@@ -64,7 +64,7 @@ let compute_static_asserts_aux
       (benv:B.global_env)
       (senv:TypeSizes.size_env)
       (includes:list string)
-      (type_map: list (ident * option ident))
+      (type_map: list (ident & option ident))
   : ML static_asserts
   = let env = B.mk_env benv, senv in
     let static_assertions =

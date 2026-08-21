@@ -2,32 +2,40 @@
 
 #include "Triangle.h"
 
+#include "EverParse.h"
+
 uint64_t
 TriangleValidateTriangle(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
-  KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 12ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes = (InputLength - StartPosition) >= 12ULL;
+  uint64_t res;
+  uint64_t positionAfterTriangle;
   if (hasBytes)
   {
-    return StartPosition + 12ULL;
+    res = StartPosition + 12ULL;
   }
-  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+  else
+  {
+    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+  }
+  positionAfterTriangle = res;
+  if (EverParseIsSuccess(positionAfterTriangle))
+  {
+    return positionAfterTriangle;
+  }
+  ErrorHandlerFn("_triangle",
+    "a",
+    EverParseErrorReasonOfResult(positionAfterTriangle),
+    EverParseGetValidatorErrorKind(positionAfterTriangle),
+    Ctxt,
+    Input,
+    StartPosition);
+  return positionAfterTriangle;
 }
 

@@ -32,26 +32,22 @@ static bool sizet_fits_u64(size_t b)
 
 static bool sizet_lte_u64(size_t b, uint64_t a)
 {
-  if (b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U)
-    return false;
-  else
-    return (uint64_t)b <= a;
+  return
+    !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
+      b <= a;
 }
 
 static bool u64_lte_sizet(uint64_t a, size_t b)
 {
-  if (b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U)
-    return true;
-  else
-    return a <= (uint64_t)b;
+  return
+    b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U || a <= b;
 }
 
 static bool sizet_eq_u64(size_t b, uint64_t a)
 {
-  if (b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U)
-    return false;
-  else
-    return (uint64_t)b == a;
+  return
+    !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
+      b == a;
 }
 
 #define CDDL_SIMPLE_VALUE_FALSE (20U)
@@ -440,17 +436,20 @@ Serializer for any
 */
 size_t COSE_Format_serialize_any(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
-  cbor_det_t c_ = any_left(c);
-  size_t len = cbor_det_size(c_, Pulse_Lib_Slice_len__uint8_t(out));
+  size_t slen = Pulse_Lib_Slice_len__uint8_t(out);
+  size_t len = cbor_det_size(any_left(c), slen);
   option__size_t scrut;
   if (len > (size_t)0U)
+  {
+    uint8_t *out1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(out);
     scrut =
       (
         (option__size_t){
           .tag = FStar_Pervasives_Native_Some,
-          .v = cbor_det_serialize(c_, Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(out), len)
+          .v = cbor_det_serialize(any_left(c), out1, len)
         }
       );
+  }
   else
     scrut = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
   if (scrut.tag == FStar_Pervasives_Native_None)
@@ -1221,28 +1220,27 @@ COSE_Format_serialize_tstr(
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
-  Pulse_Lib_Slice_slice__uint8_t c_ = tstr_left(c);
-  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(c_), 18446744073709551615ULL))
+  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(tstr_left(c)), 18446744073709551615ULL))
   {
-    size_t alen = Pulse_Lib_Slice_len__uint8_t(c_);
+    size_t alen = Pulse_Lib_Slice_len__uint8_t(tstr_left(c));
     if
     (
-      cbor_det_impl_utf8_correct_from_array(Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_),
+      cbor_det_impl_utf8_correct_from_array(Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(tstr_left(c)),
         alen)
     )
     {
-      uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
+      uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(tstr_left(c));
       cbor_det_t pres = dummy_cbor_det_t();
       bool ite;
       if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
         ite =
           cbor_det_mk_byte_string_from_arrayptr(a,
-            (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_),
+            (uint64_t)Pulse_Lib_Slice_len__uint8_t(tstr_left(c)),
             &pres);
       else
         ite =
           cbor_det_mk_text_string_from_arrayptr(a,
-            (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_),
+            (uint64_t)Pulse_Lib_Slice_len__uint8_t(tstr_left(c)),
             &pres);
       KRML_MAYBE_UNUSED_VAR(ite);
       cbor_det_t x = pres;
@@ -1390,12 +1388,13 @@ COSE_Format_serialize_bstr(
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
-  Pulse_Lib_Slice_slice__uint8_t c_ = bstr_left(c);
-  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(c_), 18446744073709551615ULL))
+  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(bstr_left(c)), 18446744073709551615ULL))
   {
-    uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
+    uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(bstr_left(c));
     cbor_det_t pres = dummy_cbor_det_t();
-    cbor_det_mk_byte_string_from_arrayptr(a, (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_), &pres);
+    cbor_det_mk_byte_string_from_arrayptr(a,
+      (uint64_t)Pulse_Lib_Slice_len__uint8_t(bstr_left(c)),
+      &pres);
     cbor_det_t x = pres;
     size_t len1 = cbor_det_size(x, Pulse_Lib_Slice_len__uint8_t(out));
     option__size_t scrut;
@@ -2006,18 +2005,12 @@ evercddl_int_ugly;
 
 bool COSE_Format_uu___is_Mkevercddl_int0(COSE_Format_evercddl_int projectee)
 {
-  if (projectee.tag == COSE_Format_Mkevercddl_int0)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkevercddl_int0;
 }
 
 bool COSE_Format_uu___is_Mkevercddl_int1(COSE_Format_evercddl_int projectee)
 {
-  if (projectee.tag == COSE_Format_Mkevercddl_int1)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkevercddl_int1;
 }
 
 static COSE_Format_evercddl_int evercddl_int_right(evercddl_int_ugly x2)
@@ -2225,10 +2218,7 @@ size_t COSE_Format_serialize_cborany(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_
   else
   {
     size_t psz = COSE_Format_serialize_any(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -2359,10 +2349,7 @@ COSE_Format_serialize_mimemessage(
   else
   {
     size_t psz = COSE_Format_serialize_tstr(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -2493,10 +2480,7 @@ COSE_Format_serialize_regexp(
   else
   {
     size_t psz = COSE_Format_serialize_tstr(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -2627,10 +2611,7 @@ COSE_Format_serialize_b64legacy(
   else
   {
     size_t psz = COSE_Format_serialize_tstr(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -2761,10 +2742,7 @@ COSE_Format_serialize_b64url(
   else
   {
     size_t psz = COSE_Format_serialize_tstr(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -2892,10 +2870,7 @@ COSE_Format_serialize_uri(Pulse_Lib_Slice_slice__uint8_t c, Pulse_Lib_Slice_slic
   else
   {
     size_t psz = COSE_Format_serialize_tstr(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -3026,10 +3001,7 @@ COSE_Format_serialize_encodedcbor(
   else
   {
     size_t psz = COSE_Format_serialize_bstr(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -3156,10 +3128,7 @@ size_t COSE_Format_serialize_eb16(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t o
   else
   {
     size_t psz = COSE_Format_serialize_any(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -3286,10 +3255,7 @@ size_t COSE_Format_serialize_eb64legacy(cbor_det_t c, Pulse_Lib_Slice_slice__uin
   else
   {
     size_t psz = COSE_Format_serialize_any(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -3416,10 +3382,7 @@ size_t COSE_Format_serialize_eb64url(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_
   else
   {
     size_t psz = COSE_Format_serialize_any(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -3659,10 +3622,7 @@ COSE_Format_serialize_tdate(
   else
   {
     size_t psz = COSE_Format_serialize_tstr(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -3855,18 +3815,12 @@ bool COSE_Format_validate_evercddl_label(cbor_det_t c)
 
 bool COSE_Format_uu___is_Mkevercddl_label0(COSE_Format_evercddl_label projectee)
 {
-  if (projectee.tag == COSE_Format_Mkevercddl_label0)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkevercddl_label0;
 }
 
 bool COSE_Format_uu___is_Mkevercddl_label1(COSE_Format_evercddl_label projectee)
 {
-  if (projectee.tag == COSE_Format_Mkevercddl_label1)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkevercddl_label1;
 }
 
 static COSE_Format_evercddl_label evercddl_label_right(COSE_Format_evercddl_label_ugly x2)
@@ -4061,18 +4015,12 @@ bool COSE_Format_aux_env29_validate_1(cbor_det_array_iterator_t *pi)
 
 bool COSE_Format_uu___is_Mkaux_env29_type_10(COSE_Format_aux_env29_type_1 projectee)
 {
-  if (projectee.tag == COSE_Format_Mkaux_env29_type_10)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkaux_env29_type_10;
 }
 
 bool COSE_Format_uu___is_Mkaux_env29_type_11(COSE_Format_aux_env29_type_1 projectee)
 {
-  if (projectee.tag == COSE_Format_Mkaux_env29_type_11)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkaux_env29_type_11;
 }
 
 static COSE_Format_aux_env29_type_1
@@ -4170,17 +4118,17 @@ COSE_Format_aux_env29_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_aux_env29_type_1_ugly c_ = aux_env29_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
     Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    COSE_Format_aux_env29_type_1_ugly scrut = aux_env29_type_1_left(c);
     size_t size1;
-    if (c_.tag == COSE_Format_Inl)
-      size1 = COSE_Format_serialize_tstr(c_.case_Inl, out1);
-    else if (c_.tag == COSE_Format_Inr)
-      size1 = COSE_Format_serialize_int(c_.case_Inr, out1);
+    if (scrut.tag == COSE_Format_Inl)
+      size1 = COSE_Format_serialize_tstr(scrut.case_Inl, out1);
+    else if (scrut.tag == COSE_Format_Inr)
+      size1 = COSE_Format_serialize_int(scrut.case_Inr, out1);
     else
       size1 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
     if (size1 == (size_t)0U)
@@ -4372,7 +4320,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
         ite = COSE_Format_validate_int(cv);
       if (ite)
       {
-        remaining = remaining - 1ULL;
+        remaining--;
         ite0 = MGOK;
       }
       else
@@ -4408,7 +4356,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -4492,7 +4440,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               ite = COSE_Format_validate_int(cv);
             if (ite)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -4622,7 +4570,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               ite1 = false;
             if (ite1)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -4700,7 +4648,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -4908,7 +4856,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
             else
               ite1 = false;
             if (!!ite1)
-              remaining = remaining - 1ULL;
+              remaining--;
           }
           sw = MGOK;
           break;
@@ -5853,10 +5801,7 @@ COSE_Format_serialize_cose_key_generic(
                 cond = pres && !em1;
               }
               bool ret = pres;
-              if (ret)
-                ite = ret;
-              else
-                ite = ret;
+              ite = ret ? ret : ret;
             }
           }
           else
@@ -6745,12 +6690,12 @@ COSE_Format_aux_env30_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_cose_key_generic c_ = aux_env30_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
-    size_t size1 = COSE_Format_serialize_cose_key_generic(c_, split__uint8_t(out, size).snd);
+    Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    size_t size1 = COSE_Format_serialize_cose_key_generic(aux_env30_type_1_left(c), out1);
     if (size1 == (size_t)0U)
       return false;
     else
@@ -6819,18 +6764,12 @@ cose_keyset_ugly;
 
 bool COSE_Format_uu___is_Mkcose_keyset0(COSE_Format_cose_keyset projectee)
 {
-  if (projectee.tag == COSE_Format_Mkcose_keyset0)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkcose_keyset0;
 }
 
 bool COSE_Format_uu___is_Mkcose_keyset1(COSE_Format_cose_keyset projectee)
 {
-  if (projectee.tag == COSE_Format_Mkcose_keyset1)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkcose_keyset1;
 }
 
 static COSE_Format_cose_keyset cose_keyset_right(cose_keyset_ugly x2)
@@ -6995,10 +6934,7 @@ COSE_Format_serialize_cose_keyset(
         cond = pres && !em1;
       }
       bool ret = pres;
-      if (ret)
-        ite = ret;
-      else
-        ite = ret;
+      ite = ret ? ret : ret;
     }
   }
   else
@@ -7229,7 +7165,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
         ite = false;
       if (ite)
       {
-        remaining = remaining - 1ULL;
+        remaining--;
         ite0 = MGOK;
       }
       else
@@ -7270,7 +7206,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
               ite = COSE_Format_validate_tstr(cv);
             if (ite)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               sw0 = MGOK;
             }
             else
@@ -7324,7 +7260,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -7401,7 +7337,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -7545,7 +7481,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
             else
               ite1 = false;
             if (!!ite1)
-              remaining = remaining - 1ULL;
+              remaining--;
           }
           sw = MGOK;
           break;
@@ -8945,12 +8881,12 @@ COSE_Format_aux_env34_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_evercddl_label c_ = aux_env34_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
-    size_t size1 = COSE_Format_serialize_evercddl_label(c_, split__uint8_t(out, size).snd);
+    Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    size_t size1 = COSE_Format_serialize_evercddl_label(aux_env34_type_1_left(c), out1);
     if (size1 == (size_t)0U)
       return false;
     else
@@ -9147,7 +9083,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
         ite = COSE_Format_validate_tstr(cv);
       if (ite)
       {
-        remaining = remaining - 1ULL;
+        remaining--;
         ite0 = MGOK;
       }
       else
@@ -9248,7 +9184,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               ite1 = false;
             if (ite1)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -9333,7 +9269,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               ite = COSE_Format_validate_int(cv);
             if (ite)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -9411,7 +9347,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -9488,7 +9424,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
           else if (scrut0.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut0.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -9527,7 +9463,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                 else if (scrut.tag == FStar_Pervasives_Native_Some)
                   if (COSE_Format_validate_everparsenomatch(scrut.v))
                   {
-                    remaining = remaining - 1ULL;
+                    remaining--;
                     ite = MGOK;
                   }
                   else
@@ -9613,7 +9549,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                 else if (scrut0.tag == FStar_Pervasives_Native_Some)
                   if (COSE_Format_validate_bstr(scrut0.v))
                   {
-                    remaining = remaining - 1ULL;
+                    remaining--;
                     ite0 = MGOK;
                   }
                   else
@@ -9652,7 +9588,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else if (scrut.tag == FStar_Pervasives_Native_Some)
                         if (COSE_Format_validate_everparsenomatch(scrut.v))
                         {
-                          remaining = remaining - 1ULL;
+                          remaining--;
                           ite = MGOK;
                         }
                         else
@@ -9740,7 +9676,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else if (scrut0.tag == FStar_Pervasives_Native_Some)
                         if (COSE_Format_validate_everparsenomatch(scrut0.v))
                         {
-                          remaining = remaining - 1ULL;
+                          remaining--;
                           ite0 = MGOK;
                         }
                         else
@@ -9805,7 +9741,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else if (scrut.tag == FStar_Pervasives_Native_Some)
                               if (COSE_Format_validate_everparsenomatch(scrut.v))
                               {
-                                remaining = remaining - 1ULL;
+                                remaining--;
                                 ite = MGOK;
                               }
                               else
@@ -10075,7 +10011,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
             else
               ite1 = false;
             if (!!ite1)
-              remaining = remaining - 1ULL;
+              remaining--;
           }
           sw = MGOK;
           break;
@@ -11371,10 +11307,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                 cond = pres && !em1;
               }
               bool ret = pres;
-              if (ret)
-                ite = ret;
-              else
-                ite = ret;
+              ite = ret ? ret : ret;
             }
           }
           else
@@ -12753,19 +12686,13 @@ empty_or_serialized_map_ugly;
 bool
 COSE_Format_uu___is_Mkempty_or_serialized_map0(COSE_Format_empty_or_serialized_map projectee)
 {
-  if (projectee.tag == COSE_Format_Mkempty_or_serialized_map0)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkempty_or_serialized_map0;
 }
 
 bool
 COSE_Format_uu___is_Mkempty_or_serialized_map1(COSE_Format_empty_or_serialized_map projectee)
 {
-  if (projectee.tag == COSE_Format_Mkempty_or_serialized_map1)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Mkempty_or_serialized_map1;
 }
 
 static COSE_Format_empty_or_serialized_map
@@ -14526,10 +14453,7 @@ COSE_Format_serialize_cose_sign1_tagged(
   else
   {
     size_t psz = COSE_Format_serialize_cose_sign1(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 
@@ -14935,12 +14859,12 @@ COSE_Format_aux_env41_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_cose_signature c_ = aux_env41_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
-    size_t size1 = COSE_Format_serialize_cose_signature(c_, split__uint8_t(out, size).snd);
+    Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    size_t size1 = COSE_Format_serialize_cose_signature(aux_env41_type_1_left(c), out1);
     if (size1 == (size_t)0U)
       return false;
     else
@@ -15369,10 +15293,7 @@ COSE_Format_serialize_cose_sign(COSE_Format_cose_sign c, Pulse_Lib_Slice_slice__
               cond = pres && !em1;
             }
             bool ret = pres;
-            if (ret)
-              ite = ret;
-            else
-              ite = ret;
+            ite = ret ? ret : ret;
           }
         }
         else
@@ -15585,10 +15506,7 @@ COSE_Format_serialize_cose_sign_tagged(
   else
   {
     size_t psz = COSE_Format_serialize_cose_sign(cpayload, split__uint8_t(out, tsz).snd);
-    if (psz == (size_t)0U)
-      return (size_t)0U;
-    else
-      return tsz + psz;
+    return psz == (size_t)0U ? (size_t)0U : tsz + psz;
   }
 }
 

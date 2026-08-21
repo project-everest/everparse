@@ -17,13 +17,16 @@ include nofstar.Makefile
 
 include deps.Makefile
 
-ifneq ($(OS),Windows_NT)
+ifneq (1,$(EVERPARSE_ONLY_3D))
 package-subset: cddl
 endif
 
 # Disable COSE on MacOS because we don't know how to link with OpenSSL
+# Disable COSE on Windows because we don't know how to link with OpenSSL
+ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
 all: cose
+endif
 endif
 
 ifeq (,$(NO_PULSE))
@@ -65,7 +68,11 @@ lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+3d-prelude-verify: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+.PHONY: 3d-prelude-verify
+
+3d-prelude: 3d-prelude-verify
 	+$(MAKE) -C src/3d/prelude
 
 .PHONY: 3d-prelude
@@ -137,8 +144,11 @@ test: 3d-test
 endif
 
 # Disable COSE tests on MacOS because we don't know how to link with OpenSSL
+# Disable COSE tests on Windows because we don't know how to link with OpenSSL
+ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
 test: cose-test
+endif
 endif
 
 submodules:

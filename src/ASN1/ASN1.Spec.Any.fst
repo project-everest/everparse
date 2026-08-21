@@ -26,7 +26,11 @@ let rec make_gen_choice_weak_payload_parser
     if (id = id') then
       let p = (Mkgenparser?.p gp) in 
       parse_synth p (attach_tag lc id)
-    else      
+    else
+      let _ = assert (extract_types lc ==
+        (fst hd, Mkgenparser?.t (snd hd)) :: extract_types tl) in
+      let _ = assert_norm (project_tags lc ==
+        tag_of_gen_choice_type (extract_types lc)) in
       parse_synth (make_gen_choice_weak_payload_parser tl id) (fun x -> lemma_choice_cast (fst hd, Mkgenparser?.t (snd hd)) (extract_types tl) id x)
 
 let make_gen_choice_weak_parser
@@ -47,6 +51,23 @@ let make_gen_choice_weak_parser_twin
 : asn1_id_t -> parser (and_then_kind k asn1_weak_parser_kind) (make_gen_choice_type (extract_types lc))
 = fun id -> parse_tagged_union (fp id) (tag_of_gen_choice_type (extract_types lc)) (make_gen_choice_weak_payload_parser lc)
 
+let make_gen_choice_weak_parser_twin_precond
+  (#t : eqtype)
+  (#k : parser_kind)
+  (fp : asn1_id_t -> parser k t {and_then_cases_injective fp})
+  (lc : list (t & (gen_parser asn1_weak_parser_kind)))
+  (x1 x2 : asn1_id_t)
+  (b1 b2 : LowParse.Bytes.bytes)
+: Lemma
+  (requires (and_then_cases_injective_precond
+    (make_gen_choice_weak_parser_twin fp lc) x1 x2 b1 b2))
+  (ensures (and_then_cases_injective_precond fp x1 x2 b1 b2))
+=
+  parse_tagged_union_eq (fp x1) (tag_of_gen_choice_type (extract_types lc))
+    (make_gen_choice_weak_payload_parser lc) b1;
+  parse_tagged_union_eq (fp x2) (tag_of_gen_choice_type (extract_types lc))
+    (make_gen_choice_weak_payload_parser lc) b2
+
 let make_gen_choice_weak_parser_twin_and_then_cases_injective
   (#t : eqtype)
   (#k : parser_kind)
@@ -55,8 +76,7 @@ let make_gen_choice_weak_parser_twin_and_then_cases_injective
 : Lemma (ensures (and_then_cases_injective (make_gen_choice_weak_parser_twin fp lc)))
 = let p = make_gen_choice_weak_parser_twin fp lc in
   and_then_cases_injective_intro p (fun x1 x2 b1 b2 ->
-    parse_tagged_union_eq (fp x1) (tag_of_gen_choice_type (extract_types lc)) (make_gen_choice_weak_payload_parser lc) b1;
-    parse_tagged_union_eq (fp x2) (tag_of_gen_choice_type (extract_types lc)) (make_gen_choice_weak_payload_parser lc) b2;
+    make_gen_choice_weak_parser_twin_precond fp lc x1 x2 b1 b2;
     and_then_cases_injective_elim fp x1 x2 b1 b2
   )
 
@@ -101,7 +121,12 @@ let rec make_gen_choice_with_fallback_weak_payload_parser
     if (id = id') then
       let p = (Mkgenparser?.p gp) in 
       parse_synth p (attach_tag_with_fallback lc fb id)
-    else      
+    else
+      let _ = assert (extract_types lc ==
+        (fst hd, Mkgenparser?.t (snd hd)) :: extract_types tl) in
+      let _ = assert_norm (project_tags_with_fallback lc fb ==
+        tag_of_gen_choice_type_with_fallback (extract_types lc)
+          (Mkgenparser?.t fb)) in
       parse_synth (make_gen_choice_with_fallback_weak_payload_parser tl fb id) (fun x -> lemma_choice_with_fallback_cast (fst hd, Mkgenparser?.t (snd hd)) (extract_types tl) (Mkgenparser?.t fb) id x)
 
 let make_gen_choice_with_fallback_weak_parser
@@ -296,4 +321,3 @@ let make_asn1_sequence_any_parser
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
 : Tot (asn1_sequence_any_parser_type itemtwins suffix_t)
 = make_asn1_sequence_any_parser' itemtwins suffix_p_twin None
-

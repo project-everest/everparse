@@ -98,7 +98,8 @@ ensures exists* c v em res vout size count m min max .
       pts_to out_size size **
       pts_to out_count count **
       pure (
-        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l
+        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l /\
+        (res == true ==> count == count')
       )
 {
     let size1' = SZ.add size0 size1;
@@ -127,6 +128,7 @@ ensures exists* c v em res vout size count m min max .
       with count_ . assert (pts_to out_count count_);
       invariant_insert_success p key tkey sp1 value tvalue inj sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_ w0_old gk gv min_old max_old false size0 count_old m l;
       assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_ true l);
+      assert pure (count_ == count');
     } else {
       pres := false;
       with vout_ . assert (pts_to out vout_);

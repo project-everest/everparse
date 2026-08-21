@@ -1,6 +1,7 @@
 module LowParse.Spec.SeqBytes
 include LowParse.Spec.SeqBytes.Base
 include LowParse.Spec.VLData
+include LowParse.Spec.VLGen // for parse_bounded_vlgen (Seq-native vlgenbytes)
 
 module Seq = FStar.Seq
 module U32 = FStar.UInt32
@@ -23,7 +24,7 @@ let parse_seq_all_bytes_kind =
 
 let parse_seq_all_bytes'
   (input: bytes)
-: GTot (option (bytes * consumed_length input))
+: GTot (option (bytes & consumed_length input))
 = let len = Seq.length input in
     Some (input, len)
 
@@ -87,7 +88,7 @@ let parse_bounded_seq_vlbytes_pred
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (x: bytes)
-: GTot Type0
+: GTot prop
 = let reslen = Seq.length x in
   min <= reslen /\ reslen <= max
 
@@ -128,6 +129,220 @@ let serialize_bounded_seq_vlbytes
       (x <: parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes)
     )
     ()
+
+(* The Seq-native reciprocal of [synth_bounded_seq_vlbytes]: both are the
+   identity on [Seq.seq byte], reflecting that a [parse_bounded_seq_vlbytes_t]
+   value IS a [parse_bounded_vldata_strong_t] value. *)
+inline_for_extraction
+let synth_bounded_seq_vlbytes_recip
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (x: parse_bounded_seq_vlbytes_t min max)
+: Tot (parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes)
+= x
+
+(* The serialized form of a [bounded_seq_vlbytes] value [y] is the
+   [(log256' max)]-byte big-endian length header (encoding [Seq.length y])
+   followed by the raw payload bytes [y] itself (the seq-all-bytes serializer is
+   the identity). Derived from [serialize_synth_eq] over the strong-vldata
+   serializer, whose [aux] is exactly that append. *)
+let serialize_bounded_seq_vlbytes_bytes_eq
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (y: parse_bounded_seq_vlbytes_t min max)
+: Lemma (
+    serialize (serialize_bounded_seq_vlbytes min max) y ==
+    Seq.append
+      (serialize (serialize_bounded_integer (log256' max)) (U32.uint_to_t (Seq.length y)))
+      y
+  )
+= serialize_synth_eq
+    (parse_bounded_seq_vlbytes' min max)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_seq_vlbytes' min max)
+    (fun (x: parse_bounded_seq_vlbytes_t min max) ->
+      (x <: parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes)
+    )
+    ()
+    y
+
+let length_serialize_bounded_seq_vlbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (x: parse_bounded_seq_vlbytes_t min max)
+: Lemma
+  (Seq.length (serialize (serialize_bounded_seq_vlbytes min max) x) == log256' max + Seq.length x)
+= serialize_synth_eq
+    (parse_bounded_seq_vlbytes' min max)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_seq_vlbytes' min max)
+    (fun (x: parse_bounded_seq_vlbytes_t min max) ->
+      (x <: parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes)
+    )
+    ()
+    x
+
+(* ----------------------------------------------------------------------------
+   Seq-native bounded vlbytes with an EXPLICIT (possibly oversized) fixed-width
+   length header [l >= log256' max]. Mirrors the FStar.Bytes
+   [parse_bounded_vlbytes'] / [serialize_bounded_vlbytes'] family
+   (LowParse.Spec.Bytes) with [serialize_all_bytes -> serialize_seq_all_bytes]
+   (the identity), so the value type is [parse_bounded_seq_vlbytes_t] over
+   [Seq.seq byte] instead of [FStar.Bytes]. Used by QuackyDucky under -pulse for
+   staged implicit-sum byte payloads whose header width exceeds the value bound.
+   ---------------------------------------------------------------------------- *)
+
+let parse_bounded_seq_vlbytes_aux
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+: Tot (parser (parse_bounded_vldata_strong_kind min max l parse_seq_all_bytes_kind) (parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes))
+= parse_bounded_vldata_strong' min max l serialize_seq_all_bytes
+
+let parse_bounded_seq_vlbytes_gen
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+: Tot (parser (parse_bounded_vldata_strong_kind min max l parse_seq_all_bytes_kind) (parse_bounded_seq_vlbytes_t min max))
+= parse_synth (parse_bounded_seq_vlbytes_aux min max l) (synth_bounded_seq_vlbytes min max)
+
+let serialize_bounded_seq_vlbytes_aux
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+: Tot (serializer (parse_bounded_seq_vlbytes_aux min max l))
+= serialize_bounded_vldata_strong' min max l serialize_seq_all_bytes
+
+let serialize_bounded_seq_vlbytes_gen
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+: Tot (serializer (parse_bounded_seq_vlbytes_gen min max l))
+= serialize_synth
+    (parse_bounded_seq_vlbytes_aux min max l)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_seq_vlbytes_aux min max l)
+    (synth_bounded_seq_vlbytes_recip min max)
+    ()
+
+let length_serialize_bounded_seq_vlbytes_gen
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (x: parse_bounded_seq_vlbytes_t min max)
+: Lemma
+  (Seq.length (serialize (serialize_bounded_seq_vlbytes_gen min max l) x) == l + Seq.length x)
+= serialize_synth_eq
+    (parse_bounded_seq_vlbytes_aux min max l)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_seq_vlbytes_aux min max l)
+    (synth_bounded_seq_vlbytes_recip min max)
+    ()
+    x
+
+(* The serialized form of an explicit-[l] [bounded_seq_vlbytes] value [y]: the
+   [l]-byte big-endian length header (encoding [Seq.length y]) followed by the
+   raw payload bytes [y] (the seq-all-bytes serializer is the identity). *)
+let serialize_bounded_seq_vlbytes_gen_bytes_eq
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (y: parse_bounded_seq_vlbytes_t min max)
+: Lemma (
+    serialize (serialize_bounded_seq_vlbytes_gen min max l) y ==
+    Seq.append
+      (serialize (serialize_bounded_integer l) (U32.uint_to_t (Seq.length y)))
+      y
+  )
+= serialize_synth_eq
+    (parse_bounded_seq_vlbytes_aux min max l)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_seq_vlbytes_aux min max l)
+    (synth_bounded_seq_vlbytes_recip min max)
+    ()
+    y
+
+(* ----------------------------------------------------------------------------
+   Seq-native bounded vlbytes framed by a GENERIC (variable-width) length header
+   parser [pk]. Mirrors the FStar.Bytes [parse_bounded_vlgenbytes] /
+   [serialize_bounded_vlgenbytes] family with
+   [serialize_all_bytes -> serialize_seq_all_bytes]. Used by QuackyDucky under
+   -pulse for byte payloads whose length is encoded by bitcoin_varint / asn1_len
+   / asn1_len8.
+   ---------------------------------------------------------------------------- *)
+
+let parse_bounded_seq_vlgenbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#sk: parser_kind)
+  (pk: parser sk (bounded_int32 min max))
+: Tot (parser (parse_bounded_vlgen_kind sk min max parse_seq_all_bytes_kind) (parse_bounded_seq_vlbytes_t min max))
+= parse_bounded_vlgen min max pk serialize_seq_all_bytes `parse_synth` synth_bounded_seq_vlbytes min max
+
+let serialize_bounded_seq_vlgenbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 min max))
+  (sk: serializer pk { kk.parser_kind_subkind == Some ParserStrong })
+: Tot (serializer (parse_bounded_seq_vlgenbytes min max pk))
+= serialize_synth
+    (parse_bounded_vlgen min max pk serialize_seq_all_bytes)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_vlgen min max sk serialize_seq_all_bytes)
+    (synth_bounded_seq_vlbytes_recip min max)
+    ()
+
+let length_serialize_bounded_seq_vlgenbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#kk: parser_kind)
+  (#pk: parser kk (bounded_int32 min max))
+  (sk: serializer pk { kk.parser_kind_subkind == Some ParserStrong })
+  (x: parse_bounded_seq_vlbytes_t min max)
+: Lemma
+  (
+    Seq.length (serialize (serialize_bounded_seq_vlgenbytes min max sk) x) ==
+      Seq.length (serialize sk (U32.uint_to_t (Seq.length x))) + Seq.length x
+  )
+= serialize_synth_eq
+    (parse_bounded_vlgen min max pk serialize_seq_all_bytes)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_vlgen min max sk serialize_seq_all_bytes)
+    (synth_bounded_seq_vlbytes_recip min max)
+    ()
+    x;
+  serialize_bounded_vlgen_unfold
+    min
+    max
+    sk
+    serialize_seq_all_bytes
+    x
+
+(* The serialized form of a generic-header [bounded_seq_vlgenbytes] value [y]:
+   the variable-width length header (via [sk], encoding [Seq.length y]) followed
+   by the raw payload bytes [y] (the seq-all-bytes serializer is the identity). *)
+let serialize_bounded_seq_vlgenbytes_bytes_eq
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (y: parse_bounded_seq_vlbytes_t vmin vmax)
+: Lemma (
+    serialize (serialize_bounded_seq_vlgenbytes vmin vmax ssk) y ==
+    Seq.append
+      (serialize ssk (U32.uint_to_t (Seq.length y)))
+      y
+  )
+= serialize_synth_eq
+    (parse_bounded_vlgen vmin vmax pk serialize_seq_all_bytes)
+    (synth_bounded_seq_vlbytes vmin vmax)
+    (serialize_bounded_vlgen vmin vmax ssk serialize_seq_all_bytes)
+    (synth_bounded_seq_vlbytes_recip vmin vmax)
+    ()
+    y;
+  serialize_bounded_vlgen_unfold vmin vmax ssk serialize_seq_all_bytes
+    (synth_bounded_seq_vlbytes_recip vmin vmax y)
 
 
 let parse_lseq_bytes_gen

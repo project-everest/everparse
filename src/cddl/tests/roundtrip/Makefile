@@ -8,7 +8,7 @@
 all: test
 
 EVERPARSE_SRC_PATH := $(realpath ../../..)
-EVERPARSE_HOME     := $(realpath $(EVERPARSE_SRC_PATH)/..)
+include $(EVERPARSE_SRC_PATH)/windows.Makefile
 ODIR := _output
 
 FSTAR_EXE ?= fstar.exe
@@ -16,7 +16,11 @@ FSTAR_EXE ?= fstar.exe
 # evercddl.lib (handwritten + extracted) lives under $EVERPARSE_HOME/lib;
 # fstar.lib lives under the F* installation. `fstar.exe --ocamlenv` prepends
 # the latter to OCAMLPATH for us.
-export OCAMLPATH := $(EVERPARSE_HOME)/lib:$(OCAMLPATH)
+ifeq ($(OS),Windows_NT)
+export OCAMLPATH := $(EVERPARSE_SRC_PATH)/../lib;$(OCAMLPATH)
+else
+export OCAMLPATH := $(EVERPARSE_SRC_PATH)/../lib:$(OCAMLPATH)
+endif
 
 GEN := ocaml/_build/default/gen_fst/Main.exe
 

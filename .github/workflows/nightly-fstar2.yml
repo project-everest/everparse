@@ -93,6 +93,10 @@ jobs:
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5
+      - name: Set-up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: everparse/src/3d/hashchk/global.json
       - name: Everparse CI
         run: |
           make -C everparse -j$(nproc) -k test
@@ -216,21 +220,21 @@ jobs:
         id: cache
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }}
           lookup-only: true
           fail-on-cache-miss: false
       - name: Build dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} --pull --target deps .
+          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }} --pull --target deps .
       - name: Save image
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} | gzip > deps.tgz
+          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }} | gzip > deps.tgz
       - name: Upload image into cache
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |
             deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }}

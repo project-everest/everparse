@@ -436,8 +436,8 @@ and resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case = //case fi
 
 let resolve_typedef_attribute (env: qenv) (a: attribute) : ML attribute =
   match a with
-  | Entrypoint (Some p) ->
-    Entrypoint (Some ({
+  | Entrypoint ep_name (Some p) ->
+    Entrypoint ep_name (Some ({
       probe_ep_init = map_opt (resolve_ident env) p.probe_ep_init;
       probe_ep_fn = resolve_ident env p.probe_ep_fn;
       probe_ep_length = resolve_expr env p.probe_ep_length;

@@ -13,7 +13,7 @@ let rec list_map
   | [] -> []
   | a :: q -> f a :: list_map f q
 
-type enum (key: eqtype) (repr: eqtype) = (l: list (key * repr) {
+type enum (key: eqtype) (repr: eqtype) = (l: list (key & repr) {
   L.noRepeats (list_map fst l) /\
   L.noRepeats (list_map snd l)
 })
@@ -40,21 +40,21 @@ let make_enum_key (#key #repr: eqtype) (e: enum key repr) (k: key) : Pure (enum_
 inline_for_extraction
 let enum_repr (#key #repr: eqtype) (e: enum key repr) : Tot eqtype = (r: repr { list_mem r (list_map snd e) } )
 
-let flip (#a #b: Type) (c: (a * b)) : Tot (b * a) = let (ca, cb) = c in (cb, ca)
+let flip (#a #b: Type) (c: (a & b)) : Tot (b & a) = let (ca, cb) = c in (cb, ca)
 
-let rec map_flip_flip (#a #b: Type) (l: list (a * b)) : Lemma
+let rec map_flip_flip (#a #b: Type) (l: list (a & b)) : Lemma
   (list_map flip (list_map flip l) == l)
 = match l with
   | [] -> ()
   | _ :: q -> map_flip_flip q
 
-let rec map_fst_flip (#a #b: Type) (l: list (a * b)) : Lemma
+let rec map_fst_flip (#a #b: Type) (l: list (a & b)) : Lemma
   (list_map fst (list_map flip l) == list_map snd l)
 = match l with
   | [] -> ()
   | _ :: q -> map_fst_flip q
 
-let rec map_snd_flip (#a #b: Type) (l: list (a * b)) : Lemma
+let rec map_snd_flip (#a #b: Type) (l: list (a & b)) : Lemma
   (list_map snd (list_map flip l) == list_map fst l)
 = match l with
   | [] -> ()
@@ -62,7 +62,7 @@ let rec map_snd_flip (#a #b: Type) (l: list (a * b)) : Lemma
 
 let rec assoc_mem_snd
   (#a #b: eqtype)
-  (l: list (a * b))
+  (l: list (a & b))
   (x: a)
   (y: b)
 : Lemma
@@ -76,7 +76,7 @@ let rec assoc_mem_snd
 
 let rec assoc_flip_elim
   (#a #b: eqtype)
-  (l: list (a * b))
+  (l: list (a & b))
   (y: b)
   (x: a)
 : Lemma
@@ -106,7 +106,7 @@ let rec assoc_flip_elim
 
 let rec assoc_flip_intro
   (#a #b: eqtype)
-  (l: list (a * b))
+  (l: list (a & b))
   (y: b)
   (x: a)
 : Lemma
@@ -131,7 +131,7 @@ let enum_key_of_repr
   (requires True)
   (ensures (fun y -> L.assoc y e == Some r))
 = map_fst_flip e;
-  let e' = list_map #(key * repr) #(repr * key) flip e in
+  let e' = list_map #(key & repr) #(repr & key) flip e in
   L.assoc_mem r e';
   let k = Some?.v (L.assoc r e') in
   assoc_flip_elim e r k;
@@ -329,7 +329,7 @@ let serialize_maybe_enum_key_eq
   (serialize (serialize_maybe_enum_key p s e) x == serialize s (repr_of_maybe_enum_key e x))
 = serialize_synth_eq p (maybe_enum_key_of_repr e) s (repr_of_maybe_enum_key e) () x 
 
-let is_total_enum (#key: eqtype) (#repr: eqtype) (l: list (key * repr)) : GTot Type0 =
+let is_total_enum (#key: eqtype) (#repr: eqtype) (l: list (key & repr)) : GTot Type0 =
   forall (k: key) . {:pattern (list_mem k (list_map fst l))} list_mem k (list_map fst l)
 
 let total_enum (key: eqtype) (repr: eqtype) : Tot eqtype =
@@ -631,7 +631,7 @@ let enum_destr_cons
   let _ = r_reflexive_t_elim _ _ eq_refl in
   [@inline_let]
   let _ = r_transitive_t_elim _ _ eq_trans in
-  (fun (e' : list (key * repr) { e' == e } ) -> match e' with
+  (fun (e' : list (key & repr) { e' == e } ) -> match e' with
      | (k, _) :: _ ->
      (fun (f: (enum_key e -> Tot t)) (x: enum_key e) -> ((
        [@inline_let]
@@ -677,7 +677,7 @@ let enum_destr_cons_nil
 = fun (eq: (t -> t -> GTot Type0)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) ->
   [@inline_let]
   let _ = r_reflexive_t_elim _ _ eq_refl in
-  (fun (e' : list (key * repr) { e' == e } ) -> match e' with
+  (fun (e' : list (key & repr) { e' == e } ) -> match e' with
      | (k, _) :: _ ->
      (fun (f: (enum_key e -> Tot t)) (x: enum_key e) -> ((
        f k
@@ -794,7 +794,7 @@ let dep_enum_destr_cons_nil
 (* Destructor from the representation *)
 
 
-let maybe_enum_key_of_repr_not_in (#key #repr: eqtype) (e: enum key repr) (l: list (key * repr)) (x: repr) : GTot Type0 =
+let maybe_enum_key_of_repr_not_in (#key #repr: eqtype) (e: enum key repr) (l: list (key & repr)) (x: repr) : GTot Type0 =
   (~ (L.mem x (L.map snd l)))
 
 let list_rev_cons
@@ -813,7 +813,7 @@ let list_append_rev_cons (#t: Type) (l1: list t) (x: t) (l2: list t) : Lemma
 
 let rec assoc_append_flip_l_intro
   (#key #repr: eqtype)
-  (l1 l2: list (key * repr))
+  (l1 l2: list (key & repr))
   (y: repr)
   (x: key)
 : Lemma
@@ -833,7 +833,7 @@ let maybe_enum_destr_t'
   (t: Type)
   (#key #repr: eqtype)  
   (e: enum key repr)
-  (l1 l2: list (key * repr))
+  (l1 l2: list (key & repr))
   (u1: squash (e == L.append (L.rev l1) l2))
 : Tot Type
 = (eq: (t -> t -> GTot Type0)) ->
@@ -887,7 +887,7 @@ let maybe_enum_key_of_repr_not_in_cons
   (e: enum key repr)
   (k: key)
   (r: repr)
-  (l: list (key * repr))
+  (l: list (key & repr))
   (x: repr)
 : Lemma
   (requires (maybe_enum_key_of_repr_not_in e l x /\ x <> r))
@@ -916,8 +916,8 @@ let maybe_enum_destr_cons
   (t: Type)
   (#key #repr: eqtype)
   (e: enum key repr)
-  (l1: list (key * repr))
-  (l2: list (key * repr))
+  (l1: list (key & repr))
+  (l2: list (key & repr))
   (u1: squash (Cons? l2 /\ e == L.append (L.rev l1) l2))
   (g: (maybe_enum_destr_t' t e (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons l1 (list_hd l2) (list_tl l2))))
 : Tot (maybe_enum_destr_t' t e l1 l2 u1)
@@ -967,8 +967,8 @@ let maybe_enum_destr_nil
   (t: Type)
   (#key #repr: eqtype)
   (e: enum key repr)
-  (l1: list (key * repr))
-  (l2: list (key * repr))
+  (l1: list (key & repr))
+  (l2: list (key & repr))
   (u1: squash (Nil? l2 /\ e == L.append (L.rev l1) []))
 : Tot (maybe_enum_destr_t' t e l1 l2 u1)
 = fun (eq: (t -> t -> GTot Type0)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) (f: (maybe_enum_key e -> Tot t)) ->
@@ -988,8 +988,8 @@ let rec mk_maybe_enum_destr'
   (t: Type)
   (#key #repr: eqtype)
   (e: enum key repr)
-  (l1: list (key * repr))
-  (l2: list (key * repr))
+  (l1: list (key & repr))
+  (l2: list (key & repr))
   (u: squash (e == L.rev l1 `L.append` l2))
 : Tot (maybe_enum_destr_t' t e l1 l2 u)
   (decreases l2)
@@ -1029,7 +1029,7 @@ let dep_maybe_enum_destr_t'
   (#key #repr: eqtype)
   (e: enum key repr)
   (v: (maybe_enum_key e -> Tot Type))
-  (l1 l2: list (key * repr))
+  (l1 l2: list (key & repr))
   (u1: squash (e == L.append (L.rev l1) l2))
 : Tot Type
 = (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot Type0)) ->
@@ -1054,8 +1054,8 @@ let dep_maybe_enum_destr_cons
   (#key #repr: eqtype)
   (e: enum key repr)
   (v: (maybe_enum_key e -> Tot Type))
-  (l1: list (key * repr))
-  (l2: list (key * repr))
+  (l1: list (key & repr))
+  (l2: list (key & repr))
   (u1: squash (Cons? l2 /\ e == L.append (L.rev l1) l2))
   (g: (dep_maybe_enum_destr_t' e v (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons l1 (list_hd l2) (list_tl l2))))
 : Tot (dep_maybe_enum_destr_t' e v l1 l2 u1)
@@ -1105,8 +1105,8 @@ let dep_maybe_enum_destr_nil
   (#key #repr: eqtype)
   (e: enum key repr)
   (v: (maybe_enum_key e -> Tot Type))
-  (l1: list (key * repr))
-  (l2: list (key * repr))
+  (l1: list (key & repr))
+  (l2: list (key & repr))
   (u1: squash (Nil? l2 /\ e == L.append (L.rev l1) []))
 : Tot (dep_maybe_enum_destr_t' e v l1 l2 u1)
 = fun
@@ -1134,8 +1134,8 @@ let rec mk_dep_maybe_enum_destr'
   (#key #repr: eqtype)
   (e: enum key repr)
   (v: (maybe_enum_key e -> Tot Type))
-  (l1: list (key * repr))
-  (l2: list (key * repr))
+  (l1: list (key & repr))
+  (l2: list (key & repr))
   (u1: squash (e == L.append (L.rev l1) l2))
 : Tot (dep_maybe_enum_destr_t' e v l1 l2 u1)
   (decreases l2)
@@ -1226,7 +1226,7 @@ let enum_repr_of_key_cons
 : Pure (enum_repr_of_key'_t e)
   (requires (Cons? e))
   (ensures (fun _ -> True))
-= (fun (e' : list (key * repr) { e' == e } ) -> match e' with
+= (fun (e' : list (key & repr) { e' == e } ) -> match e' with
      | (k, r) :: _ ->
      (fun (x: enum_key e) -> (
       if k = x
@@ -1251,7 +1251,7 @@ let enum_repr_of_key_cons_nil
 : Pure (enum_repr_of_key'_t e)
   (requires (Cons? e /\ Nil? (enum_tail' e)))
   (ensures (fun _ -> True))
-= (fun (e' : list (key * repr) { e' == e } ) -> match e' with
+= (fun (e' : list (key & repr) { e' == e } ) -> match e' with
      | [(k, r)] ->
      (fun (x: enum_key e) ->
       (r <: (r: enum_repr e { enum_repr_of_key e x == r } ))))
@@ -1299,7 +1299,7 @@ let maybe_enum_key_of_repr'_t_cons_nil
 : Pure (maybe_enum_key_of_repr'_t e)
   (requires (Cons? e /\ Nil? (enum_tail' e)))
   (ensures (fun _ -> True))
-= (fun (e' : list (key * repr) { e' == e } ) -> match e' with
+= (fun (e' : list (key & repr) { e' == e } ) -> match e' with
   | [(k, r)] ->
     (fun x -> ((
       if r = x
@@ -1325,7 +1325,7 @@ let maybe_enum_key_of_repr'_t_cons
 : Pure (maybe_enum_key_of_repr'_t e)
   (requires (Cons? e))
   (ensures (fun _ -> True))
-= (fun (e' : list (key * repr) { e' == e } ) -> match e' with
+= (fun (e' : list (key & repr) { e' == e } ) -> match e' with
      | (k, r) :: _ ->
      (fun x -> ((
         if r = x

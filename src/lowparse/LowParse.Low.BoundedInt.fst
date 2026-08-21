@@ -342,11 +342,19 @@ let read_bounded_integer_le_4 =
 
 let read_u16_le =
   [@inline_let] let _ = synth_u16_le_injective in
-  read_inline_synth'
-    _
-    synth_u16_le
-    read_bounded_integer_le_2
-    ()
+  [@inline_let] let _ = bounded_integer_of_le_injective 2 in
+  leaf_reader_ext
+    (make_total_constant_size_reader 2 2ul #U16.t
+      (fun s -> synth_u16_le (bounded_integer_of_le 2 s))
+      ()
+      (fun #rrel #rel b pos ->
+        let h = HST.get () in
+        E.lemma_le_to_n_is_bounded (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 2));
+        LE.load16_le_i (* #(Ghost.hide rrel) #(Ghost.hide rel) *) b pos))
+    parse_u16_le
+    (fun x ->
+      parse_synth_eq (parse_bounded_integer_le 2) synth_u16_le x;
+      parse_bounded_integer_le_eq 2 x)
 
 let read_u32_le =
   read_inline_synth'

@@ -421,7 +421,7 @@ let parse_bounded_vldata_strong_pred
   (#p: parser k t)
   (s: serializer p)
   (x: t)
-: GTot Type0
+: GTot prop
 = let reslen = Seq.length (s x) in
   min <= reslen /\ reslen <= max
 

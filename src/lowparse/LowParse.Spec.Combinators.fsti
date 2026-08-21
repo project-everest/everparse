@@ -1040,7 +1040,7 @@ let bare_parse_tagged_union
   (k': (t: tag_t) -> Tot parser_kind)
   (p: (t: tag_t) -> Tot (parser (k' t) (refine_with_tag tag_of_data t)))
   (input: bytes)
-: GTot (option (data_t * consumed_length input))
+: GTot (option (data_t & consumed_length input))
 = match parse pt input with
   | None -> None
   | Some (tg, consumed_tg) ->
@@ -1532,7 +1532,7 @@ val nondep_then
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-: Tot (parser (and_then_kind k1 k2) (t1 * t2))
+: Tot (parser (and_then_kind k1 k2) (t1 & t2))
 
 #set-options "--z3rlimit 16"
 
@@ -1624,7 +1624,7 @@ val tot_nondep_then
   (#k2: parser_kind)
   (#t2: Type)
   (p2: tot_parser k2 t2)
-: Pure (tot_parser (and_then_kind k1 k2) (t1 * t2))
+: Pure (tot_parser (and_then_kind k1 k2) (t1 & t2))
   (requires True)
   (ensures (fun y ->
     forall x . parse y x == parse (nondep_then #k1 p1 #k2 p2) x
@@ -1639,8 +1639,8 @@ let bare_serialize_nondep_then
   (#t2: Type)
   (p2: parser k2 t2)
   (s2: serializer p2)
-: Tot (bare_serializer (t1 * t2))
-= fun (x: t1 * t2) ->
+: Tot (bare_serializer (t1 & t2))
+= fun (x: t1 & t2) ->
   let (x1, x2) = x in
   Seq.append (s1 x1) (s2 x2)
 
@@ -1664,7 +1664,7 @@ val serialize_nondep_then_eq
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (input: t1 * t2)
+  (input: t1 & t2)
 : Lemma
   (serialize (serialize_nondep_then s1 s2) input == bare_serialize_nondep_then p1 s1 p2 s2 input)
 
@@ -1691,7 +1691,7 @@ val serialize_nondep_then_upd_left
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
 : Lemma
   (requires (Seq.length (serialize s1 y) == Seq.length (serialize s1 (fst x))))
@@ -1710,7 +1710,7 @@ val serialize_nondep_then_upd_left_chain
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
   (i' : nat)
   (s' : bytes)
@@ -1735,7 +1735,7 @@ val serialize_nondep_then_upd_bw_left
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
 : Lemma
   (requires (Seq.length (serialize s1 y) == Seq.length (serialize s1 (fst x))))
@@ -1757,7 +1757,7 @@ val serialize_nondep_then_upd_bw_left_chain
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
   (i' : nat)
   (s' : bytes)
@@ -1783,7 +1783,7 @@ val serialize_nondep_then_upd_right
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t2)
 : Lemma
   (requires (Seq.length (serialize s2 y) == Seq.length (serialize s2 (snd x))))
@@ -1802,7 +1802,7 @@ val serialize_nondep_then_upd_right_chain
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t2)
   (i' : nat)
   (s' : bytes)
@@ -1829,7 +1829,7 @@ let serialize_nondep_then_upd_bw_right
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t2)
 : Lemma
   (requires (Seq.length (serialize s2 y) == Seq.length (serialize s2 (snd x))))
@@ -1849,7 +1849,7 @@ let serialize_nondep_then_upd_bw_right_chain
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t2)
   (i' : nat)
   (s' : bytes)
@@ -1880,8 +1880,8 @@ let tot_bare_serialize_nondep_then
   (s1: tot_bare_serializer t1)
   (#t2: Type)
   (s2: tot_bare_serializer t2)
-: Tot (tot_bare_serializer (t1 * t2))
-= fun (x: t1 * t2) ->
+: Tot (tot_bare_serializer (t1 & t2))
+= fun (x: t1 & t2) ->
   let (x1, x2) = x in
   Seq.append (s1 x1) (s2 x2)
 
@@ -1905,7 +1905,7 @@ val tot_serialize_nondep_then_eq
   (#t2: Type)
   (#p2: tot_parser k2 t2)
   (s2: tot_serializer #k2 p2)
-  (input: t1 * t2)
+  (input: t1 & t2)
 : Lemma
   (bare_serialize (tot_serialize_nondep_then s1 s2) input == tot_bare_serialize_nondep_then s1 s2 input)
 

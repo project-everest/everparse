@@ -14,7 +14,7 @@ DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 # FStar/ and karamel/.
 unset FSTAR_EXE
 unset FSTAR_HOME
-unset KRML_HOME
+unset KRML_EXE
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -32,7 +32,7 @@ fi
 
 fixpath () {
     if $is_windows ; then
-        cygpath -m "$1"
+        cygpath -m "$(echo "$1" | sed 's!\r!!g')"
     else
         echo "$1"
     fi
@@ -83,7 +83,7 @@ make_everparse() {
     ## Clear all variables
     export EVERPARSE_USE_OPAMROOT=
     export EVERPARSE_USE_FSTAR_EXE=
-    export EVERPARSE_USE_KRML_HOME=
+    export EVERPARSE_USE_KRML_EXE=
     export EVERPARSE_USE_PULSE_HOME=
     rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
@@ -107,7 +107,7 @@ make_everparse() {
 	# use (Cygwin's) `ldd` to find out which dll we are using exactly, and
 	# ship that.
 	# (See FStarLang/FStar#4064)
-	LIBGMP10_DLL="$(ldd "$FSTAR_EXE" | sed -n 's/^[[:space:]]libgmp-10.dll => *\([^ ]*\) .*$/\1/p')"
+	LIBGMP10_DLL="$(ldd "$FSTAR_EXE" | grep x86_64 | sed -n 's/^[[:space:]]libgmp-10.dll => *\([^ ]*\) .*$/\1/p')"
 	if [[ -z "$LIBGMP10_DLL" ]] ; then
             echo libgmp-10.dll is missing
             exit 1
@@ -170,10 +170,14 @@ make_everparse() {
     fi
 
     # Copy KaRaMeL
-    $cp -L $KRML_HOME/krml everparse/bin/krml$exe
-    $cp -r $KRML_HOME/krmllib everparse/
-    $cp -r $KRML_HOME/include everparse/
-    $cp -r $KRML_HOME/misc everparse/
+    KRML_EXE="$EVERPARSE_HOME/opt/karamel/out/bin/krml$exe"
+    $cp -L "$KRML_EXE" everparse/bin/krml$exe
+    mkdir -p everparse/lib everparse/include
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-krmllib)")" everparse/lib/krml
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-include)")" everparse/include/krml
+    # TODO implement krml -locate-misc
+    mkdir -p everparse/share/krml
+    $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
@@ -199,7 +203,7 @@ make_everparse() {
     $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
 
     # Copy Pulse, evercbor and evercddl
-    if ! $is_windows; then
+    if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
 	$cp -r $PULSE_HOME/lib/pulse everparse/lib/
@@ -227,8 +231,8 @@ make_everparse() {
     # licenses
     mkdir -p everparse/licenses
     download https://raw.githubusercontent.com/FStarLang/FStar/master/LICENSE everparse/licenses/FStar
-    $cp $KRML_HOME/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
-    $cp $KRML_HOME/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     download https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt everparse/licenses/z3
     download https://raw.githubusercontent.com/libffi/libffi/master/LICENSE everparse/licenses/libffi6

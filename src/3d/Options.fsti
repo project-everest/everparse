@@ -1,18 +1,9 @@
 module Options
+include Options.Base
 open HashingOptions
 open FStar.All
 
-val display_usage : unit -> ML unit
-
-val compute_options (ignore: list string) : ML string
-
-val parse_cmd_line : unit -> ML (list string)
-
 val get_file_name (mname:string) : ML string
-
-val get_module_name (file: string) : ML string
-
-val get_output_dir : unit -> ML string
 
 val debug_print_string (s:string) : ML unit
 
@@ -30,11 +21,17 @@ val get_skip_c_makefiles : unit -> ML bool
 
 val get_no_everparse_h : unit -> ML bool
 
-val get_check_hashes : unit -> ML (option check_hashes_t)
+val get_hoist_locals : unit -> ML bool
+
+val get_goto_for_early_return : unit -> ML bool
+
+val get_blank_lines : unit -> ML bool
+
+val get_line_comments : unit -> ML bool
+
+val get_init_locals : unit -> ML (option string)
 
 val get_save_hashes : unit -> ML bool
-
-val get_check_inplace_hashes : unit -> ML (list string)
 
 val get_equate_types_list : unit -> ML (list (string & string))
 
@@ -89,6 +86,8 @@ val get_z3_flight_name: unit -> ML string
 val get_produce_testcases_c: unit -> ML bool
 
 val get_z3_skip_c_initializers: unit -> ML bool
+
+val get_use_error_handler_macro: unit -> ML bool
 
 val get_z3_use_ptr: unit -> ML bool
 

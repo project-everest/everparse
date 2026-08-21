@@ -13,7 +13,7 @@ module B = LowStar.Buffer
 let parse_inner_raw =
   LPI.parse_u16 `LPC.nondep_then` LPI.parse_u16
 
-let synth_inner (x: (U16.t * U16.t)) : Tot inner =
+let synth_inner (x: (U16.t & U16.t)) : Tot inner =
   let (left, right) = x in
   {left = left; right = right;}
 
@@ -22,7 +22,7 @@ let parse_inner' : LP.parser _ inner =
 
 let parse_inner = parse_inner'
 
-let synth_inner_recip (x: inner) : Tot (U16.t * U16.t) =
+let synth_inner_recip (x: inner) : Tot (U16.t & U16.t) =
   (x.left, x.right)
 
 let serialize_inner_raw : LP.serializer parse_inner_raw =
@@ -43,7 +43,7 @@ let serialize_inner_intro h b lo =
 let parse_t_raw =
   parse_inner ` LPC.nondep_then` LPI.parse_u32
 
-let synth_t (x: (inner * U32.t)) : Tot t =
+let synth_t (x: (inner & U32.t)) : Tot t =
   let (inner, last) = x in
   {inner = inner; last = last;}
 
@@ -53,7 +53,7 @@ let parse_t_kind = LP.get_parser_kind parse_t'
 
 let parse_t = parse_t'
 
-let synth_t_recip (x: t) : Tot (inner * U32.t) =
+let synth_t_recip (x: t) : Tot (inner & U32.t) =
   (x.inner, x.last)
 
 let serialize_t_raw : LP.serializer parse_t_raw =

@@ -76,7 +76,7 @@ let parse_all_bytes_kind =
 
 let parse_all_bytes'
   (input: bytes)
-: Tot (option (B32.bytes * consumed_length input))
+: Tot (option (B32.bytes & consumed_length input))
 = let len = Seq.length input in
   if len >= 4294967296
   then None
@@ -156,7 +156,7 @@ let parse_bounded_vlbytes_pred
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (x: B32.bytes)
-: GTot Type0
+: GTot prop
 = let reslen = B32.length x in
   min <= reslen /\ reslen <= max
 

@@ -312,11 +312,9 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label & values) 0)
   let alg' = mk_int alg;
   A.pts_to_len rest;
   let rest2 = S.from_array rest 0sz;
-  Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
+  assert pure ((Ghost.reveal vrest) `Seq.equal` Seq.empty);
+  Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Ghost.reveal vrest) []
       (rel_pair rel_evercddl_label rel_values);
-  assert pure (Seq.Base.create 0 (dummy_map_val ()) `Seq.equal` vrest);
-  rewrite each (FStar.Seq.Base.create 0
-            (dummy_map_val ())) as vrest;
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
   with res. assert rel_empty_or_serialized_map res (sign1_phdrs_spec alg);
@@ -363,12 +361,10 @@ fn mk_emphdrs (rest: A.larray (evercddl_label & values) 0)
   ensures borrows (rel_header_map res (sign1_emphdrs_spec ())) (pts_to rest #prest vrest)
 {
   A.pts_to_len rest;
-  assert pure (Seq.equal vrest (Seq.create 0 (dummy_map_val ())));
+  assert pure ((Ghost.reveal vrest) `Seq.equal` Seq.empty);
   let rest2 = S.from_array rest 0sz;
-  Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
+  Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Ghost.reveal vrest) []
       (rel_pair rel_evercddl_label rel_values);
-  rewrite each (FStar.Seq.Base.create 0
-            (dummy_map_val ())) as vrest;
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_header_map res (sign1_emphdrs_spec ());

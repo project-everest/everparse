@@ -2767,9 +2767,9 @@ fn l2r_write_filter
   (offset: _)
   (#v: _)
 {
-  unfold (vmatch_filter vmatch f x' x);
+  unfold (vmatch_filter vmatch f x' (Ghost.reveal x));
   let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out offset;
-  fold (vmatch_filter vmatch f x' x);
+  fold (vmatch_filter vmatch f x' (Ghost.reveal x));
   res
 }
 
@@ -2785,9 +2785,9 @@ fn compute_remaining_size_filter
   (out: _)
   (#v: _)
 {
-  unfold (vmatch_filter vmatch f x' x);
+  unfold (vmatch_filter vmatch f x' (Ghost.reveal x));
   let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out;
-  fold (vmatch_filter vmatch f x' x);
+  fold (vmatch_filter vmatch f x' (Ghost.reveal x));
   res
 }
 
@@ -2808,7 +2808,7 @@ fn zero_copy_parse_filter
   Trade.trans (vmatch res v') _ _;
   Trade.rewrite_with_trade
     (vmatch res v')
-    (vmatch_filter vmatch f res v);
+    (vmatch_filter vmatch f res (Ghost.reveal v));
   Trade.trans _ (vmatch res v') _;
   res
 }
@@ -2910,3 +2910,62 @@ fn l2r_leaf_write_false (_: unit)
 {
   0sz // dummy
 }
+
+(* ===== Pure structural [leaf_size] combinators (LowParse.Pulse.Base.leaf_size) ===== *)
+
+inline_for_extraction
+let leaf_size_empty : leaf_size serialize_empty =
+  leaf_size_constant_size serialize_empty 0sz ()
+
+inline_for_extraction
+let leaf_size_false (_: unit) : leaf_size serialize_false =
+  fun (x: squash False) -> 0sz
+
+(* Size through [serialize_synth]: the synthesized value serializes to exactly the
+   same bytes as its preimage (mirrors [l2r_leaf_write_synth]). *)
+inline_for_extraction
+let leaf_size_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+  (f1': ((x2: t2) -> (x1: t1 { x1 == f1 x2 })))
+: leaf_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= fun x ->
+    serialize_synth_eq p1 f2 s1 f1 () x;
+    w (f1' x)
+
+inline_for_extraction
+let leaf_size_synth'
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+: leaf_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= leaf_size_synth w f2 f1 (mk_synth f1)
+
+(* Size through [serialize_nondep_then]: the total length is the sum of the two
+   child lengths (mirrors [l2r_leaf_write_nondep_then]). The kind-high bound below
+   guarantees the total fits in a machine word, so the addition cannot overflow. *)
+inline_for_extraction
+let leaf_size_pair
+  (#t1 #t2: Type0)
+  (#k1: parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w1: leaf_size s1)
+  (sqs: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#k2: parser_kind) (#p2: parser k2 t2) (#s2: serializer p2) (w2: leaf_size s2)
+  (sqb: squash (match (and_then_kind k1 k2).parser_kind_high with | Some h -> h < pow2 16 | None -> False))
+: leaf_size #(t1 & t2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
+= fun x ->
+    let (x1, x2) = x in
+    length_serialize_nondep_then s1 s2 x1 x2;
+    serialize_length (serialize_nondep_then s1 s2) x;
+    let sz1 = w1 x1 in
+    let sz2 = w2 x2 in
+    // sz1 + sz2 == serialized length <= parser_kind_high < pow2 16, fits via fits_at_least_16
+    FStar.SizeT.add sz1 sz2
+
+(* Size through [serialize_filter]: filtering does not change the serialized bytes
+   (mirrors [l2r_leaf_write_filter]). *)
+inline_for_extraction
+let leaf_size_filter
+  (#t1: Type0)
+  (#k1: parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size #t1 s1)
+  (f: (t1 -> GTot bool))
+: leaf_size #(parse_filter_refine u#0 f) #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= fun x -> w x

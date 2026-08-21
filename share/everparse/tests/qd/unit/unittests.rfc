@@ -255,3 +255,30 @@ struct {
   t39 x;
   t40 y;
 } t41;
+
+uint32_le t60[8];
+
+uint16_le t61[6];
+
+/*
+ Single-field structs are simplified to type aliases (like t10). Unlike t10
+ (which wraps the constant-size total type t3), these wrap types that require a
+ validator/jumper/leaf-reader/leaf-writer/leaf-size, exercising the low-level
+ Pulse alias definitions in the type-alias code path (which must be eta-expanded
+ to avoid C function-pointer variables under qd -pulse).
+*/
+
+/* alias of an enum: exercises validator + reader + writer + leaf_size aliases */
+struct {
+  tag w;
+} t62;
+
+/* alias of a variable-length vector: exercises validator + jumper aliases */
+struct {
+  t5 w;
+} t63;
+
+/* alias of a multi-field struct: exercises validator + jumper aliases */
+struct {
+  t8 w;
+} t64;

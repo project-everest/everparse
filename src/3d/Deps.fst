@@ -206,7 +206,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | _ -> [] in
 
   let deps_of_attribute (a:attribute) : ML (list string) = match a with
-    | Entrypoint (Some p) -> maybe_dep p.probe_ep_fn `List.Tot.append` deps_of_expr p.probe_ep_length
+    | Entrypoint _ (Some p) -> maybe_dep p.probe_ep_fn `List.Tot.append` deps_of_expr p.probe_ep_length
     | _ -> []
   in
 
@@ -318,7 +318,7 @@ let build_dep_graph_from_list files =
     modules_with_extern_probe = [];
   }
   in
-  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
+  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.module_name fn) acc) (g0, []) files
   |> fst
   in
   {g1 with graph =
@@ -339,7 +339,7 @@ let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) 
   let dirname = files |> List.hd |> OS.dirname in
   let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
   files
-  |> List.map Options.get_module_name
+  |> List.map Options.module_name
   |> get_sorted_deps g
   |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
   |> List.rev
@@ -361,7 +361,7 @@ let has_extern_probe g m = List.Tot.mem m g.modules_with_extern_probe
 
 
 #push-options "--warn_error -272"
-let parsed_config : ref (option (Config.config & string)) = ST.alloc None
+let parsed_config : ref (option (Config.config & string)) = alloc None
 #pop-options
 
 let parse_config () =

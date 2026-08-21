@@ -14,7 +14,7 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE)
+KRML=$(KRML_EXE) -fstar $(FSTAR_EXE)
 
 extract: $(ALL_KRML_FILES)
 #	$(KRML) -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern=[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -bundle CDDL.Pulse.Test=*[rename=CDDLExtractionTest] -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY)

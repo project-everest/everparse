@@ -26,22 +26,19 @@ EverCrypt_Ed25519_verify(
 
 COSE_Format_evercddl_int COSE_EverCrypt_mk_int(int32_t i)
 {
-  if (i < (int32_t)0)
-    return
-      (
-        (COSE_Format_evercddl_int){
-          .tag = COSE_Format_Mkevercddl_int1,
-          { .case_Mkevercddl_int1 = (uint64_t)((int32_t)-1 - i) }
-        }
-      );
-  else
-    return
-      (
-        (COSE_Format_evercddl_int){
-          .tag = COSE_Format_Mkevercddl_int0,
-          { .case_Mkevercddl_int0 = (uint64_t)i }
-        }
-      );
+  return
+    i < 0 ? (
+            (COSE_Format_evercddl_int){
+              .tag = COSE_Format_Mkevercddl_int1,
+              { .case_Mkevercddl_int1 = (uint64_t)(-1 - i) }
+            }
+          )
+          : (
+            (COSE_Format_evercddl_int){
+              .tag = COSE_Format_Mkevercddl_int0,
+              { .case_Mkevercddl_int0 = (uint64_t)i }
+            }
+          );
 }
 
 static Pulse_Lib_Slice_slice__uint8_t
@@ -176,7 +173,7 @@ COSE_EverCrypt_sign1(
   K___COSE_Format_evercddl_label_COSE_Format_values phdrauxbuf[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     phdrauxbuf[_i] = COSE_EverCrypt_dummy_map_val();
-  COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int((int32_t)-8);
+  COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int(-8);
   COSE_Format_empty_or_serialized_map
   phdr =
     {
@@ -333,10 +330,7 @@ uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(
   FStar_Pervasives_either__COSE_Format_bstr_COSE_Format_nil projectee
 )
 {
-  if (projectee.tag == COSE_Format_Inl)
-    return true;
-  else
-    return false;
+  return projectee.tag == COSE_Format_Inl;
 }
 
 FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t

@@ -1,6 +1,7 @@
 #include "BoundedSumConstWrapper.h"
 #include "EverParse.h"
 #include "BoundedSumConst.h"
+
 void BoundedSumConstEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -27,9 +28,12 @@ void DefaultErrorHandler(
 
 BOOLEAN BoundedSumConstCheckBoundedSum(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
 	frame.filled = FALSE;
-	uint64_t result = BoundedSumConstValidateBoundedSum( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = BoundedSumConstValidateBoundedSum( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{

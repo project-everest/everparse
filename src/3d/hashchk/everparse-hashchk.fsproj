@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <OtherFlags>--nowarn:0086 --nowarn:0025 --nowarn:0044 --langversion:5.0 --mlcompatibility</OtherFlags>
+    <WarnOn>3390;$(WarnOn)</WarnOn>
+    <Name>everparse-hashchk</Name>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="prims.fs" />
+    <Compile Include="FStar_Pervasives_Native.fs" />
+    <Compile Include="fstarlib\FStar_Pervasives.fs" />
+    <Compile Include="fstarlib\FStar_List_Tot_Base.fs" />
+    <Compile Include="FStar_List.fs" />
+    <Compile Include="3d\Version.fs" />
+    <Compile Include="Hashing_Op.fs" />
+    <Compile Include="fstarlib\FStar_Char.fs" />
+    <Compile Include="FStar_String.fs" />
+    <Compile Include="fstarlib\FStar_Monotonic_Heap.fs" />
+    <Compile Include="fstarlib\FStar_CommonST.fs" />
+    <Compile Include="FStar_ST.fs" />
+    <Compile Include="FStar_All.fs" />
+    <Compile Include="fstarlib\FStar_IO.fs" />
+    <Compile Include="OS.fs" />
+    <Compile Include="3d\HashingOptions.fs" />
+    <Compile Include="3d\Hashing_Hash.fs" />
+    <Compile Include="3d\Utils.fs" />
+    <Compile Include="3d\Getopt.fs" />
+    <Compile Include="3d\Options_Base.fs" />
+    <Compile Include="HashCheck.fs" />
+  </ItemGroup>
+</Project>

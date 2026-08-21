@@ -1,0 +1,14 @@
+extern probe ProbeInPlace
+extern probe (INIT) ProbeInit
+
+entrypoint
+typedef struct _point {
+  UINT16 x;
+  UINT16 y { y >= x };
+} Point;
+
+entrypoint probe ProbeInPlace (length = 42)
+typedef struct _tagged(UINT64 bound) {
+  UINT16 x { x >= bound };
+  UINT16 y { y >= x };
+} Tagged;

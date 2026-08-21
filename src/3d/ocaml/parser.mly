@@ -455,11 +455,21 @@ cases:
   | cs=nonempty_list(case) { cs }
 
 attribute:
-  | ENTRYPOINT { Entrypoint None }
+  | ENTRYPOINT { Entrypoint (None, None) }
+  | ENTRYPOINT LPAREN name=IDENT RPAREN { Entrypoint (Some name, None) }
   | ENTRYPOINT PROBE i=qident LPAREN length=IDENT EQ len=expr RPAREN {
       if length.v.name <> "length" || length.v.modul_name <> None
       then error "Expected 'length' as the first argument to 'entrypoint probe'" length.range;
-      Entrypoint (Some ({
+      Entrypoint (None, Some ({
+        probe_ep_init = None;
+        probe_ep_fn = i;
+        probe_ep_length = len;
+      }))
+    }
+  | ENTRYPOINT LPAREN name=IDENT RPAREN PROBE i=qident LPAREN length=IDENT EQ len=expr RPAREN {
+      if length.v.name <> "length" || length.v.modul_name <> None
+      then error "Expected 'length' as the first argument to 'entrypoint probe'" length.range;
+      Entrypoint (Some name, Some ({
         probe_ep_init = None;
         probe_ep_fn = i;
         probe_ep_length = len;

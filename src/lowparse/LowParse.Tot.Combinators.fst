@@ -181,7 +181,7 @@ val nondep_then
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-: Tot (parser (and_then_kind k1 k2) (t1 * t2))
+: Tot (parser (and_then_kind k1 k2) (t1 & t2))
 
 let nondep_then #k1 = tot_nondep_then #k1
 

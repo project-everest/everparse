@@ -1,13 +1,15 @@
 all: verify compile
 
 EVERPARSE_HOME ?= ../..
-KRML_HOME ?= $(EVERPARSE_HOME)/../karamel
 
 LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
 
-INCLUDE_PATH = $(LOWPARSE_HOME) $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-FSTAR_OPTIONS = --cache_checked_modules --ext optimize_let_vc \
+INCLUDE_PATH = $(LOWPARSE_HOME)
+
+FSTAR_OPTIONS += --cache_checked_modules --ext optimize_let_vc \
 		--already_cached *,-ASN1Test,-ASN1 \
 		--cmi \
 	        --odir ocaml/extracted \
@@ -56,7 +58,7 @@ krml.rsp: $(ALL_KRML_FILES)
 	mv $@.tmp $@
 
 Test.c: krml.rsp
-	$(KRML_HOME)/krml -fstar $(FSTAR_EXE) \
+	$(KRML_EXE) -fstar $(FSTAR_EXE) \
 	  -bundle 'ASN1Test=ASN1Test.\*,Prims,FStar.\*,C.\*,C,LowStar.\*,LowParse.\*' \
 	  -no-prefix ASN1Test \
 	  -skip-makefiles \

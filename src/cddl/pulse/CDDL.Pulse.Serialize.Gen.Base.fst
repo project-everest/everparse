@@ -252,7 +252,7 @@ fn impl_serialize_ext
     ([@@@erasable]sq: squash (
       (Ghost.reveal inj == true \/ Ghost.reveal inj' == true) /\
       typ_equiv t' t /\
-      (forall (x: cbor) . Ghost.reveal t' x ==> ((Ghost.reveal ps'.parser x <: tgt) == Ghost.reveal ps.parser x))
+      (forall (x: cbor) . Ghost.reveal t' x ==> (((Ghost.reveal ps').parser x <: tgt) == (Ghost.reveal ps).parser x))
     ))
 : impl_serialize #p overflows_low fits_high #(Ghost.reveal t') #tgt #inj' (Ghost.reveal ps') #impl_tgt r
 =
@@ -285,18 +285,15 @@ fn impl_serialize_bij
     (g21: (impl_tgt' -> impl_tgt))
     ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
     ([@@@erasable]gprf_12_21: (x: impl_tgt') -> squash (g12 (g21 x) == x))
-: impl_serialize #p overflows_low fits_high #t #tgt' #inj (spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 f21)
+: impl_serialize #p overflows_low fits_high #t #tgt' #inj (spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 (Ghost.reveal f21))
 =
     (c: _)
     (#v: _)
     (out: _)
 {
-  let c' = g21 c;
-  Trade.rewrite_with_trade
-    (rel_fun r g21 f21 c v)
-    (r c' (Ghost.reveal f21 v));
-  let res = i c' #(Ghost.reveal f21 v) out; // FIXME: WHY WHY WHY the explicit here?
-  Trade.elim _ _;
+  unfold (rel_fun r g21 (Ghost.reveal f21) c (Ghost.reveal v));
+  let res = i (g21 c) #((Ghost.reveal f21) (Ghost.reveal v)) out; // FIXME: WHY WHY WHY the explicit here?
+  fold (rel_fun r g21 (Ghost.reveal f21) c (Ghost.reveal v));
   res
 }
 

@@ -2,13 +2,12 @@ EVERPARSE_HOME ?= $(realpath ../../../../../..)
 EVERPARSE_SRC_PATH ?= $(EVERPARSE_HOME)/src
 
 LOWPARSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse
-KRML_HOME ?= $(EVERPARSE_HOME)/opt/karamel
 
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
 export FSTAR_EXE
 export LOWPARSE_HOME
-export KRML_HOME
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -24,29 +23,27 @@ CHECKED_EXT=.checked$(LAX_EXT)
 
 FSTAR_OPTIONS += --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
-		--include $(LOWPARSE_HOME) --include $(LOWPARSE_HOME)/pulse --include $(PULSE_HOME)/lib/pulse --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi --ext context_pruning \
+		--include $(LOWPARSE_HOME) --include $(LOWPARSE_HOME)/pulse --include $(PULSE_HOME)/lib/pulse --include .. --cmi --ext context_pruning \
 		--ext 'optimize_let_vc=false' \
 		--warn_error '@272'
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
-
-HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
 ifeq ($(OS),Darwin)
 KRML_OPTS += -ccopt -Wno-tautological-constant-out-of-range-compare
 endif
 
 # -Wno-tautological-overlap-compare because of T32
-KRML = $(KRML_HOME)/krml \
+KRML = $(KRML_EXE) \
 	 -fstar $(FSTAR_EXE) \
+	 -skip-compilation \
 	 -ccopt "-O3" -ccopt "-ffast-math" \
 	 -ccopt "-Wno-tautological-overlap-compare" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
-	 -bundle 'LowParse.\*' \
+	 -bundle 'FStar.\*,Prims,Pulse.\*,PulseCore.\*,LowParse.\*,C,C.\*' \
 	 $(KRML_OPTS) \
-	 $(HEADERS) \
-	 -warn-error '@2-26'
+	 -warn-error '@2@15-26'
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
@@ -84,16 +81,10 @@ endif
 
 ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
 
-extract: $(ALL_KRML_FILES) # from .depend
+test: $(ALL_KRML_FILES) krml/Test.krml
 	-@mkdir out
-	$(KRML) -skip-compilation $^
-
-test.exe: $(ALL_KRML_FILES) krml/Test.krml
-	-@mkdir out
-	$(KRML) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c -no-prefix Test $^ -o test.exe
-
-test: test.exe
-	./test.exe
+	$(KRML) -no-prefix Test $^
+	$(CC) -c -I out -I .. $$f out/*.c
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)

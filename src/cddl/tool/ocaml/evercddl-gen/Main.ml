@@ -84,7 +84,7 @@ let string_matches_regexp s r = Re.execp r s
 let filename_is_relative n =
   if Filename.is_relative n
   then true
-  else if Sys.cygwin
+  else if Sys.win32
   then not (string_matches_regexp n regexp_path_drive)
   else false
 
@@ -116,26 +116,32 @@ let fstar_exe =
        then fstar_exe
        else "fstar.exe" (* rely on PATH *)
 
-let krml_home =
+let krml_exe =
   try
-    Sys.getenv "KRML_HOME"
+    Sys.getenv "KRML_EXE"
   with
   | Not_found ->
-     let opt_krml = Filename.concat (Filename.concat everparse_home "opt") "karamel" in
-     if Sys.file_exists opt_krml
-     then opt_krml
-     else
+    let krml = "krml" ^ (if Sys.win32 then ".exe" else "") in
+    let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "karamel") "out") "bin") krml in
+    if Sys.file_exists opt_krml
+    then opt_krml
+    else
        (* assume a binary package *)
-       everparse_home
+       Filename.concat (Filename.concat everparse_home "bin") krml
 
-let _ = Unix.putenv "KRML_HOME" krml_home
+let krml_locate k tmpdir =
+  let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
+  let cmd = Filename.quote_command krml_exe ~stdout:tmpfile ["-locate-" ^ k] in
+  if Sys.command cmd <> 0 then failwith ("Unable to run krml -locate-" ^ k);
+  let ch = open_in tmpfile in
+  let res = input_line ch in
+  close_in ch;
+  Sys.remove tmpfile;
+  res
 
-let krml_exe =
-  let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
-  let res1 = Filename.concat krml_home krml in
-  if Sys.file_exists res1
-  then res1
-  else Filename.concat (Filename.concat krml_home "bin") krml
+let krmllib = krml_locate "krmllib"
+
+let krmlinclude = krml_locate "include"
 
 let pulse_home =
   try
@@ -172,11 +178,10 @@ let everparse_src_cddl = Filename.concat everparse_src "cddl"
 let everparse_src_cddl_spec = Filename.concat everparse_src_cddl "spec"
 let everparse_src_cddl_pulse = Filename.concat everparse_src_cddl "pulse"
 let everparse_src_cddl_tool = Filename.concat everparse_src_cddl "tool"
-let krml_home_krmllib = Filename.concat krml_home "krmllib"
 let everparse_home_lib = Filename.concat everparse_home "lib"
 let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
 
-let include_options =
+let include_options krml_home_krmllib =
   include_option_of_paths
     [
       everparse_src_cbor_spec;
@@ -210,7 +215,7 @@ let include_options_for_rust =
 (* TODO: honor OTHERFLAGS. This would require implementing Bash word
    splitting, since we are using lists of arguments. *)
 
-let fstar_options =
+let fstar_options krmllib =
   z3_executable_option @
     [
       "--cache_checked_modules";
@@ -218,7 +223,7 @@ let fstar_options =
       "--cmi";
       "--ext"; "context_pruning";
     ] @
-      include_options
+      include_options krmllib
 
 let admit = ref false
 
@@ -286,6 +291,7 @@ let _ =
   let basename = produce_fst_file tmpdir dir in
   if !fstar_only then exit 0;
   let filename = Filename.concat dir basename in
+  let krmllib = krmllib tmpdir in
   let res = run_cmd fstar_exe
     (
       [
@@ -294,7 +300,7 @@ let _ =
         "--already_cached"; ("*,-" ^ !mname);
       ] @
         (if !admit then [ "--admit_smt_queries"; "true" ] else []) @
-        fstar_options
+        fstar_options krmllib
     )
   in
   if res <> 0
@@ -315,7 +321,7 @@ let _ =
           "--extract_module"; !mname;
         ] @
           (if is_rust () then include_options_for_rust else []) @
-          fstar_options
+          fstar_options krmllib
       )
   in
   if res <> 0
@@ -366,11 +372,16 @@ let _ =
       ] @
         c_krml_list
   in
+  let krml_tmpfile = Filename.temp_file ~temp_dir:tmpdir "krml_options" ".rsp" in
+  let krml_tmpfile_out = open_out krml_tmpfile in
+  let _ = List.iter (fun s -> output_string krml_tmpfile_out s; output_char krml_tmpfile_out '\n') krml_options in
+  let _ = close_out krml_tmpfile_out in
   let res =
     run_cmd
       krml_exe
-      krml_options
+      ["@" ^ krml_tmpfile]
   in
+  let _ = Sys.remove krml_tmpfile in
   (* In the C case, krml only emitted the sources (-skip-compilation). Drive the
      C compiler ourselves unless compilation was explicitly skipped. The byte
      slice that cbor_raw embeds is homed by the CBOR library as the nominal
@@ -384,11 +395,12 @@ let _ =
       else begin
         let cc = try Sys.getenv "CC" with Not_found -> "cc" in
         let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
+        let krmlinclude = krmlinclude tmpdir in
         let cc_args = [
-          "-I"; Filename.concat (Filename.concat krml_home "krmllib") "dist/minimal";
-          "-I"; Filename.concat krml_home "krmllib";
+          "-I"; Filename.concat (Filename.concat krmllib "dist") "minimal";
+          "-I"; krmllib;
           "-I"; det_c;
-          "-I"; Filename.concat krml_home "include";
+          "-I"; krmlinclude;
           "-I"; !odir;
           "-Wall"; "-Werror"; "-Wno-unknown-warning-option"; "-g"; "-fwrapv";
           "-D_BSD_SOURCE"; "-D_DEFAULT_SOURCE"; "-Wno-parentheses"; "-std=c11";

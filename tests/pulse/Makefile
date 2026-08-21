@@ -15,7 +15,7 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 
-KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
+KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 extract: $(ALL_KRML_FILES)
 	$(KRML) -bundle 'ArithParse.Impl=*[rename=ArithParse]' -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c

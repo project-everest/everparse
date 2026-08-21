@@ -47,7 +47,7 @@ type comments_buffer_t = {
 
 #push-options "--warn_error -272" //top-level effect; ok
 let comments_buffer : comments_buffer_t =
-  let buffer : ref (list (string & pos & pos)) = FStar.ST.alloc [] in
+  let buffer : ref (list (string & pos & pos)) = alloc [] in
   let buffer_comment (c, s, p) =
     let c = String.substring c 2 (String.length c - 2) in
     buffer := (c, s, p) :: !buffer
@@ -83,7 +83,7 @@ let string_of_pos p =
 
 /// range: A source extent
 [@@ PpxDerivingYoJson ]
-let range = pos * pos
+let range = pos & pos
 
 /// comment: A list of line comments, i.e., a list of strings
 let comments = list string
@@ -166,7 +166,7 @@ type integer_type =
 [@@ PpxDerivingYoJson ]
 let pointer_size_t = i:integer_type { i == UInt32 \/ i == UInt64 }
 
-let parse_int_suffix (i:string) : string * option integer_type =
+let parse_int_suffix (i:string) : string & option integer_type =
     let l = String.length i in
     if l >= 2
     then let suffix = String.sub i (l - 2) 2 in
@@ -596,7 +596,7 @@ type probe_entrypoint = {
 [@@ PpxDerivingYoJson ]
 noeq
 type attribute =
-  | Entrypoint: (probe: option probe_entrypoint) -> attribute
+  | Entrypoint: (ep_name: option ident) -> (probe: option probe_entrypoint) -> attribute
   | Aligned
   | Noextract
 
@@ -767,7 +767,7 @@ let decl_with_v (d:decl) (v:decl') : decl =
 noeq
 type type_refinement = {
   includes:list string;
-  type_map:list (ident * option ident);
+  type_map:list (ident & option ident);
   auto_type_map: list (ident & option ident); //map from type to its auto-generated type
 }
 
@@ -1141,8 +1141,10 @@ let print_generics generics =
 
 let print_attribute (a:attribute) : ML string =
   match a with
-  | Entrypoint None -> "entrypoint"
-  | Entrypoint (Some p) -> Printf.sprintf "entrypoint(probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
+  | Entrypoint None None -> "entrypoint"
+  | Entrypoint (Some n) None -> Printf.sprintf "entrypoint(%s)" (print_ident n)
+  | Entrypoint None (Some p) -> Printf.sprintf "entrypoint probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
+  | Entrypoint (Some n) (Some p) -> Printf.sprintf "entrypoint(%s) probe(%s, length=%s)" (print_ident n) (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
   | Aligned -> "aligned"
   | Noextract -> "noextract"
 let print_attributes (a:list attribute) : ML string =
@@ -1262,14 +1264,31 @@ let print_decls (ds:list decl) : ML string =
 let has_entrypoint (l:list attribute) : Tot bool =
   List.Tot.existsb Entrypoint? l
 
+let has_plain_entrypoint (l:list attribute) : Tot bool =
+  List.Tot.existsb (fun a -> match a with Entrypoint _ None -> true | _ -> false) l
+
 let rec get_entrypoint_probes' (l: list attribute) (accu: list probe_entrypoint) : Tot (list probe_entrypoint) =
   match l with
   | [] -> List.Tot.rev accu
-  | Entrypoint (Some probe) :: q -> get_entrypoint_probes' q (probe :: accu)
+  | Entrypoint _ (Some probe) :: q -> get_entrypoint_probes' q (probe :: accu)
   | _ :: q -> get_entrypoint_probes' q accu
 
 let get_entrypoint_probes (l: list attribute) : Tot (list probe_entrypoint) =
   get_entrypoint_probes' l []
+
+let get_plain_entrypoint_name (l: list attribute) : Tot (option ident) =
+  match List.Tot.find (fun a -> match a with Entrypoint _ None -> true | _ -> false) l with
+  | Some (Entrypoint n None) -> n
+  | _ -> None
+
+let rec get_probe_entrypoint_names' (l: list attribute) (accu: list (option ident)) : Tot (list (option ident)) =
+  match l with
+  | [] -> List.Tot.rev accu
+  | Entrypoint n (Some _) :: q -> get_probe_entrypoint_names' q (n :: accu)
+  | _ :: q -> get_probe_entrypoint_names' q accu
+
+let get_probe_entrypoint_names (l: list attribute) : Tot (list (option ident)) =
+  get_probe_entrypoint_names' l []
 
 let is_entrypoint_or_export d = match d.d_decl.v with
   | Record names _ _ _ _
@@ -1548,7 +1567,7 @@ let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
 ////////////////////////////////////////////////////////////////////////////////
 module H = Hashtable
 let subst = H.t ident' expr
-let mk_subst (s:list (ident * expr)) : ML subst =
+let mk_subst (s:list (ident & expr)) : ML subst =
   let h = H.create 10 in
   List.iter (fun (i, e) -> H.insert h i.v e) s;
   h

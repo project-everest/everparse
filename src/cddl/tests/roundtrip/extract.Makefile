@@ -23,7 +23,7 @@ endif
 
 EVERPARSE_SRC_PATH := $(realpath ../../..)
 
-# karamel.Makefile adds KRML_HOME/krmllib paths; pulse.Makefile adds
+# karamel.Makefile adds krmllib paths; pulse.Makefile adds
 # PULSE_HOME/lib/pulse and sets OCAMLPATH for pulse extraction.
 INCLUDE_PATHS += \
     $(EVERPARSE_SRC_PATH)/cbor/spec \

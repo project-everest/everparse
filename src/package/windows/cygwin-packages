@@ -1,10 +1,13 @@
 git
 wget
 time
-pkg-config
+pkg-config=2.5.1-1
+pkgconf=2.5.1-1
 mingw64-i686-gmp
 mingw64-i686-libffi
 mingw64-x86_64-gmp
 mingw64-x86_64-libffi
 zip
 unzip
+make
+cmake

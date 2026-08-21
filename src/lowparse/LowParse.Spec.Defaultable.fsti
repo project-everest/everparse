@@ -6,7 +6,7 @@ let mk_option_tuple
   (#t #t' : Type)
   (a : option t)
   (b : option t')
-: option (t * t')
+: option (t & t')
 = match a, b with
   | None, _
   | _, None -> None
@@ -20,14 +20,14 @@ let parse_defaultable_kind (k : parser_kind) : Tot parser_kind = {
   parser_kind_injective = k.parser_kind_injective;
 }
 
-let parse_defaultable_injective_cond (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) (b : bytes) : GTot Type0 =
+let parse_defaultable_injective_cond (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) (b : bytes) : GTot prop =
   match defaultablev with
   | None -> True
   | Some v -> match (parse p b) with
     | None -> True
     | Some (v', _) -> ~ (v == v')
 
-let parse_defaultable_injective_cond_prop (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) : GTot Type0 =
+let parse_defaultable_injective_cond_prop (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) : GTot prop =
   forall (b : bytes) . parse_defaultable_injective_cond defaultablev p b
 
 
