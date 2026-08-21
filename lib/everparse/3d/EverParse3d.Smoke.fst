@@ -52,3 +52,44 @@ let smoke_static
     false
     false
 = A.validate_without_reading #_ #_ #_ #St.input_stream_static A.validate____UINT32
+
+(* Probe combinators, at the `buffer` backend. As above, this is here to make
+   sure the definitions of EverParse3d.ProbeActions are really applicable by a
+   client (and, in particular, that they are not hidden inside a comment). *)
+module P = EverParse3d.ProbeActions
+
+inline_for_extraction noextract
+let smoke_probe
+  (f: P.probe_fn_incremental #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t)
+  (init: P.init_probe_dest_t #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t)
+: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t unit false false false
+= P.init_and_probe "smoke"
+    init
+    (P.seq_probe_m B.error_handler_macro "smoke" ()
+      (P.probe_and_copy_init_sz B.error_handler_macro f)
+      (P.probe_array B.error_handler_macro 8uL
+        (P.seq_probe_m B.error_handler_macro "elem" ()
+          (P.skip_read 4uL)
+          (P.skip_write 4uL))))
+
+inline_for_extraction noextract
+fn smoke_run_probe
+  (m: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t unit false false false)
+  (ctxt: EverParse3d.Actions.Common.app_ctxt)
+  (src: FStar.UInt64.t)
+  (sz: FStar.UInt64.t)
+  (dest: B.copy_buffer_t)
+  (#v_ctxt: Ghost.erased FStar.UInt8.t)
+  (#contents_dest #v_dest: Ghost.erased (Seq.seq FStar.UInt8.t))
+requires
+    pts_to ctxt v_ctxt ** EverParse3d.CopyBuffer.pts_to #_ #B.base_t #B.len_t #B.pos_t dest contents_dest v_dest
+returns b: FStar.UInt64.t
+ensures
+    (exists* v_ctxt' contents_dest' v_dest' .
+      pts_to ctxt v_ctxt' **
+      EverParse3d.CopyBuffer.pts_to #_ #B.base_t #B.len_t #B.pos_t dest contents_dest' v_dest' **
+      pure (b <> 0uL ==> contents_dest' == v_dest')
+    )
+{
+  P.run_probe_m B.error_handler_macro m "smoke" "smoke" "smoke" ctxt () src sz dest
+}

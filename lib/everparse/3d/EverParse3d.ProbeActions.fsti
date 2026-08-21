@@ -158,7 +158,9 @@ val probe_and_read_at_offset_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t s)
+  (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL })
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+  (reader:probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t s)
 : probe_m #_ #_ #_ #_ #inst #cbinst t true false use_error_handler
 
 inline_for_extraction
@@ -168,7 +170,9 @@ val seq_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1:probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler) (m2:probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler)
+  (#use_error_handler:bool) (#a:Type0)
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+  (detail:string) (dflt:a) (m1:probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler) (m2:probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler)
 : probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler
 
 inline_for_extraction
@@ -178,7 +182,9 @@ val bind_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler) (m2:a -> probe_m #_ #_ #_ #_ #inst #cbinst b true false use_error_handler)
+  (#use_error_handler:bool) (#a #b:Type0)
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+  (detail:string) (dflt:b) (m1:probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler) (m2:a -> probe_m #_ #_ #_ #_ #inst #cbinst b true false use_error_handler)
 : probe_m #_ #_ #_ #_ #inst #cbinst b true false use_error_handler
 
 inline_for_extraction
@@ -188,7 +194,9 @@ val probe_and_copy_init_sz
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t)
+  (#use_error_handler:bool)
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+  (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t)
 : probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
 
 inline_for_extraction
@@ -198,7 +206,7 @@ val return_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (#a:Type) (v:a)
+  (#use_error_handler:bool) (#a:Type0) (v:a)
 : probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler
 
 inline_for_extraction
@@ -248,7 +256,9 @@ val probe_array
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler)
+  (#use_error_handler:bool)
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+  (byte_len:U64.t) (probe_elem:probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler)
 : probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
 
 inline_for_extraction
@@ -263,7 +273,7 @@ val lift_pure_external_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (#a:Type) (f:pure_external_action a)
+  (#use_error_handler:bool) (#a:Type0) (f:pure_external_action a)
 : probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler
 
 inline_for_extraction
@@ -287,16 +297,20 @@ val run_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-  (#use_error_handler:bool) (#any:bool) 
+  (#use_error_handler:bool) (#any:bool)
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
   (m:probe_m #_ #_ #_ #_ #inst #cb_inst unit false any use_error_handler)
-  (tn fn det:string)
+  (tn fn_ det:string)
   (ctxt:app_ctxt)
-  (err:(if use_error_handler then error_handler #_ #_ #_ #inst else unit))
+  (err:(if use_error_handler then error_handler #base_t #len_t #pos_t #inst else unit))
   (src:U64.t)
   (sz:U64.t)
   (dest:copy_buffer_t)
+  (#v_ctxt: Ghost.erased U8.t)
+  (#contents_dest: Ghost.erased (Seq.seq U8.t))
+  (#v_dest: Ghost.erased (Seq.seq U8.t))
 : stt U64.t
-    (exists* v_ctxt contents_dest v_dest .
+    (
       pts_to ctxt v_ctxt **
       CB.pts_to #_ #_ #_ #_ #_ #cb_inst dest contents_dest v_dest
     )
