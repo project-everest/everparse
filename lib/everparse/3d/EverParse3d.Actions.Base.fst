@@ -15,6 +15,7 @@ open FStar.FunctionalExtensionality
 open EverParse3d.Actions.Common
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 module P = EverParse3d.Prelude
 module SZ = FStar.SizeT
 
@@ -94,7 +95,7 @@ let validate_with_action_no_read
      (#nz:bool)
      (#wk: _)
      (#k:parser_kind nz wk)
-     (#t:Type)
+     (#t:Type0)
      (p:parser k t)
      (extra_state: state_dict)
      (has_action:bool)
@@ -1339,6 +1340,7 @@ let probe_then_validate
       )
 
 #pop-options
+*)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Group A combinators: actions
@@ -1753,7 +1755,7 @@ fn validate_total_constant_size_no_read
       (#nz:bool)
       (#wk: _)
       (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
+      (#[@@@erasable] t:Type0)
       ([@@@erasable] p:parser k t)
       (sz: SZ.t)
       ([@@@erasable] u: squash (
@@ -1814,7 +1816,7 @@ fn lift_reader
 }
 
 inline_for_extraction noextract
-fn validate____UINT8
+let validate____UINT8
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1823,14 +1825,14 @@ fn validate____UINT8
 = validate_total_constant_size_no_read parse____UINT8 1sz ()
 
 inline_for_extraction noextract
-fn read____UINT8
+let read____UINT8
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT8
 = lift_reader parse____UINT8 P.read____UINT8 1sz ()
 
 inline_for_extraction noextract
-fn validate____UINT8BE
+let validate____UINT8BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1839,14 +1841,14 @@ fn validate____UINT8BE
 = validate_total_constant_size_no_read parse____UINT8BE 1sz ()
 
 inline_for_extraction noextract
-fn read____UINT8BE
+let read____UINT8BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT8BE
 = lift_reader parse____UINT8BE P.read____UINT8BE 1sz ()
 
 inline_for_extraction noextract
-fn validate____UINT16BE
+let validate____UINT16BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1855,14 +1857,14 @@ fn validate____UINT16BE
 = validate_total_constant_size_no_read parse____UINT16BE 2sz ()
 
 inline_for_extraction noextract
-fn read____UINT16BE
+let read____UINT16BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT16BE
 = lift_reader parse____UINT16BE P.read____UINT16BE 2sz ()
 
 inline_for_extraction noextract
-fn validate____UINT32BE
+let validate____UINT32BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1871,14 +1873,14 @@ fn validate____UINT32BE
 = validate_total_constant_size_no_read parse____UINT32BE 4sz ()
 
 inline_for_extraction noextract
-fn read____UINT32BE
+let read____UINT32BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT32BE
 = lift_reader parse____UINT32BE P.read____UINT32BE 4sz ()
 
 inline_for_extraction noextract
-fn validate____UINT64BE
+let validate____UINT64BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1887,14 +1889,14 @@ fn validate____UINT64BE
 = validate_total_constant_size_no_read parse____UINT64BE 8sz ()
 
 inline_for_extraction noextract
-fn read____UINT64BE
+let read____UINT64BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT64BE
 = lift_reader parse____UINT64BE P.read____UINT64BE 8sz ()
 
 inline_for_extraction noextract
-fn validate____UINT16
+let validate____UINT16
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1903,14 +1905,14 @@ fn validate____UINT16
 = validate_total_constant_size_no_read parse____UINT16 2sz ()
 
 inline_for_extraction noextract
-fn read____UINT16
+let read____UINT16
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT16
 = lift_reader parse____UINT16 P.read____UINT16 2sz ()
 
 inline_for_extraction noextract
-fn validate____UINT32
+let validate____UINT32
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1919,14 +1921,14 @@ fn validate____UINT32
 = validate_total_constant_size_no_read parse____UINT32 4sz ()
 
 inline_for_extraction noextract
-fn read____UINT32
+let read____UINT32
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT32
 = lift_reader parse____UINT32 P.read____UINT32 4sz ()
 
 inline_for_extraction noextract
-fn validate____UINT64
+let validate____UINT64
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -1935,7 +1937,7 @@ fn validate____UINT64
 = validate_total_constant_size_no_read parse____UINT64 8sz ()
 
 inline_for_extraction noextract
-fn read____UINT64
+let read____UINT64
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t parse____UINT64
@@ -2031,7 +2033,7 @@ fn validate_drop
 }
 
 inline_for_extraction noextract
-fn validate_without_reading
+let validate_without_reading
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#nz:bool)
@@ -2156,7 +2158,8 @@ fn action_field_ptr
   (contents_sl: _)
   (v_sl: _)
 {
-  (Some?.v f) sl_base sl_len sl_pos contents_sl v_sl
+  let g = Some?.v f;
+  g sl_base sl_len sl_pos contents_sl v_sl
 }
 
 noextract
@@ -2183,7 +2186,8 @@ fn action_field_ptr_after
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   with w . assert (pts_to write_to #1.0R w);
-  let res = (Some?.v f) sz write_to sl_base sl_len sl_pos w contents_sl v_sl;
+  let g = Some?.v f;
+  let res = g sz write_to sl_base sl_len sl_pos w contents_sl v_sl;
   forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) _;
   res
 }
@@ -2191,6 +2195,13 @@ fn action_field_ptr_after
 ////////////////////////////////////////////////////////////////////////////////
 // Lists that consume all the remaining input
 ////////////////////////////////////////////////////////////////////////////////
+
+let seq_empty_eq_slice_end
+  (v vcur: Seq.seq LP.byte)
+: Lemma
+  (ensures (Seq.length vcur == 0 ==> vcur == Seq.slice v (Seq.length v) (Seq.length v)))
+= if Seq.length vcur = 0
+  then Seq.lemma_eq_elim vcur (Seq.slice v (Seq.length v) (Seq.length v))
 
 inline_for_extraction noextract
 fn validate_list
@@ -2205,7 +2216,7 @@ fn validate_list
       (#use_error_handler:bool)
       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
 : validate_with_action_t
-    #base_t #len_t #pos_t
+    #base_t #len_t #pos_t #inst
     #false #WeakKindConsumesAll
     #(LPL.parse_list_kind k.LP.parser_kind_injective)
     (LPL.parse_list p) extra_state ha use_error_handler
@@ -2262,12 +2273,12 @@ fn validate_list
   let fres = !res;
   with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
   LPL.parse_list_eq p vcur;
-  Seq.lemma_eq_elim vcur (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl) (Seq.length v_sl));
+  seq_empty_eq_slice_end (Ghost.reveal v_sl) vcur;
   fres
 }
 
 inline_for_extraction noextract
-fn validate_all_zeros
+let validate_all_zeros
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
@@ -2298,6 +2309,8 @@ let list_up_to_done
 = Some? (LP.parse q v_sl) /\
   snd (Some?.v (LP.parse q v_sl)) == Seq.length v_sl - Seq.length vcur
 
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
 inline_for_extraction noextract
 fn validate_list_up_to
   (#base_t #len_t #pos_t: Type0)
@@ -2313,7 +2326,7 @@ fn validate_list_up_to
       (terminator: t)
       ([@@@erasable] prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
 : validate_with_action_t
-    #base_t #len_t #pos_t
+    #base_t #len_t #pos_t #inst
     #true #WeakKindStrongPrefix
     #(LUT.parse_list_up_to_kind k)
     (LUT.parse_list_up_to (cond_string_up_to terminator) p prf)
@@ -2379,6 +2392,30 @@ fn validate_list_up_to
   fres
 }
 
+#pop-options
+
+let string_prf
+  (#k: parser_kind true WeakKindStrongPrefix)
+  (#t: eqtype)
+  (p: parser k t)
+  (terminator: t)
+: Tot (LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+= LP.parser_kind_prop_equiv k p;
+  (fun _ _ _ -> ())
+
+let parse_string_eq
+  (#k: parser_kind true WeakKindStrongPrefix)
+  (#t: eqtype)
+  (p: parser k t)
+  (terminator: t)
+  (v: Seq.seq LP.byte)
+: Lemma
+  (ensures (
+    LP.parse (parse_string p terminator) v ==
+    LP.parse (LUT.parse_list_up_to (cond_string_up_to terminator) p (string_prf p terminator)) v
+  ))
+= LP.parser_kind_prop_equiv k p
+
 inline_for_extraction noextract
 fn validate_string
   (#base_t #len_t #pos_t: Type0)
@@ -2393,7 +2430,20 @@ fn validate_string
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
 : validate_with_action_t #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler
-= validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) parse_string_kind
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  parse_string_eq p terminator v_sl;
+  let v2 = validate_list_up_to v r terminator (string_prf p terminator);
+  v2 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
+}
 
 (* In Low*, when the payload has a total constant size, this combinator picks a
    specialized validator that merely checks that enough bytes are available,
@@ -2401,7 +2451,7 @@ fn validate_string
    always take the general path for now.
    TODO: port validate_nlist_total_constant_size{,_mod_ok,_mod_ko}. *)
 inline_for_extraction noextract
-fn validate_nlist_constant_size_without_actions
+let validate_nlist_constant_size_without_actions
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (n:U32.t)
