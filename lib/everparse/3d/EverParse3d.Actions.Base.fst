@@ -61,7 +61,7 @@ let validate_with_action_t
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
-: Type 
+: Type0
 = (ctxt: app_ctxt) ->
   (error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
   (sl_base: base_t) ->
@@ -100,7 +100,7 @@ let validate_with_action_no_read
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
-: Type 
+: Type0
 = (ctxt: app_ctxt) ->
   (error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
   (sl_base: base_t) ->
@@ -191,7 +191,7 @@ let leaf_reader
   (#k: parser_kind nz WeakKindStrongPrefix)
   (#t: Type)
   (p: parser k t)
-: Tot Type
+: Tot Type0
 =
   (sl_base: base_t) ->
   (sl_len: len_t) ->
@@ -1116,12 +1116,6 @@ fn read_impos
   ()
 }
 
-inline_for_extraction
-let validator
-  (#base_t #len_t #pos_t: Type0)
-  {| inst: I.input_stream_inst base_t len_t pos_t  |}
-  #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t) (#use_error_handler:bool)
-  = validate_with_action_no_read #base_t #len_t #pos_t p state_dict_empty false use_error_handler
 
 
 
@@ -2104,39 +2098,6 @@ fn action_field_pos_32
 // `option`, and the corresponding action takes a `squash (Some? ...)` witness.
 // A backend that does not support an operation simply provides `None`.
 ////////////////////////////////////////////////////////////////////////////////
-
-inline_for_extraction noextract
-let field_ptr_t
-  (base_t len_t pos_t: Type0)
-  {| inst: I.input_stream_inst base_t len_t pos_t  |}
-  (ptr_t: Type0)
-: Type
-= (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
-  (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
-  (v_sl: Ghost.erased (Seq.seq U8.t)) ->
-  stt ptr_t
-    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
-    (fun _ -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
-
-inline_for_extraction noextract
-let field_ptr_after_t
-  (base_t len_t pos_t: Type0)
-  {| inst: I.input_stream_inst base_t len_t pos_t  |}
-  (ptr_t: Type0)
-: Type
-= (sz: U64.t) ->
-  (write_to: ref ptr_t) ->
-  (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
-  (w: Ghost.erased ptr_t) ->
-  (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
-  (v_sl: Ghost.erased (Seq.seq U8.t)) ->
-  stt bool
-    (pts_to write_to #1.0R w ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
-    (fun _ -> exists* w' . pts_to write_to #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
 
 noextract
 inline_for_extraction
