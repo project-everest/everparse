@@ -113,7 +113,9 @@ lowparse-unit-test: lowparse
 
 # The Pulse combinator backend (--pulse). Generation plus F* verification
 # only: extraction of the Pulse combinators to C is not wired up yet.
-3d-pulse-test: 3d
+# Only the driver and the Pulse combinators are needed: --pulse never looks at
+# the Low* prelude.
+3d-pulse-test: 3d-exe 3d-pulse-prelude
 	+$(MAKE) -C share/everparse/tests/3d
 
 .PHONY: 3d-pulse-test
