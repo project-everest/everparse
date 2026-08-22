@@ -236,7 +236,18 @@ let state_dict_weaken_prop0
   (forall (x: string { state_p d1 x }) . d1.state_values x == d2.state_values x) /\
   (forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d2.state x y)
 
+(* Kept opaque to SMT: every occurrence of `state_dict_weaken_prop` otherwise
+   expands into three nested (and dependently typed) quantifiers, which the
+   promiscuous pattern of `state_dict_weaken_prod` then asserts for every
+   product appearing anywhere in a generated module. Client modules reason
+   about it through the introduction and composition lemmas below instead. *)
+[@@"opaque_to_smt"]
 let state_dict_weaken_prop = state_dict_weaken_prop0
+
+let reveal_state_dict_weaken_prop ()
+: Lemma
+  (forall d1 d2 . state_dict_weaken_prop d1 d2 <==> state_dict_weaken_prop0 d1 d2)
+= reveal_opaque (`%state_dict_weaken_prop) state_dict_weaken_prop
 
 let forevery_singleton_prop
   (name: string)
@@ -343,6 +354,11 @@ ensures
   fold (forevery_state (state_dict_singleton name state) (mk_singleton_value name state v));
 }
 
+(* Kept opaque to SMT: its `state_values` field is an `if`, so an SMT encoding
+   that unfolds it has to case-split to encode the *types* of the values of a
+   nested product, which is exponential in the nesting depth. Definitional
+   unfolding in the typechecker is unaffected. *)
+[@@"opaque_to_smt"]
 let state_dict_prod
   (d1 d2: state_dict)
 : Pure state_dict
@@ -353,149 +369,14 @@ let state_dict_prod
     (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
     (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
 
-let state_dict_prod_comm
-  (d1 d2: state_dict)
+let reveal_state_dict_prod ()
 : Lemma
-  (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
-  (ensures (state_dict_prod d1 d2 == state_dict_prod d2 d1))
-= mk_state_dict_ext
-    (fun x -> d1.state_p x \/ d2.state_p x)
-    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
-    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
-    (fun x -> d2.state_p x \/ d1.state_p x)
-    (fun x -> if d2.state_p x then d2.state_values x else d1.state_values x)
-    (fun x v -> if d2.state_p x then d2.state x v else d1.state x v)
-
-let state_dict_prod_empty
-  (d: state_dict)
-: Lemma
-  (state_dict_prod d state_dict_empty == d)
-= assert_norm (state_dict_prod d state_dict_empty == mk_state_dict
-    (fun x -> d.state_p x \/ state_dict_empty.state_p x)
-    (fun x -> if d.state_p x then d.state_values x else state_dict_empty.state_values x)
-    (fun x v -> if d.state_p x then d.state x v else state_dict_empty.state x v)
-  );
-  mk_state_dict_ext
-    (fun x -> d.state_p x \/ state_dict_empty.state_p x)
-    (fun x -> if d.state_p x then d.state_values x else state_dict_empty.state_values x)
-    (fun x v -> if d.state_p x then d.state x v else state_dict_empty.state x v)
-    (fun x -> d.state_p x == true)
-    d.state_values
-    d.state;
- mk_state_dict_idem d
-
-#push-options "--z3rlimit 32"
-
-let state_dict_prod_assoc
-  (d1 d2 d3: state_dict)
-: Lemma
-  (requires (
-    (forall x . ~ (d1.state_p x /\ d2.state_p x)) /\
-    (forall x . ~ ((d1.state_p x \/ d2.state_p x) /\ d3.state_p x))
-  ))
-  (ensures (
-    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
-    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
-  ))
-= let d12 = d1 `state_dict_prod` d2 in
-  let d23 = d2 `state_dict_prod` d3 in
-  assert_norm (d1 `state_dict_prod` d23 == mk_state_dict
-    (fun x -> d1.state_p x \/ d23.state_p x)
-    (fun x -> if d1.state_p x then d1.state_values x else d23.state_values x)
-    (fun x v -> if d1.state_p x then d1.state x v else d23.state x v)
-  );
-  assert_norm (d12 `state_dict_prod` d3 == mk_state_dict
-    (fun x -> d12.state_p x \/ d3.state_p x)
-    (fun x -> if d12.state_p x then d12.state_values x else d3.state_values x)
-    (fun x v -> if d12.state_p x then d12.state x v else d3.state x v)
-  );
-  mk_state_dict_ext
-    (fun x -> d1.state_p x \/ d23.state_p x)
-    (fun x -> if d1.state_p x then d1.state_values x else d23.state_values x)
-    (fun x v -> if d1.state_p x then d1.state x v else d23.state x v)
-    (fun x -> d12.state_p x \/ d3.state_p x)
-    (fun x -> if d12.state_p x then d12.state_values x else d3.state_values x)
-    (fun x v -> if d12.state_p x then d12.state x v else d3.state x v);
-  assert (
-    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
-    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
-  )
-
-#pop-options
-
-let mk_prod_value
-  (#d1 #d2: state_dict)
-  (f1: forevery_values d1)
-  (f2: forevery_values d2)
-  (_: squash (forall x . ~ (d1.state_p x /\ d2.state_p x)))
-: Tot (forevery_values (state_dict_prod d1 d2))
-= mk_state_dict_value (state_dict_prod d1 d2)
-    (fun x -> if d1.state_p x then f1 x else f2 x)
-
-let mk_proj_value
-  (#d: state_dict)
-  (f: forevery_values d)
-  (d': state_dict)
-  (_: squash (state_dict_weaken_prop d' d))
-: Tot (forevery_values d')
-= mk_state_dict_value d' (fun x -> f x)
-
-let state_dict_weaken_prod
-  (d1 d2: state_dict)
-: Lemma
-  (requires
-    (forall x . ~ (d1.state_p x /\ d2.state_p x))
-  )
-  (ensures (
-    state_dict_weaken_prop d1 (state_dict_prod d1 d2) /\
-    state_dict_weaken_prop d2 (state_dict_prod d1 d2)
-  ))
-  [SMTPat (state_dict_prod d1 d2)]
-= assert (state_dict_weaken_prop0 d1 (state_dict_prod d1 d2));
-  assert (state_dict_weaken_prop0 d2 (state_dict_prod d1 d2))  
-
-let state_dict_weaken_prop_refl
-  (d: state_dict)
-: Lemma
-  (ensures (state_dict_weaken_prop d d))
-  [SMTPat (state_dict_weaken_prop d d)]
-= ()
-
-(* The 3D frontend folds the leaves of a type's `state_dict` into a
-   right-nested product, but combinators such as `t_probe_then_validate_gen`
-   build left-nested ones. Reassociation is therefore needed to relate the two;
-   since products of disjoint dictionaries are literally equal up to
-   associativity, an SMT pattern on the left-nested form suffices. *)
-let state_dict_prod_assoc_pat
-  (d1 d2 d3: state_dict)
-: Lemma
-  (requires (
-    (forall x . ~ (d1.state_p x /\ d2.state_p x)) /\
-    (forall x . ~ ((d1.state_p x \/ d2.state_p x) /\ d3.state_p x))
-  ))
-  (ensures (
-    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
-    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
-  ))
-= state_dict_prod_assoc d1 d2 d3
-
-let state_dict_weaken_prop_trans
-  (d1 d2 d3: state_dict)
-: Lemma
-  (requires (
-    state_dict_weaken_prop d1 d2 /\
-    state_dict_weaken_prop d2 d3
-  ))
-  (ensures (state_dict_weaken_prop d1 d3))
-  [SMTPat (state_dict_weaken_prop d1 d2); SMTPat (state_dict_weaken_prop d2 d3)]
-= assert (forall (x: string) . state_p d1 x ==> state_p d3 x);
-  assert (forall (x: string { state_p d1 x }) . d1.state_values x == d3.state_values x);
-  introduce forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d3.state x y
-  with begin
-    assert (d1.state_values x == d2.state_values x);
-    assert (d1.state x y == d2.state x (coerce_eq () y));
-    assert (d2.state x (coerce_eq () y) == d3.state x (coerce_eq () y))
-  end
+  (forall (d1 d2: state_dict) . (forall x . ~ (d1.state_p x /\ d2.state_p x)) ==>
+    state_dict_prod d1 d2 == mk_state_dict
+      (fun x -> d1.state_p x \/ d2.state_p x)
+      (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
+      (fun x v -> if d1.state_p x then d1.state x v else d2.state x v))
+= reveal_opaque (`%state_dict_prod) state_dict_prod
 
 (* Characterizations of `state_p` for the three dictionary formers the 3D
    frontend emits. `mk_state_dict_correct` already proves these facts, but its
@@ -531,10 +412,240 @@ let state_p_prod
   (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
   (ensures (state_p (state_dict_prod d1 d2) x <==> (state_p d1 x \/ state_p d2 x)))
   [SMTPat (state_p (state_dict_prod d1 d2) x)]
-= mk_state_dict_correct
+= reveal_opaque (`%state_dict_prod) state_dict_prod;
+  mk_state_dict_correct
     (fun x -> d1.state_p x \/ d2.state_p x)
     (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
     (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
+
+(* Projector-shaped companions of the `state_p_*` lemmas above. The
+   disjointness precondition of `state_dict_prod` is phrased with the record
+   projector rather than with `state_p`, so the `state_p`-shaped patterns above
+   never fire on it. *)
+
+let state_p_empty'
+  (x: string)
+: Lemma
+  (ensures (state_dict_empty.state_p x == false))
+  [SMTPat (state_dict_empty.state_p x)]
+= state_p_empty x
+
+let state_p_singleton'
+  (name: string)
+  (#t: Type0)
+  (state: t -> slprop)
+  (x: string)
+: Lemma
+  (ensures ((state_dict_singleton name state).state_p x == (x = name)))
+  [SMTPat ((state_dict_singleton name state).state_p x)]
+= state_p_singleton name state x
+
+let state_p_prod'
+  (d1 d2: state_dict)
+  (x: string)
+: Lemma
+  (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
+  (ensures ((state_dict_prod d1 d2).state_p x == (d1.state_p x || d2.state_p x)))
+  [SMTPat ((state_dict_prod d1 d2).state_p x)]
+= state_p_prod d1 d2 x
+
+let state_dict_prod_comm
+  (d1 d2: state_dict)
+: Lemma
+  (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
+  (ensures (state_dict_prod d1 d2 == state_dict_prod d2 d1))
+= reveal_opaque (`%state_dict_prod) state_dict_prod;
+  mk_state_dict_ext
+    (fun x -> d1.state_p x \/ d2.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
+    (fun x -> d2.state_p x \/ d1.state_p x)
+    (fun x -> if d2.state_p x then d2.state_values x else d1.state_values x)
+    (fun x v -> if d2.state_p x then d2.state x v else d1.state x v)
+
+let state_dict_prod_empty
+  (d: state_dict)
+: Lemma
+  (state_dict_prod d state_dict_empty == d)
+= reveal_opaque (`%state_dict_prod) state_dict_prod;
+  assert_norm (state_dict_prod d state_dict_empty == mk_state_dict
+    (fun x -> d.state_p x \/ state_dict_empty.state_p x)
+    (fun x -> if d.state_p x then d.state_values x else state_dict_empty.state_values x)
+    (fun x v -> if d.state_p x then d.state x v else state_dict_empty.state x v)
+  );
+  mk_state_dict_ext
+    (fun x -> d.state_p x \/ state_dict_empty.state_p x)
+    (fun x -> if d.state_p x then d.state_values x else state_dict_empty.state_values x)
+    (fun x v -> if d.state_p x then d.state x v else state_dict_empty.state x v)
+    (fun x -> d.state_p x == true)
+    d.state_values
+    d.state;
+ mk_state_dict_idem d
+
+#push-options "--z3rlimit 32"
+
+let state_dict_prod_assoc
+  (d1 d2 d3: state_dict)
+: Lemma
+  (requires (
+    (forall x . ~ (d1.state_p x /\ d2.state_p x)) /\
+    (forall x . ~ ((d1.state_p x \/ d2.state_p x) /\ d3.state_p x))
+  ))
+  (ensures (
+    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
+    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
+  ))
+= reveal_opaque (`%state_dict_prod) state_dict_prod;
+  let d12 = d1 `state_dict_prod` d2 in
+  let d23 = d2 `state_dict_prod` d3 in
+  assert_norm (d1 `state_dict_prod` d23 == mk_state_dict
+    (fun x -> d1.state_p x \/ d23.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d23.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d23.state x v)
+  );
+  assert_norm (d12 `state_dict_prod` d3 == mk_state_dict
+    (fun x -> d12.state_p x \/ d3.state_p x)
+    (fun x -> if d12.state_p x then d12.state_values x else d3.state_values x)
+    (fun x v -> if d12.state_p x then d12.state x v else d3.state x v)
+  );
+  mk_state_dict_ext
+    (fun x -> d1.state_p x \/ d23.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d23.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d23.state x v)
+    (fun x -> d12.state_p x \/ d3.state_p x)
+    (fun x -> if d12.state_p x then d12.state_values x else d3.state_values x)
+    (fun x v -> if d12.state_p x then d12.state x v else d3.state x v);
+  assert (
+    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
+    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
+  )
+
+#pop-options
+
+let mk_prod_value
+  (#d1 #d2: state_dict)
+  (f1: forevery_values d1)
+  (f2: forevery_values d2)
+  (_: squash (forall x . ~ (d1.state_p x /\ d2.state_p x)))
+: Tot (forevery_values (state_dict_prod d1 d2))
+= reveal_opaque (`%state_dict_prod) state_dict_prod;
+  mk_state_dict_value (state_dict_prod d1 d2)
+    (fun x -> if d1.state_p x then f1 x else f2 x)
+
+let mk_proj_value
+  (#d: state_dict)
+  (f: forevery_values d)
+  (d': state_dict)
+  (_: squash (state_dict_weaken_prop d' d))
+: Tot (forevery_values d')
+= reveal_state_dict_weaken_prop ();
+  mk_state_dict_value d' (fun x -> f x)
+
+let state_dict_weaken_prod
+  (d1 d2: state_dict)
+: Lemma
+  (requires
+    (forall x . ~ (d1.state_p x /\ d2.state_p x))
+  )
+  (ensures (
+    state_dict_weaken_prop d1 (state_dict_prod d1 d2) /\
+    state_dict_weaken_prop d2 (state_dict_prod d1 d2)
+  ))
+  [SMTPat (state_dict_prod d1 d2)]
+= reveal_state_dict_weaken_prop ();
+  reveal_opaque (`%state_dict_prod) state_dict_prod;
+  assert (state_dict_weaken_prop0 d1 (state_dict_prod d1 d2));
+  assert (state_dict_weaken_prop0 d2 (state_dict_prod d1 d2))  
+
+let state_dict_weaken_empty
+  (d: state_dict)
+: Lemma
+  (ensures (state_dict_weaken_prop state_dict_empty d))
+  [SMTPat (state_dict_weaken_prop state_dict_empty d)]
+= reveal_state_dict_weaken_prop ()
+
+let state_dict_weaken_prop_refl
+  (d: state_dict)
+: Lemma
+  (ensures (state_dict_weaken_prop d d))
+  [SMTPat (state_dict_weaken_prop d d)]
+= reveal_state_dict_weaken_prop ()
+
+(* Introduction rule for weakening out of a product. The 3D frontend folds the
+   leaves of a type's `state_dict` into a right-nested product, while
+   combinators such as `t_probe_then_validate_gen` build their own products out
+   of a sub-dictionary and a copy buffer; the two associations rarely agree.
+   Rather than reassociating (whose SMT pattern loops), a product weakens into
+   `d` as soon as both of its factors do. The pattern fires on the goal only:
+   it introduces no new product. *)
+let state_dict_weaken_prod_intro
+  (d1 d2 d: state_dict)
+: Lemma
+  (requires (
+    (forall x . ~ (d1.state_p x /\ d2.state_p x)) /\
+    state_dict_weaken_prop d1 d /\
+    state_dict_weaken_prop d2 d
+  ))
+  (ensures (state_dict_weaken_prop (state_dict_prod d1 d2) d))
+  [SMTPat (state_dict_weaken_prop (state_dict_prod d1 d2) d)]
+= reveal_state_dict_weaken_prop ();
+  let d12 = state_dict_prod d1 d2 in
+  mk_state_dict_correct
+    (fun x -> d1.state_p x \/ d2.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v);
+  assert (forall (x: string) . state_p d12 x ==> state_p d x);
+  assert (forall (x: string { state_p d12 x }) . d12.state_values x == d.state_values x);
+  introduce forall (x: string { state_p d12 x }) (y: d12.state_values x) . d12.state x y == d.state x y
+  with begin
+    if d1.state_p x
+    then begin
+      assert (d12.state_values x == d1.state_values x);
+      assert (d12.state x y == d1.state x (coerce_eq () y));
+      assert (d1.state x (coerce_eq () y) == d.state x (coerce_eq () y))
+    end else begin
+      assert (d12.state_values x == d2.state_values x);
+      assert (d12.state x y == d2.state x (coerce_eq () y));
+      assert (d2.state x (coerce_eq () y) == d.state x (coerce_eq () y))
+    end
+  end
+
+(* The 3D frontend folds the leaves of a type's `state_dict` into a
+   right-nested product, but combinators such as `t_probe_then_validate_gen`
+   build left-nested ones. Reassociation is therefore needed to relate the two;
+   since products of disjoint dictionaries are literally equal up to
+   associativity, an SMT pattern on the left-nested form suffices. *)
+let state_dict_prod_assoc_pat
+  (d1 d2 d3: state_dict)
+: Lemma
+  (requires (
+    (forall x . ~ (d1.state_p x /\ d2.state_p x)) /\
+    (forall x . ~ ((d1.state_p x \/ d2.state_p x) /\ d3.state_p x))
+  ))
+  (ensures (
+    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
+    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
+  ))
+= state_dict_prod_assoc d1 d2 d3
+
+let state_dict_weaken_prop_trans
+  (d1 d2 d3: state_dict)
+: Lemma
+  (requires (
+    state_dict_weaken_prop d1 d2 /\
+    state_dict_weaken_prop d2 d3
+  ))
+  (ensures (state_dict_weaken_prop d1 d3))
+  [SMTPat (state_dict_weaken_prop d1 d2); SMTPat (state_dict_weaken_prop d2 d3)]
+= reveal_state_dict_weaken_prop ();
+  assert (forall (x: string) . state_p d1 x ==> state_p d3 x);
+  assert (forall (x: string { state_p d1 x }) . d1.state_values x == d3.state_values x);
+  introduce forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d3.state x y
+  with begin
+    assert (d1.state_values x == d2.state_values x);
+    assert (d1.state x y == d2.state x (coerce_eq () y));
+    assert (d2.state x (coerce_eq () y) == d3.state x (coerce_eq () y))
+  end
 
 ghost fn forevery_state_dict_prod_unfold
   (#d1: state_dict)
@@ -547,6 +658,7 @@ ensures
   forevery_state d1 (mk_proj_value v d1 ()) **
   forevery_state d2 (mk_proj_value v d2 ())
 {
+  reveal_opaque (`%state_dict_prod) state_dict_prod;
   unfold (forevery_state (state_dict_prod d1 d2) v);
   forevery_map (fun x -> forevery_state_body (state_dict_prod d1 d2) v x) (fun x ->
     forevery_state_body d1 (mk_proj_value v d1 ()) x **
@@ -580,6 +692,7 @@ requires
 ensures
   forevery_state (state_dict_prod d1 d2) (mk_prod_value v1 v2 ())
 {
+  reveal_opaque (`%state_dict_prod) state_dict_prod;
   unfold (forevery_state d1 v1);
   unfold (forevery_state d2 v2);
   forevery_zip (forevery_state_body d1 v1) (forevery_state_body d2 v2);
@@ -636,7 +749,8 @@ let state_dict_decomp
   (f: string -> prop)
 : Lemma
   (d == state_dict_prod (state_dict_filter d f) (state_dict_filter d (notp f)))
-= state_dict_ext
+= reveal_opaque (`%state_dict_prod) state_dict_prod;
+  state_dict_ext
     d
     (state_dict_prod (state_dict_filter d f) (state_dict_filter d (notp f)))
 
@@ -647,7 +761,8 @@ let state_dict_weaken_filter
 : Lemma
   (requires (state_dict_weaken_prop d1 d2))
   (ensures (state_dict_filter d2 (state_p d1) == d1))
-= state_dict_ext
+= reveal_state_dict_weaken_prop ();
+  state_dict_ext
     (state_dict_filter d2 (state_p d1))
     d1
 
@@ -659,7 +774,8 @@ let state_dict_weaken_sub
     (forall x . ~ (state_p d1 x /\ state_p d3 x)) /\
     d2 == state_dict_prod d1 d3
   ))
-= state_dict_weaken_filter d1 d2;
+= reveal_state_dict_weaken_prop ();
+  state_dict_weaken_filter d1 d2;
   state_dict_decomp d2 (state_p d1);
   state_dict_filter d2 (notp (state_p d1))
 
@@ -700,7 +816,8 @@ let state_dict_rename_values_frame
   (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
   (v: forevery_values d)
 : Tot (forevery_values (state_dict_filter d (state_dict_rename_values_frame_p d d' f)))
-= mk_proj_value v (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) ()
+= reveal_state_dict_weaken_prop ();
+  mk_proj_value v (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) ()
 
 ghost fn when_intro_true
   (p: prop)

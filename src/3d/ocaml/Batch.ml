@@ -39,6 +39,23 @@ let cl_wrapper () =
   let krml_home = Filename.dirname (Filename.dirname krml) in
   Filename.concat (Filename.concat (Filename.concat (Filename.concat krml_home "share") "krml") "misc") "cl-wrapper.bat"
 
+(* --pulse: the code generated for the Pulse combinator backend is checked
+   against lib/everparse/3d and src/lowparse/pulse rather than src/3d/prelude,
+   and needs the Pulse library itself on the include path. *)
+let pulse_3d_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "3d"
+let lowparse_pulse_home = filename_concat lowparse_home "pulse"
+let pulse_lib_home =
+  let candidates =
+    (match Sys.getenv_opt "PULSE_HOME" with
+     | Some h -> [filename_concat (filename_concat h "lib") "pulse"]
+     | None -> [])
+    @ [ filename_concat (filename_concat everparse_home "lib") "pulse";
+        filename_concat (filename_concat (filename_concat (filename_concat (filename_concat everparse_home "opt") "pulse") "out") "lib") "pulse" ]
+  in
+  match List.find_opt Sys.file_exists candidates with
+  | Some d -> d
+  | None -> filename_concat (filename_concat everparse_home "lib") "pulse"
+
 let ddd_actions_home input_stream_binding =
   let input_stream_dir =
     match string_of_input_stream_binding input_stream_binding with
@@ -52,11 +69,15 @@ let ddd_actions_c_home input_stream_binding =
 
 (* command lines *)
 let fstar_args0 krmllib =
-  "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
+  "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,PulseCore,Pulse,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
         "--include" :: (filename_concat krmllib "obj") ::
-          "--include" :: ddd_prelude_home ::
+          (if Options.get_pulse ()
+           then "--include" :: pulse_lib_home ::
+                "--include" :: lowparse_pulse_home ::
+                "--include" :: pulse_3d_home :: []
+           else "--include" :: ddd_prelude_home :: []) @
             "--cmi" ::
             "--warn_error" :: "+241" ::
               OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
@@ -83,7 +104,9 @@ let fstar_args
 =
     "--odir" :: out_dir ::
       "--cache_dir" :: out_dir ::
-        "--include" :: ddd_actions_home input_stream_binding ::
+        (if Options.get_pulse ()
+         then []
+         else [ "--include"; ddd_actions_home input_stream_binding ]) @
         "--include" :: out_dir ::
             fstar_args0 krmllib
 
