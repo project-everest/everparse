@@ -93,3 +93,44 @@ ensures
 {
   P.run_probe_m B.error_handler_macro m "smoke" "smoke" "smoke" ctxt () src sz dest
 }
+
+(* Generic external actions, field_ptr_after with a setter, and
+   probe_then_validate, at the `buffer` backend. *)
+module A = EverParse3d.Actions.Base
+
+inline_for_extraction noextract
+let smoke_external_action
+  (d: state_dict)
+  (f: A.external_action d unit)
+: A.action #B.base_t #B.len_t #B.pos_t d unit false
+= A.mk_external_action f
+
+inline_for_extraction noextract
+let smoke_field_ptr_after_with_setter
+  (d: state_dict)
+  (#ptr_t: Type0)
+  (f: option (A.field_ptr_after_setter_t B.base_t B.len_t B.pos_t d ptr_t))
+  (sq: squash (Some? f))
+  (sz: FStar.UInt64.t)
+  (write_to: (ptr_t -> A.external_action d unit))
+: A.action #B.base_t #B.len_t #B.pos_t d bool false
+= A.action_field_ptr_after_with_setter f sq sz write_to
+
+inline_for_extraction noextract
+let smoke_probe_then_validate
+  (#nz: bool) (#wk: _) (#k: EverParse3d.Kinds.parser_kind nz wk)
+  (#t: Type0) (#p: EverParse3d.Prelude.parser k t)
+  (d: state_dict)
+  (v: A.validate_with_action_t #B.base_t #B.len_t #B.pos_t p d false false)
+  (#ptr_t: Type0)
+  (src: ptr_t)
+  (as_u64: (ptr_t -> P.pure_external_action FStar.UInt64.t))
+  (dest: B.copy_buffer_t)
+  (init: P.init_probe_dest_t #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t)
+  (probe: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t unit true false false)
+  (sq: squash (forall x .
+    ~ (d.state_p x /\ (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest).state_p x)))
+: A.action #B.base_t #B.len_t #B.pos_t
+    (state_dict_prod d (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest))
+    bool false
+= A.probe_then_validate B.error_handler_macro "T" "f" v src as_u64 true "smoke_cb" dest init 0uL probe sq

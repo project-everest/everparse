@@ -2427,3 +2427,195 @@ let validate_nlist_constant_size_without_actions
       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state false use_error_handler)
 : validate_with_action_t #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
 = validate_nlist n n_is_const v
+
+////////////////////////////////////////////////////////////////////////////////
+// Generic external actions
+////////////////////////////////////////////////////////////////////////////////
+
+(* In Low*, an external action was indexed by the set of memory locations it may
+   modify. Here it is indexed by the state dictionary entries it may modify. *)
+
+inline_for_extraction noextract
+fn mk_external_action
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#a: Type0)
+      (f: external_action extra_state a)
+      (#use_error_handler: bool)
+: action #base_t #len_t #pos_t extra_state a use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  f ()
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// field_ptr_after, with a user-provided setter instead of a reference
+////////////////////////////////////////////////////////////////////////////////
+
+inline_for_extraction noextract
+fn action_field_ptr_after_with_setter
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#ptr_t: Type0)
+      (f: option (field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t))
+      ([@@@erasable] sq: squash (Some? f))
+      (sz: U64.t)
+      (write_to: (ptr_t -> external_action extra_state unit))
+      (#use_error_handler: bool)
+: action #base_t #len_t #pos_t extra_state bool use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let g = Some?.v f;
+  g sz write_to sl_base sl_len sl_pos contents_sl v_sl
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Probe, then validate the copy buffer
+////////////////////////////////////////////////////////////////////////////////
+
+(* In Low*, the copy buffer contributed its own invariant and memory location to
+   the action. Here it contributes a state dictionary entry, keyed by a name
+   chosen by the frontend: disjointness between the copy buffer and the rest of
+   the state (and, in particular, between the copy buffers of nested probes) is
+   then a matter of key distinctness. *)
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction noextract
+fn probe_then_validate
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#copy_buffer_t: Type0)
+  {| cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t  |}
+      (error_handler_macro: error_handler #base_t #len_t #pos_t)
+      (typename: string)
+      (fieldname: string)
+      (#nz: bool)
+      (#wk: _)
+      (#k: parser_kind nz wk)
+      (#[@@@erasable] t: Type0)
+      (#[@@@erasable] p: parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#ha: bool)
+      (#use_error_handler: bool)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#ptr_t: Type0)
+      (src: ptr_t)
+      (as_u64: (ptr_t -> PA.pure_external_action U64.t))
+      (nullable: bool)
+      (dest_name: string)
+      (dest: copy_buffer_t)
+      (init: PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (prep_dest_sz: U64.t)
+      (#mz: bool)
+      (probe: PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      ([@@@erasable] sq: squash (forall x .
+        ~ (extra_state.state_p x /\
+           (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest).state_p x)))
+: action #base_t #len_t #pos_t
+    (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
+    bool
+    use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  forevery_state_dict_prod_unfold
+    #extra_state
+    #(copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
+    () _;
+  forevery_state_dict_singleton_unfold' dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) _;
+  with w . assert (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
+  rewrite (copy_buffer_state #_ #base_t #len_t #pos_t dest w)
+    as (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w));
+  let a64 = as_u64 src;
+  let src64 = a64 ();
+  if (nullable && src64 = 0uL) {
+    // a null pointer is accepted without probing
+    rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w))
+      as (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
+    forevery_state_dict_singleton_fold dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) w;
+    forevery_state_dict_prod_fold
+      extra_state
+      (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
+      ();
+    true
+  } else {
+    let m = PA.init_and_probe (typename ^ "." ^ fieldname) init probe;
+    let b = PA.run_probe_m error_handler_macro m typename fieldname "probe" ctxt error_handler_fn src64 prep_dest_sz dest;
+    with cd vd . assert (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
+    if (b <> 0uL) {
+      rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd)
+        as (I.pts_to
+              (CP.base_of #_ #base_t #len_t #pos_t dest)
+              (CP.len_of #_ #base_t #len_t #pos_t dest)
+              (CP.pos_of #_ #base_t #len_t #pos_t dest)
+              cd vd);
+      let res = v ctxt error_handler_fn
+        (CP.base_of #_ #base_t #len_t #pos_t dest)
+        (CP.len_of #_ #base_t #len_t #pos_t dest)
+        (CP.pos_of #_ #base_t #len_t #pos_t dest)
+        _ cd vd;
+      with vd' . assert (I.pts_to
+              (CP.base_of #_ #base_t #len_t #pos_t dest)
+              (CP.len_of #_ #base_t #len_t #pos_t dest)
+              (CP.pos_of #_ #base_t #len_t #pos_t dest)
+              cd vd');
+      rewrite (I.pts_to
+              (CP.base_of #_ #base_t #len_t #pos_t dest)
+              (CP.len_of #_ #base_t #len_t #pos_t dest)
+              (CP.pos_of #_ #base_t #len_t #pos_t dest)
+              cd vd')
+        as (copy_buffer_state #_ #base_t #len_t #pos_t dest
+              (Ghost.reveal cd, Ghost.reveal vd'));
+      forevery_state_dict_singleton_fold dest_name
+        (copy_buffer_state #_ #base_t #len_t #pos_t dest)
+        (Ghost.reveal cd, Ghost.reveal vd');
+      forevery_state_dict_prod_fold
+        extra_state
+        (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
+        ();
+      res = validator_success
+    } else {
+      rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd)
+        as (copy_buffer_state #_ #base_t #len_t #pos_t dest
+              (Ghost.reveal cd, Ghost.reveal vd));
+      forevery_state_dict_singleton_fold dest_name
+        (copy_buffer_state #_ #base_t #len_t #pos_t dest)
+        (Ghost.reveal cd, Ghost.reveal vd);
+      forevery_state_dict_prod_fold
+        extra_state
+        (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
+        ();
+      ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)
+        typename fieldname
+        (error_reason_of_result validator_error_probe_failed)
+        validator_error_probe_failed
+        ctxt sl_base sl_len sl_pos _ _;
+      false
+    }
+  }
+}
+
+#pop-options

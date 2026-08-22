@@ -940,3 +940,119 @@ val validate_nlist_constant_size_without_actions
       (#use_error_handler:bool)
       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state false use_error_handler)
 : validate_with_action_t #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+
+inline_for_extraction noextract
+let external_action
+  (extra_state: state_dict)
+  (a: Type0)
+: Type0
+= unit ->
+  stt a
+    (exists* extra . forevery_state extra_state extra)
+    (fun _ -> exists* extra' . forevery_state extra_state extra')
+
+
+inline_for_extraction noextract
+let field_ptr_after_setter_t
+  (base_t len_t pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (extra_state: state_dict)
+  (ptr_t: Type0)
+: Type0
+= (sz: U64.t) ->
+  (write_to: (ptr_t -> external_action extra_state unit)) ->
+  (sl_base: base_t) ->
+  (sl_len: len_t) ->
+  (sl_pos: pos_t) ->
+  (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
+  (v_sl: Ghost.erased (Seq.seq U8.t)) ->
+  stt bool
+    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      (exists* extra . forevery_state extra_state extra))
+    (fun _ -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      (exists* extra' . forevery_state extra_state extra'))
+
+
+inline_for_extraction noextract
+let copy_buffer_state
+  (#copy_buffer_t: Type0)
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (c: copy_buffer_t)
+  (cv: (Seq.seq U8.t & Seq.seq U8.t))
+: slprop
+= CP.pts_to #_ #base_t #len_t #pos_t c (fst cv) (snd cv)
+
+inline_for_extraction noextract
+let copy_buffer_state_dict
+  (#copy_buffer_t: Type0)
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (name: string)
+  (c: copy_buffer_t)
+: state_dict
+= state_dict_singleton name (copy_buffer_state #_ #base_t #len_t #pos_t c)
+
+noextract
+inline_for_extraction
+val mk_external_action
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#extra_state: state_dict)
+      (#a: Type0)
+      (f: external_action extra_state a)
+      (#use_error_handler: bool)
+: action #base_t #len_t #pos_t extra_state a use_error_handler
+
+noextract
+inline_for_extraction
+val action_field_ptr_after_with_setter
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#extra_state: state_dict)
+      (#ptr_t: Type0)
+      (f: option (field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t))
+      (sq: squash (Some? f))
+      (sz: U64.t)
+      (write_to: (ptr_t -> external_action extra_state unit))
+      (#use_error_handler: bool)
+: action #base_t #len_t #pos_t extra_state bool use_error_handler
+
+noextract
+inline_for_extraction
+val probe_then_validate
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#copy_buffer_t: Type0)
+  {| cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t  |}
+      (error_handler_macro: error_handler #base_t #len_t #pos_t)
+      (typename: string)
+      (fieldname: string)
+      (#nz: bool)
+      (#wk: _)
+      (#k: parser_kind nz wk)
+      (#t: Type0)
+      (#p: parser k t)
+      (#extra_state: state_dict)
+      (#ha: bool)
+      (#use_error_handler: bool)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#ptr_t: Type0)
+      (src: ptr_t)
+      (as_u64: (ptr_t -> PA.pure_external_action U64.t))
+      (nullable: bool)
+      (dest_name: string)
+      (dest: copy_buffer_t)
+      (init: PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (prep_dest_sz: U64.t)
+      (#mz: bool)
+      (probe: PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      (sq: squash (forall x .
+        ~ (extra_state.state_p x /\
+           (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest).state_p x)))
+: action #base_t #len_t #pos_t
+    (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
+    bool
+    use_error_handler
