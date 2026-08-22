@@ -21,6 +21,12 @@ module LPL = LowParse.Spec.List
 module LPP = LowParse.PulseParse.Base
 module LUT = LowParse.Spec.ListUpTo
 
+let is_range_okay = EverParse3d.ErrorCode.is_range_okay
+
+(* The type of non-null byte pointers manipulated by `field_ptr`-style
+   actions. The 3D frontend emits this name unqualified. *)
+let ___PUINT8 : Type0 = Pulse.Lib.ArrayPtr.ptr FStar.UInt8.t
+
 val action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
@@ -1239,3 +1245,49 @@ val validate_unit_no_read
       (#extra_state: state_dict)
       (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+
+noextract
+inline_for_extraction
+val validate_weaken_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+       (name: string)
+       (#nz:_)
+       (#wk:_)
+       (#k:parser_kind nz wk)
+       (#t:Type)
+       (#p:parser k t)
+       (#d1: state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p d1 has_action use_error_handler)
+      (d2: state_dict)
+      (d2_extends: squash (state_dict_weaken_prop d1 d2))
+: validate_with_action_no_read #base_t #len_t #pos_t p d2 has_action use_error_handler
+
+inline_for_extraction noextract
+let validate_weaken_gen
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (name: string)
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#t:Type)
+      (#p:parser k t)
+      (#d1: state_dict)
+      (#has_action:bool)
+      (allow_reading:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_t #base_t #len_t #pos_t p d1 has_action allow_reading use_error_handler)
+      (d2: state_dict)
+      (d2_extends: squash (state_dict_weaken_prop d1 d2))
+: validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler
+= let f = match allow_reading
+  returns (validate_with_action_t #base_t #len_t #pos_t p d1 has_action allow_reading use_error_handler ->
+           validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler)
+  with
+  | true -> (fun v -> validate_weaken_no_read #base_t #len_t #pos_t name v d2 d2_extends)
+  | false -> (fun v -> validate_weaken #base_t #len_t #pos_t name v d2 d2_extends)
+  in
+  f v

@@ -36,3 +36,13 @@ let error_reason_of_result (code:U8.t) : string =
   | 6uy -> "unexpected padding"
   | 7uy -> "probe failed"
   | _ -> "unspecified"
+
+// Some generic helpers
+
+module U32 = FStar.UInt32
+
+let is_range_okay (size offset access_size: U32.t)
+  : bool
+  = let open U32 in
+    size >=^ access_size &&
+    size -^ access_size >=^ offset

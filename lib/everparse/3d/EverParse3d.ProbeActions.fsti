@@ -319,3 +319,10 @@ val run_probe_m
       CB.pts_to #_ #_ #_ #_ #_ #cb_inst dest contents_dest' v_dest' **
       pure (b <> 0uL ==> contents_dest' == v_dest')
     )
+
+(* The identity coercion from a probed pointer value to a `uint64_t` address,
+   used by the 3D frontend when the probed pointer already is a 64-bit
+   address. *)
+inline_for_extraction
+noextract
+val as_u64_identity (x: U64.t) : pure_external_action U64.t

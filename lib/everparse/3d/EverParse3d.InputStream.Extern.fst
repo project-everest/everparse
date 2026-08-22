@@ -245,3 +245,72 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
 (* No `copy_buffer` instance: probing is unavailable for the `extern` backend,
    as in Low*. *)
+
+(* `field_ptr_after`: the address just past the next `sz` bytes of the input
+   stream, obtained from the client-provided `EverParseStreamPeep` primitive.
+   Only the `extern` backend provides it, as in Low*. *)
+
+module AP = Pulse.Lib.ArrayPtr
+module R = Pulse.Lib.Reference
+module AB = EverParse3d.Actions.Base
+open EverParse3d.State
+
+noextract
+inline_for_extraction
+let ___PUINT8 = AP.ptr U8.t
+
+assume val field_ptr_after_impl
+: AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8
+
+noextract
+inline_for_extraction
+let field_ptr_after
+: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8)
+= Some field_ptr_after_impl
+
+assume val null_ptr : ___PUINT8
+
+(* An opaque alias for the state-dictionary invariant. It is a plain (hence
+   delta-reducible) definition, so that it is convertible with the `exists*`
+   that `field_ptr_after_setter_t` expects, while being opaque enough that
+   Pulse does not lift the existential into an implicit binder of the `fn`
+   below. *)
+let all_states (d: state_dict) : slprop =
+  exists* (extra: forevery_values d) . forevery_state d extra
+
+inline_for_extraction
+fn field_ptr_after_with_setter_impl
+  (#extra_state: state_dict)
+  (sz: FStar.UInt64.t)
+  (write_to: (___PUINT8 -> AB.external_action extra_state unit))
+  (sl_base: base_t)
+  (sl_len: len_t)
+  (sl_pos: pos_t)
+  (contents_sl: Ghost.erased (Seq.seq U8.t))
+  (v_sl: Ghost.erased (Seq.seq U8.t))
+requires
+  I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  all_states extra_state
+returns res: bool
+ensures
+  I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  all_states extra_state
+{
+  let mut w = null_ptr;
+  let ok = field_ptr_after_impl sz w sl_base sl_len sl_pos _ contents_sl v_sl;
+  if ok {
+    let q = !w;
+    unfold (all_states extra_state);
+    write_to q ();
+    fold (all_states extra_state);
+    true
+  } else {
+    false
+  }
+}
+
+noextract
+inline_for_extraction
+let field_ptr_after_with_setter (extra_state: state_dict)
+: option (AB.field_ptr_after_setter_t base_t len_t pos_t #input_stream_extern extra_state ___PUINT8)
+= Some (field_ptr_after_with_setter_impl #extra_state)

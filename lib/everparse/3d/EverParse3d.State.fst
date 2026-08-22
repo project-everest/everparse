@@ -454,6 +454,88 @@ let state_dict_weaken_prod
 = assert (state_dict_weaken_prop0 d1 (state_dict_prod d1 d2));
   assert (state_dict_weaken_prop0 d2 (state_dict_prod d1 d2))  
 
+let state_dict_weaken_prop_refl
+  (d: state_dict)
+: Lemma
+  (ensures (state_dict_weaken_prop d d))
+  [SMTPat (state_dict_weaken_prop d d)]
+= ()
+
+(* The 3D frontend folds the leaves of a type's `state_dict` into a
+   right-nested product, but combinators such as `t_probe_then_validate_gen`
+   build left-nested ones. Reassociation is therefore needed to relate the two;
+   since products of disjoint dictionaries are literally equal up to
+   associativity, an SMT pattern on the left-nested form suffices. *)
+let state_dict_prod_assoc_pat
+  (d1 d2 d3: state_dict)
+: Lemma
+  (requires (
+    (forall x . ~ (d1.state_p x /\ d2.state_p x)) /\
+    (forall x . ~ ((d1.state_p x \/ d2.state_p x) /\ d3.state_p x))
+  ))
+  (ensures (
+    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
+    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
+  ))
+= state_dict_prod_assoc d1 d2 d3
+
+let state_dict_weaken_prop_trans
+  (d1 d2 d3: state_dict)
+: Lemma
+  (requires (
+    state_dict_weaken_prop d1 d2 /\
+    state_dict_weaken_prop d2 d3
+  ))
+  (ensures (state_dict_weaken_prop d1 d3))
+  [SMTPat (state_dict_weaken_prop d1 d2); SMTPat (state_dict_weaken_prop d2 d3)]
+= assert (forall (x: string) . state_p d1 x ==> state_p d3 x);
+  assert (forall (x: string { state_p d1 x }) . d1.state_values x == d3.state_values x);
+  introduce forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d3.state x y
+  with begin
+    assert (d1.state_values x == d2.state_values x);
+    assert (d1.state x y == d2.state x (coerce_eq () y));
+    assert (d2.state x (coerce_eq () y) == d3.state x (coerce_eq () y))
+  end
+
+(* Characterizations of `state_p` for the three dictionary formers the 3D
+   frontend emits. `mk_state_dict_correct` already proves these facts, but its
+   SMT pattern only fires on a literal `mk_state_dict` application. Restating
+   them with patterns on `state_dict_empty`, `state_dict_singleton` and
+   `state_dict_prod` is what reduces the disjointness side conditions of
+   generated code to plain (dis)equalities between string literals. *)
+
+let state_p_empty
+  (x: string)
+: Lemma
+  (ensures (~ (state_p state_dict_empty x)))
+  [SMTPat (state_p state_dict_empty x)]
+= mk_state_dict_correct (fun _ -> False) (fun _ -> unit) (fun _ _ -> emp)
+
+let state_p_singleton
+  (name: string)
+  (#t: Type0)
+  (state: t -> slprop)
+  (x: string)
+: Lemma
+  (ensures (state_p (state_dict_singleton name state) x <==> x == name))
+  [SMTPat (state_p (state_dict_singleton name state) x)]
+= mk_state_dict_correct
+    (forevery_singleton_prop name)
+    (forevery_singleton_values name t)
+    (forevery_singleton_state name state)
+
+let state_p_prod
+  (d1 d2: state_dict)
+  (x: string)
+: Lemma
+  (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
+  (ensures (state_p (state_dict_prod d1 d2) x <==> (state_p d1 x \/ state_p d2 x)))
+  [SMTPat (state_p (state_dict_prod d1 d2) x)]
+= mk_state_dict_correct
+    (fun x -> d1.state_p x \/ d2.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
+
 ghost fn forevery_state_dict_prod_unfold
   (#d1: state_dict)
   (#d2: state_dict)

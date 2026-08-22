@@ -348,3 +348,33 @@ instance copy_buffer_buffer : CB.copy_buffer copy_buffer_t base_t len_t pos_t = 
   len_of = (fun c -> c.cb_len);
   pos_of = (fun c -> c.cb_pos);
 }
+
+(* `field_ptr`: the address of the current position in the input stream.
+   Only the `buffer` backend can provide it. *)
+module AB = EverParse3d.Actions.Base
+
+inline_for_extraction
+fn field_ptr_impl
+  (b: base_t) (len: len_t) (pos: pos_t)
+  (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
+requires stream_pts_to b len pos contents v
+returns res: AP.ptr U8.t
+ensures stream_pts_to b len pos contents v
+{
+  unfold (stream_pts_to b len pos contents v);
+  let p = !pos;
+  let s' = AP.split b p;
+  AP.join b s';
+  Seq.lemma_split contents (SZ.v p);
+  Seq.lemma_eq_elim
+    (Seq.append (Seq.slice contents 0 (SZ.v p)) (Seq.slice contents (SZ.v p) (Seq.length contents)))
+    contents;
+  fold (stream_pts_to b len pos contents v);
+  s'
+}
+
+noextract
+inline_for_extraction
+let field_ptr
+: option (AB.field_ptr_t base_t len_t pos_t #input_stream_buffer (AP.ptr U8.t))
+= Some field_ptr_impl

@@ -230,7 +230,25 @@ let emit_fstar_code_for_interpreter (en:env)
       else ""
     in
  
-    let module_prefix = 
+    let module_prefix =
+      if Options.get_pulse ()
+      then
+       FStar.Printf.sprintf "module %s\n\
+                             open Pulse.Lib.Pervasives\n\
+                             open EverParse3d.Prelude\n\
+                             open EverParse3d.State\n\
+                             open EverParse3d.Actions.Base\n\
+                             open EverParse3d.Interpreter\n\
+                             %s\n\
+                             module T = FStar.Tactics\n\
+                             module A = EverParse3d.Actions.Base\n\
+                             module P = EverParse3d.Prelude\n\
+                             module I = EverParse3d.InputStream.Base\n\
+                             module B = %s\n\
+                             #set-options \"--fuel 0 --ifuel 0 --z3rlimit 32 --ext optimize_let_vc\"\n"
+                             modul maybe_open_external_api
+                             (Options.pulse_backend_module ())
+      else
        FStar.Printf.sprintf "module %s\n\
                              open EverParse3d.Prelude\n\
                              open EverParse3d.Actions.All\n\

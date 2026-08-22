@@ -2767,3 +2767,50 @@ fn validate_unit_no_read
 {
   validator_success
 }
+
+#push-options "--z3rlimit 32"
+
+noextract
+inline_for_extraction
+fn validate_weaken_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+       (name: string)
+       (#nz:_)
+       (#wk:_)
+       (#k:parser_kind nz wk)
+       (#t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] d1: state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p d1 has_action use_error_handler)
+      (d2: state_dict)
+      (d2_extends: squash (state_dict_weaken_prop d1 d2))
+: validate_with_action_no_read #base_t #len_t #pos_t p d2 has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  let d3 = state_dict_weaken_sub d2 d1;
+  with extra2 . assert (forevery_state d2 extra2);
+  rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
+  forevery_state_dict_prod_unfold () _;
+  with extra1 . assert (forevery_state d1 extra1);
+  with extra3 . assert (forevery_state d3 extra3);
+  forevery_values_ext d2 extra2 (mk_prod_value extra1 extra3 ());
+  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  forevery_state_dict_prod_fold d1 d3 ();
+  with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
+  res
+}
+
+#pop-options

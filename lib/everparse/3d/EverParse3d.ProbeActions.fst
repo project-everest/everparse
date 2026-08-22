@@ -833,3 +833,15 @@ ensures
 }
 
 #pop-options
+
+inline_for_extraction
+noextract
+fn as_u64_identity_impl (x: U64.t) (_: unit)
+requires emp
+returns r: U64.t
+ensures emp
+{
+  x
+}
+
+let as_u64_identity x = as_u64_identity_impl x

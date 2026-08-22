@@ -1045,7 +1045,7 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_false _
   | I.T_string _ _ _
   | I.T_denoted _ _
-  | I.T_probe_then_validate _ _ _ _ _ _ _ _ _
+  | I.T_probe_then_validate _ _ _ _ _ _ _ _ _ _
     -> 0
 
 let rec parse_typ (t : I.typ) : Tot (parser not_reading)
@@ -1078,7 +1078,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
       parse_nlist_total_constant_size i size
     else
       parse_nlist (fun _ -> mk_expr size) (parse_typ body)
-  | I.T_probe_then_validate _fn body _ptr_sz _nullable _probe _dest _as_u64 _probe_init dest_sz -> 
+  | I.T_probe_then_validate _fn body _ptr_sz _nullable _probe _dest _as_u64 _probe_init dest_sz _ -> 
     parse_probe (fun _ -> mk_expr dest_sz) (parse_denoted body)
 
 and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Tot (int -> parser not_reading)

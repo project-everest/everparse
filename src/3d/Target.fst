@@ -445,7 +445,21 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       //exactly like the validators, so we must apply it to the same
       //compile-time boolean the rest of the generated code uses.
       let ueh = if Options.get_use_error_handler_macro () then "false" else "true" in
-      Printf.sprintf "(probe_m_unit %s)" ueh
+      if Options.get_pulse ()
+      then
+        (* Probes are supported for the `buffer` backend only, so the probe
+           monad's type class instances are always the buffer ones. *)
+        Printf.sprintf
+          "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer unit true false %s)"
+          ueh
+      else
+        Printf.sprintf "(probe_m_unit %s)" ueh
+    else
+    if (if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T" then Options.get_pulse () else false)
+    then
+      (* Under --pulse the copy buffer type is provided by the input-stream
+         backend instance rather than by a linked-in abstract type. *)
+      "B.copy_buffer_t"
     else
     let hd' =
       if hd.v = Ast.to_ident' "void"
@@ -477,7 +491,10 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_pointer t i -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
+  | T_pointer t i ->
+    if Options.get_pulse ()
+    then Printf.sprintf "(Pulse.Lib.Reference.ref (%s))" (print_typ mname t)
+    else Printf.sprintf "bpointer (%s)" (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
@@ -1643,6 +1660,14 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
 
 let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
+  (* Under --pulse the probe types are indexed by the input-stream and
+     copy-buffer type class instances, which cannot be inferred from a bare
+     `val`; spell them out. Probes are supported for the `buffer` backend only. *)
+  let probe_inst_args =
+    if Options.get_pulse ()
+    then " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer"
+    else ""
+  in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
     // | Output_type ot ->
@@ -1659,12 +1684,20 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params false ->
-      Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
+      (if Options.get_pulse ()
+       then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action output_state %s\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
+       else
+      Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
+        (print_ident f)
+        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
+          (print_ident i)
+          (print_typ modul t))))
+        (print_typ modul ret))
     | Extern_fn f ret params true ->
       Printf.sprintf "\n\nval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
         (print_ident f)
@@ -1673,18 +1706,21 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
           (print_typ modul t))))
         (print_typ modul ret)
     | Extern_probe f PQWithOffsets ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental\n\n" (print_ident f)
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental%s\n\n" (print_ident f) probe_inst_args
     | Extern_probe f (PQRead t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s \n\n" 
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s%s \n\n" 
               (print_ident f)
               (print_integer_type t)
+              probe_inst_args
     | Extern_probe f (PQWrite t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s \n\n" 
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s%s \n\n" 
               (print_ident f)
               (print_integer_type t)
+              probe_inst_args
     | Extern_probe f PQInit ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.init_probe_dest_t \n\n" 
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.init_probe_dest_t%s \n\n" 
               (print_ident f)
+              probe_inst_args
     | _ -> "")) in
 
    let external_types_include =
@@ -1692,6 +1728,23 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      then Printf.sprintf "include %s.ExternalTypes\n\n" modul
      else "" in
 
+   if Options.get_pulse ()
+   then
+   Printf.sprintf
+    "module %s.ExternalAPI\n\n\
+     open Pulse.Lib.Pervasives\n\
+     open EverParse3d.Prelude\n\
+     open EverParse3d.State\n\
+     open EverParse3d.Actions.Base\n\
+     open EverParse3d.Interpreter\n\
+     module B = %s\n\
+     %s\n\
+     noextract val output_state : EverParse3d.State.state_dict\n\n%s"
+    modul
+    (Options.pulse_backend_module ())
+    external_types_include
+    s
+   else
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
      open EverParse3d.Prelude\n\
