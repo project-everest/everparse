@@ -50,7 +50,7 @@ let action
 module LP = LowParse.Spec.Base
 
 inline_for_extraction noextract
-let validate_with_action_t
+let validate_with_action_read
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
      (#nz:bool)
@@ -145,8 +145,8 @@ fn validate_eta
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -227,9 +227,9 @@ fn validate_with_success_action
       (#[@@@erasable] extra: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_t #base_t #len_t #pos_t p1 extra has_action use_error_handler)
+      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra has_action use_error_handler)
       (a:action #base_t #len_t #pos_t extra bool use_error_handler)
-  : validate_with_action_t #base_t #len_t #pos_t p1 extra true use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t p1 extra true use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -268,8 +268,8 @@ fn validate_with_error_handler
       (#[@@@erasable] extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (v1:validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action use_error_handler)
-  : validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action use_error_handler
+      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler)
+  : validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -295,7 +295,7 @@ fn validate_ret
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-  : validate_with_action_t #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -323,7 +323,7 @@ fn validate_pair
        (#[@@@erasable] extra_state: state_dict)
        (#has_action1:bool)
        (#use_error_handler:bool)
-       (v1:validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
        (#nz2:_)
        (#wk2: _)
        (#k2:parser_kind nz2 wk2)
@@ -331,8 +331,8 @@ fn validate_pair
        (#[@@@erasable] p2:parser k2 t2)
        (k2_const: bool)
        (#has_action2:bool)
-       (v2:validate_with_action_t #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
-  : validate_with_action_t
+       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
+  : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_pair` p2)
       extra_state
@@ -383,8 +383,8 @@ fn validate_dep_pair_with_refinement_and_action
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_t #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
-  : validate_with_action_t
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
@@ -440,7 +440,7 @@ fn validate_filter
        (f:t -> bool)
        (cr:string)
        (cf:string)
-  : validate_with_action_t #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -484,7 +484,7 @@ fn validate_filter_with_action
        (cr:string)
        (cf:string)
        (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
-  : validate_with_action_t
+  : validate_with_action_read
       #base_t #len_t #pos_t
       (p `parse_filter` f)
       extra_state
@@ -532,11 +532,11 @@ fn validate_weaken_left
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_t #base_t #len_t #pos_t (parse_weaken_left p k') extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_left p k') extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -562,11 +562,11 @@ fn validate_weaken_right
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_t #base_t #len_t #pos_t (parse_weaken_right p k') extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_right p k') extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -596,10 +596,10 @@ fn validate_weaken
        (#[@@@erasable] d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t #base_t #len_t #pos_t p d1 has_action use_error_handler)
+       (v:validate_with_action_read #base_t #len_t #pos_t p d1 has_action use_error_handler)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: validate_with_action_t #base_t #len_t #pos_t p d2 has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p d2 has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -639,12 +639,12 @@ fn validate_call
        (#[@@@erasable] d': state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t #base_t #len_t #pos_t p d' has_action use_error_handler)
+       (v:validate_with_action_read #base_t #len_t #pos_t p d' has_action use_error_handler)
       (d: state_dict)
       (#[@@@erasable] f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
       (#[@@@erasable] g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
       ([@@@erasable] sq: squash (state_dict_rename_prop d d' f g))
-: validate_with_action_t #base_t #len_t #pos_t p d has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p d has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -669,7 +669,7 @@ fn validate_impos
        (#extra_state: _)
        (#use_error_handler:bool)
        (_:unit)
-  : validate_with_action_t #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -698,10 +698,10 @@ fn validate_ite
        (#ha2:_)
        (#use_error_handler:bool)
        ([@@@erasable] p1:squash e -> parser k (a()))
-       (v1:(squash e -> validate_with_action_t #base_t #len_t #pos_t (p1()) extra_state ha1 use_error_handler))
+       (v1:(squash e -> validate_with_action_read #base_t #len_t #pos_t (p1()) extra_state ha1 use_error_handler))
        ([@@@erasable] p2:squash (not e) -> parser k (b()))
-       (v2:(squash (not e) -> validate_with_action_t #base_t #len_t #pos_t (p2()) extra_state ha2 use_error_handler))
-  : validate_with_action_t
+       (v2:(squash (not e) -> validate_with_action_read #base_t #len_t #pos_t (p2()) extra_state ha2 use_error_handler))
+  : validate_with_action_read
       #base_t #len_t #pos_t
       (parse_ite e p1 p2)
       extra_state
@@ -875,8 +875,8 @@ fn validate_nlist
        (#[@@@erasable] extra_state: _)
        (#ha:bool)
        (#use_error_handler:bool)
-       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler
+       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -969,8 +969,8 @@ fn validate_t_at_most
        (#[@@@erasable] extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
-  : validate_with_action_t #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+  : validate_with_action_read #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1027,8 +1027,8 @@ fn validate_t_exact
        (#[@@@erasable] extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
-  : validate_with_action_t #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+  : validate_with_action_read #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1283,7 +1283,7 @@ let probe_then_validate
       (#use_error_handler:bool)
       (typename:string)
       (fieldname:string)
-      (v:validate_with_action_t p inv disj l ha allow_reading use_error_handler)
+      (v:validate_with_action_read p inv disj l ha allow_reading use_error_handler)
       (src:ptr_t)
       (as_u64:ptr_t -> PA.pure_external_action U64.t)
       (nullable:bool)
@@ -1472,8 +1472,8 @@ fn validate_with_comment
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1494,7 +1494,7 @@ fn validate_unit
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_t #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1516,7 +1516,7 @@ fn validate_unit_refinement
       (cf: string)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_t #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1557,8 +1557,8 @@ fn validate_dep_pair
       (#[@@@erasable] t2:t1 -> Type)
       (#[@@@erasable] p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:t1 -> validate_with_action_t #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
-  : validate_with_action_t
+      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_dep_pair` p2)
       extra_state
@@ -1605,8 +1605,8 @@ fn validate_dep_pair_with_action
       (#[@@@erasable] t2:t1 -> Type)
       (#[@@@erasable] p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:t1 -> validate_with_action_t #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
-  : validate_with_action_t
+      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_dep_pair` p2)
       extra_state
@@ -1660,8 +1660,8 @@ fn validate_dep_pair_with_refinement
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_t #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
-  : validate_with_action_t
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
@@ -1708,7 +1708,7 @@ fn validate_with_dep_action
       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
       (r:leaf_reader #base_t #len_t #pos_t p)
       (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
-  : validate_with_action_t #base_t #len_t #pos_t p extra_state true use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1959,7 +1959,7 @@ fn validate_all_bytes
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_t #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2002,7 +2002,7 @@ fn validate_drop
       (#has_action:bool)
       (#use_error_handler:bool)
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2039,7 +2039,7 @@ let validate_without_reading
       (#has_action:bool)
       (#use_error_handler:bool)
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
 = validate_drop v
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2175,8 +2175,8 @@ fn validate_list
       (#[@@@erasable] extra_state: state_dict)
       (#ha:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
-: validate_with_action_t
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+: validate_with_action_read
     #base_t #len_t #pos_t #inst
     #false #WeakKindConsumesAll
     #(LPL.parse_list_kind k.LP.parser_kind_injective)
@@ -2244,7 +2244,7 @@ let validate_all_zeros
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_t #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
 = validate_list
     (validate_filter "parse_zeros" validate____UINT8 read____UINT8 is_zero "check if zero" "")
 
@@ -2286,7 +2286,7 @@ fn validate_list_up_to
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
       ([@@@erasable] prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
-: validate_with_action_t
+: validate_with_action_read
     #base_t #len_t #pos_t #inst
     #true #WeakKindStrongPrefix
     #(LUT.parse_list_up_to_kind k)
@@ -2390,7 +2390,7 @@ fn validate_string
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
-: validate_with_action_t #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2424,8 +2424,8 @@ let validate_nlist_constant_size_without_actions
       (#[@@@erasable] p:parser k t)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state false use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler)
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
 = validate_nlist n n_is_const v
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2514,7 +2514,7 @@ fn probe_then_validate
       (#[@@@erasable] extra_state: state_dict)
       (#ha: bool)
       (#use_error_handler: bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
       (#ptr_t: Type0)
       (src: ptr_t)
       (as_u64: (ptr_t -> PA.pure_external_action U64.t))
@@ -2619,3 +2619,129 @@ fn probe_then_validate
 }
 
 #pop-options
+
+////////////////////////////////////////////////////////////////////////////////
+// Non-consuming counterparts of the wrapper combinators, so that the
+// interpreter can be polymorphic in the `allow_reading` index
+////////////////////////////////////////////////////////////////////////////////
+
+inline_for_extraction noextract
+fn validate_impos_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+       (#[@@@erasable] extra_state: _)
+       (#use_error_handler:bool)
+       (_:unit)
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  validator_error_impossible
+}
+
+inline_for_extraction noextract
+fn validate_eta_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+}
+
+inline_for_extraction noextract
+fn validate_with_comment_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (c: string)
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  // TODO: add support for extracting compile-time comments in Pulse
+  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+}
+
+inline_for_extraction noextract
+fn validate_with_error_handler_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+      (typename: string)
+      (fieldname: string)
+      (#nz: _)
+      (#wk: _)
+      (#k1:parser_kind nz wk)
+      (#[@@@erasable] t1: Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action: _)
+      (#use_error_handler:bool)
+      (v1: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler)
+: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  let res = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos;
+  if (res = validator_success) {
+    res
+  } else {
+    ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos _ _;
+    res
+  };
+}

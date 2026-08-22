@@ -11,7 +11,7 @@ module B = EverParse3d.InputStream.Buffer
 
 inline_for_extraction noextract
 let smoke_v
-: A.validate_with_action_t
+: A.validate_with_action_read
     #B.base_t #B.len_t #B.pos_t
     (parse____UINT8 `parse_pair` parse____UINT16)
     state_dict_empty
@@ -30,7 +30,7 @@ module E = EverParse3d.InputStream.Extern
 
 inline_for_extraction noextract
 let smoke_extern
-: A.validate_with_action_t
+: A.validate_with_action_read
     #E.base_t #E.len_t #E.pos_t #E.input_stream_extern
     (parse____UINT8 `parse_pair` parse____UINT16)
     state_dict_empty
@@ -45,7 +45,7 @@ module St = EverParse3d.InputStream.Static
 
 inline_for_extraction noextract
 let smoke_static
-: A.validate_with_action_t
+: A.validate_with_action_read
     #St.base_t #St.len_t #St.pos_t #St.input_stream_static
     parse____UINT32
     state_dict_empty
@@ -121,7 +121,7 @@ let smoke_probe_then_validate
   (#nz: bool) (#wk: _) (#k: EverParse3d.Kinds.parser_kind nz wk)
   (#t: Type0) (#p: EverParse3d.Prelude.parser k t)
   (d: state_dict)
-  (v: A.validate_with_action_t #B.base_t #B.len_t #B.pos_t p d false false)
+  (v: A.validate_with_action_read #B.base_t #B.len_t #B.pos_t p d false false)
   (#ptr_t: Type0)
   (src: ptr_t)
   (as_u64: (ptr_t -> P.pure_external_action FStar.UInt64.t))
