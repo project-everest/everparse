@@ -497,7 +497,7 @@ val action_assignment
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (name: string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler
 
 noextract
 inline_for_extraction
@@ -1231,3 +1231,11 @@ let validate_without_reading_gen
   | false -> (fun v -> v)
   in
   f v
+
+inline_for_extraction noextract
+val validate_unit_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler

@@ -1234,7 +1234,7 @@ fn action_assignment
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (name: string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1247,7 +1247,7 @@ fn action_assignment
   forevery_state_dict_singleton_unfold' _ _ _;
   x := w;
   forevery_state_dict_singleton_fold name (pts_to x #1.0R) _;
-  w
+  ()
 }
 
 (*
@@ -2744,4 +2744,26 @@ fn validate_with_error_handler_no_read
     ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos _ _;
     res
   };
+}
+
+inline_for_extraction noextract
+fn validate_unit_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  validator_success
 }
