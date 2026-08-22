@@ -977,6 +977,37 @@ let print_c_entry
      let frame_decl =
          "EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;"
      in
+     if Options.get_pulse ()
+     then
+       (* The Pulse `error_handler` takes a uint8_t error code and the three
+          components of the input stream, rather than a uint64_t code and an
+          EVERPARSE_INPUT_BUFFER. *)
+       Printf.sprintf
+          "static\n\
+           void DefaultErrorHandler(\n\t\
+                               const char *typename_s,\n\t\
+                               const char *fieldname,\n\t\
+                               const char *reason,\n\t\
+                               uint8_t error_code,\n\t\
+                               uint8_t *context,\n\t\
+                               uint8_t *base,\n\t\
+                               size_t len,\n\t\
+                               size_t *pos)\n\
+           {\n\t\
+             %s\n\t\
+             (void) len;\n\t\
+             EverParseDefaultErrorHandler(\n\t\t\
+               typename_s,\n\t\t\
+               fieldname,\n\t\t\
+               reason,\n\t\t\
+               (uint64_t)error_code,\n\t\t\
+               frame,\n\t\t\
+               base,\n\t\t\
+               (uint64_t)*pos\n\t\
+             );\n\
+           }"
+          frame_decl
+     else
      Printf.sprintf
           "static\n\
            void DefaultErrorHandler(\n\t\
@@ -1006,6 +1037,51 @@ let print_c_entry
    in
    let input_stream_binding = Options.get_input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
+   (* Under --pulse the extracted validator has a different C prototype: it
+      takes the three components of the input stream (`uint8_t *base`,
+      `size_t len`, `size_t *pos`) instead of a single `EVERPARSE_INPUT_BUFFER`,
+      its `extra_state` argument is ghost and hence erased, and it returns a
+      plain `uint8_t` error code (0 = success) rather than a packed uint64_t.
+      The public wrapper keeps its uint32_t length, so we cast; the
+      accompanying static assertions check that the cast is lossless. *)
+   let wrapped_call_buffer_pulse name params =
+     let tail =
+       if goto_return then
+         Printf.sprintf
+           "if (ep_status != 0U)\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              goto exit;\n\t\
+            }\n\t\
+            result = TRUE;\n\n\
+            exit:\n\t\
+            return result;"
+           modul
+       else
+         Printf.sprintf
+           "if (ep_status != 0U)\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              return FALSE;\n\t\
+            }\n\t\
+            return TRUE;"
+           modul
+     in
+     (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
+     ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
+     ^ Printf.sprintf "size_t everparse_pos%s;\n\t" scalar_zero
+     ^ Printf.sprintf "uint8_t ep_status%s;\n\n\t" scalar_zero
+     ^ "frame.filled = FALSE;\n\t\
+        everparse_pos = (size_t)0U;\n\t"
+     ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)len, &everparse_pos);\n\n\t" name params error_handler_arg
+     ^ tail
+   in
    let wrapped_call_buffer name params =
      let tail =
        if goto_return then
@@ -1289,7 +1365,10 @@ let print_c_entry
     let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
     let body = 
       if is_input_stream_buffer
-      then wrapped_call_buffer validator_name pargs
+      then
+        if Options.get_pulse ()
+        then wrapped_call_buffer_pulse validator_name pargs
+        else wrapped_call_buffer validator_name pargs
       else wrapped_call_stream validator_name pargs
     in
     (* Probe wrapper *)
@@ -1439,17 +1518,30 @@ let print_c_entry
     |> List.Tot.fold_left external_api_from_decl []
     |> List.Tot.fold_left include_external_api_from_module ""
   in
+  (* The generated wrappers keep their uint32_t/uint64_t argument types, but
+     the Pulse validators are indexed by size_t. Check the casts are lossless. *)
+  let pulse_static_asserts =
+    if Options.get_pulse ()
+    then
+      "#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
+       _Static_assert(sizeof(size_t) >= sizeof(uint32_t), \"EverParse: size_t must be at least as wide as uint32_t\");\n\
+       _Static_assert(sizeof(size_t) >= sizeof(uint64_t), \"EverParse: size_t must be at least as wide as uint64_t\");\n\
+       #endif\n"
+    else ""
+  in
   let impl =
     Printf.sprintf
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
+       %s\
        %s\n\
        %s\n\n\
        %s\n\n\
        %s\n"
       modul
       modul
+      pulse_static_asserts
       include_external_api
       error_callback_proto
       default_error_handler
@@ -1651,12 +1743,20 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | _ -> "")) in
+   let prefix =
+     if Options.get_pulse ()
+     then "open Pulse.Lib.Pervasives\n\
+           open EverParse3d.Prelude\n\
+           open EverParse3d.State\n\
+           open EverParse3d.Actions.Base\n"
+     else "open EverParse3d.Prelude\n\
+           open EverParse3d.Actions.All\n"
+   in
    Printf.sprintf
-    "module %s.ExternalTypes\n\n\
-     open EverParse3d.Prelude\n\
-     open EverParse3d.Actions.All\n\n%s"
+    "module %s.ExternalTypes\n\n%s\n%s"
      modul
-    s
+     prefix
+     s
 
 let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in

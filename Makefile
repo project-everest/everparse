@@ -111,7 +111,18 @@ lowparse-unit-test: lowparse
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
+# The Pulse combinator backend (--pulse). Generation plus F* verification
+# only: extraction of the Pulse combinators to C is not wired up yet.
+3d-pulse-test: 3d
+	+$(MAKE) -C share/everparse/tests/3d
+
+.PHONY: 3d-pulse-test
+
 3d-test: 3d-unit-test 3d-doc-test
+
+ifeq (,$(NO_PULSE))
+3d-test: 3d-pulse-test
+endif
 
 asn1-test: asn1
 	+$(MAKE) -C src/ASN1 test

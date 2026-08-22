@@ -342,6 +342,13 @@ let rec typ_indexes_of_action (a:T.action)
     | Action_act a ->
       typ_indexes_of_action a
 
+let rec inv_copy_buf_keys (i:inv)
+  : ML (list string)
+  = match i with
+    | Inv_conj i j -> inv_copy_buf_keys i @ inv_copy_buf_keys j
+    | Inv_ptr _ -> []
+    | Inv_copy_buf x -> [T.print_expr "" x]
+
 let rec typ_indexes_of_parser (en:env) (p:T.parser)
   : ML typ_indexes
   = let typ_indexes_of_parser = typ_indexes_of_parser en in
@@ -557,8 +564,26 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
 
     | T.Parse_with_probe p sz nullable probe_fn dest as_u64 init dest_sz ->
       let d = dtyp_of_parser p in
+      let probed_indexes = typ_indexes_of_parser en p in
+      (* A copy buffer is a keyed `state_dict` entry that the probe combinator
+         makes disjoint from the state of the probed type. Two probes at
+         disjoint sites may therefore share a copy buffer, but a nested probe
+         may not reuse the one it is already writing into. Reject that here
+         rather than letting the key-disjointness obligation fail in the
+         generated F* code. *)
+      let dest_key = T.print_maybe_qualified_ident "" dest in
+      let probed_inv, _, _, _ = probed_indexes in
+      (match probed_inv with
+       | Some i ->
+         if List.mem dest_key (inv_copy_buf_keys i)
+         then A.error
+           (Printf.sprintf
+             "The copy buffer %s cannot be reused by a probe nested inside a probe that already writes into it"
+             dest_key)
+           dest.A.range
+       | None -> ());
       T_probe_then_validate fn d sz nullable probe_fn dest as_u64 init dest_sz
-        (typ_indexes_of_parser en p)
+        probed_indexes
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
