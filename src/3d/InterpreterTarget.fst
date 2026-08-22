@@ -742,6 +742,68 @@ let print_derived_name (mname:string) (tag:string) (i:A.ident) =
     tag
     (T.print_ident i)
 
+(* --pulse: the parameters of the type declaration currently being printed.
+
+   A copy buffer, or an output pointer, that a type receives as a parameter
+   cannot be keyed in the `state_dict` by a literal derived from the name of
+   that parameter: the very same buffer reaches different types under
+   different parameter names, and two different keys for one resource would
+   defeat the whole point of the keys. So every generated definition takes one
+   `Ghost.erased string` key per parameter, and the key of a dictionary leaf
+   that is a parameter is that erased string rather than a literal. Callers
+   pass their own key for a parameter they forward, and `Ghost.hide` of a
+   literal for anything else.
+
+   The keys are erased so that they do not survive extraction: `validate_X`
+   shares the binders of `def_X`, since its type mentions the dictionary.
+
+   This ref holds the parameters in scope. It is set by `print_binding` before
+   anything mentioning a `state_dict` is printed, which is the only context in
+   which the key of a leaf can refer to a parameter. *)
+let pulse_kenv : ref (list string) = alloc []
+
+let set_pulse_kenv (l:list string) : ML unit =
+  FStar.ST.recall pulse_kenv;
+  pulse_kenv := l
+
+let get_pulse_kenv () : ML (list string) =
+  FStar.ST.recall pulse_kenv;
+  !pulse_kenv
+
+let pulse_key_binder_of (p:string) : string = Printf.sprintf "k__%s" p
+
+let pulse_in_kenv (e:string) : ML bool =
+  Some? (List.Tot.find (fun (x:string) -> x = e) (get_pulse_kenv ()))
+
+(* Keys are string literals in generated F*, so anything that is not an
+   identifier (an argument may be an arbitrary expression) has to be mangled.
+   Only resources -- copy buffers and output pointers -- are ever dictionary
+   leaves, and those are always plain identifiers, so mangling only ever
+   applies to keys that go unused. *)
+let pulse_sanitize_key (e:string) : ML string =
+  let ok (c:FStar.Char.char) : ML bool =
+    let n = FStar.Char.int_of_char c in
+    if n >= 48 && n <= 57 then true
+    else if n >= 65 && n <= 90 then true
+    else if n >= 97 && n <= 122 then true
+    else n = 95 || n = 46 || n = 39
+  in
+  FStar.String.string_of_list
+    (List.map (fun c -> if ok c then c else FStar.Char.char_of_int 95)
+      (FStar.String.list_of_string e))
+
+(* The key of a dictionary leaf, as it appears inside the definition. *)
+let pulse_key_of (e:string) : ML string =
+  if pulse_in_kenv e
+  then Printf.sprintf "(FStar.Ghost.reveal %s)" (pulse_key_binder_of e)
+  else Printf.sprintf "\"%s\"" (pulse_sanitize_key e)
+
+(* The key to pass for an argument, at a use site. *)
+let pulse_key_arg_of (e:string) : ML string =
+  if pulse_in_kenv e
+  then pulse_key_binder_of e
+  else Printf.sprintf "(FStar.Ghost.hide \"%s\")" (pulse_sanitize_key e)
+
 (* --pulse: the `state_dict` of a type declaration.
 
    The Low* `inv` describes exactly the set of extra resources a type needs:
@@ -762,10 +824,10 @@ let rec pulse_state_dict_leaves (mname:string) (i:inv)
       pulse_state_dict_leaves mname i @ pulse_state_dict_leaves mname j
     | Inv_ptr x ->
       let e = T.print_expr mname x in
-      [e, Printf.sprintf "(state_dict_singleton \"%s\" (pts_to %s #1.0R))" e e]
+      [e, Printf.sprintf "(state_dict_singleton %s (pts_to %s #1.0R))" (pulse_key_of e) e]
     | Inv_copy_buf x ->
       let e = T.print_expr mname x in
-      [e, Printf.sprintf "(A.copy_buffer_state_dict%s \"%s\" %s)" (pulse_cb_inst_args ()) e e]
+      [e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
 
 let rec pulse_dedup_leaves (l:list (string & string))
   : ML (list (string & string))
@@ -790,6 +852,41 @@ let print_state_dict (mname:string) (i:index inv)
     | None -> "state_dict_empty"
     | Some i -> pulse_fold_prod (pulse_dedup_leaves (pulse_state_dict_leaves mname i))
 
+(* The keys of the leaves of a declaration's own dictionary, in the order in
+   which `pulse_fold_prod` combines them. *)
+let pulse_state_dict_keys (mname:string) (i:index inv)
+  : ML (list string)
+  = match i with
+    | None -> []
+    | Some i ->
+      List.map (fun (k, _) -> pulse_key_of k)
+        (pulse_dedup_leaves (pulse_state_dict_leaves mname i))
+
+(* `state_dict_prod` requires disjoint key sets, which for the singletons the
+   frontend emits is pairwise disequality of the keys. When the keys are
+   literals that is decided by normalization, but a key coming from a
+   parameter is opaque, so the definition takes the disequalities it needs as
+   a hypothesis, and its callers discharge them from their own. *)
+let rec pulse_key_distinct_conj (l:list string)
+  : ML string
+  = match l with
+    | [] -> ""
+    | [_] -> ""
+    | k :: tl ->
+      let here =
+        List.map (fun k' -> Printf.sprintf "%s =!= %s" k k') tl
+        |> String.concat " /\\ "
+      in
+      let rest = pulse_key_distinct_conj tl in
+      if rest = "" then here else Printf.sprintf "%s /\\ %s" here rest
+
+let pulse_keys_binder (mname:string) (i:index inv)
+  : ML string
+  = let c = pulse_key_distinct_conj (pulse_state_dict_keys mname i) in
+    if c = ""
+    then "(sq_keys_: squash True)"
+    else Printf.sprintf "(sq_keys_: squash (%s))" c
+
 let print_dtyp_at (mname:string) (d:string) (dt:dtyp) =
   match dt with
   | DT_IType i ->
@@ -803,10 +900,15 @@ let print_dtyp_at (mname:string) (d:string) (dt:dtyp) =
          dictionary, so `dtyp_X` is polymorphic in the ambient dictionary
          `d` (solved by unification from the enclosing `def_X` ascription)
          and takes the weakening proof, which is a decidable computation
-         over literal string keys. *)
-      Printf.sprintf "(%s %s %s ())"
+         over the keys. The keys of the arguments are passed explicitly: a
+         resource that the referenced type receives as a parameter has to be
+         keyed by whatever key the caller uses for it. *)
+      let pargs = List.map (T.print_expr mname) args in
+      let keys = List.map pulse_key_arg_of pargs |> String.concat " " in
+      Printf.sprintf "(%s %s %s () %s ())"
         (print_derived_name mname "dtyp" hd)
-        (List.map (T.print_expr mname) args |> String.concat " ")
+        keys
+        (String.concat " " pargs)
         d
     else
     Printf.sprintf "(%s %s)"
@@ -864,8 +966,8 @@ let rec print_action (mname:string) (a:T.action)
             if not (pulse_is_extern ())
             then A.error "The field_ptr_after action is only supported by the extern backend" A.dummy_range;
             Printf.sprintf
-              "(Action_field_ptr_after B.field_ptr_after () \"%s\" %s %s ())"
-              (T.print_ident write_to)
+              "(Action_field_ptr_after B.field_ptr_after () %s %s %s ())"
+              (pulse_key_arg_of (T.print_ident write_to))
               (T.print_expr mname sz)
               (T.print_ident write_to)
           end
@@ -895,8 +997,8 @@ let rec print_action (mname:string) (a:T.action)
 
         | T.Action_deref i ->
           if pulse ()
-          then Printf.sprintf "(Action_deref \"%s\" %s ())"
-                              (print_ident mname i)
+          then Printf.sprintf "(Action_deref %s %s ())"
+                              (pulse_key_arg_of (print_ident mname i))
                               (print_ident mname i)
           else
           Printf.sprintf "(Action_deref %s)"
@@ -904,8 +1006,8 @@ let rec print_action (mname:string) (a:T.action)
 
         | T.Action_assignment lhs rhs ->
           if pulse ()
-          then Printf.sprintf "(Action_assignment \"%s\" %s %s ())"
-                              (print_ident mname lhs)
+          then Printf.sprintf "(Action_assignment %s %s %s ())"
+                              (pulse_key_arg_of (print_ident mname lhs))
                               (print_ident mname lhs)
                               (T.print_expr mname rhs)
           else
@@ -1078,7 +1180,7 @@ let rec print_typ (mname:string) (t:typ)
         then A.error "Probes are only supported by the buffer backend under --pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
-        Printf.sprintf "(t_probe_then_validate_gen %s %s %b \"%s\" %s %s %s \"%s\" %s %s %s %s () _ ())"
+        Printf.sprintf "(t_probe_then_validate_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
                      (pulse_ehm ())
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      nullable
@@ -1086,7 +1188,7 @@ let rec print_typ (mname:string) (t:typ)
                      (print_ident mname init)
                      (T.print_expr mname dest_sz)
                      (T.print_expr mname probe_fn)
-                     (T.print_maybe_qualified_ident mname dest)
+                     (pulse_key_arg_of (T.print_maybe_qualified_ident mname dest))
                      (T.print_maybe_qualified_ident mname dest)
                      (print_ident mname as_u64)
                      es
@@ -1111,7 +1213,7 @@ let rec print_typ (mname:string) (t:typ)
         then A.error "Probes are only supported by the buffer backend under --pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
-        Printf.sprintf "(t_probe_then_validate_alt_gen %s %s %b \"%s\" %s %s %s \"%s\" %s %s %s %s () _ ())"
+        Printf.sprintf "(t_probe_then_validate_alt_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
                      (pulse_ehm ())
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      nullable
@@ -1119,7 +1221,7 @@ let rec print_typ (mname:string) (t:typ)
                      (print_ident mname init)
                      (T.print_expr mname dest_sz)
                      (T.print_probe_action mname probe_fn)
-                     (T.print_maybe_qualified_ident mname dest)
+                     (pulse_key_arg_of (T.print_maybe_qualified_ident mname dest))
                      (T.print_maybe_qualified_ident mname dest)
                      (print_ident mname as_u64)
                      es
@@ -1147,18 +1249,32 @@ let print_typedef_name mname (n:T.typedef_name) =
     (print_ident mname n.td_name)
     (List.map (print_param mname) n.td_params |> String.concat " ")
 
+(* --pulse: one erased key per parameter, in parameter order. *)
+let pulse_key_binders mname (ps:list T.param) : ML string =
+  List.map
+    (fun p ->
+      Printf.sprintf "(%s: FStar.Ghost.erased string)"
+        (pulse_key_binder_of (print_ident mname (fst p))))
+    ps
+  |> String.concat " "
+
+let pulse_key_binder_args mname (ps:list T.param) : ML string =
+  List.map (fun p -> pulse_key_binder_of (print_ident mname (fst p))) ps
+  |> String.concat " "
+
 let state_dict_of_type_decl mname (td:type_decl) : ML string =
   let inv, _, _, _ = td.typ_indexes in
   print_state_dict mname inv
 
-let print_type_decl mname (td:type_decl) =
+let print_type_decl mname (binders:string) (td:type_decl) =
   if pulse ()
   then
     FStar.Printf.sprintf
       "[@@specialize; noextract_to \"krml\"]\n\
        noextract\n\
-       let def_%s = ( %s <: Tot (typ %s %s %b _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
-        (print_typedef_name mname td.name)
+       let def_%s %s = ( %s <: Tot (typ %s %s %b _ _ _))\n"
+        (print_ident mname td.name.td_name)
+        binders
         (print_typ mname td.typ)
         (pulse_inst_args ())
         (state_dict_of_type_decl mname td)
@@ -1313,9 +1429,24 @@ let print_binding mname (td:type_decl)
   let root_name = print_ident mname tdn.td_name in
   let print_binders = print_binders mname in
   let print_args = print_binders_as_args mname in
-  let binders = print_binders tdn.td_params in
-  let args = print_args tdn.td_params in
-  let def = print_type_decl mname td in
+  (* Record the parameters in scope before printing anything that mentions a
+     `state_dict`: a leaf that is a parameter is keyed by that parameter's
+     erased key rather than by a literal. *)
+  let _ = set_pulse_kenv (List.map (fun p -> print_ident mname (fst p)) tdn.td_params) in
+  let binders, args =
+    if pulse ()
+    then
+      let inv, _, _, _ = td.typ_indexes in
+      Printf.sprintf "%s %s %s"
+        (pulse_key_binders mname tdn.td_params)
+        (print_binders tdn.td_params)
+        (pulse_keys_binder mname inv),
+      Printf.sprintf "%s %s sq_keys_"
+        (pulse_key_binder_args mname tdn.td_params)
+        (print_args tdn.td_params)
+    else print_binders tdn.td_params, print_args tdn.td_params
+  in
+  let def = print_type_decl mname binders td in
   let weak_kind = A.print_weak_kind k.pk_weak_kind in
   let pk_of_binding =
       Printf.sprintf "[@@noextract_to \"krml\"]\n\

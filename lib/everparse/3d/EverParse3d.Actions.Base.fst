@@ -1209,7 +1209,7 @@ inline_for_extraction
 fn action_deref
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (name: string)
+      (name: Ghost.erased string)
       (#a:Type0) (x:ref a) (#use_error_handler: bool)
 : action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
 =
@@ -1232,7 +1232,7 @@ inline_for_extraction
 fn action_assignment
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (name: string)
+      (name: Ghost.erased string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
 : action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler
 =
@@ -2131,7 +2131,7 @@ fn action_field_ptr_after
       (#ptr_t: Type0)
       (f: option (field_ptr_after_t base_t len_t pos_t ptr_t))
       ([@@@erasable] sq: squash (Some? f))
-      (name: string)
+      (name: Ghost.erased string)
       (sz: U64.t)
       (write_to: ref ptr_t)
       (#use_error_handler:bool)
@@ -2519,7 +2519,7 @@ fn probe_then_validate
       (src: ptr_t)
       (as_u64: (ptr_t -> PA.pure_external_action U64.t))
       (nullable: bool)
-      (dest_name: string)
+      (dest_name: Ghost.erased string)
       (dest: copy_buffer_t)
       (init: PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
       (prep_dest_sz: U64.t)

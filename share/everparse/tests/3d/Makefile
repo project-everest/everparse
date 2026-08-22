@@ -24,11 +24,6 @@ OUT_DIR=out.pulse
 # Same exclusions as src/3d/tests.
 excluded_tests := FieldDependence0.3d ActAndCheck.3d
 
-# Excluded for now: the SMT encoding of their `def_` declarations blows up.
-# Both have three nested copy buffers; see the note in EverParse3d.State.fst
-# about the state_dict encoding.
-excluded_tests += FineGrainedProbeSpecialize.3d Specialize6.3d
-
 ifeq ($(OS),Windows_NT)
   # UlongToPtr is defined in Windows DLLs, conflicts with those examples
   excluded_tests += FineGrainedProbe.3d Specialize2.3d Specialize3.3d Specialize5.3d

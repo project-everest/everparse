@@ -619,7 +619,7 @@ type atomic_action
       #ptr_t:Type0 ->
       f:option (A.field_ptr_after_t base_t len_t pos_t #inst ptr_t) ->
       _:squash (Some? f) ->
-      name:string ->
+      name:Ghost.erased string ->
       sz:U64.t ->
       write_to:ref ptr_t ->
       _:squash (state_dict_weaken_prop
@@ -636,14 +636,14 @@ type atomic_action
 
   | Action_deref:
       #a:Type0 ->
-      name:string ->
+      name:Ghost.erased string ->
       x:ref a ->
       _:squash (state_dict_weaken_prop (state_dict_singleton name (pts_to x #1.0R)) d) ->
       atomic_action base_t len_t pos_t inst d use_error_handler false false a
 
   | Action_assignment:
       #a:Type0 ->
-      name:string ->
+      name:Ghost.erased string ->
       x:ref a ->
       rhs:a ->
       _:squash (state_dict_weaken_prop (state_dict_singleton name (pts_to x #1.0R)) d) ->
@@ -1385,7 +1385,7 @@ let t_probe_then_validate
       (dest_sz:U64.t)
       (#mz:bool)
       (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
-      (dest_name:string)
+      (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
@@ -1424,7 +1424,7 @@ let t_probe_then_validate_alt
       (dest_sz:U64.t)
       (#mz:bool)
       (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst use_error_handler mz)
-      (dest_name:string)
+      (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
@@ -1466,7 +1466,7 @@ let t_probe_then_validate_gen
       (dest_sz:U64.t)
       (#mz:bool)
       (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
-      (dest_name:string)
+      (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
@@ -1511,7 +1511,7 @@ let t_probe_then_validate_alt_gen
       (dest_sz:U64.t)
       (#mz:bool)
       (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst use_error_handler mz)
-      (dest_name:string)
+      (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
