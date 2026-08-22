@@ -134,3 +134,24 @@ let smoke_probe_then_validate
     (state_dict_prod d (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest))
     bool false
 = A.probe_then_validate B.error_handler_macro "T" "f" v src as_u64 true "smoke_cb" dest init 0uL probe sq
+
+(* The interpreter, at the `buffer` backend: build a small `typ` and run it
+   through `as_validator`. This also guards against the whole tail of
+   EverParse3d.Interpreter being accidentally commented out. *)
+module It = EverParse3d.Interpreter
+
+inline_for_extraction noextract
+let smoke_typ (d: state_dict)
+: It.typ B.base_t B.len_t B.pos_t B.input_stream_buffer d false
+    (and_then_kind kind____UINT8 (kind_nlist kind____UINT16 (Some 3)))
+    false false
+= It.T_pair "smoke"
+    true (It.T_denoted "u8" (It.DT_IType It.UInt8))
+    true (It.T_nlist "l" 3ul (Some 3) true
+           (It.T_with_comment "u16" (It.T_denoted "u16" (It.DT_IType It.UInt16)) "a comment"))
+
+inline_for_extraction noextract
+let smoke_as_validator (d: state_dict)
+: A.validate_with_action_read #B.base_t #B.len_t #B.pos_t
+    (It.as_parser (smoke_typ d)) d false false
+= It.as_validator B.error_handler_macro "SmokeTyp" (smoke_typ d)

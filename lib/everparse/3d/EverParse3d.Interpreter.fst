@@ -766,3 +766,838 @@ let rec action_as_action
 
     | Action_act a ->
       A.action_seq (action_as_action a) A.action_return_true
+
+////////////////////////////////////////////////////////////////////////////////
+// Types
+////////////////////////////////////////////////////////////////////////////////
+
+(* Some AST nodes contain source comments that we propagate to the output *)
+let comments = string
+
+(* The `allow_reading` index below is the Pulse reading of the Low* one:
+   `true` means the validator does not consume the input stream, so that a
+   leaf reader may subsequently read the value. Note that, unlike in Low*,
+   the two flavours are genuinely distinct types in Pulse, so `as_validator`
+   inserts `A.validate_without_reading_gen` wherever a sub-type at an
+   arbitrary `allow_reading` feeds a combinator expecting a consuming
+   validator. *)
+
+[@@ no_auto_projectors]
+noeq
+type typ
+  (base_t: Type0) (len_t: Type0) (pos_t: Type0)
+  (inst: I.input_stream_inst base_t len_t pos_t)
+  ([@@@erasable] d: state_dict)
+  (use_error_handler:bool)
+  : #nz:bool -> #wk:P.weak_kind ->
+    P.parser_kind nz wk ->
+    bool ->
+    bool ->
+    Type =
+  | T_false:
+      fieldname:string ->
+      typ base_t len_t pos_t inst d use_error_handler P.impos_kind false true
+
+  | T_denoted :
+      fieldname:string ->
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #ha:_ -> #has_reader:_ ->
+      td:dtyp base_t len_t pos_t inst d use_error_handler pk ha has_reader ->
+      typ base_t len_t pos_t inst d use_error_handler pk ha has_reader
+
+  | T_pair:
+      first_fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ -> #b1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #ha2:_ -> #b2:_ ->
+      k1_const: bool ->
+      t1:typ base_t len_t pos_t inst d use_error_handler pk1 ha1 b1 ->
+      k2_const: bool ->
+      t2:typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2 ->
+      typ base_t len_t pos_t inst d use_error_handler
+          (P.and_then_kind pk1 pk2) (ha1 || ha2) false
+
+  | T_dep_pair:
+      first_fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #ha2:_ -> #b2:bool ->
+      //the first component is a pre-denoted type with a reader
+      t1:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      //the second component is a function from denotations of t1
+      t2:(dtyp_as_type t1 -> typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2) ->
+      typ base_t len_t pos_t inst d use_error_handler
+          (P.and_then_kind pk1 pk2) (ha1 || ha2) false
+
+  | T_refine:
+      fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ ->
+      base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      refinement:(dtyp_as_type base -> bool) ->
+      typ base_t len_t pos_t inst d use_error_handler (P.filter_kind pk1) ha1 false
+
+  | T_refine_with_action:
+      fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ -> #b2:_ -> #rt2:_ ->
+      base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      refinement:(dtyp_as_type base -> bool) ->
+      act:(dtyp_as_type base -> action base_t len_t pos_t inst d use_error_handler b2 rt2 bool) ->
+      typ base_t len_t pos_t inst d use_error_handler (P.filter_kind pk1) true false
+
+  | T_dep_pair_with_refinement:
+      first_fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #ha2:_ -> #b2:_ ->
+      base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      refinement:(dtyp_as_type base -> bool) ->
+      k:(x:dtyp_as_type base { refinement x } ->
+         typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2) ->
+      typ base_t len_t pos_t inst d use_error_handler
+          (P.and_then_kind (P.filter_kind pk1) pk2) (ha1 || ha2) false
+
+  | T_dep_pair_with_action:
+      fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #ha2:_ -> #b2:_ ->
+      #b3:_ -> #rt3:_ ->
+      base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      k:(x:dtyp_as_type base -> typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2) ->
+      act:(dtyp_as_type base -> action base_t len_t pos_t inst d use_error_handler b3 rt3 bool) ->
+      typ base_t len_t pos_t inst d use_error_handler
+          (P.and_then_kind pk1 pk2) true false
+
+  | T_dep_pair_with_refinement_and_action:
+      first_fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #ha2:_ -> #b2:_ ->
+      #b3:_ -> #rt3:_ ->
+      base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      refinement:(dtyp_as_type base -> bool) ->
+      k:(x:dtyp_as_type base { refinement x } ->
+         typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2) ->
+      act:(dtyp_as_type base -> action base_t len_t pos_t inst d use_error_handler b3 rt3 bool) ->
+      typ base_t len_t pos_t inst d use_error_handler
+          (P.and_then_kind (P.filter_kind pk1) pk2) true false
+
+  | T_if_else:
+      #nz1:_ -> #wk1:_ -> #pk1:P.parser_kind nz1 wk1 ->
+      #b1:_ -> #ha1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #b2:_ -> #ha2:_ ->
+      b:bool -> //A bool, rather than an expression
+      t1:(squash b -> typ base_t len_t pos_t inst d use_error_handler pk1 ha1 b1) ->
+      t2:(squash (not b) -> typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2) ->
+      typ base_t len_t pos_t inst d use_error_handler (P.glb pk1 pk2) (ha1 || ha2) false
+
+  | T_cases:
+      #nz1:_ -> #wk1:_ -> #pk1:P.parser_kind nz1 wk1 ->
+      #b1:_ -> #ha1:_ ->
+      #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
+      #b2:_ -> #ha2:_ ->
+      b:bool -> //A bool, rather than an expression
+      t1:typ base_t len_t pos_t inst d use_error_handler pk1 ha1 b1 ->
+      t2:typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2 ->
+      typ base_t len_t pos_t inst d use_error_handler (P.glb pk1 pk2) (ha1 || ha2) false
+
+  | T_with_action:
+      fieldname:string ->
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #b1:_ -> #ha1:_ ->
+      #b2:_ -> #rt2:_ ->
+      base:typ base_t len_t pos_t inst d use_error_handler pk ha1 b1 ->
+      act:action base_t len_t pos_t inst d use_error_handler b2 rt2 bool ->
+      typ base_t len_t pos_t inst d use_error_handler pk true false
+
+  | T_with_dep_action:
+      fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ ->
+      #b2:_ -> #rt2:_ ->
+      head:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      act:(typename:string -> dtyp_as_type head ->
+           action base_t len_t pos_t inst d use_error_handler b2 rt2 bool) ->
+      typ base_t len_t pos_t inst d use_error_handler pk1 true false
+
+  | T_drop:
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #b:_ -> #ha:_ ->
+      t:typ base_t len_t pos_t inst d use_error_handler pk ha b ->
+      typ base_t len_t pos_t inst d use_error_handler pk ha false
+
+  | T_with_comment:
+      fieldname:string ->
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #b:_ -> #ha:_ ->
+      t:typ base_t len_t pos_t inst d use_error_handler pk ha b ->
+      c:comments ->
+      typ base_t len_t pos_t inst d use_error_handler pk ha b
+
+  | T_nlist:
+      fieldname:string ->
+      #wk:_ -> #pk:P.parser_kind true wk ->
+      #b:_ -> #ha:_ ->
+      n:U32.t ->
+      n_is_constant:option nat { P.memoizes_n_as_const n_is_constant n } ->
+      payload_is_constant_size:bool ->
+      t:typ base_t len_t pos_t inst d use_error_handler pk ha b ->
+      typ base_t len_t pos_t inst d use_error_handler (P.kind_nlist pk n_is_constant) ha false
+
+  | T_at_most:
+      fieldname:string ->
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #b:_ -> #ha:_ ->
+      n:U32.t ->
+      t:typ base_t len_t pos_t inst d use_error_handler pk ha b ->
+      typ base_t len_t pos_t inst d use_error_handler P.kind_t_at_most ha false
+
+  | T_exact:
+      fieldname:string ->
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #b:_ -> #ha:_ ->
+      n:U32.t ->
+      t:typ base_t len_t pos_t inst d use_error_handler pk ha b ->
+      typ base_t len_t pos_t inst d use_error_handler P.kind_t_exact ha false
+
+  | T_string:
+      fieldname:string ->
+      #pk1:P.parser_kind true P.WeakKindStrongPrefix ->
+      #ha:_ ->
+      element_type:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha true ->
+      terminator:dtyp_as_type element_type ->
+      typ base_t len_t pos_t inst d use_error_handler P.parse_string_kind ha false
+
+(* Type denotation of `typ` *)
+let rec as_type
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#[@@@erasable] d: state_dict)
+          (#use_error_handler:bool)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : Tot Type0
+    (decreases t)
+  = match t with
+    | T_false _ -> False
+
+    | T_denoted _ td ->
+      dtyp_as_type td
+
+    | T_pair _ _ t1 _ t2 ->
+      as_type t1 & as_type t2
+
+    | T_dep_pair _ i t
+    | T_dep_pair_with_action _ i t _ ->
+      x:dtyp_as_type i & as_type (t x)
+
+    | T_refine _ base refinement ->
+      P.refine (dtyp_as_type base) refinement
+
+    | T_refine_with_action _ base refinement _ ->
+      P.refine (dtyp_as_type base) refinement
+
+    | T_dep_pair_with_refinement _ base refinement t ->
+      x:P.refine (dtyp_as_type base) refinement & as_type (t x)
+
+    | T_dep_pair_with_refinement_and_action _ base refinement t _ ->
+      x:P.refine (dtyp_as_type base) refinement & as_type (t x)
+
+    | T_if_else b t0 t1 ->
+      P.t_ite b (fun _ -> as_type (t0()))
+                (fun _ -> as_type (t1()))
+
+    | T_cases b t0 t1 ->
+      P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1)
+
+    | T_drop t
+    | T_with_action _ t _
+    | T_with_comment _ t _ ->
+      as_type t
+
+    | T_with_dep_action _ i _ ->
+      dtyp_as_type i
+
+    | T_nlist _fn n _n_is_const _plconst t ->
+      P.nlist n (as_type t)
+
+    | T_at_most _ n t ->
+      P.t_at_most n (as_type t)
+
+    | T_exact _ n t ->
+      P.t_exact n (as_type t)
+
+    | T_string _ elt_t terminator ->
+      P.cstring (dtyp_as_type elt_t) terminator
+
+(* Parser denotation of `typ` *)
+let rec as_parser
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#[@@@erasable] d: state_dict)
+          (#use_error_handler:bool)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : Tot (P.parser pk (as_type t))
+        (decreases t)
+  = match t returns Tot (P.parser pk (as_type t)) with
+    | T_false _ ->
+      P.parse_impos()
+
+    | T_denoted _ dt ->
+      dtyp_as_parser dt
+
+    | T_pair _ _ t1 _ t2 ->
+      let p1 = as_parser t1 in
+      let p2 = as_parser t2 in
+      P.parse_pair p1 p2
+
+    | T_dep_pair _ i t
+    | T_dep_pair_with_action _ i t _ ->
+      let pi = dtyp_as_parser i in
+      P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> as_parser (t x))
+
+    | T_refine _ base refinement
+    | T_refine_with_action _ base refinement _ ->
+      let pi = dtyp_as_parser base in
+      P.parse_filter pi refinement
+
+    | T_dep_pair_with_refinement _ base refinement k ->
+      P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
+
+    | T_dep_pair_with_refinement_and_action _ base refinement k _ ->
+      P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
+
+    | T_if_else b t0 t1 ->
+      let p0 (_:squash b) =
+        P.parse_weaken_right (as_parser (t0())) _
+      in
+      let p1 (_:squash (not b)) =
+        P.parse_weaken_left (as_parser (t1())) _
+      in
+      P.parse_ite b p0 p1
+
+    | T_cases b t0 t1 ->
+      let p0 (_:squash b) =
+        P.parse_weaken_right (as_parser t0) _
+      in
+      let p1 (_:squash (not b)) =
+        P.parse_weaken_left (as_parser t1) _
+      in
+      P.parse_ite b p0 p1
+
+    | T_with_action _ t a ->
+      as_parser t
+
+    | T_with_dep_action _ i a ->
+      dtyp_as_parser i
+
+    | T_drop t ->
+      as_parser t
+
+    | T_with_comment _ t c ->
+      as_parser t
+
+    | T_nlist _fn n n_is_const _plconst t ->
+      P.parse_nlist n n_is_const (as_parser t)
+
+    | T_at_most _ n t ->
+      P.parse_t_at_most n (as_parser t)
+
+    | T_exact _ n t ->
+      P.parse_t_exact n (as_parser t)
+
+    | T_string _ elt_t terminator ->
+      P.parse_string (dtyp_as_parser elt_t) terminator
+
+[@@specialize]
+let rec as_reader
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#[@@@erasable] d: state_dict)
+          (#use_error_handler:bool)
+          #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #ha
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha true)
+  : leaf_reader #base_t #len_t #pos_t #inst (as_parser t)
+  = match t with
+    | T_denoted _n dt ->
+      assert_norm (as_type (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler _n dt) == dtyp_as_type dt);
+      assert_norm (as_parser (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler _n dt) == dtyp_as_parser dt);
+      (| (), dtyp_as_leaf_reader dt |)
+    | T_with_comment _n t _c ->
+      assert_norm (as_type (T_with_comment #base_t #len_t #pos_t #inst #d #use_error_handler _n t _c) == as_type t);
+      assert_norm (as_parser (T_with_comment #base_t #len_t #pos_t #inst #d #use_error_handler _n t _c) == as_parser t);
+      as_reader t
+    | T_false _n ->
+      assert_norm (as_type (T_false #base_t #len_t #pos_t #inst #d #use_error_handler _n) == False);
+      assert_norm (as_parser (T_false #base_t #len_t #pos_t #inst #d #use_error_handler _n) == P.parse_impos());
+      (| (), A.read_impos () |)
+
+(* The main result: a validator denotation of `typ`, related by construction
+   to the parser and type denotations. *)
+#push-options "--split_queries no --z3rlimit_factor 4 --z3cliopt 'smt.qi.eager_threshold=100'"
+#restart-solver
+[@@specialize]
+let rec as_validator
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#[@@@erasable] d: state_dict)
+          (#use_error_handler:bool)
+          (ehm: error_handler #base_t #len_t #pos_t #inst)
+          (typename:string)
+          #nz #wk (#pk:P.parser_kind nz wk)
+          #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : Tot (A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(as_type t)
+            (as_parser t)
+            d
+            ha b use_error_handler)
+        (decreases t)
+  = match t
+    returns Tot (A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(as_type t) (as_parser t) d ha b use_error_handler)
+    with
+    | T_false fldname ->
+      A.validate_with_error_handler_no_read ehm typename fldname (A.validate_impos_no_read #base_t #len_t #pos_t #inst #d #use_error_handler ())
+
+    | T_denoted fldname td ->
+      assert_norm (as_type (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_type td);
+      assert_norm (as_parser (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_parser td);
+      A.validate_with_error_handler_gen ehm typename fldname _
+        (A.validate_eta_gen _ (dtyp_as_validator td))
+
+    | T_pair fldname k1_const t1 k2_const t2 ->
+      assert_norm (as_type (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == as_type t1 & as_type t2);
+      assert_norm (as_parser (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == P.parse_pair (as_parser t1) (as_parser t2));
+      A.validate_pair typename fldname
+          k1_const
+          (A.validate_without_reading_gen _ (as_validator ehm typename t1))
+          k2_const
+          (A.validate_without_reading_gen _ (as_validator ehm typename t2))
+
+    | T_dep_pair fldname i t ->
+      assert_norm (as_type (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) == x:dtyp_as_type i & as_type (t x));
+      assert_norm (as_parser (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) ==
+                   P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
+      A.validate_dep_pair fldname
+          (A.validate_with_error_handler_no_read ehm typename fldname (dtyp_as_validator_no_read i))
+          (dtyp_as_leaf_reader i)
+          (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x)))
+
+    | T_refine fldname t f ->
+      assert_norm (as_type (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f) == P.refine (dtyp_as_type t) f);
+      assert_norm (as_parser (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f) == P.parse_filter (dtyp_as_parser t) f);
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_filter fldname
+          (dtyp_as_validator_no_read t)
+          (dtyp_as_leaf_reader t)
+          f "reading field_value" "checking constraint")
+
+    | T_refine_with_action fldname t f a ->
+      assert_norm (as_type (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f a) == P.refine (dtyp_as_type t) f);
+      assert_norm (as_parser (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f a) == P.parse_filter (dtyp_as_parser t) f);
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_filter_with_action fldname
+          (dtyp_as_validator_no_read t)
+          (dtyp_as_leaf_reader t)
+          f "reading field_value" "checking constraint"
+          (fun x -> action_as_action (a x)))
+
+    | T_dep_pair_with_refinement fldname base refinement k ->
+      assert_norm (as_type (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k) ==
+                        x:P.refine (dtyp_as_type base) refinement & as_type (k x));
+      assert_norm (as_parser (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k) ==
+                        P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_dep_pair_with_refinement false fldname
+            (dtyp_as_validator_no_read base)
+            (dtyp_as_leaf_reader base)
+            refinement
+            (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x))))
+
+    | T_dep_pair_with_action fldname base t act ->
+      assert_norm (as_type (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t act) ==
+                        x:dtyp_as_type base & as_type (t x));
+      assert_norm (as_parser (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t act) ==
+                        P.(dtyp_as_parser base `parse_dep_pair` (fun x -> as_parser (t x))));
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_dep_pair_with_action
+            (dtyp_as_validator_no_read base)
+            (dtyp_as_leaf_reader base)
+            (fun x -> action_as_action (act x))
+            (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x))))
+
+    | T_dep_pair_with_refinement_and_action fldname base refinement k act ->
+      assert_norm (as_type (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k act) ==
+                        x:P.refine (dtyp_as_type base) refinement & as_type (k x));
+      assert_norm (as_parser (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k act) ==
+                        P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
+      A.validate_dep_pair_with_refinement_and_action false fldname
+            (A.validate_with_error_handler_no_read ehm typename fldname
+              (dtyp_as_validator_no_read base))
+            (dtyp_as_leaf_reader base)
+            refinement
+            (fun x -> action_as_action (act x))
+            (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x)))
+
+    | T_if_else b t0 t1 ->
+      assert_norm (as_type (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
+      let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
+      let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) _ in
+      assert_norm (as_parser (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.parse_ite b p0 p1);
+      let v0 (_:squash b) =
+        A.validate_weaken_right (A.validate_without_reading_gen _ (as_validator ehm typename (t0()))) _
+      in
+      let v1 (_:squash (not b)) =
+        A.validate_weaken_left (A.validate_without_reading_gen _ (as_validator ehm typename (t1()))) _
+      in
+      A.validate_ite b p0 v0 p1 v1
+
+    | T_cases b t0 t1 ->
+      assert_norm (as_type (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1));
+      let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
+      let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
+      assert_norm (as_parser (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.parse_ite b p0 p1);
+      let v0 (_:squash b) =
+        A.validate_weaken_right (A.validate_without_reading_gen _ (as_validator ehm typename t0)) _
+      in
+      let v1 (_:squash (not b)) =
+        A.validate_weaken_left (A.validate_without_reading_gen _ (as_validator ehm typename t1)) _
+      in
+      A.validate_ite b p0 v0 p1 v1
+
+    | T_with_action fldname t a ->
+      assert_norm (as_type (T_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t a) == as_type t);
+      assert_norm (as_parser (T_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t a) == as_parser t);
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_with_success_action fldname
+          (A.validate_without_reading_gen _ (as_validator ehm typename t))
+          (action_as_action a))
+
+    | T_with_dep_action fldname i a ->
+      assert_norm (as_type (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == dtyp_as_type i);
+      assert_norm (as_parser (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == dtyp_as_parser i);
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_with_dep_action fldname
+            (dtyp_as_validator_no_read i)
+            (dtyp_as_leaf_reader i)
+            (fun x -> action_as_action (a typename x)))
+
+    | T_drop t ->
+      assert_norm (as_type (T_drop #base_t #len_t #pos_t #inst #d #use_error_handler t) == as_type t);
+      assert_norm (as_parser (T_drop #base_t #len_t #pos_t #inst #d #use_error_handler t) == as_parser t);
+      A.validate_without_reading_gen _ (as_validator ehm typename t)
+
+    | T_with_comment fldname t c ->
+      assert_norm (as_type (T_with_comment #base_t #len_t #pos_t #inst #d #use_error_handler fldname t c) == as_type t);
+      assert_norm (as_parser (T_with_comment #base_t #len_t #pos_t #inst #d #use_error_handler fldname t c) == as_parser t);
+      A.validate_with_comment_gen c _ (as_validator ehm typename t)
+
+    | T_nlist fldname n n_is_const payload_is_constant_size t ->
+      assert_norm (as_type (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.nlist n (as_type t));
+      assert_norm (as_parser (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.parse_nlist n n_is_const (as_parser t));
+      let body = A.validate_without_reading_gen _ (as_validator ehm typename t) in
+      let f = match ha
+        returns (A.validate_with_action_read #base_t #len_t #pos_t (as_parser t) d ha use_error_handler ->
+                 A.validate_with_action_read #base_t #len_t #pos_t (P.parse_nlist n n_is_const (as_parser t)) d ha use_error_handler)
+        with
+        | true -> (fun v -> A.validate_with_error_handler ehm typename fldname (A.validate_nlist n n_is_const v))
+        | false -> (fun v -> A.validate_with_error_handler ehm typename fldname
+                    (A.validate_nlist_constant_size_without_actions n n_is_const payload_is_constant_size v))
+      in
+      f body
+
+    | T_at_most fldname n t ->
+      assert_norm (as_type (T_at_most #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.t_at_most n (as_type t));
+      assert_norm (as_parser (T_at_most #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.parse_t_at_most n (as_parser t));
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_t_at_most n (A.validate_without_reading_gen _ (as_validator ehm typename t)))
+
+    | T_exact fldname n t ->
+      assert_norm (as_type (T_exact #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.t_exact n (as_type t));
+      assert_norm (as_parser (T_exact #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.parse_t_exact n (as_parser t));
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_t_exact n (A.validate_without_reading_gen _ (as_validator ehm typename t)))
+
+    | T_string fldname elt_t terminator ->
+      assert_norm (as_type (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.cstring (dtyp_as_type elt_t) terminator);
+      assert_norm (as_parser (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.parse_string (dtyp_as_parser elt_t) terminator);
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_string (dtyp_as_validator_no_read elt_t)
+                           (dtyp_as_leaf_reader elt_t)
+                           terminator)
+#pop-options
+
+////////////////////////////////////////////////////////////////////////////////
+// Smart constructors and specialization
+////////////////////////////////////////////////////////////////////////////////
+
+[@@specialize]
+let atomic_action_call
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      (#[@@@erasable] d: state_dict)
+      (#use_error_handler:bool)
+      (#t:Type0)
+      (a: action_binding base_t len_t pos_t inst d use_error_handler t)
+  : atomic_action base_t len_t pos_t inst d use_error_handler true false t
+  = Action_call a
+
+inline_for_extraction
+let coerce (#[@@@erasable]a:Type)
+           (#[@@@erasable]b:Type)
+           ( [@@@erasable]pf:squash (a == b))
+           (x:a)
+  : b
+  = x
+
+(* Probe-then-validate.
+
+   This is deliberately *not* a constructor of `atomic_action`: the probed
+   type lives at its own `state_dict` `es`, which must exclude the copy
+   buffer's key, whereas the enclosing type lives at
+   `state_dict_prod es (copy_buffer_state_dict dest_name dest)`. Storing `es`
+   in the AST would raise the universe of `atomic_action`; binding it here, at
+   the level of a top-level function, keeps everything in `Type u#1`.
+
+   The disjointness argument `sq` is what rules out a nested probe reusing the
+   same copy buffer: the inner type's dictionary would then already contain
+   `dest_name`. It is a decidable computation over literal string keys. *)
+[@@specialize]
+let t_probe_then_validate
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      (#copy_buffer_t: Type0)
+      (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#use_error_handler:bool)
+      (ehm: error_handler #base_t #len_t #pos_t #inst)
+      (pointer_size:pointer_size_t)
+      (nullable:bool)
+      (fldname:string)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (dest_sz:U64.t)
+      (#mz:bool)
+      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      (dest_name:string)
+      (dest:copy_buffer_t)
+      (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
+      (#nz #wk:_) (#pk:P.parser_kind nz wk)
+      (#ha #has_reader:_)
+      (#[@@@erasable] es: state_dict)
+      (td:dtyp base_t len_t pos_t inst es use_error_handler pk ha has_reader)
+      (sq: squash (forall x .
+        ~ (es.state_p x /\
+           (A.copy_buffer_state_dict #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst dest_name dest).state_p x)))
+ : typ base_t len_t pos_t inst
+       (state_dict_prod es (A.copy_buffer_state_dict #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst dest_name dest))
+       use_error_handler
+       (parser_kind_of_itype pointer_size)
+       true
+       false
+ = T_with_dep_action fldname
+     (DT_IType pointer_size)
+     (fun typename src ->
+        Atomic_action (atomic_action_call
+          (A.probe_then_validate ehm typename fldname
+             (A.validate_without_reading_gen has_reader (dtyp_as_validator td))
+             src as_u64 nullable dest_name dest init_cb dest_sz probe sq)))
+
+[@@specialize]
+let t_probe_then_validate_alt
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      (#copy_buffer_t: Type0)
+      (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#use_error_handler:bool)
+      (ehm: error_handler #base_t #len_t #pos_t #inst)
+      (pointer_size:pointer_size_t)
+      (nullable:bool)
+      (fldname:string)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (dest_sz:U64.t)
+      (#mz:bool)
+      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst use_error_handler mz)
+      (dest_name:string)
+      (dest:copy_buffer_t)
+      (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
+      (#nz #wk:_) (#pk:P.parser_kind nz wk)
+      (#ha #has_reader:_)
+      (#[@@@erasable] es: state_dict)
+      (td:dtyp base_t len_t pos_t inst es use_error_handler pk ha has_reader)
+      (sq: squash (forall x .
+        ~ (es.state_p x /\
+           (A.copy_buffer_state_dict #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst dest_name dest).state_p x)))
+ : typ base_t len_t pos_t inst
+       (state_dict_prod es (A.copy_buffer_state_dict #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst dest_name dest))
+       use_error_handler
+       (parser_kind_of_itype pointer_size)
+       true
+       false
+ = t_probe_then_validate ehm pointer_size nullable fldname init_cb dest_sz
+     (probe_action_as_probe_m ehm probe) dest_name dest as_u64 td sq
+
+[@@noextract_to "krml"; specialize]
+inline_for_extraction noextract
+let validator_of
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      ([@@@erasable] d: state_dict)
+      (use_error_handler:bool)
+      #ha #allow_reading #nz #wk (#k:P.parser_kind nz wk)
+      (t:typ base_t len_t pos_t inst d use_error_handler k ha allow_reading)
+  = A.validate_with_action_t #base_t #len_t #pos_t #inst
+      (as_parser t)
+      d
+      ha
+      allow_reading
+      use_error_handler
+
+[@@noextract_to "krml"; specialize]
+inline_for_extraction noextract
+let dtyp_of
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      ([@@@erasable] d: state_dict)
+      (use_error_handler:bool)
+      #nz #wk (#k:P.parser_kind nz wk)
+      #ha #b (t:typ base_t len_t pos_t inst d use_error_handler k ha b)
+  = dtyp base_t len_t pos_t inst d use_error_handler k ha b
+
+let specialization_steps =
+  [nbe;
+   zeta;
+   primops;
+   iota;
+   delta_attr [`%specialize];
+   delta_only ([`%Some?;
+                `%Some?.v;
+                `%as_validator;
+                `%nz_of_binding;
+                `%wk_of_binding;
+                `%pk_of_binding;
+                `%has_action_of_binding;
+                `%has_reader;
+                `%type_of_binding;
+                `%parser_of_binding;
+                `%validator_of_binding;
+                `%leaf_reader_of_binding;
+                `%fst;
+                `%snd;
+                `%Mktuple2?._1;
+                `%Mktuple2?._2]@projector_names)]
+
+let specialize_tac steps (_:unit)
+  : T.Tac unit
+  = let open FStar.List.Tot in
+    T.norm (steps@specialization_steps);
+    T.trefl()
+
+[@@specialize]
+let mk_global_binding
+      (#base_t #len_t #pos_t: Type0)
+      (inst: I.input_stream_inst base_t len_t pos_t)
+      ([@@@erasable] d: state_dict)
+      (use_error_handler:bool)
+      #nz #wk
+      (pk:P.parser_kind nz wk)
+      ([@@@erasable] p_t : Type0)
+      ([@@@erasable] p_p : P.parser pk p_t)
+      (p_reader: option (leaf_reader #base_t #len_t #pos_t #inst p_p))
+      (#ha b:bool)
+      (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler)
+      ([@@@erasable] pf:squash (b == Some? p_reader))
+   : global_binding base_t len_t pos_t inst d use_error_handler
+   = {
+       parser_kind_nz = nz;
+       parser_weak_kind = wk;
+       parser_kind = pk;
+       parser_has_action = ha;
+       p_t = p_t;
+       p_p = p_p;
+       p_reader = p_reader;
+       p_v = p_v
+     }
+
+[@@specialize]
+let mk_dt_app
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      (#[@@@erasable] d: state_dict)
+      (#use_error_handler:bool)
+      #nz #wk (pk:P.parser_kind nz wk) (ha b:bool)
+      (x:global_binding base_t len_t pos_t inst d use_error_handler)
+      ([@@@erasable] pf:squash (nz == nz_of_binding x /\
+                                wk == wk_of_binding x /\
+                                pk == pk_of_binding x /\
+                                ha == has_action_of_binding x /\
+                                b == has_reader x))
+    : dtyp base_t len_t pos_t inst d use_error_handler #nz #wk pk ha b
+    = DT_App pk ha b x pf
+
+[@@specialize]
+let mk_dtyp_app
+      (#base_t #len_t #pos_t: Type0)
+      (inst: I.input_stream_inst base_t len_t pos_t)
+      ([@@@erasable] d: state_dict)
+      (use_error_handler:bool)
+      #nz #wk
+      (pk:P.parser_kind nz wk)
+      ([@@@erasable] p_t : Type0)
+      ([@@@erasable] p_p : P.parser pk p_t)
+      (p_reader: option (leaf_reader #base_t #len_t #pos_t #inst p_p))
+      (ha b:bool)
+      (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler)
+      ([@@@erasable] pf:squash (b == Some? p_reader))
+   : dtyp base_t len_t pos_t inst d use_error_handler #nz #wk pk ha b
+   = let gb = {
+       parser_kind_nz = nz;
+       parser_weak_kind = wk;
+       parser_kind = pk;
+       parser_has_action = ha;
+       p_t = p_t;
+       p_p = p_p;
+       p_reader = p_reader;
+       p_v = p_v
+     } in
+     DT_App pk ha b gb ()
+
+//attribute to tag the state_dict indexes of type definitions
+let specialize_state_dict = ()
+
+let coerce_validator steps : T.Tac unit =
+  let open FStar.List.Tot in
+  T.norm [delta_only (steps @ [`%parser_kind_of_itype;
+                               `%parser_kind_nz_of_itype;
+                               `%fst;
+                               `%snd;
+                               `%Mktuple2?._1;
+                               `%Mktuple2?._2;
+                               `%coerce;
+                               `%validator_of;
+                               `%dtyp_of;
+                              ]);
+           delta_attr [`%specialize_state_dict];
+           zeta;
+           iota;
+           primops];
+  T.trefl()
+
+let coerce_dt_app (steps:_) : T.Tac unit =
+  let open FStar.List.Tot in
+  T.norm [delta_only (steps@[`%nz_of_binding;
+                        `%wk_of_binding;
+                        `%pk_of_binding;
+                        `%has_reader;
+                        `%leaf_reader_of_binding;
+                        `%mk_global_binding]@projector_names);
+          zeta;
+          iota;
+          simplify];
+  T.trivial()
