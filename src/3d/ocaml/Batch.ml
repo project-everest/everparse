@@ -837,12 +837,14 @@ let postprocess_c
   =
   (* copy EverParse.h unless prevented; if prevented and Karamel produced its
    * own (due to preserved type abbreviations from -no-inline-type-abbrev),
-   * remove it so the caller's expectations of "no EverParse.h here" hold. *)
+   * remove it so the caller's expectations of "no EverParse.h here" hold.
+   * In --pulse mode KaRaMeL's EverParse.h is the real one -- it carries the
+   * bundled runtime -- so it must be kept. *)
   if not no_everparse_h
   then begin
       copy_everparse_h_raw input_stream_binding out_dir
     end
-  else if remove_krml_produced_everparse_h
+  else if remove_krml_produced_everparse_h && not (Options.get_pulse ())
   then begin
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
       if Sys.file_exists dest_everparse_h

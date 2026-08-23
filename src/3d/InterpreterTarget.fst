@@ -56,8 +56,14 @@ let pulse_cb_inst_args () : ML string =
 let pulse_is_buffer () : ML bool =
   HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
 
-let pulse_is_extern () : ML bool =
-  HashingOptions.InputStreamExtern? (Options.get_input_stream_binding ())
+(* `field_ptr_after` needs the client's Peep primitive, which both `extern` and
+   `static` provide -- they are the same F* development, differing only in the
+   C linkage of the stream primitives, exactly as in Low*. *)
+let pulse_has_field_ptr_after () : ML bool =
+  match Options.get_input_stream_binding () with
+  | HashingOptions.InputStreamExtern _ -> true
+  | HashingOptions.InputStreamStatic _ -> true
+  | _ -> false
 
 
 noeq
@@ -963,8 +969,8 @@ let rec print_action (mname:string) (a:T.action)
         | T.Action_field_ptr_after sz write_to ->
           if pulse ()
           then begin
-            if not (pulse_is_extern ())
-            then A.error "The field_ptr_after action is only supported by the extern backend" A.dummy_range;
+            if not (pulse_has_field_ptr_after ())
+            then A.error "The field_ptr_after action is only supported by the extern and static backends" A.dummy_range;
             Printf.sprintf
               "(Action_field_ptr_after B.field_ptr_after () %s %s %s ())"
               (pulse_key_arg_of (T.print_ident write_to))
@@ -980,8 +986,8 @@ let rec print_action (mname:string) (a:T.action)
         | T.Action_field_ptr_after_with_setter sz write_to_field write_to_obj ->
           if pulse ()
           then begin
-            if not (pulse_is_extern ())
-            then A.error "The field_ptr_after action is only supported by the extern backend" A.dummy_range;
+            if not (pulse_has_field_ptr_after ())
+            then A.error "The field_ptr_after action is only supported by the extern and static backends" A.dummy_range;
             Printf.sprintf
               "(Action_field_ptr_after_with_setter (B.field_ptr_after_with_setter _) () %s (%s %s))"
               (T.print_expr mname sz)

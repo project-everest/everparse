@@ -44,7 +44,23 @@ verify_only_tests := $(filter $(no_extract_tests),$(positive_tests))
 
 VERIFY_DIR=out.pulse.verify
 
-all: pulse-test pulse-test-negative
+all: pulse-test pulse-test-negative pulse-subdirs
+
+# Subdirectories with their own build. Only those already ported to --pulse are
+# listed; the rest were copied from src/3d/tests and still drive the Low*
+# backend, so building them here would prove nothing.
+#
+# extern and static are the ones that matter: they are the only tests that
+# select an --input_stream other than buffer, so they are what exercises the
+# extern and static backends, including field_ptr_after, end to end -- each
+# builds a test program against a hand-written client stream and runs it.
+pulse_subdirs := extern static
+
+.PHONY: pulse-subdirs $(pulse_subdirs)
+pulse-subdirs: $(pulse_subdirs)
+
+$(pulse_subdirs):
+	+$(MAKE) -C $@
 
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
 
@@ -97,5 +113,6 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
 clean-files:
 	rm -rf $(OUT_DIR) $(VERIFY_DIR) out.fail.pulse *.out *.err
+	for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
 
 clean: clean-files

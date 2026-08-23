@@ -970,15 +970,61 @@ let print_c_entry
      | None -> ""
    in
    let use_error_handler_macro = Options.get_use_error_handler_macro () in
+   let is_input_stream_buffer =
+     HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+   in
+   (* Under --pulse with an `extern` (or `static`) input stream, `len_t` and
+      `pos_t` are `unit` and hence erased, so the validator carries no position
+      of its own. The stream object does, so the wrapper asks it. *)
+   let stream_get_position_decl =
+     "extern size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);\n"
+   in
+   let stream_pos_decl =
+     (* The position accessor is needed by the wrapper body as well as by the
+        default handler, so declare it whenever the Pulse extern/static
+        validators are in use, including under --use_error_handler_macro. *)
+     if is_input_stream_buffer then ""
+     else if Options.get_pulse ()
+     then stream_get_position_decl
+     else ""
+   in
    let default_error_handler =
      if use_error_handler_macro
-     then ""
+     then stream_pos_decl
      else
      let frame_decl =
          "EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;"
      in
      if Options.get_pulse ()
      then
+       if not is_input_stream_buffer
+       then
+       (* The `extern`/`static` Pulse validators pass the stream object alone:
+          its length and position are `unit`, hence erased. *)
+       Printf.sprintf
+          "%sstatic\n\
+           void DefaultErrorHandler(\n\t\
+                               const char *typename_s,\n\t\
+                               const char *fieldname,\n\t\
+                               const char *reason,\n\t\
+                               uint8_t error_code,\n\t\
+                               uint8_t *context,\n\t\
+                               EVERPARSE_INPUT_STREAM_BASE base)\n\
+           {\n\t\
+             %s\n\t\
+             EverParseDefaultErrorHandler(\n\t\t\
+               typename_s,\n\t\t\
+               fieldname,\n\t\t\
+               reason,\n\t\t\
+               (uint64_t)error_code,\n\t\t\
+               frame,\n\t\t\
+               NULL,\n\t\t\
+               (uint64_t)EverParseStreamGetPosition(base)\n\t\
+             );\n\
+           }"
+          stream_pos_decl
+          frame_decl
+       else
        (* The Pulse `error_handler` takes a uint8_t error code and the three
           components of the input stream, rather than a uint64_t code and an
           EVERPARSE_INPUT_BUFFER. *)
@@ -1036,7 +1082,6 @@ let print_c_entry
      if use_error_handler_macro then "" else " &DefaultErrorHandler,"
    in
    let input_stream_binding = Options.get_input_stream_binding () in
-   let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    (* Under --pulse the extracted validator has a different C prototype: it
       takes the three components of the input stream (`uint8_t *base`,
       `size_t len`, `size_t *pos`) instead of a single `EVERPARSE_INPUT_BUFFER`,
@@ -1263,6 +1308,48 @@ let print_c_entry
               len
               tail)
    in
+   (* The Pulse `extern`/`static` validator returns a plain uint8_t error code
+      (0 = success) and takes the stream object alone, its length and position
+      being erased. The parsed size therefore comes from the stream rather than
+      from the result code, but the wrapper's own signature is unchanged. *)
+   let wrapped_call_stream_pulse name params =
+     let tail =
+       "if (ep_status != 0U)\n\t\
+        {\n\t\t\
+            EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
+        }\n\t\
+        EverParseRetreat(_extra, base, parsedSize);\n\
+        return parsedSize;"
+     in
+     let frame_init =
+       "frame.filled = FALSE;\n\t\
+        frame.typename_s = \"UNKNOWN\";\n\t\
+        frame.fieldname = \"UNKNOWN\";\n\t\
+        frame.reason = \"UNKNOWN\";\n\t\
+        frame.error_code = 0uL;\n\t"
+     in
+     if hoist then
+       Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
+       ^ Printf.sprintf "uint8_t ep_status%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t parsedSize%s;\n\n\t" scalar_zero
+       ^ frame_init
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base);\n\t" name params error_handler_arg
+       ^ "parsedSize = (uint64_t)EverParseStreamGetPosition(base);\n\n\t"
+       ^ tail
+     else
+       Printf.sprintf
+        "EVERPARSE_ERROR_FRAME frame%s;\n\t\
+         %s\
+         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base);\n\t\
+         uint64_t parsedSize = (uint64_t)EverParseStreamGetPosition(base);\n\n\t\
+         %s"
+        struct_zero
+        frame_init
+        name
+        params
+        error_handler_arg
+        tail
+   in
    let wrapped_call_stream name params =
      let tail =
        "if (EverParseIsError(ep_status))\n\t\
@@ -1350,6 +1437,10 @@ let print_c_entry
     (* Main wrapper *)
     let pparams = print_params params in
     let pargs = print_arguments params in
+    (* The Pulse extern/static validators do not take an EVERPARSE_EXTRA_T:
+       only the client's own EverParseHandleError/EverParseRetreat do, so it
+       stays in the wrapper's signature but is not forwarded. *)
+    let pargs_no_extra = print_arguments d.decl_name.td_params in
     let mk_main_signature (name: string) =
       if is_input_stream_buffer 
       then Printf.sprintf
@@ -1369,6 +1460,8 @@ let print_c_entry
         if Options.get_pulse ()
         then wrapped_call_buffer_pulse validator_name pargs
         else wrapped_call_buffer validator_name pargs
+      else if Options.get_pulse ()
+      then wrapped_call_stream_pulse validator_name pargs_no_extra
       else wrapped_call_stream validator_name pargs
     in
     (* Probe wrapper *)

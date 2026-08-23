@@ -18,9 +18,9 @@ int main(void) {
   if (test != NULL) {
     EVERPARSE_INPUT_STREAM_BASE testStream = EverParseCreate();
     if (testStream != NULL) {
-      EverParsePush(testStream, test, testSize);
-      EverParsePush(testStream, test, testSize);
-      EverParsePush(testStream, test, testSize);
+      EverParsePush(testStream, test, (size_t)testSize);
+      EverParsePush(testStream, test, (size_t)testSize);
+      EverParsePush(testStream, test, (size_t)testSize);
       if (TestCheckPoint(&out, 0, testStream)) {
         if (out == NULL) {
           printf("Validation succeeded, but not enough contiguous bytes\n");

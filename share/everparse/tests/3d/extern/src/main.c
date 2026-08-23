@@ -17,9 +17,9 @@ int main(void) {
   if (test != NULL) {
     EVERPARSE_INPUT_STREAM_BASE testStream = EverParseCreate();
     if (testStream != NULL) {
-      EverParsePush(testStream, test, testSize);
-      EverParsePush(testStream, test, testSize);
-      EverParsePush(testStream, test, testSize);
+      EverParsePush(testStream, test, (size_t)testSize);
+      EverParsePush(testStream, test, (size_t)testSize);
+      EverParsePush(testStream, test, (size_t)testSize);
       if (TestCheckPoint(0, testStream)) {
         printf("Validation succeeded\n");
       }

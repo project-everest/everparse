@@ -25,7 +25,7 @@ export EVERPARSE_HOME
 # package; followed by arguments
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
-EVERPARSE_CMD=$(EVERPARSE_EXE) --input_stream extern --input_stream_include EverParseStream.h
+EVERPARSE_CMD=$(EVERPARSE_EXE) --pulse --input_stream extern --input_stream_include EverParseStream.h
 
 # Output directory for .c/.h files as well as temporary files (.fst,
 # .krml, etc.)
