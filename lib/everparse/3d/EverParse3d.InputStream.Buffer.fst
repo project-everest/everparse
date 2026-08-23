@@ -8,13 +8,12 @@ open Pulse.Lib.Pervasives
    three C arguments instead of a struct. *)
 
 module AP = Pulse.Lib.ArrayPtr
-module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module I = EverParse3d.InputStream.Base
 module LP = LowParse.Spec.Base
-module LPL = LowParse.PulseParse.Base
+module API = LowParse.Pulse.ArrayPtr.Int
 module Trade = Pulse.Lib.Trade.Util
 module Common = EverParse3d.Actions.Common
 module CB = EverParse3d.CopyBuffer
@@ -233,43 +232,9 @@ ensures stream_pts_to base_y len_y pos_y contents0 (Seq.append v suffix)
   fold (stream_pts_to base_y len_y pos_y contents0 (Seq.append v suffix));
 }
 
-(* Undo [Pulse.Lib.Slice.subslice]: give back the ownership of the whole slice.
-   [Pulse.Lib.Slice] exposes [subslice_rest] but no elimination form for it. *)
-ghost
-fn subslice_join
-  (#t: Type0) (sub: S.slice t) (sl: S.slice t) (pm: perm) (i: SZ.t) (j: SZ.t)
-  (v: Ghost.erased (Seq.seq t) { SZ.v i <= SZ.v j /\ SZ.v j <= Seq.length v })
-requires
-  S.pts_to sub #pm (Seq.slice v (SZ.v i) (SZ.v j)) **
-  S.subslice_rest sub sl pm i j v
-ensures S.pts_to sl #pm v
-{
-  unfold (S.subslice_rest sub sl pm i j v);
-  with s1 s2 s3 . assert (
-    S.is_split sl s1 s2 **
-    S.is_split s2 sub s3
-  );
-  S.join sub s3 s2;
-  S.join s1 s2 sl;
-  Seq.lemma_eq_elim
-    (Seq.append
-      (Seq.slice v 0 (SZ.v i))
-      (Seq.append
-        (Seq.slice v (SZ.v i) (SZ.v j))
-        (Seq.slice v (SZ.v j) (Seq.length v))))
-    (Ghost.reveal v);
-  rewrite (S.pts_to sl #pm
-    (Seq.append
-      (Seq.slice v 0 (SZ.v i))
-      (Seq.append
-        (Seq.slice v (SZ.v i) (SZ.v j))
-        (Seq.slice v (SZ.v j) (Seq.length v)))))
-    as (S.pts_to sl #pm v);
-}
-
 inline_for_extraction
 fn stream_read
-  (t': Type0) (k: LP.parser_kind) (p: LP.parser k t') (r: LPL.leaf_reader p)
+  (t': Type0) (k: LP.parser_kind) (p: LP.parser k t') (r: API.leaf_reader p)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v ** pure (
@@ -291,18 +256,20 @@ ensures exists* v' .
   unfold (stream_pts_to b len pos contents v);
   let p0 = !pos;
   let m = SZ.add p0 n;
-  let sl = S.arrayptr_to_slice_intro b len;
-  let sub = S.subslice sl p0 m;
-  Seq.lemma_eq_elim
-    (Seq.slice contents (SZ.v p0) (SZ.v m))
-    (Seq.slice v 0 (SZ.v n));
-  LP.parse_strong_prefix p v (Seq.slice v 0 (SZ.v n));
-  let gv : Ghost.erased t' = Ghost.hide (fst (Some?.v (LP.parse p (Ghost.reveal v))));
-  LPL.pts_to_parsed_intro p sub (Ghost.reveal gv);
+  (* [AP.split] is pure pointer arithmetic: it extracts to [b + p0] and gives
+     [sub] the ownership of the bytes from the current position onwards, which
+     is exactly the remaining input [v]. The reader looks at the first [n] of
+     them; the strong-prefix property makes the rest irrelevant. *)
+  let sub = AP.split b p0;
+  Seq.lemma_eq_elim (Seq.slice contents (SZ.v p0) (Seq.length contents)) v;
   let res = r sub;
-  Trade.elim _ _;
-  subslice_join sub sl 1.0R p0 m contents;
-  S.arrayptr_to_slice_elim sl;
+  LP.parse_strong_prefix p v (Seq.slice v 0 (SZ.v n));
+  (* [AP.join] is ghost, so restoring the whole buffer costs nothing at run
+     time. *)
+  AP.join b sub;
+  Seq.lemma_eq_elim
+    (Seq.append (Seq.slice contents 0 (SZ.v p0)) (Seq.slice contents (SZ.v p0) (Seq.length contents)))
+    contents;
   pos := m;
   Seq.lemma_eq_elim
     (Seq.slice contents (SZ.v m) (SZ.v len))

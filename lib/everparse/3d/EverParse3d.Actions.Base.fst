@@ -1806,7 +1806,7 @@ fn lift_reader
   (v_sl: _)
 {
   LP.parser_kind_prop_equiv k p;
-  I.read t k p (LPP.leaf_reader_of_reader r) sl_base sl_len sl_pos sz contents_sl v_sl
+  I.read t k p r sl_base sl_len sl_pos sz contents_sl v_sl
 }
 
 inline_for_extraction noextract

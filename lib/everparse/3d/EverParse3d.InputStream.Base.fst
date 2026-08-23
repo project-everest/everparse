@@ -4,7 +4,7 @@ open Pulse.Lib.Pervasives
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module LP = LowParse.Spec.Base
-module LPL = LowParse.PulseParse.Base
+module API = LowParse.Pulse.ArrayPtr.Int
 
 let seq_is_suffix_of (#t: Type) (small large: Seq.seq t) : Tot prop =
     Seq.length small <= Seq.length large /\
@@ -105,7 +105,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     (t': Type0) ->
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->
-    (r: LPL.leaf_reader p) ->
+    (r: API.leaf_reader p) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->

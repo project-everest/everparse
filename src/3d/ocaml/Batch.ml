@@ -390,12 +390,15 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
      Pulse prelude into EverParse.h/EverParse.c alongside the generated code.
      Warning 26 (Top-type casts) is expected for the ref-dereference idiom.
 
-     Pulse.\* goes in a static header. Specialization inlines the whole runtime
-     into the generated validators, so the only use sites of Pulse library
-     helpers (Pulse.Lib.Slice.op_Array_Access and friends) are the generated
-     modules. KaRaMeL monomorphizes after bundling and emits each instance in
-     the file that first uses it, which would otherwise leave a cross
-     translation unit symbol in an arbitrary generated .c. *)
+     Pulse.\* goes in a static header, defensively. Specialization inlines the
+     whole runtime into the generated validators, so any use site of a Pulse
+     library helper is a generated module, and KaRaMeL monomorphizes after
+     bundling and emits each instance in the file that first uses it. A helper
+     that is not mapped to a C primitive by Pulse extraction would therefore
+     leave a cross translation unit symbol in an arbitrary generated .c. The 3d
+     runtime currently reads bytes through Pulse.Lib.ArrayPtr only, all of
+     whose operations are such primitives, so as things stand this emits
+     nothing. *)
   let backend_args =
     if Options.get_pulse ()
     then

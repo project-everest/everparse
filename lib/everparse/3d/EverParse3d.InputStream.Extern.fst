@@ -16,7 +16,7 @@ module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module I = EverParse3d.InputStream.Base
 module LP = LowParse.Spec.Base
-module LPL = LowParse.PulseParse.Base
+module API = LowParse.Pulse.ArrayPtr.Int
 module Common = EverParse3d.Actions.Common
 
 open EverParse3d.InputStream.Base { seq_is_suffix_of }
@@ -121,7 +121,7 @@ assume val stream_read :
 (t': Type0) ->
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->
-    (r: LPL.leaf_reader p) ->
+    (r: API.leaf_reader p) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->

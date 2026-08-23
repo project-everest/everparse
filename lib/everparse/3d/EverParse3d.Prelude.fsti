@@ -159,19 +159,8 @@ val parse_t_exact (n:U32.t) (#nz:bool) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p
 ////////////////////////////////////////////////////////////////////////////////
 
 inline_for_extraction noextract
-val reader (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:Type0) (p:parser k t) : Type u#1
+val reader (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:Type0) (p:parser k t) : Type0
 
-inline_for_extraction noextract
-val read_filter (#nz:_)
-                (#k: parser_kind nz WeakKindStrongPrefix)
-                (#t: Type0)
-                (#p: parser k t)
-                (p32: reader p)
-                (f: (t -> bool))
-    : reader (parse_filter p f)
-
-inline_for_extraction noextract
-val read_impos : reader (parse_impos())
 
 /// Parse a zero-terminated string
 
@@ -256,9 +245,6 @@ let parse_unit
   : parser kind_unit unit
   = parse_ret ()
 
-inline_for_extraction noextract
-val read_unit
-  : reader (parse_ret ())
 
 ////////////////////////////////////////////////////////////////////////////////
 //Convenience lemmas for bounded arithmetic, especially on bitfields
