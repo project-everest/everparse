@@ -1708,7 +1708,12 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt A.UInt64 ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = bpointer %s\n\n" s (print_output_type false bt))
+              let ptr =
+                if Options.get_pulse ()
+                then "Pulse.Lib.Reference.ref"
+                else "bpointer"
+              in
+              bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = %s %s\n\n" s ptr (print_output_type false bt))
   else ""
 #pop-options
 
@@ -1746,6 +1751,14 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (print_typ mname oe.oe_t)
           (Some?.v oe.oe_bitwidth)
       end in
+    if Options.get_pulse ()
+    then
+      Printf.sprintf
+        "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action output_state unit\n\n"
+        fn_name
+        fn_arg1_t
+        fn_arg2_t
+    else
     Printf.sprintf
         "\n\nval %s (_:%s) (_:%s) : extern_action unit (NonTrivial output_loc)\n\n"
         fn_name

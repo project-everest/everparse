@@ -20,7 +20,7 @@ EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 
 # The option under test plus an --add_include so the user-provided
 # macro definition is visible from all generated .c/.h files.
-EVERPARSE_OPTIONS=--use_error_handler_macro --add_include '"MyErrorHandlerMacro.h"'
+EVERPARSE_OPTIONS=--pulse --use_error_handler_macro --add_include '"MyErrorHandlerMacro.h"'
 
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)
 

@@ -1348,6 +1348,21 @@ let atomic_action_call
   : atomic_action base_t len_t pos_t inst d use_error_handler true false t
   = Action_call a
 
+(* Same, but at `b = false`, for calls to external actions. Unlike
+   `action_binding` in the Low* interpreter, the Pulse one is not indexed by
+   `b`, so at those call sites `b` would otherwise be unsolvable. `false`
+   is what the Low* `mk_action_binding` returns. *)
+[@@specialize]
+let atomic_action_call_extern
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      (#[@@@erasable] d: state_dict)
+      (#use_error_handler:bool)
+      (#t:Type0)
+      (a: action_binding base_t len_t pos_t inst d use_error_handler t)
+  : atomic_action base_t len_t pos_t inst d use_error_handler false false t
+  = Action_call a
+
 [@@specialize]
 inline_for_extraction
 let coerce (#[@@@erasable]a:Type)

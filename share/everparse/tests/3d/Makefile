@@ -50,11 +50,13 @@ all: pulse-test pulse-test-negative pulse-subdirs
 # listed; the rest were copied from src/3d/tests and still drive the Low*
 # backend, so building them here would prove nothing.
 #
-# extern and static are the ones that matter: they are the only tests that
-# select an --input_stream other than buffer, so they are what exercises the
-# extern and static backends, including field_ptr_after, end to end -- each
-# builds a test program against a hand-written client stream and runs it.
-pulse_subdirs := extern static
+# extern and static are the only tests that select an --input_stream other than
+# buffer, so they are what exercises those two backends, including
+# field_ptr_after, end to end -- each builds a test program against a
+# hand-written client stream and runs it. modules covers multi-module input,
+# output_types covers output types and their external actions, and the rest
+# cover individual frontend options.
+pulse_subdirs := extern static modules output_types exttype save_hashes use_error_handler_macro
 
 .PHONY: pulse-subdirs $(pulse_subdirs)
 pulse-subdirs: $(pulse_subdirs)

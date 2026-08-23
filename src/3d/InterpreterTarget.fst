@@ -71,6 +71,10 @@ type inv =
   | Inv_conj : inv -> inv -> inv
   | Inv_ptr  : expr -> inv
   | Inv_copy_buf: expr -> inv
+  (* --pulse only: the ambient state of the external actions generated for
+     output types. In Low* this is carried by the Eloc_output location alone,
+     but a Pulse state_dict fuses invariant and footprint. *)
+  | Inv_output : inv
 
 noeq
 type eloc =
@@ -118,6 +122,7 @@ let rec subst_inv' subst (i:inv)
       Inv_ptr (T.subst_expr subst x)
     | Inv_copy_buf x ->
       Inv_copy_buf (T.subst_expr subst x)
+    | Inv_output -> i
 let subst_inv s = subst_index (subst_inv' s)
 
 let eq_tags e e' =
@@ -194,6 +199,7 @@ let rec free_vars_of_inv' (i:inv)
     | Inv_conj i j -> free_vars_of_inv' i @ free_vars_of_inv' j
     | Inv_ptr x -> free_vars_of_expr x
     | Inv_copy_buf x -> free_vars_of_expr x
+    | Inv_output -> []
 let free_vars_of_inv = map_index [] free_vars_of_inv'
 
 let rec free_vars_of_eloc' (e:eloc)
@@ -319,7 +325,7 @@ let rec typ_indexes_of_action (a:T.action)
           None,
           On_success false
         | Action_field_ptr_after_with_setter _ _ _ ->
-          None,
+          (if pulse () then Some Inv_output else None),
           Some Eloc_output,
           None,
           On_success false
@@ -333,7 +339,7 @@ let rec typ_indexes_of_action (a:T.action)
           None,
           On_success false
         | Action_call f args ->
-          None,
+          (if pulse () then Some Inv_output else None),
           Some Eloc_output,
           None,
           On_success false
@@ -354,6 +360,7 @@ let rec inv_copy_buf_keys (i:inv)
     | Inv_conj i j -> inv_copy_buf_keys i @ inv_copy_buf_keys j
     | Inv_ptr _ -> []
     | Inv_copy_buf x -> [T.print_expr "" x]
+    | Inv_output -> []
 
 let rec typ_indexes_of_parser (en:env) (p:T.parser)
   : ML typ_indexes
@@ -834,6 +841,7 @@ let rec pulse_state_dict_leaves (mname:string) (i:inv)
     | Inv_copy_buf x ->
       let e = T.print_expr mname x in
       [e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
+    | Inv_output -> ["output_state", "output_state"]
 
 let rec pulse_dedup_leaves (l:list (string & string))
   : ML (list (string & string))
@@ -1023,7 +1031,7 @@ let rec print_action (mname:string) (a:T.action)
 
         | T.Action_call hd args ->
           if pulse ()
-          then Printf.sprintf "(Action_call (mk_action_binding (%s %s) _ ()))"
+          then Printf.sprintf "(atomic_action_call_extern (mk_action_binding (%s %s) _ ()))"
                               (print_ident mname hd)
                               (List.map (T.print_expr mname) args |> String.concat " ")
           else
@@ -1307,6 +1315,7 @@ let rec print_inv' mname (i:inv)
     | Inv_conj i j -> Printf.sprintf "(A.conj_inv %s %s)" (print_inv' mname i) (print_inv' mname j)
     | Inv_ptr x -> Printf.sprintf "(A.ptr_inv %s)" (T.print_expr mname x)
     | Inv_copy_buf x -> Printf.sprintf "(A.copy_buffer_inv %s)" (T.print_expr mname x)
+    | Inv_output -> "A.true_inv"
 let print_inv mname = print_index (print_inv' mname)
 
 let rec print_eloc' mname (e:eloc)
