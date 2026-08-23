@@ -213,6 +213,10 @@ let swrite_bounded_vlbytes
     finalize_bounded_vlbytes min max sout pout_from len
   )
 
+(* The `valid_bounded_vlgenbytes` call below needs more than the 16 units the
+   enclosing block grants. *)
+#push-options "--z3rlimit 128"
+
 inline_for_extraction
 noextract
 let swrite_bounded_vlgenbytes
@@ -245,6 +249,8 @@ let swrite_bounded_vlgenbytes
     valid_bounded_vlgenbytes min max pk sout pout_from h;
     pout_payload `U32.add` len
   )
+
+#pop-options
 
 #pop-options
 
