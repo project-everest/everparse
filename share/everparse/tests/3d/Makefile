@@ -3,9 +3,8 @@
 # Same .3d inputs, but generated against the Pulse combinator backend
 # (lib/everparse/3d) with --pulse, and verified with F*.
 #
-# The C stages of src/3d/tests (KaRaMeL extraction, compiling and running the
-# generated C) are not covered here: extraction of the Pulse combinators to C
-# is not wired up yet. These tests therefore stop after F* verification.
+# --batch runs the whole pipeline: generation, F* verification, F* extraction
+# to .krml and KaRaMeL extraction to C. The generated C is then compiled.
 
 ifeq (,$(EVERPARSE_HOME))
   EVERPARSE_HOME := $(realpath ../../../..)
@@ -18,6 +17,9 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 
 3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
+
+CC ?= cc
+KRML_EXE ?= $(EVERPARSE_HOME)/opt/karamel/out/bin/krml
 
 OUT_DIR=out.pulse
 
@@ -32,29 +34,61 @@ endif
 positive_tests := $(filter-out $(wildcard FAIL*.3d) $(excluded_tests),$(wildcard *.3d))
 negative_tests := $(wildcard FAIL*.3d)
 
+# Tests whose generated code does not yet survive KaRaMeL extraction under
+# --pulse. They still go through generation and F* verification, but not the C
+# stages.
+#  - the probe/specialize tests: the assumed ExternalAPI signatures mention the
+#    input_stream_inst type class, which KaRaMeL cannot render as a C type
+#    ("Not a tlid");
+#  - TestFieldPtr: the field_ptr action produces two arities of the same
+#    validator type.
+no_extract_tests := \
+  FineGrainedProbe.3d FineGrainedProbeSpecialize.3d \
+  Specialize2.3d Specialize3.3d Specialize5.3d Specialize6.3d \
+  TestFieldPtr.3d
+
+batch_tests := $(filter-out $(no_extract_tests),$(positive_tests))
+verify_only_tests := $(filter $(no_extract_tests),$(positive_tests))
+
+VERIFY_DIR=out.pulse.verify
+
 all: pulse-test pulse-test-negative
 
-.PHONY: all pulse-test pulse-test-negative pulse-generate pulse-verify clean clean-files
+.PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
 
-# Generation only. `--no_batch` stops before KaRaMeL extraction.
-pulse-generate:
+# Generation, F* verification and KaRaMeL extraction to C, in one go.
+pulse-batch:
 	mkdir -p $(OUT_DIR)
-	$(3D) --odir $(OUT_DIR) --no_batch --no_copy_everparse_h $(positive_tests)
+	$(3D) --odir $(OUT_DIR) --batch $(batch_tests)
 
-# Verify every generated F* module. Interfaces first, then implementations,
-# since an implementation needs its own interface's checked file.
-pulse-verify: pulse-generate
+# Compile everything KaRaMeL produced, to check the generated C is well-formed
+# and that the wrappers agree with the validators' ABI.
+pulse-cc: pulse-batch
 	set -e ; \
-	for f in $(OUT_DIR)/*.fsti ; do \
-	  echo "  [VERIFY] $$f" ; \
-	  $(3D) --odir $(OUT_DIR) --__micro_step verify $$f ; \
-	done ; \
-	for f in $(OUT_DIR)/*.fst ; do \
-	  echo "  [VERIFY] $$f" ; \
-	  $(3D) --odir $(OUT_DIR) --__micro_step verify $$f ; \
+	krml_include="$$($(KRML_EXE) -locate-include)" ; \
+	krml_lib="$$($(KRML_EXE) -locate-krmllib)" ; \
+	here="$$(pwd)" ; \
+	cd $(OUT_DIR) && \
+	for f in *.c ; do \
+	  echo "  [CC] $$f" ; \
+	  $(CC) -c -I. -I"$$here" -I"$$krml_include" -I"$$krml_lib/dist/minimal" $$f -o $${f%.c}.o ; \
 	done
 
-pulse-test: pulse-verify
+# The remaining tests: generation plus F* verification only.
+pulse-verify:
+	mkdir -p $(VERIFY_DIR)
+	$(3D) --odir $(VERIFY_DIR) --no_batch --no_copy_everparse_h $(verify_only_tests)
+	set -e ; \
+	for f in $(VERIFY_DIR)/*.fsti ; do \
+	  echo "  [VERIFY] $$f" ; \
+	  $(3D) --odir $(VERIFY_DIR) --__micro_step verify $$f ; \
+	done ; \
+	for f in $(VERIFY_DIR)/*.fst ; do \
+	  echo "  [VERIFY] $$f" ; \
+	  $(3D) --odir $(VERIFY_DIR) --__micro_step verify $$f ; \
+	done
+
+pulse-test: pulse-cc pulse-verify
 
 pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
@@ -68,6 +102,6 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 	    done ) >$@.out 2>$@.err
 
 clean-files:
-	rm -rf $(OUT_DIR) out.fail.pulse *.out *.err
+	rm -rf $(OUT_DIR) $(VERIFY_DIR) out.fail.pulse *.out *.err
 
 clean: clean-files

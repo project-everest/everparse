@@ -1229,14 +1229,11 @@ let validate_without_reading_gen
       (#use_error_handler:bool)
       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler)
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
-= let f = match allow_reading
-  returns (validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler ->
-            validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+= match allow_reading
+  returns (validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
   with
-  | true -> (fun v -> validate_without_reading #base_t #len_t #pos_t v)
-  | false -> (fun v -> v)
-  in
-  f v
+  | true -> validate_without_reading #base_t #len_t #pos_t v
+  | false -> v
 
 inline_for_extraction noextract
 val validate_unit_no_read
@@ -1283,11 +1280,8 @@ let validate_weaken_gen
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
 : validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler
-= let f = match allow_reading
-  returns (validate_with_action_t #base_t #len_t #pos_t p d1 has_action allow_reading use_error_handler ->
-           validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler)
+= match allow_reading
+  returns (validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler)
   with
-  | true -> (fun v -> validate_weaken_no_read #base_t #len_t #pos_t name v d2 d2_extends)
-  | false -> (fun v -> validate_weaken #base_t #len_t #pos_t name v d2 d2_extends)
-  in
-  f v
+  | true -> validate_weaken_no_read #base_t #len_t #pos_t name v d2 d2_extends
+  | false -> validate_weaken #base_t #len_t #pos_t name v d2 d2_extends

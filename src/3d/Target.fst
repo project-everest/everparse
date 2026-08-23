@@ -1523,7 +1523,8 @@ let print_c_entry
   let pulse_static_asserts =
     if Options.get_pulse ()
     then
-      "#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
+      "#include \"EverParsePulse.h\"\n\
+       #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
        _Static_assert(sizeof(size_t) >= sizeof(uint32_t), \"EverParse: size_t must be at least as wide as uint32_t\");\n\
        _Static_assert(sizeof(size_t) >= sizeof(uint64_t), \"EverParse: size_t must be at least as wide as uint64_t\");\n\
        #endif\n"

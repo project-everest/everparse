@@ -264,36 +264,44 @@ let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.p
 
 /// UINT8
 let parse____UINT8 = LowParse.Spec.Int.parse_u8
+inline_for_extraction noextract
 let read____UINT8 = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u8
 
 /// UINT8BE
 let parse____UINT8BE = LowParse.Spec.Int.parse_u8
+inline_for_extraction noextract
 let read____UINT8BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u8
 
 /// UInt16BE
 let parse____UINT16BE = LowParse.Spec.Int.parse_u16
+inline_for_extraction noextract
 let read____UINT16BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u16
 
 /// UInt32BE
 let parse____UINT32BE = LowParse.Spec.Int.parse_u32
+inline_for_extraction noextract
 let read____UINT32BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u32
 
 /// UInt64BE
 let parse____UINT64BE = LowParse.Spec.Int.parse_u64
+inline_for_extraction noextract
 let read____UINT64BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u64
 
 
 /// UInt16
 let parse____UINT16 = LowParse.Spec.BoundedInt.parse_u16_le
+inline_for_extraction noextract
 let read____UINT16 = LowParse.PulseParse.Base.reader_of_leaf_reader LowParse.PulseParse.BoundedIntLE.read_u16_le
 
 /// UInt32
 let parse____UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
+inline_for_extraction noextract
 let read____UINT32 = LowParse.PulseParse.Base.reader_of_leaf_reader LowParse.PulseParse.BoundedIntLE.read_u32_le
 
 
 /// UInt64
 let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
+inline_for_extraction noextract
 let read____UINT64 = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u64_le
   
 inline_for_extraction noextract

@@ -44,6 +44,7 @@ let cl_wrapper () =
    and needs the Pulse library itself on the include path. *)
 let pulse_3d_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "3d"
 let lowparse_pulse_home = filename_concat lowparse_home "pulse"
+let pulse_3d_krml_home = filename_concat (filename_concat pulse_3d_home "krml") "extracted"
 let pulse_lib_home =
   let candidates =
     (match Sys.getenv_opt "PULSE_HOME" with
@@ -238,6 +239,9 @@ let all_krmls_in_dir
     res
 
 let all_everparse_krmls input_stream_binding =
+  if Options.get_pulse ()
+  then all_krmls_in_dir pulse_3d_krml_home
+  else
   let prelude = all_krmls_in_dir ddd_prelude_home in
   let actions = all_krmls_in_dir (ddd_actions_home input_stream_binding) in
   let actions_base = List.map basename actions in
@@ -382,14 +386,25 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
       (krml_args0 @ krml_files)
       (List.rev add_include)
   in
+  (* In --pulse mode the runtime is not a shipped library: KaRaMeL bundles the
+     Pulse prelude into EverParse.h/EverParse.c alongside the generated code.
+     Warning 26 (Top-type casts) is expected for the ref-dereference idiom. *)
+  let backend_args =
+    if Options.get_pulse ()
+    then
+      "-add-include" :: "EverParse:\"EverParseEndianness.h\"" ::
+        "-warn-error" :: "-9@4-20-26" :: []
+    else
+      "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
+        "-no-prefix" :: "LowParse.Slice" ::
+          "-no-prefix" :: "LowParse.Low.BoundedInt" ::
+            "-library" :: everparse_only_bundle ::
+              "-warn-error" :: "-9@4-20" :: []
+  in
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
-        "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
-          "-no-prefix" :: "LowParse.Slice" ::
-            "-no-prefix" :: "LowParse.Low.BoundedInt" ::
-                "-library" :: everparse_only_bundle ::
-                  "-warn-error" :: "-9@4-20" ::
+        backend_args @
                     "-fnoreturn-else" ::
                       "-fparentheses" ::
                         "-fcurly-braces" ::
@@ -399,7 +414,12 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
-                                    "-no-inline-type-abbrev" :: "EverParse3d.Actions.Common.error_handler" ::
+                                    (* the Pulse error_handler abbreviation is
+                                       parameterized by the input stream types,
+                                       which KaRaMeL cannot keep opaque *)
+                                    (if Options.get_pulse ()
+                                     then []
+                                     else ["-no-inline-type-abbrev"; "EverParse3d.Actions.Common.error_handler"]) @
                                     (if Options.get_hoist_locals ()
                                      then ["-fhoist-locals"]
                                      else []) @
@@ -447,12 +467,20 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
 
 let call_krml files_and_modules_cleanup out_dir krml_args =
   (* append the everparse and krmllib bundles to the list of arguments *)
-  let krml_args = krml_args @ [
+  let krml_args = krml_args @ (
+    if Options.get_pulse ()
+    then [
+        "-bundle" ;
+        "Prims,FStar.\\*,LowStar.\\*[rename=SHOULDNOTBETHERE]";
+        "-bundle" ;
+        "EverParse3d.Actions.Common=Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*[rename=EverParse,rename-prefix]";
+    ]
+    else [
         "-bundle" ;
         Printf.sprintf "%s[rename=Lib,rename-prefix]" fstar_krmllib_bundle;
         "-bundle" ;
         Printf.sprintf "EverParse3d.Actions.Common=%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
-  ]
+  ])
   in
   (* the argument list is too long, so we need to go through an argument file *)
   let argfile = Filename.temp_file ~temp_dir:out_dir "krmlargs" ".rsp" in
@@ -737,9 +765,18 @@ let copy_everparse_h_raw
       input_stream_binding
       out_dir =
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      let everparse_h_source = (filename_concat (ddd_actions_c_home input_stream_binding) "EverParse.h") in
-      if file_exists everparse_h_source
-      then copy everparse_h_source dest_everparse_h;
+      (* In --pulse mode EverParse.h is produced by KaRaMeL itself, so it must
+         not be overwritten by the Low* one. *)
+      if not (Options.get_pulse ())
+      then begin
+        let everparse_h_source = (filename_concat (ddd_actions_c_home input_stream_binding) "EverParse.h") in
+        if file_exists everparse_h_source
+        then copy everparse_h_source dest_everparse_h
+      end else begin
+        let everparse_pulse_h_source = filename_concat ddd_home "EverParsePulse.h" in
+        if file_exists everparse_pulse_h_source
+        then copy everparse_pulse_h_source (filename_concat out_dir "EverParsePulse.h")
+      end;
       let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
       if file_exists everparse_endianness_source
       then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")

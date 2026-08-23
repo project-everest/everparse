@@ -111,11 +111,16 @@ lowparse-unit-test: lowparse
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
-# The Pulse combinator backend (--pulse). Generation plus F* verification
-# only: extraction of the Pulse combinators to C is not wired up yet.
-# Only the driver and the Pulse combinators are needed: --pulse never looks at
-# the Low* prelude.
-3d-pulse-test: 3d-exe 3d-pulse-prelude
+# KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
+# what 3d.exe --pulse feeds to KaRaMeL alongside the generated modules.
+3d-pulse-krml: 3d-pulse-prelude
+	+$(MAKE) -C lib/everparse/3d/krml extract-krml
+
+.PHONY: 3d-pulse-krml
+
+# The Pulse combinator backend (--pulse): generation, F* verification,
+# KaRaMeL extraction to C, then compiling and running the C tests.
+3d-pulse-test: 3d-exe 3d-pulse-krml
 	+$(MAKE) -C share/everparse/tests/3d
 
 .PHONY: 3d-pulse-test

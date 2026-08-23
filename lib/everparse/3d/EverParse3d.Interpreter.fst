@@ -1304,15 +1304,12 @@ let rec as_validator
       assert_norm (as_type (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.nlist n (as_type t));
       assert_norm (as_parser (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.parse_nlist n n_is_const (as_parser t));
       let body = A.validate_without_reading_gen _ (as_validator ehm typename t) in
-      let f = match ha
-        returns (A.validate_with_action_read #base_t #len_t #pos_t (as_parser t) d ha use_error_handler ->
-                 A.validate_with_action_read #base_t #len_t #pos_t (P.parse_nlist n n_is_const (as_parser t)) d ha use_error_handler)
-        with
-        | true -> (fun v -> A.validate_with_error_handler ehm typename fldname (A.validate_nlist n n_is_const v))
-        | false -> (fun v -> A.validate_with_error_handler ehm typename fldname
-                    (A.validate_nlist_constant_size_without_actions n n_is_const payload_is_constant_size v))
-      in
-      f body
+      (match ha
+      returns (A.validate_with_action_read #base_t #len_t #pos_t (P.parse_nlist n n_is_const (as_parser t)) d ha use_error_handler)
+      with
+      | true -> A.validate_with_error_handler ehm typename fldname (A.validate_nlist n n_is_const body)
+      | false -> A.validate_with_error_handler ehm typename fldname
+                    (A.validate_nlist_constant_size_without_actions n n_is_const payload_is_constant_size body))
 
     | T_at_most fldname n t ->
       assert_norm (as_type (T_at_most #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.t_at_most n (as_type t));
@@ -1350,6 +1347,7 @@ let atomic_action_call
   : atomic_action base_t len_t pos_t inst d use_error_handler true false t
   = Action_call a
 
+[@@specialize]
 inline_for_extraction
 let coerce (#[@@@erasable]a:Type)
            (#[@@@erasable]b:Type)
