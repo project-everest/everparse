@@ -402,9 +402,21 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
   let backend_args =
     if Options.get_pulse ()
     then
+      (* With `--input_stream extern` (and `static`, which shares the module)
+         the stream primitives are `assume val`s implemented by the client in
+         C, so KaRaMeL's "no corresponding implementation" warning is expected
+         and must not be fatal. The Low* backend gets this for free because it
+         passes `-library EverParse3d.\*`, the whole runtime being shipped as a
+         separate library; in `--pulse` mode the runtime is bundled into the
+         generated code instead, so the warning has to be relaxed explicitly. *)
+      let extern_warns =
+        match string_of_input_stream_binding input_stream_binding with
+        | "extern" | "static" -> "-2"
+        | _ -> ""
+      in
       "-add-include" :: "EverParse:\"EverParsePulseEndianness.h\"" ::
         "-static-header" :: "Pulse.\\*" ::
-        "-warn-error" :: "-9@4-20-26" :: []
+        "-warn-error" :: Printf.sprintf "-9@4-20-26%s" extern_warns :: []
     else
       "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
         "-no-prefix" :: "LowParse.Slice" ::

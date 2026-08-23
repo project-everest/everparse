@@ -18,6 +18,7 @@ module I = EverParse3d.InputStream.Base
 module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
 module Common = EverParse3d.Actions.Common
+module AP = Pulse.Lib.ArrayPtr
 
 open EverParse3d.InputStream.Base { seq_is_suffix_of }
 
@@ -117,32 +118,82 @@ assume val stream_has_at :
       (res == true ==> SZ.fits (SZ.v off + SZ.v n))
     )))
 
-assume val stream_read :
-(t': Type0) ->
-    (k: LP.parser_kind) ->
-    (p: LP.parser k t') ->
-    (r: API.leaf_reader p) ->
-    (base: base_t) ->
+(* The `EverParseRead` primitive: copy the next `n` bytes of the stream into the
+   caller-provided scratch buffer `dst` and consume them.
+
+   Unlike Low*, where `EverParseRead` returns a pointer that may alias either
+   the client's own storage or `dst`, this always copies. `read` is only ever
+   used to parse a leaf integer, so `n` is at most 8 and the copy is free; in
+   exchange the C signature carries no aliasing obligation and the separation
+   logic postcondition stays a plain points-to. *)
+assume val stream_read_bytes :
+(base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
     (n: SZ.t) ->
+    (dst: AP.ptr U8.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt t'
+    (dv: Ghost.erased (Seq.seq U8.t)) ->
+    stt unit
     (requires (
-      stream_pts_to base len pos contents v ** pure (
-      k.LP.parser_kind_subkind == Some LP.ParserStrong /\
-      k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-      k.LP.parser_kind_low == SZ.v n /\
-      Some? (LP.parse p v)
+      stream_pts_to base len pos contents v ** AP.pts_to dst dv ** pure (
+      SZ.v n <= Seq.length v /\
+      Seq.length dv == SZ.v n
     )))
-    (ensures (fun dst' -> exists* v' .
-      stream_pts_to base len pos contents v' ** pure (
-      Seq.length v >= SZ.v n /\
-      LP.parse p (Seq.slice v 0 (SZ.v n)) == Some (dst', SZ.v n) /\
-      LP.parse p v == Some (dst', SZ.v n) /\
+    (ensures (fun _ -> exists* v' dv' .
+      stream_pts_to base len pos contents v' **
+      AP.pts_to dst dv' ** pure (
+      SZ.v n <= Seq.length v /\
+      Seq.equal dv' (Seq.slice v 0 (SZ.v n)) /\
       Seq.equal v' (Seq.slice v (SZ.v n) (Seq.length v))
     )))
+
+(* `read` cannot itself be assumed: it takes the leaf reader `r` as an argument,
+   and an F* function value has no C representation. So the client provides the
+   byte-level primitive above and the reader is applied here, on our side of the
+   boundary, exactly as the Low* version applies it to the pointer returned by
+   `EverParseRead`. Since every caller passes a literal `n` and this is
+   `inline_for_extraction`, the scratch buffer extracts to a fixed-size C stack
+   array, not a VLA. *)
+inline_for_extraction
+noextract
+fn stream_read
+  (t': Type0)
+  (k: LP.parser_kind)
+  (p: LP.parser k t')
+  (r: API.leaf_reader p)
+  (base: base_t)
+  (len: len_t)
+  (pos: pos_t)
+  (n: SZ.t)
+  (contents: Ghost.erased (Seq.seq U8.t))
+  (v: Ghost.erased (Seq.seq U8.t))
+  requires (
+    stream_pts_to base len pos contents v ** pure (
+    k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+    k.LP.parser_kind_low == SZ.v n /\
+    Some? (LP.parse p v)
+  ))
+  returns dst': t'
+  ensures (exists* v' .
+    stream_pts_to base len pos contents v' ** pure (
+    Seq.length v >= SZ.v n /\
+    LP.parse p (Seq.slice v 0 (SZ.v n)) == Some (dst', SZ.v n) /\
+    LP.parse p v == Some (dst', SZ.v n) /\
+    Seq.equal v' (Seq.slice v (SZ.v n) (Seq.length v))
+  ))
+{
+  API.parse_constant_size_eq p v;
+  LP.parse_strong_prefix p v (Seq.slice v 0 (SZ.v n));
+  let mut scratch = [| 0uy; n |];
+  let sp = AP.from_array scratch;
+  stream_read_bytes base len pos n sp contents v _;
+  let res = r sp;
+  AP.to_array sp scratch;
+  res
+}
 
 assume val stream_skip :
 (base: base_t) ->
