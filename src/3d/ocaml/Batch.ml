@@ -388,11 +388,19 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
   in
   (* In --pulse mode the runtime is not a shipped library: KaRaMeL bundles the
      Pulse prelude into EverParse.h/EverParse.c alongside the generated code.
-     Warning 26 (Top-type casts) is expected for the ref-dereference idiom. *)
+     Warning 26 (Top-type casts) is expected for the ref-dereference idiom.
+
+     Pulse.\* goes in a static header. Specialization inlines the whole runtime
+     into the generated validators, so the only use sites of Pulse library
+     helpers (Pulse.Lib.Slice.op_Array_Access and friends) are the generated
+     modules. KaRaMeL monomorphizes after bundling and emits each instance in
+     the file that first uses it, which would otherwise leave a cross
+     translation unit symbol in an arbitrary generated .c. *)
   let backend_args =
     if Options.get_pulse ()
     then
       "-add-include" :: "EverParse:\"EverParsePulseEndianness.h\"" ::
+        "-static-header" :: "Pulse.\\*" ::
         "-warn-error" :: "-9@4-20-26" :: []
     else
       "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
