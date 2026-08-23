@@ -56,7 +56,18 @@ all: pulse-test pulse-test-negative pulse-subdirs
 # hand-written client stream and runs it. modules covers multi-module input,
 # output_types covers output types and their external actions, and the rest
 # cover individual frontend options.
-pulse_subdirs := extern static modules output_types exttype save_hashes use_error_handler_macro
+#
+# probe and probe_error_handler_macro are left out. Their default target builds
+# the z3 test-case generator, which still goes through the Low* interpreter, and
+# their ProbeInPlace callback repoints the copy buffer at the source rather than
+# copying into it. Under --pulse the copy buffer is passed by value -- it is the
+# buffer backend's own input buffer, and the probe combinator owns its
+# pts_to -- so a client cannot repoint it, and in-place probing has no
+# expression in this ABI.
+pulse_subdirs := extern static modules output_types exttype save_hashes \
+  use_error_handler_macro funptr ifdefs iter tcpip goto_return \
+  specialize_test specialize_test2 specialize_test_error_handler_macro \
+  specialize_tagged_union_array
 
 .PHONY: pulse-subdirs $(pulse_subdirs)
 pulse-subdirs: $(pulse_subdirs)

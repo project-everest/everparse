@@ -23,7 +23,7 @@ export EVERPARSE_HOME
 # Path to either the 3d executable or the everparse.sh or
 # everparse.cmd script from the EverParse binary package
 FSTAR_EXE ?= $(EVERPARSE_HOME)/fstar.sh
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
 
 # Options passed to EverParse.  See probe_error_handler_macro for the
 # rationale: --use_error_handler_macro makes the generated validators

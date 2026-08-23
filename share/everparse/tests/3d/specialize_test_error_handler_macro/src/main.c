@@ -147,21 +147,23 @@ BOOLEAN eq_p64_p32(P64 a, P32 b) {
 
 int test1(void) {
   A destA;
-  copy_buffer_t a_out = (copy_buffer_t) {
-    .type = COPY_BUFFER_A,
-    .buf = (uint8_t*)&destA,
-    .len = sizeof(destA)
+  size_t a_out_pos = 0;
+  EVERPARSE_COPY_BUFFER_T a_out = (EVERPARSE_COPY_BUFFER_T) {
+    .cb_base = (uint8_t*)&destA,
+    .cb_len = sizeof(destA),
+    .cb_pos = &a_out_pos
   };
   B64 destB;
-  copy_buffer_t b_out = (copy_buffer_t) {
-    .type = COPY_BUFFER_B,
-    .buf = (uint8_t*)&destB,
-    .len = sizeof(destB)
+  size_t b_out_pos = 0;
+  EVERPARSE_COPY_BUFFER_T b_out = (EVERPARSE_COPY_BUFFER_T) {
+    .cb_base = (uint8_t*)&destB,
+    .cb_len = sizeof(destB),
+    .cb_pos = &b_out_pos
   };
   if (SpecializeAbcCheckC(
       false, 
-      (EVERPARSE_COPY_BUFFER_T) &a_out,
-      (EVERPARSE_COPY_BUFFER_T) &b_out,
+      a_out,
+      b_out,
       (uint8_t*)&c64,
       sizeof(c64)
       ))
@@ -191,8 +193,8 @@ int test1(void) {
   }
   if (SpecializeAbcCheckC(
     true, 
-    (EVERPARSE_COPY_BUFFER_T) &a_out,
-    (EVERPARSE_COPY_BUFFER_T) &b_out,
+    a_out,
+    b_out,
     (uint8_t*)&c32,
     sizeof(c32)
     ))
@@ -225,21 +227,23 @@ int test1(void) {
 
 int test2(void) {
   A destA = {0x00000000, 0x00000000};
-  copy_buffer_t a_out = (copy_buffer_t) {
-    .type = COPY_BUFFER_A,
-    .buf = (uint8_t*)&destA,
-    .len = sizeof(destA)
+  size_t a_out_pos = 0;
+  EVERPARSE_COPY_BUFFER_T a_out = (EVERPARSE_COPY_BUFFER_T) {
+    .cb_base = (uint8_t*)&destA,
+    .cb_len = sizeof(destA),
+    .cb_pos = &a_out_pos
   };
   B64 destB;
-  copy_buffer_t b_out = (copy_buffer_t) {
-    .type = COPY_BUFFER_B,
-    .buf = (uint8_t*)&destB,
-    .len = sizeof(destB)
+  size_t b_out_pos = 0;
+  EVERPARSE_COPY_BUFFER_T b_out = (EVERPARSE_COPY_BUFFER_T) {
+    .cb_base = (uint8_t*)&destB,
+    .cb_len = sizeof(destB),
+    .cb_pos = &b_out_pos
   };
   if (SpecializeAbcCheckC(
       false, 
-      (EVERPARSE_COPY_BUFFER_T) &a_out,
-      (EVERPARSE_COPY_BUFFER_T) &b_out,
+      a_out,
+      b_out,
       (uint8_t*)&c64_null_a,
       sizeof(c64_null_a)
       ))
@@ -272,8 +276,8 @@ int test2(void) {
   }
   if (SpecializeAbcCheckC(
     true, 
-    (EVERPARSE_COPY_BUFFER_T) &a_out,
-    (EVERPARSE_COPY_BUFFER_T) &b_out,
+    a_out,
+    b_out,
     (uint8_t*)&c32_null_a,
     sizeof(c32_null_a)
     ))

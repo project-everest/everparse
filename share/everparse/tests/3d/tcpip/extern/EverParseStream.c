@@ -1,98 +1,95 @@
 #include "EverParseEndianness.h"
 #include "EverParseStream.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-BOOLEAN EverParseHas(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
-  if (n == 0)
-    return TRUE;
+/* Number of bytes still available, capped at `limit` so that a long chain is
+   not walked further than the caller cares about. */
+static size_t es_avail(EVERPARSE_INPUT_STREAM_BASE const x, size_t const limit) {
+  size_t got = 0;
   struct es_cell *head = x->head;
-  while (head != NULL) {
-    uint64_t len = head->len;
-    if (n <= len)
-      return TRUE;
-    n -= len;
+  while (head != NULL && got < limit) {
+    got += head->len;
     head = head->next;
   }
-  return FALSE;
+  return got;
 }
 
-uint8_t *EverParseRead(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n, uint8_t * const dst) {
-  /** assumes EverParseHas n */
-  if (n == 0)
-    return dst;
-  struct es_cell *head = x->head;
-  uint64_t len = head->len;
-  if (n <= len) {
-    uint8_t *res = head->buf;
-    head->buf += n;
-    head->len -= n;
-    return res;
-  }
-  uint8_t *write = dst;
-  while (n > len) {
-    memcpy(write, head->buf, len);
-    write += len;
-    n -= len;
-    head = head->next;
-    if (head == NULL) {
-      /* here we know that n == 0 */
-      x->head = NULL;
-      return dst;
+BOOLEAN EverParseStreamHas(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  return es_avail(x, n) >= n ? TRUE : FALSE;
+}
+
+BOOLEAN EverParseStreamHasAt(EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
+  /** assumes off bytes are available */
+  size_t total = off + n;
+  if (total < off)
+    return FALSE; /* overflow */
+  return es_avail(x, total) >= total ? TRUE : FALSE;
+}
+
+size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
+  return x->consumed;
+}
+
+/* Drop the first n bytes of the stream, copying them to dst first when dst is
+   not NULL. Assumes EverParseStreamHas(x, n). */
+static void es_consume(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t *dst) {
+  x->consumed += n;
+  while (n > 0) {
+    struct es_cell *head = x->head;
+    size_t len, take;
+    while (head->len == 0) { /* skip exhausted cells */
+      head = head->next;
+      x->head = head;
     }
     len = head->len;
-  }
-  memcpy(write, head->buf, n);
-  head->buf += n;
-  head->len -= n;
-  x->head = head;
-  return dst;
-}
-
-void EverParseSkip(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
-  /** assumes EverParseHas n */
-  if (n == 0)
-    return;
-  {
-    struct es_cell *head = x->head;
-    uint64_t len = head->len;
-    while (n > len) {
-      n -= len;
-      head = head->next;
-      if (head == NULL) {
-	/* here we know that n == 0 */
-	x->head = NULL;
-	return;
-      }
-      len = head->len;
+    take = n < len ? n : len;
+    if (dst != NULL) {
+      memcpy(dst, head->buf, take);
+      dst += take;
     }
-    head->buf += n;
-    head->len -= n;
-    x->head = head;
-    return;
+    head->buf += take;
+    head->len -= take;
+    n -= take;
+    if (head->len == 0)
+      x->head = head->next;
   }
 }
 
-uint64_t EverParseEmpty(EVERPARSE_EXTRA_T const _unused, EVERPARSE_INPUT_STREAM_BASE const x) {
-  uint64_t res = 0;
+void EverParseStreamReadBytes(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+  /** assumes EverParseStreamHas(x, n) */
+  es_consume(x, n, dst);
+}
+
+void EverParseStreamSkip(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  /** assumes EverParseStreamHas(x, n) */
+  es_consume(x, n, NULL);
+}
+
+size_t EverParseStreamEmpty(EVERPARSE_INPUT_STREAM_BASE const x) {
+  size_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {
     res += head->len;
     head = head->next;
   }
   x->head = NULL;
+  x->consumed += res;
   return res;
 }
 
-EVERPARSE_INPUT_STREAM_BASE EverParseCreate() {
+EVERPARSE_INPUT_STREAM_BASE EverParseCreate(void) {
   EVERPARSE_INPUT_STREAM_BASE res = malloc(sizeof(struct EVERPARSE_INPUT_STREAM_BASE_s));
   if (res == NULL) {
     return NULL;
   }
   res->head = NULL;
+  res->consumed = 0;
   return res;
 }
 
-int EverParsePush(EVERPARSE_INPUT_STREAM_BASE const x, uint8_t * const buf, uint64_t const len) {
+int EverParsePush(EVERPARSE_INPUT_STREAM_BASE const x, uint8_t * const buf, size_t const len) {
   struct es_cell * cell = malloc(sizeof(struct es_cell));
   if (cell == NULL)
     return 0;
@@ -102,7 +99,6 @@ int EverParsePush(EVERPARSE_INPUT_STREAM_BASE const x, uint8_t * const buf, uint
   x->head = cell;
   return 1;
 }
-
 
 void EverParseHandleError(EVERPARSE_EXTRA_T _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code)
 {

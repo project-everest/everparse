@@ -1,4 +1,5 @@
-#include "EverParseEndianness.h"
+#include "EverParsePulseEndianness.h"
+#include "EverParse.h"
 #define EVERPARSE_SUCCESS 0ul
 #define EVERPARSE_ERROR_GENERIC 1uL
 #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL

@@ -24,7 +24,7 @@ export EVERPARSE_HOME
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package; followed by arguments
 FSTAR_EXE ?= fstar.exe
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
 EVERPARSE_CMD=$(EVERPARSE_EXE) --config $(EVERPARSE_INPUT_DIR)/CompileTimeIfFlags.3d.config
 
 # Output directory for .c/.h files as well as temporary files (.fst,

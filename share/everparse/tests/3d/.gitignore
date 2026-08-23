@@ -10,3 +10,8 @@ test-cpp.exe
 *.err
 out.pulse
 out.fail.pulse
+
+# Build directories of the subdirectory tests.
+obj/
+output/
+batch_obj/

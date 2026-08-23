@@ -1949,7 +1949,8 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      open EverParse3d.Interpreter\n\
      module B = %s\n\
      %s\n\
-     noextract val output_state : EverParse3d.State.state_dict\n\n%s"
+     noextract val output_state_slprop : unit -> Pulse.Lib.Core.slprop\n\n\
+     noextract let output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"output_state\" output_state_slprop\n\n%s"
     modul
     (Options.pulse_backend_module ())
     external_types_include

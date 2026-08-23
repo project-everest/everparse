@@ -2565,11 +2565,16 @@ fn probe_then_validate
               (CP.len_of #_ #base_t #len_t #pos_t dest)
               (CP.pos_of #_ #base_t #len_t #pos_t dest)
               cd vd);
+      (* Validate the probed bytes from the beginning of the copy buffer, as
+         the Low* interpreter does by passing the validator the position
+         `0uL`. Here the position belongs to the buffer, which is reused
+         across probe sites, so it has to be rewound explicitly. *)
+      CP.reset #_ #base_t #len_t #pos_t dest cd vd;
       let res = v ctxt error_handler_fn
         (CP.base_of #_ #base_t #len_t #pos_t dest)
         (CP.len_of #_ #base_t #len_t #pos_t dest)
         (CP.pos_of #_ #base_t #len_t #pos_t dest)
-        _ cd vd;
+        _ cd cd;
       with vd' . assert (I.pts_to
               (CP.base_of #_ #base_t #len_t #pos_t dest)
               (CP.len_of #_ #base_t #len_t #pos_t dest)

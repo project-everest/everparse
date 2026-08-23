@@ -3,7 +3,7 @@
 
 EVERPARSE_HOME ?= $(realpath ../../../..)
 FSTAR_EXE ?= $(EVERPARSE_HOME)/bin/../opt/FStar/out/bin/fstar.exe
-EVERPARSE_EXE = $(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+EVERPARSE_EXE = $(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
 OUTPUT_DIR = output
 
 all: test

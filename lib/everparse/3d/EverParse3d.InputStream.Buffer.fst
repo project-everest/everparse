@@ -308,12 +308,26 @@ type copy_buffer_t = {
   cb_pos: pos_t;
 }
 
+inline_for_extraction
+fn copy_buffer_reset
+  (c: copy_buffer_t)
+  (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
+requires stream_pts_to c.cb_base c.cb_len c.cb_pos contents v
+ensures stream_pts_to c.cb_base c.cb_len c.cb_pos contents contents
+{
+  unfold (stream_pts_to c.cb_base c.cb_len c.cb_pos contents v);
+  c.cb_pos := 0sz;
+  Seq.lemma_eq_elim (Seq.slice contents 0 (SZ.v c.cb_len)) contents;
+  fold (stream_pts_to c.cb_base c.cb_len c.cb_pos contents contents);
+}
+
 noextract
 inline_for_extraction
 instance copy_buffer_buffer : CB.copy_buffer copy_buffer_t base_t len_t pos_t = {
   base_of = (fun c -> c.cb_base);
   len_of = (fun c -> c.cb_len);
   pos_of = (fun c -> c.cb_pos);
+  reset = copy_buffer_reset;
 }
 
 (* `field_ptr`: the address of the current position in the input stream.

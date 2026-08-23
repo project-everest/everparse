@@ -2,79 +2,68 @@
 #include "TestWrapper.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-static BOOLEAN _EverParseHas(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
-  if (n == 0)
-    return TRUE;
+/* The client's stream operations. These are exactly what the Low* version of
+   this test provides; only the types of the byte counts change, and the
+   position bookkeeping now belongs to the wrappers in EverParseStream.c. */
+
+/* Number of bytes still available, capped at `limit`. */
+static size_t _EverParseAvail(EVERPARSE_INPUT_STREAM_BASE const x, size_t const limit) {
+  size_t got = 0;
   struct es_cell *head = x->head;
-  while (head != NULL) {
-    uint64_t len = head->len;
-    if (n <= len)
-      return TRUE;
-    n -= len;
+  while (head != NULL && got < limit) {
+    got += head->len;
     head = head->next;
   }
-  return FALSE;
+  return got;
 }
 
-static uint8_t *_EverParseRead(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n, uint8_t * const dst) {
-  /** assumes EverParseHas n */
-  if (n == 0)
-    return dst;
-  struct es_cell *head = x->head;
-  uint64_t len = head->len;
-  if (n <= len) {
-    uint8_t *res = head->buf;
-    head->buf += n;
-    head->len -= n;
-    return res;
-  }
-  uint8_t *write = dst;
-  while (n > len) {
-    memcpy(write, head->buf, len);
-    write += len;
-    n -= len;
-    head = head->next;
-    if (head == NULL) {
-      /* here we know that n == 0 */
-      x->head = NULL;
-      return dst;
+static BOOLEAN _EverParseHas(EVERPARSE_INPUT_STREAM_BASE x, size_t n) {
+  return _EverParseAvail(x, n) >= n ? TRUE : FALSE;
+}
+
+static BOOLEAN _EverParseHasAt(EVERPARSE_INPUT_STREAM_BASE x, size_t off, size_t n) {
+  size_t total = off + n;
+  if (total < off)
+    return FALSE; /* overflow */
+  return _EverParseAvail(x, total) >= total ? TRUE : FALSE;
+}
+
+/* Drop the first n bytes, copying them to dst first when dst is not NULL.
+   Assumes they are available. */
+static void _EverParseConsume(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t *dst) {
+  while (n > 0) {
+    struct es_cell *head = x->head;
+    size_t len, take;
+    while (head->len == 0) { /* skip exhausted cells */
+      head = head->next;
+      x->head = head;
     }
     len = head->len;
-  }
-  memcpy(write, head->buf, n);
-  head->buf += n;
-  head->len -= n;
-  x->head = head;
-  return dst;
-}
-
-static void _EverParseSkip(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
-  /** assumes EverParseHas n */
-  if (n == 0)
-    return;
-  {
-    struct es_cell *head = x->head;
-    uint64_t len = head->len;
-    while (n > len) {
-      n -= len;
-      head = head->next;
-      if (head == NULL) {
-	/* here we know that n == 0 */
-	x->head = NULL;
-	return;
-      }
-      len = head->len;
+    take = n < len ? n : len;
+    if (dst != NULL) {
+      memcpy(dst, head->buf, take);
+      dst += take;
     }
-    head->buf += n;
-    head->len -= n;
-    x->head = head;
-    return;
+    head->buf += take;
+    head->len -= take;
+    n -= take;
+    if (head->len == 0)
+      x->head = head->next;
   }
 }
 
-static uint64_t _EverParseEmpty(EVERPARSE_INPUT_STREAM_BASE const x) {
-  uint64_t res = 0;
+static void _EverParseReadBytes(EVERPARSE_INPUT_STREAM_BASE x, size_t n, uint8_t *dst) {
+  _EverParseConsume(x, n, dst);
+}
+
+static void _EverParseSkip(EVERPARSE_INPUT_STREAM_BASE x, size_t n) {
+  _EverParseConsume(x, n, NULL);
+}
+
+static size_t _EverParseEmpty(EVERPARSE_INPUT_STREAM_BASE x) {
+  size_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {
     res += head->len;
@@ -84,49 +73,60 @@ static uint64_t _EverParseEmpty(EVERPARSE_INPUT_STREAM_BASE const x) {
   return res;
 }
 
-void _EverParseRetreat(EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {
-  printf("Warning, no retreat");
+static uint8_t *_EverParsePeep(EVERPARSE_INPUT_STREAM_BASE x, size_t n) {
+  struct es_cell *head = x->head;
+  while (head != NULL && head->len == 0)
+    head = head->next;
+  if (head == NULL)
+    return n == 0 ? (uint8_t *)x : NULL;
+  if (head->len < n)
+    return NULL;
+  return head->buf;
 }
 
-// This function is declared in the generated TestWrapper.c, but not
-// defined. It is the callback function called if the validator for
-// Test.T fails.
-void _EverParseError(void *status, uint64_t position, const char *StructName, const char *FieldName, const char *Reason, uint64_t error_code) {
-  printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", StructName, FieldName, Reason);
-  *((BOOLEAN*)status) = FALSE;
-}
-
-EVERPARSE_EXTRA_T makeExtraT(void *ctx) {
-  EVERPARSE_EXTRA_T out = {
+static EVERPARSE_STREAM_VTABLE makeVTable(void) {
+  EVERPARSE_STREAM_VTABLE out = {
       .has = &_EverParseHas,
-      .read = &_EverParseRead,
+      .hasAt = &_EverParseHasAt,
+      .readBytes = &_EverParseReadBytes,
       .skip = &_EverParseSkip,
       .empty = &_EverParseEmpty,
-      .handleError = &_EverParseError,
-      .retreat = &_EverParseRetreat,
-      .errorContext = ctx
+      .peep = &_EverParsePeep
   };
   return out;
 }
 
+// The callback called if the validator for Test.T fails.
+static void _EverParseError(void *status, uint64_t position, const char *StructName, const char *FieldName, const char *Reason, uint64_t error_code) {
+  printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", StructName, FieldName, Reason);
+  *((BOOLEAN*)status) = FALSE;
+}
+
+static EVERPARSE_EXTRA_T makeExtraT(void *ctx) {
+  EVERPARSE_EXTRA_T out = {
+      .errorContext = ctx,
+      .handleError = &_EverParseError
+  };
+  return out;
+}
 
 int test(uint32_t chunkSize, uint32_t numChunks) {
   uint8_t *chunk = calloc(chunkSize, sizeof(uint8_t));
-  EVERPARSE_INPUT_STREAM_BASE testStream = EverParseCreate();
+  EVERPARSE_INPUT_STREAM_BASE testStream = EverParseCreate(makeVTable());
   BOOLEAN status = TRUE;
   uint32_t i = numChunks;
   if (chunk != NULL) {
     if (testStream != NULL) {
       while (i-- > 0) {
-        EverParsePush(testStream, chunk, chunkSize);
+        EverParsePush(testStream, chunk, (size_t)chunkSize);
       }
       EVERPARSE_EXTRA_T ex = makeExtraT(&status);
-      uint64_t bytesRead = TestCheckPoint(ex, testStream);
+      TestCheckPoint(ex, testStream);
       if (status) {
-        printf("Validation succeeded (chunk_size=%u, n_chunks=%u), read %u bytes\n", chunkSize, numChunks, bytesRead);
+        printf("Validation succeeded (chunk_size=%u, n_chunks=%u), read %zu bytes\n", chunkSize, numChunks, EverParseStreamGetPosition(testStream));
       }
       else {
-        printf("Validation failed (chunk_size=%u, n_chunks=%u), read %u bytes\n", chunkSize, numChunks, bytesRead);
+        printf("Validation failed (chunk_size=%u, n_chunks=%u), read %zu bytes\n", chunkSize, numChunks, EverParseStreamGetPosition(testStream));
       }
       free(testStream);
     }
@@ -134,7 +134,7 @@ int test(uint32_t chunkSize, uint32_t numChunks) {
   }
   return status;
 }
-    
+
 int main(void) {
   if (!test(2, 6)) { return 1; }
   if (!test(3, 9)) { return 1; }
@@ -142,4 +142,3 @@ int main(void) {
   if (test(2, 5))  { return 1; }
   return 0;
 }
-  
