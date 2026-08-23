@@ -7,6 +7,8 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 open Pulse.Lib.Pervasives
 
+noextract
+inline_for_extraction
 class copy_buffer (copy_buffer_t: Type0) (base_t: Type0) (len_t: Type0) (pos_t: Type0) {| I.input_stream_inst base_t len_t pos_t |} = {
   base_of : copy_buffer_t -> base_t;
   len_of : copy_buffer_t -> len_t;
