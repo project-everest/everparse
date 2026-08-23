@@ -36,16 +36,8 @@ negative_tests := $(wildcard FAIL*.3d)
 
 # Tests whose generated code does not yet survive KaRaMeL extraction under
 # --pulse. They still go through generation and F* verification, but not the C
-# stages.
-#  - the probe/specialize tests: the assumed ExternalAPI signatures mention the
-#    input_stream_inst type class, which KaRaMeL cannot render as a C type
-#    ("Not a tlid");
-#  - TestFieldPtr: the field_ptr action produces two arities of the same
-#    validator type.
-no_extract_tests := \
-  FineGrainedProbe.3d FineGrainedProbeSpecialize.3d \
-  Specialize2.3d Specialize3.3d Specialize5.3d Specialize6.3d \
-  TestFieldPtr.3d
+# stages. (Currently empty: all tests extract.)
+no_extract_tests :=
 
 batch_tests := $(filter-out $(no_extract_tests),$(positive_tests))
 verify_only_tests := $(filter $(no_extract_tests),$(positive_tests))
@@ -76,8 +68,10 @@ pulse-cc: pulse-batch
 
 # The remaining tests: generation plus F* verification only.
 pulse-verify:
-	mkdir -p $(VERIFY_DIR)
+	test -n "$(strip $(verify_only_tests))" || exit 0 ; \
+	mkdir -p $(VERIFY_DIR) && \
 	$(3D) --odir $(VERIFY_DIR) --no_batch --no_copy_everparse_h $(verify_only_tests)
+	test -n "$(strip $(verify_only_tests))" || exit 0 ; \
 	set -e ; \
 	for f in $(VERIFY_DIR)/*.fsti ; do \
 	  echo "  [VERIFY] $$f" ; \

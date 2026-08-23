@@ -392,7 +392,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
   let backend_args =
     if Options.get_pulse ()
     then
-      "-add-include" :: "EverParse:\"EverParseEndianness.h\"" ::
+      "-add-include" :: "EverParse:\"EverParsePulseEndianness.h\"" ::
         "-warn-error" :: "-9@4-20-26" :: []
     else
       "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
@@ -776,6 +776,10 @@ let copy_everparse_h_raw
         let everparse_pulse_h_source = filename_concat ddd_home "EverParsePulse.h" in
         if file_exists everparse_pulse_h_source
         then copy everparse_pulse_h_source (filename_concat out_dir "EverParsePulse.h")
+        ;
+        let everparse_pulse_endianness_h_source = filename_concat ddd_home "EverParsePulseEndianness.h" in
+        if file_exists everparse_pulse_endianness_h_source
+        then copy everparse_pulse_endianness_h_source (filename_concat out_dir "EverParsePulseEndianness.h")
       end;
       let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
       if file_exists everparse_endianness_source

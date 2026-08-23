@@ -8,6 +8,11 @@ module F = FStar.FunctionalExtensionality
 module U64 = FStar.UInt64
 module SZ = FStar.SizeT
   
+(* An attribute to control partial evaluation of backend definitions.
+   Distinct from EverParse3d.Interpreter.specialize so that backend modules,
+   which cannot depend on the interpreter, can still be unfolded by it. *)
+let specialize_backend = ()
+
 let app_ctxt = AppCtxt.app_ctxt
 
 let error_handler

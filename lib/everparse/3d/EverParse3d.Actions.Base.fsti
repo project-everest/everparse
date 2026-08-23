@@ -910,8 +910,7 @@ val action_field_ptr
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#ptr_t: Type0)
-      (f: option (field_ptr_t base_t len_t pos_t ptr_t))
-      (sq: squash (Some? f))
+      (f: field_ptr_t base_t len_t pos_t ptr_t)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
 : action #base_t #len_t #pos_t extra_state ptr_t use_error_handler
@@ -922,8 +921,7 @@ val action_field_ptr_after
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#ptr_t: Type0)
-      (f: option (field_ptr_after_t base_t len_t pos_t ptr_t))
-      (sq: squash (Some? f))
+      (f: field_ptr_after_t base_t len_t pos_t ptr_t)
       (name: Ghost.erased string)
       (sz: U64.t)
       (write_to: ref ptr_t)
@@ -1041,8 +1039,7 @@ val action_field_ptr_after_with_setter
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#ptr_t: Type0)
-      (f: option (field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t))
-      (sq: squash (Some? f))
+      (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
       (sz: U64.t)
       (write_to: (ptr_t -> external_action extra_state unit))
       (#use_error_handler: bool)

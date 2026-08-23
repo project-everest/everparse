@@ -262,6 +262,7 @@ let ___PUINT8 = AP.ptr U8.t
 assume val field_ptr_after_impl
 : AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8
 
+[@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
 let field_ptr_after
@@ -309,6 +310,7 @@ ensures
   }
 }
 
+[@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
 let field_ptr_after_with_setter (extra_state: state_dict)

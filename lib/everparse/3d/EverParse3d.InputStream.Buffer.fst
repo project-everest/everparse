@@ -373,6 +373,7 @@ ensures stream_pts_to b len pos contents v
   s'
 }
 
+[@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
 let field_ptr

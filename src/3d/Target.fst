@@ -1467,7 +1467,7 @@ let print_c_entry
 
   let header =
     Printf.sprintf
-      "#include \"EverParseEndianness.h\"\n\
+      "#include \"%s\"\n\
        %s\n\
        %s\
        #ifdef __cplusplus\n\
@@ -1477,6 +1477,9 @@ let print_c_entry
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
+      (if Options.get_pulse ()
+       then "EverParsePulseEndianness.h\"\n#include \"EverParse.h"
+       else "EverParseEndianness.h")
       error_code_macros
       external_defs_includes
       (signatures |> List.filter (fun s -> s <> "") |> String.concat "\n\n")

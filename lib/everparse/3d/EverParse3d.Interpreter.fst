@@ -79,6 +79,7 @@ open FStar.List.Tot
 (* An attribute to control partial evaluation *)
 let specialize = ()
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // Primitive types
 ////////////////////////////////////////////////////////////////////////////////
@@ -683,11 +684,11 @@ let atomic_action_as_action
     | Action_field_pos_32 ->
       A.action_field_pos_32
     | Action_field_ptr f sq ->
-      A.action_field_ptr f sq
+      A.action_field_ptr (Some?.v f)
     | Action_field_ptr_after f sq name sz write_to sq' ->
-      A.action_weaken (A.action_field_ptr_after f sq name sz write_to) d sq'
+      A.action_weaken (A.action_field_ptr_after (Some?.v f) name sz write_to) d sq'
     | Action_field_ptr_after_with_setter f sq sz write_to ->
-      A.action_field_ptr_after_with_setter f sq sz write_to
+      A.action_field_ptr_after_with_setter (Some?.v f) sz write_to
     | Action_deref name x sq ->
       A.action_weaken (A.action_deref name x) d sq
     | Action_assignment name x rhs sq ->
@@ -1563,7 +1564,7 @@ let specialization_steps =
    zeta;
    primops;
    iota;
-   delta_attr [`%specialize];
+   delta_attr [`%specialize; `%EverParse3d.Actions.Common.specialize_backend];
    delta_only ([`%Some?;
                 `%Some?.v;
                 `%as_validator;

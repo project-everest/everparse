@@ -2105,8 +2105,7 @@ fn action_field_ptr
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#ptr_t: Type0)
-      (f: option (field_ptr_t base_t len_t pos_t ptr_t))
-      ([@@@erasable] sq: squash (Some? f))
+      (f: field_ptr_t base_t len_t pos_t ptr_t)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
 : action #base_t #len_t #pos_t extra_state ptr_t use_error_handler
@@ -2119,8 +2118,7 @@ fn action_field_ptr
   (contents_sl: _)
   (v_sl: _)
 {
-  let g = Some?.v f;
-  g sl_base sl_len sl_pos contents_sl v_sl
+  f sl_base sl_len sl_pos contents_sl v_sl
 }
 
 noextract
@@ -2129,8 +2127,7 @@ fn action_field_ptr_after
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#ptr_t: Type0)
-      (f: option (field_ptr_after_t base_t len_t pos_t ptr_t))
-      ([@@@erasable] sq: squash (Some? f))
+      (f: field_ptr_after_t base_t len_t pos_t ptr_t)
       (name: Ghost.erased string)
       (sz: U64.t)
       (write_to: ref ptr_t)
@@ -2147,8 +2144,7 @@ fn action_field_ptr_after
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   with w . assert (pts_to write_to #1.0R w);
-  let g = Some?.v f;
-  let res = g sz write_to sl_base sl_len sl_pos w contents_sl v_sl;
+  let res = f sz write_to sl_base sl_len sl_pos w contents_sl v_sl;
   forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) _;
   res
 }
@@ -2466,8 +2462,7 @@ fn action_field_ptr_after_with_setter
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#[@@@erasable] extra_state: state_dict)
       (#ptr_t: Type0)
-      (f: option (field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t))
-      ([@@@erasable] sq: squash (Some? f))
+      (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
       (sz: U64.t)
       (write_to: (ptr_t -> external_action extra_state unit))
       (#use_error_handler: bool)
@@ -2481,8 +2476,7 @@ fn action_field_ptr_after_with_setter
   (contents_sl: _)
   (v_sl: _)
 {
-  let g = Some?.v f;
-  g sz write_to sl_base sl_len sl_pos contents_sl v_sl
+  f sz write_to sl_base sl_len sl_pos contents_sl v_sl
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2549,8 +2543,7 @@ fn probe_then_validate
   with w . assert (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
   rewrite (copy_buffer_state #_ #base_t #len_t #pos_t dest w)
     as (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w));
-  let a64 = as_u64 src;
-  let src64 = a64 ();
+  let src64 = as_u64 src ();
   if (nullable && src64 = 0uL) {
     // a null pointer is accepted without probing
     rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w))

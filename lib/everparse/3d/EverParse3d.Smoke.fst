@@ -114,7 +114,7 @@ let smoke_field_ptr_after_with_setter
   (sz: FStar.UInt64.t)
   (write_to: (ptr_t -> A.external_action d unit))
 : A.action #B.base_t #B.len_t #B.pos_t d bool false
-= A.action_field_ptr_after_with_setter f sq sz write_to
+= A.action_field_ptr_after_with_setter (Some?.v f) sz write_to
 
 inline_for_extraction noextract
 let smoke_probe_then_validate
