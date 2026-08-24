@@ -89,13 +89,8 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 # output_types covers output types and their external actions, and the rest
 # cover individual frontend options.
 #
-# probe and probe_error_handler_macro are left out. Their default target builds
-# the z3 test-case generator, which still goes through the Low* interpreter, and
-# their ProbeInPlace callback repoints the copy buffer at the source rather than
-# copying into it. Under --pulse the copy buffer is passed by value -- it is the
-# buffer backend's own input buffer, and the probe combinator owns its
-# pts_to -- so a client cannot repoint it, and in-place probing has no
-# expression in this ABI.
+# probe and probe_error_handler_macro are left out: their default target builds
+# the z3 test-case generator, which still goes through the Low* interpreter.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
   specialize_test specialize_test2 specialize_test_error_handler_macro \

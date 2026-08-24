@@ -148,18 +148,20 @@ BOOLEAN eq_p64_p32(P64 a, P32 b) {
 int test1(void) {
   A destA;
   size_t a_out_pos = 0;
-  EVERPARSE_COPY_BUFFER_T a_out = (EVERPARSE_COPY_BUFFER_T) {
+  EVERPARSE_COPY_BUFFER_DESCR a_out_descr = {
     .cb_base = (uint8_t*)&destA,
     .cb_len = sizeof(destA),
     .cb_pos = &a_out_pos
   };
+  EVERPARSE_COPY_BUFFER_T a_out = &a_out_descr;
   B64 destB;
   size_t b_out_pos = 0;
-  EVERPARSE_COPY_BUFFER_T b_out = (EVERPARSE_COPY_BUFFER_T) {
+  EVERPARSE_COPY_BUFFER_DESCR b_out_descr = {
     .cb_base = (uint8_t*)&destB,
     .cb_len = sizeof(destB),
     .cb_pos = &b_out_pos
   };
+  EVERPARSE_COPY_BUFFER_T b_out = &b_out_descr;
   if (SpecializeAbcCheckC(
       false, 
       a_out,
@@ -228,18 +230,20 @@ int test1(void) {
 int test2(void) {
   A destA = {0x00000000, 0x00000000};
   size_t a_out_pos = 0;
-  EVERPARSE_COPY_BUFFER_T a_out = (EVERPARSE_COPY_BUFFER_T) {
+  EVERPARSE_COPY_BUFFER_DESCR a_out_descr = {
     .cb_base = (uint8_t*)&destA,
     .cb_len = sizeof(destA),
     .cb_pos = &a_out_pos
   };
+  EVERPARSE_COPY_BUFFER_T a_out = &a_out_descr;
   B64 destB;
   size_t b_out_pos = 0;
-  EVERPARSE_COPY_BUFFER_T b_out = (EVERPARSE_COPY_BUFFER_T) {
+  EVERPARSE_COPY_BUFFER_DESCR b_out_descr = {
     .cb_base = (uint8_t*)&destB,
     .cb_len = sizeof(destB),
     .cb_pos = &b_out_pos
   };
+  EVERPARSE_COPY_BUFFER_T b_out = &b_out_descr;
   if (SpecializeAbcCheckC(
       false, 
       a_out,

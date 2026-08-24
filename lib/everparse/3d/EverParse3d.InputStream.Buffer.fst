@@ -300,33 +300,65 @@ instance input_stream_buffer : I.input_stream_inst base_t len_t pos_t = {
 assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
 (* Copy buffers, used as the destination of probe actions. Only the `buffer`
-   backend provides them. *)
+   backend provides them.
+
+   A copy buffer is a *pointer* to the descriptor, not the descriptor itself,
+   so that a probe callback can overwrite the latter -- in particular, repoint
+   the buffer at the probed bytes rather than copying into it, as the Low*
+   backend allows.
+
+   The descriptor is a monomorphic record here rather than a polymorphic one
+   in `EverParse3d.CopyBuffer`, so that KaRaMeL emits it under the stable name
+   `EVERPARSE_COPY_BUFFER_DESCR` in `EverParse.h`. `copy_buffer_t` itself is
+   an abbreviation and is inlined away by KaRaMeL, so the C type a wrapper
+   sees is `EVERPARSE_COPY_BUFFER_DESCR *`; `EverParsePulseEndianness.h`
+   defines `EVERPARSE_COPY_BUFFER_T` as exactly that. *)
 noeq
-type copy_buffer_t = {
+type copy_buffer_descr = {
   cb_base: base_t;
   cb_len: len_t;
   cb_pos: pos_t;
 }
 
+type copy_buffer_t = R.ref copy_buffer_descr
+
+(* Pulse eagerly eliminates a top-level `exists*` in a `requires`, which would
+   give `copy_buffer_reset` a type with an extra ghost binder instead of the
+   `stt` the class field expects. Hiding the existential behind this
+   (transparent) definition keeps the two convertible. *)
+let cb_pts_to (c: copy_buffer_t) (contents: Seq.seq U8.t) (v: Seq.seq U8.t) : Tot slprop =
+  exists* (d: copy_buffer_descr).
+    R.pts_to c d ** I.pts_to d.cb_base d.cb_len d.cb_pos contents v
+
 inline_for_extraction
 fn copy_buffer_reset
   (c: copy_buffer_t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
-requires stream_pts_to c.cb_base c.cb_len c.cb_pos contents v
-ensures stream_pts_to c.cb_base c.cb_len c.cb_pos contents contents
+requires cb_pts_to c contents v
+ensures cb_pts_to c contents contents
 {
-  unfold (stream_pts_to c.cb_base c.cb_len c.cb_pos contents v);
-  c.cb_pos := 0sz;
-  Seq.lemma_eq_elim (Seq.slice contents 0 (SZ.v c.cb_len)) contents;
-  fold (stream_pts_to c.cb_base c.cb_len c.cb_pos contents contents);
+  unfold (cb_pts_to c contents v);
+  with d. assert (R.pts_to c d ** I.pts_to d.cb_base d.cb_len d.cb_pos contents v);
+  let dv = !c;
+  rewrite (I.pts_to d.cb_base d.cb_len d.cb_pos contents v)
+    as (stream_pts_to d.cb_base d.cb_len d.cb_pos contents v);
+  unfold (stream_pts_to d.cb_base d.cb_len d.cb_pos contents v);
+  dv.cb_pos := 0sz;
+  Seq.lemma_eq_elim (Seq.slice contents 0 (SZ.v d.cb_len)) contents;
+  fold (stream_pts_to d.cb_base d.cb_len d.cb_pos contents contents);
+  rewrite (stream_pts_to d.cb_base d.cb_len d.cb_pos contents contents)
+    as (I.pts_to d.cb_base d.cb_len d.cb_pos contents contents);
+  fold (cb_pts_to c contents contents);
 }
 
 noextract
 inline_for_extraction
 instance copy_buffer_buffer : CB.copy_buffer copy_buffer_t base_t len_t pos_t = {
-  base_of = (fun c -> c.cb_base);
-  len_of = (fun c -> c.cb_len);
-  pos_of = (fun c -> c.cb_pos);
+  descr_t = copy_buffer_descr;
+  base_of = (fun d -> d.cb_base);
+  len_of = (fun d -> d.cb_len);
+  pos_of = (fun d -> d.cb_pos);
+  descr = (fun c -> c);
   reset = copy_buffer_reset;
 }
 
