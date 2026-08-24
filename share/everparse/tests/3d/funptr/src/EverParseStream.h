@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include "EverParsePulseEndianness.h"
+#include "EverParseEndianness.h"
 
 /* A client-provided input stream for `3d --pulse --input_stream static`, where
    the stream operations are reached through function pointers rather than

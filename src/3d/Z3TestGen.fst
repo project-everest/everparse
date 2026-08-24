@@ -1556,9 +1556,8 @@ let alloc_ptr_copy_buffer
   arg_var
   arg_var
 
-(* The --pulse counterparts.  The harness state embeds the descriptor as its
-   first member and owns the position cell the descriptor points at; the copy
-   buffer handed to the validator is the address of that descriptor. *)
+(* The --pulse counterparts: same as the Low* ones plus the position cell that
+   EverParseStreamPos hands to the validator. *)
 let alloc_default_copy_buffer_pulse
   (flight: string)
   (wid: nat)
@@ -1566,17 +1565,17 @@ let alloc_default_copy_buffer_pulse
   (arg_var: string)
 : Tot string
 =
-  let v = "_contents_" ^ arg_var in
-  "
-  copy_buffer_t " ^ v ^ ";
-  " ^ v ^ ".pos = (size_t) 0;
-  " ^ v ^ ".descr.cb_base = NULL;
-  " ^ v ^ ".descr.cb_len = (size_t) 0;
-  " ^ v ^ ".descr.cb_pos = &" ^ v ^ ".pos;
-  " ^ v ^ ".layers = witness" ^ flight ^ string_of_int wid ^ ";
-  " ^ v ^ ".count = " ^ string_of_int nblayers ^ ";
-  EVERPARSE_COPY_BUFFER_T " ^ arg_var ^ " = &" ^ v ^ ".descr;
+  Printf.sprintf
 "
+  copy_buffer_t _contents_%s = { .layers = witness%s%d, .count = %d, .cur = 0U, .pos = (size_t) 0 };
+  EVERPARSE_COPY_BUFFER_T %s = (void* ) &_contents_%s;
+"
+  arg_var
+  flight
+  wid
+  nblayers
+  arg_var
+  arg_var
 
 let alloc_ptr_copy_buffer_pulse
   (flight: string)
@@ -1584,16 +1583,16 @@ let alloc_ptr_copy_buffer_pulse
   (arg_var: string)
 : Tot string
 =
-  let v = "_contents_" ^ arg_var in
-  let w = "witness" ^ flight ^ string_of_int wid in
-  "
-  copy_buffer_t " ^ v ^ ";
-  " ^ v ^ ".pos = (size_t) 0;
-  " ^ v ^ ".descr.cb_base = " ^ w ^ "[0].buf;
-  " ^ v ^ ".descr.cb_len = (size_t) " ^ w ^ "[0].len;
-  " ^ v ^ ".descr.cb_pos = &" ^ v ^ ".pos;
-  EVERPARSE_COPY_BUFFER_T " ^ arg_var ^ " = &" ^ v ^ ".descr;
+  Printf.sprintf
 "
+  copy_buffer_t _contents_%s = { .layer = witness%s%d[0], .pos = (size_t) 0 };
+  EVERPARSE_COPY_BUFFER_T %s = (void* ) &_contents_%s;
+"
+  arg_var
+  flight
+  wid
+  arg_var
+  arg_var
 
 let alloc_copy_buffer
   (use_ptr: bool)
@@ -2231,25 +2230,56 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 }
 "
 
-(* Under --pulse the validator reads the copy buffer's base, length and
-   position out of an EVERPARSE_COPY_BUFFER_DESCR directly, so there are no
-   EverParseStreamOf/EverParseStreamLen hooks to define.  The harness state is
-   an enclosing struct whose *first* member is the descriptor, so that a probe
-   callback can cast the EVERPARSE_COPY_BUFFER_T it receives back to it. *)
+(* The --pulse counterparts.  The copy buffer is the same opaque void* handle
+   as in Low*, so the harness still defines its own copy_buffer_t and the
+   EverParseStreamOf/EverParseStreamLen hooks.  Two differences: Pulse input
+   stream lengths are size_t rather than uint64_t, and the read position lives
+   inside the stream rather than being passed to the validator, so there is a
+   third hook, EverParseStreamPos, returning a cell the harness owns. *)
 let test_default_probe_functions_pulse = "
 typedef struct {
-  EVERPARSE_COPY_BUFFER_DESCR descr; /* must come first, see cast below */
-  size_t pos;
   witness_layer_t *layers;
   uint64_t count;
+  uint64_t cur;
+  size_t pos;
 } copy_buffer_t;
+
+uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->layers[state->cur].buf;
+}
+
+size_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return (size_t) state->layers[state->cur].len;
+}
+
+size_t * EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return &state->pos;
+}
 "
 
 let test_ptr_probe_functions_pulse = "
 typedef struct {
-  EVERPARSE_COPY_BUFFER_DESCR descr; /* must come first, see cast below */
+  witness_layer_t layer;
   size_t pos;
 } copy_buffer_t;
+
+uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->layer.buf;
+}
+
+size_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return (size_t) state->layer.len;
+}
+
+size_t * EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return &state->pos;
+}
 "
 
 let test_probe_functions (use_ptr: bool) : ML string =
@@ -2302,25 +2332,25 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 }
 "
 
-(* The --pulse counterparts.  Both repoint the copy buffer rather than copying
-   into it, which the Pulse copy buffer supports because it is a pointer to a
-   descriptor: exactly the Low* behaviour, expressed through the descriptor
-   instead of through EverParseStreamOf. *)
+(* The --pulse counterparts of the probe callbacks.  They differ from the Low*
+   ones only in also rewinding the harness-owned position cell: under --pulse
+   the position belongs to the stream, so a copy buffer reused across probe
+   sites has to be rewound.  (The interpreter calls `reset` too; doing it here
+   as well is harmless and keeps the harness self-contained.) *)
 let generate_default_probe_function_pulse (name: string) : Tot string = "
 BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
   if (ro != 0 || wo != 0) {
     printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
     exit(4);
   };
-  copy_buffer_t *state = (copy_buffer_t * ) (void * ) dst;
+  copy_buffer_t *state = ((copy_buffer_t * ) dst);
   if (src < state->count) {
     uint64_t got_len = state->layers[src].len;
     if (len != got_len) {
       printf(\"ProbeAndCopy: layer length does not match spec. Expected %\" PRIu64 \", got %\" PRIu64 \"\\n\", len, got_len);
       exit(4);
     } else {
-      state->descr.cb_base = state->layers[src].buf;
-      state->descr.cb_len = (size_t) got_len;
+      state->cur = src;
       state->pos = (size_t) 0;
       return true;
     }
@@ -2337,9 +2367,9 @@ BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE
     printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
     exit(4);
   };
-  copy_buffer_t *state = (copy_buffer_t * ) (void * ) dst;
-  state->descr.cb_base = (uint8_t* ) (void* ) src;
-  state->descr.cb_len = (size_t) len;
+  copy_buffer_t *state = ((copy_buffer_t * ) dst);
+  state->layer.buf = (uint8_t* ) (void* ) src;
+  state->layer.len = len;
   state->pos = (size_t) 0;
   return true;
 }
@@ -2350,19 +2380,12 @@ let generate_probe_function (use_ptr: bool) (name: string) : ML string =
   then (if use_ptr then generate_ptr_probe_function_pulse name else generate_default_probe_function_pulse name)
   else (if use_ptr then generate_ptr_probe_function name else generate_default_probe_function name)
 
-(* The harness has to emit the copy-buffer definitions only when the module
-   actually uses one: under --pulse, KaRaMeL emits EVERPARSE_COPY_BUFFER_DESCR
-   into EverParse.h only for modules that mention it, so a probe-free module
-   must not get these definitions at all. *)
 let cout_test_probe_functions
   (use_ptr: bool)
   (cout: string -> ML unit)
   (prog: prog)
 : ML unit
-= if (if Options.get_pulse ()
-      then List.Tot.existsb (fun (x: (string & prog_def)) -> ProgProbe? (snd x)) prog
-      else true)
-  then begin
+= begin
   cout (test_probe_functions use_ptr);
   List.iter
     (fun x -> match x with

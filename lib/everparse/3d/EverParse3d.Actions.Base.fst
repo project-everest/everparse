@@ -7,7 +7,6 @@ open EverParse3d.Prelude
 open Pulse.Lib.Pervasives
 module I = EverParse3d.InputStream.Base
 module CP = EverParse3d.CopyBuffer
-module R = Pulse.Lib.Reference
 
 module PA = EverParse3d.ProbeActions
 module AppCtxt = EverParse3d.AppCtxt
@@ -2948,25 +2947,15 @@ fn probe_then_validate
          across probe sites, so it has to be rewound explicitly. *)
       unfold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
       CP.reset #_ #base_t #len_t #pos_t dest cd vd;
-      with d . assert (
-        R.pts_to (CP.descr #_ #base_t #len_t #pos_t dest) d **
-        I.pts_to #base_t #len_t #pos_t
-          (CP.base_of #_ #base_t #len_t #pos_t d)
-          (CP.len_of #_ #base_t #len_t #pos_t d)
-          (CP.pos_of #_ #base_t #len_t #pos_t d) cd cd);
-      (* Read the descriptor out of the handle. The probe may have repointed
-         it, so the triple has to come from the reference rather than from a
-         pure projection of `dest`. *)
-      let dv = !(CP.descr #_ #base_t #len_t #pos_t dest);
       let res = v ctxt error_handler_fn
-        (CP.base_of #_ #base_t #len_t #pos_t dv)
-        (CP.len_of #_ #base_t #len_t #pos_t dv)
-        (CP.pos_of #_ #base_t #len_t #pos_t dv)
+        (CP.base_of #_ #base_t #len_t #pos_t dest)
+        (CP.len_of #_ #base_t #len_t #pos_t dest)
+        (CP.pos_of #_ #base_t #len_t #pos_t dest)
         _ cd cd;
       with vd' . assert (I.pts_to #base_t #len_t #pos_t
-              (CP.base_of #_ #base_t #len_t #pos_t dv)
-              (CP.len_of #_ #base_t #len_t #pos_t dv)
-              (CP.pos_of #_ #base_t #len_t #pos_t dv) cd vd');
+              (CP.base_of #_ #base_t #len_t #pos_t dest)
+              (CP.len_of #_ #base_t #len_t #pos_t dest)
+              (CP.pos_of #_ #base_t #len_t #pos_t dest) cd vd');
       fold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd');
       rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd')
         as (copy_buffer_state #_ #base_t #len_t #pos_t dest

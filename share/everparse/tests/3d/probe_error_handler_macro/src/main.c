@@ -22,18 +22,49 @@ uint64_t primary[2] = {1, (uint64_t) (void*) secondary};
 
 // THE COPY BUFFER TYPE AND OPERATIONS
 
-// The type of input buffers passed to the secondary validator. With
-// the Pulse backend, EVERPARSE_COPY_BUFFER_T is not opaque: it is a
-// pointer to an EVERPARSE_COPY_BUFFER_DESCR, a plain struct declared
-// in EverParse.h holding the three fields that make up a Pulse input
-// stream, namely the base pointer `cb_base`, the length `cb_len` and
-// a pointer `cb_pos` to the current read position.
+// The type of input buffers passed to the secondary validator. In
+// EverParse.h, EVERPARSE_COPY_BUFFER_T is defined as void*, but in
+// our example here, we will use `copy_buffer_t*`
 //
-// So, unlike with the Low* backend, there is no client-defined
-// copy_buffer_t here, and no EverParseStreamOf/EverParseStreamLen to
-// define either: the generated code reads `cb_base`/`cb_len`/`cb_pos`
-// directly. The client only has to own the storage for the descriptor
-// and for the position cell that `cb_pos` points to.
+// Compared to the Low* backend, a Pulse input stream also carries its
+// current read position, so the copy buffer has to own a cell for it.
+
+typedef struct {
+  uint8_t *buf;
+  size_t len;
+  size_t pos;
+} copy_buffer_t;
+
+// `EverParseStreamOf` is declared in EverParse.h, but we need to
+// define it here. Given an input buffer, `EverParseStreamOf` is
+// intended to return the input byte array that will be passed to the
+// `secondary` validator.
+
+uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+  return ((copy_buffer_t *) x)->buf;
+}
+
+// `EverParseStreamLen` is declared in EverParse.h, but we need to
+// define it here. Given an input buffer, `EverParseStreamLen` is
+// intended to return the number of input bytes that the
+// `secondary` validator is allowed to read.
+//
+// Unlike with the Low* backend, the length is a size_t, since that is
+// what Pulse input streams use.
+
+size_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
+  return ((copy_buffer_t *) x)->len;
+}
+
+// `EverParseStreamPos` has no Low* counterpart: there the read
+// position is an argument of the validator, whereas a Pulse input
+// stream carries it. It returns the cell holding the position at
+// which the `secondary` validator will start reading; the generated
+// code rewinds it to 0 before each validation.
+
+size_t * EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x) {
+  return &((copy_buffer_t *) x)->pos;
+}
 
 // THE PROBING FUNCTIONS
 
@@ -42,17 +73,18 @@ uint64_t primary[2] = {1, (uint64_t) (void*) secondary};
 // hand here. We define it as checking whether the pointer read from
 // the `primary` type matches the `secondary` array, with the
 // corresponding sizes, and if so, performing a copy from the
-// `secondary` array to the buffer stored in dst->cb_base that will be
+// `secondary` array to the buffer stored in dst->buf that will be
 // used as an input buffer to the validator for the `secondary` type
 // defined in Probe.3d.
 
 BOOLEAN ProbeAndCopy(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
   static_assert(sizeof(secondary) == 4, "unexpected size of secondary");
+  copy_buffer_t *p = dst;
   if (src == (uint64_t) secondary &&
       ro == 0 &&
       wo == 0 &&
-      len == sizeof(secondary) && dst->cb_len >= (size_t) len) {
-    memcpy(dst->cb_base, (uint8_t*) secondary, (size_t) len);
+      len == sizeof(secondary) && p->len >= (size_t) len) {
+    memcpy(p->buf, (uint8_t*) secondary, (size_t) len);
     return true;
   } else {
     printf("ProbeAndCopy failed\n");
@@ -69,13 +101,12 @@ BOOLEAN ProbeInit(const char* typename, uint64_t len, EVERPARSE_COPY_BUFFER_T ds
 // hand here. We define it as checking whether the pointer read from
 // the `primary` type matches the `secondary` array, with the
 // corresponding sizes, and if so, NOT performing a copy, but rather
-// repointing the copy buffer at the `secondary` array, which the
-// validator for the `secondary` type defined in Probe.3d will then
-// use directly as its input.
+// reusing the `secondary` array directly as an input buffer to the
+// validator for the `secondary` type defined in Probe.3d.
 //
-// Repointing works because EVERPARSE_COPY_BUFFER_T is a *pointer* to
-// the descriptor, exactly as in the Low* backend where it is an
-// opaque pointer whose EverParseStreamOf the client may change.
+// This is why EVERPARSE_COPY_BUFFER_T has to stay an opaque handle:
+// the validator only ever reaches the bytes through
+// EverParseStreamOf, so overwriting `buf` here repoints it.
 
 BOOLEAN ProbeInPlace(
   uint64_t len,
@@ -89,8 +120,9 @@ BOOLEAN ProbeInPlace(
       read_offset == 0 &&
       write_offset == 0 &&
       len == sizeof(secondary)) {
-    dst->cb_base = (uint8_t*) secondary;
-    dst->cb_len = (size_t) len;
+    copy_buffer_t *p = dst;
+    p->buf = (uint8_t*) secondary;
+    p->len = (size_t) len;
     return true;
   } else {
     printf("ProbeAndCopy failed\n");
@@ -102,20 +134,17 @@ BOOLEAN ProbeInPlace(
 
 int main(void) {
 
-  // In-place test: the ProbeInPlace probing function will repoint the
-  // destination at the `secondary` array without a copy, so that the
-  // `secondary` validator will directly use the `secondary` array as
-  // an input. The initial base/length are therefore irrelevant; only
-  // the position cell has to be backed by real storage, since the
-  // generated code resets it through `cb_pos` before validating.
-  size_t posInPlace = 0;
-  EVERPARSE_COPY_BUFFER_DESCR destInPlace = {
-    .cb_base = NULL,
-    .cb_len = 0,
-    .cb_pos = &posInPlace
+  // In-place test: the ProbeInPlace probing function will populate
+  // the destination directly with the `secondary` array without a
+  // copy, so that the `secondary` validator will directly use the
+  // `secondary` array as an input
+  copy_buffer_t destInPlace = (copy_buffer_t) {
+    .buf = NULL,
+    .len = 0,
+    .pos = 0
   };
   static_assert(sizeof(primary) == 16, "unexpected size of primary");
-  if (ProbeCheckPrimaryInPlace(&destInPlace, (uint8_t*) primary, sizeof(primary))) {
+  if (ProbeCheckPrimaryInPlace((EVERPARSE_COPY_BUFFER_T) &destInPlace, (uint8_t*) primary, sizeof(primary))) {
     printf("Validation succeeded with PrimaryInPlace\n");
   } else {
     printf("Validation failed with PrimaryInPlace\n");
@@ -129,13 +158,12 @@ int main(void) {
   // `probe` declaration in Probe.3d.
   uint8_t destAndCopyBuf[8];
   static_assert (sizeof(destAndCopyBuf) == 8, "unexpected size of destAndCopyBuf");
-  size_t posAndCopy = 0;
-  EVERPARSE_COPY_BUFFER_DESCR destAndCopy = {
-    .cb_base = destAndCopyBuf,
-    .cb_len = sizeof(destAndCopyBuf),
-    .cb_pos = &posAndCopy
+  copy_buffer_t destAndCopy = (copy_buffer_t) {
+    .buf = destAndCopyBuf,
+    .len = sizeof(destAndCopyBuf),
+    .pos = 0
   };
-  if (ProbeCheckPrimaryAndCopy(&destAndCopy, (uint8_t*) primary, sizeof(primary))) {
+  if (ProbeCheckPrimaryAndCopy((EVERPARSE_COPY_BUFFER_T) &destAndCopy, (uint8_t*) primary, sizeof(primary))) {
     printf("Validation succeeded with PrimaryAndCopy\n");
   } else {
     printf("Validation failed with PrimaryAndCopy\n");

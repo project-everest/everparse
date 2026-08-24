@@ -1,7 +1,6 @@
 module EverParse3d.ProbeActions
 #lang-pulse
 
-module R = Pulse.Lib.Reference
 
 let probe_fn_incremental
   (#copy_buffer_t: Type0)
@@ -206,21 +205,11 @@ ensures exists* v_ctxt' .
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
 {
   unfold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
-  with d . assert (
-    R.pts_to (CB.descr #_ #base_t #len_t #pos_t dest) d **
-    I.pts_to #base_t #len_t #pos_t
-      (CB.base_of #_ #base_t #len_t #pos_t d)
-      (CB.len_of #_ #base_t #len_t #pos_t d)
-      (CB.pos_of #_ #base_t #len_t #pos_t d)
-      contents_dest v_dest);
-  (* The descriptor has to be read out of the handle: a probe may have
-     repointed the copy buffer. *)
-  let dv = !(CB.descr #_ #base_t #len_t #pos_t dest);
   ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)
     tn fn_ det 0uy ctxt
-      (CB.base_of #_ #base_t #len_t #pos_t dv)
-      (CB.len_of #_ #base_t #len_t #pos_t dv)
-      (CB.pos_of #_ #base_t #len_t #pos_t dv)
+      (CB.base_of #_ #base_t #len_t #pos_t dest)
+      (CB.len_of #_ #base_t #len_t #pos_t dest)
+      (CB.pos_of #_ #base_t #len_t #pos_t dest)
       contents_dest v_dest;
   fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
 }
