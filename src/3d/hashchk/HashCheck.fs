@@ -36,7 +36,7 @@ let check_inplace_hashes_f h file_c =
      | Some res -> res
 
 let load_hash (file: string) (is_weak: bool) : FStar_Pervasives_Native.option<string> =
-  use fs = new System.IO.FileStream(file, System.IO.FileMode.Open)
+  use fs = new System.IO.FileStream(file, System.IO.FileMode.Open, System.IO.FileAccess.Read)
   use js = System.Text.Json.JsonDocument.Parse(fs)
   let root = js.RootElement
   if root.ValueKind <> System.Text.Json.JsonValueKind.Object
