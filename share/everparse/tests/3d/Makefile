@@ -4,7 +4,9 @@
 # (lib/everparse/3d) with --pulse, and verified with F*.
 #
 # --batch runs the whole pipeline: generation, F* verification, F* extraction
-# to .krml and KaRaMeL extraction to C. The generated C is then compiled.
+# to .krml and KaRaMeL extraction to C. The generated C is then compiled with
+# -Wall -Wextra -Werror through the Makefile.basic that KaRaMeL emits, and the
+# C++ driver test.cpp is linked against it and run.
 
 ifeq (,$(EVERPARSE_HOME))
   EVERPARSE_HOME := $(realpath ../../../..)
@@ -19,17 +21,24 @@ FSTAR_EXE ?= fstar.exe
 3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
 
 CC ?= cc
+CXX ?= c++
 KRML_EXE ?= $(EVERPARSE_HOME)/opt/karamel/out/bin/krml
+export KRML_EXE
 
 OUT_DIR=out.pulse
+ELF_DIR=out.elf.pulse
+CLEANUP_DIR=out.cleanup.pulse
+INPLACE_DIR=out.inplace-hash.pulse
 
 # Same exclusions as src/3d/tests.
 excluded_tests := FieldDependence0.3d ActAndCheck.3d
 
+exclude_modules :=
 ifeq ($(OS),Windows_NT)
   # UlongToPtr is defined in Windows DLLs, conflicts with those examples
-  excluded_tests += FineGrainedProbe.3d FineGrainedProbeSpecialize.3d \
-    Specialize2.3d Specialize3.3d Specialize5.3d Specialize6.3d
+  exclude_modules := FineGrainedProbe FineGrainedProbeSpecialize \
+    Specialize2 Specialize3 Specialize5 Specialize6
+  excluded_tests += $(addsuffix .3d,$(exclude_modules))
 endif
 
 positive_tests := $(filter-out $(wildcard FAIL*.3d) $(excluded_tests),$(wildcard *.3d))
@@ -45,7 +54,26 @@ verify_only_tests := $(filter $(no_extract_tests),$(positive_tests))
 
 VERIFY_DIR=out.pulse.verify
 
-all: pulse-test pulse-test-negative pulse-subdirs
+# The exact set of files --cleanup is expected to leave behind, mirroring
+# src/3d/tests. Compared to the Low* backend, the Pulse backend also emits
+# EverParse.c/EverParse.h and the internal/ directory, because
+# EverParseErrorReasonOfResult is a real function extracted by KaRaMeL rather
+# than a static inline in the hand-written prelude header.
+positive_tests_nosuffix := $(basename $(positive_tests))
+modules_or_wrappers := $(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
+modules_static_assertions := $(addsuffix StaticAssertions.c, TestFieldPtr Align)
+modules_auto_static_assertions := $(addsuffix AutoStaticAssertions.c, $(filter-out $(exclude_modules),Align Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize))
+module_extern_apis := $(addsuffix _ExternalAPI.h, $(filter-out $(exclude_modules),Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize))
+clean_out_files := \
+	$(addsuffix .c,$(modules_or_wrappers)) \
+	$(modules_static_assertions) \
+	$(modules_auto_static_assertions) \
+	$(addsuffix .h,$(modules_or_wrappers)) \
+	$(module_extern_apis) \
+	EverParse.c EverParse.h internal
+
+all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
+	elf-test pulse-subdirs
 
 # Subdirectories with their own build. Only those already ported to --pulse are
 # listed; the rest were copied from src/3d/tests and still drive the Low*
@@ -77,24 +105,25 @@ $(pulse_subdirs):
 	+$(MAKE) -C $@
 
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
+.PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test
 
-# Generation, F* verification and KaRaMeL extraction to C, in one go.
+# Generation, F* verification and KaRaMeL extraction to C, in one go, then a
+# second pass checking that regenerating the sources yields the same strong
+# hashes as the ones just saved.
 pulse-batch:
 	mkdir -p $(OUT_DIR)
-	$(3D) --odir $(OUT_DIR) --batch $(batch_tests)
+	$(3D) --odir $(OUT_DIR) --batch --save_hashes $(batch_tests)
+	$(3D) --odir $(OUT_DIR) --batch --check_hashes strong $(batch_tests)
 
 # Compile everything KaRaMeL produced, to check the generated C is well-formed
-# and that the wrappers agree with the validators' ABI.
+# and that the wrappers agree with the validators' ABI. We go through the
+# Makefile.basic that KaRaMeL emits, so that the generated code is held to the
+# same -Wall -Wextra -Werror standard as in src/3d/tests. USER_TARGET=test has
+# no recipe: it just forces every object to be built.
 pulse-cc: pulse-batch
-	set -e ; \
-	krml_include="$$($(KRML_EXE) -locate-include)" ; \
-	krml_lib="$$($(KRML_EXE) -locate-krmllib)" ; \
-	here="$$(pwd)" ; \
-	cd $(OUT_DIR) && \
-	for f in *.c ; do \
-	  echo "  [CC] $$f" ; \
-	  $(CC) -c -I. -I"$$here" -I"$$krml_include" -I"$$krml_lib/dist/minimal" $$f -o $${f%.c}.o ; \
-	done
+	+$(MAKE) -C $(OUT_DIR) -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
+	$(CXX) -o test-cpp.pulse.exe -I $(OUT_DIR) test.cpp $(addprefix $(OUT_DIR)/, ArithmeticWrapper.o Arithmetic.o EverParse.o)
+	./test-cpp.pulse.exe
 
 # The remaining tests: generation plus F* verification only.
 pulse-verify:
@@ -114,6 +143,36 @@ pulse-verify:
 
 pulse-test: pulse-cc pulse-verify
 
+# Build and link the C++ ELF test driver against the --pulse-generated ELF
+# parser. As in src/3d/tests, it is not run: it needs an ELF file to read.
+elf-test: ELF.3d
+	mkdir -p $(ELF_DIR)
+	$(3D) --odir $(ELF_DIR) --batch ELF.3d
+	$(CXX) -o $(ELF_DIR)/elf-test -I $(ELF_DIR) $(addprefix $(ELF_DIR)/, ELF.c ELFWrapper.c EverParse.c) TestELF.cpp
+
+# --cleanup must leave behind exactly the C artifacts and nothing else: no .fst,
+# .checked, .krml or KaRaMeL scratch files.
+pulse-cleanup-test:
+	mkdir -p $(CLEANUP_DIR)
+	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir $(CLEANUP_DIR) --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
+	test "$$(ls $(CLEANUP_DIR) | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+
+echo-clean-out-files:
+	echo "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+
+echo-out-files:
+	echo "$$(ls $(CLEANUP_DIR) | sort)"
+
+.PHONY: echo-clean-out-files echo-out-files
+
+# The in-place hash is embedded in the generated header, so that a consumer can
+# check a checked-in header against its .3d source without regenerating it.
+pulse-inplace-hash-test:
+	mkdir -p $(INPLACE_DIR)
+	$(3D) --odir $(INPLACE_DIR) --batch Comments.3d
+	$(3D) --odir $(INPLACE_DIR) --batch --check_hashes inplace Comments.3d
+	$(3D) --check_inplace_hash Comments.3d=$(INPLACE_DIR)/Comments.h
+
 pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
 # A negative test must be rejected either by the 3d frontend or by F* on the
@@ -126,7 +185,8 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 	    done ) >$@.out 2>$@.err
 
 clean-files:
-	rm -rf $(OUT_DIR) $(VERIFY_DIR) out.fail.pulse *.out *.err
+	rm -rf $(OUT_DIR) $(VERIFY_DIR) $(ELF_DIR) $(CLEANUP_DIR) $(INPLACE_DIR) \
+	  out.fail.pulse test-cpp.pulse.exe *.out *.err
 	for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
 
 clean: clean-files

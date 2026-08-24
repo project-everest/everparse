@@ -10,6 +10,11 @@ test-cpp.exe
 *.err
 out.pulse
 out.fail.pulse
+out.pulse.verify
+out.elf.pulse
+out.cleanup.pulse
+out.inplace-hash.pulse
+test-cpp.pulse.exe
 
 # Build directories of the subdirectory tests.
 obj/
