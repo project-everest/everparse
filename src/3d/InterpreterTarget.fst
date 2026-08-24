@@ -1464,13 +1464,26 @@ let print_binding mname (td:type_decl)
   let def = print_type_decl mname binders td in
   let weak_kind = A.print_weak_kind k.pk_weak_kind in
   let pk_of_binding =
+      (* The kind expression is a nest of `and_then_kind`/`glb` applications,
+         each of which mentions its arguments several times. Left unreduced,
+         F* extraction unfolds them and the term grows exponentially with the
+         nesting depth. Reduce the nest to a literal record here. *)
+      let kind_expr =
+        Printf.sprintf "coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s"
+          (T.print_kind mname k)
+      in
+      let kind_expr =
+        if pulse ()
+        then Printf.sprintf "norm [delta_namespace [\"EverParse3d\"; \"LowParse\"]; zeta; iota; primops] (%s)" kind_expr
+        else kind_expr
+      in
       Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction noextract\n\
-                    let kind_%s : P.parser_kind %s %s = coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s\n"
+                    let kind_%s : P.parser_kind %s %s = %s\n"
         root_name
         (string_of_bool k.pk_nz)
         weak_kind
-        (T.print_kind mname k)
+        kind_expr
   in
   let inv, eloc, disj =
     let inv, eloc, disj, _ = td.typ_indexes in

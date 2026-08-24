@@ -24,13 +24,6 @@ KRML_EXE ?= $(EVERPARSE_HOME)/opt/karamel/out/bin/krml
 OUT_DIR=out.pulse
 
 # Same exclusions as src/3d/tests.
-#
-# FieldDependence0.3d additionally does not survive --pulse at all: it is
-# generated and verified fine, but `fstar.exe --codegen krml` on the generated
-# module runs away (>32GB, "allocation failure during minor GC"). It is also
-# excluded from src/3d/tests' positive_tests, so the Low* suite does not cover
-# it either -- but the binary-package CI does exercise it under Low*, and
-# deliberately does not under --pulse.
 excluded_tests := FieldDependence0.3d ActAndCheck.3d
 
 ifeq ($(OS),Windows_NT)

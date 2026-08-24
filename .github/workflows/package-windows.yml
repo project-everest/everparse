@@ -202,16 +202,11 @@ jobs:
       # differences from the Low* step above:
       #  - the inputs come from share\everparse\tests\3d rather than
       #    src\3d\tests, so that --check_hashes inplace, which rewrites the .3d
-      #    file, does not clobber the hashes the Low* run just wrote;
-      #  - FieldDependence0.3d is omitted. It generates and verifies fine under
-      #    --pulse, but F* krml extraction of the generated module does not
-      #    terminate in reasonable space (>32GB). It is excluded from
-      #    positive_tests in both test suites, so this is not a regression, but
-      #    it must not be put in CI until that is fixed.
+      #    file, does not clobber the hashes the Low* run just wrote.
       - name: Test EverParse (--pulse)
         shell: cmd
         run: |
-          ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\Arithmetic.3d && ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\Comments.3d && ${{ github.workspace }}\test\everparse.cmd --pulse --check_hashes inplace ${{ github.workspace }}\everparse\share\everparse\tests\3d\Comments.3d
+          ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\Arithmetic.3d ${{ github.workspace }}\everparse\share\everparse\tests\3d\FieldDependence0.3d && ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\Comments.3d && ${{ github.workspace }}\test\everparse.cmd --pulse --check_hashes inplace ${{ github.workspace }}\everparse\share\everparse\tests\3d\Comments.3d
       - name: Test EverParse test case generation
         shell: cmd
         run: |
