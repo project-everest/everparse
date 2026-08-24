@@ -195,6 +195,33 @@ make_everparse() {
     if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
     $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
     $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
+
+    # Copy the Pulse 3d runtime (--pulse), unless Pulse is disabled altogether.
+    #
+    # `3d.exe --pulse` needs three things at run time, all located relative to
+    # EVERPARSE_HOME by src/3d/ocaml/Batch.ml:
+    #   - lib/everparse/3d: the combinator library itself, on the F* --include
+    #     path, hence sources *and* .checked files;
+    #   - lib/everparse/3d/krml/extracted: the same library already extracted
+    #     to .krml, which is what gets handed to KaRaMeL alongside the
+    #     generated modules (the Pulse runtime is bundled into the generated
+    #     code rather than shipped as a separate C library);
+    #   - lib/pulse: the Pulse standard library, also on the --include path.
+    # src/lowparse/pulse is already covered by the src/lowparse copy above, and
+    # EverParsePulse{,Endianness}.h are copied out to the output directory by
+    # the copy_everparse_h micro-step.
+    if [[ -z "$NO_PULSE" ]] ; then
+        $cp -r $EVERPARSE_HOME/src/3d/EverParsePulse.h everparse/src/3d/
+        $cp -r $EVERPARSE_HOME/src/3d/EverParsePulseEndianness.h everparse/src/3d/
+        mkdir -p everparse/lib/everparse
+        $cp -r $EVERPARSE_HOME/lib/everparse/3d everparse/lib/everparse/3d
+        # Drop the build machinery: the package ships the results, not the
+        # means of producing them.
+        rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile
+        rm -f everparse/lib/everparse/3d/krml/extracted/.depend
+        $cp -r $PULSE_HOME/lib/pulse everparse/lib/
+    fi
+
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/README.Windows.pkg everparse/README
     else
@@ -202,11 +229,10 @@ make_everparse() {
     fi
     $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
 
-    # Copy Pulse, evercbor and evercddl
+    # Copy evercbor and evercddl
     if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
-	$cp -r $PULSE_HOME/lib/pulse everparse/lib/
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
 	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
     fi

@@ -90,6 +90,13 @@ endif
 
 3d: 3d-pulse-prelude
 
+# The binary package ships the Pulse 3d runtime already extracted to .krml, so
+# that `3d.exe --pulse` has nothing left to build. Hence the krml extraction is
+# part of the packaged subset, not just of the test targets.
+ifeq (,$(NO_PULSE))
+3d: 3d-pulse-krml
+endif
+
 3d: 3d-prelude 3d-exe
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
