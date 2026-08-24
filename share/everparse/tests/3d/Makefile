@@ -28,7 +28,8 @@ excluded_tests := FieldDependence0.3d ActAndCheck.3d
 
 ifeq ($(OS),Windows_NT)
   # UlongToPtr is defined in Windows DLLs, conflicts with those examples
-  excluded_tests += FineGrainedProbe.3d Specialize2.3d Specialize3.3d Specialize5.3d
+  excluded_tests += FineGrainedProbe.3d FineGrainedProbeSpecialize.3d \
+    Specialize2.3d Specialize3.3d Specialize5.3d Specialize6.3d
 endif
 
 positive_tests := $(filter-out $(wildcard FAIL*.3d) $(excluded_tests),$(wildcard *.3d))
