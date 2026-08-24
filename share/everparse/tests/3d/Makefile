@@ -30,6 +30,7 @@ ELF_DIR=out.elf.pulse
 CLEANUP_DIR=out.cleanup.pulse
 INPLACE_DIR=out.inplace-hash.pulse
 Z3TESTGEN_DIR=out.z3-testgen.pulse
+INTERPRET_DIR=out.batch-interpret.pulse
 
 3D_Z3_EXECUTABLE ?= z3-4.13.3
 
@@ -46,6 +47,25 @@ endif
 
 positive_tests := $(filter-out $(wildcard FAIL*.3d) $(excluded_tests),$(wildcard *.3d))
 negative_tests := $(wildcard FAIL*.3d)
+
+# The two tests that positive_tests excludes are not untestable: they are
+# covered by pulse-batch-interpret-test, over the wider set below, exactly as
+# src/3d/tests covers them with batch-interpret-test over INTERPRETABLE_FILES.
+#
+# The split is historical. 3D used to have two translation backends,
+# Translate.fst (specialized) and TranslateForInterpreter.fst, and :act/:check
+# were only ever supported by the latter, so ActAndCheck.3d was excluded from
+# positive_tests when it was added (commit 7b2764b70). Only
+# TranslateForInterpreter survives today, so both targets now drive the very
+# same pipeline and differ only in which files they feed it. We keep the two
+# apart anyway, so that this Makefile stays diffable against src/3d/tests, and
+# so that pulse-cleanup-test keeps asserting an exact output file list over the
+# narrower set.
+#
+# Unlike src/3d/tests, we also drop exclude_modules here: INTERPRETABLE_FILES
+# does not, which looks like an oversight, since those modules do not build on
+# Windows for a reason unrelated to which files a target selects.
+interpretable_tests := $(filter-out $(wildcard FAIL*.3d) $(addsuffix .3d,$(exclude_modules)),$(wildcard *.3d))
 
 # Tests whose generated code does not yet survive KaRaMeL extraction under
 # --pulse. They still go through generation and F* verification, but not the C
@@ -76,7 +96,8 @@ clean_out_files := \
 	EverParse.c EverParse.h internal
 
 all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
-	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test pulse-subdirs
+	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test \
+	pulse-batch-interpret-test pulse-subdirs
 
 # Subdirectories with their own build. Only those already ported to --pulse are
 # listed; the rest were copied from src/3d/tests and still drive the Low*
@@ -105,6 +126,7 @@ $(pulse_subdirs):
 
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
 .PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test
+.PHONY: pulse-batch-interpret-test
 
 # Generation, F* verification and KaRaMeL extraction to C, in one go, then a
 # second pass checking that regenerating the sources yields the same strong
@@ -141,6 +163,19 @@ pulse-verify:
 	done
 
 pulse-test: pulse-cc pulse-verify
+
+# The counterpart of src/3d/tests' batch-interpret-test: the same pipeline as
+# pulse-batch/pulse-cc, but over interpretable_tests, which additionally covers
+# FieldDependence0.3d and ActAndCheck.3d. Its own output directory, because
+# EverParse.h is generated per batch and carries that batch's external
+# typedefs, so two --batch runs cannot share one.
+pulse-batch-interpret-test:
+	mkdir -p $(INTERPRET_DIR)
+	$(3D) --odir $(INTERPRET_DIR) --batch --save_hashes $(interpretable_tests)
+	$(3D) --odir $(INTERPRET_DIR) --batch --check_hashes strong $(interpretable_tests)
+	+$(MAKE) -C $(INTERPRET_DIR) -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
+	$(CXX) -o test-cpp-interpret.pulse.exe -I $(INTERPRET_DIR) test.cpp $(addprefix $(INTERPRET_DIR)/, ArithmeticWrapper.o Arithmetic.o EverParse.o)
+	./test-cpp-interpret.pulse.exe
 
 # Build and link the C++ ELF test driver against the --pulse-generated ELF
 # parser. As in src/3d/tests, it is not run: it needs an ELF file to read.
@@ -204,7 +239,8 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
 clean-files:
 	rm -rf $(OUT_DIR) $(VERIFY_DIR) $(ELF_DIR) $(CLEANUP_DIR) $(INPLACE_DIR) \
-	  $(Z3TESTGEN_DIR) out.fail.pulse test-cpp.pulse.exe *.out *.err
+	  $(Z3TESTGEN_DIR) $(INTERPRET_DIR) out.fail.pulse test-cpp.pulse.exe \
+	  test-cpp-interpret.pulse.exe *.out *.err
 	for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
 
 clean: clean-files
