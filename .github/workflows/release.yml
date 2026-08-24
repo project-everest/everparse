@@ -248,6 +248,14 @@ jobs:
         with:
           path: everparse/src/3d/tests/Comments*
           name: everparse-test-macos
+      # The --pulse counterpart, kept in its own artifact: both files are
+      # called Comments.3d, so putting them in one artifact would change the
+      # archive root and break the existing interop steps.
+      - name: Upload test artifact (--pulse)
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/share/everparse/tests/3d/Comments*
+          name: everparse-test-pulse-macos
 
   build-linux:
     if: ${{ !inputs.only_build_3d }}
@@ -338,6 +346,14 @@ jobs:
         with:
           path: everparse/src/3d/tests/Comments*
           name: everparse-test-linux
+      # The --pulse counterpart, kept in its own artifact: both files are
+      # called Comments.3d, so putting them in one artifact would change the
+      # archive root and break the existing interop steps.
+      - name: Upload test artifact (--pulse)
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/share/everparse/tests/3d/Comments*
+          name: everparse-test-pulse-linux
 
   build-windows:
     runs-on: windows-2025
@@ -445,6 +461,14 @@ jobs:
         with:
           path: everparse\src\3d\tests\Comments*
           name: everparse-test-windows
+      # The --pulse counterpart, kept in its own artifact: both files are
+      # called Comments.3d, so putting them in one artifact would change the
+      # archive root and break the existing interop steps.
+      - name: Upload test artifact (--pulse)
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse\share\everparse\tests\3d\Comments*
+          name: everparse-test-pulse-windows
 
   test-interop-macos:
     if: ${{ !inputs.only_build_3d }}
@@ -470,6 +494,14 @@ jobs:
       - name: Test EverParse
         run: |
           cd ${{ github.workspace }}/linux/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Linux test (--pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-linux
+          path: linux-pulse
+      - name: Test EverParse (--pulse)
+        run: |
+          cd ${{ github.workspace }}/linux-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --pulse --check_hashes inplace Comments.3d
       - name: Download Windows test
         uses: actions/download-artifact@v4
         with:
@@ -478,6 +510,14 @@ jobs:
       - name: Test EverParse
         run: |
           cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Windows test (--pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-windows
+          path: windows-pulse
+      - name: Test EverParse (--pulse)
+        run: |
+          cd ${{ github.workspace }}/windows-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --pulse --check_hashes inplace Comments.3d
 
   test-interop-linux:
     if: ${{ !inputs.only_build_3d }}
@@ -503,6 +543,14 @@ jobs:
       - name: Test EverParse
         run: |
           cd ${{ github.workspace }}/macos/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Macos test (--pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-macos
+          path: macos-pulse
+      - name: Test EverParse (--pulse)
+        run: |
+          cd ${{ github.workspace }}/macos-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --pulse --check_hashes inplace Comments.3d
       - name: Download Windows test
         uses: actions/download-artifact@v4
         with:
@@ -511,6 +559,14 @@ jobs:
       - name: Test EverParse
         run: |
           cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Windows test (--pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-windows
+          path: windows-pulse
+      - name: Test EverParse (--pulse)
+        run: |
+          cd ${{ github.workspace }}/windows-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --pulse --check_hashes inplace Comments.3d
 
   test-interop-windows:
     if: ${{ !inputs.only_build_3d }}
@@ -536,6 +592,15 @@ jobs:
         shell: cmd
         run: |
           cd ${{ github.workspace }}\linux && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+      - name: Download Linux test (--pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-linux
+          path: linux-pulse
+      - name: Test EverParse (--pulse)
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\linux-pulse && ${{ github.workspace }}\test\everparse.cmd --pulse --check_hashes inplace Comments.3d
       - name: Download Macos test
         uses: actions/download-artifact@v4
         with:
@@ -545,6 +610,15 @@ jobs:
         shell: cmd
         run: |
           cd ${{ github.workspace }}\macos && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+      - name: Download Macos test (--pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-macos
+          path: macos-pulse
+      - name: Test EverParse (--pulse)
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\macos-pulse && ${{ github.workspace }}\test\everparse.cmd --pulse --check_hashes inplace Comments.3d
 
   build-docker:
     if: ${{ !inputs.only_build_3d }}
