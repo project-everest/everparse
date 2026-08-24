@@ -50,7 +50,11 @@ endif
 
 all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o
 
-$(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/TestWrapper.h
+# Under --pulse, EverParse.h is not copied from the prelude at the start of
+# the pipeline: KaRaMeL emits it, carrying the bundled runtime, at the same
+# time as the generated .c files. The wrapper headers include it, so it has
+# to be an explicit prerequisite here, or a parallel build races.
+$(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/TestWrapper.h $(EVERPARSE_OUTPUT_DIR)/EverParse.h
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
 $(EVERPARSE_OUTPUT_DIR)/test.exe: $(all_o_files)

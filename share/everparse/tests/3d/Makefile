@@ -187,7 +187,7 @@ pulse-z3-testgen-test: ELF.3d
 # the probe callback copies from a table of witness layers, and --z3_use_ptr,
 # where it repoints the copy buffer at a real address patched into the witness
 # bytes at run time. The latter is what needs EVERPARSE_COPY_BUFFER_T to be an
-# indirection; probe/src/Makefile drives it.
+# opaque handle rather than a by-value struct; probe/src/Makefile drives it.
 pulse-z3-testgen-probe-test: probe/src/Probe.3d
 	+$(MAKE) -C probe/src
 
