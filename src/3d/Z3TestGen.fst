@@ -2309,8 +2309,8 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 print_c_initializer use_ptr flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
-  do_diff_test_for out_dir counter cout z3 print_c_initializer use_ptr flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 use_ptr print_c_initializer flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 use_ptr print_c_initializer flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
   cout "  return 0;
   }
 "
