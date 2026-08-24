@@ -1556,17 +1556,62 @@ let alloc_ptr_copy_buffer
   arg_var
   arg_var
 
-let alloc_copy_buffer
-  (use_ptr: bool)
+(* The --pulse counterparts.  The harness state embeds the descriptor as its
+   first member and owns the position cell the descriptor points at; the copy
+   buffer handed to the validator is the address of that descriptor. *)
+let alloc_default_copy_buffer_pulse
   (flight: string)
   (wid: nat)
   (nblayers: nat)
   (arg_var: string)
 : Tot string
 =
-  if use_ptr
-  then alloc_ptr_copy_buffer flight wid arg_var
-  else alloc_default_copy_buffer flight wid nblayers arg_var
+  let v = "_contents_" ^ arg_var in
+  "
+  copy_buffer_t " ^ v ^ ";
+  " ^ v ^ ".pos = (size_t) 0;
+  " ^ v ^ ".descr.cb_base = NULL;
+  " ^ v ^ ".descr.cb_len = (size_t) 0;
+  " ^ v ^ ".descr.cb_pos = &" ^ v ^ ".pos;
+  " ^ v ^ ".layers = witness" ^ flight ^ string_of_int wid ^ ";
+  " ^ v ^ ".count = " ^ string_of_int nblayers ^ ";
+  EVERPARSE_COPY_BUFFER_T " ^ arg_var ^ " = &" ^ v ^ ".descr;
+"
+
+let alloc_ptr_copy_buffer_pulse
+  (flight: string)
+  (wid: nat)
+  (arg_var: string)
+: Tot string
+=
+  let v = "_contents_" ^ arg_var in
+  let w = "witness" ^ flight ^ string_of_int wid in
+  "
+  copy_buffer_t " ^ v ^ ";
+  " ^ v ^ ".pos = (size_t) 0;
+  " ^ v ^ ".descr.cb_base = " ^ w ^ "[0].buf;
+  " ^ v ^ ".descr.cb_len = (size_t) " ^ w ^ "[0].len;
+  " ^ v ^ ".descr.cb_pos = &" ^ v ^ ".pos;
+  EVERPARSE_COPY_BUFFER_T " ^ arg_var ^ " = &" ^ v ^ ".descr;
+"
+
+let alloc_copy_buffer
+  (use_ptr: bool)
+  (flight: string)
+  (wid: nat)
+  (nblayers: nat)
+  (arg_var: string)
+: ML string
+=
+  if Options.get_pulse ()
+  then
+    if use_ptr
+    then alloc_ptr_copy_buffer_pulse flight wid arg_var
+    else alloc_default_copy_buffer_pulse flight wid nblayers arg_var
+  else
+    if use_ptr
+    then alloc_ptr_copy_buffer flight wid arg_var
+    else alloc_default_copy_buffer flight wid nblayers arg_var
 
 let print_witness_call_as_c
   (use_ptr: bool)
@@ -2186,8 +2231,31 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 }
 "
 
-let test_probe_functions (use_ptr: bool) : Tot string =
-  if use_ptr then test_ptr_probe_functions else test_default_probe_functions
+(* Under --pulse the validator reads the copy buffer's base, length and
+   position out of an EVERPARSE_COPY_BUFFER_DESCR directly, so there are no
+   EverParseStreamOf/EverParseStreamLen hooks to define.  The harness state is
+   an enclosing struct whose *first* member is the descriptor, so that a probe
+   callback can cast the EVERPARSE_COPY_BUFFER_T it receives back to it. *)
+let test_default_probe_functions_pulse = "
+typedef struct {
+  EVERPARSE_COPY_BUFFER_DESCR descr; /* must come first, see cast below */
+  size_t pos;
+  witness_layer_t *layers;
+  uint64_t count;
+} copy_buffer_t;
+"
+
+let test_ptr_probe_functions_pulse = "
+typedef struct {
+  EVERPARSE_COPY_BUFFER_DESCR descr; /* must come first, see cast below */
+  size_t pos;
+} copy_buffer_t;
+"
+
+let test_probe_functions (use_ptr: bool) : ML string =
+  if Options.get_pulse ()
+  then (if use_ptr then test_ptr_probe_functions_pulse else test_default_probe_functions_pulse)
+  else (if use_ptr then test_ptr_probe_functions else test_default_probe_functions)
 
 let generate_default_probe_function (name: string) : Tot string = "
 BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
@@ -2234,22 +2302,67 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 }
 "
 
-let generate_probe_function (use_ptr: bool) (name: string) : Tot string =
-  if use_ptr
-  then generate_ptr_probe_function name
-  else generate_default_probe_function name
+(* The --pulse counterparts.  Both repoint the copy buffer rather than copying
+   into it, which the Pulse copy buffer supports because it is a pointer to a
+   descriptor: exactly the Low* behaviour, expressed through the descriptor
+   instead of through EverParseStreamOf. *)
+let generate_default_probe_function_pulse (name: string) : Tot string = "
+BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+  if (ro != 0 || wo != 0) {
+    printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
+    exit(4);
+  };
+  copy_buffer_t *state = (copy_buffer_t * ) (void * ) dst;
+  if (src < state->count) {
+    uint64_t got_len = state->layers[src].len;
+    if (len != got_len) {
+      printf(\"ProbeAndCopy: layer length does not match spec. Expected %\" PRIu64 \", got %\" PRIu64 \"\\n\", len, got_len);
+      exit(4);
+    } else {
+      state->descr.cb_base = state->layers[src].buf;
+      state->descr.cb_len = (size_t) got_len;
+      state->pos = (size_t) 0;
+      return true;
+    }
+  } else {
+    printf(\"ProbeAndCopy: incorrect pointer\\n\");
+    exit(4);
+  }
+}
+"
 
-(* Under --pulse, EVERPARSE_COPY_BUFFER_T is a by-value struct that KaRaMeL
-   only emits into EverParse.h when the module actually uses it, so a
-   probe-free module must not get these definitions at all.  Probes
-   themselves are rejected up-front (see check_pulse_supported), hence
-   nothing needs to be emitted in that case either. *)
+let generate_ptr_probe_function_pulse (name: string) : Tot string = "
+BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+  if (ro != 0 || wo != 0) {
+    printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
+    exit(4);
+  };
+  copy_buffer_t *state = (copy_buffer_t * ) (void * ) dst;
+  state->descr.cb_base = (uint8_t* ) (void* ) src;
+  state->descr.cb_len = (size_t) len;
+  state->pos = (size_t) 0;
+  return true;
+}
+"
+
+let generate_probe_function (use_ptr: bool) (name: string) : ML string =
+  if Options.get_pulse ()
+  then (if use_ptr then generate_ptr_probe_function_pulse name else generate_default_probe_function_pulse name)
+  else (if use_ptr then generate_ptr_probe_function name else generate_default_probe_function name)
+
+(* The harness has to emit the copy-buffer definitions only when the module
+   actually uses one: under --pulse, KaRaMeL emits EVERPARSE_COPY_BUFFER_DESCR
+   into EverParse.h only for modules that mention it, so a probe-free module
+   must not get these definitions at all. *)
 let cout_test_probe_functions
   (use_ptr: bool)
   (cout: string -> ML unit)
   (prog: prog)
 : ML unit
-= if Options.get_pulse () then () else begin
+= if (if Options.get_pulse ()
+      then List.Tot.existsb (fun (x: (string & prog_def)) -> ProgProbe? (snd x)) prog
+      else true)
+  then begin
   cout (test_probe_functions use_ptr);
   List.iter
     (fun x -> match x with
@@ -2262,24 +2375,6 @@ let cout_test_probe_functions
     prog
   end
 
-(* The Pulse copy buffer is passed by value, so a probe callback cannot
-   repoint it the way the Low* test harness does.  Until the harness grows a
-   genuinely copying probe, reject such parsers explicitly rather than
-   emitting C that does not compile. *)
-let check_pulse_supported (args: list (string & arg_type)) : ML unit =
-  if Options.get_pulse ()
-  then
-    if List.Tot.existsb (fun (x: (string & arg_type)) -> ArgCopyBuffer? (snd x)) args
-    then failwith "--pulse does not yet support test generation for parsers taking a copy buffer (probe)"
-
-(* Same check, performed against a named parser before any test generation
-   starts, so that the driver can bail out early rather than from the Z3
-   worker thread. *)
-let check_pulse_supported_for (prog: prog) (name: string) : ML unit =
-  match List.assoc name prog with
-  | Some (ProgDef args _) -> check_pulse_supported args
-  | _ -> ()
-
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   (use_ptr: bool)
   (print_c_initializer: bool)
@@ -2290,7 +2385,6 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
   end;
   let Some (ProgDef args _) = def in
-  check_pulse_supported args;
   let sargs = List.Tot.map snd args in
   let modul, validator_name = module_and_validator_name name1 in
   let nargs = count_args sargs in with_option_out_file out_file (fun cout ->
@@ -2365,7 +2459,6 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
   end;
   let Some (ProgDef args _) = def in
-  check_pulse_supported args;
   let sargs = List.Tot.map snd args in
   let def2 = List.assoc name2 prog in
   if None? def2
@@ -2538,7 +2631,6 @@ let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : M
   | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
   end;
   let Some (ProgDef args _) = def in
-  check_pulse_supported args;
   let modul, validator_name = module_and_validator_name name1 in
   let outparameters : ref string = alloc "" in
   let outp s : ML unit = outparameters := !outparameters ^ s in

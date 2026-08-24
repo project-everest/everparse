@@ -1222,6 +1222,14 @@ let print_c_entry
    in  
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
+     (* Where the probed bytes ended up.  In Low* the copy buffer is opaque and
+        the client provides EverParseStreamOf; in Pulse it is a pointer to an
+        EVERPARSE_COPY_BUFFER_DESCR whose base the wrapper can read directly. *)
+     let stream_of =
+       if Options.get_pulse ()
+       then "probeDest->cb_base"
+       else "EverParseStreamOf(probeDest)"
+     in
      let tail =
        if goto_return then
          Printf.sprintf
@@ -1259,10 +1267,11 @@ let print_c_entry
                  result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
                  goto exit;\n\t\
                }\n\t\
-               base = EverParseStreamOf(probeDest);\n\t\
+               base = %s;\n\t\
                %s"
               (probe_fn_to_c probe.probe_ep_fn)
               len
+              stream_of
               tail
           else
             Printf.sprintf
@@ -1271,10 +1280,11 @@ let print_c_entry
                  //\n\t\t// Probe failed\n\t\t//\n\n\t\t\
                  return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
                }\n\t\
-               base = EverParseStreamOf(probeDest);\n\t\
+               base = %s;\n\t\
                %s"
               (probe_fn_to_c probe.probe_ep_fn)
               len
+              stream_of
               tail)
      else
        (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\n\t" else "")
@@ -1287,11 +1297,12 @@ let print_c_entry
                  result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
                  goto exit;\n\t\
                }\n\t\
-               uint8_t *base = EverParseStreamOf(probeDest);\n\t\
+               uint8_t *base = %s;\n\t\
                %s"
               (probe_prefix probe wrappedName)
               (probe_fn_to_c probe.probe_ep_fn)
               len
+              stream_of
               tail
           else
             Printf.sprintf 
@@ -1301,11 +1312,12 @@ let print_c_entry
                  //\n\t\t// Probe failed\n\t\t//\n\n\t\t\
                  return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
                }\n\t\
-               uint8_t *base = EverParseStreamOf(probeDest);\n\t\
+               uint8_t *base = %s;\n\t\
                %s"
               (probe_prefix probe wrappedName)
               (probe_fn_to_c probe.probe_ep_fn)
               len
+              stream_of
               tail)
    in
    (* The Pulse `extern`/`static` validator returns a plain uint8_t error code

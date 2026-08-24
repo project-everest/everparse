@@ -76,7 +76,7 @@ clean_out_files := \
 	EverParse.c EverParse.h internal
 
 all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
-	elf-test pulse-z3-testgen-test pulse-subdirs
+	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test pulse-subdirs
 
 # Subdirectories with their own build. Only those already ported to --pulse are
 # listed; the rest were copied from src/3d/tests and still drive the Low*
@@ -89,12 +89,13 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 # output_types covers output types and their external actions, and the rest
 # cover individual frontend options.
 #
-# probe and probe_error_handler_macro are left out: their default target builds
-# the z3 test-case generator, which still goes through the Low* interpreter.
+# probe and probe_error_handler_macro exercise probes end to end: a
+# hand-written client that both copies into and repoints the copy buffer, plus
+# z3 test-case generation on the same grammar.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
   specialize_test specialize_test2 specialize_test_error_handler_macro \
-  specialize_tagged_union_array
+  specialize_tagged_union_array probe probe_error_handler_macro
 
 .PHONY: pulse-subdirs $(pulse_subdirs)
 pulse-subdirs: $(pulse_subdirs)
@@ -103,7 +104,7 @@ $(pulse_subdirs):
 	+$(MAKE) -C $@
 
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
-.PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test
+.PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test
 
 # Generation, F* verification and KaRaMeL extraction to C, in one go, then a
 # second pass checking that regenerating the sources yields the same strong
@@ -178,14 +179,17 @@ pulse-inplace-hash-test:
 # error handler takes the input as a (base, len, pos) triple. The harness is
 # compiled with -Wall -Wextra -Werror and run, and every witness must get the
 # verdict Z3 predicted.
-#
-# Probes are not covered: --pulse passes EVERPARSE_COPY_BUFFER_T by value, so a
-# probe callback cannot repoint it, and 3d rejects such parsers here (as it
-# rejects --z3_use_ptr outright). Hence there is no counterpart to the Low*
-# z3-testgen-probe-test.
 pulse-z3-testgen-test: ELF.3d
 	mkdir -p $(Z3TESTGEN_DIR)
 	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir $(Z3TESTGEN_DIR) ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+
+# Same, on a grammar with probes, in both harness modes: the default one, where
+# the probe callback copies from a table of witness layers, and --z3_use_ptr,
+# where it repoints the copy buffer at a real address patched into the witness
+# bytes at run time. The latter is what needs EVERPARSE_COPY_BUFFER_T to be an
+# indirection; probe/src/Makefile drives it.
+pulse-z3-testgen-probe-test: probe/src/Probe.3d
+	+$(MAKE) -C probe/src
 
 pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
