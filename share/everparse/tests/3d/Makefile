@@ -29,6 +29,9 @@ OUT_DIR=out.pulse
 ELF_DIR=out.elf.pulse
 CLEANUP_DIR=out.cleanup.pulse
 INPLACE_DIR=out.inplace-hash.pulse
+Z3TESTGEN_DIR=out.z3-testgen.pulse
+
+3D_Z3_EXECUTABLE ?= z3-4.13.3
 
 # Same exclusions as src/3d/tests.
 excluded_tests := FieldDependence0.3d ActAndCheck.3d
@@ -73,7 +76,7 @@ clean_out_files := \
 	EverParse.c EverParse.h internal
 
 all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
-	elf-test pulse-subdirs
+	elf-test pulse-z3-testgen-test pulse-subdirs
 
 # Subdirectories with their own build. Only those already ported to --pulse are
 # listed; the rest were copied from src/3d/tests and still drive the Low*
@@ -105,7 +108,7 @@ $(pulse_subdirs):
 	+$(MAKE) -C $@
 
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
-.PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test
+.PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test
 
 # Generation, F* verification and KaRaMeL extraction to C, in one go, then a
 # second pass checking that regenerating the sources yields the same strong
@@ -173,6 +176,22 @@ pulse-inplace-hash-test:
 	$(3D) --odir $(INPLACE_DIR) --batch --check_hashes inplace Comments.3d
 	$(3D) --check_inplace_hash Comments.3d=$(INPLACE_DIR)/Comments.h
 
+# Z3-based test-case generation against the --pulse backend. The SMT half is
+# backend-independent -- it runs on the InterpreterTarget AST -- so this
+# exercises the generated C harness: the Pulse validators return a uint8_t
+# status and report the consumed length through a size_t* position, and their
+# error handler takes the input as a (base, len, pos) triple. The harness is
+# compiled with -Wall -Wextra -Werror and run, and every witness must get the
+# verdict Z3 predicted.
+#
+# Probes are not covered: --pulse passes EVERPARSE_COPY_BUFFER_T by value, so a
+# probe callback cannot repoint it, and 3d rejects such parsers here (as it
+# rejects --z3_use_ptr outright). Hence there is no counterpart to the Low*
+# z3-testgen-probe-test.
+pulse-z3-testgen-test: ELF.3d
+	mkdir -p $(Z3TESTGEN_DIR)
+	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir $(Z3TESTGEN_DIR) ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+
 pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
 # A negative test must be rejected either by the 3d frontend or by F* on the
@@ -186,7 +205,7 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
 clean-files:
 	rm -rf $(OUT_DIR) $(VERIFY_DIR) $(ELF_DIR) $(CLEANUP_DIR) $(INPLACE_DIR) \
-	  out.fail.pulse test-cpp.pulse.exe *.out *.err
+	  $(Z3TESTGEN_DIR) out.fail.pulse test-cpp.pulse.exe *.out *.err
 	for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
 
 clean: clean-files

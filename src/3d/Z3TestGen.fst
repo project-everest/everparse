@@ -1435,8 +1435,18 @@ let print_witness_call_as_c_aux
   out flight;
   out (string_of_int num);
   out "[0].buf, ";
-  out_witness_len out flight num;
-  out ", 0);"
+  if Options.get_pulse ()
+  then begin
+    (* Pulse validators take the input as (base, len, pos), where pos is an
+       in/out pointer rather than a by-value start position. *)
+    out "(size_t) ";
+    out_witness_len out flight num;
+    out ", &everparse_pos);"
+  end
+  else begin
+    out_witness_len out flight num;
+    out ", 0);"
+  end
 
 let pointer_elt_type_as_c (x: simple_arg_type true) : Tot (option string) =
   match x with
@@ -1583,17 +1593,29 @@ let print_witness_call_as_c
       | (_, ArgSimple _) -> ()
     )
     arg_types;
-  out "
+  let pulse = Options.get_pulse () in
+  if pulse
+  then out "
+    size_t everparse_pos = (size_t) 0U;
+    uint8_t output = "
+  else out "
     uint64_t output = ";
   print_witness_call_as_c_aux out flight validator_name arg_types args num;
   out "
     printf(\"  // ";
   print_witness_call_as_c_aux out flight validator_name arg_types args num;
   out " // \");
-    BOOLEAN result = !EverParseIsError(output);
-    BOOLEAN consumes_all_bytes_if_successful = true;
+";
+  if pulse
+  then out "    BOOLEAN result = (output == 0U);
+"
+  else out "    BOOLEAN result = !EverParseIsError(output);
+";
+  out "    BOOLEAN consumes_all_bytes_if_successful = true;
     if (result) {
-      consumes_all_bytes_if_successful = (output == ";
+      consumes_all_bytes_if_successful = (";
+  if pulse then out "(uint64_t) everparse_pos" else out "output";
+  out " == ";
   out_witness_len out flight num;
   out ");
       result = consumes_all_bytes_if_successful;
@@ -2057,7 +2079,7 @@ let mk_get_negative_test_witness (name: string) (l: list arg_type) : string =
 (assert (= state-witness-input-size -1)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
 "
 
-let test_error_handler_fn = "
+let test_error_handler_fn_lowstar = "
 static void TestErrorHandler (
   const char *typename_s,
   const char *fieldname,
@@ -2078,6 +2100,41 @@ static void TestErrorHandler (
 }
 "
 
+(* The Pulse backend passes the input as a (base, len, pos) triple rather
+   than an EVERPARSE_INPUT_BUFFER, and its error codes are uint8_t.  Pulse
+   does not thread a per-field start position to the error handler, so the
+   reported position is the current one, read back from the position pointer
+   and cast to uint64_t.  This mirrors what the generated *Wrapper.c does,
+   and is why positions reported here can differ from the Low* ones even
+   though the verdicts agree. *)
+let test_error_handler_fn_pulse = "
+static void TestErrorHandler (
+  const char *typename_s,
+  const char *fieldname,
+  const char *reason,
+  uint8_t error_code,
+  uint8_t *context,
+  uint8_t *base,
+  size_t len,
+  size_t *pos
+) {
+  (void) error_code;
+  (void) base;
+  (void) len;
+  if (*context) {
+    printf(\"// Reached from position %\" PRIu64 \": type name %s, field name %s\\n\", (uint64_t) *pos, typename_s, fieldname);
+  } else {
+    printf(\"// Parsing failed at position %\" PRIu64 \": type name %s, field name %s. Reason: %s\\n\", (uint64_t) *pos, typename_s, fieldname, reason);
+    *context = 1;
+  }
+}
+"
+
+let test_error_handler_fn () : ML string =
+  if Options.get_pulse ()
+  then test_error_handler_fn_pulse
+  else test_error_handler_fn_lowstar
+
 let witness_layer_typedef = "
 typedef struct {
   uint8_t *buf;
@@ -2094,7 +2151,7 @@ typedef struct {
 let test_error_handler () : ML string =
   (if Options.get_use_error_handler_macro ()
    then ""
-   else test_error_handler_fn)
+   else test_error_handler_fn ())
   ^ witness_layer_typedef
 
 let test_default_probe_functions = "
@@ -2182,12 +2239,18 @@ let generate_probe_function (use_ptr: bool) (name: string) : Tot string =
   then generate_ptr_probe_function name
   else generate_default_probe_function name
 
+(* Under --pulse, EVERPARSE_COPY_BUFFER_T is a by-value struct that KaRaMeL
+   only emits into EverParse.h when the module actually uses it, so a
+   probe-free module must not get these definitions at all.  Probes
+   themselves are rejected up-front (see check_pulse_supported), hence
+   nothing needs to be emitted in that case either. *)
 let cout_test_probe_functions
   (use_ptr: bool)
   (cout: string -> ML unit)
   (prog: prog)
 : ML unit
-= cout (test_probe_functions use_ptr);
+= if Options.get_pulse () then () else begin
+  cout (test_probe_functions use_ptr);
   List.iter
     (fun x -> match x with
     | (name, ProgProbe T.PQWithOffsets) ->
@@ -2197,6 +2260,25 @@ let cout_test_probe_functions
     | _ -> ()
     )
     prog
+  end
+
+(* The Pulse copy buffer is passed by value, so a probe callback cannot
+   repoint it the way the Low* test harness does.  Until the harness grows a
+   genuinely copying probe, reject such parsers explicitly rather than
+   emitting C that does not compile. *)
+let check_pulse_supported (args: list (string & arg_type)) : ML unit =
+  if Options.get_pulse ()
+  then
+    if List.Tot.existsb (fun (x: (string & arg_type)) -> ArgCopyBuffer? (snd x)) args
+    then failwith "--pulse does not yet support test generation for parsers taking a copy buffer (probe)"
+
+(* Same check, performed against a named parser before any test generation
+   starts, so that the driver can bail out early rather than from the Z3
+   worker thread. *)
+let check_pulse_supported_for (prog: prog) (name: string) : ML unit =
+  match List.assoc name prog with
+  | Some (ProgDef args _) -> check_pulse_supported args
+  | _ -> ()
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   (use_ptr: bool)
@@ -2208,6 +2290,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
   end;
   let Some (ProgDef args _) = def in
+  check_pulse_supported args;
   let sargs = List.Tot.map snd args in
   let modul, validator_name = module_and_validator_name name1 in
   let nargs = count_args sargs in with_option_out_file out_file (fun cout ->
@@ -2282,6 +2365,7 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
   end;
   let Some (ProgDef args _) = def in
+  check_pulse_supported args;
   let sargs = List.Tot.map snd args in
   let def2 = List.assoc name2 prog in
   if None? def2
@@ -2360,6 +2444,25 @@ let test_checker_c
   let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
   let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
   let nb_args_s = string_of_int (nb_cmd_and_args - 1) in
+  let pulse = Options.get_pulse () in
+  (* Pulse validators return a uint8_t status (0 on success) and report the
+     number of consumed bytes through their position pointer, whereas Low*
+     validators return the consumed length or an error code. *)
+  let validator_call =
+    if pulse
+    then "
+  size_t everparse_pos = (size_t) 0U;
+  uint8_t result = "^validator_name^"("^call_args_lhs^"&context, "^test_error_handler_call_arg ()^"buf, (size_t) len, &everparse_pos);
+  uint64_t consumed = (uint64_t) everparse_pos;
+"
+    else "
+  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, "^test_error_handler_call_arg ()^"buf, len, 0);
+  uint64_t consumed = result;
+"
+  in
+  let validator_failed =
+    if pulse then "result != 0U" else "EverParseIsError(result)"
+  in
   "
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -2411,17 +2514,15 @@ int main(int argc, char** argv) {
     buf = (uint8_t *) vbuf;
   };
   printf(\"Read %\" PRIuPTR \" bytes from %s\\n\", len, filename);
-  uint8_t context = 0;
-  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, "^test_error_handler_call_arg ()^"buf, len, 0);
-  if (len > 0)
+  uint8_t context = 0;"^validator_call^"  if (len > 0)
     munmap(vbuf, len);
   close(testfile);
-  if (EverParseIsError(result)) {
+  if ("^validator_failed^") {
     printf(\"// Witness from %s REJECTED because validator failed\\n\", filename);
     return 2;
   };
-  if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
-    printf(\"// Witness from %s REJECTED because validator only consumed %\" PRIu64 \" out of %\" PRIuPTR \" bytes\\n\", filename, result, len);
+  if (consumed != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
+    printf(\"// Witness from %s REJECTED because validator only consumed %\" PRIu64 \" out of %\" PRIuPTR \" bytes\\n\", filename, consumed, len);
     return 1;
   }
   printf(\"// Witness from %s ACCEPTED\\n\", filename);
@@ -2437,6 +2538,7 @@ let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : M
   | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
   end;
   let Some (ProgDef args _) = def in
+  check_pulse_supported args;
   let modul, validator_name = module_and_validator_name name1 in
   let outparameters : ref string = alloc "" in
   let outp s : ML unit = outparameters := !outparameters ^ s in

@@ -612,6 +612,7 @@ let produce_z3_and_test_gen
   (batch: bool)
   (produce_testcases_c: bool)
   (out_dir: string)
+  (pre_check: Z3TestGen.prog -> ML unit)
   (do_test: option string -> int -> Z3TestGen.prog -> Z3.z3 -> ML unit)
 : Tot process_files_t
 = fun
@@ -624,6 +625,10 @@ let produce_z3_and_test_gen
   if produce_testcases_c then OS.overwrite_file testcases_c; // because Batch.krml_args will add the testcase file only if it exists, so we need to create it before generating the parser, otherwise we might have a race
   let buf : ref string = alloc "" in
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
+  (* Reject unsupported backend/parser combinations here, on the main thread,
+     before the Z3 worker thread is spawned: a failure raised from that thread
+     would otherwise let the rest of the batch keep running. *)
+  pre_check prog;
   let modules = List.Tot.map snd files_and_modules in
   with_z3_thread_or (batch && produce_testcases_c) modules out_dir (Options.get_debug ()) (Options.get_save_z3_transcript ()) (fun z3 ->
     z3.to_z3 !buf;
@@ -636,7 +641,9 @@ let produce_z3_and_test
   (out_dir: string)
   (name: string)
 : Tot process_files_t
-= produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+= produce_z3_and_test_gen batch produce_testcases_c out_dir
+    (fun prog -> Z3TestGen.check_pulse_supported_for prog name)
+    (fun out_file nbwitnesses prog z3 ->
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
@@ -650,7 +657,11 @@ let produce_z3_and_diff_test
   (names: (string & string))
 : Tot process_files_t
 = let (name1, name2) = names in
-  produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+  produce_z3_and_test_gen batch produce_testcases_c out_dir
+    (fun prog ->
+      Z3TestGen.check_pulse_supported_for prog name1;
+      Z3TestGen.check_pulse_supported_for prog name2)
+    (fun out_file nbwitnesses prog z3 ->
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
@@ -798,6 +809,18 @@ let go () : ML unit =
   else
   (* Default mode: process .3d files *)
   let batch = Options.get_batch () in
+  (* --z3_use_ptr makes the generated probe callback repoint the copy buffer.
+     The Pulse backend cannot express that: its EVERPARSE_COPY_BUFFER_T is
+     passed by value, so a callee cannot change what it points to. Reject the
+     combination up-front rather than emitting C that does not compile. *)
+  if Options.get_z3_use_ptr ()
+  then begin
+    if Options.get_pulse ()
+    then begin
+      FStar.IO.print_string "3d: --z3_use_ptr is not supported with --pulse, because the Pulse EVERPARSE_COPY_BUFFER_T is passed by value and so cannot be repointed by a probe callback\n";
+      exit 1
+    end
+  end;
   let should_emit_fstar_code : string -> ML bool =
     let cmd_line_modules = List.map Options.module_name cmd_line_files in
     fun modul ->

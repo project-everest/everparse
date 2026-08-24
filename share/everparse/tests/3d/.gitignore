@@ -14,6 +14,7 @@ out.pulse.verify
 out.elf.pulse
 out.cleanup.pulse
 out.inplace-hash.pulse
+out.z3-testgen.pulse
 test-cpp.pulse.exe
 
 # Build directories of the subdirectory tests.
