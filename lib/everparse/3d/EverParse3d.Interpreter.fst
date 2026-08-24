@@ -1211,13 +1211,13 @@ let rec as_validator
           f "reading field_value" "checking constraint"
           (fun x -> action_as_action (a x)))
 
-    | T_dep_pair_with_refinement fldname base refinement k ->
+    | T_dep_pair_with_refinement fldname #_ #_ #ha1 #_ #_ #_ #_ #_ base refinement k ->
       assert_norm (as_type (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k) ==
                         x:P.refine (dtyp_as_type base) refinement & as_type (k x));
       assert_norm (as_parser (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_with_error_handler ehm typename fldname
-        (A.validate_dep_pair_with_refinement false fldname
+        (A.validate_dep_pair_with_refinement (not ha1) fldname
             (dtyp_as_validator_no_read base)
             (dtyp_as_leaf_reader base)
             refinement
@@ -1235,12 +1235,12 @@ let rec as_validator
             (fun x -> action_as_action (act x))
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x))))
 
-    | T_dep_pair_with_refinement_and_action fldname base refinement k act ->
+    | T_dep_pair_with_refinement_and_action fldname #_ #_ #ha1 #_ #_ #_ #_ #_ #_ #_ base refinement k act ->
       assert_norm (as_type (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k act) ==
                         x:P.refine (dtyp_as_type base) refinement & as_type (k x));
       assert_norm (as_parser (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k act) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
-      A.validate_dep_pair_with_refinement_and_action false fldname
+      A.validate_dep_pair_with_refinement_and_action (not ha1) fldname
             (A.validate_with_error_handler_no_read ehm typename fldname
               (dtyp_as_validator_no_read base))
             (dtyp_as_leaf_reader base)

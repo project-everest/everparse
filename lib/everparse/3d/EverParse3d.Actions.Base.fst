@@ -361,10 +361,9 @@ fn validate_pair
 #push-options "--z3rlimit 32"
 
 inline_for_extraction noextract
-fn validate_dep_pair_with_refinement_and_action
+fn validate_dep_pair_with_refinement_and_action'
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (#nz1:_)
       (#k1:parser_kind nz1 WeakKindStrongPrefix)
@@ -420,6 +419,104 @@ fn validate_dep_pair_with_refinement_and_action
     res_key
   }
 }
+
+(* When [p1] is total and consumes no input, [v1] can neither fail nor consume,
+   so we skip it entirely and go straight to the leaf reader. *)
+inline_for_extraction noextract
+fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (name1: string)
+      (#nz1:_)
+      (#k1:parser_kind nz1 WeakKindStrongPrefix)
+      (#t1:Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+      (r1: leaf_reader #base_t #len_t #pos_t p1)
+      ([@@@erasable] u: squash (
+        k1.LP.parser_kind_high == Some 0 /\
+        k1.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
+      ))
+      (f: t1 -> bool)
+      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#nz2:_)
+      (#wk2: _)
+      (#k2:parser_kind nz2 wk2)
+      (#[@@@erasable] t2:refine _ f -> Type)
+      (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#has_action2:bool)
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
+      #base_t #len_t #pos_t
+      ((p1 `parse_filter` f) `parse_dep_pair` p2)
+      extra_state
+      true
+      use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
+  LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
+  LP.parser_kind_prop_equiv k1 p1;
+  let val_key = r1 sl_base sl_len sl_pos _ _;
+  if (f val_key) {
+    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    if (res_action) {
+      v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+    } else {
+      validator_error_action_failed
+    }
+  } else {
+    validator_error_constraint_failed
+  }
+}
+
+inline_for_extraction noextract
+let validate_dep_pair_with_refinement_and_action
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (p1_is_constant_size_without_actions: bool)
+      (name1: string)
+      (#nz1:_)
+      (#k1:parser_kind nz1 WeakKindStrongPrefix)
+      (#t1:Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action1:bool)
+      (#use_error_handler:bool)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (r1: leaf_reader #base_t #len_t #pos_t p1)
+      (f: t1 -> bool)
+      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#nz2:_)
+      (#wk2: _)
+      (#k2:parser_kind nz2 wk2)
+      (#[@@@erasable] t2:refine _ f -> Type)
+      (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#has_action2:bool)
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
+      #base_t #len_t #pos_t
+      ((p1 `parse_filter` f) `parse_dep_pair` p2)
+      extra_state
+      true
+      use_error_handler
+= if
+    (p1_is_constant_size_without_actions &&
+     (k1.LP.parser_kind_high = Some 0) &&
+     (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal))
+  then
+    validate_dep_pair_with_refinement_and_action_total_zero_parser' name1 r1 () f a v2
+  else
+    validate_dep_pair_with_refinement_and_action' name1 v1 r1 f a v2
 
 #pop-options
 
@@ -1639,10 +1736,9 @@ fn validate_dep_pair_with_action
 }
 
 inline_for_extraction noextract
-fn validate_dep_pair_with_refinement
+fn validate_dep_pair_with_refinement'
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (#nz1:_)
       (#k1:parser_kind nz1 WeakKindStrongPrefix)
@@ -1692,6 +1788,97 @@ fn validate_dep_pair_with_refinement
     res_key
   }
 }
+
+(* As above: a total zero-consuming [p1] makes [v1] redundant. *)
+inline_for_extraction noextract
+fn validate_dep_pair_with_refinement_total_zero_parser'
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (name1: string)
+      (#nz1:_)
+      (#k1:parser_kind nz1 WeakKindStrongPrefix)
+      (#t1:Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+      (r1: leaf_reader #base_t #len_t #pos_t p1)
+      ([@@@erasable] u: squash (
+        k1.LP.parser_kind_high == Some 0 /\
+        k1.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
+      ))
+      (f: t1 -> bool)
+      (#nz2:_)
+      (#wk2: _)
+      (#k2:parser_kind nz2 wk2)
+      (#[@@@erasable] t2:refine _ f -> Type)
+      (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#has_action2:bool)
+      (has_action1: bool)
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
+      #base_t #len_t #pos_t
+      ((p1 `parse_filter` f) `parse_dep_pair` p2)
+      extra_state
+      (has_action1 || has_action2)
+      use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
+  LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
+  LP.parser_kind_prop_equiv k1 p1;
+  let val_key = r1 sl_base sl_len sl_pos _ _;
+  if (f val_key) {
+    v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  } else {
+    validator_error_constraint_failed
+  }
+}
+
+inline_for_extraction noextract
+let validate_dep_pair_with_refinement
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (p1_is_constant_size_without_actions: bool)
+      (name1: string)
+      (#nz1:_)
+      (#k1:parser_kind nz1 WeakKindStrongPrefix)
+      (#t1:Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action1:bool)
+      (#use_error_handler:bool)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (r1: leaf_reader #base_t #len_t #pos_t p1)
+      (f: t1 -> bool)
+      (#nz2:_)
+      (#wk2: _)
+      (#k2:parser_kind nz2 wk2)
+      (#[@@@erasable] t2:refine _ f -> Type)
+      (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#has_action2:bool)
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_read
+      #base_t #len_t #pos_t
+      ((p1 `parse_filter` f) `parse_dep_pair` p2)
+      extra_state
+      (has_action1 || has_action2)
+      use_error_handler
+= if
+    (p1_is_constant_size_without_actions &&
+     (k1.LP.parser_kind_high = Some 0) &&
+     (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal))
+  then
+    validate_dep_pair_with_refinement_total_zero_parser' name1 r1 () f has_action1 v2
+  else
+    validate_dep_pair_with_refinement' name1 v1 r1 f v2
 
 inline_for_extraction noextract
 fn validate_with_dep_action
@@ -2402,11 +2589,193 @@ fn validate_string
   v2 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
 }
 
-(* In Low*, when the payload has a total constant size, this combinator picks a
-   specialized validator that merely checks that enough bytes are available,
-   instead of iterating over the elements. This is only an optimization; here we
-   always take the general path for now.
-   TODO: port validate_nlist_total_constant_size{,_mod_ok,_mod_ko}. *)
+(* When the payload has a total constant size, the whole list has a total
+   constant size too, so validating it amounts to checking that [n] bytes are
+   available, instead of iterating over the elements. *)
+
+inline_for_extraction noextract
+let validate_nlist_total_constant_size_mod_ok
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n})
+      (#wk: _)
+      (#k:parser_kind true wk)
+      (#[@@@erasable] t:Type0)
+      ([@@@erasable] p:parser k t)
+      ([@@@erasable] u: squash (
+        k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+        k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+        k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal /\
+        k.LP.parser_kind_low < 4294967296 /\
+        U32.v n % k.LP.parser_kind_low == 0
+      ))
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+= [@inline_let] let _ = parse_nlist_total_fixed_size_kind_correct n n_is_const p in
+  [@inline_let]
+  let k' : parser_kind false WeakKindStrongPrefix =
+    LP.total_constant_size_parser_kind (U32.v n)
+  in
+  [@inline_let]
+  let p' : parser k' (nlist n t) =
+    LP.strengthen k' (parse_nlist n n_is_const p)
+  in
+  validate_total_constant_size_no_read
+    #base_t #len_t #pos_t
+    p'
+    (SZ.uint32_to_sizet n)
+    ()
+    #extra_state
+    #use_error_handler
+
+(* If [n] is not a multiple of the (constant) size of the payload, then no
+   list of payloads can span exactly [n] bytes, so the parser always fails. *)
+let parse_nlist_size_not_multiple
+      (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n})
+      (#wk: _)
+      (#k:parser_kind true wk)
+      (#t:Type0)
+      (p:parser k t)
+      (sq: LP.bytes)
+: Lemma
+  (requires (
+    k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+    U32.v n % k.LP.parser_kind_low <> 0
+  ))
+  (ensures (None? (LP.parse (parse_nlist n n_is_const p) sq)))
+= parse_nlist_eq n n_is_const p sq;
+  parse_fldata_eq (LowParse.Spec.List.parse_list p) (U32.v n) sq;
+  let f () : Lemma
+    (requires (Some? (LP.parse (parse_nlist n n_is_const p) sq)))
+    (ensures False)
+  = let sq' = Seq.slice sq 0 (U32.v n) in
+    LowParse.Spec.List.list_length_constant_size_parser_correct p sq';
+    let Some (l, _) = LP.parse (parse_nlist n n_is_const p) sq in
+    assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low);
+    FStar.Math.Lemmas.cancel_mul_mod (FStar.List.Tot.length l) k.LP.parser_kind_low;
+    assert (U32.v n % k.LP.parser_kind_low == 0)
+  in
+  Classical.move_requires f ()
+
+inline_for_extraction noextract
+fn validate_nlist_constant_size_mod_ko
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n})
+      (#wk: _)
+      (#k:parser_kind true wk)
+      (#[@@@erasable] t:Type0)
+      ([@@@erasable] p:parser k t)
+      ([@@@erasable] u: squash (
+        k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+        k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+        U32.v n % k.LP.parser_kind_low <> 0
+      ))
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  parse_nlist_size_not_multiple n n_is_const p (Seq.slice v_sl (SZ.v v_pos) (Seq.length v_sl));
+  validator_error_list_size_not_multiple
+}
+
+(* [n] need not be a compile-time constant, so we may have to test its
+   divisibility at run time. We eta-expand and swap [fn] and [if] so that the
+   test happens once per validation, not once per element. *)
+inline_for_extraction noextract
+fn validate_nlist_total_constant_size'
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n})
+      (#wk: _)
+      (#k:parser_kind true wk)
+      (#[@@@erasable] t:Type0)
+      ([@@@erasable] p:parser k t)
+      ([@@@erasable] u: squash (
+        k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+        k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+        k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal /\
+        k.LP.parser_kind_low < 4294967296
+      ))
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  if (n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul) {
+    validate_nlist_total_constant_size_mod_ok n n_is_const p ()
+      ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+  } else {
+    validate_nlist_constant_size_mod_ko n n_is_const p ()
+      ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+  }
+}
+
+(* Whenever the divisibility test can be settled at specialization time, we
+   avoid emitting it altogether. *)
+inline_for_extraction noextract
+let validate_nlist_total_constant_size
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n})
+      (#wk: _)
+      (#k:parser_kind true wk)
+      (#[@@@erasable] t:Type0)
+      ([@@@erasable] p:parser k t)
+      ([@@@erasable] u: squash (
+        k.LP.parser_kind_subkind == Some LP.ParserStrong /\
+        k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+        k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal /\
+        k.LP.parser_kind_low < 4294967296
+      ))
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+= if
+    (if k.LP.parser_kind_low = 1
+     then true
+     else match n_is_const with
+          | Some n -> n % k.LP.parser_kind_low = 0
+          | _ -> false)
+  then
+    validate_nlist_total_constant_size_mod_ok n n_is_const p ()
+  else if
+    (match n_is_const with
+     | Some n -> n % k.LP.parser_kind_low <> 0
+     | _ -> false)
+  then
+    validate_nlist_constant_size_mod_ko n n_is_const p ()
+  else
+    validate_nlist_total_constant_size' n n_is_const p ()
+
 inline_for_extraction noextract
 let validate_nlist_constant_size_without_actions
   (#base_t #len_t #pos_t: Type0)
@@ -2422,7 +2791,20 @@ let validate_nlist_constant_size_without_actions
       (#use_error_handler:bool)
       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler)
 : validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
-= validate_nlist n n_is_const v
+= if payload_is_constant_size
+  then begin
+    if
+      (k.LP.parser_kind_subkind = Some LP.ParserStrong &&
+       k.LP.parser_kind_high = Some k.LP.parser_kind_low &&
+       k.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
+       k.LP.parser_kind_low < 4294967296)
+    then
+      validate_drop (validate_nlist_total_constant_size n n_is_const p ())
+    else
+      validate_nlist n n_is_const v
+  end
+  else
+    validate_nlist n n_is_const v
 
 ////////////////////////////////////////////////////////////////////////////////
 // Generic external actions
