@@ -63,6 +63,14 @@ jobs:
       - name: Test EverParse test case generation
         run: |
           bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      # The --pulse counterpart. The generated C harness differs between the
+      # two backends -- Pulse validators return a uint8_t status and report the
+      # consumed length through a size_t* position -- so this compiles and runs
+      # code the Low* step above never exercises. Its own --odir, so the two do
+      # not clobber each other.
+      - name: Test EverParse test case generation (--pulse)
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh --pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
           ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
