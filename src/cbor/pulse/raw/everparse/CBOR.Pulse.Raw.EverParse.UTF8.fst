@@ -53,21 +53,21 @@ ensures
 {
   S.pts_to_len s;
   let i = !pi;
-  let byte1 = S.op_Array_Access s i;
+  let byte1 = S.op_Dot_Lparen_Rparen s i;
   let i1 : SZ.t = (SZ.add i 1sz);
   if (U8.lte byte1 0x7Fuy) {
     pi := i1;
   } else if (i1 = len) {
     pcont := false;
   } else {
-    let byte2 = S.op_Array_Access s i1;
+    let byte2 = S.op_Dot_Lparen_Rparen s i1;
     let i2 : SZ.t = SZ.add i1 1sz;
     if (U8.lte 0xC2uy byte1 && U8.lte byte1 0xDFuy && u8_in_80_BF byte2) {
        pi := i2;
     } else if (i2 = len) {
       pcont := false
     } else {
-      let byte3 = S.op_Array_Access s i2;
+      let byte3 = S.op_Dot_Lparen_Rparen s i2;
       let i3 : SZ.t = SZ.add i2 1sz;
       if (not (u8_in_80_BF byte3)) {
          pcont := false
@@ -88,7 +88,7 @@ ensures
       } else if (i3 = len) {
         pcont := false
       } else {
-        let byte4 = S.op_Array_Access s i3;
+        let byte4 = S.op_Dot_Lparen_Rparen s i3;
         let i4 = SZ.add i3 1sz;
         if (not (u8_in_80_BF byte4)) {
            pcont := false

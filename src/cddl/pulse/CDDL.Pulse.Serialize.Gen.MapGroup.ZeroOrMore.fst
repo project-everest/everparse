@@ -102,7 +102,7 @@ fn map_slice_iterator_next
   Seq.lemma_split s 1;
   SM.seq_list_match_cons_elim _ _ r;
   with gres gv . assert (r gres gv);
-  let res = S.op_Array_Access i.base.s 0sz;
+  let res = S.op_Dot_Lparen_Rparen i.base.s 0sz;
   rewrite each gres as res;
   let (il, ir) = S.split i.base.s 1sz;
   with sl . assert (pts_to il #i.base.p sl);

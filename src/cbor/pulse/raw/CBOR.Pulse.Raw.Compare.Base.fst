@@ -168,14 +168,14 @@ fn impl_lex_compare
     decreases %[(if !pres = 0s then 1 else 0); (SZ.v n1 - SZ.v (!pi1))] // fstar2 only
   {
     let i1 = !pi1;
-    let x1 = S.op_Array_Access s1.v i1;
+    let x1 = S.op_Dot_Lparen_Rparen s1.v i1;
     SM.seq_list_match_index_trade vmatch c1 v1 (SZ.v i1);
     Trade.rewrite_with_trade
       (vmatch (Seq.index c1 (SZ.v i1)) (List.Tot.index v1 (SZ.v i1)))
       (vmatch x1 (List.Tot.index v1 (SZ.v i1)));
     Trade.trans _ _ (SM.seq_list_match c1 v1 vmatch);
     let i2 = !pi2;
-    let x2 = S.op_Array_Access s2.v i2;
+    let x2 = S.op_Dot_Lparen_Rparen s2.v i2;
     SM.seq_list_match_index_trade vmatch c2 v2 (SZ.v i2);
     Trade.rewrite_with_trade
       (vmatch (Seq.index c2 (SZ.v i2)) (List.Tot.index v2 (SZ.v i2)))

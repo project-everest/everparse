@@ -777,7 +777,7 @@ ensures
   {
     SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
     let n1 = !pn1;
-    let x1 = S.op_Array_Access x n1;
+    let x1 = S.op_Dot_Lparen_Rparen x n1;
     SM.seq_list_match_cons_elim_trade _ _ (Raw.cbor_match_map_entry ps);
     Trade.trans _ _ (SM.seq_list_match s l (Raw.cbor_match_map_entry ps));
     with gx1 y1 . assert Raw.cbor_match_map_entry ps gx1 y1;
@@ -811,7 +811,7 @@ ensures
     {
       SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
       let n2 = !pn2;
-      let x2 = S.op_Array_Access x n2;
+      let x2 = S.op_Dot_Lparen_Rparen x n2;
       SM.seq_list_match_cons_elim_trade _ _ (Raw.cbor_match_map_entry ps);
       with gx2 y2 . assert (Raw.cbor_match_map_entry ps x1 y1 ** Raw.cbor_match_map_entry ps gx2 y2);
       rewrite each gx2 as x2;

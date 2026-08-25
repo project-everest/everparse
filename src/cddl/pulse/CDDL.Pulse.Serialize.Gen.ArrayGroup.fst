@@ -1617,7 +1617,7 @@ fn impl_serialize_array_group_zero_or_more_slice
     with s2' l2' . assert (SM.seq_list_match s2' l2' r1);
     let y = Ghost.hide (List.Tot.hd l2);
     let i = !pi;
-    let x = S.op_Array_Access c.s i;
+    let x = S.op_Dot_Lparen_Rparen c.s i;
     Trade.rewrite_with_trade (r1 _ _) (r1 x y);
     Trade.trans_hyp_l (r1 x y) _ _ _;
     with l1 . assert (GR.pts_to pl1 l1);

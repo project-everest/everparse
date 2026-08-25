@@ -63,7 +63,7 @@ fn be_to_n_1
 {
   E.reveal_be_to_n (Seq.slice (v) 0 1);
   E.reveal_be_to_n (Seq.slice (v) 0 0);
-  let last = S.op_Array_Access x 0sz;
+  let last = S.op_Dot_Lparen_Rparen x 0sz;
   UIntType?.from_byte u last
 }
 
@@ -88,7 +88,7 @@ fn be_to_n_S
   pow2_le_compat (8 * (len + 1)) (8 * len);
   pow2_plus (8 * len) 8;
   let pos' = pos `SZ.sub` 1sz;
-  let last = S.op_Array_Access x pos';
+  let last = S.op_Dot_Lparen_Rparen x pos';
   let n = ih x #pm #v pos';
   let blast = UIntType?.from_byte u last;
   UIntType?.add u blast (u.mul256 n)
@@ -175,7 +175,7 @@ fn n_to_be_1
   E.reveal_n_to_be 1 (u.v n);
   E.reveal_n_to_be 0 (u.v n / pow2 8);
   let n' = u.to_byte n;
-  S.op_Array_Assignment x (pos `SZ.sub` 1sz) n'
+  S.op_Dot_Lparen_Rparen_Less_Minus x (pos `SZ.sub` 1sz) n'
 }
 
 inline_for_extraction
@@ -200,7 +200,7 @@ fn n_to_be_S
   with v1 . assert (pts_to x v1);
   Seq.lemma_split (Seq.slice v1 (SZ.v pos - 1) (Seq.length v1)) 1;
   let _ = ih hi x pos';
-  S.op_Array_Assignment x pos' lo;
+  S.op_Dot_Lparen_Rparen_Less_Minus x pos' lo;
   with v2 . assert (pts_to x v2);
   Seq.lemma_split (Seq.slice v2 (SZ.v pos - 1) (Seq.length v2)) 1;
 }
@@ -280,7 +280,7 @@ fn n_to_le_1
   E.reveal_n_to_le 1 (u.v n);
   E.reveal_n_to_le 0 (u.v n / pow2 8);
   let n' = u.to_byte n;
-  S.op_Array_Assignment x pos n'
+  S.op_Dot_Lparen_Rparen_Less_Minus x pos n'
 }
 
 inline_for_extraction
@@ -307,7 +307,7 @@ fn n_to_le_S
   with v1b . assert (pts_to x v1b);
   Seq.slice_slice v1b 0 (SZ.v pos + 1) 0 (SZ.v pos);
   Seq.slice_slice v 0 (SZ.v pos + 1) 0 (SZ.v pos);
-  S.op_Array_Assignment x pos lo;
+  S.op_Dot_Lparen_Rparen_Less_Minus x pos lo;
   with v2 . assert (pts_to x v2);
   Seq.slice_upd v1b 0 (SZ.v pos) (SZ.v pos) lo;
   Seq.slice_upd v1b (SZ.v pos + 1) (SZ.v pos + 1 + len) (SZ.v pos) lo;

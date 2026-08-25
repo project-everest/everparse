@@ -168,7 +168,7 @@ fn free_array
   {
     let i = !pi;
     SM.seq_seq_match_dequeue_left elem_vmatch s (Seq.seq_of_list v) (SZ.v i) (L.length v);
-    let elem = V.op_Array_Access x i;
+    let elem = V.op_Dot_Lparen_Rparen x i;
     free_elem elem;
     pi := SZ.add i 1sz;
   };
@@ -372,7 +372,7 @@ ensures
       #(Ghost.hide (L.tl (snd (L.splitAt (SZ.v i) (Ghost.reveal fl)))));
     let elx = fst r;
     let off2 = snd r;
-    V.op_Array_Assignment vec i elx;
+    V.op_Dot_Lparen_Rparen_Less_Minus vec i elx;
     with s1'. assert (V.pts_to vec s1');
     SM.seq_seq_match_rewrite_seq (PPB.vmatch_conv elem_vmatch elem_conv) s1 s1' (Ghost.reveal sl) (Ghost.reveal sl) 0 (SZ.v i);
     splitAt_index_hd (SZ.v i) (Ghost.reveal fl);

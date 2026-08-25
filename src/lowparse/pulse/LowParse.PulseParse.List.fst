@@ -376,7 +376,7 @@ fn l2r_safe_writer_list
           S.pts_to out vout **
           SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0 (SZ.v i) **
           SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n));
-        let xi = V.op_Array_Access (snd yy) i;
+        let xi = V.op_Dot_Lparen_Rparen (snd yy) i;
         SM.seq_seq_match_dequeue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n);
         Seq.lemma_seq_of_list_index (Ghost.reveal y) (SZ.v i);
         rewrite (PPB.vmatch_conv elem_vmatch elem_conv (Seq.index ss (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i)))
@@ -531,7 +531,7 @@ fn l2r_safe_size_list
       {
         let i = !pi;
         let off = !poff;
-        let xi = V.op_Array_Access (snd yy) i;
+        let xi = V.op_Dot_Lparen_Rparen (snd yy) i;
         SM.seq_seq_match_dequeue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n);
         Seq.lemma_seq_of_list_index (Ghost.reveal y) (SZ.v i);
         rewrite (PPB.vmatch_conv elem_vmatch elem_conv (Seq.index ss (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i)))

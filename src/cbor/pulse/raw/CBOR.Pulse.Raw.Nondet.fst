@@ -1787,10 +1787,10 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
     PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match false ps) _ _;
     PM.seq_list_match_cons_elim_trade s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps);
     let i = !pi;
-    let x = S.op_Array_Access dest i;
+    let x = S.op_Dot_Lparen_Rparen dest i;
     assert (pure (x == Seq.head s2));
     let x' = { x with found = false };
-    S.op_Array_Assignment dest i x';
+    S.op_Dot_Lparen_Rparen_Less_Minus dest i x';
     slprop_equivs ();
     let y' : Ghost.erased (Spec.cbor & option Spec.cbor) = Ghost.hide (set_snd_None _ _ (List.Tot.hd l2));
     Trade.rewrite_with_trade
@@ -1929,7 +1929,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       PM.seq_list_match_cons_elim_trade s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps);
       let j = !pj;
       pj := SZ.add j 1sz;
-      let dest_entry = S.op_Array_Access dest j;
+      let dest_entry = S.op_Dot_Lparen_Rparen dest j;
       Trade.rewrite_with_trade
         (cbor_map_get_multiple_entry_match cbor_nondet_match true ps (Seq.head s2) (List.Tot.hd l2))
         (cbor_nondet_match ps dest_entry.key (fst (List.Tot.hd l2)) **
@@ -1941,7 +1941,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
         let entry_value = cbor_nondet_reset_perm () entry.cbor_map_entry_value 1.0R;
         Trade.trans_hyp_r _ (cbor_nondet_match 1.0R entry_value _) _ _;
         let dest_entry' = { dest_entry with found = true; value = entry_value };
-        S.op_Array_Assignment dest j dest_entry';
+        S.op_Dot_Lparen_Rparen_Less_Minus dest j dest_entry';
         Trade.rewrite_with_trade
           (cbor_nondet_match ps dest_entry.key (fst (List.Tot.hd l2)) **
             cbor_nondet_match 1.0R entry_value (snd ventry)

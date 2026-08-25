@@ -279,7 +279,7 @@ decreases bound
       {
         let i = !pi;
         SM.seq_seq_match_dequeue_left freeable_match' s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len);
-        let x' = V.op_Array_Access a.array_footprint i;
+        let x' = V.op_Dot_Lparen_Rparen a.array_footprint i;
         rewrite (freeable_match' (Seq.index s (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)))
              as (freeable_match' x' (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)));
         FStar.List.Tot.Properties.memP_precedes (List.Tot.index (Ghost.reveal ft') (SZ.v i)) (Ghost.reveal ft');
@@ -318,7 +318,7 @@ decreases bound
       {
         let i = !pi;
         SM.seq_seq_match_dequeue_left freeable_match_map_entry s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len);
-        let x' = V.op_Array_Access a.map_footprint i;
+        let x' = V.op_Dot_Lparen_Rparen a.map_footprint i;
         rewrite (freeable_match_map_entry (Seq.index s (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)))
              as (freeable_match_map_entry x' (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)));
         FStar.List.Tot.Properties.memP_precedes (List.Tot.index (Ghost.reveal ft') (SZ.v i)) (Ghost.reveal ft');
@@ -726,9 +726,9 @@ ensures
     rewrite each Seq.index s (SZ.v i) as c;
     Trade.elim _ (SM.seq_list_match s (Array?.v v) (cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_array_payload_perm)));
     with v1 . assert (cbor_match 1.0R c'.cbor v1 ** Trade.trade (cbor_match 1.0R c'.cbor v1) (freeable c'));
-    V.op_Array_Assignment v' i c'.cbor;
+    V.op_Dot_Lparen_Rparen_Less_Minus v' i c'.cbor;
     with s1' . assert (pts_to v' s1');
-    V.op_Array_Assignment vf i c'.footprint;
+    V.op_Dot_Lparen_Rparen_Less_Minus vf i c'.footprint;
     with sf' . assert (pts_to vf sf');
     SM.seq_seq_match_rewrite_seq_trade (cbor_match 1.0R) s1 s1' sl sl 0 (SZ.v i);
     Trade.trans (SM.seq_seq_match (cbor_match 1.0R) s1' sl 0 (SZ.v i)) _ _;
@@ -920,7 +920,7 @@ ensures
       (SM.seq_seq_match freeable_match_map_entry sf st 0 j)
     );
     rewrite each j as (SZ.v i);
-    let c = S.op_Array_Access ar i;
+    let c = S.op_Dot_Lparen_Rparen ar i;
     SM.seq_list_match_index_trade (cbor_match_map_entry_with_depth (nat_pred depth) (p `perm_mul` a.cbor_map_payload_perm)) s (Map?.v v) (SZ.v i);
     with v1 . assert (cbor_match_map_entry_with_depth (nat_pred depth) (p `perm_mul` a.cbor_map_payload_perm) c v1);
     let key', value' = cbor_copy_map_entry_d (nat_pred depth) (copy (nat_pred depth)) (p `perm_mul` a.cbor_map_payload_perm) c;
@@ -940,13 +940,13 @@ ensures
       )
       (cbor_match_map_entry 1.0R cme' v1);
     Trade.trans (cbor_match_map_entry 1.0R cme' v1) _ _;
-    V.op_Array_Assignment v' i cme';
+    V.op_Dot_Lparen_Rparen_Less_Minus v' i cme';
     with s1' . assert (pts_to v' s1');
     let cfp' = {
       map_entry_key = key'.footprint;
       map_entry_value = value'.footprint;
     };
-    V.op_Array_Assignment vf i cfp';
+    V.op_Dot_Lparen_Rparen_Less_Minus vf i cfp';
     with sf' . assert (pts_to vf sf');
     SM.seq_seq_match_rewrite_seq_trade (cbor_match_map_entry 1.0R) s1 s1' sl sl 0 (SZ.v i);
     Trade.trans (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1' sl 0 (SZ.v i)) _ _;

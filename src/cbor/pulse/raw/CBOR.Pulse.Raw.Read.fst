@@ -130,7 +130,7 @@ ensures exists* p' y .
       Trade.trans _ _ (cbor_match pm c r);
       S.pts_to_len c'.cbor_array_ptr;
       PM.seq_list_match_length (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) _ _;
-      let res = S.op_Array_Access c'.cbor_array_ptr (SZ.uint64_to_sizet i);
+      let res = S.op_Dot_Lparen_Rparen c'.cbor_array_ptr (SZ.uint64_to_sizet i);
       Trade.elim_hyp_l _ _ (cbor_match pm c r);
       PM.seq_list_match_index_trade (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) _ _ (U64.v i);
       Trade.trans _ _ (cbor_match pm c r);

@@ -4,7 +4,7 @@ module S = CDDL.Spec.Set
 module F = FStar.FunctionalExtensionality
 module Util = CBOR.Spec.Util
 
-let ( ^-> ) = F.op_Hat_Subtraction_Greater
+let ( ^-> ) = F.op_Hat_Minus_Greater
 
 noeq
 type uunit : Type u#a = | UU

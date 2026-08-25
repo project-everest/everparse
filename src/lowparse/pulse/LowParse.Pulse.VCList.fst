@@ -1045,7 +1045,7 @@ fn compute_remaining_size_nlist_as_array
     PM.seq_list_match_length (vmatch arr) _ _;
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = A.op_Array_Access a.v i;
+    let e = A.op_Dot_Lparen_Rparen a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i - 1);
@@ -1136,7 +1136,7 @@ fn l2r_write_nlist_as_array
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     serialize_nlist_append s (SZ.v i) l1 (SZ.v n - SZ.v i) l2;
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = A.op_Array_Access a.v i;
+    let e = A.op_Dot_Lparen_Rparen a.v i;
     with ve l2' . assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     List.Tot.append_assoc l1 [ve] l2';
     let i' = SZ.add i 1sz;
@@ -1312,7 +1312,7 @@ fn compute_remaining_size_nlist_as_slice
     PM.seq_list_match_length (vmatch arr) _ _;
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = S.op_Array_Access a.v i;
+    let e = S.op_Dot_Lparen_Rparen a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     let ni' : Ghost.erased nat = Ghost.hide (n - SZ.v i - 1);
@@ -1407,7 +1407,7 @@ fn l2r_write_nlist_as_slice
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     serialize_nlist_append s (SZ.v i) l1 (n - SZ.v i) l2;
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = S.op_Array_Access a.v i;
+    let e = S.op_Dot_Lparen_Rparen a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     List.Tot.append_assoc l1 [ve] l2';
