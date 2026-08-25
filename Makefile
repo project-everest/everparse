@@ -72,18 +72,6 @@ ifeq (,$(NO_PULSE))
 lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
-# lowparse needed because of .fst behind .fsti for extraction
-3d-prelude-verify: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-
-.PHONY: 3d-prelude-verify
-
-# TODO: re-enable once Low* is gone
-# 3d-prelude: 3d-prelude-verify
-#	+$(MAKE) -C src/3d/prelude
-3d-prelude:
-
-.PHONY: 3d-prelude
-
 3d-exe: $(NEED_Z3)
 	+$(MAKE) -C src/3d 3d
 
@@ -103,7 +91,7 @@ ifeq (,$(NO_PULSE))
 3d: 3d-pulse-krml
 endif
 
-3d: 3d-prelude 3d-exe
+3d: 3d-exe
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
 asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
