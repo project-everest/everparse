@@ -14,7 +14,6 @@ open Pulse.Lib.Pervasives
 include LowParse.Spec.Endianness
 
 open FStar.Math.Lemmas
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module E = LowParse.Endianness
