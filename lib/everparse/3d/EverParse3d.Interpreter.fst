@@ -1144,7 +1144,7 @@ let rec as_reader
 
 (* The main result: a validator denotation of `typ`, related by construction
    to the parser and type denotations. *)
-#push-options "--split_queries no --z3rlimit_factor 4 --z3cliopt 'smt.qi.eager_threshold=100'"
+#push-options "--z3rlimit_factor 4 --z3cliopt 'smt.qi.eager_threshold=100'"
 #restart-solver
 [@@specialize]
 let rec as_validator

@@ -15,6 +15,9 @@
 *)
 module EverParse3d.Prelude
 friend EverParse3d.Kinds
+include EverParse3d.Prelude.StaticHeader
+include EverParse3d.Kinds
+open FStar.Range
 module BF = LowParse.BitFields
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators

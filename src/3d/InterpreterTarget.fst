@@ -777,11 +777,9 @@ let print_derived_name (mname:string) (tag:string) (i:A.ident) =
 let pulse_kenv : ref (list string) = alloc []
 
 let set_pulse_kenv (l:list string) : ML unit =
-  FStar.ST.recall pulse_kenv;
   pulse_kenv := l
 
 let get_pulse_kenv () : ML (list string) =
-  FStar.ST.recall pulse_kenv;
   !pulse_kenv
 
 let pulse_key_binder_of (p:string) : string = Printf.sprintf "k__%s" p

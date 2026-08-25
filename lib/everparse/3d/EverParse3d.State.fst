@@ -75,6 +75,16 @@ let state_dict_ext
   assert (d1.state == d2.state);
   assert (d1 == d2)
 
+(* A named (rather than anonymous) combinator for the [state] field of
+   [mk_state_dict]. *)
+let mk_state_fun
+  (dom: Type)
+  (values: dom -> Type)
+  (state: (x: dom) -> values x -> slprop)
+  (x: dom)
+: Tot (values x ^-> slprop)
+= on (values x) (state x)
+
 let mk_state_dict
   (p: string -> prop)
   (values: (x: string { p x }) -> Type0)
@@ -83,11 +93,10 @@ let mk_state_dict
 =
   let p' = on_g string (fun x -> ID.strong_excluded_middle (p x) <: bool) in
   let values' = on (refine_bool_t string p') values in
-  let state' (x: refine_bool_t string p') : (values' x ^-> slprop) = on (values' x) (state x) in
   {
     state_p = p';
     state_values = values';
-    state = on_dom (refine_bool_t string p') state';
+    state = on_dom (refine_bool_t string p') (mk_state_fun (refine_bool_t string p') values' state);
   }
 
 let mk_state_dict_correct
@@ -112,13 +121,15 @@ let mk_state_dict_correct
   =
     let p' = on_g string (fun x -> ID.strong_excluded_middle (p x) <: bool) in
     assert (d.state_p == p');
-    let values' : refine_bool_t string d.state_p `arrow` Type0 = on (refine_bool_t string d.state_p) values in
-    assert_norm (d.state_values == (coerce_eq () values' <: (refine_bool_t string d.state_p `arrow` Type0)));
-    let state' (x: refine_bool_t string p') : (d.state_values x ^-> slprop) = on (d.state_values x) (state x) in
-    assert_norm (d.state == on_dom (refine_bool_t string d.state_p) state');
-    assert_norm (d.state x == on_dom (refine_bool_t string d.state_p) state' x);
-    assert (d.state x == state' x);
-    assert (d.state x y == state' x y);
+    let values' = on (refine_bool_t string p') values in
+    assert (d.state_values == values');
+    let f = mk_state_fun (refine_bool_t string p') values' state in
+    (* Materialize the application of the restricted [state] field, then let the
+       normalizer reduce the record projection: the SMT encoding provides no
+       inversion axiom for a record field whose type depends on an earlier
+       field, so a plain [assert] on [d.state x y] does not go through. *)
+    assert ((((on_dom (refine_bool_t string p') f x) <: (values' x ^-> slprop)) y) == state x y);
+    assert_norm ((((mk_state_dict p values state).state x) <: (values' x ^-> slprop)) y == state x y);
     assert (d.state x y == state x y)
   in
   Classical.forall_intro_2 prf

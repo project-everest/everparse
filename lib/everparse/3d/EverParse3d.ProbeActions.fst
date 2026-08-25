@@ -1,6 +1,17 @@
 module EverParse3d.ProbeActions
 #lang-pulse
 
+module AppCtxt = EverParse3d.AppCtxt
+module I = EverParse3d.InputStream.Base
+module U8 = FStar.UInt8
+module U16 = FStar.UInt16
+module U32 = FStar.UInt32
+module U64 = FStar.UInt64
+open EverParse3d.CopyBuffer
+module CB = EverParse3d.CopyBuffer
+open Pulse.Lib.Pervasives
+open EverParse3d.Actions.Common
+
 
 let probe_fn_incremental
   (#copy_buffer_t: Type0)
@@ -676,6 +687,7 @@ fn probe_array
       U64.v v_ro' >= U64.v (Ghost.reveal v_read_offset) /\
       U64.v v_wo' >= U64.v (Ghost.reveal v_write_offset)
     )
+    decreases %[(if !stop then 0 else 1); (U64.v (!ctr))] // fstar2 only
   {
     let c0 = !ctr;
     let hf0 = !failed;
