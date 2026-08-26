@@ -10,7 +10,7 @@ FSTAR_OPTIONS += --warn_error -342
 
 # EverParse3d.Interpreter is specialized away in generated code (the `specialize`
 # tactic), exactly as in the Low* prelude, so it is never extracted itself.
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,+Pulse.Lib.ArrayPtr,-EverParse3d.Interpreter,-EverParse3d.Smoke'
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,+Pulse.Lib.ArrayPtr,-EverParse3d.Interpreter,-EverParse3d.Smoke'
 
 ALREADY_CACHED := '*,'
 OUTPUT_DIRECTORY := extracted
