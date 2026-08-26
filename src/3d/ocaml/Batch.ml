@@ -45,17 +45,6 @@ let cl_wrapper () =
 let pulse_3d_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "3d"
 let lowparse_pulse_home = filename_concat lowparse_home "pulse"
 let pulse_3d_krml_home = filename_concat (filename_concat pulse_3d_home "krml") "extracted"
-let pulse_lib_home =
-  let candidates =
-    (match Sys.getenv_opt "PULSE_HOME" with
-     | Some h -> [filename_concat (filename_concat h "lib") "pulse"]
-     | None -> [])
-    @ [ filename_concat (filename_concat everparse_home "lib") "pulse";
-        filename_concat (filename_concat (filename_concat (filename_concat (filename_concat everparse_home "opt") "pulse") "out") "lib") "pulse" ]
-  in
-  match List.find_opt Sys.file_exists candidates with
-  | Some d -> d
-  | None -> filename_concat (filename_concat everparse_home "lib") "pulse"
 
 (* In --pulse mode KaRaMeL is invoked with -skip-makefiles, so it emits neither
    Makefile.basic nor Makefile.include; EverParse ships its own instead. See
@@ -93,7 +82,7 @@ let fstar_args0 krmllib =
       "--include" :: krmllib ::
         "--include" :: (filename_concat krmllib "obj") ::
           (if Options.get_pulse ()
-           then "--include" :: pulse_lib_home ::
+           then
                 "--include" :: lowparse_pulse_home ::
                 "--include" :: pulse_3d_home :: []
            else "--include" :: ddd_prelude_home :: []) @
