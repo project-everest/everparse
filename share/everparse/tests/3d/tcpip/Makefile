@@ -10,11 +10,11 @@ all: interpret extern
 
 interpret: $(SOURCE_FILES) interpret.out
 	$(EVERPARSE_CMD) --batch $(SOURCE_FILES) --odir interpret.out
-	+$(MAKE) -C interpret.out/ -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-type-limits -Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d'
+	+$(MAKE) -C interpret.out/ -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-type-limits -Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d'
 
 extern: $(SOURCE_FILES_EXTERN) extern.out
 	$(EVERPARSE_CMD) --input_stream extern --input_stream_include EverParseStream.h --batch $(SOURCE_FILES_EXTERN) --odir extern.out
-	+$(MAKE) -C extern.out/ -f Makefile.basic USER_TARGET=test USER_CFLAGS='-I ../extern -Wno-type-limits -Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d'
+	+$(MAKE) -C extern.out/ -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-I ../extern -Wno-type-limits -Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d'
 
 %.out:
 	mkdir -p $@

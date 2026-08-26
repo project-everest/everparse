@@ -57,6 +57,12 @@ let pulse_lib_home =
   | Some d -> d
   | None -> filename_concat (filename_concat everparse_home "lib") "pulse"
 
+(* In --pulse mode KaRaMeL is invoked with -skip-makefiles, so it emits neither
+   Makefile.basic nor Makefile.include; EverParse ships its own instead. See
+   share/everparse/3d/Makefile.basic for why. *)
+let pulse_makefile_basic =
+  filename_concat (filename_concat (filename_concat (filename_concat everparse_home "share") "everparse") "3d") "Makefile.basic"
+
 let ddd_actions_home input_stream_binding =
   let input_stream_dir =
     match string_of_input_stream_binding input_stream_binding with
@@ -474,7 +480,11 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
       else "-add-include" :: Printf.sprintf "\"%s\"" input_stream_include :: krml_args
   in
   let krml_args =
-    if skip_c_makefiles
+    (* --pulse always skips KaRaMeL's makefiles: EverParse ships its own
+       Makefile.basic, which does not need the Makefile.include that KaRaMeL
+       would emit alongside it. This makes --skip_c_makefiles a no-op as far as
+       KaRaMeL is concerned under --pulse. *)
+    if skip_c_makefiles || Options.get_pulse ()
     then "-skip-makefiles" :: krml_args
     else krml_args
   in

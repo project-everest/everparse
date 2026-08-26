@@ -213,6 +213,10 @@ make_everparse() {
     if [[ -z "$NO_PULSE" ]] ; then
         $cp -r $EVERPARSE_HOME/src/3d/EverParsePulse.h everparse/src/3d/
         $cp -r $EVERPARSE_HOME/src/3d/EverParsePulseEndianness.h everparse/src/3d/
+        # EverParse's own Makefile.basic: under --pulse, KaRaMeL is invoked with
+        # -skip-makefiles, so this is what the generated C is compiled with.
+        mkdir -p everparse/share/everparse/3d
+        $cp -r $EVERPARSE_HOME/share/everparse/3d/Makefile.basic everparse/share/everparse/3d/
         mkdir -p everparse/lib/everparse
         $cp -r $EVERPARSE_HOME/lib/everparse/3d everparse/lib/everparse/3d
         # Drop the build machinery: the package ships the results, not the
