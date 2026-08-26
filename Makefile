@@ -375,7 +375,7 @@ clean-cddl:
 .PHONY: clean-cbor-verify
 
 clean-bin:
-	rm -rf bin lib
+	rm -rf bin
 
 .PHONY: clean-bin
 
