@@ -1,0 +1,15 @@
+// Test for the `Complete' entrypoint wrappers, which additionally
+// check that the validator consumed the whole input.
+
+entrypoint
+typedef struct _POINT {
+  UINT32 x;
+  UINT32 y;
+} POINT;
+
+// A named entrypoint: the complete-check wrapper is named by
+// suffixing the user-provided name with `Complete'.
+entrypoint(CheckHeader)
+typedef struct _HEADER {
+  UINT8 tag;
+} HEADER;

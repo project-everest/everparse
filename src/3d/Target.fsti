@@ -427,6 +427,7 @@ val print_probe_action  (mname:string) (a:probe_action) : ML string
 val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
 val wrapper_name (modul: string) (fn: string) : ML string
+val wrapper_complete_name (modul: string) (fn: string) : ML string
 val validator_name (modul: string) (fn: string) : ML string
 type produce_everparse_error = | ProduceEverParseError
 type opt_produce_everparse_error = option produce_everparse_error

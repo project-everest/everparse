@@ -43,7 +43,10 @@ Then, EverParse/3d produces:
   F\* and Low\* files, and similarly for ``MyFile2.3d``
 
 * ``MyFile1Wrapper.c``, ``MyFile1Wrapper.h``: an entrypoint API to call into the
-  verified C code, and similarly for ``MyFile2.3d``
+  verified C code, and similarly for ``MyFile2.3d``. For each entrypoint type,
+  this API offers two wrappers: one that only checks that the message is valid,
+  and one, with ``Complete`` in its name, that additionally checks that the
+  validator consumed the whole input buffer.
 
 * ``EverParse.h``, ``EverParseEndianness.h``: various EverParse
   helpers for the implementation of verified validators, common to

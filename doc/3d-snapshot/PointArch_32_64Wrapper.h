@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 BOOLEAN PointArch3264CheckPoint(uint8_t *base, uint32_t len);
+
+BOOLEAN PointArch3264CheckCompletePoint(uint8_t *base, uint32_t len);
 #ifdef __cplusplus
 }
 #endif

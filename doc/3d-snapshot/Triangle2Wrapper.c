@@ -43,3 +43,26 @@ BOOLEAN Triangle2CheckTriangle(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
+
+BOOLEAN Triangle2CheckCompleteTriangle(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = Triangle2ValidateTriangle( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			Triangle2EverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		Triangle2EverParseError("_triangle", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
