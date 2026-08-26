@@ -114,13 +114,23 @@ decreases l
   }
 }
 
+(* Workaround for the quadratic/exponential normalization of *stuck* record
+   projections introduced by F*'s primitive projector iota-rule: a hand-written
+   accessor is an ordinary definition that unfolds to a [match], which the
+   normalizer reduces through its usual memoized closure path. *)
+inline_for_extraction noextract
+let pair_fst (#a #b: Type) (x: (a & b)) : Tot a = match x with (v, _) -> v
+
+inline_for_extraction noextract
+let pair_snd (#a #b: Type) (x: (a & b)) : Tot b = match x with (_, v) -> v
+
 let rel_pair
   (#low1 #high1: Type)
   (r1: rel low1 high1)
   (#low2 #high2: Type)
   (r2: rel low2 high2)
 : rel (low1 & low2) (high1 & high2)
-= mk_rel (fun xlow xhigh -> r1 (fst xlow) (fst xhigh) ** r2 (snd xlow) (snd xhigh))
+= mk_rel (fun xlow xhigh -> r1 (pair_fst xlow) (pair_fst xhigh) ** r2 (pair_snd xlow) (pair_snd xhigh))
 
 let rel_pair_eq
   (#low1 #high1: Type)
@@ -660,12 +670,20 @@ noeq type cbor_with_perm
 
 module Cbor = CBOR.Spec.API.Format
 
+inline_for_extraction noextract
+let cwp_c (#cbor_t: Type0) (x: cbor_with_perm cbor_t) : Tot cbor_t =
+  match x with | Mkcbor_with_perm c _ -> c
+
+inline_for_extraction noextract
+let cwp_p (#cbor_t: Type0) (x: cbor_with_perm cbor_t) : Tot perm =
+  match x with | Mkcbor_with_perm _ p -> p
+
 let rel_cbor_not_freeable
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (freeable: bool)
 : Tot (rel (cbor_with_perm cbor_t) Cbor.cbor)
-= mk_rel (fun x1 x2 -> vmatch x1.p x1.c x2 ** pure (freeable == false))
+= mk_rel (fun x1 x2 -> vmatch (cwp_p x1) (cwp_c x1) x2 ** pure (freeable == false))
 
 // A parser implementation that skips some data instead of reading
 // it. This parser implementation has no equivalent serializer
