@@ -511,37 +511,51 @@ let glb
     k `is_weaker_than` k2
 //    (forall k' . (k' `is_weaker_than` k1 /\ k' `is_weaker_than` k2) ==> k' `is_weaker_than` k)
   ))
-= match k1.parser_kind_metadata, k2.parser_kind_metadata with
+= (* NOTE: we destructure [k1] and [k2] with a single [match] each, and use the
+     bound field variables below, instead of writing [k1.parser_kind_low] etc.
+     Each record projector application on a not-yet-a-constructor argument is a
+     *stuck* projection, and recent F* normalizers re-normalize the projected
+     scrutinee once per projection instead of sharing it. Since [glb] mentions
+     each of its arguments seven times, chains of [glb] (as built by
+     [glb_list_of] over an enum, see [LowParse.Spec.Sum.weaken_parse_dsum_cases_kind])
+     then blow up exponentially in the length of the chain. A single [match]
+     forces each argument exactly once. *)
+  match k1 with
+  | Mkparser_kind' lo1 hi1 sk1 md1 inj1 ->
+  begin match k2 with
+  | Mkparser_kind' lo2 hi2 sk2 md2 inj2 ->
+  begin match md1, md2 with
   | _, Some ParserKindMetadataFail ->
   {
-    parser_kind_low = k1.parser_kind_low;
-    parser_kind_high = k1.parser_kind_high;
-    parser_kind_subkind = k1.parser_kind_subkind;
-    parser_kind_metadata = (match k1.parser_kind_metadata with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
-    parser_kind_injective = k1.parser_kind_injective;
+    parser_kind_low = lo1;
+    parser_kind_high = hi1;
+    parser_kind_subkind = sk1;
+    parser_kind_metadata = (match md1 with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
+    parser_kind_injective = inj1;
   }
   | Some ParserKindMetadataFail, _ ->
   {
-    parser_kind_low = k2.parser_kind_low;
-    parser_kind_high = k2.parser_kind_high;
-    parser_kind_subkind = k2.parser_kind_subkind;
+    parser_kind_low = lo2;
+    parser_kind_high = hi2;
+    parser_kind_subkind = sk2;
     parser_kind_metadata = None;
-    parser_kind_injective = k2.parser_kind_injective;
+    parser_kind_injective = inj2;
   }
   | _ ->
   {
-    parser_kind_low = (if k1.parser_kind_low < k2.parser_kind_low then k1.parser_kind_low else k2.parser_kind_low);
+    parser_kind_low = (if lo1 < lo2 then lo1 else lo2);
     parser_kind_high = (
-      if is_some k1.parser_kind_high `bool_and` is_some k2.parser_kind_high
-      then if some_v k2.parser_kind_high < some_v k1.parser_kind_high
-	   then k1.parser_kind_high
-	   else k2.parser_kind_high
+      if is_some hi1 `bool_and` is_some hi2
+      then if some_v hi2 < some_v hi1
+	   then hi1
+	   else hi2
       else None
     );
-    parser_kind_metadata = if k1.parser_kind_metadata = k2.parser_kind_metadata then k1.parser_kind_metadata else None;
-    parser_kind_subkind = if k1.parser_kind_subkind = k2.parser_kind_subkind then k1.parser_kind_subkind else None;
-    parser_kind_injective = k1.parser_kind_injective && k2.parser_kind_injective;
+    parser_kind_metadata = if md1 = md2 then md1 else None;
+    parser_kind_subkind = if sk1 = sk2 then sk1 else None;
+    parser_kind_injective = inj1 && inj2;
   }
+  end end
 #pop-options
 #pop-options
 
