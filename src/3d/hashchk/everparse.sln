@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "everparse-hashchk", "everparse-hashchk.fsproj", "{04A0C562-45DD-4E10-95AE-88ABE071E0D0}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "everparse", "everparse.fsproj", "{55411AB0-DF26-43AA-9424-49A2A91E0896}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{04A0C562-45DD-4E10-95AE-88ABE071E0D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04A0C562-45DD-4E10-95AE-88ABE071E0D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04A0C562-45DD-4E10-95AE-88ABE071E0D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04A0C562-45DD-4E10-95AE-88ABE071E0D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55411AB0-DF26-43AA-9424-49A2A91E0896}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55411AB0-DF26-43AA-9424-49A2A91E0896}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55411AB0-DF26-43AA-9424-49A2A91E0896}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55411AB0-DF26-43AA-9424-49A2A91E0896}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

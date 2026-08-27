@@ -99,6 +99,11 @@ jobs:
           ocaml-compiler: 4.14.2
         # This will install Cygwin as well
 
+      - name: Set-up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: src/3d/hashchk/global.json
+
       - name: Install Cygwin packages
         shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
         env:
@@ -119,7 +124,7 @@ jobs:
       - name: Run tests
         shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
         run: >-
-          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make test -kj$(nproc)
+          cd $GITHUB_WORKSPACE && eval $(opam env) && export PATH="$(cygpath -u "$DOTNET_ROOT"):$PATH" && env V=1 MAKE=make make test -kj$(nproc)
 
   build:
     needs: fstar-src
