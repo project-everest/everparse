@@ -313,8 +313,8 @@ pub fn
 serialize_any(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let ser: crate::cbordetver::option__size_t =
-        crate::cbordetver::cbor_det_serialize(any_left(c), out);
+    let c1: crate::cbordetveraux::cbor_raw = any_left(c);
+    let ser: crate::cbordetver::option__size_t = crate::cbordetver::cbor_det_serialize(c1, out);
     match ser
     {
         crate::cbordetver::option__size_t::None => 0usize,
