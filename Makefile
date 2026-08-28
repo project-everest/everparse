@@ -119,9 +119,10 @@ lowparse-unit-test: lowparse
 	+$(MAKE) -C doc 3d-test
 
 # KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
-# what 3d.exe --pulse feeds to KaRaMeL alongside the generated modules.
+# what 3d.exe --pulse feeds to KaRaMeL alongside the generated modules, and the
+# per-backend EverParse.h it copies into the output directory.
 3d-pulse-krml: 3d-pulse-prelude
-	+$(MAKE) -C lib/everparse/3d/krml extract-krml
+	+$(MAKE) -C lib/everparse/3d/krml all
 
 .PHONY: 3d-pulse-krml
 

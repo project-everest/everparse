@@ -204,8 +204,10 @@ make_everparse() {
     #     path, hence sources *and* .checked files;
     #   - lib/everparse/3d/krml/extracted: the same library already extracted
     #     to .krml, which is what gets handed to KaRaMeL alongside the
-    #     generated modules (the Pulse runtime is bundled into the generated
-    #     code rather than shipped as a separate C library);
+    #     generated modules;
+    #   - lib/everparse/3d/krml/<backend>/EverParse.h: the pre-generated
+    #     runtime header, one per input stream backend, copied into the output
+    #     directory just as src/3d/prelude/<backend>/EverParse.h is for Low*;
     #   - lib/pulse: the Pulse standard library, also on the --include path.
     # src/lowparse/pulse is already covered by the src/lowparse copy above, and
     # EverParsePulse{,Endianness}.h are copied out to the output directory by
@@ -221,7 +223,7 @@ make_everparse() {
         $cp -r $EVERPARSE_HOME/lib/everparse/3d everparse/lib/everparse/3d
         # Drop the build machinery: the package ships the results, not the
         # means of producing them.
-        rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile
+        rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile everparse/lib/everparse/3d/krml/header.Makefile
         rm -f everparse/lib/everparse/3d/krml/extracted/.depend
         $cp -r $PULSE_HOME/lib/pulse everparse/lib/
     fi

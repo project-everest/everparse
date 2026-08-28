@@ -74,6 +74,18 @@ let ddd_actions_home input_stream_binding =
 let ddd_actions_c_home input_stream_binding =
   filename_concat ddd_prelude_home (string_of_input_stream_binding input_stream_binding)
 
+(* --pulse: like ddd_actions_c_home, the directory holding the pre-generated
+   EverParse.h for this backend. See lib/everparse/3d/krml/header.Makefile. *)
+let pulse_actions_c_home input_stream_binding =
+  filename_concat
+    (filename_concat pulse_3d_home "krml")
+    (string_of_input_stream_binding input_stream_binding)
+
+let everparse_h_home input_stream_binding =
+  if Options.get_pulse ()
+  then pulse_actions_c_home input_stream_binding
+  else ddd_actions_c_home input_stream_binding
+
 (* command lines *)
 let fstar_args0 krmllib =
   "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,PulseCore,Pulse,EverParse3d.\\*,Spec" ::
@@ -278,6 +290,11 @@ let remove_fst_and_krml_files
 
 let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*"
 
+(* --pulse: same, plus the Pulse library the runtime is built on. This is both
+   the bundle's pattern list and the -library list, which must agree: the
+   pre-generated EverParse.h holds exactly what the bundle emits. *)
+let pulse_everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*"
+
 let fstar_krmllib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
 
 let krml_args input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules =
@@ -392,40 +409,32 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
       (krml_args0 @ krml_files)
       (List.rev add_include)
   in
-  (* In --pulse mode the runtime is not a shipped library: KaRaMeL bundles the
-     Pulse prelude into EverParse.h alongside the generated code. Warning 26
-     (Top-type casts) is expected for the ref-dereference idiom.
+  (* In --pulse mode the Pulse runtime is a shipped library, exactly as the Low*
+     prelude is: lib/everparse/3d/krml/header.Makefile pre-generates one
+     EverParse.h per input stream backend, and copy_everparse_h_raw drops it
+     into the output directory. So KaRaMeL gets -library here too, which turns
+     the runtime into plain `extern` declarations resolved by that header, and
+     regenerating the runtime at every 3d invocation is no longer needed. The
+     generated validators are byte-identical to what -static-header produced,
+     because everything the runtime contributes to them is inline_for_extraction
+     and has already been inlined by F* itself.
 
-     Everything that survives into that bundle is emitted `static inline` into
-     the header (see the -static-header list below), so KaRaMeL writes no
-     EverParse.c at all, matching the self-contained EverParse.h that the Low*
-     backend ships as a prelude. *)
+     Warning 26 (Top-type casts) is expected for the Pulse ref-dereference
+     idiom, which survives in the inlined code. *)
   let backend_args =
     if Options.get_pulse ()
     then
       (* With `--input_stream extern` (and `static`, which shares the module)
          the stream primitives are `assume val`s implemented by the client in
          C, so KaRaMeL's "no corresponding implementation" warning is expected
-         and must not be fatal. The Low* backend gets this for free because it
-         passes `-library EverParse3d.\*`, the whole runtime being shipped as a
-         separate library; in `--pulse` mode the runtime is bundled into the
-         generated code instead, so the warning has to be relaxed explicitly. *)
+         and must not be fatal. *)
       let extern_warns =
         match string_of_input_stream_binding input_stream_binding with
         | "extern" | "static" -> "-2"
         | _ -> ""
       in
-      (* Mirrors the Low* backend's -static-header list, minus
-         EverParse3d.CopyBuffer and EverParse3d.InputStream.\*: those hold the
-         `assume val`s that the client implements in C. Low* can list them
-         because it also passes `-library`, which drops their declarations
-         outright; with no `-library` here, KaRaMeL would instead emit them as
-         `static` prototypes that never get a definition, clashing with the
-         client's non-static one. Everything else in the bundle becomes
-         `static inline` in the header, so no EverParse.c is emitted at all,
-         matching the self-contained EverParse.h that Low* ships. *)
       "-add-include" :: "EverParse:\"EverParsePulseEndianness.h\"" ::
-        "-static-header" :: "Pulse.\\*,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode" ::
+        "-library" :: pulse_everparse_only_bundle ::
         "-warn-error" :: Printf.sprintf "-9@4-20-26%s" extern_warns :: []
     else
       "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
@@ -539,7 +548,7 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
         "-bundle" ;
         "Prims,FStar.\\*,LowStar.\\*[rename=SHOULDNOTBETHERE]";
         "-bundle" ;
-        Printf.sprintf "%s=Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*[rename=EverParse,rename-prefix]" api;
+        Printf.sprintf "%s=%s[rename=EverParse,rename-prefix]" api pulse_everparse_only_bundle;
       ]
     else [
         "-bundle" ;
@@ -831,14 +840,15 @@ let copy_everparse_h_raw
       input_stream_binding
       out_dir =
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      (* In --pulse mode EverParse.h is produced by KaRaMeL itself, so it must
-         not be overwritten by the Low* one. *)
-      if not (Options.get_pulse ())
+      (* Both backends ship a pre-generated, backend-specific EverParse.h: the
+         Low* one from src/3d/prelude/<backend>, the Pulse one from
+         lib/everparse/3d/krml/<backend>. Either way it overwrites the stub of
+         `extern` declarations that KaRaMeL emits for the -library'd runtime. *)
+      let everparse_h_source = filename_concat (everparse_h_home input_stream_binding) "EverParse.h" in
+      if file_exists everparse_h_source
+      then copy everparse_h_source dest_everparse_h;
+      if Options.get_pulse ()
       then begin
-        let everparse_h_source = (filename_concat (ddd_actions_c_home input_stream_binding) "EverParse.h") in
-        if file_exists everparse_h_source
-        then copy everparse_h_source dest_everparse_h
-      end else begin
         let everparse_pulse_h_source = filename_concat ddd_home "EverParsePulse.h" in
         if file_exists everparse_pulse_h_source
         then copy everparse_pulse_h_source (filename_concat out_dir "EverParsePulse.h")
@@ -879,15 +889,14 @@ let postprocess_c
     : unit
   =
   (* copy EverParse.h unless prevented; if prevented and Karamel produced its
-   * own (due to preserved type abbreviations from -no-inline-type-abbrev),
-   * remove it so the caller's expectations of "no EverParse.h here" hold.
-   * In --pulse mode KaRaMeL's EverParse.h is the real one -- it carries the
-   * bundled runtime -- so it must be kept. *)
+   * own (due to preserved type abbreviations from -no-inline-type-abbrev, or
+   * to the -library'd runtime in --pulse mode), remove it so the caller's
+   * expectations of "no EverParse.h here" hold. *)
   if not no_everparse_h
   then begin
       copy_everparse_h_raw input_stream_binding out_dir
     end
-  else if remove_krml_produced_everparse_h && not (Options.get_pulse ())
+  else if remove_krml_produced_everparse_h
   then begin
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
       if Sys.file_exists dest_everparse_h
