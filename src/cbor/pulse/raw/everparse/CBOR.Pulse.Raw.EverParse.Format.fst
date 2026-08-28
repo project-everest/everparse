@@ -963,6 +963,28 @@ fn jump_raw_data_item (_: unit) : jumper #raw_data_item #parse_raw_data_item_kin
     input offset #pm #v
 }
 
+(* Workaround for https://github.com/FStarLang/FStar/issues/4498 : hiding the
+   represented value behind an opaque existential binder prevents the core
+   typechecker from unfolding the scrutinee of a stuck projection such as
+   `dfst (synth_raw_data_item_recip v)`, which it then rejects because `v` is
+   ghost. *)
+noextract [@@noextract_to "krml"]
+ghost
+fn pts_to_serialized_hide
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: t)
+requires pts_to_serialized s input #pm v
+ensures exists* v' . pts_to_serialized s input #pm v' ** pure (v' == v) **
+  trade (pts_to_serialized s input #pm v') (pts_to_serialized s input #pm v)
+{
+  Trade.refl (pts_to_serialized s input #pm v)
+}
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn get_header_and_contents
@@ -990,7 +1012,9 @@ fn get_header_and_contents
     synth_raw_data_item_recip
     input;
   LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  pts_to_serialized_hide (serialize_dtuple2 serialize_header serialize_content) input;
   with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   let ph, outc = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
   unfold (split_dtuple2_post serialize_header serialize_content input pm v' (ph, outc));
   unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
@@ -998,8 +1022,7 @@ fn get_header_and_contents
   let h = read_header () ph;
   Trade.elim_hyp_l _ _ _;
   outh := h;
-  rewrite each dfst (synth_raw_data_item_recip
-                      v) as h;
+  rewrite each dfst v' as h;
   outc
 }
 
