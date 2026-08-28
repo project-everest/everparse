@@ -228,6 +228,24 @@ assume val stream_empty :
       SZ.v res == Seq.length v
     )))
 
+(* An extern stream carries its length and position on the other side of the
+   C boundary, so [len_t] and [pos_t] are [unit] and truncation returns a fresh
+   base handle: [trunc_t = base_t]. Together with the buffer backend's
+   [trunc_t = len_t] this keeps the (base, len, pos) triple from ever being
+   built as a C struct; see the comment on [trunc_t] in
+   EverParse3d.InputStream.Base. *)
+inline_for_extraction
+noextract
+let stream_trunc_base (b: base_t) (len: len_t) (pos: pos_t) (tr: base_t) : Tot base_t = tr
+
+inline_for_extraction
+noextract
+let stream_trunc_len (b: base_t) (len: len_t) (pos: pos_t) (tr: base_t) : Tot len_t = ()
+
+inline_for_extraction
+noextract
+let stream_trunc_pos (b: base_t) (len: len_t) (pos: pos_t) (tr: base_t) : Tot pos_t = ()
+
 assume val stream_truncate :
 (base: base_t) ->
     (len: len_t) ->
@@ -235,14 +253,14 @@ assume val stream_truncate :
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt (base_t & len_t & pos_t)
+    stt base_t
     (requires (
       stream_pts_to base len pos contents v ** pure (
       SZ.v n <= Seq.length v
     )))
     (ensures (fun res -> exists* contents' v1 v2 .
-      stream_pts_to res._1 res._2 res._3 contents' v1 **
-      stream_is_prefix_of res._1 res._2 res._3 base len pos contents v2 **
+      stream_pts_to (stream_trunc_base base len pos res) (stream_trunc_len base len pos res) (stream_trunc_pos base len pos res) contents' v1 **
+      stream_is_prefix_of (stream_trunc_base base len pos res) (stream_trunc_len base len pos res) (stream_trunc_pos base len pos res) base len pos contents v2 **
       pure (
       	SZ.v n <= Seq.length v /\
         Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\
@@ -284,6 +302,10 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
   read = stream_read;
   skip = stream_skip;
   empty = stream_empty;
+  trunc_t = base_t;
+  trunc_base = stream_trunc_base;
+  trunc_len = stream_trunc_len;
+  trunc_pos = stream_trunc_pos;
   truncate = stream_truncate;
   untruncate = stream_untruncate;
 }

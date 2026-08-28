@@ -993,9 +993,18 @@ fn validate_nlist
     validator_error_not_enough_data
   } else {
     let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    (* [truncate] returns only the component the backend actually changes;
+       recover the other two from the original stream. The rewrites give the
+       short names to Pulse's (syntactic) frame inference. *)
+    let tb = inst.trunc_base sl_base sl_len sl_pos tr;
+    let tl = inst.trunc_len sl_base sl_len sl_pos tr;
+    let tp = inst.trunc_pos sl_base sl_len sl_pos tr;
+    rewrite each (inst.trunc_base sl_base sl_len sl_pos tr) as tb;
+    rewrite each (inst.trunc_len sl_base sl_len sl_pos tr) as tl;
+    rewrite each (inst.trunc_pos sl_base sl_len sl_pos tr) as tp;
     with contents1 v1 v2. assert (
-      I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
-      I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
+      I.pts_to tb tl tp contents1 v1 **
+      I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
     parse_list_consumes_all p v1;
@@ -1007,7 +1016,7 @@ fn validate_nlist
       pts_to res vres **
       pts_to stop vstop **
       pts_to ctxt v_ctxt' **
-      I.pts_to tr._1 tr._2 tr._3 contents1 vcur **
+      I.pts_to tb tl tp contents1 vcur **
       forevery_state extra_state extra' **
       pure (
         vcur `I.seq_is_suffix_of` v1 /\
@@ -1020,15 +1029,15 @@ fn validate_nlist
         (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0)
       )
     {
-      with vcur. assert (I.pts_to tr._1 tr._2 tr._3 contents1 vcur);
+      with vcur. assert (I.pts_to tb tl tp contents1 vcur);
       with extra'. assert (forevery_state extra_state extra');
-      let hasMore = I.has tr._1 tr._2 tr._3 1sz contents1 vcur;
+      let hasMore = I.has tb tl tp 1sz contents1 vcur;
       if (not hasMore) {
         stop := true;
       } else {
         LPL.parse_list_eq' p vcur;
-        let r = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra' contents1 vcur;
-        with vcur'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 vcur');
+        let r = v ctxt error_handler_fn tb tl tp extra' contents1 vcur;
+        with vcur'. assert (I.pts_to tb tl tp contents1 vcur');
         seq_is_suffix_of_trans vcur' vcur v1;
         if (r = validator_success) {
           ()
@@ -1039,11 +1048,11 @@ fn validate_nlist
       }
     };
     let fres = !res;
-    with vcur. assert (I.pts_to tr._1 tr._2 tr._3 contents1 vcur);
+    with vcur. assert (I.pts_to tb tl tp contents1 vcur);
     LPL.parse_list_eq p vcur;
     Seq.lemma_eq_elim v1 (Seq.slice v_sl 0 (U32.v n));
     seq_is_suffix_of_append vcur v1 v2;
-    I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 vcur contents_sl v2;
+    I.untruncate tb tl tp sl_base sl_len sl_pos contents1 vcur contents_sl v2;
     if (fres = validator_success) {
       seq_append_nil_slice v_sl v1 v2 vcur (U32.v n);
       fres
@@ -1088,24 +1097,33 @@ fn validate_t_at_most
   } else {
     LowParse.Spec.Combinators.nondep_then_eq p parse_all_bytes (Seq.slice v_sl 0 (U32.v n));
     let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    (* [truncate] returns only the component the backend actually changes;
+       recover the other two from the original stream. The rewrites give the
+       short names to Pulse's (syntactic) frame inference. *)
+    let tb = inst.trunc_base sl_base sl_len sl_pos tr;
+    let tl = inst.trunc_len sl_base sl_len sl_pos tr;
+    let tp = inst.trunc_pos sl_base sl_len sl_pos tr;
+    rewrite each (inst.trunc_base sl_base sl_len sl_pos tr) as tb;
+    rewrite each (inst.trunc_len sl_base sl_len sl_pos tr) as tl;
+    rewrite each (inst.trunc_pos sl_base sl_len sl_pos tr) as tp;
     with contents1 v1 v2. assert (
-      I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
-      I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
+      I.pts_to tb tl tp contents1 v1 **
+      I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
-    let res = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra _ _;
+    let res = v ctxt error_handler_fn tb tl tp extra _ _;
     if (res = validator_success) {
-      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
-      let unused = I.empty tr._1 tr._2 tr._3 contents1 v1';
+      with v1'. assert (I.pts_to tb tl tp contents1 v1');
+      let unused = I.empty tb tl tp contents1 v1';
       seq_empty_is_suffix_of v1;
       seq_is_suffix_of_append (Seq.empty #LP.byte) v1 v2;
-      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 (Seq.empty #LP.byte) contents_sl v2;
+      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 (Seq.empty #LP.byte) contents_sl v2;
       seq_append_empty_slice v_sl v1 v2 (U32.v n);
       validator_success
     } else {
-      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
+      with v1'. assert (I.pts_to tb tl tp contents1 v1');
       seq_is_suffix_of_append v1' v1 v2;
-      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 v1' contents_sl v2;
       res
     }
   }
@@ -1145,17 +1163,26 @@ fn validate_t_exact
     validator_error_not_enough_data
   } else {
     let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    (* [truncate] returns only the component the backend actually changes;
+       recover the other two from the original stream. The rewrites give the
+       short names to Pulse's (syntactic) frame inference. *)
+    let tb = inst.trunc_base sl_base sl_len sl_pos tr;
+    let tl = inst.trunc_len sl_base sl_len sl_pos tr;
+    let tp = inst.trunc_pos sl_base sl_len sl_pos tr;
+    rewrite each (inst.trunc_base sl_base sl_len sl_pos tr) as tb;
+    rewrite each (inst.trunc_len sl_base sl_len sl_pos tr) as tl;
+    rewrite each (inst.trunc_pos sl_base sl_len sl_pos tr) as tp;
     with contents1 v1 v2. assert (
-      I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
-      I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
+      I.pts_to tb tl tp contents1 v1 **
+      I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
-    let res = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra _ _;
+    let res = v ctxt error_handler_fn tb tl tp extra _ _;
     if (res = validator_success) {
-      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
-      let stillHasBytes = I.has tr._1 tr._2 tr._3 1sz contents1 v1';
+      with v1'. assert (I.pts_to tb tl tp contents1 v1');
+      let stillHasBytes = I.has tb tl tp 1sz contents1 v1';
       seq_is_suffix_of_append v1' v1 v2;
-      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 v1' contents_sl v2;
       if (stillHasBytes) {
         validator_error_unexpected_padding
       } else {
@@ -1163,9 +1190,9 @@ fn validate_t_exact
         validator_success
       }
     } else {
-      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
+      with v1'. assert (I.pts_to tb tl tp contents1 v1');
       seq_is_suffix_of_append v1' v1 v2;
-      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 v1' contents_sl v2;
       res
     }
   }

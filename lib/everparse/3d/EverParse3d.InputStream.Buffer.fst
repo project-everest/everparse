@@ -157,15 +157,31 @@ ensures stream_pts_to b len pos contents Seq.empty **
   SZ.sub len p
 }
 
+(* Truncating a byte-array stream leaves the base pointer and the position cell
+   alone and only shortens the length, so [trunc_t] is just [len_t] and
+   [stream_truncate] extracts to a plain `size_t`-returning function. See the
+   comment on [trunc_t] in EverParse3d.InputStream.Base. *)
+inline_for_extraction
+noextract
+let stream_trunc_base (b: base_t) (len: len_t) (pos: pos_t) (tr: len_t) : Tot base_t = b
+
+inline_for_extraction
+noextract
+let stream_trunc_len (b: base_t) (len: len_t) (pos: pos_t) (tr: len_t) : Tot len_t = tr
+
+inline_for_extraction
+noextract
+let stream_trunc_pos (b: base_t) (len: len_t) (pos: pos_t) (tr: len_t) : Tot pos_t = pos
+
 inline_for_extraction
 fn stream_truncate
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v ** pure (SZ.v n <= Seq.length v)
-returns res: (base_t & len_t & pos_t)
+returns res: len_t
 ensures exists* contents' v1 v2 .
-  stream_pts_to res._1 res._2 res._3 contents' v1 **
-  stream_is_prefix_of res._1 res._2 res._3 b len pos contents v2 **
+  stream_pts_to (stream_trunc_base b len pos res) (stream_trunc_len b len pos res) (stream_trunc_pos b len pos res) contents' v1 **
+  stream_is_prefix_of (stream_trunc_base b len pos res) (stream_trunc_len b len pos res) (stream_trunc_pos b len pos res) b len pos contents v2 **
   pure (
     SZ.v n <= Seq.length v /\
     Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\
@@ -184,26 +200,12 @@ ensures exists* contents' v1 v2 .
     (Seq.append
       (Seq.slice contents (SZ.v p) (SZ.v m))
       (Seq.slice contents (SZ.v m) (SZ.v len)));
-  let bb : base_t = b;
-  let mm : len_t = m;
-  let pp : pos_t = pos;
-  let ret : (base_t & len_t & pos_t) = (bb, mm, pp);
   fold (stream_pts_to b m pos
           (Seq.slice contents 0 (SZ.v m))
           (Seq.slice contents (SZ.v p) (SZ.v m)));
   fold (stream_is_prefix_of b m pos b len pos contents
           (Seq.slice contents (SZ.v m) (SZ.v len)));
-  rewrite (stream_pts_to b m pos
-             (Seq.slice contents 0 (SZ.v m))
-             (Seq.slice contents (SZ.v p) (SZ.v m)))
-    as (stream_pts_to ret._1 ret._2 ret._3
-             (Seq.slice contents 0 (SZ.v m))
-             (Seq.slice contents (SZ.v p) (SZ.v m)));
-  rewrite (stream_is_prefix_of b m pos b len pos contents
-             (Seq.slice contents (SZ.v m) (SZ.v len)))
-    as (stream_is_prefix_of ret._1 ret._2 ret._3 b len pos contents
-             (Seq.slice contents (SZ.v m) (SZ.v len)));
-  ret
+  m
 }
 
 ghost
@@ -289,6 +291,10 @@ instance input_stream_buffer : I.input_stream_inst base_t len_t pos_t = {
   read = stream_read;
   skip = stream_skip;
   empty = stream_empty;
+  trunc_t = len_t;
+  trunc_base = stream_trunc_base;
+  trunc_len = stream_trunc_len;
+  trunc_pos = stream_trunc_pos;
   truncate = stream_truncate;
   untruncate = stream_untruncate;
 }

@@ -161,6 +161,25 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
       SZ.v res == Seq.length v
     )));
 
+  (* [truncate] conceptually returns a whole (base, len, pos) triple, but
+     returning one would extract to a C struct that KaRaMeL monomorphizes into
+     whichever *generated* module happens to use it first, and then has to
+     share through an `internal/` header. Instead each instance names the one
+     component it actually modifies -- [trunc_t] -- and recovers the other two
+     from the original stream through the projections below. Buffer sets
+     [trunc_t = len_t] (it re-bases nothing and only shortens the length),
+     extern sets [trunc_t = base_t] (its length and position are [unit]), so in
+     both backends [truncate] extracts to a scalar-returning function and no
+     struct is ever built. *)
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  trunc_t: Type0;
+
+  trunc_base: (base: base_t) -> (len: len_t) -> (pos: pos_t) -> (tr: trunc_t) -> Tot base_t;
+
+  trunc_len: (base: base_t) -> (len: len_t) -> (pos: pos_t) -> (tr: trunc_t) -> Tot len_t;
+
+  trunc_pos: (base: base_t) -> (len: len_t) -> (pos: pos_t) -> (tr: trunc_t) -> Tot pos_t;
+
   truncate:
     (base: base_t) ->
     (len: len_t) ->
@@ -168,14 +187,14 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt (base_t & len_t & pos_t)
+    stt trunc_t
     (requires (
       pts_to base len pos contents v ** pure (
       SZ.v n <= Seq.length v
     )))
     (ensures (fun res -> exists* contents' v1 v2 .
-      pts_to res._1 res._2 res._3 contents' v1 **
-      is_prefix_of res._1 res._2 res._3 base len pos contents v2 **
+      pts_to (trunc_base base len pos res) (trunc_len base len pos res) (trunc_pos base len pos res) contents' v1 **
+      is_prefix_of (trunc_base base len pos res) (trunc_len base len pos res) (trunc_pos base len pos res) base len pos contents v2 **
       pure (
       	SZ.v n <= Seq.length v /\
         Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\
