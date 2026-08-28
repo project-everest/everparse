@@ -31,7 +31,7 @@ quackyducky-sample0-test:
 
 .PHONY: quackyducky-sample0-test
 
-clean: clean-unit sample0.clean sample_low.clean sample.clean bitfields.clean lowparse.clean
+clean: clean-unit sample0.clean sample_low.clean sample.clean bitfields.clean lowparse.clean pulse.clean
 
 .PHONY: clean
 

@@ -303,14 +303,12 @@ fn write_expr_base_payload_plus
     (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1 x1' x)
     (rel_base x1' y');
   rel_base_cases _ _;
-  let EUPlus count pl = x1';
-  let n = Ghost.hide (Plus?.n y');
-  let l = Ghost.hide (Plus?.l y');
+  norewrite let EUPlus count pl = x1';
   Trade.rewrite_with_trade
     (rel_base x1' y')
-    (rel_base_EUPlus count pl n () l);
+    (rel_base_EUPlus count pl (count_payload xh1) () x);
   Trade.trans _ (rel_base x1' y') _;
-  unfold_vmatch_and_const (pure (eq2 #nat n (U8.v count))) (pts_to_serialized_with_perm (serialize_nlist n serialize_expr)) pl l;
+  unfold_vmatch_and_const (pure (eq2 #nat (count_payload xh1) (U8.v count))) (pts_to_serialized_with_perm (serialize_nlist (count_payload xh1) serialize_expr)) pl x;
   Trade.trans _ _ (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1 x1' x);
   Trade.elim_hyp_l _ _ _;
   pl
@@ -329,16 +327,15 @@ fn write_expr_base_payload_minus
   (x1': _)
   (x: _)
 {
-  let y' : Ghost.erased expr = (synth_expr (| xh1, pair_to_nlist _ x |));
+  let y' : Ghost.erased expr = (synth_expr (| xh1, pair_to_nlist expr (Ghost.reveal x) |));
   Trade.rewrite_with_trade
-    (vmatch_synth (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1) (pair_to_nlist _) x1' x)
+    (vmatch_synth (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1) (pair_to_nlist expr) x1' x)
     (rel_base x1' y');
   rel_base_cases _ _;
-  let EUMinus fs sn = x1';
-  let v = Ghost.hide (Minus?._0 y');
+  norewrite let EUMinus fs sn = x1';
   Trade.rewrite_with_trade
     (rel_base x1' y')
-    (vmatch_pair (pts_to_serialized_with_perm serialize_expr) (pts_to_serialized_with_perm serialize_expr) (fs, sn) v);
+    (vmatch_pair (pts_to_serialized_with_perm serialize_expr) (pts_to_serialized_with_perm serialize_expr) (fs, sn) x);
   Trade.trans _ (rel_base x1' y') _;
   (fs, sn)
 }
@@ -434,28 +431,32 @@ ensures
 {
   unfold (vmatch_synth rel_base synth_expr xl xh);
   let xh' = Ghost.hide (synth_expr xh);
+  rewrite (rel_base xl (synth_expr xh)) as (rel_base xl xh');
   rel_base_cases xl xh';
   match xl {
-    EUPlus count payload -> {
+    norewrite EUPlus count payload -> {
       let n = Ghost.hide (Plus?.n xh');
       let l : Ghost.erased (nlist (Ghost.reveal n) expr) = Ghost.hide (Plus?.l xh');
       Trade.rewrite_with_trade (rel_base xl xh') (rel_base_EUPlus count payload n () l);
       unfold (vmatch_and_const (pure (eq2 #nat n (U8.v count))) (pts_to_serialized_with_perm (serialize_nlist n serialize_expr)) payload l);
       fold (vmatch_and_const (pure (eq2 #nat n (U8.v count))) (pts_to_serialized_with_perm (serialize_nlist n serialize_expr)) payload l);
       Trade.elim _ _;
+      rewrite (rel_base xl xh') as (rel_base xl (synth_expr xh));
       fold (vmatch_synth rel_base synth_expr xl xh);
       mk_header count (HUnit #count () ())
     }
-    EValue v -> {
+    norewrite EValue v -> {
       let v' : Ghost.erased U64.t = Value?._0 xh';
       Trade.rewrite_with_trade (rel_base xl xh') (eq_as_slprop U64.t v v');
       unfold (eq_as_slprop U64.t v v');
       fold (eq_as_slprop U64.t v v');
       Trade.elim _ _;
+      rewrite (rel_base xl xh') as (rel_base xl (synth_expr xh));
       fold (vmatch_synth rel_base synth_expr xl xh);
       mk_header 255uy (HValue () v)
     }
-    EUMinus _ _ -> {
+    norewrite EUMinus _ _ -> {
+      rewrite (rel_base xl xh') as (rel_base xl (synth_expr xh));
       fold (vmatch_synth rel_base synth_expr xl xh);
       mk_header 254uy (HUnit () ())
     }
@@ -488,7 +489,7 @@ fn write_expr_rec_base
 {
   vmatch_with_cond_elim_trade rel EBase? x1' x;
   rel_cases _ _;
-  let EBase res = x1';
+  norewrite let EBase res = x1';
   Trade.rewrite_with_trade
     (rel x1' x)
     (rel_base res x);
@@ -529,18 +530,15 @@ fn write_expr_rec_not_base_payload_plus_lens
   vmatch_dep_proj2_elim_trade (vmatch_synth (vmatch_with_cond rel (pnot EBase?)) synth_expr) xh1 x1' x;
   vmatch_synth_elim_trade (vmatch_with_cond rel (pnot EBase?)) synth_expr x1' (| xh1, Ghost.reveal x |);
   Trade.trans _ _ (vmatch_dep_proj2 (vmatch_synth (vmatch_with_cond rel (pnot EBase?)) synth_expr) xh1 x1' x);
-  let y' : Ghost.erased expr = Ghost.hide (synth_expr (| xh1, Ghost.reveal x |));
-  vmatch_with_cond_elim_trade rel (pnot EBase?) x1' y';
+  vmatch_with_cond_elim_trade rel (pnot EBase?) x1' (synth_expr (| xh1, Ghost.reveal x |));
   Trade.trans _ _ (vmatch_dep_proj2 (vmatch_synth (vmatch_with_cond rel (pnot EBase?)) synth_expr) xh1 x1' x);
   rel_cases _ _;
-  rel_eq x1' y';
-  let EPlus s = x1';
-  let n = Ghost.hide (Plus?.n y');
-  let l = Ghost.hide (Plus?.l y');
+  rel_eq x1' (synth_expr (| xh1, Ghost.reveal x |));
+  norewrite let EPlus s = x1';
   Trade.rewrite_with_trade
-    (rel x1' y')
-    (nlist_match_slice0 rel (count_payload xh1) s l);
-  Trade.trans _ (rel x1' y') _;
+    (rel x1' (synth_expr (| xh1, Ghost.reveal x |)))
+    (nlist_match_slice0 rel (count_payload xh1) s x);
+  Trade.trans _ (rel x1' (synth_expr (| xh1, Ghost.reveal x |))) _;
   s
 }
 
@@ -594,11 +592,10 @@ fn write_expr_rec_not_base_payload_minus_lens
           xh1)
       (pair_to_nlist expr) _ _);
   rel_cases _ _;
-  let EMinus fs sn = x1';
+  norewrite let EMinus fs sn = x1';
   with y' . assert (rel x1' y');
-  let ph = Ghost.hide (Minus?._0 y');
   rel_eq x1' y';
-  Trade.rewrite_with_trade (rel x1' y') (vmatch_pair (vmatch_ref rel) (vmatch_ref rel) (fs, sn) ph);
+  Trade.rewrite_with_trade (rel x1' y') (vmatch_pair (vmatch_ref rel) (vmatch_ref rel) (fs, sn) x');
   Trade.trans _ _ (vmatch_synth (vmatch_dep_proj2 (vmatch_synth (vmatch_with_cond rel (pnot EBase?))
               synth_expr)
           xh1)
@@ -666,19 +663,18 @@ ensures
 {
   vmatch_synth_elim_trade
     (vmatch_with_cond rel (pnot EBase?)) synth_expr xl xh;
-  let xh' = Ghost.hide (synth_expr xh);
-  vmatch_with_cond_elim_trade rel (pnot EBase?) xl xh';
+  vmatch_with_cond_elim_trade rel (pnot EBase?) xl (synth_expr xh);
   Trade.trans _ _ (vmatch_synth (vmatch_with_cond rel (pnot EBase?)) synth_expr xl xh);
   rel_cases _ _;
-  rel_eq xl xh';
+  rel_eq xl (synth_expr xh);
   match xl {
-    EPlus s -> {
-      let n = Ghost.hide (Plus?.n xh');
-      let l = Ghost.hide (Plus?.l xh');
+    norewrite EPlus s -> {
+      let n = Ghost.hide (Plus?.n (synth_expr xh));
+      let l = Ghost.hide (Plus?.l (synth_expr xh));
       Trade.rewrite_with_trade
-        (rel xl xh')
+        (rel xl (synth_expr xh))
         (nlist_match_slice0 rel n s l);
-      Trade.trans _ (rel xl xh') _;
+      Trade.trans _ (rel xl (synth_expr xh)) _;
       nlist_match_slice0_elim_trade rel n s l;
       Trade.trans _ _ (vmatch_synth (vmatch_with_cond rel (pnot EBase?)) synth_expr xl xh);
       S.pts_to_len s.v;
@@ -689,7 +685,7 @@ ensures
       let res8 = FStar.Int.Cast.uint32_to_uint8 res32;
       mk_header res8 (HUnit () ())
     }
-    EMinus fs sn -> {
+    norewrite EMinus fs sn -> {
       Trade.elim _ _;
       mk_header 254uy (HUnit () ())
     }
@@ -736,6 +732,14 @@ let write_expr_rec
     )
     (write_expr_rec_not_base w)
 
+(* NOTE: this recursive knot goes through the higher-order combinator
+   `write_expr_rec`, which is polymorphic in the high-level value, so Pulse
+   cannot discharge the `decreases` proof obligation (it boils down to
+   `x << x`). Older versions of Pulse accepted `fn rec` with no `decreases`
+   clause at all and silently admitted termination; we now have to admit it
+   explicitly. `divergent fn rec` is not an option here, since the
+   combinators above all expect a total (`stt`) writer. *)
+#push-options "--admit_smt_queries true"
 fn rec write_expr
   (x': expr_t)
   (#x: Ghost.erased expr)
@@ -751,9 +755,11 @@ ensures exists* v' .
   pts_to out v' ** rel x' x ** pure (
   l2r_writer_for_post serialize_expr x offset v res v'
 )
+decreases x
 {
   write_expr_rec write_expr x' #x out offset #v
 }
+#pop-options
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let write_expr' : l2r_writer rel serialize_expr = write_expr
@@ -796,17 +802,17 @@ fn value_lens
   Trade.rewrite_with_trade
     (eq_as_slprop U64.t value value)
     (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh res ph);
-  unfold (vmatch_ignore pl ph);
+  unfold (vmatch_ignore pl (Ghost.reveal ph));
   intro
     (Trade.trade
       (eq_as_slprop U64.t value value)
-      (vmatch_ignore pl ph)
+      (vmatch_ignore pl (Ghost.reveal ph))
     )
     #emp
     fn _
   {
     unfold (eq_as_slprop U64.t value value);
-    fold (vmatch_ignore pl ph);
+    fold (vmatch_ignore pl (Ghost.reveal ph));
   };
   Trade.trans (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh res ph) _ _;
   res
@@ -872,14 +878,13 @@ fn minus_lens
 = (pl: _)
   (ph: _)
 {
-  let (fs, sn) = pl;
+  norewrite let (fs, sn) = pl;
   let res = (EUMinus fs sn);
-  let ph' = Ghost.hide (pair_to_nlist_recip expr ph);
   vmatch_synth_elim_trade _ _ _ _;
   Trade.rewrite_with_trade
     (vmatch_pair (pts_to_serialized_with_perm serialize_expr)
       (pts_to_serialized_with_perm serialize_expr)
-      pl ph')
+      pl (pair_to_nlist_recip expr ph))
     (vmatch_dep_proj2 #expr_base_t
       #header
       #(parse_recursive_payload_t expr header count_payload)
@@ -893,7 +898,7 @@ fn minus_lens
     _
     (vmatch_pair (pts_to_serialized_with_perm serialize_expr)
       (pts_to_serialized_with_perm serialize_expr)
-      pl ph')
+      pl (pair_to_nlist_recip expr ph))
     _;
   res
 }
