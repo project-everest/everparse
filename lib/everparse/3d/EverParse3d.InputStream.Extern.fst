@@ -259,8 +259,8 @@ assume val stream_truncate :
       SZ.v n <= Seq.length v
     )))
     (ensures (fun res -> exists* contents' v1 v2 .
-      stream_pts_to (stream_trunc_base base len pos res) (stream_trunc_len base len pos res) (stream_trunc_pos base len pos res) contents' v1 **
-      stream_is_prefix_of (stream_trunc_base base len pos res) (stream_trunc_len base len pos res) (stream_trunc_pos base len pos res) base len pos contents v2 **
+      stream_pts_to res () () contents' v1 **
+      stream_is_prefix_of res () () base len pos contents v2 **
       pure (
       	SZ.v n <= Seq.length v /\
         Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\

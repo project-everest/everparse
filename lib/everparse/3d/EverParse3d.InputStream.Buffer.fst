@@ -180,8 +180,8 @@ fn stream_truncate
 requires stream_pts_to b len pos contents v ** pure (SZ.v n <= Seq.length v)
 returns res: len_t
 ensures exists* contents' v1 v2 .
-  stream_pts_to (stream_trunc_base b len pos res) (stream_trunc_len b len pos res) (stream_trunc_pos b len pos res) contents' v1 **
-  stream_is_prefix_of (stream_trunc_base b len pos res) (stream_trunc_len b len pos res) (stream_trunc_pos b len pos res) b len pos contents v2 **
+  stream_pts_to b res pos contents' v1 **
+  stream_is_prefix_of b res pos b len pos contents v2 **
   pure (
     SZ.v n <= Seq.length v /\
     Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\
