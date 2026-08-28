@@ -230,7 +230,25 @@ let emit_fstar_code_for_interpreter (en:env)
       else ""
     in
  
-    let module_prefix = 
+    let module_prefix =
+      if Options.get_pulse ()
+      then
+       FStar.Printf.sprintf "module %s\n\
+                             open Pulse.Lib.Pervasives\n\
+                             open EverParse3d.Prelude\n\
+                             open EverParse3d.State\n\
+                             open EverParse3d.Actions.Base\n\
+                             open EverParse3d.Interpreter\n\
+                             %s\n\
+                             module T = FStar.Tactics\n\
+                             module A = EverParse3d.Actions.Base\n\
+                             module P = EverParse3d.Prelude\n\
+                             module I = EverParse3d.InputStream.Base\n\
+                             module B = %s\n\
+                             #set-options \"--fuel 0 --ifuel 0 --z3rlimit 32 --ext optimize_let_vc\"\n"
+                             modul maybe_open_external_api
+                             (Options.pulse_backend_module ())
+      else
        FStar.Printf.sprintf "module %s\n\
                              open EverParse3d.Prelude\n\
                              open EverParse3d.Actions.All\n\
@@ -556,7 +574,13 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
+    if Options.get_pulse ()
+    then
+      (* KaRaMeL emits no makefiles under --pulse; use EverParse's own, which
+         needs neither krmllib's headers nor libkrmllib.a. *)
+      OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
+    else
+      OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
   end
 
 let build_and_run_test_exe
@@ -618,11 +642,12 @@ let produce_z3_and_test
   (out_dir: string)
   (name: string)
 : Tot process_files_t
-= produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+= produce_z3_and_test_gen batch produce_testcases_c out_dir
+    (fun out_file nbwitnesses prog z3 ->
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_test out_dir out_file z3 print_c_initializers use_ptr flight prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
+    Z3TestGen.do_test out_dir out_file z3 use_ptr print_c_initializers flight prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
@@ -632,11 +657,12 @@ let produce_z3_and_diff_test
   (names: (string & string))
 : Tot process_files_t
 = let (name1, name2) = names in
-  produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+  produce_z3_and_test_gen batch produce_testcases_c out_dir
+    (fun out_file nbwitnesses prog z3 ->
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_diff_test out_dir out_file z3 print_c_initializers use_ptr flight prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
+    Z3TestGen.do_diff_test out_dir out_file z3 use_ptr print_c_initializers flight prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
   )
 
 let produce_test_checker_exe

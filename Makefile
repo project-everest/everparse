@@ -10,7 +10,7 @@ package-subset: quackyducky lowparse 3d
 
 .PHONY: package-subset
 
-clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc
+clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-3d-pulse-prelude clean-3d-pulse-tests clean-doc
 other_clean_rules += distclean
 
 include nofstar.Makefile
@@ -37,10 +37,11 @@ EVERPARSE_SRC_PATH := $(realpath src)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+SRC_DIRS += src/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
 
 ifeq (,$(NO_PULSE))
   SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+  SRC_DIRS += lib/everparse/3d
 endif
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
@@ -68,7 +69,7 @@ lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-prelude-verify: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+3d-prelude-verify: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 .PHONY: 3d-prelude-verify
 
@@ -81,6 +82,20 @@ endif
 	+$(MAKE) -C src/3d 3d
 
 .PHONY: 3d-exe
+
+# lowparse needed because of .fst behind .fsti for extraction
+3d-pulse-prelude: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES))) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
+
+.PHONY: 3d-pulse-prelude
+
+3d: 3d-pulse-prelude
+
+# The binary package ships the Pulse 3d runtime already extracted to .krml, so
+# that `3d.exe --pulse` has nothing left to build. Hence the krml extraction is
+# part of the packaged subset, not just of the test targets.
+ifeq (,$(NO_PULSE))
+3d: 3d-pulse-krml
+endif
 
 3d: 3d-prelude 3d-exe
 
@@ -103,7 +118,26 @@ lowparse-unit-test: lowparse
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
+# KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
+# what 3d.exe --pulse feeds to KaRaMeL alongside the generated modules, and the
+# per-backend EverParse.h it copies into the output directory.
+3d-pulse-krml: 3d-pulse-prelude
+	+$(MAKE) -C lib/everparse/3d/krml all
+
+.PHONY: 3d-pulse-krml
+
+# The Pulse combinator backend (--pulse): generation, F* verification,
+# KaRaMeL extraction to C, then compiling and running the C tests.
+3d-pulse-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C share/everparse/tests/3d
+
+.PHONY: 3d-pulse-test
+
 3d-test: 3d-unit-test 3d-doc-test
+
+ifeq (,$(NO_PULSE))
+3d-test: 3d-pulse-test
+endif
 
 asn1-test: asn1
 	+$(MAKE) -C src/ASN1 test
@@ -342,7 +376,7 @@ clean-cddl:
 .PHONY: clean-cbor-verify
 
 clean-bin:
-	rm -rf bin lib
+	rm -rf bin
 
 .PHONY: clean-bin
 
@@ -360,6 +394,19 @@ clean-3d-tests:
 	+$(MAKE) -C src/3d/tests clean
 
 .PHONY: clean-3d-tests
+
+# The Pulse prelude and its test corpus. Neither is reachable from clean-3d or
+# clean-3d-tests: src/3d/Makefile cleans the Low* prelude in src/3d/prelude,
+# and src/3d/tests is the Low* corpus.
+clean-3d-pulse-prelude:
+	+$(MAKE) -C lib/everparse/3d clean
+
+.PHONY: clean-3d-pulse-prelude
+
+clean-3d-pulse-tests:
+	+$(MAKE) -C share/everparse/tests/3d clean
+
+.PHONY: clean-3d-pulse-tests
 
 clean-doc:
 	+$(MAKE) -C doc clean

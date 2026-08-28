@@ -510,7 +510,8 @@ let produce_clang_format_rule
 
 let produce_everparse_h_rule
   (everparse_h: bool)
-: Tot (list rule_t)
+  (all_modules: list string)
+: FStar.All.ML (list rule_t)
 =
   if everparse_h
   then [
@@ -522,7 +523,14 @@ let produce_everparse_h_rule
     };
     {
       ty = Nop;
-      from = [mk_filename "EverParseEndianness" "h"];
+      (* In --pulse mode EverParse.h is not copied from the prelude: KaRaMeL
+         emits it, carrying the bundled runtime, at the same time as the .c
+         files. So it is those, not EverParseEndianness.h, that it follows. *)
+      from =
+        if Options.get_pulse ()
+        then mk_filename "EverParseEndianness" "h" ::
+             List.Tot.map (fun m -> mk_filename m "c") all_modules
+        else [mk_filename "EverParseEndianness" "h"];
       to = mk_filename "EverParse" "h";
       args = "";
     }
@@ -577,7 +585,7 @@ let produce_makefile
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.module_name all_files in
   let rules =
-    produce_everparse_h_rule everparse_h `List.Tot.append`
+    produce_everparse_h_rule everparse_h all_modules `List.Tot.append`
     produce_clang_format_rule clang_format copy_clang_format_opt `List.Tot.append`
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule mtype everparse_h g) all_modules `List.Tot.append`
