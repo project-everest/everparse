@@ -1,4 +1,8 @@
 module Getopt
+
+open FStar.All
+open FStar.Char
+
 let noshort = '\0'
 
 let bind (l: parse_cmdline_res) (f: unit -> ML parse_cmdline_res) : ML parse_cmdline_res =
@@ -13,7 +17,7 @@ let bind (l: parse_cmdline_res) (f: unit -> ML parse_cmdline_res) : ML parse_cmd
  * Otherwise, returns Some (o, s) where [s] is the trimmed option, and [o]
  * is the opt we found in specs (possibly None if not present, which should
  * trigger an error) *)
-let find_matching_opt specs s : ML (option (option opt * string)) =
+let find_matching_opt specs s : ML (option (option opt & string)) =
   if String.length s < 2 then
     None
   else if String.sub s 0 2 = "--" then
