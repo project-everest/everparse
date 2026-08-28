@@ -25,3 +25,10 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 extract-krml: $(ALL_KRML_FILES)
 
 .PHONY: extract-krml
+
+# common.Makefile's clean-krml only removes $(OUTPUT_DIRECTORY)/*.krml, which
+# leaves the directory and the .depend it holds behind. Drop the lot.
+clean-extracted:
+	rm -rf $(OUTPUT_DIRECTORY)
+
+.PHONY: clean-extracted

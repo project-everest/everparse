@@ -10,7 +10,7 @@ package-subset: quackyducky lowparse 3d
 
 .PHONY: package-subset
 
-clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc
+clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-3d-pulse-prelude clean-3d-pulse-tests clean-doc
 other_clean_rules += distclean
 
 include nofstar.Makefile
@@ -393,6 +393,19 @@ clean-3d-tests:
 	+$(MAKE) -C src/3d/tests clean
 
 .PHONY: clean-3d-tests
+
+# The Pulse prelude and its test corpus. Neither is reachable from clean-3d or
+# clean-3d-tests: src/3d/Makefile cleans the Low* prelude in src/3d/prelude,
+# and src/3d/tests is the Low* corpus.
+clean-3d-pulse-prelude:
+	+$(MAKE) -C lib/everparse/3d clean
+
+.PHONY: clean-3d-pulse-prelude
+
+clean-3d-pulse-tests:
+	+$(MAKE) -C share/everparse/tests/3d clean
+
+.PHONY: clean-3d-pulse-tests
 
 clean-doc:
 	+$(MAKE) -C doc clean

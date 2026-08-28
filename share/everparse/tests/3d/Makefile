@@ -242,6 +242,6 @@ clean-files:
 	rm -rf $(OUT_DIR) $(VERIFY_DIR) $(ELF_DIR) $(CLEANUP_DIR) $(INPLACE_DIR) \
 	  $(Z3TESTGEN_DIR) $(INTERPRET_DIR) out.fail.pulse test-cpp.pulse.exe \
 	  test-cpp-interpret.pulse.exe *.out *.err
-	for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
+	set -e ; for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
 
 clean: clean-files

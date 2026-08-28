@@ -6,6 +6,6 @@ extract-krml:
 .PHONY: all extract-krml
 
 clean:
-	rm -rf extracted
+	+$(MAKE) -f extract.Makefile clean
 
 .PHONY: clean
