@@ -23,11 +23,11 @@ interpret: $(SOURCE_FILES) TPoint.out AnonUnion.out AnonStruct.out ExternVector.
 	$(EVERPARSE_CMD) --batch AnonStruct.3d --odir AnonStruct.out
 	$(EVERPARSE_CMD) --batch ExternVector.3d --odir ExternVector.out
 	$(EVERPARSE_CMD) --batch OutputBitFields.3d --odir OutputBitFields.out
-	$(CXX) -o AnonStruct.out/test1 -I AnonStruct.out $(addprefix AnonStruct.out/, AnonStruct_OutputTypes.c AnonStruct.c AnonStructWrapper.c EverParse.c) TestAnonStruct.cpp
+	$(CXX) -o AnonStruct.out/test1 -I AnonStruct.out $(addprefix AnonStruct.out/, AnonStruct_OutputTypes.c AnonStruct.c AnonStructWrapper.c) TestAnonStruct.cpp
 	./AnonStruct.out/test1
-	$(CXX) -o TPoint.out/test2 -I TPoint.out $(addprefix TPoint.out/, TPoint_OutputTypes.c TPoint.c TPointWrapper.c EverParse.c) TestTPoint.cpp
+	$(CXX) -o TPoint.out/test2 -I TPoint.out $(addprefix TPoint.out/, TPoint_OutputTypes.c TPoint.c TPointWrapper.c) TestTPoint.cpp
 	./TPoint.out/test2
-	$(CC) -o ExternVector.out/test3 -I ExternVector.out -I . $(addprefix ExternVector.out/, ExternVector.c ExternVectorWrapper.c EverParse.c) ExternVectorDriver.c
+	$(CC) -o ExternVector.out/test3 -I ExternVector.out -I . $(addprefix ExternVector.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
 	./ExternVector.out/test3
 
 EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src

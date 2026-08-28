@@ -456,43 +456,6 @@ let produce_o_rule
     args = c_to_o mtype o c;
   }
 
-let produce_everparse_c_rule
-  (everparse_h: bool)
-  (all_modules: list string)
-: FStar.All.ML (list rule_t)
-=
-  (* KaRaMeL emits the bundled Pulse runtime as EverParse.c together with the
-     generated .c files, so that step is what this follows. It also needs the
-     Pulse support headers that the copy_everparse_h step drops next to
-     EverParseEndianness.h. *)
-  if Options.get_pulse ()
-  then [{
-      ty = Nop;
-      from =
-        (if everparse_h then [mk_filename "EverParseEndianness" "h"] else []) `List.Tot.append`
-        List.Tot.map (fun m -> mk_filename m "c") all_modules;
-      to = mk_filename "EverParse" "c";
-      args = "";
-    }]
-  else []
-
-let produce_everparse_o_rule
-  mtype
-: FStar.All.ML (list rule_t)
-=
-  (* The bundled Pulse runtime, emitted by KaRaMeL as EverParse.c. *)
-  if Options.get_pulse ()
-  then
-    let c = mk_filename "EverParse" "c" in
-    let o = mk_filename "EverParse" (oext mtype) in
-    [{
-      ty = CC;
-      from = [c];
-      to = o;
-      args = c_to_o mtype o c;
-    }]
-  else []
-
 let produce_wrapper_o_rule
   mtype
   (everparse_h: bool)
@@ -623,10 +586,8 @@ let produce_makefile
   let all_modules = List.map Options.module_name all_files in
   let rules =
     produce_everparse_h_rule everparse_h all_modules `List.Tot.append`
-    produce_everparse_c_rule everparse_h all_modules `List.Tot.append`
     produce_clang_format_rule clang_format copy_clang_format_opt `List.Tot.append`
     (if skip_o_rules then [] else
-      produce_everparse_o_rule mtype `List.Tot.append`
       List.Tot.concatMap (produce_wrapper_o_rule mtype everparse_h g) all_modules `List.Tot.append`
       List.Tot.concatMap (produce_static_assertions_o_rule mtype everparse_h g) all_modules `List.Tot.append`
       List.concatMap (produce_output_types_o_rule mtype emit_output_types_defs g) all_modules `List.Tot.append`
@@ -668,14 +629,6 @@ let write_makefile
   FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
-      (* In --pulse mode the runtime is not a shipped library: KaRaMeL bundles
-         it into EverParse.c/.h next to the generated code, so EverParse.c has
-         to be compiled and linked like any other generated file. *)
-      begin if ext = "h" then []
-      else if Options.get_pulse ()
-      then [mk_filename "EverParse" ext]
-      else []
-      end `List.Tot.append`
       begin if ext = "h" && everparse_h
       then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"]
       else []

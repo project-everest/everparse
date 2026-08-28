@@ -393,18 +393,13 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
       (List.rev add_include)
   in
   (* In --pulse mode the runtime is not a shipped library: KaRaMeL bundles the
-     Pulse prelude into EverParse.h/EverParse.c alongside the generated code.
-     Warning 26 (Top-type casts) is expected for the ref-dereference idiom.
+     Pulse prelude into EverParse.h alongside the generated code. Warning 26
+     (Top-type casts) is expected for the ref-dereference idiom.
 
-     Pulse.\* goes in a static header, defensively. Specialization inlines the
-     whole runtime into the generated validators, so any use site of a Pulse
-     library helper is a generated module, and KaRaMeL monomorphizes after
-     bundling and emits each instance in the file that first uses it. A helper
-     that is not mapped to a C primitive by Pulse extraction would therefore
-     leave a cross translation unit symbol in an arbitrary generated .c. The 3d
-     runtime currently reads bytes through Pulse.Lib.ArrayPtr only, all of
-     whose operations are such primitives, so as things stand this emits
-     nothing. *)
+     Everything that survives into that bundle is emitted `static inline` into
+     the header (see the -static-header list below), so KaRaMeL writes no
+     EverParse.c at all, matching the self-contained EverParse.h that the Low*
+     backend ships as a prelude. *)
   let backend_args =
     if Options.get_pulse ()
     then
@@ -420,8 +415,17 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
         | "extern" | "static" -> "-2"
         | _ -> ""
       in
+      (* Mirrors the Low* backend's -static-header list, minus
+         EverParse3d.CopyBuffer and EverParse3d.InputStream.\*: those hold the
+         `assume val`s that the client implements in C. Low* can list them
+         because it also passes `-library`, which drops their declarations
+         outright; with no `-library` here, KaRaMeL would instead emit them as
+         `static` prototypes that never get a definition, clashing with the
+         client's non-static one. Everything else in the bundle becomes
+         `static inline` in the header, so no EverParse.c is emitted at all,
+         matching the self-contained EverParse.h that Low* ships. *)
       "-add-include" :: "EverParse:\"EverParsePulseEndianness.h\"" ::
-        "-static-header" :: "Pulse.\\*" ::
+        "-static-header" :: "Pulse.\\*,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode" ::
         "-warn-error" :: Printf.sprintf "-9@4-20-26%s" extern_warns :: []
     else
       "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::

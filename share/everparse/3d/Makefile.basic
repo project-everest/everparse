@@ -6,10 +6,10 @@
 # this file is used instead. Two reasons:
 #
 # - The generated code is self-contained: the Pulse runtime is bundled into
-#   EverParse.c/EverParse.h, and nothing refers to krmllib. So, unlike
-#   KaRaMeL's Makefile.basic, this one neither puts krmllib's headers on the
-#   include path nor links against libkrmllib.a -- which a KaRaMeL built with
-#   LOWSTAR=false does not even produce.
+#   EverParse.h as static inline definitions, and nothing refers to krmllib.
+#   So, unlike KaRaMeL's Makefile.basic, this one neither puts krmllib's
+#   headers on the include path nor links against libkrmllib.a -- which a
+#   KaRaMeL built with LOWSTAR=false does not even produce.
 #
 # - It belongs to EverParse: the compiler flags the generated C is held to are
 #   EverParse's business, not KaRaMeL's.

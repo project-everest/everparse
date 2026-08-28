@@ -21,6 +21,11 @@ module LPL = LowParse.Spec.List
 module LPP = LowParse.PulseParse.Base
 module LUT = LowParse.Spec.ListUpTo
 
+(* inline_for_extraction: without it F* extracts this alias as a global holding
+   a function reference, which KaRaMeL emits as a function pointer variable --
+   turning every use site into an indirect call, and forcing a non-empty
+   EverParse.c. *)
+inline_for_extraction
 let is_range_okay = EverParse3d.ErrorCode.is_range_okay
 
 (* The type of non-null byte pointers manipulated by `field_ptr`-style
