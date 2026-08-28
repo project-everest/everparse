@@ -29,19 +29,19 @@ jobs:
         id: cache
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }}
           lookup-only: true
           fail-on-cache-miss: false
 
       - name: Build dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} --pull --target deps .
+          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }} --pull --target deps .
 
       - name: Save image
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} | gzip > deps.tgz
+          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }} | gzip > deps.tgz
 
       - name: Upload image into cache
         if: steps.cache.outputs.cache-hit != 'true'
@@ -49,7 +49,7 @@ jobs:
         with:
           path: |
             deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }}
 
   lowparse:
     runs-on: ubuntu-latest
@@ -62,13 +62,13 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Build LowParse without proofs
         run: |
          docker exec $container make -kj$(nproc) lowparse ADMIT=1
@@ -93,13 +93,13 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Build LowParse
         run: |
           docker exec $container make -kj$(nproc) lowparse
@@ -118,13 +118,13 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
@@ -150,13 +150,13 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
@@ -182,13 +182,13 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:

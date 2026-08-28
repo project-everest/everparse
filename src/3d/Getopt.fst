@@ -1,16 +1,11 @@
-let noshort = 0
-type 'a opt_variant =
-  | ZeroArgs of (unit -> 'a)
-  | OneArg of (string -> 'a) * string
-type 'a opt' = FStar_Char.char * string * 'a opt_variant
-type opt = unit opt'
-type parse_cmdline_res =
-  | Empty
-  | Help
-  | Error of string
-  | Success
+module Getopt
 
-let bind l f =
+open FStar.All
+open FStar.Char
+
+let noshort = '\0'
+
+let bind (l: parse_cmdline_res) (f: unit -> ML parse_cmdline_res) : ML parse_cmdline_res =
     match l with
     | Help
     | Error _ -> l
@@ -22,27 +17,27 @@ let bind l f =
  * Otherwise, returns Some (o, s) where [s] is the trimmed option, and [o]
  * is the opt we found in specs (possibly None if not present, which should
  * trigger an error) *)
-let find_matching_opt specs s : (opt option * string) option =
+let find_matching_opt specs s : ML (option (option opt & string)) =
   if String.length s < 2 then
     None
   else if String.sub s 0 2 = "--" then
     (* long opts *)
-    let strim = String.sub s 2 ((String.length s) - 2) in
-    let o = FStar_List.tryFind (fun (_, option, _) -> option = strim) specs in
+    let strim : string = String.sub s 2 ((String.length s) - 2) in
+    let o = FStar.List.tryFind (fun (_, option, _) -> option = strim) specs in
     Some (o, strim)
   else if String.sub s 0 1 = "-" then
     (* short opts *)
-    let strim = String.sub s 1 ((String.length s) - 1) in
-    let o = FStar_List.tryFind (fun (shortoption, _, _) -> FStar_String.make Z.one shortoption = strim) specs in
+    let strim : string = String.sub s 1 ((String.length s) - 1) in
+    let o = FStar.List.tryFind (fun (shortoption, _, _) -> String.make 1 shortoption = strim) specs in
     Some (o, strim)
   else
     None
 
 (* remark: doesn't work with files starting with -- *)
-let rec parse (opts:opt list) def ar ix max i : parse_cmdline_res =
+let rec parse (opts:list opt) (def: _ -> ML _) ar ix max i : ML parse_cmdline_res =
   if ix > max then Success
   else
-    let arg = ar.(ix) in
+    let arg = List.nth ar ix in
     let go_on () = bind (def arg) (fun _ -> parse opts def ar (ix + 1) max (i + 1)) in
     match find_matching_opt opts arg with
     | None -> go_on ()
@@ -55,34 +50,45 @@ let rec parse (opts:opt list) def ar ix max i : parse_cmdline_res =
          then Error ("last option '" ^ argtrim ^ "' takes an argument but has none\n")
          else
            let r =
-               try (f (ar.(ix + 1)); Success)
+               try (f (List.nth ar (ix + 1)); Success)
                with _ -> Error ("wrong argument given to option `" ^ argtrim ^ "`\n")
            in bind r (fun () -> parse opts def ar (ix + 2) max (i + 1))
       end
 
 let parse_array specs others args offset =
-  parse specs others args offset (Array.length args - 1) 0
+  parse specs others args offset (List.length args - 1) 0
 
 let parse_cmdline specs others =
-  if Array.length Sys.argv = 1 then Empty
-  else parse_array specs others Sys.argv 1
+  parse_array specs others (cmdline ()) 1
 
 let parse_string specs others (str:string) =
     let split_spaces (str:string) =
-      let seps = [int_of_char ' '; int_of_char '\t'] in
-      FStar_List.filter (fun s -> s != "") (FStar_String.split seps str)
+      let _space (_: unit): ML (s: string { String.length s == 1 }) =
+        assert_norm (String.length " " == 1);
+        " "
+      in
+      let _tab (_: unit): ML (s: string { String.length s == 1 }) =
+        assert_norm (String.length "\t" == 1);
+        "\t"
+      in
+      let space = _space () in
+      let tab = _tab () in
+      let seps = [String.index space 0; String.index tab 0] in
+      FStar.List.filter (fun s -> s <> "") (String.split seps str)
     in
-    (* to match the style of the F# code in FStar.GetOpt.fs *)
-    let index_of str c =
-      try
-        String.index str c
-      with Not_found -> -1
+    let index_of str c : Pure int
+      (requires True)
+      (ensures fun i -> i >= -1 /\ i < String.length str)
+    =
+        let res = String.index_of str c in
+        if res < 0 || res >= String.length str then -1 else res
     in
     let substring_from s j =
+        if j > String.length s then "" else
         let len = String.length s - j in
-        String.sub s j len
+        (String.sub s j len <: string)
     in
-    let rec split_quoted_fragments (str:string) =
+    let rec split_quoted_fragments (str:string) : ML _ =
         let i = index_of str '\'' in
         if i < 0 then Some (split_spaces str)
         else let prefix = String.sub str 0 i in
@@ -99,10 +105,7 @@ let parse_string specs others (str:string) =
     match split_quoted_fragments str with
     | None -> Error("Failed to parse options; unmatched quote \"'\"")
     | Some args ->
-      parse_array specs others (Array.of_list args) 0
+      parse_array specs others args 0
 
 let parse_list specs others lst =
-  parse_array specs others (Array.of_list lst) 0
-
-let cmdline () =
-   Array.to_list (Sys.argv)
+  parse_array specs others lst 0

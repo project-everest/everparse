@@ -651,7 +651,7 @@ let add_copyright
   let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
   if Sys.file_exists copyright_file
   then begin
-      let h = Hashing.hash_as_comment ddd_file in
+      let h = Hashing_Hash.hash_as_comment ddd_file in
       List.iter (add_copyright_header (Some h) out_dir copyright_file) (collect_files_from produced_files wrappers out_dir [] dm)
     end
 
@@ -689,73 +689,12 @@ let call_clang_format
 
 (* Check and Save hashes *)
 
-let hashed_files
-      (out_dir: string)
-      (modul: string)
-  =
-  {
-    Hashing.c = filename_concat out_dir (Printf.sprintf "%s.c" modul);
-    Hashing.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
-    Hashing.wrapper_c =
-      begin
-        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul) in
-        if Sys.file_exists w
-        then Some w
-        else None
-      end;
-    Hashing.wrapper_h =
-      begin
-        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul) in
-        if Sys.file_exists w
-        then Some w
-        else None
-      end;
-    Hashing.assertions =
-      begin
-        let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
-        if Sys.file_exists assertions
-        then Some assertions
-        else None
-      end;
-  }
-
-let check_inplace_hash
-      file_3d_file_c
-  =
-  match String.split_on_char '=' file_3d_file_c with
-  | [file_3d; file_c] ->
-     if Hashing.check_inplace_hashes file_3d (Hashing.OneHash file_c)
-     then begin
-         print_endline (Printf.sprintf "EverParse check_inplace_hash succeeded on %s" file_3d)
-       end else begin
-         print_endline (Printf.sprintf "EverParse check_inplace_hash failed on %s" file_3d);
-         exit 255
-       end
-  | _ -> failwith "check_inplace_hash: expected file.3d=file.h"
-
-let check_inplace_hashes = List.iter check_inplace_hash
-
-let check_hashes
-      (ch: check_hashes_t)
-      (out_dir: string)
-      (file, modul)
-  =
-  let c = hashed_files out_dir modul in
-  match ch with
-  | InplaceHashes ->
-     Hashing.check_inplace_hashes file (Hashing.AllHashes c)
-  | _ ->
-     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
-     Hashing.check_hash file None json && (
-       is_weak ch ||
-         let c = hashed_files out_dir modul in
-         Hashing.check_hash file (Some c) json
-     )
+let check_inplace_hashes = Hashing_Hash.check_inplace_hashes Hashing.check_inplace_hashes_f
 
 let save_hashes
       (out_dir: string)
       (file, modul)
-  = let c = hashed_files out_dir modul in
+  = let c = Hashing_Hash.hashed_files out_dir modul in
     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
     Hashing.save_hashes file (Some c) json
 
@@ -918,14 +857,4 @@ let postprocess_fst
   (* produce the .c and .h files and format them *)
   produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
-let check_all_hashes
-      (ch: check_hashes_t)
-      (out_dir: string)
-      (files_and_modules: (string * string) list)
-    : unit
-  = if List.for_all (check_hashes ch out_dir) files_and_modules
-    then print_endline "EverParse check_hashes succeeded!"
-    else begin
-        print_endline "EverParse check_hashes failed";
-        exit 255
-      end
+let check_all_hashes = Hashing_Hash.check_all_hashes Hashing.check_inplace_hashes_f Hashing.load_hash

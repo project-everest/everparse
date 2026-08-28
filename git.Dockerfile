@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
   pkg-config \
   libffi-dev \
   libgmp-dev \
+  libicu74 \
   libsqlite3-dev \
   libssl-dev \
   time \
@@ -39,6 +40,19 @@ RUN curl -L --output code-server.deb https://github.com/coder/code-server/releas
 RUN curl -L --output fstar-vscode-assistant.vsix https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v0.19.2/fstar-vscode-assistant-0.19.2.vsix \
  && code-server --install-extension fstar-vscode-assistant.vsix \
  && rm fstar-vscode-assistant.vsix
+
+# Install the .NET SDK, to build and run the standalone hash checker
+# (src/3d/hashchk). The version must satisfy src/3d/hashchk/global.json,
+# which requires the 8.0.4xx feature band or higher. The dotnet-sdk-8.0
+# Ubuntu package is in the 8.0.1xx feature band, so it will not do.
+ARG DOTNET_SDK_VERSION=8.0.420
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh \
+ && bash dotnet-install.sh --version $DOTNET_SDK_VERSION --install-dir $HOME/.dotnet \
+ && rm dotnet-install.sh
+ENV PATH=/home/test/.dotnet:$PATH
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV DOTNET_NOLOGO=1
+ENV DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 
 # Bring in the contents
 ARG CACHE_BUST

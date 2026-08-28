@@ -1,3 +1,5 @@
+let argv _ = Array.to_list Sys.argv
+
 let is_windows () = Sys.win32
 
 let dirname = Filename.dirname

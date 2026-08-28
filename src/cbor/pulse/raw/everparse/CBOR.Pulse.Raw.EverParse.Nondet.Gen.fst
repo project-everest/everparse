@@ -229,10 +229,13 @@ requires
   pts_to_serialized (serialize_leaf_content h1) c1 #p1 gc1 **
   pts_to_serialized (serialize_leaf_content h2) c2 #p2 gc2 **
   pure (
+    // Workaround for https://github.com/FStarLang/FStar/issues/4498 : stating the
+    // equalities on the whole (header, leaf content) pairs avoids a dependent
+    // subtyping check that the core typechecker can no longer discharge.
     h1 == get_raw_data_item_header a1 /\
-    Ghost.reveal gc1 == dsnd (dfst (synth_raw_data_item_from_alt_recip a1)) /\
+    (| h1, Ghost.reveal gc1 |) == dfst (synth_raw_data_item_from_alt_recip a1) /\
     h2 == get_raw_data_item_header a2 /\
-    Ghost.reveal gc2 == dsnd (dfst (synth_raw_data_item_from_alt_recip a2)) /\
+    (| h2, Ghost.reveal gc2 |) == dfst (synth_raw_data_item_from_alt_recip a2) /\
     get_header_major_type h1 == get_header_major_type h2
   )
 returns res: bool

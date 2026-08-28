@@ -1,5 +1,7 @@
 module OS
 
+val argv : unit -> FStar.All.ML (list string)
+
 val is_windows : unit -> FStar.All.ML bool
 
 val mkdir : string -> FStar.All.ML unit

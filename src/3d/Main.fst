@@ -208,7 +208,7 @@ let emit_fstar_code_for_interpreter (en:env)
     then begin
       let external_types_fsti_file =
         open_write_file
-          (Printf.sprintf "%s/%s.ExternalTypes.fsti" (Options.get_output_dir ()) modul) in
+          (Printf.sprintf "%s/%s.ExternalTypes.fsti" (Options.output_dir ()) modul) in
       FStar.IO.write_string external_types_fsti_file (Target.print_external_types_fstar_interpreter modul tds);
       FStar.IO.close_write_file external_types_fsti_file
     end;
@@ -219,7 +219,7 @@ let emit_fstar_code_for_interpreter (en:env)
     then begin
       let external_api_fsti_file =
         open_write_file
-          (Printf.sprintf "%s/%s.ExternalAPI.fsti" (Options.get_output_dir ()) modul) in
+          (Printf.sprintf "%s/%s.ExternalAPI.fsti" (Options.output_dir ()) modul) in
       FStar.IO.write_string external_api_fsti_file (Target.print_external_api_fstar_interpreter modul tds);
       FStar.IO.close_write_file external_api_fsti_file
     end;
@@ -246,7 +246,7 @@ let emit_fstar_code_for_interpreter (en:env)
     let fst_file =
       open_write_file
         (Printf.sprintf "%s/%s.fst"
-          (Options.get_output_dir())
+          (Options.output_dir())
           modul) in
     FStar.IO.write_string fst_file module_prefix;
     FStar.IO.write_string fst_file impl;    
@@ -255,7 +255,7 @@ let emit_fstar_code_for_interpreter (en:env)
     let fsti_file =
       open_write_file
         (Printf.sprintf "%s/%s.fsti"
-          (Options.get_output_dir())
+          (Options.output_dir())
           modul) in
     FStar.IO.write_string fsti_file module_prefix;
     FStar.IO.write_string fsti_file iface;
@@ -273,7 +273,7 @@ let emit_static_assertions
     let c_static_asserts_file =
       open_write_file
         (Printf.sprintf "%s/%s%s.c"
-          (Options.get_output_dir())
+          (Options.output_dir())
           modul
           filename_suffix) in
     FStar.IO.write_string c_static_asserts_file "\n\n";
@@ -301,7 +301,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
     let c_file =
       open_write_file
         (Printf.sprintf "%s/%sWrapper.c"
-          (Options.get_output_dir())
+          (Options.output_dir())
           modul) in
           
     FStar.IO.write_string c_file wrapper_impl;
@@ -310,7 +310,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
     let h_file =
       open_write_file
         (Printf.sprintf "%s/%sWrapper.h"
-          (Options.get_output_dir())
+          (Options.output_dir())
           modul) in
     FStar.IO.write_string h_file wrapper_header;
     FStar.IO.close_write_file h_file
@@ -332,7 +332,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
     then begin
       let output_types_defs_file = open_write_file
         (Printf.sprintf "%s/%s_OutputTypesDefs.h"
-           (Options.get_output_dir ())
+           (Options.output_dir ())
            modul) in
       FStar.IO.write_string output_types_defs_file (Target.print_output_types_defs modul t_decls);
       FStar.IO.close_write_file output_types_defs_file
@@ -350,7 +350,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
     then begin
       let extern_typedefs_file = open_write_file
         (Printf.sprintf "%s/%s_ExternalTypedefs.h"
-          (Options.get_output_dir ())
+          (Options.output_dir ())
           modul) in
       FStar.IO.write_string extern_typedefs_file
         (Printf.sprintf
@@ -384,7 +384,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
   // then begin
   //   let extern_typedefs_file = open_write_file
   //     (Printf.sprintf "%s/%s_ExternalTypedefs.h"
-  //       (Options.get_output_dir ())
+  //       (Options.output_dir ())
   //       modul) in
   //   FStar.IO.write_string extern_typedefs_file "\n";
   //   FStar.IO.close_write_file extern_typedefs_file
@@ -394,7 +394,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
   then begin
     let output_types_c_file =
       open_write_file
-        (Printf.sprintf "%s/%s_OutputTypes.c" (Options.get_output_dir ()) modul) in
+        (Printf.sprintf "%s/%s_OutputTypes.c" (Options.output_dir ()) modul) in
     FStar.IO.write_string output_types_c_file (Target.print_out_exprs_c modul t_decls);
     FStar.IO.close_write_file output_types_c_file
   end;
@@ -406,7 +406,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
   //   let c_static_asserts_file =
   //     open_write_file
   //       (Printf.sprintf "%s/%sStaticAssertions.c"
-  //         (Options.get_output_dir())
+  //         (Options.output_dir())
   //         modul) in
   //   FStar.IO.write_string c_static_asserts_file "\n\n";
   //   FStar.IO.write_string c_static_asserts_file 
@@ -463,7 +463,7 @@ let emit_config_as_fstar_module ()
       let fst_file =
         open_write_file
           (Printf.sprintf "%s/%s.fst"
-            (Options.get_output_dir())
+            (Options.output_dir())
             config_module_name) in
       FStar.IO.write_string fst_file fst_file_contents;
       FStar.IO.close_write_file fst_file
@@ -664,9 +664,9 @@ let produce_and_postprocess_c
   (file: string)
 : ML unit
 =
-  let modul = Options.get_module_name file in
+  let modul = Options.module_name file in
   let deps = Deps.collect_and_sort_dependencies [file] in
-  let dep_files_and_modules = List.map (fun f -> (f, Options.get_module_name f)) deps in
+  let dep_files_and_modules = List.map (fun f -> (f, Options.module_name f)) deps in
   (* remove the current module from the deps *)
   let dep_files_and_modules = List.filter (fun (_, m) -> m <> modul) dep_files_and_modules in
   Batch.produce_and_postprocess_one_c
@@ -685,7 +685,7 @@ let go () : ML unit =
   let cmd_line_files = Options.parse_cmd_line() in
   let cfg_opt = Deps.get_config () in
   (* Special mode: --check_inplace_hashes *)
-  let inplace_hashes = Options.get_check_inplace_hashes () in
+  let inplace_hashes = Options.check_inplace_hashes () in
   if Cons? inplace_hashes
   then Batch.check_inplace_hashes inplace_hashes
   else
@@ -699,7 +699,7 @@ let go () : ML unit =
   if micro_step = Some HashingOptions.MicroStepCopyClangFormat
   then
   (* Special mode: --__micro_step copy_clang_format *)
-    let _ = Batch.copy_clang_format (Options.get_output_dir ()) in
+    let _ = Batch.copy_clang_format (Options.output_dir ()) in
     exit 0
   else
   if micro_step = Some HashingOptions.MicroStepCopyEverParseH
@@ -709,17 +709,17 @@ let go () : ML unit =
       (Options.get_clang_format ())
       (Options.get_clang_format_executable ())
       (Options.get_input_stream_binding ())
-      (Options.get_output_dir ())
+      (Options.output_dir ())
     in
     exit 0
   else
   if micro_step = Some HashingOptions.MicroStepSaveHashes
   then
   (* Special mode: --__micro_step save_hashes *)
-    let out_dir = Options.get_output_dir () in
+    let out_dir = Options.output_dir () in
     let _ = OS.mkdir out_dir in
     List.iter (fun file ->
-      Batch.save_hashes_for_module out_dir file (Options.get_module_name file)
+      Batch.save_hashes_for_module out_dir file (Options.module_name file)
     ) cmd_line_files;
     exit 0
   else
@@ -728,7 +728,7 @@ let go () : ML unit =
   if Nil? cmd_line_files
   then let _ = Options.display_usage () in exit 1
   else
-  let out_dir = Options.get_output_dir () in
+  let out_dir = Options.output_dir () in
   let _ = OS.mkdir out_dir in
   (* Special mode: --__micro_step *)
   match micro_step with
@@ -762,18 +762,18 @@ let go () : ML unit =
     in
     FStar.IO.print_string "EverParse succeeded!\n"
   else
+  (* Special mode: --check_hashes *)
+  let check_hashes = Options.check_hashes () in
+  if Some? check_hashes
+  then Batch.check_all_hashes (Some?.v check_hashes) out_dir (List.map (fun file -> (file, Options.module_name file)) cmd_line_files)
+  else
   (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user, unless --__skip_deps is provided *)
   let all_files =
     if Options.get_skip_deps ()
     then List.Tot.rev cmd_line_files (* files are accumulated in reverse on the command line *)
     else Deps.collect_and_sort_dependencies cmd_line_files
   in
-  let all_files_and_modules = List.map (fun file -> (file, Options.get_module_name file)) all_files in
-  (* Special mode: --check_hashes *)
-  let check_hashes = Options.get_check_hashes () in
-  if Some? check_hashes
-  then Batch.check_all_hashes (Some?.v check_hashes) out_dir all_files_and_modules
-  else
+  let all_files_and_modules = List.map (fun file -> (file, Options.module_name file)) all_files in
   (* Special mode: --emit_smt_encoding *)
   if Options.get_emit_smt_encoding ()
   then produce_z3 all_files_and_modules
@@ -781,7 +781,7 @@ let go () : ML unit =
   (* Default mode: process .3d files *)
   let batch = Options.get_batch () in
   let should_emit_fstar_code : string -> ML bool =
-    let cmd_line_modules = List.map Options.get_module_name cmd_line_files in
+    let cmd_line_modules = List.map Options.module_name cmd_line_files in
     fun modul ->
       batch || List.Tot.mem modul cmd_line_modules in
   let process : process_files_t =
