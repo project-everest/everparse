@@ -217,6 +217,21 @@ let get_z3_skip_c_initializers () : ML bool =
 let get_use_error_handler_macro () : ML bool =
   !use_error_handler_macro
 
+let get_pulse () : ML bool =
+  !pulse
+
+let pulse_backend_module () : ML string =
+  match get_input_stream_binding () with
+  | HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.Buffer"
+  | HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.Extern"
+  | HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.Static"
+
+let pulse_inst () : ML string =
+  match get_input_stream_binding () with
+  | HashingOptions.InputStreamBuffer -> "B.input_stream_buffer"
+  | HashingOptions.InputStreamExtern _ -> "B.input_stream_extern"
+  | HashingOptions.InputStreamStatic _ -> "B.input_stream_static"
+
 let get_z3_use_ptr () : ML bool =
   !use_ptr_for_probe
 

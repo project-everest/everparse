@@ -332,3 +332,105 @@ let rec mk_n_to_le
   else if len = 1
   then n_to_le_1 u
   else n_to_le_S (mk_n_to_le u (len - 1))
+
+// Reading from left to right: pos is the position of the first (lowest-weight)
+// byte of the little-endian encoding.
+
+inline_for_extraction
+noextract
+let le_to_n_t
+  (#t: Type0)
+  (#tot: nat)
+  (u: uinttype u#0 t tot)
+  (len: nat { len <= tot })
+: Tot Type
+= (x: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  (pos: SZ.t) ->
+  stt t
+    (pts_to x #pm v ** pure (
+      SZ.v pos + len <= Seq.length v
+    ))
+    (fun res -> pts_to x #pm v ** pure (
+      SZ.v pos + len <= Seq.length v /\
+      u.v res == E.le_to_n (Seq.slice v (SZ.v pos) (SZ.v pos + len))
+    ))
+
+inline_for_extraction
+noextract
+fn le_to_n_0
+  (#t: Type0)
+  (#tot: nat)
+  (u: uinttype t tot)
+: le_to_n_t #t #tot u 0
+= (x: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (pos: SZ.t)
+{
+  E.reveal_le_to_n (Seq.slice v (SZ.v pos) (SZ.v pos));
+  UIntType?.zero u
+}
+
+inline_for_extraction
+noextract
+fn le_to_n_1
+  (#t: Type)
+  (#tot: nat)
+  (u: uinttype t tot { tot > 0 })
+: (le_to_n_t #t #tot u 1)
+= (x: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (pos: SZ.t)
+{
+  E.reveal_le_to_n (Seq.slice v (SZ.v pos) (SZ.v pos + 1));
+  E.reveal_le_to_n (Seq.tail (Seq.slice v (SZ.v pos) (SZ.v pos + 1)));
+  let first = S.op_Array_Access x pos;
+  UIntType?.from_byte u first
+}
+
+inline_for_extraction
+noextract
+fn le_to_n_S
+  (#t: Type)
+  (#tot: nat)
+  (#u: uinttype t tot)
+  (#len: nat { len + 1 <= tot })
+  (ih: le_to_n_t #t #tot u len)
+: (le_to_n_t #t #tot u (len + 1))
+= (x: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (pos: SZ.t)
+{
+  assert_norm (pow2 8 == 256);
+  S.pts_to_len x;
+  E.reveal_le_to_n (Seq.slice v (SZ.v pos) (SZ.v pos + (len + 1)));
+  Seq.slice_slice v (SZ.v pos) (SZ.v pos + (len + 1)) 1 (len + 1);
+  E.lemma_le_to_n_is_bounded (Seq.slice v (SZ.v pos + 1) (SZ.v pos + 1 + len));
+  pow2_le_compat (8 * tot) (8 * (len + 1));
+  pow2_le_compat (8 * (len + 1)) (8 * len);
+  pow2_plus (8 * len) 8;
+  let pos' = pos `SZ.add` 1sz;
+  let first = S.op_Array_Access x pos;
+  let n = ih x #pm #v pos';
+  let bfirst = UIntType?.from_byte u first;
+  UIntType?.add u bfirst (u.mul256 n)
+}
+
+[@must_reduce]
+noextract
+let rec mk_le_to_n
+  (#t: Type)
+  (#tot: nat)
+  (u: uinttype t tot)
+  (len: nat {len <= tot})
+: Tot (le_to_n_t u len)
+  (decreases len)
+= if len = 0
+  then le_to_n_0 u
+  else if len = 1
+  then le_to_n_1 u
+  else le_to_n_S (mk_le_to_n u (len - 1))
