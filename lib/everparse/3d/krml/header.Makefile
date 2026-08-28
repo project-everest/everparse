@@ -19,6 +19,11 @@
 all: headers
 
 EVERPARSE_SRC_PATH := $(realpath ../../../../src)
+# On Windows, $(realpath) yields a Cygwin path (/cygdrive/d/...) that the
+# native krml.exe cannot open. windows.Makefile rewrites EVERPARSE_SRC_PATH
+# with `cygpath -m`, so DDD_HOME must be derived *after* this include.
+# The sibling extract.Makefile does the same.
+include $(EVERPARSE_SRC_PATH)/windows.Makefile
 DDD_HOME := $(EVERPARSE_SRC_PATH)/3d
 
 BACKENDS := buffer extern static
