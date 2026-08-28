@@ -421,7 +421,7 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
         let i0: usize = (&pi)[0];
         let byte1: u8 = s[i0];
         let i1: usize = i0.wrapping_add(1usize);
-        if byte1 <= 0x7Fu8
+        if byte1 <= 0x7fu8
         { (&mut pi)[0] = i1 }
         else if i1 == len
         { (&mut pres)[0] = false }
@@ -429,7 +429,7 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
         {
             let byte2: u8 = s[i1];
             let i2: usize = i1.wrapping_add(1usize);
-            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+            if 0xc2u8 <= byte1 && byte1 <= 0xdfu8 && (0x80u8 <= byte2 && byte2 <= 0xbfu8)
             { (&mut pi)[0] = i2 }
             else if i2 == len
             { (&mut pres)[0] = false }
@@ -437,23 +437,23 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
             {
                 let byte3: u8 = s[i2];
                 let i3: usize = i2.wrapping_add(1usize);
-                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
+                if ! (0x80u8 <= byte3 && byte3 <= 0xbfu8)
                 { (&mut pres)[0] = false }
-                else if byte1 == 0xE0u8
+                else if byte1 == 0xe0u8
                 {
-                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
+                    if 0xa0u8 <= byte2 && byte2 <= 0xbfu8
                     { (&mut pi)[0] = i3 }
                     else
                     { (&mut pres)[0] = false }
                 }
-                else if byte1 == 0xEDu8
+                else if byte1 == 0xedu8
                 {
-                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
+                    if 0x80u8 <= byte2 && byte2 <= 0x9fu8
                     { (&mut pi)[0] = i3 }
                     else
                     { (&mut pres)[0] = false }
                 }
-                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                else if 0xe1u8 <= byte1 && byte1 <= 0xefu8 && (0x80u8 <= byte2 && byte2 <= 0xbfu8)
                 { (&mut pi)[0] = i3 }
                 else if i3 == len
                 { (&mut pres)[0] = false }
@@ -461,14 +461,14 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
                 {
                     let byte4: u8 = s[i3];
                     let i4: usize = i3.wrapping_add(1usize);
-                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
+                    if ! (0x80u8 <= byte4 && byte4 <= 0xbfu8)
                     { (&mut pres)[0] = false }
-                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
+                    else if byte1 == 0xf0u8 && 0x90u8 <= byte2 && byte2 <= 0xbfu8
                     { (&mut pi)[0] = i4 }
                     else if
-                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                    0xf1u8 <= byte1 && byte1 <= 0xf3u8 && (0x80u8 <= byte2 && byte2 <= 0xbfu8)
                     { (&mut pi)[0] = i4 }
-                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
+                    else if byte1 == 0xf4u8 && 0x80u8 <= byte2 && byte2 <= 0x8fu8
                     { (&mut pi)[0] = i4 }
                     else
                     { (&mut pres)[0] = false }

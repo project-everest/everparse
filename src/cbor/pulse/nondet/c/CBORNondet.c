@@ -309,7 +309,7 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
     size_t i = pi;
     uint8_t byte1 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s, i);
     size_t i1 = i + (size_t)1U;
-    if (byte1 <= 0x7FU)
+    if (byte1 <= 0x7fU)
       pi = i1;
     else if (i1 == len)
       pres = false;
@@ -317,7 +317,7 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
     {
       uint8_t byte2 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s, i1);
       size_t i2 = i1 + (size_t)1U;
-      if (0xC2U <= byte1 && byte1 <= 0xDFU && 0x80U <= byte2 && byte2 <= 0xBFU)
+      if (0xc2U <= byte1 && byte1 <= 0xdfU && 0x80U <= byte2 && byte2 <= 0xbfU)
         pi = i2;
       else if (i2 == len)
         pres = false;
@@ -325,19 +325,19 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
       {
         uint8_t byte3 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s, i2);
         size_t i3 = i2 + (size_t)1U;
-        if (!(0x80U <= byte3 && byte3 <= 0xBFU))
+        if (!(0x80U <= byte3 && byte3 <= 0xbfU))
           pres = false;
-        else if (byte1 == 0xE0U)
-          if (0xA0U <= byte2 && byte2 <= 0xBFU)
+        else if (byte1 == 0xe0U)
+          if (0xa0U <= byte2 && byte2 <= 0xbfU)
             pi = i3;
           else
             pres = false;
-        else if (byte1 == 0xEDU)
-          if (0x80U <= byte2 && byte2 <= 0x9FU)
+        else if (byte1 == 0xedU)
+          if (0x80U <= byte2 && byte2 <= 0x9fU)
             pi = i3;
           else
             pres = false;
-        else if (0xE1U <= byte1 && byte1 <= 0xEFU && 0x80U <= byte2 && byte2 <= 0xBFU)
+        else if (0xe1U <= byte1 && byte1 <= 0xefU && 0x80U <= byte2 && byte2 <= 0xbfU)
           pi = i3;
         else if (i3 == len)
           pres = false;
@@ -345,13 +345,13 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
         {
           uint8_t byte4 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s, i3);
           size_t i4 = i3 + (size_t)1U;
-          if (!(0x80U <= byte4 && byte4 <= 0xBFU))
+          if (!(0x80U <= byte4 && byte4 <= 0xbfU))
             pres = false;
-          else if (byte1 == 0xF0U && 0x90U <= byte2 && byte2 <= 0xBFU)
+          else if (byte1 == 0xf0U && 0x90U <= byte2 && byte2 <= 0xbfU)
             pi = i4;
-          else if (0xF1U <= byte1 && byte1 <= 0xF3U && 0x80U <= byte2 && byte2 <= 0xBFU)
+          else if (0xf1U <= byte1 && byte1 <= 0xf3U && 0x80U <= byte2 && byte2 <= 0xbfU)
             pi = i4;
-          else if (byte1 == 0xF4U && 0x80U <= byte2 && byte2 <= 0x8FU)
+          else if (byte1 == 0xf4U && 0x80U <= byte2 && byte2 <= 0x8fU)
             pi = i4;
           else
             pres = false;
