@@ -330,6 +330,13 @@ assume val null_ptr : ___PUINT8
 let all_states (d: state_dict) : slprop =
   exists* (extra: forevery_values d) . forevery_state d extra
 
+(* `noextract` as well as `inline_for_extraction`: its only caller,
+   `field_ptr_after_with_setter` below, is itself noextract and inlined into
+   the generated validators. Without `noextract` KaRaMeL must materialise a
+   real definition for it -- which, now that this module is public (an API of
+   the EverParse bundle), would resurrect EverParse.c just for this one
+   function. *)
+noextract
 inline_for_extraction
 fn field_ptr_after_with_setter_impl
   (#extra_state: state_dict)

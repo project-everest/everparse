@@ -502,16 +502,45 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
   krml_args
   
 
-let call_krml files_and_modules_cleanup out_dir krml_args =
+let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
   (* append the everparse and krmllib bundles to the list of arguments *)
   let krml_args = krml_args @ (
     if Options.get_pulse ()
-    then [
+    then
+      (* The bundle's API modules -- those whose declarations stay public and so
+         land in EverParse.h rather than internal/EverParse.h. Everything else
+         in the bundle is marked private by KaRaMeL, and is either inlined into
+         the generated validators or raised to internal/ if it survives as a
+         cross translation unit symbol. Listing a module here is therefore only
+         safe when *all* of its extracted declarations belong in the public ABI:
+         adding EverParse3d.InputStream.Buffer, say, would also materialise
+         every inline_for_extraction stream helper as a real function in
+         EverParse.c, rather than letting it be inlined away. That is why the
+         assumed copy-buffer projections live in a module of their own.
+
+         Only the selected backend's module is listed: each of Buffer, Extern
+         and Static owns a [@@CMacro] error_handler_macro, and making two of
+         them public at once collides on EVERPARSE_ERROR_HANDLER_MACRO
+         (KaRaMeL warning 23). Static re-exports Extern's instance and has no
+         extracted declarations of its own, so it needs nothing public. *)
+      let backend_api =
+        match string_of_input_stream_binding input_stream_binding with
+        | "extern" | "static" -> ["EverParse3d.InputStream.Extern"]
+        | _ -> ["EverParse3d.CopyBuffer.Buffer"]
+      in
+      let api =
+        String.concat "+" ([
+            "EverParse3d.Actions.Common";
+            "EverParse3d.ErrorCode";
+            "EverParse3d.Prelude.StaticHeader";
+          ] @ backend_api)
+      in
+      [
         "-bundle" ;
         "Prims,FStar.\\*,LowStar.\\*[rename=SHOULDNOTBETHERE]";
         "-bundle" ;
-        "EverParse3d.Actions.Common=Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*[rename=EverParse,rename-prefix]";
-    ]
+        Printf.sprintf "%s=Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*[rename=EverParse,rename-prefix]" api;
+      ]
     else [
         "-bundle" ;
         Printf.sprintf "%s[rename=Lib,rename-prefix]" fstar_krmllib_bundle;
@@ -590,7 +619,7 @@ let produce_c_files
     krml_args@bundle_types
   in
   with_preserved_everparse_h out_dir (fun () ->
-    call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
+    call_krml input_stream_binding (if cleanup then Some files_and_modules else None) out_dir krml_args
   )
 
 let produce_one_c_file
@@ -612,7 +641,7 @@ let produce_one_c_file
       ]
   in
   with_preserved_everparse_h out_dir (fun () ->
-    call_krml None out_dir krml_args
+    call_krml input_stream_binding None out_dir krml_args
   )
 
 (* Update EVERPARSEVERSION and FILENAME *)

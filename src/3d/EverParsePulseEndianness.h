@@ -21,7 +21,8 @@
    provides `EverParseStreamOf`, `EverParseStreamLen` and `EverParseStreamPos`
    to project it. The first two are exactly the Low* hooks; the third returns
    the position cell that Pulse validators carry inside the stream and that
-   Low* validators instead take as an argument.
+   Low* validators instead take as an argument. All three are declared by the
+   generated `EverParse.h`, so this header does not repeat them.
 
    This header is kept as the single `-add-include` for the `EverParse` bundle
    under `--pulse`, so that anything the Pulse backend does need later has a
@@ -31,15 +32,5 @@
 #define EverParsePulseEndianness_H
 
 #include "EverParseEndianness.h"
-#include <stddef.h>
-
-/* The three copy-buffer projections a client has to implement in order to use
-   probes. KaRaMeL does emit these declarations, but into `internal/EverParse.h`,
-   which client code is not meant to include; repeating them here is what gives
-   a client's definitions the same signature checking the Low* backend provides
-   by declaring `EverParseStreamOf`/`EverParseStreamLen` in `EverParse.h`. */
-extern uint8_t *EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x);
-extern size_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x);
-extern size_t *EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x);
 
 #endif

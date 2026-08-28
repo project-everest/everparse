@@ -311,18 +311,24 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
    See `EverParse3d.CopyBuffer` for why that is sound to the same degree as
    the Low* backend.
 
-   The names are chosen for their extracted forms: the `[rename=EverParse,
-   rename-prefix]` bundle turns `stream_of`/`stream_len`/`stream_pos` into
-   `EverParseStreamOf`/`EverParseStreamLen`/`EverParseStreamPos`. The first
-   two are exactly the Low* hooks, so a client written against the Low*
-   backend only has to add the third, which returns the position cell that
-   Pulse validators carry in the stream and Low* validators take as an
-   argument. *)
-assume val copy_buffer_t : Type0
+   The four names are declared in EverParse3d.CopyBuffer.Buffer and re-exported
+   here, so that the bundle can make them -- and only them -- public. See that
+   module for why. *)
+module CBB = EverParse3d.CopyBuffer.Buffer
 
-assume val stream_of : copy_buffer_t -> base_t
-assume val stream_len : copy_buffer_t -> len_t
-assume val stream_pos : copy_buffer_t -> pos_t
+inline_for_extraction
+noextract
+let copy_buffer_t = CBB.copy_buffer_t
+
+inline_for_extraction
+noextract
+let stream_of = CBB.stream_of
+inline_for_extraction
+noextract
+let stream_len = CBB.stream_len
+inline_for_extraction
+noextract
+let stream_pos = CBB.stream_pos
 
 inline_for_extraction
 fn copy_buffer_reset
