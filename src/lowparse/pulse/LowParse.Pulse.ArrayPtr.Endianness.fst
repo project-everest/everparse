@@ -5,9 +5,9 @@ module LowParse.Pulse.ArrayPtr.Endianness
    These are byte-for-byte the same proofs: the specifications only ever talk
    about the ghost byte sequence [v], never about the container. The point of
    the duplication is extraction, not verification. A [Pulse.Lib.Slice.slice]
-   is a two-field record, so [Slice.op_Array_Access] is a real function that
+   is a two-field record, so [Slice.op_Dot_Lparen_Rparen] is a real function that
    KaRaMeL monomorphizes and emits as a symbol, whereas
-   [Pulse.Lib.ArrayPtr.op_Array_Access] is mapped directly to [EBufRead] by
+   [Pulse.Lib.ArrayPtr.op_Dot_Lparen_Rparen] is mapped directly to [EBufRead] by
    Pulse extraction and compiles to a plain [b[i]]. *)
 
 open Pulse.Lib.Pervasives
@@ -75,7 +75,7 @@ fn be_to_n_1
 {
   E.reveal_be_to_n (Seq.slice (v) 0 1);
   E.reveal_be_to_n (Seq.slice (v) 0 0);
-  let last = AP.op_Array_Access x 0sz;
+  let last = AP.op_Dot_Lparen_Rparen x 0sz;
   UIntType?.from_byte u last
 }
 
@@ -100,7 +100,7 @@ fn be_to_n_S
   pow2_le_compat (8 * (len + 1)) (8 * len);
   pow2_plus (8 * len) 8;
   let pos' = pos `SZ.sub` 1sz;
-  let last = AP.op_Array_Access x pos';
+  let last = AP.op_Dot_Lparen_Rparen x pos';
   let n = ih x #pm #v pos';
   let blast = UIntType?.from_byte u last;
   UIntType?.add u blast (u.mul256 n)
@@ -179,7 +179,7 @@ fn le_to_n_1
 {
   E.reveal_le_to_n (Seq.slice v (SZ.v pos) (SZ.v pos + 1));
   E.reveal_le_to_n (Seq.tail (Seq.slice v (SZ.v pos) (SZ.v pos + 1)));
-  let first = AP.op_Array_Access x pos;
+  let first = AP.op_Dot_Lparen_Rparen x pos;
   UIntType?.from_byte u first
 }
 
@@ -206,7 +206,7 @@ fn le_to_n_S
   pow2_le_compat (8 * (len + 1)) (8 * len);
   pow2_plus (8 * len) 8;
   let pos' = pos `SZ.add` 1sz;
-  let first = AP.op_Array_Access x pos;
+  let first = AP.op_Dot_Lparen_Rparen x pos;
   let n = ih x #pm #v pos';
   let bfirst = UIntType?.from_byte u first;
   UIntType?.add u bfirst (u.mul256 n)

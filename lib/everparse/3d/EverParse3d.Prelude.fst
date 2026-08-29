@@ -55,14 +55,19 @@ let parse_ret #t (v:t)
   = LPC.parse_ret #t v
 
 /// Parser: bind
+///
+/// NOTE: [EverParse3d.Kinds.and_then_kind] carries [strict_on_arguments], so the
+/// unifier no longer delta-unfolds it to [LPC.and_then_kind] when its arguments
+/// are symbolic. Go through [coerce_eq] so that the two kinds are equated by the
+/// SMT solver instead (the attribute does not affect the SMT encoding).
 inline_for_extraction noextract
 let parse_dep_pair p1 p2
-  = LPC.parse_dtuple2 p1 p2
+  = FStar.Pervasives.coerce_eq () (LPC.parse_dtuple2 p1 p2)
 
-/// Parser: sequencing
+/// Parser: sequencing (see the NOTE on [parse_dep_pair] above)
 inline_for_extraction noextract
 let parse_pair p1 p2
-  = LPC.nondep_then p1 p2
+  = FStar.Pervasives.coerce_eq () (LPC.nondep_then p1 p2)
 
 /// Parser: map
 let injective_map a b = (a -> Tot b) //{LPC.synth_injective f}

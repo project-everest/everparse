@@ -38,42 +38,69 @@ noeq type state_dict = {
   state: restricted_t' (refine_bool_t string state_p) (fun x -> (state_values x `arrow` slprop));
 }
 
+let state_dict_eta
+  (d: state_dict)
+: Lemma
+  (ensures (Mkstate_dict d.state_p d.state_values d.state == d))
+= match d with Mkstate_dict _ _ _ -> ()
+
+(* The workhorse of [state_dict_ext]. Taking the three fields of each
+   [state_dict] as *separate parameters* is essential: whenever F* has to
+   relate two dependent types such as [values1 x] and [values2 x], unification
+   decomposes the application, and the residual SMT guard is [values1 ==
+   values2], which is exactly what hypothesis 2 below provides. Phrasing the
+   same proof directly on [d1] and [d2] makes the decomposition go one step
+   further, down to the projectees, leaving the SMT guard [d1 == d2], i.e. the
+   very goal we are trying to establish; the proof then cannot be closed. *)
+let state_dict_ext_aux
+  (p1: string `arrow_g` bool)
+  (values1: refine_bool_t string p1 `arrow` Type0)
+  (s1: restricted_t' (refine_bool_t string p1) (fun x -> (values1 x `arrow` slprop)))
+  (p2: string `arrow_g` bool)
+  (values2: refine_bool_t string p2 `arrow` Type0)
+  (s2: restricted_t' (refine_bool_t string p2) (fun x -> (values2 x `arrow` slprop)))
+: Lemma
+  (requires (
+    (forall x . p1 x == p2 x) /\
+    (forall (x: refine_bool_t string p1) . values1 x == values2 x) /\
+    (forall (x: refine_bool_t string p1) (v: values1 x) . s1 x v == s2 x (coerce_eq () v))
+  ))
+  (ensures (
+    Mkstate_dict p1 values1 s1 == Mkstate_dict p2 values2 s2
+  ))
+= extensionality_g' string (fun _ -> bool) p1 p2;
+  assert (p1 == p2);
+  assert (refine_bool_t string p1 == refine_bool_t string p2);
+  extensionality' (refine_bool_t string p1) (fun _ -> Type0) values1 values2;
+  assert (values1 == values2);
+  let prf
+    (x: refine_bool_t string p1)
+  : Lemma (ensures s1 x == s2 x)
+    [SMTPat (s1 x)]
+  = extensionality' (values1 x) (fun _ -> slprop) (s1 x) (s2 x)
+  in
+  extensionality'
+    (refine_bool_t string p1)
+    (on_dom (refine_bool_t string p1) (fun x -> values1 x `arrow` slprop))
+    s1 s2
+
 let state_dict_ext
   (d1 d2: state_dict)
 : Lemma
   (requires (
     (forall x . d1.state_p x == d2.state_p x) /\
     (forall (x: refine_bool_t string d1.state_p) . d1.state_values x == d2.state_values x) /\
-    (forall (x: refine_bool_t string d1.state_p) (v: d1.state_values x) . d1.state x v == d2.state x v
+    (forall (x: refine_bool_t string d1.state_p) (v: d1.state_values x) .
+      d1.state x v == d2.state x (coerce_eq () v)
   )))
   (ensures (
     d1 == d2
   ))
-= assert (feq_g (d1.state_p <: (string ^->> bool)) (d2.state_p <: (string ^->> bool)));
-  extensionality_g' string (fun _ -> bool) d1.state_p d2.state_p;
-  assert (d1.state_p == d2.state_p);
-  assert (refine_bool_t string d1.state_p == refine_bool_t string d2.state_p);
-  assert (refine_bool_t string d1.state_p `arrow` Type0 == refine_bool_t string d2.state_p `arrow` Type0);
-  assert (feq d1.state_values d2.state_values);
-  extensionality' (refine_bool_t string d1.state_p) (fun _ -> Type0) d1.state_values (coerce_eq () d2.state_values <: refine_bool_t string d1.state_p `arrow` Type0);
-  assert (d1.state_values == d2.state_values);
-  assert (forall (x: refine_bool_t string d1.state_p) . feq (d1.state x) (d2.state x));
-  let prf
-    (x: refine_bool_t string d1.state_p)
-  : Lemma (ensures d1.state x == d2.state x)
-    [SMTPat (d1.state x)]
-  =
-    assert (d1.state_values x `arrow` slprop == d2.state_values x `arrow` slprop);
-    extensionality' (d1.state_values x) (fun _ -> slprop) (d1.state x) (coerce_eq () (d2.state x) <: d1.state_values x `arrow` slprop)
-  in
-  assert (forall (x: refine_bool_t string d1.state_p) . d1.state x == d2.state x);
-  restricted_t'_eq
-    (refine_bool_t string d1.state_p) (fun x -> (d1.state_values x `arrow` slprop))
-    (refine_bool_t string d2.state_p) (fun x -> (d2.state_values x `arrow` slprop));
-  assert (feq d1.state (coerce_eq () d2.state <: restricted_t' (refine_bool_t string d1.state_p) (fun x -> (d1.state_values x `arrow` slprop))));
-  extensionality' (refine_bool_t string d1.state_p) (on_dom (refine_bool_t string d1.state_p) (fun x -> d1.state_values x ^-> slprop)) d1.state (coerce_eq () d2.state <: restricted_t' (refine_bool_t string d1.state_p) (fun x -> (d1.state_values x `arrow` slprop)));
-  assert (d1.state == d2.state);
-  assert (d1 == d2)
+= state_dict_ext_aux
+    d1.state_p d1.state_values d1.state
+    d2.state_p d2.state_values d2.state;
+  state_dict_eta d1;
+  state_dict_eta d2
 
 (* A named (rather than anonymous) combinator for the [state] field of
    [mk_state_dict]. *)
@@ -160,12 +187,11 @@ let mk_state_dict_ext
   : Lemma
     (d1.state x == (coerce_eq () (d2.state x) <: d1.state_values x `arrow` slprop))
   =
-    assert (forall y . d1.state x y == d2.state x y);
+    assert (forall y . d1.state x y == d2.state x (coerce_eq () y));
     assert (feq (d1.state x) (coerce_eq () (d2.state x) <: d1.state_values x `arrow` slprop));
     extensionality' (d1.state_values x) (fun _ -> slprop) (d1.state x) (coerce_eq () (d2.state x) <: d1.state_values x `arrow` slprop)
   in
   Classical.forall_intro prf2;
-  assert (forall (x: refine_bool_t string d1.state_p) . d1.state x == d2.state x);
   assert (feq d1.state (coerce_eq () d2.state <: restricted_t' (refine_bool_t string d1.state_p) (fun x -> (d1.state_values x `arrow` slprop))));
   state_dict_ext d1 d2
 
@@ -245,7 +271,10 @@ let state_dict_weaken_prop0
 : Tot prop
 = (forall (x: string) . state_p d1 x ==> state_p d2 x) /\
   (forall (x: string { state_p d1 x }) . d1.state_values x == d2.state_values x) /\
-  (forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d2.state x y)
+  (* [coerce_eq () y] is definitionally [y]; the coercion is only there to make
+     this conjunct well-typed without forcing F* to decompose
+     [d1.state_values x =?= d2.state_values x] down to [d1 =?= d2]. *)
+  (forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d2.state x (coerce_eq () y))
 
 (* Kept opaque to SMT: every occurrence of `state_dict_weaken_prop` otherwise
    expands into three nested (and dependently typed) quantifiers, which the
@@ -541,7 +570,11 @@ let mk_prod_value
 : Tot (forevery_values (state_dict_prod d1 d2))
 = reveal_opaque (`%state_dict_prod) state_dict_prod;
   mk_state_dict_value (state_dict_prod d1 d2)
-    (fun x -> if d1.state_p x then f1 x else f2 x)
+    (fun x ->
+      if d1.state_p x
+      then coerce_eq #(d1.state_values x) #((state_dict_prod d1 d2).state_values x) () (f1 x)
+      else coerce_eq #(d2.state_values x) #((state_dict_prod d1 d2).state_values x) () (f2 x)
+    )
 
 let mk_proj_value
   (#d: state_dict)
@@ -550,7 +583,7 @@ let mk_proj_value
   (_: squash (state_dict_weaken_prop d' d))
 : Tot (forevery_values d')
 = reveal_state_dict_weaken_prop ();
-  mk_state_dict_value d' (fun x -> f x)
+  mk_state_dict_value d' (fun x -> coerce_eq #(d.state_values x) #(d'.state_values x) () (f x))
 
 let state_dict_weaken_prod
   (d1 d2: state_dict)
@@ -607,7 +640,7 @@ let state_dict_weaken_prod_intro
     (fun x v -> if d1.state_p x then d1.state x v else d2.state x v);
   assert (forall (x: string) . state_p d12 x ==> state_p d x);
   assert (forall (x: string { state_p d12 x }) . d12.state_values x == d.state_values x);
-  introduce forall (x: string { state_p d12 x }) (y: d12.state_values x) . d12.state x y == d.state x y
+  introduce forall (x: string { state_p d12 x }) (y: d12.state_values x) . d12.state x y == d.state x (coerce_eq () y)
   with begin
     if d1.state_p x
     then begin
@@ -651,7 +684,7 @@ let state_dict_weaken_prop_trans
 = reveal_state_dict_weaken_prop ();
   assert (forall (x: string) . state_p d1 x ==> state_p d3 x);
   assert (forall (x: string { state_p d1 x }) . d1.state_values x == d3.state_values x);
-  introduce forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d3.state x y
+  introduce forall (x: string { state_p d1 x }) (y: d1.state_values x) . d1.state x y == d3.state x (coerce_eq () y)
   with begin
     assert (d1.state_values x == d2.state_values x);
     assert (d1.state x y == d2.state x (coerce_eq () y));
@@ -800,7 +833,7 @@ let state_dict_rename_prop
   (forall x . Some? (f x) ==> g (Some?.v (f x)) == x) /\
   (forall x . f (g x) == Some x) /\
   (forall x . d'.state_values x == d.state_values (g x)) /\
-  (forall x y . d'.state x y == d.state (g x) y)
+  (forall (x: refine_bool_t string d'.state_p) (y: d'.state_values x) . d'.state x y == d.state (g x) (coerce_eq () y))
 
 let state_dict_rename_values_call
   (d: state_dict)
@@ -811,7 +844,7 @@ let state_dict_rename_values_call
 : Pure (forevery_values d')
     (requires (state_dict_rename_prop d d' f g))
     (ensures (fun _ -> True))
-= mk_state_dict_value d' (fun x -> v (g x))
+= mk_state_dict_value d' (fun x -> coerce_eq #(d.state_values (g x)) #(d'.state_values x) () (v (g x)))
 
 let state_dict_rename_values_frame_p
   (d: state_dict)
@@ -962,7 +995,7 @@ let state_dict_rename_values_return
     (requires (state_dict_rename_prop d d' f g))
     (ensures (fun _ -> True))
 = mk_state_dict_value d (fun x -> match f x with
-  | Some x' -> v' x'
+  | Some x' -> coerce_eq #(d'.state_values x') #(d.state_values x) () (v' x')
   | None -> v x
   )
 

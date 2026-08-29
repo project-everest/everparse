@@ -48,6 +48,21 @@ val ret_kind
   : parser_kind false WeakKindStrongPrefix
 
 /// Parser: bind
+///
+/// NOTE: [strict_on_arguments] makes the normalizer evaluate [k1] and [k2] to a
+/// constructor application *before* unfolding [and_then_kind] (and hence
+/// [LowParse.Spec.Combinators.and_then_kind], which projects each of its two
+/// arguments several times). Without it, every one of those record projections
+/// is a *stuck* projection, and recent F* normalizers re-normalize the
+/// projected scrutinee once per projection instead of sharing it. The 3d
+/// backend emits one [and_then_kind] per struct field, so the resulting chains
+/// (e.g. [kind__ELF]) then blow up exponentially in the number of fields, and
+/// extraction of the generated modules diverges. With the attribute each
+/// argument is forced exactly once and the projections immediately
+/// iota-reduce. This only affects the normalizer, not the SMT encoding.
+/// See also [LowParse.Spec.Base.glb], which addresses the same problem by
+/// destructuring its arguments with a single [match].
+[@@strict_on_arguments [1; 4]]
 inline_for_extraction
 noextract
 val and_then_kind (#nz1:_) (k1:parser_kind nz1 WeakKindStrongPrefix)

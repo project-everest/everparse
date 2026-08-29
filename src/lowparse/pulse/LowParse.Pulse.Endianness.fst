@@ -387,7 +387,7 @@ fn le_to_n_1
 {
   E.reveal_le_to_n (Seq.slice v (SZ.v pos) (SZ.v pos + 1));
   E.reveal_le_to_n (Seq.tail (Seq.slice v (SZ.v pos) (SZ.v pos + 1)));
-  let first = S.op_Array_Access x pos;
+  let first = S.op_Dot_Lparen_Rparen x pos;
   UIntType?.from_byte u first
 }
 
@@ -414,7 +414,7 @@ fn le_to_n_S
   pow2_le_compat (8 * (len + 1)) (8 * len);
   pow2_plus (8 * len) 8;
   let pos' = pos `SZ.add` 1sz;
-  let first = S.op_Array_Access x pos;
+  let first = S.op_Dot_Lparen_Rparen x pos;
   let n = ih x #pm #v pos';
   let bfirst = UIntType?.from_byte u first;
   UIntType?.add u bfirst (u.mul256 n)
