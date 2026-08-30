@@ -218,7 +218,7 @@ let get_use_error_handler_macro () : ML bool =
   !use_error_handler_macro
 
 let get_pulse () : ML bool =
-  !pulse
+  true
 
 let pulse_backend_module () : ML string =
   match get_input_stream_binding () with
