@@ -19,7 +19,7 @@ export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 
 CC ?= cc
 CXX ?= c++
