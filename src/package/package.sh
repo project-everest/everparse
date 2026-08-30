@@ -203,7 +203,6 @@ make_everparse() {
     #   - lib/everparse/3d/krml/<backend>/EverParse.h: the pre-generated
     #     runtime header, one per input stream backend, copied into the output
     #     directory just as src/3d/prelude/<backend>/EverParse.h is for Low*;
-    #   - lib/pulse: the Pulse standard library, also on the --include path.
     # src/lowparse/pulse is already covered by the src/lowparse copy above, and
     # EverParsePulse{,Endianness}.h are copied out to the output directory by
     # the copy_everparse_h micro-step.
@@ -220,7 +219,6 @@ make_everparse() {
         # means of producing them.
         rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile everparse/lib/everparse/3d/krml/header.Makefile
         rm -f everparse/lib/everparse/3d/krml/extracted/.depend
-        $cp -r $PULSE_HOME/lib/pulse everparse/lib/
     fi
 
     if $is_windows ; then
