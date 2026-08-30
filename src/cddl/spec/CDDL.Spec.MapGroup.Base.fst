@@ -1119,6 +1119,7 @@ let map_group_match_item_for_eq
     else assert (MPS.equal s MPS.empty)
   | _ -> assert (MPS.equal s MPS.empty)
 
+#push-options "--z3rlimit 128"
 #restart-solver
 let map_group_match_item_for_eq_gen
   (cut: bool)
@@ -1143,12 +1144,32 @@ let map_group_match_item_for_eq_gen
 = map_group_match_item_for_eq k ty l;
   if cut
   then match cbor_map_get l k with
-  | None -> ()
+  | None ->
+    assert (map_group_match_item_for false k ty l == MapGroupResult MPS.empty);
+    assert (map_group_match_item_cut_pre l MPS.empty == MPS.singleton (cbor_map_empty, l));
+    bring_cbor_map_defined_alt ();
+    assert (~ (cbor_map_defined k l));
+    assert (forall v' . ~ (cbor_map_mem (k, v') l));
+    assert (~ (map_group_match_item_cut_exists_pred (t_literal k) (MPS.singleton (cbor_map_empty, l)) (cbor_map_empty, l)));
+    assert (~ (mps_exists (map_group_match_item_cut_exists_pred (t_literal k) (MPS.singleton (cbor_map_empty, l))) (MPS.singleton (cbor_map_empty, l))));
+    assert (map_group_match_item_for true k ty l == MapGroupResult MPS.empty)
   | Some v ->
     let l1 = cbor_map_singleton k v in
     let l2 = l `cbor_map_sub` l1 in
     if ty v
-    then ()
+    then begin
+      assert (map_group_match_item_for false k ty l == MapGroupResult (MPS.singleton (l1, l2)));
+      assert (cbor_map_disjoint l1 l2);
+      bring_cbor_map_defined_alt ();
+      assert (cbor_map_defined k l1);
+      assert (~ (cbor_map_defined k l2));
+      assert (forall v' . ~ (cbor_map_mem (k, v') l2));
+      assert (~ (map_group_match_item_cut_exists_pred (t_literal k) (MPS.singleton (l1, l2)) (l1, l2)));
+      assert (~ (mps_exists (map_group_match_item_cut_exists_pred (t_literal k) (MPS.singleton (l1, l2))) (MPS.singleton (l1, l2))));
+      assert (map_group_match_item_cut_pre l (MPS.singleton (l1, l2)) == MPS.singleton (l1, l2));
+      assert (map_group_match_item_for true k ty l == MapGroupResult (MPS.singleton (l1, l2)));
+      assert (map_group_match_item_for cut k ty l == map_group_match_item_for true k ty l)
+    end
     else begin
       assert (map_group_match_item_for false k ty l == MapGroupResult MPS.empty);
       assert (map_group_match_item_cut_pre l MPS.empty == MPS.singleton (cbor_map_empty, l));
@@ -1159,6 +1180,7 @@ let map_group_match_item_for_eq_gen
       assert (map_group_match_item_for true k ty l == MapGroupCutFailure)
     end
 
+#pop-options
 #pop-options
 
 let mps_equal_intro
