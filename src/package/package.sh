@@ -177,8 +177,8 @@ make_everparse() {
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
-#    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
-#    mkdir -p everparse/src/3d
+    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
+    mkdir -p everparse/src/3d
     $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
