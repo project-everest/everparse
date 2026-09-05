@@ -966,6 +966,7 @@ ensures
 }
 
 // ===== map element-predicate conversions (entry-level), duplicated from Read.fst =====
+#push-options "--z3rlimit 32"
 ghost
 fn map_peek
   (depth: Ghost.erased nat)
@@ -989,6 +990,7 @@ ensures
     ()
   }
 }
+#pop-options
 
 ghost
 fn map_to_unref
