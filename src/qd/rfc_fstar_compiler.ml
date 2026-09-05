@@ -863,6 +863,7 @@ let hex_to_uy_list (cval: string) : string =
    (case, field-type) list (auto-completed for all enum keys). *)
 let emit_copyful_owned_sum o i n tn cprefix cl =
   let ii = ipub i o in
+  let same_kind = sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n in
   (* owned low representation (an inductive mirroring the high constructors).
      Emitted to the interface (under -pulse) so the transparent direct [vmatch]
      can reference its constructors there. *)
@@ -1006,7 +1007,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
     wp o "\n";
     wp o "let %s_write_coerce_eq ()\n  : Lemma (\n      (forall (x: %s_low) (m2: %s_mid) . %s_vmatch x m2 == PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch x (%s_gf m2)) /\\\n      (forall (m2: %s_mid) . %s_conv m2 == PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m2))\n    )\n  = FStar.Classical.forall_intro_2 %s_free_vmatch_eq;\n    FStar.Classical.forall_intro %s_write_conv_eq\n\n" n n n n n n n n n n n n n n n n n n;
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n n n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n%s  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n same_kind n n n n n;
     register_writer n
   end
 
@@ -1019,6 +1020,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
    the default (unknown-case) field type name. *)
 let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   let g = pcombinator_name dt in
+  let same_kind = sprintf "  assert_norm (LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases (LP.get_parser_kind %s) == %s_parser_kind);\n" tn n n (pcombinator_name dt) n in
   let ii = ipub i o in
   let cap = String.capitalize_ascii in
   (* owned low representation (an inductive mirroring the high constructors),
@@ -1161,7 +1163,7 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
     wp o "  | %s_Unknown_%s_mid rv cm -> assert (%s_conv (%s_Unknown_%s_mid rv cm) == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf (%s_Unknown_%s_mid rv cm))) by (FStar.Tactics.norm [delta; iota; zeta; primops; unascribe; nbe]; FStar.Tactics.trefl ())\n\n" cprefix tn n cprefix tn n n n n cprefix tn;
     wp o "let %s_write_coerce_eq ()\n  : Lemma (\n      (forall (x: %s_low) (m2: %s_mid) . %s_vmatch x m2 == PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch x (%s_gf m2)) /\\\n      (forall (m2: %s_mid) . %s_conv m2 == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m2))\n    )\n  = FStar.Classical.forall_intro_2 %s_free_vmatch_eq;\n    FStar.Classical.forall_intro %s_write_conv_eq\n\n" n n n n n n n n n n n n n n n n n n;
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n n n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n%s  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n same_kind n n n n n;
     register_writer n
   end;
   wp o "#pop-options\n\n"
@@ -3444,6 +3446,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
                begin
                  wp i "val %s_accessor_%s : PPB.accessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty) n case;
                  wp o "let %s_accessor_%s : PPB.accessor %s_parser %s %s_clens_%s =\n" n case n (pcombinator_name ty) n case;
+                 wp o "%s" same_kind;
                  (match d with
                  | "" ->
                    wp o "  PPC.accessor_ext\n";
@@ -3495,6 +3498,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
           begin
             wp i "val %s_accessor_Unknown : PPB.accessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt) n;
             wp o "let %s_accessor_Unknown : PPB.accessor %s_parser %s %s_clens_Unknown =\n" n n (pcombinator_name dt) n;
+            wp o "%s" same_kind;
             wp o "  PPC.accessor_ext\n";
             wp o "    (PPS.accessor_clens_dsum_unknown_payload %s_sum %s_repr_jumper parse_%s_cases %s ())\n" n tn n (pcombinator_name dt);
             wp o "    %s_clens_Unknown\n" n;
