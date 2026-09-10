@@ -22,16 +22,20 @@ Point `FSTAR_EXE` at that build as usual.
 ## Building
 
 ```sh
-# Rust (the default; produces src/cose/rust/src/*.rs)
-make -C src/cose/generate-rust extract-all       # ~27 s
-make -C src/cose/generate-rust snapshot
+# Rust (produces src/cose/rust/src/*.rs)
+make -C src/cose/generate-rust snapshot          # ~27 s
 
-# Rust, karamel-native instead
-make -C src/cose/generate-rust extract-all CUSTARD=0
+# C (produces src/cose/c/COSE_Format.{c,h})
+make -C src/cose/verifiedinterop snapshot        # ~37 s
 
-# C (side-by-side with the karamel-native build; see "C leg" below)
-make -C src/cose/verifiedinterop extract-custard # ~37 s
+# karamel-native instead, on either leg
+make -C src/cose/generate-rust   snapshot CUSTARD=0
+make -C src/cose/verifiedinterop snapshot CUSTARD=0
 ```
+
+`CUSTARD=0` regenerates the *generated* files only.  The hand-written consumers
+(`c/COSE_OpenSSL.c`, `interop/*.c`, `verifiedinterop/test/*.c`) are written
+against Custard's output and would have to be reverted alongside it.
 
 The shared settings live in [`custard.Makefile`](custard.Makefile); the targets
 themselves are in `generate-rust/extract.Makefile` and
@@ -88,8 +92,9 @@ the Custard author:
   dead code: Custard extracts a whole program from its entry points and nothing
   calls them.
 
-Together these cost **4 lines** in the Rust consumers (3 in `rust/src/main.rs`,
-1 import plus 2 paths in `rust/tests/interop.rs`), all already applied.
+Together these cost 4 lines in the Rust consumers (3 in `rust/src/main.rs`,
+1 import plus 2 paths in `rust/tests/interop.rs`), all already applied.  The C
+consumers absorb the same difference in the naming changes described above.
 
 ## Entry modules
 

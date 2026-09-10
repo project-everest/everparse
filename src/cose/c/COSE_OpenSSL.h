@@ -7,7 +7,7 @@
 
 void COSE_OpenSSL_openssl_error_msg(const char *msg);
 
-typedef Pulse_Lib_Slice_slice__uint8_t bstr;
+typedef Pulse_Lib_Slice_slice__uint8 bstr;
 
 bstr COSE_OpenSSL_sign_eddsa(EVP_PKEY *signing_key, const bstr tbs);
 bool COSE_OpenSSL_validate(EVP_PKEY *signing_key, bstr tbs, bstr sig);

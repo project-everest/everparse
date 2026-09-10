@@ -2,12 +2,13 @@
 #define COMMON_H
 
 #include "COSE_Format.h"
-#include "COSE_EverCrypt.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 
 #define check(cond) { if (!(cond)) { fprintf(stderr, "failed: %s\n", #cond); abort(); } }
 
-typedef Pulse_Lib_Slice_slice__uint8_t bstr;
+typedef Pulse_Lib_Slice_slice__uint8 bstr;
 
 uint8_t *parse_ed25519_private_key(bstr cose_key);
 uint8_t *parse_ed25519_public_key(bstr cose_key);

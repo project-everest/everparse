@@ -66,6 +66,11 @@ extract: extract-krml
 # the program across COSE_Format.{c,h}, COSE_EverCrypt.{c,h}, CBORDetAPI.h and
 # internal/COSE_Format.h.  Custard emits a single translation unit and header.
 # See README.custard.md.
+# Custard is the default extraction backend for the C leg.  Set CUSTARD=0 to
+# fall back to F* --codegen krml + karamel; note that the consumers in ../c and
+# ../interop are written against Custard's output and would need reverting too.
+CUSTARD ?= 1
+
 CUSTARD_SLICE := c
 include $(EVERPARSE_SRC_PATH)/cose/custard.Makefile
 
@@ -82,18 +87,41 @@ extract-custard: $(ALL_CHECKED_FILES)
 
 .PHONY: extract-custard
 
+ifeq (1,$(CUSTARD))
+
+# Custard emits the whole program as one translation unit, so the snapshot is
+# just COSE_Format.{c,h}; the karamel-native split files are removed.
+snapshot: extract-custard
+	rm -f $(addprefix ../c/,$(C_FILES))
+	rmdir ../c/internal 2>/dev/null || true
+	cp $(CUSTARD_C_DIR)/COSE_Format.c $(CUSTARD_C_DIR)/COSE_Format.h ../c/
+
+test: extract-custard
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
+test: COSE_Format.c.custard.diff COSE_Format.h.custard.diff
+endif
+
+%.custard.diff: extract-custard
+	diff ../c/$(basename $(basename $@)) $(CUSTARD_C_DIR)/$(basename $(basename $@))
+
+.PHONY: %.custard.diff
+
+else
+
 snapshot: extract
 	mkdir -p ../c/internal
 	rm -f $(addprefix ../c/,$(C_FILES))
 	cp $(addprefix $(OUTPUT_DIRECTORY)/,$(BASE_C_FILES)) ../c/
 	cp $(addprefix $(OUTPUT_DIRECTORY)/internal/,$(INTERNAL_C_FILES)) ../c/internal/
 
-.PHONY: snapshot
-
 test: extract
 ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
 test: $(addsuffix .diff,$(C_FILES))
 endif
+
+endif
+
+.PHONY: snapshot
 
 clean-output:
 	rm -rf $(OUTPUT_DIRECTORY)
