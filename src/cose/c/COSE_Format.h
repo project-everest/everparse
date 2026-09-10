@@ -16,6 +16,8 @@ so two spellings of it are the same spelling. */
 #define CUSTARD_UNIT_DEFINED
 typedef uint8_t custard_unit;
 #endif
+#include "stdlib.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

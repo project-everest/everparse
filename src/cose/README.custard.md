@@ -43,43 +43,73 @@ themselves are in `generate-rust/extract.Makefile` and
 
 ## Status
 
-**Rust: switched over.**  `src/cose/rust/src/*.rs` is Custard output.  The
-crate, its binary and `cargo test --release` (2 passed, 1 ignored) all behave
-exactly as on the karamel-native snapshot, and the public API matches it
-function-for-function (99/99, 35/35, 9/9 `pub fn` per module).
+Both legs are switched over; Custard output is what is committed.
 
-**C: available, not switched over.**  `extract-custard` produces C at full API
-parity with `../c` (82/82, 41/41, 41/41, 9/9 declarations, each measured by
-function prefix and checked with a deletion control).  It is *not* the default,
-because it is not a drop-in replacement for the snapshot in `../c` — see below.
+**Rust.**  `rust/src/*.rs` is Custard output.  The crate, its binary and
+`cargo test --release` (2 passed, 1 ignored) behave exactly as on the
+karamel-native snapshot, and the public API matches it function-for-function
+(99/99, 35/35, 9/9 `pub fn` per module).
 
-## Why the C leg is not the default
+**C.**  `c/COSE_Format.{c,h}` is Custard output, at full declaration parity with
+the karamel-native snapshot it replaced (82/82, 41/41, 41/41, 9/9, each measured
+by function prefix and checked with a deletion control).  Both C consumer suites
+round-trip against pycose: `interop`, which is OpenSSL-backed, and
+`verifiedinterop/test`, which links HACL*'s `libevercrypt.a`.  `interop`'s
+benchmark is unchanged or slightly better than the karamel-native build --
+notably `parse` 2.96 vs 4.02 us/iter.
+
+## What switching the C leg required
 
 Custard's C output is correct and complete, but its *shape* differs from
-karamel's in two ways that the hand-written consumers in `../c` and `../interop`
-depend on:
+karamel's, and the hand-written consumers had to follow.
 
 1. **One translation unit.**  karamel splits the program over
    `COSE_Format.{c,h}`, `COSE_EverCrypt.{c,h}`, `CBORDetAPI.h` and
-   `internal/COSE_Format.h`; Custard emits a single `.c`/`.h` pair.  That pair
-   also *defines* the 40 `cbor_det_*` functions that the karamel-native build
-   links in separately from `cbor/pulse/det/c/CBORDet.c`, so `CBOR_Det.o` has to
-   be dropped from `interop/Makefile` to avoid duplicate symbols.
+   `internal/COSE_Format.h`; Custard emits a single `.c`/`.h` pair.
+   `--custard_split` does *not* apply to the C backend -- it still writes one
+   unit -- so this is inherent.  Consequences:
 
-2. **Generated type names.**  `../c/COSE_OpenSSL.h` and `../interop/common.c`
-   spell out generated names — `Pulse_Lib_Slice_slice__uint8_t`,
-   `COSE_Format_Inl`, `COSE_Format_Mkevercddl_int0`, and option
-   monomorphizations — which Custard names differently (see "Naming" below).
+   * That unit also *defines* the 40 `cbor_det_*` functions the karamel build
+     links separately from `cbor/pulse/det/c/CBORDet.c`, so `CBOR_Det.o` is no
+     longer linked; it would be a duplicate definition.
+   * It also contains the EverCrypt-backed entry points, so `COSE_Format.o`
+     references `EverCrypt_Ed25519_{sign,verify}` even in `interop`, which does
+     not use them.  `interop` compiles with `-ffunction-sections
+     -fdata-sections` and links with `-Wl,--gc-sections`, which drops that code
+     rather than take on a HACL* dependency.  `verifiedinterop/test`, which does
+     use EverCrypt, links `libevercrypt.a` as before.
+   * `COSE_EverCrypt.h` no longer exists; its nine declarations are in
+     `COSE_Format.h`.
 
-(1) and the first name are mechanical.  (2) is not: `common.c` pattern-matches
-several layers deep into generated structs, so switching the C snapshot means
-rewriting hand-written interop C, which is out of scope here.  Both are naming,
-not semantics.
+2. **Generated names and tagged-union layout.**  karamel emits
+   `typedef enum { COSE_Format_Mkevercddl_int0, ... }` with payloads in
+   `.case_Mkevercddl_int0`; Custard emits `COSE_FORMAT_MKEVERCDDL_INT0` with
+   payloads in `.val.COSE_Format_Mkevercddl_int0._x0`.  Tuple fields are `._1`
+   and `._2` rather than `.fst` and `.snd`; monomorphized names are abbreviated
+   (`option___COSE_Format_cose_key_okp___Pulse_Lib_Slice_slice__uint8_t_` becomes
+   `option__tuple2_cose_key_okp_slice_uint8`); and a constructor whose payloads
+   are all unit collapses to a bare enum rather than a tagged struct.
+
+3. **`Abort.abort` needs an explicit target name.**  It is an `assume val`
+   realized by libc's `abort`, and karamel gave it that unqualified name via
+   `-no-prefix Abort`.  `--custard_c_no_prefix` covers definitions, not assume
+   vals, so listing `Abort` there -- or as an entry module -- does nothing.  The
+   declaration instead carries
+   `[@@custard_extern "abort"; custard_c_header "stdlib.h"]`, which is the
+   mechanism intended for this.  `interop` did not notice the difference only
+   because `--gc-sections` had already discarded the code that calls it.
+
+4. **Two modellings changed.**  `sig_structure.context` is
+   `FStar_Pervasives_either__unit_unit` where karamel had a plain enum tag, and
+   `cose_sign1.protected` is no longer renamed to `protected0`.
+
+None of this is a semantic difference; the round-trip tests against pycose are
+what establish that.
 
 ## Naming divergences
 
-Three differences from karamel-native output are **working as designed**, per
-the Custard author:
+Three differences from karamel-native output are working as designed, per the
+Custard author:
 
 * Option/either monomorphizations can land in a different bundle than they do
   under karamel.  Custard places an instance where it first demands it, which is
@@ -92,9 +122,42 @@ the Custard author:
   dead code: Custard extracts a whole program from its entry points and nothing
   calls them.
 
-Together these cost 4 lines in the Rust consumers (3 in `rust/src/main.rs`,
-1 import plus 2 paths in `rust/tests/interop.rs`), all already applied.  The C
-consumers absorb the same difference in the naming changes described above.
+Together these cost 4 lines in the Rust consumers (3 in `rust/src/main.rs`, 1
+import plus 2 paths in `rust/tests/interop.rs`).  The C consumers absorb the
+same difference in the naming changes described above.
+
+### Caveat: generated specialization names are not stable
+
+Custard warns, during extraction, that the name of a monomorphized
+specialization carries "a hint built from the monomorphizer's input and may
+change when that input does", and advises that a consumer needing to spell one
+should typedef it once in its own header rather than depend on the name
+throughout.  The consumers here do spell them, so expect churn there when the
+specification changes.
+
+### Two option types for what looks like one type
+
+The C output has both `FStar_Pervasives_Native_option__bstr` and
+`FStar_Pervasives_Native_option__slice_uint8`.  They are structurally identical
+-- each wraps a `Pulse_Lib_Slice_slice__uint8` -- but are distinct C types, so a
+consumer must spell whichever one appears in the signature it is calling.
+
+This is faithful rather than a defect: `COSE.Format.bstr` and
+`Pulse.Lib.Slice.slice UInt8.t` really are different F* types.  `bstr` is a
+nominal type spliced by `FStar.Tactics.PrettifyType`; it does not unfold under
+`delta`, or even under `delta_only` naming it, and a `slice UInt8.t` is rejected
+where a `bstr` is expected.  What makes the two indistinguishable in C is that
+Custard then collapses each single-field wrapper to its payload, so the
+*identity* of the monomorphization is fixed before the collapse and its
+*representation* after it.
+
+The two backends differ here.  The Rust leg has a single
+`option__Pulse_Lib_Slice_slice·uint8_t`, used both for `cose_key_okp.intkeyneg2`
+(an `option bstr`) and as `verify1_simple`'s return type (an
+`option (slice uint8)`).  That is because the C leg monomorphizes inside Custard
+(`--custard_monomorphize_types true`) over F* types, whereas the Rust leg leaves
+monomorphization to karamel, by which point Custard has already collapsed `bstr`
+away.
 
 ## Entry modules
 
