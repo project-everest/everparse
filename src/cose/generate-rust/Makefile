@@ -16,8 +16,17 @@ $(OUTPUT): ../cose-sign.cddl ../../cddl/spec/postlude.cddl
 extract-krml: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract-krml
 
+# Custard is the default extraction backend for the Rust leg.  Set
+# CUSTARD=0 to fall back to F* --codegen krml.
+CUSTARD ?= 1
+
+ifeq (1,$(CUSTARD))
+extract-all: $(OUTPUT)
+	+$(MAKE) -f extract.Makefile extract-custard
+else
 extract-all: extract-krml
 	+$(MAKE) -f extract.Makefile extract
+endif
 
 SNAPSHOT_FILES=cbordetveraux cbordetver commonpulse coseformat
 SNAPSHOT_FILES_RS=$(addsuffix .rs,$(SNAPSHOT_FILES))

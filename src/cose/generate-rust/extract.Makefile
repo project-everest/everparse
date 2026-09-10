@@ -22,18 +22,51 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
+# Shared by the karamel-native and the Custard leg: the same five bundles
+# define the crate's module structure either way.
+COSE_RUST_BUNDLES := \
+		-bundle 'CommonPulse=[rename=CommonPulse]' \
+		-bundle 'EverCrypt.Ed25519=[rename=Ed25519]' \
+		-bundle 'COSE.Format=[rename=COSEFormat]' \
+		-bundle 'CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]' \
+		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.Raw.Slice+CBOR.Pulse.API.Det.Type=\*[rename=CBORDetVerAux]'
+
 extract-krml: $(ALL_KRML_FILES)
 
 .PHONY: extract-krml
 
 extract: extract-krml
 	$(KRML) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking \
-		-bundle 'CommonPulse=[rename=CommonPulse]' \
-		-bundle 'EverCrypt.Ed25519=[rename=Ed25519]' \
-		-bundle 'COSE.Format=[rename=COSEFormat]' \
-		-bundle 'CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]' \
-		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.Raw.Slice+CBOR.Pulse.API.Det.Type=\*[rename=CBORDetVerAux]' \
+		$(COSE_RUST_BUNDLES) \
 		-tmpdir $(OUTPUT_DIRECTORY) -skip-compilation $(ALL_KRML_FILES)
+
+# Custard: replaces the F* --codegen krml step above with Custard's KrmlRust
+# backend.  karamel then runs unchanged, on the same bundles.
+CUSTARD_SLICE := rust
+include $(EVERPARSE_SRC_PATH)/cose/custard.Makefile
+
+CUSTARD_KRML_DIR := $(OUTPUT_DIRECTORY)/custard
+
+extract-custard-krml: $(ALL_CHECKED_FILES)
+	rm -rf $(CUSTARD_KRML_DIR)
+	mkdir -p $(CUSTARD_KRML_DIR)
+	$(CUSTARD_FSTAR) --custard_backend KrmlRust \
+		$(addprefix --custard_entry_module ,$(CUSTARD_RUST_ENTRY_MODULES)) \
+		--custard_split --odir $(CUSTARD_KRML_DIR) \
+		$(OUTPUT_DIRECTORY)/COSE.Format.fst
+
+# karamel exits 0 even when it fails to print a function, so the log is grepped
+# rather than trusted.
+extract-custard: extract-custard-krml
+	$(KRML) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking \
+		$(COSE_RUST_BUNDLES) \
+		-tmpdir $(OUTPUT_DIRECTORY) -skip-compilation $(CUSTARD_KRML_DIR)/*.krml \
+		2>&1 | tee $(OUTPUT_DIRECTORY)/custard-krml.log
+	@ ! grep -q 'ERROR printing' $(OUTPUT_DIRECTORY)/custard-krml.log || \
+	  { echo 'karamel failed to print some functions:'; \
+	    grep 'ERROR printing' $(OUTPUT_DIRECTORY)/custard-krml.log; exit 1; }
+
+.PHONY: extract-custard extract-custard-krml
 
 #	$(KRML) -bundle COSE.Format=*[rename=COSEFormat] -add-include '"CBORDetAbstract.h"' -no-prefix CBOR.Pulse.API.Det.Rust -no-prefix CBOR.Spec.Constants -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator
 

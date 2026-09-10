@@ -59,6 +59,29 @@ extract: extract-krml
 
 .PHONY: %.diff
 
+# Custard: direct-to-C.  This replaces both the F* --codegen krml step and
+# karamel; Custard emits the C itself.
+#
+# Note the output layout differs from the karamel-native build, which splits
+# the program across COSE_Format.{c,h}, COSE_EverCrypt.{c,h}, CBORDetAPI.h and
+# internal/COSE_Format.h.  Custard emits a single translation unit and header.
+# See README.custard.md.
+CUSTARD_SLICE := c
+include $(EVERPARSE_SRC_PATH)/cose/custard.Makefile
+
+CUSTARD_C_DIR := $(OUTPUT_DIRECTORY)/custard
+
+extract-custard: $(ALL_CHECKED_FILES)
+	rm -rf $(CUSTARD_C_DIR)
+	mkdir -p $(CUSTARD_C_DIR)
+	$(CUSTARD_FSTAR) --custard_backend C --custard_monomorphize_types true \
+		$(addprefix --custard_entry_module ,$(CUSTARD_C_ENTRY_MODULES)) \
+		$(addprefix --custard_c_no_prefix ,$(CUSTARD_C_NO_PREFIX)) \
+		$(OUTPUT_DIRECTORY)/COSE.Format.fst \
+		-o $(CURDIR)/$(CUSTARD_C_DIR)/COSE_Format.c
+
+.PHONY: extract-custard
+
 snapshot: extract
 	mkdir -p ../c/internal
 	rm -f $(addprefix ../c/,$(C_FILES))
