@@ -56,8 +56,8 @@ CUSTARD_C_ENTRY_MODULES := \
 # Mirrors the karamel-native build's -no-prefix flags, so the emitted C names
 # match the snapshot in ../c.  karamel's -no-prefix Abort has no counterpart
 # here: --custard_c_no_prefix covers definitions, not assume vals, so listing
-# Abort changes nothing.  Abort.abort carries [@@custard_extern "abort"]
-# instead, which is what gives it libc's unqualified name.
+# Abort changes nothing.  Abort.abort is instead realized by the consumers,
+# which define Abort_abort; see README.custard.md.
 CUSTARD_C_NO_PREFIX := \
   CBOR.Pulse.API.Det.C CBOR.Pulse.API.Det.Type \
   CBOR.Spec.Constants CBOR.Pulse.API.Det.Dummy

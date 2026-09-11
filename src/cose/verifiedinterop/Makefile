@@ -9,6 +9,8 @@ CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
+include $(EVERPARSE_SRC_PATH)/cose/custard-detect.Makefile
+
 ifeq (1,$(ADMIT))
 CDDL_ADMIT := --admit
 else
@@ -66,11 +68,11 @@ extract: extract-krml
 # the program across COSE_Format.{c,h}, COSE_EverCrypt.{c,h}, CBORDetAPI.h and
 # internal/COSE_Format.h.  Custard emits a single translation unit and header.
 # See README.custard.md.
-# Custard is the default extraction backend for the C leg.  Set CUSTARD=0 to
-# fall back to F* --codegen krml + karamel; note that the consumers in ../c and
-# ../interop are written against Custard's output and would need reverting too.
-CUSTARD ?= 1
-
+# CUSTARD defaults to 1 when the F* in use has Custard and to 0 otherwise;
+# see custard-detect.Makefile, included at the top of this file.  The snapshot
+# in ../c, and the consumers in ../interop and ../verifiedinterop/test, are
+# written against Custard's output, so CUSTARD=0 gives a working karamel
+# extraction but one that nothing here consumes.
 CUSTARD_SLICE := c
 include $(EVERPARSE_SRC_PATH)/cose/custard.Makefile
 
@@ -108,16 +110,18 @@ endif
 
 else
 
+# Without Custard the karamel extraction still runs -- it is the same verified
+# .checked files, and keeping it working is the point -- but it must not touch
+# the snapshot, which belongs to the other backend.
 snapshot: extract
-	mkdir -p ../c/internal
-	rm -f $(addprefix ../c/,$(C_FILES))
-	cp $(addprefix $(OUTPUT_DIRECTORY)/,$(BASE_C_FILES)) ../c/
-	cp $(addprefix $(OUTPUT_DIRECTORY)/internal/,$(INTERNAL_C_FILES)) ../c/internal/
+	@echo 'ERROR: ../c holds Custard output, and this F* has no Custard.' >&2
+	@echo '       Rebuild F* from the gebner_custard branch (FStarLang/FStar#4395);' >&2
+	@echo '       see ../README.custard.md.' >&2
+	@false
 
 test: extract
-ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
-test: $(addsuffix .diff,$(C_FILES))
-endif
+	@echo 'NOTE: extracted with karamel; not diffed against ../c, which holds'
+	@echo '      Custard output.  See ../README.custard.md.'
 
 endif
 

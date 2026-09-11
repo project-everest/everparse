@@ -1,5 +1,10 @@
 #include "common.h"
 
+/* Abort.abort is an assume val realized by libc's abort.  karamel got the
+   unqualified C name from -no-prefix Abort; Custard's --custard_c_no_prefix
+   does not cover assume vals, so the realization is provided here. */
+void Abort_abort(void) { abort(); }
+
 #define check(cond) { if (!(cond)) { fprintf(stderr, "failed: %s\n", #cond); abort(); } }
 
 typedef Pulse_Lib_Slice_slice__uint8 bstr;
