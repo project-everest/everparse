@@ -19,6 +19,15 @@ Earlier revisions hit blockers that are fixed there; in particular anything
 before `4af84d2f86` extracts COSE roughly **50× slower** (C: 1994 s → 37 s).
 Point `FSTAR_EXE` at that build as usual.
 
+Custard is not in any released F\*, so the choice of backend is made from the
+compiler at hand rather than hardcoded: `custard-detect.Makefile` asks
+`$(FSTAR_EXE) --help` whether it knows `--custard_backend` and sets `CUSTARD`
+to 1 or 0 accordingly.  With a released F\* the COSE `.fst` sources still
+verify and still extract through `--codegen krml` + karamel; what a released
+F\* cannot do is *refresh the snapshots*, and `snapshot` refuses rather than
+overwriting Custard output with karamel's.  Nothing in `src/cose` depends on a
+Custard-only F\* attribute or option at typechecking time.
+
 ## Building
 
 ```sh
@@ -28,14 +37,17 @@ make -C src/cose/generate-rust snapshot          # ~27 s
 # C (produces src/cose/c/COSE_Format.{c,h})
 make -C src/cose/verifiedinterop snapshot        # ~37 s
 
-# karamel-native instead, on either leg
-make -C src/cose/generate-rust   snapshot CUSTARD=0
-make -C src/cose/verifiedinterop snapshot CUSTARD=0
+# karamel-native extraction instead, on either leg
+make -C src/cose/generate-rust   extract-all CUSTARD=0
+make -C src/cose/verifiedinterop extract     CUSTARD=0
 ```
 
-`CUSTARD=0` regenerates the *generated* files only.  The hand-written consumers
-(`c/COSE_OpenSSL.c`, `interop/*.c`, `verifiedinterop/test/*.c`) are written
-against Custard's output and would have to be reverted alongside it.
+`CUSTARD=0` runs the karamel-native extraction but does not update the
+snapshots: `snapshot` under `CUSTARD=0` fails on purpose.  The snapshots and
+the hand-written consumers (`c/COSE_OpenSSL.c`, `interop/*.c`,
+`verifiedinterop/test/*.c`) are written against Custard's output, and a
+karamel snapshot dropped on top of them would leave the tree inconsistent.
+Reverting the leg means reverting all of it together.
 
 The shared settings live in [`custard.Makefile`](custard.Makefile); the targets
 themselves are in `generate-rust/extract.Makefile` and
@@ -90,14 +102,28 @@ karamel's, and the hand-written consumers had to follow.
    `option__tuple2_cose_key_okp_slice_uint8`); and a constructor whose payloads
    are all unit collapses to a bare enum rather than a tagged struct.
 
-3. **`Abort.abort` needs an explicit target name.**  It is an `assume val`
+3. **`Abort.abort` has to be realized by the consumer.**  It is an `assume val`
    realized by libc's `abort`, and karamel gave it that unqualified name via
    `-no-prefix Abort`.  `--custard_c_no_prefix` covers definitions, not assume
-   vals, so listing `Abort` there -- or as an entry module -- does nothing.  The
-   declaration instead carries
-   `[@@custard_extern "abort"; custard_c_header "stdlib.h"]`, which is the
-   mechanism intended for this.  `interop` did not notice the difference only
-   because `--gc-sections` had already discarded the code that calls it.
+   vals, so listing `Abort` there -- or as an entry module -- does nothing, and
+   Custard emits `extern void Abort_abort(void);` and calls that.  The one
+   mechanism that *would* give it libc's name is
+   `[@@custard_extern "abort"; custard_c_header "stdlib.h"]` on the
+   declaration, but that attribute exists only on the `gebner_custard` branch,
+   so using it would stop `Abort.fst` typechecking with a released F\*.  The
+   consumers therefore define the symbol themselves, in one line of
+   `interop/common.c` and `verifiedinterop/test/common.c`:
+
+   ```c
+   void Abort_abort(void) { abort(); }
+   ```
+
+   Any other consumer of `c/COSE_Format.c` has to do the same.  `interop` did
+   not notice the difference at first only because `--gc-sections` had already
+   discarded the code that calls it.  Making `--custard_c_no_prefix` apply to
+   `assume val`s, or adding a command-line counterpart to `custard_extern`,
+   would remove the need for the shim without making the source
+   branch-specific.
 
 4. **Two modellings changed.**  `sig_structure.context` is
    `FStar_Pervasives_either__unit_unit` where karamel had a plain enum tag, and
