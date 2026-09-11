@@ -348,13 +348,11 @@ pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
                   let success: bool =
                       if sig.len() == 64usize
                       {
-                          let scrut1: crate::coseformat::cose_sign1 = x;
-                          let scrut10: crate::coseformat::cose_sign1 = x;
                           verify_sig(
                               pubkey,
-                              scrut1.protected,
+                              x.protected,
                               aad,
-                              match scrut10.payload
+                              match x.payload
                               {
                                   crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                                   { v }
@@ -368,9 +366,8 @@ pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
                       { false };
                   if success
                   {
-                      let scrut1: crate::coseformat::cose_sign1 = x;
                       let payload: &[u8] =
-                          match scrut1.payload
+                          match x.payload
                           {
                               crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                               { v }
@@ -423,13 +420,11 @@ pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
                   let success: bool =
                       if sig.len() == 64usize
                       {
-                          let scrut1: crate::coseformat::cose_sign1 = x;
-                          let scrut10: crate::coseformat::cose_sign1 = x;
                           verify_sig(
                               pubkey,
-                              scrut1.protected,
+                              x.protected,
                               aadslice,
-                              match scrut10.payload
+                              match x.payload
                               {
                                   crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                                   { v }
@@ -443,9 +438,8 @@ pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
                       { false };
                   if success
                   {
-                      let scrut1: crate::coseformat::cose_sign1 = x;
                       let payload: &[u8] =
-                          match scrut1.payload
+                          match x.payload
                           {
                               crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                               { v }

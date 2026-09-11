@@ -14,7 +14,7 @@ Both legs consume the **same** `.checked` files as the karamel-native build, so
 
 ## Requirements
 
-An F\* built from the `gebner_custard` branch, at **`12104fcba4`** or later.
+An F\* built from the `gebner_custard` branch, at **`a1d6ba3f5a`** or later.
 Earlier revisions hit blockers that are fixed there; in particular anything
 before `4af84d2f86` extracts COSE roughly **50× slower** (C: 1994 s → 37 s).
 Point `FSTAR_EXE` at that build as usual.
@@ -102,28 +102,21 @@ karamel's, and the hand-written consumers had to follow.
    `option__tuple2_cose_key_okp_slice_uint8`); and a constructor whose payloads
    are all unit collapses to a bare enum rather than a tagged struct.
 
-3. **`Abort.abort` has to be realized by the consumer.**  It is an `assume val`
-   realized by libc's `abort`, and karamel gave it that unqualified name via
-   `-no-prefix Abort`.  `--custard_c_no_prefix` covers definitions, not assume
-   vals, so listing `Abort` there -- or as an entry module -- does nothing, and
-   Custard emits `extern void Abort_abort(void);` and calls that.  The one
-   mechanism that *would* give it libc's name is
-   `[@@custard_extern "abort"; custard_c_header "stdlib.h"]` on the
-   declaration, but that attribute exists only on the `gebner_custard` branch,
-   so using it would stop `Abort.fst` typechecking with a released F\*.  The
-   consumers therefore define the symbol themselves, in one line of
-   `interop/common.c` and `verifiedinterop/test/common.c`:
+3. **`Abort.abort` is emitted unprefixed.**  It is an `assume val` realized by
+   libc's `abort`, and the karamel-native build gave it that unqualified name
+   via `-no-prefix Abort`.  Custard does the same, via `Abort` in
+   `CUSTARD_C_NO_PREFIX`, so `COSE_Format.c` declares `extern void abort(void);`
+   and calls it, and consumers need to do nothing.
 
-   ```c
-   void Abort_abort(void) { abort(); }
-   ```
-
-   Any other consumer of `c/COSE_Format.c` has to do the same.  `interop` did
-   not notice the difference at first only because `--gc-sections` had already
-   discarded the code that calls it.  Making `--custard_c_no_prefix` apply to
-   `assume val`s, or adding a command-line counterpart to `custard_extern`,
-   would remove the need for the shim without making the source
-   branch-specific.
+   This needed a fix on the Custard side: `--custard_c_no_prefix` originally
+   covered definitions but not `assume val`s, so listing `Abort` did nothing
+   and Custard emitted `Abort_abort`, which each consumer had to define itself.
+   The only other mechanism, `[@@custard_extern "abort"]` on the declaration,
+   exists only on the `gebner_custard` branch, so using it stops `Abort.fst`
+   typechecking with a released F\* -- which broke EverParse's CI until it was
+   backed out.  FStarLang/FStar#4395 section 102 extended the option to
+   `assume val`s, which is why the shim is gone; this is the one item that
+   requires `a1d6ba3f5a` rather than merely `12104fcba4`.
 
 4. **Two modellings changed.**  `sig_structure.context` is
    `FStar_Pervasives_either__unit_unit` where karamel had a plain enum tag, and

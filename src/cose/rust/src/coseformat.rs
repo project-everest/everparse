@@ -399,9 +399,8 @@ serialize_tstr(c: &[u8], out: &mut [u8]) ->
                 { crate::cbordetver::cbor_det_string_kind::TextString };
             let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
                 crate::cbordetver::cbor_det_mk_string(mty, tstr_left(c));
-            let _letpattern: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = res;
             let x: crate::cbordetveraux::cbor_raw =
-                match _letpattern
+                match res
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: c1 } => c1,
                     _ => panic!("Incomplete pattern matching")
@@ -510,9 +509,8 @@ serialize_bstr(c: &[u8], out: &mut [u8]) ->
             crate::cbordetver::cbor_det_string_kind::ByteString;
         let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
             crate::cbordetver::cbor_det_mk_string(mty, bstr_left(c));
-        let _letpattern: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = res;
         let x: crate::cbordetveraux::cbor_raw =
-            match _letpattern
+            match res
             {
                 crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: c1 } => c1,
                 _ => panic!("Incomplete pattern matching")
@@ -624,9 +622,8 @@ pub fn aux_env34_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
         if is_uint
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let i: u64 =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                     _ => panic!("Incomplete pattern matching")
@@ -657,9 +654,8 @@ pub fn aux_env34_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -677,9 +673,8 @@ pub fn aux_env34_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v1: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(v);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
                     let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern
+                        match v1
                         {
                             crate::cbordetver::cbor_det_view::Array { _0: a } =>
                               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -771,9 +766,8 @@ pub fn aux_env34_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -805,9 +799,8 @@ pub fn aux_env34_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -838,9 +831,8 @@ pub fn aux_env34_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -870,9 +862,8 @@ pub fn aux_env34_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
             if is_uint1
             {
                 let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k1);
-                let _letpattern: crate::cbordetver::cbor_det_view = v;
                 let i: u64 =
-                    match _letpattern
+                    match v
                     {
                         crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                         _ => panic!("Incomplete pattern matching")
@@ -928,15 +919,6 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
             either__Pulse_Lib_Slice_slice··COSE_Format_evercddl_label···CBOR_Pulse_Raw_Type_cbor_raw·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw
             =
                 _letpattern.1;
-            let
-            _letpattern1:
-            ((((option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t,
-            option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label),
-            option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int),
-            option__Pulse_Lib_Slice_slice·uint8_t),
-            either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···)
-            =
-                c1;
             let res1: bool =
                 {
                     let
@@ -946,20 +928,12 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                     option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int),
                     option__Pulse_Lib_Slice_slice·uint8_t)
                     =
-                        _letpattern1.0;
+                        c1.0;
                     let
                     c21:
                     either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···
                     =
-                        _letpattern1.1;
-                    let
-                    _letpattern2:
-                    (((option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t,
-                    option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label),
-                    option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int),
-                    option__Pulse_Lib_Slice_slice·uint8_t)
-                    =
-                        c11;
+                        c1.1;
                     let res1: bool =
                         {
                             let
@@ -968,15 +942,8 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                             option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label),
                             option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int)
                             =
-                                _letpattern2.0;
-                            let c22: option__Pulse_Lib_Slice_slice·uint8_t = _letpattern2.1;
-                            let
-                            _letpattern3:
-                            ((option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t,
-                            option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label),
-                            option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int)
-                            =
-                                c12;
+                                c11.0;
+                            let c22: option__Pulse_Lib_Slice_slice·uint8_t = c11.1;
                             let res1: bool =
                                 {
                                     let
@@ -984,30 +951,24 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                     (option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t,
                                     option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label)
                                     =
-                                        _letpattern3.0;
+                                        c12.0;
                                     let
                                     c23:
                                     option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int
                                     =
-                                        _letpattern3.1;
-                                    let
-                                    _letpattern4:
-                                    (option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t,
-                                    option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label)
-                                    =
-                                        c13;
+                                        c12.1;
                                     let res1: bool =
                                         {
                                             let
                                             c14:
                                             option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t
                                             =
-                                                _letpattern4.0;
+                                                c13.0;
                                             let
                                             c24:
                                             option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label
                                             =
-                                                _letpattern4.1;
+                                                c13.1;
                                             let res1: bool =
                                                 match c14
                                                 {
@@ -1020,11 +981,11 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                           {
                                                               let size0: usize = (&psize)[0usize];
                                                               let
-                                                              _letpattern5: (&mut [u8], &mut [u8])
+                                                              _letpattern1: (&mut [u8], &mut [u8])
                                                               =
                                                                   out.split_at_mut(size0);
-                                                              let _out0: &[u8] = _letpattern5.0;
-                                                              let out1: &mut [u8] = _letpattern5.1;
+                                                              let _out0: &[u8] = _letpattern1.0;
+                                                              let out1: &mut [u8] = _letpattern1.1;
                                                               let
                                                               mty:
                                                               crate::cbordetver::cbor_det_int_kind
@@ -1062,14 +1023,14 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                   let size1: usize =
                                                                       size0.wrapping_add(res1);
                                                                   let
-                                                                  _letpattern6:
+                                                                  _letpattern2:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size1);
                                                                   let _out01: &[u8] =
-                                                                      _letpattern6.0;
+                                                                      _letpattern2.0;
                                                                   let out2: &mut [u8] =
-                                                                      _letpattern6.1;
+                                                                      _letpattern2.1;
                                                                   let res2: usize =
                                                                       match c15
                                                                       {
@@ -1094,14 +1055,14 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                       let size2: usize =
                                                                           size1.wrapping_add(res2);
                                                                       let
-                                                                      _letpattern7:
+                                                                      _letpattern3:
                                                                       (&mut [u8], &mut [u8])
                                                                       =
                                                                           out.split_at_mut(size2);
                                                                       let out012: &mut [u8] =
-                                                                          _letpattern7.0;
+                                                                          _letpattern3.0;
                                                                       let _out_rest: &[u8] =
-                                                                          _letpattern7.1;
+                                                                          _letpattern3.1;
                                                                       let res3: bool =
                                                                           crate::cbordetver::cbor_det_serialize_map_insert(
                                                                               out012,
@@ -1147,11 +1108,11 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                           {
                                                               let size0: usize = (&psize)[0usize];
                                                               let
-                                                              _letpattern5: (&mut [u8], &mut [u8])
+                                                              _letpattern1: (&mut [u8], &mut [u8])
                                                               =
                                                                   out.split_at_mut(size0);
-                                                              let _out0: &[u8] = _letpattern5.0;
-                                                              let out1: &mut [u8] = _letpattern5.1;
+                                                              let _out0: &[u8] = _letpattern1.0;
+                                                              let out1: &mut [u8] = _letpattern1.1;
                                                               let
                                                               mty:
                                                               crate::cbordetver::cbor_det_int_kind
@@ -1189,14 +1150,14 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                   let size1: usize =
                                                                       size0.wrapping_add(res11);
                                                                   let
-                                                                  _letpattern6:
+                                                                  _letpattern2:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size1);
                                                                   let _out01: &[u8] =
-                                                                      _letpattern6.0;
+                                                                      _letpattern2.0;
                                                                   let out2: &mut [u8] =
-                                                                      _letpattern6.1;
+                                                                      _letpattern2.1;
                                                                   let mut pcount1: [u64; 1] =
                                                                       [0u64; 1usize];
                                                                   let mut psize1: [usize; 1] =
@@ -1467,14 +1428,14 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                       let size2: usize =
                                                                           size1.wrapping_add(res21);
                                                                       let
-                                                                      _letpattern7:
+                                                                      _letpattern3:
                                                                       (&mut [u8], &mut [u8])
                                                                       =
                                                                           out.split_at_mut(size2);
                                                                       let out012: &mut [u8] =
-                                                                          _letpattern7.0;
+                                                                          _letpattern3.0;
                                                                       let _out_rest: &[u8] =
-                                                                          _letpattern7.1;
+                                                                          _letpattern3.1;
                                                                       let res3: bool =
                                                                           crate::cbordetver::cbor_det_serialize_map_insert(
                                                                               out012,
@@ -1523,10 +1484,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                   if count < 18446744073709551615u64
                                                   {
                                                       let size0: usize = (&psize)[0usize];
-                                                      let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                      let _letpattern1: (&mut [u8], &mut [u8]) =
                                                           out.split_at_mut(size0);
-                                                      let _out0: &[u8] = _letpattern5.0;
-                                                      let out1: &mut [u8] = _letpattern5.1;
+                                                      let _out0: &[u8] = _letpattern1.0;
+                                                      let out1: &mut [u8] = _letpattern1.1;
                                                       let
                                                       mty: crate::cbordetver::cbor_det_int_kind
                                                       =
@@ -1558,10 +1519,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                       {
                                                           let size1: usize =
                                                               size0.wrapping_add(res11);
-                                                          let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                          let _letpattern2: (&mut [u8], &mut [u8]) =
                                                               out.split_at_mut(size1);
-                                                          let _out01: &[u8] = _letpattern6.0;
-                                                          let out2: &mut [u8] = _letpattern6.1;
+                                                          let _out01: &[u8] = _letpattern2.0;
+                                                          let out2: &mut [u8] = _letpattern2.1;
                                                           let res2: usize =
                                                               match c14
                                                               {
@@ -1581,12 +1542,12 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                               let size2: usize =
                                                                   size1.wrapping_add(res2);
                                                               let
-                                                              _letpattern7: (&mut [u8], &mut [u8])
+                                                              _letpattern3: (&mut [u8], &mut [u8])
                                                               =
                                                                   out.split_at_mut(size2);
                                                               let out012: &mut [u8] =
-                                                                  _letpattern7.0;
-                                                              let _out_rest: &[u8] = _letpattern7.1;
+                                                                  _letpattern3.0;
+                                                              let _out_rest: &[u8] = _letpattern3.1;
                                                               let res3: bool =
                                                                   crate::cbordetver::cbor_det_serialize_map_insert(
                                                                       out012,
@@ -1630,10 +1591,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                           if count < 18446744073709551615u64
                                           {
                                               let size0: usize = (&psize)[0usize];
-                                              let _letpattern4: (&mut [u8], &mut [u8]) =
+                                              let _letpattern1: (&mut [u8], &mut [u8]) =
                                                   out.split_at_mut(size0);
-                                              let _out0: &[u8] = _letpattern4.0;
-                                              let out1: &mut [u8] = _letpattern4.1;
+                                              let _out0: &[u8] = _letpattern1.0;
+                                              let out1: &mut [u8] = _letpattern1.1;
                                               let mty: crate::cbordetver::cbor_det_int_kind =
                                                   crate::cbordetver::cbor_det_int_kind::UInt64;
                                               let c3: crate::cbordetveraux::cbor_raw =
@@ -1653,18 +1614,18 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                               if res11 > 0usize
                                               {
                                                   let size1: usize = size0.wrapping_add(res11);
-                                                  let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                  let _letpattern2: (&mut [u8], &mut [u8]) =
                                                       out.split_at_mut(size1);
-                                                  let _out01: &[u8] = _letpattern5.0;
-                                                  let out2: &mut [u8] = _letpattern5.1;
+                                                  let _out01: &[u8] = _letpattern2.0;
+                                                  let out2: &mut [u8] = _letpattern2.1;
                                                   let res2: usize = serialize_bstr(c13, out2);
                                                   if res2 > 0usize
                                                   {
                                                       let size2: usize = size1.wrapping_add(res2);
-                                                      let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                      let _letpattern3: (&mut [u8], &mut [u8]) =
                                                           out.split_at_mut(size2);
-                                                      let out012: &mut [u8] = _letpattern6.0;
-                                                      let _out_rest: &[u8] = _letpattern6.1;
+                                                      let out012: &mut [u8] = _letpattern3.0;
+                                                      let _out_rest: &[u8] = _letpattern3.1;
                                                       let res3: bool =
                                                           crate::cbordetver::cbor_det_serialize_map_insert(
                                                               out012,
@@ -1705,27 +1666,21 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                             { v: c12 }
                             =>
                               {
-                                  let
-                                  _letpattern3:
-                                  (&[u8],
-                                  crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags)
-                                  =
-                                      c12;
-                                  let c13: &[u8] = _letpattern3.0;
+                                  let c13: &[u8] = c12.0;
                                   let
                                   c22:
                                   crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
                                   =
-                                      _letpattern3.1;
+                                      c12.1;
                                   let count: u64 = (&pcount)[0usize];
                                   let res11: bool =
                                       if count < 18446744073709551615u64
                                       {
                                           let size0: usize = (&psize)[0usize];
-                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                          let _letpattern1: (&mut [u8], &mut [u8]) =
                                               out.split_at_mut(size0);
-                                          let _out0: &[u8] = _letpattern4.0;
-                                          let out1: &mut [u8] = _letpattern4.1;
+                                          let _out0: &[u8] = _letpattern1.0;
+                                          let out1: &mut [u8] = _letpattern1.1;
                                           let mty: crate::cbordetver::cbor_det_int_kind =
                                               crate::cbordetver::cbor_det_int_kind::UInt64;
                                           let c3: crate::cbordetveraux::cbor_raw =
@@ -1744,18 +1699,18 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                           if res11 > 0usize
                                           {
                                               let size1: usize = size0.wrapping_add(res11);
-                                              let _letpattern5: (&mut [u8], &mut [u8]) =
+                                              let _letpattern2: (&mut [u8], &mut [u8]) =
                                                   out.split_at_mut(size1);
-                                              let _out01: &[u8] = _letpattern5.0;
-                                              let out2: &mut [u8] = _letpattern5.1;
+                                              let _out01: &[u8] = _letpattern2.0;
+                                              let out2: &mut [u8] = _letpattern2.1;
                                               let res2: usize = serialize_bstr(c13, out2);
                                               if res2 > 0usize
                                               {
                                                   let size2: usize = size1.wrapping_add(res2);
-                                                  let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                  let _letpattern3: (&mut [u8], &mut [u8]) =
                                                       out.split_at_mut(size2);
-                                                  let out012: &mut [u8] = _letpattern6.0;
-                                                  let _out_rest: &[u8] = _letpattern6.1;
+                                                  let out012: &mut [u8] = _letpattern3.0;
+                                                  let _out_rest: &[u8] = _letpattern3.1;
                                                   let res3: bool =
                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                           out012,
@@ -1791,10 +1746,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                 if count1 < 18446744073709551615u64
                                                 {
                                                     let size0: usize = (&psize)[0usize];
-                                                    let _letpattern4: (&mut [u8], &mut [u8]) =
+                                                    let _letpattern1: (&mut [u8], &mut [u8]) =
                                                         out.split_at_mut(size0);
-                                                    let _out0: &[u8] = _letpattern4.0;
-                                                    let out1: &mut [u8] = _letpattern4.1;
+                                                    let _out0: &[u8] = _letpattern1.0;
+                                                    let out1: &mut [u8] = _letpattern1.1;
                                                     let mty: crate::cbordetver::cbor_det_int_kind =
                                                         crate::cbordetver::cbor_det_int_kind::UInt64;
                                                     let c3: crate::cbordetveraux::cbor_raw =
@@ -1822,10 +1777,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                     {
                                                         let size1: usize =
                                                             size0.wrapping_add(res12);
-                                                        let _letpattern5: (&[u8], &[u8]) =
+                                                        let _letpattern2: (&[u8], &[u8]) =
                                                             out.split_at(size1);
-                                                        let _out01: &[u8] = _letpattern5.0;
-                                                        let out2: &[u8] = _letpattern5.1;
+                                                        let _out01: &[u8] = _letpattern2.0;
+                                                        let out2: &[u8] = _letpattern2.1;
                                                         let res2: usize =
                                                             serialize_everparsenomatch(out2);
                                                         if res2 > 0usize
@@ -1833,11 +1788,11 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                             let size2: usize =
                                                                 size1.wrapping_add(res2);
                                                             let
-                                                            _letpattern6: (&mut [u8], &mut [u8])
+                                                            _letpattern3: (&mut [u8], &mut [u8])
                                                             =
                                                                 out.split_at_mut(size2);
-                                                            let out012: &mut [u8] = _letpattern6.0;
-                                                            let _out_rest: &[u8] = _letpattern6.1;
+                                                            let out012: &mut [u8] = _letpattern3.0;
+                                                            let _out_rest: &[u8] = _letpattern3.1;
                                                             let res3: bool =
                                                                 crate::cbordetver::cbor_det_serialize_map_insert(
                                                                     out012,
@@ -1883,27 +1838,21 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                   { v: c12 }
                                   =>
                                     {
-                                        let
-                                        _letpattern3:
-                                        (&[u8],
-                                        crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags)
-                                        =
-                                            c12;
-                                        let c13: &[u8] = _letpattern3.0;
+                                        let c13: &[u8] = c12.0;
                                         let
                                         c23:
                                         crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
                                         =
-                                            _letpattern3.1;
+                                            c12.1;
                                         let count: u64 = (&pcount)[0usize];
                                         let res11: bool =
                                             if count < 18446744073709551615u64
                                             {
                                                 let size0: usize = (&psize)[0usize];
-                                                let _letpattern4: (&mut [u8], &mut [u8]) =
+                                                let _letpattern1: (&mut [u8], &mut [u8]) =
                                                     out.split_at_mut(size0);
-                                                let _out0: &[u8] = _letpattern4.0;
-                                                let out1: &mut [u8] = _letpattern4.1;
+                                                let _out0: &[u8] = _letpattern1.0;
+                                                let out1: &mut [u8] = _letpattern1.1;
                                                 let mty: crate::cbordetver::cbor_det_int_kind =
                                                     crate::cbordetver::cbor_det_int_kind::UInt64;
                                                 let c3: crate::cbordetveraux::cbor_raw =
@@ -1923,18 +1872,18 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                 if res11 > 0usize
                                                 {
                                                     let size1: usize = size0.wrapping_add(res11);
-                                                    let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                    let _letpattern2: (&mut [u8], &mut [u8]) =
                                                         out.split_at_mut(size1);
-                                                    let _out01: &[u8] = _letpattern5.0;
-                                                    let out2: &mut [u8] = _letpattern5.1;
+                                                    let _out01: &[u8] = _letpattern2.0;
+                                                    let out2: &mut [u8] = _letpattern2.1;
                                                     let res2: usize = serialize_bstr(c13, out2);
                                                     if res2 > 0usize
                                                     {
                                                         let size2: usize = size1.wrapping_add(res2);
-                                                        let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                        let _letpattern3: (&mut [u8], &mut [u8]) =
                                                             out.split_at_mut(size2);
-                                                        let out012: &mut [u8] = _letpattern6.0;
-                                                        let _out_rest: &[u8] = _letpattern6.1;
+                                                        let out012: &mut [u8] = _letpattern3.0;
+                                                        let _out_rest: &[u8] = _letpattern3.1;
                                                         let res3: bool =
                                                             crate::cbordetver::cbor_det_serialize_map_insert(
                                                                 out012,
@@ -1970,10 +1919,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                       if count1 < 18446744073709551615u64
                                                       {
                                                           let size0: usize = (&psize)[0usize];
-                                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                                          let _letpattern1: (&mut [u8], &mut [u8]) =
                                                               out.split_at_mut(size0);
-                                                          let _out0: &[u8] = _letpattern4.0;
-                                                          let out1: &mut [u8] = _letpattern4.1;
+                                                          let _out0: &[u8] = _letpattern1.0;
+                                                          let out1: &mut [u8] = _letpattern1.1;
                                                           let
                                                           mty: crate::cbordetver::cbor_det_int_kind
                                                           =
@@ -2007,10 +1956,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                           {
                                                               let size1: usize =
                                                                   size0.wrapping_add(res12);
-                                                              let _letpattern5: (&[u8], &[u8]) =
+                                                              let _letpattern2: (&[u8], &[u8]) =
                                                                   out.split_at(size1);
-                                                              let _out01: &[u8] = _letpattern5.0;
-                                                              let out2: &[u8] = _letpattern5.1;
+                                                              let _out01: &[u8] = _letpattern2.0;
+                                                              let out2: &[u8] = _letpattern2.1;
                                                               let res2: usize =
                                                                   serialize_everparsenomatch(out2);
                                                               if res2 > 0usize
@@ -2018,14 +1967,14 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                   let size2: usize =
                                                                       size1.wrapping_add(res2);
                                                                   let
-                                                                  _letpattern6:
+                                                                  _letpattern3:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2);
                                                                   let out012: &mut [u8] =
-                                                                      _letpattern6.0;
+                                                                      _letpattern3.0;
                                                                   let _out_rest: &[u8] =
-                                                                      _letpattern6.1;
+                                                                      _letpattern3.1;
                                                                   let res3: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out012,
@@ -2067,21 +2016,15 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                   =>
                                     {
                                         let
-                                        _letpattern3:
-                                        (crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags,
-                                        crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags)
-                                        =
-                                            c23;
-                                        let
                                         c12:
                                         crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
                                         =
-                                            _letpattern3.0;
+                                            c23.0;
                                         let
                                         c24:
                                         crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
                                         =
-                                            _letpattern3.1;
+                                            c23.1;
                                         let res11: bool =
                                             match c12
                                             {
@@ -2092,10 +2035,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                       if count < 18446744073709551615u64
                                                       {
                                                           let size0: usize = (&psize)[0usize];
-                                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                                          let _letpattern1: (&mut [u8], &mut [u8]) =
                                                               out.split_at_mut(size0);
-                                                          let _out0: &[u8] = _letpattern4.0;
-                                                          let out1: &mut [u8] = _letpattern4.1;
+                                                          let _out0: &[u8] = _letpattern1.0;
+                                                          let out1: &mut [u8] = _letpattern1.1;
                                                           let
                                                           mty: crate::cbordetver::cbor_det_int_kind
                                                           =
@@ -2129,10 +2072,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                           {
                                                               let size1: usize =
                                                                   size0.wrapping_add(res11);
-                                                              let _letpattern5: (&[u8], &[u8]) =
+                                                              let _letpattern2: (&[u8], &[u8]) =
                                                                   out.split_at(size1);
-                                                              let _out01: &[u8] = _letpattern5.0;
-                                                              let out2: &[u8] = _letpattern5.1;
+                                                              let _out01: &[u8] = _letpattern2.0;
+                                                              let out2: &[u8] = _letpattern2.1;
                                                               let res2: usize =
                                                                   serialize_everparsenomatch(out2);
                                                               if res2 > 0usize
@@ -2140,14 +2083,14 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                   let size2: usize =
                                                                       size1.wrapping_add(res2);
                                                                   let
-                                                                  _letpattern6:
+                                                                  _letpattern3:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2);
                                                                   let out012: &mut [u8] =
-                                                                      _letpattern6.0;
+                                                                      _letpattern3.0;
                                                                   let _out_rest: &[u8] =
-                                                                      _letpattern6.1;
+                                                                      _letpattern3.1;
                                                                   let res3: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out012,
@@ -2191,10 +2134,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                       if count < 18446744073709551615u64
                                                       {
                                                           let size0: usize = (&psize)[0usize];
-                                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                                          let _letpattern1: (&mut [u8], &mut [u8]) =
                                                               out.split_at_mut(size0);
-                                                          let _out0: &[u8] = _letpattern4.0;
-                                                          let out1: &mut [u8] = _letpattern4.1;
+                                                          let _out0: &[u8] = _letpattern1.0;
+                                                          let out1: &mut [u8] = _letpattern1.1;
                                                           let
                                                           mty: crate::cbordetver::cbor_det_int_kind
                                                           =
@@ -2228,10 +2171,10 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                           {
                                                               let size1: usize =
                                                                   size0.wrapping_add(res12);
-                                                              let _letpattern5: (&[u8], &[u8]) =
+                                                              let _letpattern2: (&[u8], &[u8]) =
                                                                   out.split_at(size1);
-                                                              let _out01: &[u8] = _letpattern5.0;
-                                                              let out2: &[u8] = _letpattern5.1;
+                                                              let _out01: &[u8] = _letpattern2.0;
+                                                              let out2: &[u8] = _letpattern2.1;
                                                               let res2: usize =
                                                                   serialize_everparsenomatch(out2);
                                                               if res2 > 0usize
@@ -2239,14 +2182,14 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                   let size2: usize =
                                                                       size1.wrapping_add(res2);
                                                                   let
-                                                                  _letpattern6:
+                                                                  _letpattern3:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2);
                                                                   let out012: &mut [u8] =
-                                                                      _letpattern6.0;
+                                                                      _letpattern3.0;
                                                                   let _out_rest: &[u8] =
-                                                                      _letpattern6.1;
+                                                                      _letpattern3.1;
                                                                   let res3: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out012,
@@ -2299,16 +2242,15 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                     { v: c11 }
                     =>
                       {
-                          let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] = c11;
                           let discarded: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
+                              [c11; 1usize];
                           crate::lowstar::ignore::ignore::<[&[(evercddl_label,
                           crate::cbordetveraux::cbor_raw)];
                           1]>(discarded);
                           let mut pres: [bool; 1] = [true; 1usize];
                           let mut pc: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
-                          let em0: bool = i.len() == 0usize;
+                              [c11; 1usize];
+                          let em0: bool = c11.len() == 0usize;
                           let mut pem: [bool; 1] = [em0; 1usize];
                           let __anf1: bool = (&pres)[0usize];
                           let __anf0: bool = (&pem)[0usize];
@@ -2322,63 +2264,47 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                               else
                               {
                                   let count·: u64 = count.wrapping_add(1u64);
-                                  let i1: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
+                                  let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
                                       (&pc)[0usize];
                                   let res: (evercddl_label, crate::cbordetveraux::cbor_raw) =
-                                      i1[0usize];
+                                      i[0usize];
                                   let
-                                  _letpattern2:
+                                  _letpattern1:
                                   (&[(evercddl_label, crate::cbordetveraux::cbor_raw)],
                                   &[(evercddl_label, crate::cbordetveraux::cbor_raw)])
                                   =
-                                      i1.split_at(1usize);
+                                      i.split_at(1usize);
                                   let
-                                  _letpattern3: (evercddl_label, crate::cbordetveraux::cbor_raw)
+                                  _letpattern2: (evercddl_label, crate::cbordetveraux::cbor_raw)
                                   =
                                       {
                                           let
                                           _il: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
                                           =
-                                              _letpattern2.0;
+                                              _letpattern1.0;
                                           let
                                           ir: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
                                           =
-                                              _letpattern2.1;
-                                          let
-                                          i·: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
-                                              ir;
-                                          (&mut pc)[0usize] = i·;
+                                              _letpattern1.1;
+                                          (&mut pc)[0usize] = ir;
                                           res
                                       };
-                                  let ek: evercddl_label = _letpattern3.0;
-                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern3.1;
+                                  let ek: evercddl_label = _letpattern2.0;
+                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern2.1;
                                   let size0: usize = (&psize)[0usize];
-                                  let _letpattern4: (&mut [u8], &mut [u8]) =
+                                  let _letpattern3: (&mut [u8], &mut [u8]) =
                                       out.split_at_mut(size0);
-                                  let _letpattern5: (&mut [u8], &mut [u8]) =
-                                      {
-                                          let s1: &mut [u8] = _letpattern4.0;
-                                          let s2: &mut [u8] = _letpattern4.1;
-                                          (s1,s2)
-                                      };
-                                  let _tmp: &[u8] = _letpattern5.0;
-                                  let out1: &mut [u8] = _letpattern5.1;
+                                  let _tmp: &[u8] = _letpattern3.0;
+                                  let out1: &mut [u8] = _letpattern3.1;
                                   let size1: usize = serialize_evercddl_label(ek, out1);
                                   if size1 == 0usize
                                   { (&mut pres)[0usize] = false }
                                   else
                                   {
-                                      let _letpattern6: (&mut [u8], &mut [u8]) =
+                                      let _letpattern4: (&mut [u8], &mut [u8]) =
                                           out1.split_at_mut(size1);
-                                      let _letpattern7: (&mut [u8], &mut [u8]) =
-                                          {
-                                              let s1: &mut [u8] = _letpattern6.0;
-                                              let s2: &mut [u8] = _letpattern6.1;
-                                              (s1,s2)
-                                          };
-                                      let out1·: &[u8] = _letpattern7.0;
-                                      let out2: &mut [u8] = _letpattern7.1;
+                                      let out1·: &[u8] = _letpattern4.0;
+                                      let out2: &mut [u8] = _letpattern4.1;
                                       let size2: usize = serialize_values(ev, out2);
                                       if size2 == 0usize
                                       { (&mut pres)[0usize] = false }
@@ -2402,48 +2328,26 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                   { v: pair }
                                                   =>
                                                     {
-                                                        let
-                                                        _letpattern8:
-                                                        (crate::cbordetveraux::cbor_raw, &[u8])
-                                                        =
-                                                            pair;
                                                         let c3: crate::cbordetveraux::cbor_raw =
-                                                            _letpattern8.0;
-                                                        let rem: &[u8] = _letpattern8.1;
+                                                            pair.0;
+                                                        let rem: &[u8] = pair.1;
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: (c3,rem) }
                                                     },
                                                   _ => panic!("Incomplete pattern matching")
                                               };
-                                          let
-                                          _letpattern8:
-                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                          =
-                                              ock;
-                                          match _letpattern8
+                                          match ock
                                           {
                                               crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                               { v: ck_ }
                                               =>
                                                 {
-                                                    let
-                                                    _letpattern9:
-                                                    (crate::cbordetveraux::cbor_raw, &[u8])
-                                                    =
-                                                        ck_;
-                                                    let ck: crate::cbordetveraux::cbor_raw =
-                                                        _letpattern9.0;
-                                                    let _remk: &[u8] = _letpattern9.1;
-                                                    let _letpattern10: (&[u8], &[u8]) =
+                                                    let ck: crate::cbordetveraux::cbor_raw = ck_.0;
+                                                    let _remk: &[u8] = ck_.1;
+                                                    let _letpattern5: (&[u8], &[u8]) =
                                                         out2.split_at(size2);
-                                                    let _letpattern11: (&[u8], &[u8]) =
-                                                        {
-                                                            let s1: &[u8] = _letpattern10.0;
-                                                            let s2: &[u8] = _letpattern10.1;
-                                                            (s1,s2)
-                                                        };
-                                                    let out2·: &[u8] = _letpattern11.0;
-                                                    let _out2_tail: &[u8] = _letpattern11.1;
+                                                    let out2·: &[u8] = _letpattern5.0;
+                                                    let _out2_tail: &[u8] = _letpattern5.1;
                                                     let
                                                     res3:
                                                     crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
@@ -2463,44 +2367,27 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                             =>
                                                               {
                                                                   let
-                                                                  _letpattern12:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      pair;
-                                                                  let
                                                                   c3: crate::cbordetveraux::cbor_raw
                                                                   =
-                                                                      _letpattern12.0;
-                                                                  let rem: &[u8] = _letpattern12.1;
+                                                                      pair.0;
+                                                                  let rem: &[u8] = pair.1;
                                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                                   { v: (c3,rem) }
                                                               },
                                                             _ =>
                                                               panic!("Incomplete pattern matching")
                                                         };
-                                                    let
-                                                    _letpattern12:
-                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                    =
-                                                        ocv;
-                                                    match _letpattern12
+                                                    match ocv
                                                     {
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: cv_ }
                                                         =>
                                                           {
                                                               let
-                                                              _letpattern13:
-                                                              (crate::cbordetveraux::cbor_raw,
-                                                              &[u8])
-                                                              =
-                                                                  cv_;
-                                                              let
                                                               cv: crate::cbordetveraux::cbor_raw
                                                               =
-                                                                  _letpattern13.0;
-                                                              let _remv: &[u8] = _letpattern13.1;
+                                                                  cv_.0;
+                                                              let _remv: &[u8] = cv_.1;
                                                               let
                                                               ce:
                                                               crate::cbordetveraux::cbor_map_entry
@@ -2520,25 +2407,13 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                   let size2·: usize =
                                                                       size1·.wrapping_add(size2);
                                                                   let
-                                                                  _letpattern14:
+                                                                  _letpattern6:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2·);
-                                                                  let
-                                                                  _letpattern15:
-                                                                  (&mut [u8], &mut [u8])
-                                                                  =
-                                                                      {
-                                                                          let s1: &mut [u8] =
-                                                                              _letpattern14.0;
-                                                                          let s2: &mut [u8] =
-                                                                              _letpattern14.1;
-                                                                          (s1,s2)
-                                                                      };
                                                                   let out_: &mut [u8] =
-                                                                      _letpattern15.0;
-                                                                  let _tmp1: &[u8] =
-                                                                      _letpattern15.1;
+                                                                      _letpattern6.0;
+                                                                  let _tmp1: &[u8] = _letpattern6.1;
                                                                   let no_dup: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out_,
@@ -2723,37 +2598,25 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                       };
                                   (&mut pc)[0usize] = i·;
                                   let
-                                  _letpattern2: (evercddl_label, crate::cbordetveraux::cbor_raw)
+                                  _letpattern1: (evercddl_label, crate::cbordetveraux::cbor_raw)
                                   =
                                       (hd_key_res,hd_value_res);
-                                  let ek: evercddl_label = _letpattern2.0;
-                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern2.1;
+                                  let ek: evercddl_label = _letpattern1.0;
+                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern1.1;
                                   let size0: usize = (&psize)[0usize];
-                                  let _letpattern3: (&mut [u8], &mut [u8]) =
+                                  let _letpattern2: (&mut [u8], &mut [u8]) =
                                       out.split_at_mut(size0);
-                                  let _letpattern4: (&mut [u8], &mut [u8]) =
-                                      {
-                                          let s1: &mut [u8] = _letpattern3.0;
-                                          let s2: &mut [u8] = _letpattern3.1;
-                                          (s1,s2)
-                                      };
-                                  let _tmp: &[u8] = _letpattern4.0;
-                                  let out1: &mut [u8] = _letpattern4.1;
+                                  let _tmp: &[u8] = _letpattern2.0;
+                                  let out1: &mut [u8] = _letpattern2.1;
                                   let size1: usize = serialize_evercddl_label(ek, out1);
                                   if size1 == 0usize
                                   { (&mut pres)[0usize] = false }
                                   else
                                   {
-                                      let _letpattern5: (&mut [u8], &mut [u8]) =
+                                      let _letpattern3: (&mut [u8], &mut [u8]) =
                                           out1.split_at_mut(size1);
-                                      let _letpattern6: (&mut [u8], &mut [u8]) =
-                                          {
-                                              let s1: &mut [u8] = _letpattern5.0;
-                                              let s2: &mut [u8] = _letpattern5.1;
-                                              (s1,s2)
-                                          };
-                                      let out1·: &[u8] = _letpattern6.0;
-                                      let out2: &mut [u8] = _letpattern6.1;
+                                      let out1·: &[u8] = _letpattern3.0;
+                                      let out2: &mut [u8] = _letpattern3.1;
                                       let size2: usize = serialize_values(ev, out2);
                                       if size2 == 0usize
                                       { (&mut pres)[0usize] = false }
@@ -2777,48 +2640,26 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                   { v: pair }
                                                   =>
                                                     {
-                                                        let
-                                                        _letpattern7:
-                                                        (crate::cbordetveraux::cbor_raw, &[u8])
-                                                        =
-                                                            pair;
                                                         let c3: crate::cbordetveraux::cbor_raw =
-                                                            _letpattern7.0;
-                                                        let rem: &[u8] = _letpattern7.1;
+                                                            pair.0;
+                                                        let rem: &[u8] = pair.1;
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: (c3,rem) }
                                                     },
                                                   _ => panic!("Incomplete pattern matching")
                                               };
-                                          let
-                                          _letpattern7:
-                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                          =
-                                              ock;
-                                          match _letpattern7
+                                          match ock
                                           {
                                               crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                               { v: ck_ }
                                               =>
                                                 {
-                                                    let
-                                                    _letpattern8:
-                                                    (crate::cbordetveraux::cbor_raw, &[u8])
-                                                    =
-                                                        ck_;
-                                                    let ck: crate::cbordetveraux::cbor_raw =
-                                                        _letpattern8.0;
-                                                    let _remk: &[u8] = _letpattern8.1;
-                                                    let _letpattern9: (&[u8], &[u8]) =
+                                                    let ck: crate::cbordetveraux::cbor_raw = ck_.0;
+                                                    let _remk: &[u8] = ck_.1;
+                                                    let _letpattern4: (&[u8], &[u8]) =
                                                         out2.split_at(size2);
-                                                    let _letpattern10: (&[u8], &[u8]) =
-                                                        {
-                                                            let s1: &[u8] = _letpattern9.0;
-                                                            let s2: &[u8] = _letpattern9.1;
-                                                            (s1,s2)
-                                                        };
-                                                    let out2·: &[u8] = _letpattern10.0;
-                                                    let _out2_tail: &[u8] = _letpattern10.1;
+                                                    let out2·: &[u8] = _letpattern4.0;
+                                                    let _out2_tail: &[u8] = _letpattern4.1;
                                                     let
                                                     res2:
                                                     crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
@@ -2838,44 +2679,27 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                             =>
                                                               {
                                                                   let
-                                                                  _letpattern11:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      pair;
-                                                                  let
                                                                   c3: crate::cbordetveraux::cbor_raw
                                                                   =
-                                                                      _letpattern11.0;
-                                                                  let rem: &[u8] = _letpattern11.1;
+                                                                      pair.0;
+                                                                  let rem: &[u8] = pair.1;
                                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                                   { v: (c3,rem) }
                                                               },
                                                             _ =>
                                                               panic!("Incomplete pattern matching")
                                                         };
-                                                    let
-                                                    _letpattern11:
-                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                    =
-                                                        ocv;
-                                                    match _letpattern11
+                                                    match ocv
                                                     {
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: cv_ }
                                                         =>
                                                           {
                                                               let
-                                                              _letpattern12:
-                                                              (crate::cbordetveraux::cbor_raw,
-                                                              &[u8])
-                                                              =
-                                                                  cv_;
-                                                              let
                                                               cv: crate::cbordetveraux::cbor_raw
                                                               =
-                                                                  _letpattern12.0;
-                                                              let _remv: &[u8] = _letpattern12.1;
+                                                                  cv_.0;
+                                                              let _remv: &[u8] = cv_.1;
                                                               let
                                                               ce:
                                                               crate::cbordetveraux::cbor_map_entry
@@ -2895,25 +2719,13 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                   let size2·: usize =
                                                                       size1·.wrapping_add(size2);
                                                                   let
-                                                                  _letpattern13:
+                                                                  _letpattern5:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2·);
-                                                                  let
-                                                                  _letpattern14:
-                                                                  (&mut [u8], &mut [u8])
-                                                                  =
-                                                                      {
-                                                                          let s1: &mut [u8] =
-                                                                              _letpattern13.0;
-                                                                          let s2: &mut [u8] =
-                                                                              _letpattern13.1;
-                                                                          (s1,s2)
-                                                                      };
                                                                   let out_: &mut [u8] =
-                                                                      _letpattern14.0;
-                                                                  let _tmp1: &[u8] =
-                                                                      _letpattern14.1;
+                                                                      _letpattern5.0;
+                                                                  let _tmp1: &[u8] = _letpattern5.1;
                                                                   let no_dup: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out_,
@@ -3092,10 +2904,8 @@ serialize_empty_or_serialized_map(c: empty_or_serialized_map, out: &mut [u8]) ->
                               crate::cbordetver::cbor_det_string_kind::ByteString;
                           let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
                               crate::cbordetver::cbor_det_mk_string(mty, c2);
-                          let _letpattern: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                              res;
                           let x: crate::cbordetveraux::cbor_raw =
-                              match _letpattern
+                              match res
                               {
                                   crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                                   { v: c1 }
@@ -3134,12 +2944,8 @@ serialize_empty_or_serialized_map(c: empty_or_serialized_map, out: &mut [u8]) ->
                                   { crate::cbordetver::cbor_det_string_kind::TextString };
                               let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
                                   crate::cbordetver::cbor_det_mk_string(mty, c2);
-                              let
-                              _letpattern: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
-                              =
-                                  res;
                               let x: crate::cbordetveraux::cbor_raw =
-                                  match _letpattern
+                                  match res
                                   {
                                       crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                                       { v: c1 }
@@ -3240,13 +3046,8 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                                       { crate::cbordetver::cbor_det_string_kind::TextString };
                                   let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
                                       crate::cbordetver::cbor_det_mk_string(mty, s);
-                                  let
-                                  _letpattern2:
-                                  crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
-                                  =
-                                      res;
                                   let c3: crate::cbordetveraux::cbor_raw =
-                                      match _letpattern2
+                                      match res
                                       {
                                           crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                                           { v: c3 }
@@ -3298,13 +3099,8 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                                       { crate::cbordetver::cbor_det_string_kind::TextString };
                                   let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
                                       crate::cbordetver::cbor_det_mk_string(mty, s);
-                                  let
-                                  _letpattern2:
-                                  crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
-                                  =
-                                      res;
                                   let c3: crate::cbordetveraux::cbor_raw =
-                                      match _letpattern2
+                                      match res
                                       {
                                           crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                                           { v: c3 }
@@ -3335,26 +3131,20 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                 { false };
             if res1
             {
-                let
-                _letpattern1:
-                (empty_or_serialized_map,
-                either__·COSE_Format_empty_or_serialized_map····Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t··_·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·)
-                =
-                    c2;
-                let c11: empty_or_serialized_map = _letpattern1.0;
+                let c11: empty_or_serialized_map = c2.0;
                 let
                 c21:
                 either__·COSE_Format_empty_or_serialized_map····Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t··_·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·
                 =
-                    _letpattern1.1;
+                    c2.1;
                 let count1: u64 = (&pcount)[0usize];
                 let res11: bool =
                     if count1 < 18446744073709551615u64
                     {
                         let size: usize = (&psize)[0usize];
-                        let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                        let _out0: &[u8] = _letpattern2.0;
-                        let out1: &mut [u8] = _letpattern2.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                        let _out0: &[u8] = _letpattern1.0;
+                        let out1: &mut [u8] = _letpattern1.1;
                         let size1: usize = serialize_empty_or_serialized_map(c11, out1);
                         if size1 == 0usize
                         { false }
@@ -3375,18 +3165,17 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                         { v: c12 }
                         =>
                           {
-                              let _letpattern2: (empty_or_serialized_map, (&[u8], &[u8])) = c12;
-                              let c13: empty_or_serialized_map = _letpattern2.0;
-                              let c22: (&[u8], &[u8]) = _letpattern2.1;
+                              let c13: empty_or_serialized_map = c12.0;
+                              let c22: (&[u8], &[u8]) = c12.1;
                               let count2: u64 = (&pcount)[0usize];
                               let res12: bool =
                                   if count2 < 18446744073709551615u64
                                   {
                                       let size: usize = (&psize)[0usize];
-                                      let _letpattern3: (&mut [u8], &mut [u8]) =
+                                      let _letpattern1: (&mut [u8], &mut [u8]) =
                                           out.split_at_mut(size);
-                                      let _out0: &[u8] = _letpattern3.0;
-                                      let out1: &mut [u8] = _letpattern3.1;
+                                      let _out0: &[u8] = _letpattern1.0;
+                                      let out1: &mut [u8] = _letpattern1.1;
                                       let size1: usize =
                                           serialize_empty_or_serialized_map(c13, out1);
                                       if size1 == 0usize
@@ -3402,18 +3191,17 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                                   { false };
                               if res12
                               {
-                                  let _letpattern3: (&[u8], &[u8]) = c22;
-                                  let c14: &[u8] = _letpattern3.0;
-                                  let c23: &[u8] = _letpattern3.1;
+                                  let c14: &[u8] = c22.0;
+                                  let c23: &[u8] = c22.1;
                                   let count3: u64 = (&pcount)[0usize];
                                   let res13: bool =
                                       if count3 < 18446744073709551615u64
                                       {
                                           let size: usize = (&psize)[0usize];
-                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                          let _letpattern1: (&mut [u8], &mut [u8]) =
                                               out.split_at_mut(size);
-                                          let _out0: &[u8] = _letpattern4.0;
-                                          let out1: &mut [u8] = _letpattern4.1;
+                                          let _out0: &[u8] = _letpattern1.0;
+                                          let out1: &mut [u8] = _letpattern1.1;
                                           let size1: usize = serialize_bstr(c14, out1);
                                           if size1 == 0usize
                                           { false }
@@ -3432,10 +3220,10 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                                       if count4 < 18446744073709551615u64
                                       {
                                           let size: usize = (&psize)[0usize];
-                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                          let _letpattern1: (&mut [u8], &mut [u8]) =
                                               out.split_at_mut(size);
-                                          let _out0: &[u8] = _letpattern4.0;
-                                          let out1: &mut [u8] = _letpattern4.1;
+                                          let _out0: &[u8] = _letpattern1.0;
+                                          let out1: &mut [u8] = _letpattern1.1;
                                           let size1: usize = serialize_bstr(c23, out1);
                                           if size1 == 0usize
                                           { false }
@@ -3459,18 +3247,17 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                         { v: c22 }
                         =>
                           {
-                              let _letpattern2: (&[u8], &[u8]) = c22;
-                              let c12: &[u8] = _letpattern2.0;
-                              let c23: &[u8] = _letpattern2.1;
+                              let c12: &[u8] = c22.0;
+                              let c23: &[u8] = c22.1;
                               let count2: u64 = (&pcount)[0usize];
                               let res12: bool =
                                   if count2 < 18446744073709551615u64
                                   {
                                       let size: usize = (&psize)[0usize];
-                                      let _letpattern3: (&mut [u8], &mut [u8]) =
+                                      let _letpattern1: (&mut [u8], &mut [u8]) =
                                           out.split_at_mut(size);
-                                      let _out0: &[u8] = _letpattern3.0;
-                                      let out1: &mut [u8] = _letpattern3.1;
+                                      let _out0: &[u8] = _letpattern1.0;
+                                      let out1: &mut [u8] = _letpattern1.1;
                                       let size1: usize = serialize_bstr(c12, out1);
                                       if size1 == 0usize
                                       { false }
@@ -3489,10 +3276,10 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                                   if count3 < 18446744073709551615u64
                                   {
                                       let size: usize = (&psize)[0usize];
-                                      let _letpattern3: (&mut [u8], &mut [u8]) =
+                                      let _letpattern1: (&mut [u8], &mut [u8]) =
                                           out.split_at_mut(size);
-                                      let _out0: &[u8] = _letpattern3.0;
-                                      let out1: &mut [u8] = _letpattern3.1;
+                                      let _out0: &[u8] = _letpattern1.0;
+                                      let out1: &mut [u8] = _letpattern1.1;
                                       let size1: usize = serialize_bstr(c23, out1);
                                       if size1 == 0usize
                                       { false }
@@ -3595,19 +3382,18 @@ serialize_cose_sign1(c: cose_sign1, out: &mut [u8]) ->
         {
             let c1: (empty_or_serialized_map, header_map) = _letpattern.0;
             let c2: (either__Pulse_Lib_Slice_slice·uint8_t_··, &[u8]) = _letpattern.1;
-            let _letpattern1: (empty_or_serialized_map, header_map) = c1;
             let res1: bool =
                 {
-                    let c11: empty_or_serialized_map = _letpattern1.0;
-                    let c21: header_map = _letpattern1.1;
+                    let c11: empty_or_serialized_map = c1.0;
+                    let c21: header_map = c1.1;
                     let count: u64 = (&pcount)[0usize];
                     let res1: bool =
                         if count < 18446744073709551615u64
                         {
                             let size: usize = (&psize)[0usize];
-                            let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                            let _out0: &[u8] = _letpattern2.0;
-                            let out1: &mut [u8] = _letpattern2.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                            let _out0: &[u8] = _letpattern1.0;
+                            let out1: &mut [u8] = _letpattern1.1;
                             let size1: usize = serialize_empty_or_serialized_map(c11, out1);
                             if size1 == 0usize
                             { false }
@@ -3626,9 +3412,9 @@ serialize_cose_sign1(c: cose_sign1, out: &mut [u8]) ->
                         if count1 < 18446744073709551615u64
                         {
                             let size: usize = (&psize)[0usize];
-                            let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                            let _out0: &[u8] = _letpattern2.0;
-                            let out1: &mut [u8] = _letpattern2.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                            let _out0: &[u8] = _letpattern1.0;
+                            let out1: &mut [u8] = _letpattern1.1;
                             let size1: usize = serialize_header_map(c21, out1);
                             if size1 == 0usize
                             { false }
@@ -3647,17 +3433,16 @@ serialize_cose_sign1(c: cose_sign1, out: &mut [u8]) ->
                 };
             if res1
             {
-                let _letpattern2: (either__Pulse_Lib_Slice_slice·uint8_t_··, &[u8]) = c2;
-                let c11: either__Pulse_Lib_Slice_slice·uint8_t_·· = _letpattern2.0;
-                let c21: &[u8] = _letpattern2.1;
+                let c11: either__Pulse_Lib_Slice_slice·uint8_t_·· = c2.0;
+                let c21: &[u8] = c2.1;
                 let count: u64 = (&pcount)[0usize];
                 let res11: bool =
                     if count < 18446744073709551615u64
                     {
                         let size: usize = (&psize)[0usize];
-                        let _letpattern3: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                        let _out0: &[u8] = _letpattern3.0;
-                        let out1: &mut [u8] = _letpattern3.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                        let _out0: &[u8] = _letpattern1.0;
+                        let out1: &mut [u8] = _letpattern1.1;
                         let size1: usize =
                             match c11
                             {
@@ -3684,9 +3469,9 @@ serialize_cose_sign1(c: cose_sign1, out: &mut [u8]) ->
                     if count1 < 18446744073709551615u64
                     {
                         let size: usize = (&psize)[0usize];
-                        let _letpattern3: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                        let _out0: &[u8] = _letpattern3.0;
-                        let out1: &mut [u8] = _letpattern3.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                        let _out0: &[u8] = _letpattern1.0;
+                        let out1: &mut [u8] = _letpattern1.1;
                         let size1: usize = serialize_bstr(c21, out1);
                         if size1 == 0usize
                         { false }
@@ -3724,17 +3509,16 @@ serialize_cose_sign1_tagged(c: cose_sign1, out: &mut [u8]) ->
     usize
 {
     let c·: (u64, cose_sign1) = (18u64,cose_sign1_tagged_left(c));
-    let _letpattern: (u64, cose_sign1) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: cose_sign1 = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: cose_sign1 = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_cose_sign1(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -3760,9 +3544,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_map
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let rem0: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Map { _0: a } =>
                   crate::cbordetver::cbor_det_map_length(a),
@@ -3774,9 +3557,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
             crate::cbordetver::cbor_det_int_kind::UInt64;
         let c1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, 1u64);
         let x·: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern1: crate::cbordetver::cbor_det_view = x·;
         let mg: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern1
+            match x·
             {
                 crate::cbordetver::cbor_det_view::Map { _0: m } =>
                   crate::cbordetver::cbor_det_map_get(m, c1),
@@ -3829,9 +3611,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 2u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -3852,12 +3633,11 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                         {
                                             let v1: crate::cbordetver::cbor_det_view =
                                                 crate::cbordetver::cbor_det_destruct(cv);
-                                            let _letpattern3: crate::cbordetver::cbor_det_view = v1;
                                             let
                                             i:
                                             crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                                             =
-                                                match _letpattern3
+                                                match v1
                                                 {
                                                     crate::cbordetver::cbor_det_view::Array
                                                     { _0: a }
@@ -3998,9 +3778,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 3u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -4062,9 +3841,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 4u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -4124,9 +3902,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 5u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -4166,11 +3943,10 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                         crate::cbordetver::cbor_det_mk_int64(mty2, 6u64);
                                     let x·2: crate::cbordetver::cbor_det_view =
                                         crate::cbordetver::cbor_det_destruct(c);
-                                    let _letpattern3: crate::cbordetver::cbor_det_view = x·2;
                                     let
                                     mg2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                                     =
-                                        match _letpattern3
+                                        match x·2
                                         {
                                             crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                               crate::cbordetver::cbor_det_map_get(m, c3),
@@ -4238,9 +4014,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                     crate::cbordetver::cbor_det_mk_int64(mty2, 6u64);
                                 let x·2: crate::cbordetver::cbor_det_view =
                                     crate::cbordetver::cbor_det_destruct(c);
-                                let _letpattern3: crate::cbordetver::cbor_det_view = x·2;
                                 let mg2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                                    match _letpattern3
+                                    match x·2
                                     {
                                         crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                           crate::cbordetver::cbor_det_map_get(m, c3),
@@ -4282,13 +4057,11 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                                   crate::cbordetver::cbor_det_mk_int64(mty3, 5u64);
                                               let x·3: crate::cbordetver::cbor_det_view =
                                                   crate::cbordetver::cbor_det_destruct(c);
-                                              let _letpattern4: crate::cbordetver::cbor_det_view =
-                                                  x·3;
                                               let
                                               mg3:
                                               crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                                               =
-                                                  match _letpattern4
+                                                  match x·3
                                                   {
                                                       crate::cbordetver::cbor_det_view::Map
                                                       { _0: m }
@@ -4366,12 +4139,11 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                               crate::cbordetver::cbor_det_mk_int64(mty3, 6u64);
                                           let x·3: crate::cbordetver::cbor_det_view =
                                               crate::cbordetver::cbor_det_destruct(c);
-                                          let _letpattern4: crate::cbordetver::cbor_det_view = x·3;
                                           let
                                           mg3:
                                           crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                                           =
-                                              match _letpattern4
+                                              match x·3
                                               {
                                                   crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                                     crate::cbordetver::cbor_det_map_get(m, c4),
@@ -4438,14 +4210,10 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                                     let x·4: crate::cbordetver::cbor_det_view =
                                                         crate::cbordetver::cbor_det_destruct(c);
                                                     let
-                                                    _letpattern5: crate::cbordetver::cbor_det_view
-                                                    =
-                                                        x·4;
-                                                    let
                                                     mg4:
                                                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                                                     =
-                                                        match _letpattern5
+                                                        match x·4
                                                         {
                                                             crate::cbordetver::cbor_det_view::Map
                                                             { _0: m }
@@ -4543,12 +4311,11 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                   {
                       let v1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = v1;
                       let
                       j0:
                       crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
                       =
-                          match _letpattern2
+                          match v1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: a } =>
                                 crate::cbordetver::cbor_det_map_iterator_start(a),
@@ -4597,9 +4364,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                       {
                                           let v2: crate::cbordetver::cbor_det_view =
                                               crate::cbordetver::cbor_det_destruct(k1);
-                                          let _letpattern3: crate::cbordetver::cbor_det_view = v2;
                                           let i: u64 =
-                                              match _letpattern3
+                                              match v2
                                               {
                                                   crate::cbordetver::cbor_det_view::Int64
                                                   { value: res, .. }
@@ -4635,12 +4401,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -4662,14 +4424,10 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                                   let v3: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(v2);
                                                   let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v3;
-                                                  let
                                                   i:
                                                   crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                                                   =
-                                                      match _letpattern3
+                                                      match v3
                                                       {
                                                           crate::cbordetver::cbor_det_view::Array
                                                           { _0: a }
@@ -4786,12 +4544,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -4827,12 +4581,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -4867,12 +4617,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -4910,12 +4656,8 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -4990,9 +4732,8 @@ pub fn validate_empty_or_serialized_map(c: crate::cbordetveraux::cbor_raw) -> bo
         if test
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let pl: &[u8] =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -5010,9 +4751,8 @@ pub fn validate_empty_or_serialized_map(c: crate::cbordetveraux::cbor_raw) -> bo
                 { v: r }
                 =>
                   {
-                      let _letpattern1: (crate::cbordetveraux::cbor_raw, &[u8]) = r;
-                      let res: crate::cbordetveraux::cbor_raw = _letpattern1.0;
-                      let rem: &[u8] = _letpattern1.1;
+                      let res: crate::cbordetveraux::cbor_raw = r.0;
+                      let rem: &[u8] = r.1;
                       if rem.len() == 0usize { validate_header_map(res) } else { false }
                   },
                 _ => panic!("Incomplete pattern matching")
@@ -5028,9 +4768,8 @@ pub fn validate_empty_or_serialized_map(c: crate::cbordetveraux::cbor_raw) -> bo
         if mt1 == 2u8
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let str: &[u8] =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -5052,9 +4791,8 @@ pub fn validate_nil(c: crate::cbordetveraux::cbor_raw) -> bool
     if test
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let v1: u8 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::SimpleValue { _0: res } => res,
                 _ => panic!("Incomplete pattern matching")
@@ -5071,9 +4809,8 @@ pub fn validate_cose_sign1(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_array
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Array { _0: a } =>
                   crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -5164,9 +4901,8 @@ pub fn validate_cose_sign1_tagged(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -5174,9 +4910,8 @@ pub fn validate_cose_sign1_tagged(c: crate::cbordetveraux::cbor_raw) -> bool
         if 18u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -5200,8 +4935,7 @@ parse_uint(c: crate::cbordetveraux::cbor_raw) ->
     u64
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
-    match _letpattern
+    match v
     {
         crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
         _ => panic!("Incomplete pattern matching")
@@ -5218,8 +4952,7 @@ parse_nint(c: crate::cbordetveraux::cbor_raw) ->
     u64
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
-    match _letpattern
+    match v
     {
         crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
         _ => panic!("Incomplete pattern matching")
@@ -5269,8 +5002,7 @@ parse_tstr
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
-    match _letpattern
+    match v
     {
         crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
         _ => panic!("Incomplete pattern matching")
@@ -5362,8 +5094,7 @@ parse_bstr
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
-    match _letpattern
+    match v
     {
         crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
         _ => panic!("Incomplete pattern matching")
@@ -5451,9 +5182,8 @@ parse_header_map
     let mty: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, 1u64);
     let x·: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = x·;
     let mg: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match x·
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c1),
@@ -5491,17 +5221,15 @@ parse_header_map
             let c2: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty1, 1u64);
             let x·1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = x·1;
             let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern1
+                match x·1
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c2),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
             let w1: either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t =
-                match _letpattern2
+                match ow
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       {
@@ -5533,9 +5261,8 @@ parse_header_map
     let mty1: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c2: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty1, 2u64);
     let x·1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern1: crate::cbordetver::cbor_det_view = x·1;
     let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern1
+        match x·1
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c2),
@@ -5554,11 +5281,10 @@ parse_header_map
                       {
                           let v: crate::cbordetver::cbor_det_view =
                               crate::cbordetver::cbor_det_destruct(cv);
-                          let _letpattern2: crate::cbordetver::cbor_det_view = v;
                           let
                           i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                           =
-                              match _letpattern2
+                              match v
                               {
                                   crate::cbordetver::cbor_det_view::Array { _0: a } =>
                                     crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -5663,30 +5389,27 @@ parse_header_map
             let c3: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty2, 2u64);
             let x·2: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern2: crate::cbordetver::cbor_det_view = x·2;
             let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern2
+                match x·2
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c3),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern3: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
             let
             w11:
             either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label
             =
-                match _letpattern3
+                match ow
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       {
                           let v: crate::cbordetver::cbor_det_view =
                               crate::cbordetver::cbor_det_destruct(w);
-                          let _letpattern4: crate::cbordetver::cbor_det_view = v;
                           let
                           ar: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                           =
-                              match _letpattern4
+                              match v
                               {
                                   crate::cbordetver::cbor_det_view::Array { _0: a } =>
                                     crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -5732,9 +5455,8 @@ parse_header_map
     let mty2: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c3: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty2, 3u64);
     let x·2: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern2: crate::cbordetver::cbor_det_view = x·2;
     let mg2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern2
+        match x·2
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c3),
@@ -5772,17 +5494,15 @@ parse_header_map
             let c4: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty3, 3u64);
             let x·3: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern3: crate::cbordetver::cbor_det_view = x·3;
             let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern3
+                match x·3
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c4),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern4: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
             let w12: either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int =
-                match _letpattern4
+                match ow
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       {
@@ -5821,9 +5541,8 @@ parse_header_map
     let mty3: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c4: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty3, 4u64);
     let x·3: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern3: crate::cbordetver::cbor_det_view = x·3;
     let mg3: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern3
+        match x·3
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c4),
@@ -5858,17 +5577,15 @@ parse_header_map
             let c5: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty4, 4u64);
             let x·4: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern4: crate::cbordetver::cbor_det_view = x·4;
             let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern4
+                match x·4
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c5),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern5: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
             let w13: &[u8] =
-                match _letpattern5
+                match ow
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       parse_bstr(w),
@@ -5890,9 +5607,8 @@ parse_header_map
     let mty4: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c5: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty4, 5u64);
     let x·4: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern4: crate::cbordetver::cbor_det_view = x·4;
     let mg4: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern4
+        match x·4
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c5),
@@ -5925,9 +5641,8 @@ parse_header_map
                       crate::cbordetver::cbor_det_mk_int64(mty5, 6u64);
                   let x·5: crate::cbordetver::cbor_det_view =
                       crate::cbordetver::cbor_det_destruct(c);
-                  let _letpattern5: crate::cbordetver::cbor_det_view = x·5;
                   let mg5: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                      match _letpattern5
+                      match x·5
                       {
                           crate::cbordetver::cbor_det_view::Map { _0: m } =>
                             crate::cbordetver::cbor_det_map_get(m, c6),
@@ -5985,17 +5700,15 @@ parse_header_map
             let c6: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty5, 5u64);
             let x·5: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern5: crate::cbordetver::cbor_det_view = x·5;
             let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern5
+                match x·5
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c6),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern6: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
             let w14: &[u8] =
-                match _letpattern6
+                match ow
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       parse_bstr(w),
@@ -6008,9 +5721,8 @@ parse_header_map
             let c7: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty6, 6u64);
             let x·6: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern7: crate::cbordetver::cbor_det_view = x·6;
             let mg5: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern7
+                match x·6
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c7),
@@ -6049,16 +5761,14 @@ parse_header_map
                         crate::cbordetver::cbor_det_mk_int64(mty7, 6u64);
                     let x·7: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(c);
-                    let _letpattern8: crate::cbordetver::cbor_det_view = x·7;
                     let ow1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern8
+                        match x·7
                         {
                             crate::cbordetver::cbor_det_view::Map { _0: m } =>
                               crate::cbordetver::cbor_det_map_get(m, c8),
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let _letpattern9: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow1;
-                    match _letpattern9
+                    match ow1
                     {
                         crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                           parse_everparsenomatch(w),
@@ -6087,9 +5797,8 @@ parse_header_map
             let c6: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty5, 6u64);
             let x·5: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern5: crate::cbordetver::cbor_det_view = x·5;
             let mg5: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern5
+                match x·5
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c6),
@@ -6122,9 +5831,8 @@ parse_header_map
                               crate::cbordetver::cbor_det_mk_int64(mty6, 5u64);
                           let x·6: crate::cbordetver::cbor_det_view =
                               crate::cbordetver::cbor_det_destruct(c);
-                          let _letpattern6: crate::cbordetver::cbor_det_view = x·6;
                           let mg6: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                              match _letpattern6
+                              match x·6
                               {
                                   crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                     crate::cbordetver::cbor_det_map_get(m, c7),
@@ -6185,17 +5893,15 @@ parse_header_map
                         crate::cbordetver::cbor_det_mk_int64(mty6, 6u64);
                     let x·6: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(c);
-                    let _letpattern6: crate::cbordetver::cbor_det_view = x·6;
                     let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern6
+                        match x·6
                         {
                             crate::cbordetver::cbor_det_view::Map { _0: m } =>
                               crate::cbordetver::cbor_det_map_get(m, c7),
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let _letpattern7: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
                     let w14: &[u8] =
-                        match _letpattern7
+                        match ow
                         {
                             crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                             { v: w }
@@ -6210,9 +5916,8 @@ parse_header_map
                         crate::cbordetver::cbor_det_mk_int64(mty7, 5u64);
                     let x·7: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(c);
-                    let _letpattern8: crate::cbordetver::cbor_det_view = x·7;
                     let mg6: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern8
+                        match x·7
                         {
                             crate::cbordetver::cbor_det_view::Map { _0: m } =>
                               crate::cbordetver::cbor_det_map_get(m, c8),
@@ -6253,19 +5958,14 @@ parse_header_map
                                 crate::cbordetver::cbor_det_mk_int64(mty8, 5u64);
                             let x·8: crate::cbordetver::cbor_det_view =
                                 crate::cbordetver::cbor_det_destruct(c);
-                            let _letpattern9: crate::cbordetver::cbor_det_view = x·8;
                             let ow1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                                match _letpattern9
+                                match x·8
                                 {
                                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                       crate::cbordetver::cbor_det_map_get(m, c9),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            let
-                            _letpattern10: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
-                            =
-                                ow1;
-                            match _letpattern10
+                            match ow1
                             {
                                 crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                                 { v: w }
@@ -6297,9 +5997,8 @@ parse_header_map
                         crate::cbordetver::cbor_det_mk_int64(mty6, 6u64);
                     let x·6: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(c);
-                    let _letpattern6: crate::cbordetver::cbor_det_view = x·6;
                     let mg6: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern6
+                        match x·6
                         {
                             crate::cbordetver::cbor_det_view::Map { _0: m } =>
                               crate::cbordetver::cbor_det_map_get(m, c7),
@@ -6340,19 +6039,14 @@ parse_header_map
                                 crate::cbordetver::cbor_det_mk_int64(mty7, 6u64);
                             let x·7: crate::cbordetver::cbor_det_view =
                                 crate::cbordetver::cbor_det_destruct(c);
-                            let _letpattern7: crate::cbordetver::cbor_det_view = x·7;
                             let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                                match _letpattern7
+                                match x·7
                                 {
                                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                       crate::cbordetver::cbor_det_map_get(m, c8),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            let
-                            _letpattern8: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
-                            =
-                                ow;
-                            match _letpattern8
+                            match ow
                             {
                                 crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                                 { v: w }
@@ -6373,9 +6067,8 @@ parse_header_map
                         crate::cbordetver::cbor_det_mk_int64(mty7, 5u64);
                     let x·7: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(c);
-                    let _letpattern7: crate::cbordetver::cbor_det_view = x·7;
                     let mg7: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern7
+                        match x·7
                         {
                             crate::cbordetver::cbor_det_view::Map { _0: m } =>
                               crate::cbordetver::cbor_det_map_get(m, c8),
@@ -6416,19 +6109,14 @@ parse_header_map
                                 crate::cbordetver::cbor_det_mk_int64(mty8, 5u64);
                             let x·8: crate::cbordetver::cbor_det_view =
                                 crate::cbordetver::cbor_det_destruct(c);
-                            let _letpattern8: crate::cbordetver::cbor_det_view = x·8;
                             let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                                match _letpattern8
+                                match x·8
                                 {
                                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                       crate::cbordetver::cbor_det_map_get(m, c9),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            let
-                            _letpattern9: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
-                            =
-                                ow;
-                            match _letpattern9
+                            match ow
                             {
                                 crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
                                 { v: w }
@@ -6463,9 +6151,8 @@ parse_header_map
     =
         (w13,w23);
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern5: crate::cbordetver::cbor_det_view = v;
     let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-        match _letpattern5
+        match v
         {
             crate::cbordetver::cbor_det_view::Map { _0: a } =>
               crate::cbordetver::cbor_det_map_iterator_start(a),
@@ -6546,9 +6233,8 @@ parse_empty_or_serialized_map
         if test
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let pl: &[u8] =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -6566,9 +6252,8 @@ parse_empty_or_serialized_map
                 { v: r }
                 =>
                   {
-                      let _letpattern1: (crate::cbordetveraux::cbor_raw, &[u8]) = r;
-                      let res: crate::cbordetveraux::cbor_raw = _letpattern1.0;
-                      let rem: &[u8] = _letpattern1.1;
+                      let res: crate::cbordetveraux::cbor_raw = r.0;
+                      let rem: &[u8] = r.1;
                       if rem.len() == 0usize { validate_header_map(res) } else { false }
                   },
                 _ => panic!("Incomplete pattern matching")
@@ -6580,9 +6265,8 @@ parse_empty_or_serialized_map
         if test1
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let cs: &[u8] =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -6610,9 +6294,8 @@ parse_empty_or_serialized_map
         else
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let res: &[u8] =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -6659,9 +6342,8 @@ parse_cose_sign1
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let ar: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Array { _0: a } =>
               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -6797,9 +6479,8 @@ parse_cose_sign1_tagged
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -6831,9 +6512,8 @@ pub fn validate_and_parse_cose_sign1_tagged <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_sign1_tagged(rl);
               if test
               {
@@ -6856,9 +6536,8 @@ pub fn validate_bool(c: crate::cbordetveraux::cbor_raw) -> bool
         if test
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let v1: u8 =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::SimpleValue { _0: res } => res,
                     _ => panic!("Incomplete pattern matching")
@@ -6876,9 +6555,8 @@ pub fn validate_bool(c: crate::cbordetveraux::cbor_raw) -> bool
         if test2
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let v1: u8 =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::SimpleValue { _0: res } => res,
                     _ => panic!("Incomplete pattern matching")
@@ -6904,9 +6582,8 @@ parse_bool(c: crate::cbordetveraux::cbor_raw) ->
     bool
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let w: u8 =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::SimpleValue { _0: res } => res,
             _ => panic!("Incomplete pattern matching")
@@ -7006,9 +6683,8 @@ pub fn validate_and_parse_bool <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_bool(rl);
               if test
               {
@@ -7046,9 +6722,8 @@ pub fn validate_and_parse_everparsenomatch <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_everparsenomatch(rl);
               if test
               {
@@ -7080,9 +6755,8 @@ pub fn validate_and_parse_any <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_any(rl);
               if test
               {
@@ -7106,9 +6780,8 @@ pub fn validate_undefined(c: crate::cbordetveraux::cbor_raw) -> bool
     if test
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let v1: u8 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::SimpleValue { _0: res } => res,
                 _ => panic!("Incomplete pattern matching")
@@ -7172,9 +6845,8 @@ pub fn validate_and_parse_undefined <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_undefined(rl);
               if test
               {
@@ -7205,9 +6877,8 @@ pub fn validate_and_parse_nil <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_nil(rl);
               if test
               {
@@ -7262,9 +6933,8 @@ pub fn validate_and_parse_null <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_null(rl);
               if test
               {
@@ -7285,9 +6955,8 @@ pub fn validate_true(c: crate::cbordetveraux::cbor_raw) -> bool
     if test
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let v1: u8 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::SimpleValue { _0: res } => res,
                 _ => panic!("Incomplete pattern matching")
@@ -7351,9 +7020,8 @@ pub fn validate_and_parse_true <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_true(rl);
               if test
               {
@@ -7374,9 +7042,8 @@ pub fn validate_false(c: crate::cbordetveraux::cbor_raw) -> bool
     if test
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let v1: u8 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::SimpleValue { _0: res } => res,
                 _ => panic!("Incomplete pattern matching")
@@ -7440,9 +7107,8 @@ pub fn validate_and_parse_false <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_false(rl);
               if test
               {
@@ -7480,9 +7146,8 @@ pub fn validate_and_parse_tstr <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_tstr(rl);
               if test
               {
@@ -7516,9 +7181,8 @@ pub fn validate_and_parse_bstr <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_bstr(rl);
               if test
               {
@@ -7575,9 +7239,8 @@ pub fn validate_and_parse_bytes <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_bytes(rl);
               if test
               {
@@ -7634,9 +7297,8 @@ pub fn validate_and_parse_text <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_text(rl);
               if test
               {
@@ -7677,9 +7339,8 @@ pub fn validate_and_parse_nint <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_nint(rl);
               if test
               {
@@ -7710,9 +7371,8 @@ pub fn validate_and_parse_uint <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_uint(rl);
               if test
               {
@@ -7750,9 +7410,8 @@ pub fn validate_and_parse_int <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_int(rl);
               if test
               {
@@ -7773,9 +7432,8 @@ pub fn validate_cborany(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -7783,9 +7441,8 @@ pub fn validate_cborany(c: crate::cbordetveraux::cbor_raw) -> bool
         if 55799u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -7821,9 +7478,8 @@ parse_cborany
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -7839,17 +7495,16 @@ serialize_cborany(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
     let c·: (u64, crate::cbordetveraux::cbor_raw) = (55799u64,cborany_left(c));
-    let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: crate::cbordetveraux::cbor_raw = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_any(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -7873,9 +7528,8 @@ pub fn validate_and_parse_cborany <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cborany(rl);
               if test
               {
@@ -7898,9 +7552,8 @@ pub fn validate_mimemessage(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -7908,9 +7561,8 @@ pub fn validate_mimemessage(c: crate::cbordetveraux::cbor_raw) -> bool
         if 36u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -7937,9 +7589,8 @@ parse_mimemessage
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -7955,17 +7606,16 @@ serialize_mimemessage(c: &[u8], out: &mut [u8]) ->
     usize
 {
     let c·: (u64, &[u8]) = (36u64,mimemessage_left(c));
-    let _letpattern: (u64, &[u8]) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: &[u8] = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_tstr(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -7988,9 +7638,8 @@ pub fn validate_and_parse_mimemessage <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_mimemessage(rl);
               if test
               {
@@ -8013,9 +7662,8 @@ pub fn validate_regexp(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8023,9 +7671,8 @@ pub fn validate_regexp(c: crate::cbordetveraux::cbor_raw) -> bool
         if 35u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8052,9 +7699,8 @@ parse_regexp
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8070,17 +7716,16 @@ serialize_regexp(c: &[u8], out: &mut [u8]) ->
     usize
 {
     let c·: (u64, &[u8]) = (35u64,regexp_left(c));
-    let _letpattern: (u64, &[u8]) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: &[u8] = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_tstr(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8103,9 +7748,8 @@ pub fn validate_and_parse_regexp <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_regexp(rl);
               if test
               {
@@ -8128,9 +7772,8 @@ pub fn validate_b64legacy(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8138,9 +7781,8 @@ pub fn validate_b64legacy(c: crate::cbordetveraux::cbor_raw) -> bool
         if 34u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8167,9 +7809,8 @@ parse_b64legacy
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8185,17 +7826,16 @@ serialize_b64legacy(c: &[u8], out: &mut [u8]) ->
     usize
 {
     let c·: (u64, &[u8]) = (34u64,b64legacy_left(c));
-    let _letpattern: (u64, &[u8]) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: &[u8] = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_tstr(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8218,9 +7858,8 @@ pub fn validate_and_parse_b64legacy <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_b64legacy(rl);
               if test
               {
@@ -8243,9 +7882,8 @@ pub fn validate_b64url(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8253,9 +7891,8 @@ pub fn validate_b64url(c: crate::cbordetveraux::cbor_raw) -> bool
         if 33u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8282,9 +7919,8 @@ parse_b64url
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8300,17 +7936,16 @@ serialize_b64url(c: &[u8], out: &mut [u8]) ->
     usize
 {
     let c·: (u64, &[u8]) = (33u64,b64url_left(c));
-    let _letpattern: (u64, &[u8]) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: &[u8] = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_tstr(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8333,9 +7968,8 @@ pub fn validate_and_parse_b64url <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_b64url(rl);
               if test
               {
@@ -8358,9 +7992,8 @@ pub fn validate_uri(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8368,9 +8001,8 @@ pub fn validate_uri(c: crate::cbordetveraux::cbor_raw) -> bool
         if 32u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8397,9 +8029,8 @@ parse_uri
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8415,17 +8046,16 @@ serialize_uri(c: &[u8], out: &mut [u8]) ->
     usize
 {
     let c·: (u64, &[u8]) = (32u64,uri_left(c));
-    let _letpattern: (u64, &[u8]) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: &[u8] = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_tstr(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8448,9 +8078,8 @@ pub fn validate_and_parse_uri <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_uri(rl);
               if test
               {
@@ -8473,9 +8102,8 @@ pub fn validate_encodedcbor(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8483,9 +8111,8 @@ pub fn validate_encodedcbor(c: crate::cbordetveraux::cbor_raw) -> bool
         if 24u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8512,9 +8139,8 @@ parse_encodedcbor
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8530,17 +8156,16 @@ serialize_encodedcbor(c: &[u8], out: &mut [u8]) ->
     usize
 {
     let c·: (u64, &[u8]) = (24u64,encodedcbor_left(c));
-    let _letpattern: (u64, &[u8]) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: &[u8] = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_bstr(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8563,9 +8188,8 @@ pub fn validate_and_parse_encodedcbor <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_encodedcbor(rl);
               if test
               {
@@ -8588,9 +8212,8 @@ pub fn validate_eb16(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8598,9 +8221,8 @@ pub fn validate_eb16(c: crate::cbordetveraux::cbor_raw) -> bool
         if 23u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8636,9 +8258,8 @@ parse_eb16
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8654,17 +8275,16 @@ serialize_eb16(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
     let c·: (u64, crate::cbordetveraux::cbor_raw) = (23u64,eb16_left(c));
-    let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: crate::cbordetveraux::cbor_raw = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_any(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8688,9 +8308,8 @@ pub fn validate_and_parse_eb16 <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_eb16(rl);
               if test
               {
@@ -8713,9 +8332,8 @@ pub fn validate_eb64legacy(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8723,9 +8341,8 @@ pub fn validate_eb64legacy(c: crate::cbordetveraux::cbor_raw) -> bool
         if 22u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8761,9 +8378,8 @@ parse_eb64legacy
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8779,17 +8395,16 @@ serialize_eb64legacy(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
     let c·: (u64, crate::cbordetveraux::cbor_raw) = (22u64,eb64legacy_left(c));
-    let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: crate::cbordetveraux::cbor_raw = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_any(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8813,9 +8428,8 @@ pub fn validate_and_parse_eb64legacy <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_eb64legacy(rl);
               if test
               {
@@ -8838,9 +8452,8 @@ pub fn validate_eb64url(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -8848,9 +8461,8 @@ pub fn validate_eb64url(c: crate::cbordetveraux::cbor_raw) -> bool
         if 21u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -8886,9 +8498,8 @@ parse_eb64url
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -8904,17 +8515,16 @@ serialize_eb64url(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
     let c·: (u64, crate::cbordetveraux::cbor_raw) = (21u64,eb64url_left(c));
-    let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: crate::cbordetveraux::cbor_raw = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_any(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -8938,9 +8548,8 @@ pub fn validate_and_parse_eb64url <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_eb64url(rl);
               if test
               {
@@ -8998,9 +8607,8 @@ pub fn validate_and_parse_number <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_number(rl);
               if test
               {
@@ -9021,9 +8629,8 @@ pub fn validate_tdate(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -9031,9 +8638,8 @@ pub fn validate_tdate(c: crate::cbordetveraux::cbor_raw) -> bool
         if 0u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -9060,9 +8666,8 @@ parse_tdate
     &'a [u8]
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -9078,17 +8683,16 @@ serialize_tdate(c: &[u8], out: &mut [u8]) ->
     usize
 {
     let c·: (u64, &[u8]) = (0u64,tdate_left(c));
-    let _letpattern: (u64, &[u8]) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: &[u8] = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_tstr(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -9111,9 +8715,8 @@ pub fn validate_and_parse_tdate <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_tdate(rl);
               if test
               {
@@ -9148,9 +8751,8 @@ pub fn validate_and_parse_values <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_values(rl);
               if test
               {
@@ -9191,9 +8793,8 @@ pub fn validate_and_parse_evercddl_label <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_evercddl_label(rl);
               if test
               {
@@ -9350,9 +8951,8 @@ pub fn aux_env29_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
         if is_uint
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let i: u64 =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                     _ => panic!("Incomplete pattern matching")
@@ -9384,9 +8984,8 @@ pub fn aux_env29_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -9417,9 +9016,8 @@ pub fn aux_env29_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -9451,9 +9049,8 @@ pub fn aux_env29_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -9471,9 +9068,8 @@ pub fn aux_env29_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v1: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(v);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
                     let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern
+                        match v1
                         {
                             crate::cbordetver::cbor_det_view::Array { _0: a } =>
                               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -9565,9 +9161,8 @@ pub fn aux_env29_map_constraint_2(x: crate::cbordetveraux::cbor_map_entry) -> bo
             if is_uint1
             {
                 let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k1);
-                let _letpattern: crate::cbordetver::cbor_det_view = v;
                 let i: u64 =
-                    match _letpattern
+                    match v
                     {
                         crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                         _ => panic!("Incomplete pattern matching")
@@ -9592,9 +9187,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_map
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let rem0: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Map { _0: a } =>
                   crate::cbordetver::cbor_det_map_length(a),
@@ -9605,9 +9199,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
             crate::cbordetver::cbor_det_int_kind::UInt64;
         let c1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, 1u64);
         let x·: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern1: crate::cbordetver::cbor_det_view = x·;
         let mg: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern1
+            match x·
             {
                 crate::cbordetver::cbor_det_view::Map { _0: m } =>
                   crate::cbordetver::cbor_det_map_get(m, c1),
@@ -9646,9 +9239,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 2u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -9708,9 +9300,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 3u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -9772,9 +9363,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 4u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -9795,12 +9385,11 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                                         {
                                             let v1: crate::cbordetver::cbor_det_view =
                                                 crate::cbordetver::cbor_det_destruct(cv);
-                                            let _letpattern3: crate::cbordetver::cbor_det_view = v1;
                                             let
                                             i:
                                             crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                                             =
-                                                match _letpattern3
+                                                match v1
                                                 {
                                                     crate::cbordetver::cbor_det_view::Array
                                                     { _0: a }
@@ -9946,9 +9535,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 5u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -10003,12 +9591,11 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                   {
                       let v1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = v1;
                       let
                       j0:
                       crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
                       =
-                          match _letpattern2
+                          match v1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: a } =>
                                 crate::cbordetver::cbor_det_map_iterator_start(a),
@@ -10057,9 +9644,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                                       {
                                           let v2: crate::cbordetver::cbor_det_view =
                                               crate::cbordetver::cbor_det_destruct(k1);
-                                          let _letpattern3: crate::cbordetver::cbor_det_view = v2;
                                           let i: u64 =
-                                              match _letpattern3
+                                              match v2
                                               {
                                                   crate::cbordetver::cbor_det_view::Int64
                                                   { value: res, .. }
@@ -10097,12 +9683,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -10137,12 +9719,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -10178,12 +9756,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -10205,14 +9779,10 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                                                   let v3: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(v2);
                                                   let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v3;
-                                                  let
                                                   i:
                                                   crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                                                   =
-                                                      match _letpattern3
+                                                      match v3
                                                       {
                                                           crate::cbordetver::cbor_det_view::Array
                                                           { _0: a }
@@ -10338,12 +9908,8 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -10522,17 +10088,15 @@ parse_cose_key_generic
     let mty: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, 1u64);
     let x·: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = x·;
     let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match x·
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c1),
             _ => panic!("Incomplete pattern matching")
         };
-    let _letpattern1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
     let w1: either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int =
-        match _letpattern1
+        match ow
         {
             crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
               {
@@ -10557,9 +10121,8 @@ parse_cose_key_generic
     let mty1: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c2: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty1, 2u64);
     let x·1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
     let mg: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern2
+        match x·1
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c2),
@@ -10594,17 +10157,15 @@ parse_cose_key_generic
             let c3: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty2, 2u64);
             let x·2: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern3: crate::cbordetver::cbor_det_view = x·2;
             let ow1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern3
+                match x·2
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c3),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern4: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow1;
             let w11: &[u8] =
-                match _letpattern4
+                match ow1
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       parse_bstr(w),
@@ -10625,9 +10186,8 @@ parse_cose_key_generic
     let mty2: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c3: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty2, 3u64);
     let x·2: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern3: crate::cbordetver::cbor_det_view = x·2;
     let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern3
+        match x·2
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c3),
@@ -10665,17 +10225,15 @@ parse_cose_key_generic
             let c4: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty3, 3u64);
             let x·3: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern4: crate::cbordetver::cbor_det_view = x·3;
             let ow1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern4
+                match x·3
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c4),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern5: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow1;
             let w12: either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int =
-                match _letpattern5
+                match ow1
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       {
@@ -10714,9 +10272,8 @@ parse_cose_key_generic
     let mty3: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c4: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty3, 4u64);
     let x·3: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern4: crate::cbordetver::cbor_det_view = x·3;
     let mg2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern4
+        match x·3
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c4),
@@ -10735,11 +10292,10 @@ parse_cose_key_generic
                       {
                           let v: crate::cbordetver::cbor_det_view =
                               crate::cbordetver::cbor_det_destruct(cv);
-                          let _letpattern5: crate::cbordetver::cbor_det_view = v;
                           let
                           i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                           =
-                              match _letpattern5
+                              match v
                               {
                                   crate::cbordetver::cbor_det_view::Array { _0: a } =>
                                     crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -10846,30 +10402,27 @@ parse_cose_key_generic
             let c5: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty4, 4u64);
             let x·4: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern5: crate::cbordetver::cbor_det_view = x·4;
             let ow1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern5
+                match x·4
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c5),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern6: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow1;
             let
             w13:
             either__Pulse_Lib_Slice_slice·COSE_Format_aux_env29_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1
             =
-                match _letpattern6
+                match ow1
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       {
                           let v: crate::cbordetver::cbor_det_view =
                               crate::cbordetver::cbor_det_destruct(w);
-                          let _letpattern7: crate::cbordetver::cbor_det_view = v;
                           let
                           ar: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                           =
-                              match _letpattern7
+                              match v
                               {
                                   crate::cbordetver::cbor_det_view::Array { _0: a } =>
                                     crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -10917,9 +10470,8 @@ parse_cose_key_generic
     let mty4: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c5: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty4, 5u64);
     let x·4: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern5: crate::cbordetver::cbor_det_view = x·4;
     let mg3: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern5
+        match x·4
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c5),
@@ -10954,17 +10506,15 @@ parse_cose_key_generic
             let c6: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty5, 5u64);
             let x·5: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern6: crate::cbordetver::cbor_det_view = x·5;
             let ow1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern6
+                match x·5
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c6),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern7: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow1;
             let w14: &[u8] =
-                match _letpattern7
+                match ow1
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       parse_bstr(w),
@@ -10984,9 +10534,8 @@ parse_cose_key_generic
     =
         (w13,w23);
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern6: crate::cbordetver::cbor_det_view = v;
     let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-        match _letpattern6
+        match v
         {
             crate::cbordetver::cbor_det_view::Map { _0: a } =>
               crate::cbordetver::cbor_det_map_iterator_start(a),
@@ -11062,15 +10611,6 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
             either__Pulse_Lib_Slice_slice··COSE_Format_evercddl_label···CBOR_Pulse_Raw_Type_cbor_raw·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw
             =
                 _letpattern.1;
-            let
-            _letpattern1:
-            ((((either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int,
-            option__Pulse_Lib_Slice_slice·uint8_t),
-            option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int),
-            option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_aux_env29_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1),
-            option__Pulse_Lib_Slice_slice·uint8_t)
-            =
-                c1;
             let res1: bool =
                 {
                     let
@@ -11080,16 +10620,8 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                     option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int),
                     option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_aux_env29_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1)
                     =
-                        _letpattern1.0;
-                    let c21: option__Pulse_Lib_Slice_slice·uint8_t = _letpattern1.1;
-                    let
-                    _letpattern2:
-                    (((either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int,
-                    option__Pulse_Lib_Slice_slice·uint8_t),
-                    option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int),
-                    option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_aux_env29_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1)
-                    =
-                        c11;
+                        c1.0;
+                    let c21: option__Pulse_Lib_Slice_slice·uint8_t = c1.1;
                     let res1: bool =
                         {
                             let
@@ -11098,19 +10630,12 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                             option__Pulse_Lib_Slice_slice·uint8_t),
                             option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int)
                             =
-                                _letpattern2.0;
+                                c11.0;
                             let
                             c22:
                             option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_aux_env29_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1
                             =
-                                _letpattern2.1;
-                            let
-                            _letpattern3:
-                            ((either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int,
-                            option__Pulse_Lib_Slice_slice·uint8_t),
-                            option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int)
-                            =
-                                c12;
+                                c11.1;
                             let res1: bool =
                                 {
                                     let
@@ -11118,36 +10643,29 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                     (either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int,
                                     option__Pulse_Lib_Slice_slice·uint8_t)
                                     =
-                                        _letpattern3.0;
+                                        c12.0;
                                     let
                                     c23:
                                     option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int
                                     =
-                                        _letpattern3.1;
-                                    let
-                                    _letpattern4:
-                                    (either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int,
-                                    option__Pulse_Lib_Slice_slice·uint8_t)
-                                    =
-                                        c13;
+                                        c12.1;
                                     let res1: bool =
                                         {
                                             let
                                             c14:
                                             either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int
                                             =
-                                                _letpattern4.0;
-                                            let c24: option__Pulse_Lib_Slice_slice·uint8_t =
-                                                _letpattern4.1;
+                                                c13.0;
+                                            let c24: option__Pulse_Lib_Slice_slice·uint8_t = c13.1;
                                             let count: u64 = (&pcount)[0usize];
                                             let res1: bool =
                                                 if count < 18446744073709551615u64
                                                 {
                                                     let size0: usize = (&psize)[0usize];
-                                                    let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                    let _letpattern1: (&mut [u8], &mut [u8]) =
                                                         out.split_at_mut(size0);
-                                                    let _out0: &[u8] = _letpattern5.0;
-                                                    let out1: &mut [u8] = _letpattern5.1;
+                                                    let _out0: &[u8] = _letpattern1.0;
+                                                    let out1: &mut [u8] = _letpattern1.1;
                                                     let mty: crate::cbordetver::cbor_det_int_kind =
                                                         crate::cbordetver::cbor_det_int_kind::UInt64;
                                                     let c3: crate::cbordetveraux::cbor_raw =
@@ -11174,10 +10692,10 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                     if res1 > 0usize
                                                     {
                                                         let size1: usize = size0.wrapping_add(res1);
-                                                        let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                        let _letpattern2: (&mut [u8], &mut [u8]) =
                                                             out.split_at_mut(size1);
-                                                        let _out01: &[u8] = _letpattern6.0;
-                                                        let out2: &mut [u8] = _letpattern6.1;
+                                                        let _out01: &[u8] = _letpattern2.0;
+                                                        let out2: &mut [u8] = _letpattern2.1;
                                                         let res2: usize =
                                                             match c14
                                                             {
@@ -11197,11 +10715,11 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                             let size2: usize =
                                                                 size1.wrapping_add(res2);
                                                             let
-                                                            _letpattern7: (&mut [u8], &mut [u8])
+                                                            _letpattern3: (&mut [u8], &mut [u8])
                                                             =
                                                                 out.split_at_mut(size2);
-                                                            let out012: &mut [u8] = _letpattern7.0;
-                                                            let _out_rest: &[u8] = _letpattern7.1;
+                                                            let out012: &mut [u8] = _letpattern3.0;
+                                                            let _out_rest: &[u8] = _letpattern3.1;
                                                             let res3: bool =
                                                                 crate::cbordetver::cbor_det_serialize_map_insert(
                                                                     out012,
@@ -11239,11 +10757,11 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                           {
                                                               let size0: usize = (&psize)[0usize];
                                                               let
-                                                              _letpattern5: (&mut [u8], &mut [u8])
+                                                              _letpattern1: (&mut [u8], &mut [u8])
                                                               =
                                                                   out.split_at_mut(size0);
-                                                              let _out0: &[u8] = _letpattern5.0;
-                                                              let out1: &mut [u8] = _letpattern5.1;
+                                                              let _out0: &[u8] = _letpattern1.0;
+                                                              let out1: &mut [u8] = _letpattern1.1;
                                                               let
                                                               mty:
                                                               crate::cbordetver::cbor_det_int_kind
@@ -11281,14 +10799,14 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                   let size1: usize =
                                                                       size0.wrapping_add(res11);
                                                                   let
-                                                                  _letpattern6:
+                                                                  _letpattern2:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size1);
                                                                   let _out01: &[u8] =
-                                                                      _letpattern6.0;
+                                                                      _letpattern2.0;
                                                                   let out2: &mut [u8] =
-                                                                      _letpattern6.1;
+                                                                      _letpattern2.1;
                                                                   let res2: usize =
                                                                       serialize_bstr(c15, out2);
                                                                   if res2 > 0usize
@@ -11296,14 +10814,14 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                       let size2: usize =
                                                                           size1.wrapping_add(res2);
                                                                       let
-                                                                      _letpattern7:
+                                                                      _letpattern3:
                                                                       (&mut [u8], &mut [u8])
                                                                       =
                                                                           out.split_at_mut(size2);
                                                                       let out012: &mut [u8] =
-                                                                          _letpattern7.0;
+                                                                          _letpattern3.0;
                                                                       let _out_rest: &[u8] =
-                                                                          _letpattern7.1;
+                                                                          _letpattern3.1;
                                                                       let res3: bool =
                                                                           crate::cbordetver::cbor_det_serialize_map_insert(
                                                                               out012,
@@ -11352,10 +10870,10 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                   if count < 18446744073709551615u64
                                                   {
                                                       let size0: usize = (&psize)[0usize];
-                                                      let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                      let _letpattern1: (&mut [u8], &mut [u8]) =
                                                           out.split_at_mut(size0);
-                                                      let _out0: &[u8] = _letpattern5.0;
-                                                      let out1: &mut [u8] = _letpattern5.1;
+                                                      let _out0: &[u8] = _letpattern1.0;
+                                                      let out1: &mut [u8] = _letpattern1.1;
                                                       let
                                                       mty: crate::cbordetver::cbor_det_int_kind
                                                       =
@@ -11387,10 +10905,10 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                       {
                                                           let size1: usize =
                                                               size0.wrapping_add(res11);
-                                                          let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                          let _letpattern2: (&mut [u8], &mut [u8]) =
                                                               out.split_at_mut(size1);
-                                                          let _out01: &[u8] = _letpattern6.0;
-                                                          let out2: &mut [u8] = _letpattern6.1;
+                                                          let _out01: &[u8] = _letpattern2.0;
+                                                          let out2: &mut [u8] = _letpattern2.1;
                                                           let res2: usize =
                                                               match c14
                                                               {
@@ -11410,12 +10928,12 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                               let size2: usize =
                                                                   size1.wrapping_add(res2);
                                                               let
-                                                              _letpattern7: (&mut [u8], &mut [u8])
+                                                              _letpattern3: (&mut [u8], &mut [u8])
                                                               =
                                                                   out.split_at_mut(size2);
                                                               let out012: &mut [u8] =
-                                                                  _letpattern7.0;
-                                                              let _out_rest: &[u8] = _letpattern7.1;
+                                                                  _letpattern3.0;
+                                                              let _out_rest: &[u8] = _letpattern3.1;
                                                               let res3: bool =
                                                                   crate::cbordetver::cbor_det_serialize_map_insert(
                                                                       out012,
@@ -11461,10 +10979,10 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                           if count < 18446744073709551615u64
                                           {
                                               let size0: usize = (&psize)[0usize];
-                                              let _letpattern4: (&mut [u8], &mut [u8]) =
+                                              let _letpattern1: (&mut [u8], &mut [u8]) =
                                                   out.split_at_mut(size0);
-                                              let _out0: &[u8] = _letpattern4.0;
-                                              let out1: &mut [u8] = _letpattern4.1;
+                                              let _out0: &[u8] = _letpattern1.0;
+                                              let out1: &mut [u8] = _letpattern1.1;
                                               let mty: crate::cbordetver::cbor_det_int_kind =
                                                   crate::cbordetver::cbor_det_int_kind::UInt64;
                                               let c3: crate::cbordetveraux::cbor_raw =
@@ -11484,10 +11002,10 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                               if res11 > 0usize
                                               {
                                                   let size1: usize = size0.wrapping_add(res11);
-                                                  let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                  let _letpattern2: (&mut [u8], &mut [u8]) =
                                                       out.split_at_mut(size1);
-                                                  let _out01: &[u8] = _letpattern5.0;
-                                                  let out2: &mut [u8] = _letpattern5.1;
+                                                  let _out01: &[u8] = _letpattern2.0;
+                                                  let out2: &mut [u8] = _letpattern2.1;
                                                   let mut pcount1: [u64; 1] = [0u64; 1usize];
                                                   let mut psize1: [usize; 1] = [0usize; 1usize];
                                                   let res2: bool =
@@ -11682,10 +11200,10 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                   if res21 > 0usize
                                                   {
                                                       let size2: usize = size1.wrapping_add(res21);
-                                                      let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                      let _letpattern3: (&mut [u8], &mut [u8]) =
                                                           out.split_at_mut(size2);
-                                                      let out012: &mut [u8] = _letpattern6.0;
-                                                      let _out_rest: &[u8] = _letpattern6.1;
+                                                      let out012: &mut [u8] = _letpattern3.0;
+                                                      let _out_rest: &[u8] = _letpattern3.1;
                                                       let res3: bool =
                                                           crate::cbordetver::cbor_det_serialize_map_insert(
                                                               out012,
@@ -11729,10 +11247,10 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                   if count < 18446744073709551615u64
                                   {
                                       let size0: usize = (&psize)[0usize];
-                                      let _letpattern3: (&mut [u8], &mut [u8]) =
+                                      let _letpattern1: (&mut [u8], &mut [u8]) =
                                           out.split_at_mut(size0);
-                                      let _out0: &[u8] = _letpattern3.0;
-                                      let out1: &mut [u8] = _letpattern3.1;
+                                      let _out0: &[u8] = _letpattern1.0;
+                                      let out1: &mut [u8] = _letpattern1.1;
                                       let mty: crate::cbordetver::cbor_det_int_kind =
                                           crate::cbordetver::cbor_det_int_kind::UInt64;
                                       let c3: crate::cbordetveraux::cbor_raw =
@@ -11749,18 +11267,18 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                       if res11 > 0usize
                                       {
                                           let size1: usize = size0.wrapping_add(res11);
-                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                          let _letpattern2: (&mut [u8], &mut [u8]) =
                                               out.split_at_mut(size1);
-                                          let _out01: &[u8] = _letpattern4.0;
-                                          let out2: &mut [u8] = _letpattern4.1;
+                                          let _out01: &[u8] = _letpattern2.0;
+                                          let out2: &mut [u8] = _letpattern2.1;
                                           let res2: usize = serialize_bstr(c12, out2);
                                           if res2 > 0usize
                                           {
                                               let size2: usize = size1.wrapping_add(res2);
-                                              let _letpattern5: (&mut [u8], &mut [u8]) =
+                                              let _letpattern3: (&mut [u8], &mut [u8]) =
                                                   out.split_at_mut(size2);
-                                              let out012: &mut [u8] = _letpattern5.0;
-                                              let _out_rest: &[u8] = _letpattern5.1;
+                                              let out012: &mut [u8] = _letpattern3.0;
+                                              let _out_rest: &[u8] = _letpattern3.1;
                                               let res3: bool =
                                                   crate::cbordetver::cbor_det_serialize_map_insert(
                                                       out012,
@@ -11800,16 +11318,15 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                     { v: c11 }
                     =>
                       {
-                          let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] = c11;
                           let discarded: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
+                              [c11; 1usize];
                           crate::lowstar::ignore::ignore::<[&[(evercddl_label,
                           crate::cbordetveraux::cbor_raw)];
                           1]>(discarded);
                           let mut pres: [bool; 1] = [true; 1usize];
                           let mut pc: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
-                          let em0: bool = i.len() == 0usize;
+                              [c11; 1usize];
+                          let em0: bool = c11.len() == 0usize;
                           let mut pem: [bool; 1] = [em0; 1usize];
                           let __anf1: bool = (&pres)[0usize];
                           let __anf0: bool = (&pem)[0usize];
@@ -11823,63 +11340,47 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                               else
                               {
                                   let count·: u64 = count.wrapping_add(1u64);
-                                  let i1: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
+                                  let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
                                       (&pc)[0usize];
                                   let res: (evercddl_label, crate::cbordetveraux::cbor_raw) =
-                                      i1[0usize];
+                                      i[0usize];
                                   let
-                                  _letpattern2:
+                                  _letpattern1:
                                   (&[(evercddl_label, crate::cbordetveraux::cbor_raw)],
                                   &[(evercddl_label, crate::cbordetveraux::cbor_raw)])
                                   =
-                                      i1.split_at(1usize);
+                                      i.split_at(1usize);
                                   let
-                                  _letpattern3: (evercddl_label, crate::cbordetveraux::cbor_raw)
+                                  _letpattern2: (evercddl_label, crate::cbordetveraux::cbor_raw)
                                   =
                                       {
                                           let
                                           _il: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
                                           =
-                                              _letpattern2.0;
+                                              _letpattern1.0;
                                           let
                                           ir: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
                                           =
-                                              _letpattern2.1;
-                                          let
-                                          i·: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
-                                              ir;
-                                          (&mut pc)[0usize] = i·;
+                                              _letpattern1.1;
+                                          (&mut pc)[0usize] = ir;
                                           res
                                       };
-                                  let ek: evercddl_label = _letpattern3.0;
-                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern3.1;
+                                  let ek: evercddl_label = _letpattern2.0;
+                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern2.1;
                                   let size0: usize = (&psize)[0usize];
-                                  let _letpattern4: (&mut [u8], &mut [u8]) =
+                                  let _letpattern3: (&mut [u8], &mut [u8]) =
                                       out.split_at_mut(size0);
-                                  let _letpattern5: (&mut [u8], &mut [u8]) =
-                                      {
-                                          let s1: &mut [u8] = _letpattern4.0;
-                                          let s2: &mut [u8] = _letpattern4.1;
-                                          (s1,s2)
-                                      };
-                                  let _tmp: &[u8] = _letpattern5.0;
-                                  let out1: &mut [u8] = _letpattern5.1;
+                                  let _tmp: &[u8] = _letpattern3.0;
+                                  let out1: &mut [u8] = _letpattern3.1;
                                   let size1: usize = serialize_evercddl_label(ek, out1);
                                   if size1 == 0usize
                                   { (&mut pres)[0usize] = false }
                                   else
                                   {
-                                      let _letpattern6: (&mut [u8], &mut [u8]) =
+                                      let _letpattern4: (&mut [u8], &mut [u8]) =
                                           out1.split_at_mut(size1);
-                                      let _letpattern7: (&mut [u8], &mut [u8]) =
-                                          {
-                                              let s1: &mut [u8] = _letpattern6.0;
-                                              let s2: &mut [u8] = _letpattern6.1;
-                                              (s1,s2)
-                                          };
-                                      let out1·: &[u8] = _letpattern7.0;
-                                      let out2: &mut [u8] = _letpattern7.1;
+                                      let out1·: &[u8] = _letpattern4.0;
+                                      let out2: &mut [u8] = _letpattern4.1;
                                       let size2: usize = serialize_values(ev, out2);
                                       if size2 == 0usize
                                       { (&mut pres)[0usize] = false }
@@ -11903,48 +11404,26 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                   { v: pair }
                                                   =>
                                                     {
-                                                        let
-                                                        _letpattern8:
-                                                        (crate::cbordetveraux::cbor_raw, &[u8])
-                                                        =
-                                                            pair;
                                                         let c3: crate::cbordetveraux::cbor_raw =
-                                                            _letpattern8.0;
-                                                        let rem: &[u8] = _letpattern8.1;
+                                                            pair.0;
+                                                        let rem: &[u8] = pair.1;
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: (c3,rem) }
                                                     },
                                                   _ => panic!("Incomplete pattern matching")
                                               };
-                                          let
-                                          _letpattern8:
-                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                          =
-                                              ock;
-                                          match _letpattern8
+                                          match ock
                                           {
                                               crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                               { v: ck_ }
                                               =>
                                                 {
-                                                    let
-                                                    _letpattern9:
-                                                    (crate::cbordetveraux::cbor_raw, &[u8])
-                                                    =
-                                                        ck_;
-                                                    let ck: crate::cbordetveraux::cbor_raw =
-                                                        _letpattern9.0;
-                                                    let _remk: &[u8] = _letpattern9.1;
-                                                    let _letpattern10: (&[u8], &[u8]) =
+                                                    let ck: crate::cbordetveraux::cbor_raw = ck_.0;
+                                                    let _remk: &[u8] = ck_.1;
+                                                    let _letpattern5: (&[u8], &[u8]) =
                                                         out2.split_at(size2);
-                                                    let _letpattern11: (&[u8], &[u8]) =
-                                                        {
-                                                            let s1: &[u8] = _letpattern10.0;
-                                                            let s2: &[u8] = _letpattern10.1;
-                                                            (s1,s2)
-                                                        };
-                                                    let out2·: &[u8] = _letpattern11.0;
-                                                    let _out2_tail: &[u8] = _letpattern11.1;
+                                                    let out2·: &[u8] = _letpattern5.0;
+                                                    let _out2_tail: &[u8] = _letpattern5.1;
                                                     let
                                                     res3:
                                                     crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
@@ -11964,44 +11443,27 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                             =>
                                                               {
                                                                   let
-                                                                  _letpattern12:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      pair;
-                                                                  let
                                                                   c3: crate::cbordetveraux::cbor_raw
                                                                   =
-                                                                      _letpattern12.0;
-                                                                  let rem: &[u8] = _letpattern12.1;
+                                                                      pair.0;
+                                                                  let rem: &[u8] = pair.1;
                                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                                   { v: (c3,rem) }
                                                               },
                                                             _ =>
                                                               panic!("Incomplete pattern matching")
                                                         };
-                                                    let
-                                                    _letpattern12:
-                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                    =
-                                                        ocv;
-                                                    match _letpattern12
+                                                    match ocv
                                                     {
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: cv_ }
                                                         =>
                                                           {
                                                               let
-                                                              _letpattern13:
-                                                              (crate::cbordetveraux::cbor_raw,
-                                                              &[u8])
-                                                              =
-                                                                  cv_;
-                                                              let
                                                               cv: crate::cbordetveraux::cbor_raw
                                                               =
-                                                                  _letpattern13.0;
-                                                              let _remv: &[u8] = _letpattern13.1;
+                                                                  cv_.0;
+                                                              let _remv: &[u8] = cv_.1;
                                                               let
                                                               ce:
                                                               crate::cbordetveraux::cbor_map_entry
@@ -12021,25 +11483,13 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                   let size2·: usize =
                                                                       size1·.wrapping_add(size2);
                                                                   let
-                                                                  _letpattern14:
+                                                                  _letpattern6:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2·);
-                                                                  let
-                                                                  _letpattern15:
-                                                                  (&mut [u8], &mut [u8])
-                                                                  =
-                                                                      {
-                                                                          let s1: &mut [u8] =
-                                                                              _letpattern14.0;
-                                                                          let s2: &mut [u8] =
-                                                                              _letpattern14.1;
-                                                                          (s1,s2)
-                                                                      };
                                                                   let out_: &mut [u8] =
-                                                                      _letpattern15.0;
-                                                                  let _tmp1: &[u8] =
-                                                                      _letpattern15.1;
+                                                                      _letpattern6.0;
+                                                                  let _tmp1: &[u8] = _letpattern6.1;
                                                                   let no_dup: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out_,
@@ -12224,37 +11674,25 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                       };
                                   (&mut pc)[0usize] = i·;
                                   let
-                                  _letpattern2: (evercddl_label, crate::cbordetveraux::cbor_raw)
+                                  _letpattern1: (evercddl_label, crate::cbordetveraux::cbor_raw)
                                   =
                                       (hd_key_res,hd_value_res);
-                                  let ek: evercddl_label = _letpattern2.0;
-                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern2.1;
+                                  let ek: evercddl_label = _letpattern1.0;
+                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern1.1;
                                   let size0: usize = (&psize)[0usize];
-                                  let _letpattern3: (&mut [u8], &mut [u8]) =
+                                  let _letpattern2: (&mut [u8], &mut [u8]) =
                                       out.split_at_mut(size0);
-                                  let _letpattern4: (&mut [u8], &mut [u8]) =
-                                      {
-                                          let s1: &mut [u8] = _letpattern3.0;
-                                          let s2: &mut [u8] = _letpattern3.1;
-                                          (s1,s2)
-                                      };
-                                  let _tmp: &[u8] = _letpattern4.0;
-                                  let out1: &mut [u8] = _letpattern4.1;
+                                  let _tmp: &[u8] = _letpattern2.0;
+                                  let out1: &mut [u8] = _letpattern2.1;
                                   let size1: usize = serialize_evercddl_label(ek, out1);
                                   if size1 == 0usize
                                   { (&mut pres)[0usize] = false }
                                   else
                                   {
-                                      let _letpattern5: (&mut [u8], &mut [u8]) =
+                                      let _letpattern3: (&mut [u8], &mut [u8]) =
                                           out1.split_at_mut(size1);
-                                      let _letpattern6: (&mut [u8], &mut [u8]) =
-                                          {
-                                              let s1: &mut [u8] = _letpattern5.0;
-                                              let s2: &mut [u8] = _letpattern5.1;
-                                              (s1,s2)
-                                          };
-                                      let out1·: &[u8] = _letpattern6.0;
-                                      let out2: &mut [u8] = _letpattern6.1;
+                                      let out1·: &[u8] = _letpattern3.0;
+                                      let out2: &mut [u8] = _letpattern3.1;
                                       let size2: usize = serialize_values(ev, out2);
                                       if size2 == 0usize
                                       { (&mut pres)[0usize] = false }
@@ -12278,48 +11716,26 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                   { v: pair }
                                                   =>
                                                     {
-                                                        let
-                                                        _letpattern7:
-                                                        (crate::cbordetveraux::cbor_raw, &[u8])
-                                                        =
-                                                            pair;
                                                         let c3: crate::cbordetveraux::cbor_raw =
-                                                            _letpattern7.0;
-                                                        let rem: &[u8] = _letpattern7.1;
+                                                            pair.0;
+                                                        let rem: &[u8] = pair.1;
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: (c3,rem) }
                                                     },
                                                   _ => panic!("Incomplete pattern matching")
                                               };
-                                          let
-                                          _letpattern7:
-                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                          =
-                                              ock;
-                                          match _letpattern7
+                                          match ock
                                           {
                                               crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                               { v: ck_ }
                                               =>
                                                 {
-                                                    let
-                                                    _letpattern8:
-                                                    (crate::cbordetveraux::cbor_raw, &[u8])
-                                                    =
-                                                        ck_;
-                                                    let ck: crate::cbordetveraux::cbor_raw =
-                                                        _letpattern8.0;
-                                                    let _remk: &[u8] = _letpattern8.1;
-                                                    let _letpattern9: (&[u8], &[u8]) =
+                                                    let ck: crate::cbordetveraux::cbor_raw = ck_.0;
+                                                    let _remk: &[u8] = ck_.1;
+                                                    let _letpattern4: (&[u8], &[u8]) =
                                                         out2.split_at(size2);
-                                                    let _letpattern10: (&[u8], &[u8]) =
-                                                        {
-                                                            let s1: &[u8] = _letpattern9.0;
-                                                            let s2: &[u8] = _letpattern9.1;
-                                                            (s1,s2)
-                                                        };
-                                                    let out2·: &[u8] = _letpattern10.0;
-                                                    let _out2_tail: &[u8] = _letpattern10.1;
+                                                    let out2·: &[u8] = _letpattern4.0;
+                                                    let _out2_tail: &[u8] = _letpattern4.1;
                                                     let
                                                     res2:
                                                     crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
@@ -12339,44 +11755,27 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                             =>
                                                               {
                                                                   let
-                                                                  _letpattern11:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      pair;
-                                                                  let
                                                                   c3: crate::cbordetveraux::cbor_raw
                                                                   =
-                                                                      _letpattern11.0;
-                                                                  let rem: &[u8] = _letpattern11.1;
+                                                                      pair.0;
+                                                                  let rem: &[u8] = pair.1;
                                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                                   { v: (c3,rem) }
                                                               },
                                                             _ =>
                                                               panic!("Incomplete pattern matching")
                                                         };
-                                                    let
-                                                    _letpattern11:
-                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                    =
-                                                        ocv;
-                                                    match _letpattern11
+                                                    match ocv
                                                     {
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: cv_ }
                                                         =>
                                                           {
                                                               let
-                                                              _letpattern12:
-                                                              (crate::cbordetveraux::cbor_raw,
-                                                              &[u8])
-                                                              =
-                                                                  cv_;
-                                                              let
                                                               cv: crate::cbordetveraux::cbor_raw
                                                               =
-                                                                  _letpattern12.0;
-                                                              let _remv: &[u8] = _letpattern12.1;
+                                                                  cv_.0;
+                                                              let _remv: &[u8] = cv_.1;
                                                               let
                                                               ce:
                                                               crate::cbordetveraux::cbor_map_entry
@@ -12396,25 +11795,13 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                   let size2·: usize =
                                                                       size1·.wrapping_add(size2);
                                                                   let
-                                                                  _letpattern13:
+                                                                  _letpattern5:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2·);
-                                                                  let
-                                                                  _letpattern14:
-                                                                  (&mut [u8], &mut [u8])
-                                                                  =
-                                                                      {
-                                                                          let s1: &mut [u8] =
-                                                                              _letpattern13.0;
-                                                                          let s2: &mut [u8] =
-                                                                              _letpattern13.1;
-                                                                          (s1,s2)
-                                                                      };
                                                                   let out_: &mut [u8] =
-                                                                      _letpattern14.0;
-                                                                  let _tmp1: &[u8] =
-                                                                      _letpattern14.1;
+                                                                      _letpattern5.0;
+                                                                  let _tmp1: &[u8] = _letpattern5.1;
                                                                   let no_dup: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out_,
@@ -12575,9 +11962,8 @@ pub fn validate_and_parse_cose_key_generic <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_key_generic(rl);
               if test
               {
@@ -12820,9 +12206,8 @@ pub fn validate_cose_keyset(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_array
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Array { _0: a } =>
                   crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -12965,9 +12350,8 @@ parse_cose_keyset
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let ar: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Array { _0: a } =>
               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -13163,9 +12547,8 @@ pub fn validate_and_parse_cose_keyset <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_keyset(rl);
               if test
               {
@@ -13237,9 +12620,8 @@ pub fn aux_env31_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bo
         if is_uint
         {
             let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k);
-            let _letpattern: crate::cbordetver::cbor_det_view = v;
             let i: u64 =
-                match _letpattern
+                match v
                 {
                     crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                     _ => panic!("Incomplete pattern matching")
@@ -13271,9 +12653,8 @@ pub fn aux_env31_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -13305,9 +12686,8 @@ pub fn aux_env31_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bo
                 {
                     let v: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(k1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v;
                     let i: u64 =
-                        match _letpattern
+                        match v
                         {
                             crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                             _ => panic!("Incomplete pattern matching")
@@ -13337,9 +12717,8 @@ pub fn aux_env31_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bo
             if is_uint1
             {
                 let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k1);
-                let _letpattern: crate::cbordetver::cbor_det_view = v;
                 let i: u64 =
-                    match _letpattern
+                    match v
                     {
                         crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                         _ => panic!("Incomplete pattern matching")
@@ -13366,9 +12745,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_map
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let rem0: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Map { _0: a } =>
                   crate::cbordetver::cbor_det_map_length(a),
@@ -13379,9 +12757,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
             crate::cbordetver::cbor_det_int_kind::UInt64;
         let c1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, 1u64);
         let x·: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern1: crate::cbordetver::cbor_det_view = x·;
         let mg: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern1
+            match x·
             {
                 crate::cbordetver::cbor_det_view::Map { _0: m } =>
                   crate::cbordetver::cbor_det_map_get(m, c1),
@@ -13401,9 +12778,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                           {
                               let v1: crate::cbordetver::cbor_det_view =
                                   crate::cbordetver::cbor_det_destruct(cv);
-                              let _letpattern2: crate::cbordetver::cbor_det_view = v1;
                               let i: u64 =
-                                  match _letpattern2
+                                  match v1
                                   {
                                       crate::cbordetver::cbor_det_view::Int64 { value: res, .. } =>
                                         res,
@@ -13442,9 +12818,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 0u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -13495,9 +12870,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 1u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -13563,9 +12937,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                           crate::cbordetver::cbor_det_mk_int64(mty1, 3u64);
                       let x·1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
                       let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                          match _letpattern2
+                          match x·1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: m } =>
                                 crate::cbordetver::cbor_det_map_get(m, c2),
@@ -13620,12 +12993,11 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                   {
                       let v1: crate::cbordetver::cbor_det_view =
                           crate::cbordetver::cbor_det_destruct(c);
-                      let _letpattern2: crate::cbordetver::cbor_det_view = v1;
                       let
                       j0:
                       crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
                       =
-                          match _letpattern2
+                          match v1
                           {
                               crate::cbordetver::cbor_det_view::Map { _0: a } =>
                                 crate::cbordetver::cbor_det_map_iterator_start(a),
@@ -13674,9 +13046,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                                       {
                                           let v2: crate::cbordetver::cbor_det_view =
                                               crate::cbordetver::cbor_det_destruct(k1);
-                                          let _letpattern3: crate::cbordetver::cbor_det_view = v2;
                                           let i: u64 =
-                                              match _letpattern3
+                                              match v2
                                               {
                                                   crate::cbordetver::cbor_det_view::Int64
                                                   { value: res, .. }
@@ -13714,12 +13085,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -13757,12 +13124,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -13800,12 +13163,8 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                                               {
                                                   let v2: crate::cbordetver::cbor_det_view =
                                                       crate::cbordetver::cbor_det_destruct(k2);
-                                                  let
-                                                  _letpattern3: crate::cbordetver::cbor_det_view
-                                                  =
-                                                      v2;
                                                   let i: u64 =
-                                                      match _letpattern3
+                                                      match v2
                                                       {
                                                           crate::cbordetver::cbor_det_view::Int64
                                                           { value: res, .. }
@@ -13925,9 +13284,8 @@ parse_cose_key_okp
     let mty: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
     let c1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, 1u64);
     let x·: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = x·;
     let ow: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match x·
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c1),
@@ -13944,17 +13302,15 @@ parse_cose_key_okp
         { crate::cbordetver::cbor_det_int_kind::NegInt64 };
     let c2: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty1, 0u64);
     let x·1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern2: crate::cbordetver::cbor_det_view = x·1;
     let ow1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern2
+        match x·1
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c2),
             _ => panic!("Incomplete pattern matching")
         };
-    let _letpattern3: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow1;
     let w2: either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t =
-        match _letpattern3
+        match ow1
         {
             crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
               {
@@ -13987,9 +13343,8 @@ parse_cose_key_okp
         { crate::cbordetver::cbor_det_int_kind::NegInt64 };
     let c3: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty2, 1u64);
     let x·2: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern4: crate::cbordetver::cbor_det_view = x·2;
     let mg: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern4
+        match x·2
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c3),
@@ -14030,17 +13385,15 @@ parse_cose_key_okp
             let c4: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty3, 1u64);
             let x·3: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern5: crate::cbordetver::cbor_det_view = x·3;
             let ow2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern5
+                match x·3
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c4),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern6: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow2;
             let w12: &[u8] =
-                match _letpattern6
+                match ow2
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       parse_bstr(w),
@@ -14068,9 +13421,8 @@ parse_cose_key_okp
         { crate::cbordetver::cbor_det_int_kind::NegInt64 };
     let c4: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty3, 3u64);
     let x·3: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern5: crate::cbordetver::cbor_det_view = x·3;
     let mg1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern5
+        match x·3
         {
             crate::cbordetver::cbor_det_view::Map { _0: m } =>
               crate::cbordetver::cbor_det_map_get(m, c4),
@@ -14111,17 +13463,15 @@ parse_cose_key_okp
             let c5: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_mk_int64(mty4, 3u64);
             let x·4: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern6: crate::cbordetver::cbor_det_view = x·4;
             let ow2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                match _letpattern6
+                match x·4
                 {
                     crate::cbordetver::cbor_det_view::Map { _0: m } =>
                       crate::cbordetver::cbor_det_map_get(m, c5),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let _letpattern7: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow2;
             let w13: &[u8] =
-                match _letpattern7
+                match ow2
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
                       parse_bstr(w),
@@ -14139,9 +13489,8 @@ parse_cose_key_okp
     =
         (w12,w22);
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern6: crate::cbordetver::cbor_det_view = v;
     let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-        match _letpattern6
+        match v
         {
             crate::cbordetver::cbor_det_view::Map { _0: a } =>
               crate::cbordetver::cbor_det_map_iterator_start(a),
@@ -14211,13 +13560,6 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
             either__Pulse_Lib_Slice_slice··COSE_Format_evercddl_label···CBOR_Pulse_Raw_Type_cbor_raw·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw
             =
                 _letpattern.1;
-            let
-            _letpattern1:
-            ((((), either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t),
-            option__Pulse_Lib_Slice_slice·uint8_t),
-            option__Pulse_Lib_Slice_slice·uint8_t)
-            =
-                c1;
             let res1: bool =
                 {
                     let
@@ -14225,44 +13567,33 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                     (((), either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t),
                     option__Pulse_Lib_Slice_slice·uint8_t)
                     =
-                        _letpattern1.0;
-                    let c21: option__Pulse_Lib_Slice_slice·uint8_t = _letpattern1.1;
-                    let
-                    _letpattern2:
-                    (((), either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t),
-                    option__Pulse_Lib_Slice_slice·uint8_t)
-                    =
-                        c11;
+                        c1.0;
+                    let c21: option__Pulse_Lib_Slice_slice·uint8_t = c1.1;
                     let res1: bool =
                         {
                             let
                             c12:
                             ((), either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t)
                             =
-                                _letpattern2.0;
-                            let c22: option__Pulse_Lib_Slice_slice·uint8_t = _letpattern2.1;
-                            let
-                            _letpattern3:
-                            ((), either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t)
-                            =
-                                c12;
+                                c11.0;
+                            let c22: option__Pulse_Lib_Slice_slice·uint8_t = c11.1;
                             let res1: bool =
                                 {
-                                    _letpattern3.0;
+                                    c12.0;
                                     let
                                     c23:
                                     either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t
                                     =
-                                        _letpattern3.1;
+                                        c12.1;
                                     let count: u64 = (&pcount)[0usize];
                                     let res1: bool =
                                         if count < 18446744073709551615u64
                                         {
                                             let size0: usize = (&psize)[0usize];
-                                            let _letpattern4: (&mut [u8], &mut [u8]) =
+                                            let _letpattern1: (&mut [u8], &mut [u8]) =
                                                 out.split_at_mut(size0);
-                                            let _out0: &[u8] = _letpattern4.0;
-                                            let out1: &mut [u8] = _letpattern4.1;
+                                            let _out0: &[u8] = _letpattern1.0;
+                                            let out1: &mut [u8] = _letpattern1.1;
                                             let mty: crate::cbordetver::cbor_det_int_kind =
                                                 crate::cbordetver::cbor_det_int_kind::UInt64;
                                             let c3: crate::cbordetveraux::cbor_raw =
@@ -14282,10 +13613,10 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                             if res1 > 0usize
                                             {
                                                 let size1: usize = size0.wrapping_add(res1);
-                                                let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                let _letpattern2: (&mut [u8], &mut [u8]) =
                                                     out.split_at_mut(size1);
-                                                let _out01: &[u8] = _letpattern5.0;
-                                                let out2: &mut [u8] = _letpattern5.1;
+                                                let _out01: &[u8] = _letpattern2.0;
+                                                let out2: &mut [u8] = _letpattern2.1;
                                                 let mty1: crate::cbordetver::cbor_det_int_kind =
                                                     crate::cbordetver::cbor_det_int_kind::UInt64;
                                                 let c4: crate::cbordetveraux::cbor_raw =
@@ -14305,10 +13636,10 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                 if res21 > 0usize
                                                 {
                                                     let size2: usize = size1.wrapping_add(res21);
-                                                    let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                    let _letpattern3: (&mut [u8], &mut [u8]) =
                                                         out.split_at_mut(size2);
-                                                    let out012: &mut [u8] = _letpattern6.0;
-                                                    let _out_rest: &[u8] = _letpattern6.1;
+                                                    let out012: &mut [u8] = _letpattern3.0;
+                                                    let _out_rest: &[u8] = _letpattern3.1;
                                                     let res3: bool =
                                                         crate::cbordetver::cbor_det_serialize_map_insert(
                                                             out012,
@@ -14339,10 +13670,10 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                         if count1 < 18446744073709551615u64
                                         {
                                             let size0: usize = (&psize)[0usize];
-                                            let _letpattern4: (&mut [u8], &mut [u8]) =
+                                            let _letpattern1: (&mut [u8], &mut [u8]) =
                                                 out.split_at_mut(size0);
-                                            let _out0: &[u8] = _letpattern4.0;
-                                            let out1: &mut [u8] = _letpattern4.1;
+                                            let _out0: &[u8] = _letpattern1.0;
+                                            let out1: &mut [u8] = _letpattern1.1;
                                             let mty: crate::cbordetver::cbor_det_int_kind =
                                                 if
                                                 crate::cbordetveraux::cbor_major_type_neg_int64
@@ -14368,10 +13699,10 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                             if res11 > 0usize
                                             {
                                                 let size1: usize = size0.wrapping_add(res11);
-                                                let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                let _letpattern2: (&mut [u8], &mut [u8]) =
                                                     out.split_at_mut(size1);
-                                                let _out01: &[u8] = _letpattern5.0;
-                                                let out2: &mut [u8] = _letpattern5.1;
+                                                let _out01: &[u8] = _letpattern2.0;
+                                                let out2: &mut [u8] = _letpattern2.1;
                                                 let res2: usize =
                                                     match c23
                                                     {
@@ -14386,10 +13717,10 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                 if res2 > 0usize
                                                 {
                                                     let size2: usize = size1.wrapping_add(res2);
-                                                    let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                    let _letpattern3: (&mut [u8], &mut [u8]) =
                                                         out.split_at_mut(size2);
-                                                    let out012: &mut [u8] = _letpattern6.0;
-                                                    let _out_rest: &[u8] = _letpattern6.1;
+                                                    let out012: &mut [u8] = _letpattern3.0;
+                                                    let _out_rest: &[u8] = _letpattern3.1;
                                                     let res3: bool =
                                                         crate::cbordetver::cbor_det_serialize_map_insert(
                                                             out012,
@@ -14428,10 +13759,10 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                           if count < 18446744073709551615u64
                                           {
                                               let size0: usize = (&psize)[0usize];
-                                              let _letpattern4: (&mut [u8], &mut [u8]) =
+                                              let _letpattern1: (&mut [u8], &mut [u8]) =
                                                   out.split_at_mut(size0);
-                                              let _out0: &[u8] = _letpattern4.0;
-                                              let out1: &mut [u8] = _letpattern4.1;
+                                              let _out0: &[u8] = _letpattern1.0;
+                                              let out1: &mut [u8] = _letpattern1.1;
                                               let mty: crate::cbordetver::cbor_det_int_kind =
                                                   if
                                                   crate::cbordetveraux::cbor_major_type_neg_int64
@@ -14457,18 +13788,18 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                               if res11 > 0usize
                                               {
                                                   let size1: usize = size0.wrapping_add(res11);
-                                                  let _letpattern5: (&mut [u8], &mut [u8]) =
+                                                  let _letpattern2: (&mut [u8], &mut [u8]) =
                                                       out.split_at_mut(size1);
-                                                  let _out01: &[u8] = _letpattern5.0;
-                                                  let out2: &mut [u8] = _letpattern5.1;
+                                                  let _out01: &[u8] = _letpattern2.0;
+                                                  let out2: &mut [u8] = _letpattern2.1;
                                                   let res2: usize = serialize_bstr(c13, out2);
                                                   if res2 > 0usize
                                                   {
                                                       let size2: usize = size1.wrapping_add(res2);
-                                                      let _letpattern6: (&mut [u8], &mut [u8]) =
+                                                      let _letpattern3: (&mut [u8], &mut [u8]) =
                                                           out.split_at_mut(size2);
-                                                      let out012: &mut [u8] = _letpattern6.0;
-                                                      let _out_rest: &[u8] = _letpattern6.1;
+                                                      let out012: &mut [u8] = _letpattern3.0;
+                                                      let _out_rest: &[u8] = _letpattern3.1;
                                                       let res3: bool =
                                                           crate::cbordetver::cbor_det_serialize_map_insert(
                                                               out012,
@@ -14511,10 +13842,10 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                   if count < 18446744073709551615u64
                                   {
                                       let size0: usize = (&psize)[0usize];
-                                      let _letpattern3: (&mut [u8], &mut [u8]) =
+                                      let _letpattern1: (&mut [u8], &mut [u8]) =
                                           out.split_at_mut(size0);
-                                      let _out0: &[u8] = _letpattern3.0;
-                                      let out1: &mut [u8] = _letpattern3.1;
+                                      let _out0: &[u8] = _letpattern1.0;
+                                      let out1: &mut [u8] = _letpattern1.1;
                                       let mty: crate::cbordetver::cbor_det_int_kind =
                                           if
                                           crate::cbordetveraux::cbor_major_type_neg_int64
@@ -14537,18 +13868,18 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                       if res11 > 0usize
                                       {
                                           let size1: usize = size0.wrapping_add(res11);
-                                          let _letpattern4: (&mut [u8], &mut [u8]) =
+                                          let _letpattern2: (&mut [u8], &mut [u8]) =
                                               out.split_at_mut(size1);
-                                          let _out01: &[u8] = _letpattern4.0;
-                                          let out2: &mut [u8] = _letpattern4.1;
+                                          let _out01: &[u8] = _letpattern2.0;
+                                          let out2: &mut [u8] = _letpattern2.1;
                                           let res2: usize = serialize_bstr(c12, out2);
                                           if res2 > 0usize
                                           {
                                               let size2: usize = size1.wrapping_add(res2);
-                                              let _letpattern5: (&mut [u8], &mut [u8]) =
+                                              let _letpattern3: (&mut [u8], &mut [u8]) =
                                                   out.split_at_mut(size2);
-                                              let out012: &mut [u8] = _letpattern5.0;
-                                              let _out_rest: &[u8] = _letpattern5.1;
+                                              let out012: &mut [u8] = _letpattern3.0;
+                                              let _out_rest: &[u8] = _letpattern3.1;
                                               let res3: bool =
                                                   crate::cbordetver::cbor_det_serialize_map_insert(
                                                       out012,
@@ -14588,16 +13919,15 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                     { v: c11 }
                     =>
                       {
-                          let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] = c11;
                           let discarded: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
+                              [c11; 1usize];
                           crate::lowstar::ignore::ignore::<[&[(evercddl_label,
                           crate::cbordetveraux::cbor_raw)];
                           1]>(discarded);
                           let mut pres: [bool; 1] = [true; 1usize];
                           let mut pc: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
-                          let em0: bool = i.len() == 0usize;
+                              [c11; 1usize];
+                          let em0: bool = c11.len() == 0usize;
                           let mut pem: [bool; 1] = [em0; 1usize];
                           let __anf1: bool = (&pres)[0usize];
                           let __anf0: bool = (&pem)[0usize];
@@ -14611,63 +13941,47 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                               else
                               {
                                   let count·: u64 = count.wrapping_add(1u64);
-                                  let i1: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
+                                  let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
                                       (&pc)[0usize];
                                   let res: (evercddl_label, crate::cbordetveraux::cbor_raw) =
-                                      i1[0usize];
+                                      i[0usize];
                                   let
-                                  _letpattern2:
+                                  _letpattern1:
                                   (&[(evercddl_label, crate::cbordetveraux::cbor_raw)],
                                   &[(evercddl_label, crate::cbordetveraux::cbor_raw)])
                                   =
-                                      i1.split_at(1usize);
+                                      i.split_at(1usize);
                                   let
-                                  _letpattern3: (evercddl_label, crate::cbordetveraux::cbor_raw)
+                                  _letpattern2: (evercddl_label, crate::cbordetveraux::cbor_raw)
                                   =
                                       {
                                           let
                                           _il: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
                                           =
-                                              _letpattern2.0;
+                                              _letpattern1.0;
                                           let
                                           ir: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
                                           =
-                                              _letpattern2.1;
-                                          let
-                                          i·: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
-                                              ir;
-                                          (&mut pc)[0usize] = i·;
+                                              _letpattern1.1;
+                                          (&mut pc)[0usize] = ir;
                                           res
                                       };
-                                  let ek: evercddl_label = _letpattern3.0;
-                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern3.1;
+                                  let ek: evercddl_label = _letpattern2.0;
+                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern2.1;
                                   let size0: usize = (&psize)[0usize];
-                                  let _letpattern4: (&mut [u8], &mut [u8]) =
+                                  let _letpattern3: (&mut [u8], &mut [u8]) =
                                       out.split_at_mut(size0);
-                                  let _letpattern5: (&mut [u8], &mut [u8]) =
-                                      {
-                                          let s1: &mut [u8] = _letpattern4.0;
-                                          let s2: &mut [u8] = _letpattern4.1;
-                                          (s1,s2)
-                                      };
-                                  let _tmp: &[u8] = _letpattern5.0;
-                                  let out1: &mut [u8] = _letpattern5.1;
+                                  let _tmp: &[u8] = _letpattern3.0;
+                                  let out1: &mut [u8] = _letpattern3.1;
                                   let size1: usize = serialize_evercddl_label(ek, out1);
                                   if size1 == 0usize
                                   { (&mut pres)[0usize] = false }
                                   else
                                   {
-                                      let _letpattern6: (&mut [u8], &mut [u8]) =
+                                      let _letpattern4: (&mut [u8], &mut [u8]) =
                                           out1.split_at_mut(size1);
-                                      let _letpattern7: (&mut [u8], &mut [u8]) =
-                                          {
-                                              let s1: &mut [u8] = _letpattern6.0;
-                                              let s2: &mut [u8] = _letpattern6.1;
-                                              (s1,s2)
-                                          };
-                                      let out1·: &[u8] = _letpattern7.0;
-                                      let out2: &mut [u8] = _letpattern7.1;
+                                      let out1·: &[u8] = _letpattern4.0;
+                                      let out2: &mut [u8] = _letpattern4.1;
                                       let size2: usize = serialize_values(ev, out2);
                                       if size2 == 0usize
                                       { (&mut pres)[0usize] = false }
@@ -14691,48 +14005,26 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                   { v: pair }
                                                   =>
                                                     {
-                                                        let
-                                                        _letpattern8:
-                                                        (crate::cbordetveraux::cbor_raw, &[u8])
-                                                        =
-                                                            pair;
                                                         let c3: crate::cbordetveraux::cbor_raw =
-                                                            _letpattern8.0;
-                                                        let rem: &[u8] = _letpattern8.1;
+                                                            pair.0;
+                                                        let rem: &[u8] = pair.1;
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: (c3,rem) }
                                                     },
                                                   _ => panic!("Incomplete pattern matching")
                                               };
-                                          let
-                                          _letpattern8:
-                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                          =
-                                              ock;
-                                          match _letpattern8
+                                          match ock
                                           {
                                               crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                               { v: ck_ }
                                               =>
                                                 {
-                                                    let
-                                                    _letpattern9:
-                                                    (crate::cbordetveraux::cbor_raw, &[u8])
-                                                    =
-                                                        ck_;
-                                                    let ck: crate::cbordetveraux::cbor_raw =
-                                                        _letpattern9.0;
-                                                    let _remk: &[u8] = _letpattern9.1;
-                                                    let _letpattern10: (&[u8], &[u8]) =
+                                                    let ck: crate::cbordetveraux::cbor_raw = ck_.0;
+                                                    let _remk: &[u8] = ck_.1;
+                                                    let _letpattern5: (&[u8], &[u8]) =
                                                         out2.split_at(size2);
-                                                    let _letpattern11: (&[u8], &[u8]) =
-                                                        {
-                                                            let s1: &[u8] = _letpattern10.0;
-                                                            let s2: &[u8] = _letpattern10.1;
-                                                            (s1,s2)
-                                                        };
-                                                    let out2·: &[u8] = _letpattern11.0;
-                                                    let _out2_tail: &[u8] = _letpattern11.1;
+                                                    let out2·: &[u8] = _letpattern5.0;
+                                                    let _out2_tail: &[u8] = _letpattern5.1;
                                                     let
                                                     res3:
                                                     crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
@@ -14752,44 +14044,27 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                             =>
                                                               {
                                                                   let
-                                                                  _letpattern12:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      pair;
-                                                                  let
                                                                   c3: crate::cbordetveraux::cbor_raw
                                                                   =
-                                                                      _letpattern12.0;
-                                                                  let rem: &[u8] = _letpattern12.1;
+                                                                      pair.0;
+                                                                  let rem: &[u8] = pair.1;
                                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                                   { v: (c3,rem) }
                                                               },
                                                             _ =>
                                                               panic!("Incomplete pattern matching")
                                                         };
-                                                    let
-                                                    _letpattern12:
-                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                    =
-                                                        ocv;
-                                                    match _letpattern12
+                                                    match ocv
                                                     {
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: cv_ }
                                                         =>
                                                           {
                                                               let
-                                                              _letpattern13:
-                                                              (crate::cbordetveraux::cbor_raw,
-                                                              &[u8])
-                                                              =
-                                                                  cv_;
-                                                              let
                                                               cv: crate::cbordetveraux::cbor_raw
                                                               =
-                                                                  _letpattern13.0;
-                                                              let _remv: &[u8] = _letpattern13.1;
+                                                                  cv_.0;
+                                                              let _remv: &[u8] = cv_.1;
                                                               let
                                                               ce:
                                                               crate::cbordetveraux::cbor_map_entry
@@ -14809,25 +14084,13 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                                   let size2·: usize =
                                                                       size1·.wrapping_add(size2);
                                                                   let
-                                                                  _letpattern14:
+                                                                  _letpattern6:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2·);
-                                                                  let
-                                                                  _letpattern15:
-                                                                  (&mut [u8], &mut [u8])
-                                                                  =
-                                                                      {
-                                                                          let s1: &mut [u8] =
-                                                                              _letpattern14.0;
-                                                                          let s2: &mut [u8] =
-                                                                              _letpattern14.1;
-                                                                          (s1,s2)
-                                                                      };
                                                                   let out_: &mut [u8] =
-                                                                      _letpattern15.0;
-                                                                  let _tmp1: &[u8] =
-                                                                      _letpattern15.1;
+                                                                      _letpattern6.0;
+                                                                  let _tmp1: &[u8] = _letpattern6.1;
                                                                   let no_dup: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out_,
@@ -15012,37 +14275,25 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                       };
                                   (&mut pc)[0usize] = i·;
                                   let
-                                  _letpattern2: (evercddl_label, crate::cbordetveraux::cbor_raw)
+                                  _letpattern1: (evercddl_label, crate::cbordetveraux::cbor_raw)
                                   =
                                       (hd_key_res,hd_value_res);
-                                  let ek: evercddl_label = _letpattern2.0;
-                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern2.1;
+                                  let ek: evercddl_label = _letpattern1.0;
+                                  let ev: crate::cbordetveraux::cbor_raw = _letpattern1.1;
                                   let size0: usize = (&psize)[0usize];
-                                  let _letpattern3: (&mut [u8], &mut [u8]) =
+                                  let _letpattern2: (&mut [u8], &mut [u8]) =
                                       out.split_at_mut(size0);
-                                  let _letpattern4: (&mut [u8], &mut [u8]) =
-                                      {
-                                          let s1: &mut [u8] = _letpattern3.0;
-                                          let s2: &mut [u8] = _letpattern3.1;
-                                          (s1,s2)
-                                      };
-                                  let _tmp: &[u8] = _letpattern4.0;
-                                  let out1: &mut [u8] = _letpattern4.1;
+                                  let _tmp: &[u8] = _letpattern2.0;
+                                  let out1: &mut [u8] = _letpattern2.1;
                                   let size1: usize = serialize_evercddl_label(ek, out1);
                                   if size1 == 0usize
                                   { (&mut pres)[0usize] = false }
                                   else
                                   {
-                                      let _letpattern5: (&mut [u8], &mut [u8]) =
+                                      let _letpattern3: (&mut [u8], &mut [u8]) =
                                           out1.split_at_mut(size1);
-                                      let _letpattern6: (&mut [u8], &mut [u8]) =
-                                          {
-                                              let s1: &mut [u8] = _letpattern5.0;
-                                              let s2: &mut [u8] = _letpattern5.1;
-                                              (s1,s2)
-                                          };
-                                      let out1·: &[u8] = _letpattern6.0;
-                                      let out2: &mut [u8] = _letpattern6.1;
+                                      let out1·: &[u8] = _letpattern3.0;
+                                      let out2: &mut [u8] = _letpattern3.1;
                                       let size2: usize = serialize_values(ev, out2);
                                       if size2 == 0usize
                                       { (&mut pres)[0usize] = false }
@@ -15066,48 +14317,26 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                   { v: pair }
                                                   =>
                                                     {
-                                                        let
-                                                        _letpattern7:
-                                                        (crate::cbordetveraux::cbor_raw, &[u8])
-                                                        =
-                                                            pair;
                                                         let c3: crate::cbordetveraux::cbor_raw =
-                                                            _letpattern7.0;
-                                                        let rem: &[u8] = _letpattern7.1;
+                                                            pair.0;
+                                                        let rem: &[u8] = pair.1;
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: (c3,rem) }
                                                     },
                                                   _ => panic!("Incomplete pattern matching")
                                               };
-                                          let
-                                          _letpattern7:
-                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                          =
-                                              ock;
-                                          match _letpattern7
+                                          match ock
                                           {
                                               crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                               { v: ck_ }
                                               =>
                                                 {
-                                                    let
-                                                    _letpattern8:
-                                                    (crate::cbordetveraux::cbor_raw, &[u8])
-                                                    =
-                                                        ck_;
-                                                    let ck: crate::cbordetveraux::cbor_raw =
-                                                        _letpattern8.0;
-                                                    let _remk: &[u8] = _letpattern8.1;
-                                                    let _letpattern9: (&[u8], &[u8]) =
+                                                    let ck: crate::cbordetveraux::cbor_raw = ck_.0;
+                                                    let _remk: &[u8] = ck_.1;
+                                                    let _letpattern4: (&[u8], &[u8]) =
                                                         out2.split_at(size2);
-                                                    let _letpattern10: (&[u8], &[u8]) =
-                                                        {
-                                                            let s1: &[u8] = _letpattern9.0;
-                                                            let s2: &[u8] = _letpattern9.1;
-                                                            (s1,s2)
-                                                        };
-                                                    let out2·: &[u8] = _letpattern10.0;
-                                                    let _out2_tail: &[u8] = _letpattern10.1;
+                                                    let out2·: &[u8] = _letpattern4.0;
+                                                    let _out2_tail: &[u8] = _letpattern4.1;
                                                     let
                                                     res2:
                                                     crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
@@ -15127,44 +14356,27 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                             =>
                                                               {
                                                                   let
-                                                                  _letpattern11:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      pair;
-                                                                  let
                                                                   c3: crate::cbordetveraux::cbor_raw
                                                                   =
-                                                                      _letpattern11.0;
-                                                                  let rem: &[u8] = _letpattern11.1;
+                                                                      pair.0;
+                                                                  let rem: &[u8] = pair.1;
                                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                                   { v: (c3,rem) }
                                                               },
                                                             _ =>
                                                               panic!("Incomplete pattern matching")
                                                         };
-                                                    let
-                                                    _letpattern11:
-                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                    =
-                                                        ocv;
-                                                    match _letpattern11
+                                                    match ocv
                                                     {
                                                         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
                                                         { v: cv_ }
                                                         =>
                                                           {
                                                               let
-                                                              _letpattern12:
-                                                              (crate::cbordetveraux::cbor_raw,
-                                                              &[u8])
-                                                              =
-                                                                  cv_;
-                                                              let
                                                               cv: crate::cbordetveraux::cbor_raw
                                                               =
-                                                                  _letpattern12.0;
-                                                              let _remv: &[u8] = _letpattern12.1;
+                                                                  cv_.0;
+                                                              let _remv: &[u8] = cv_.1;
                                                               let
                                                               ce:
                                                               crate::cbordetveraux::cbor_map_entry
@@ -15184,25 +14396,13 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                                   let size2·: usize =
                                                                       size1·.wrapping_add(size2);
                                                                   let
-                                                                  _letpattern13:
+                                                                  _letpattern5:
                                                                   (&mut [u8], &mut [u8])
                                                                   =
                                                                       out.split_at_mut(size2·);
-                                                                  let
-                                                                  _letpattern14:
-                                                                  (&mut [u8], &mut [u8])
-                                                                  =
-                                                                      {
-                                                                          let s1: &mut [u8] =
-                                                                              _letpattern13.0;
-                                                                          let s2: &mut [u8] =
-                                                                              _letpattern13.1;
-                                                                          (s1,s2)
-                                                                      };
                                                                   let out_: &mut [u8] =
-                                                                      _letpattern14.0;
-                                                                  let _tmp1: &[u8] =
-                                                                      _letpattern14.1;
+                                                                      _letpattern5.0;
+                                                                  let _tmp1: &[u8] = _letpattern5.1;
                                                                   let no_dup: bool =
                                                                       crate::cbordetver::cbor_det_serialize_map_insert(
                                                                           out_,
@@ -15363,9 +14563,8 @@ pub fn validate_and_parse_cose_key_okp <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_key_okp(rl);
               if test
               {
@@ -15424,9 +14623,8 @@ pub fn validate_and_parse_cose_key <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_key(rl);
               if test
               {
@@ -15465,9 +14663,8 @@ pub fn validate_and_parse_header_map <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_header_map(rl);
               if test
               {
@@ -15556,9 +14753,8 @@ pub fn validate_and_parse_empty_or_serialized_map <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_empty_or_serialized_map(rl);
               if test
               {
@@ -15581,9 +14777,8 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_array
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Array { _0: a } =>
                   crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -15608,9 +14803,8 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                     {
                         let v1: crate::cbordetver::cbor_det_view =
                             crate::cbordetver::cbor_det_destruct(c1);
-                        let _letpattern1: crate::cbordetver::cbor_det_view = v1;
                         let s: &[u8] =
-                            match _letpattern1
+                            match v1
                             {
                                 crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                                 _ => panic!("Incomplete pattern matching")
@@ -15692,9 +14886,8 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                     {
                         let v1: crate::cbordetver::cbor_det_view =
                             crate::cbordetver::cbor_det_destruct(c1);
-                        let _letpattern1: crate::cbordetver::cbor_det_view = v1;
                         let s: &[u8] =
-                            match _letpattern1
+                            match v1
                             {
                                 crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                                 _ => panic!("Incomplete pattern matching")
@@ -15931,9 +15124,8 @@ parse_sig_structure
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let ar: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Array { _0: a } =>
               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -15958,9 +15150,8 @@ parse_sig_structure
                 {
                     let v1: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(c1);
-                    let _letpattern1: crate::cbordetver::cbor_det_view = v1;
                     let s: &[u8] =
-                        match _letpattern1
+                        match v1
                         {
                             crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                             _ => panic!("Incomplete pattern matching")
@@ -16042,9 +15233,8 @@ parse_sig_structure
                 {
                     let v1: crate::cbordetver::cbor_det_view =
                         crate::cbordetver::cbor_det_destruct(c1);
-                    let _letpattern1: crate::cbordetver::cbor_det_view = v1;
                     let s: &[u8] =
-                        match _letpattern1
+                        match v1
                         {
                             crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                             _ => panic!("Incomplete pattern matching")
@@ -16140,9 +15330,8 @@ parse_sig_structure
         if test
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(x);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let s: &[u8] =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -16461,9 +15650,8 @@ pub fn validate_and_parse_sig_structure <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_sig_structure(rl);
               if test
               {
@@ -16495,9 +15683,8 @@ pub fn validate_and_parse_cose_sign1 <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_sign1(rl);
               if test
               {
@@ -16518,9 +15705,8 @@ pub fn validate_cose_signature(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_array
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Array { _0: a } =>
                   crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -16618,9 +15804,8 @@ parse_cose_signature
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let ar: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Array { _0: a } =>
               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -16716,19 +15901,18 @@ serialize_cose_signature(c: cose_signature, out: &mut [u8]) ->
         {
             let c1: (empty_or_serialized_map, header_map) = _letpattern.0;
             let c2: &[u8] = _letpattern.1;
-            let _letpattern1: (empty_or_serialized_map, header_map) = c1;
             let res1: bool =
                 {
-                    let c11: empty_or_serialized_map = _letpattern1.0;
-                    let c21: header_map = _letpattern1.1;
+                    let c11: empty_or_serialized_map = c1.0;
+                    let c21: header_map = c1.1;
                     let count: u64 = (&pcount)[0usize];
                     let res1: bool =
                         if count < 18446744073709551615u64
                         {
                             let size: usize = (&psize)[0usize];
-                            let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                            let _out0: &[u8] = _letpattern2.0;
-                            let out1: &mut [u8] = _letpattern2.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                            let _out0: &[u8] = _letpattern1.0;
+                            let out1: &mut [u8] = _letpattern1.1;
                             let size1: usize = serialize_empty_or_serialized_map(c11, out1);
                             if size1 == 0usize
                             { false }
@@ -16747,9 +15931,9 @@ serialize_cose_signature(c: cose_signature, out: &mut [u8]) ->
                         if count1 < 18446744073709551615u64
                         {
                             let size: usize = (&psize)[0usize];
-                            let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                            let _out0: &[u8] = _letpattern2.0;
-                            let out1: &mut [u8] = _letpattern2.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                            let _out0: &[u8] = _letpattern1.0;
+                            let out1: &mut [u8] = _letpattern1.1;
                             let size1: usize = serialize_header_map(c21, out1);
                             if size1 == 0usize
                             { false }
@@ -16772,9 +15956,9 @@ serialize_cose_signature(c: cose_signature, out: &mut [u8]) ->
                 if count < 18446744073709551615u64
                 {
                     let size: usize = (&psize)[0usize];
-                    let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                    let _out0: &[u8] = _letpattern2.0;
-                    let out1: &mut [u8] = _letpattern2.1;
+                    let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                    let _out0: &[u8] = _letpattern1.0;
+                    let out1: &mut [u8] = _letpattern1.1;
                     let size1: usize = serialize_bstr(c2, out1);
                     if size1 == 0usize
                     { false }
@@ -16825,9 +16009,8 @@ pub fn validate_and_parse_cose_signature <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_signature(rl);
               if test
               {
@@ -16919,9 +16102,8 @@ pub fn validate_cose_sign(c: crate::cbordetveraux::cbor_raw) -> bool
     if ty == crate::cbordetveraux::cbor_major_type_array
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Array { _0: a } =>
                   crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -16990,12 +16172,11 @@ pub fn validate_cose_sign(c: crate::cbordetveraux::cbor_raw) -> bool
                         {
                             let v1: crate::cbordetver::cbor_det_view =
                                 crate::cbordetver::cbor_det_destruct(c1);
-                            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
                             let
                             i4:
                             crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
                             =
-                                match _letpattern1
+                                match v1
                                 {
                                     crate::cbordetver::cbor_det_view::Array { _0: a } =>
                                       crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -17177,9 +16358,8 @@ parse_cose_sign
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let ar: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Array { _0: a } =>
               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -17294,9 +16474,8 @@ parse_cose_sign
     let x3: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc6);
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(x3);
-    let _letpattern1: crate::cbordetver::cbor_det_view = v1;
     let ar1: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        match _letpattern1
+        match v1
         {
             crate::cbordetver::cbor_det_view::Array { _0: a } =>
               crate::cbordetver::cbor_det_array_iterator_start(a),
@@ -17365,19 +16544,18 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
             either__Pulse_Lib_Slice_slice·COSE_Format_cose_signature_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_signature)
             =
                 _letpattern.1;
-            let _letpattern1: (empty_or_serialized_map, header_map) = c1;
             let res1: bool =
                 {
-                    let c11: empty_or_serialized_map = _letpattern1.0;
-                    let c21: header_map = _letpattern1.1;
+                    let c11: empty_or_serialized_map = c1.0;
+                    let c21: header_map = c1.1;
                     let count: u64 = (&pcount)[0usize];
                     let res1: bool =
                         if count < 18446744073709551615u64
                         {
                             let size: usize = (&psize)[0usize];
-                            let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                            let _out0: &[u8] = _letpattern2.0;
-                            let out1: &mut [u8] = _letpattern2.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                            let _out0: &[u8] = _letpattern1.0;
+                            let out1: &mut [u8] = _letpattern1.1;
                             let size1: usize = serialize_empty_or_serialized_map(c11, out1);
                             if size1 == 0usize
                             { false }
@@ -17396,9 +16574,9 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                         if count1 < 18446744073709551615u64
                         {
                             let size: usize = (&psize)[0usize];
-                            let _letpattern2: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                            let _out0: &[u8] = _letpattern2.0;
-                            let out1: &mut [u8] = _letpattern2.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                            let _out0: &[u8] = _letpattern1.0;
+                            let out1: &mut [u8] = _letpattern1.1;
                             let size1: usize = serialize_header_map(c21, out1);
                             if size1 == 0usize
                             { false }
@@ -17417,26 +16595,20 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                 };
             if res1
             {
-                let
-                _letpattern2:
-                (either__Pulse_Lib_Slice_slice·uint8_t_··,
-                either__Pulse_Lib_Slice_slice·COSE_Format_cose_signature_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_signature)
-                =
-                    c2;
-                let c11: either__Pulse_Lib_Slice_slice·uint8_t_·· = _letpattern2.0;
+                let c11: either__Pulse_Lib_Slice_slice·uint8_t_·· = c2.0;
                 let
                 c21:
                 either__Pulse_Lib_Slice_slice·COSE_Format_cose_signature_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_signature
                 =
-                    _letpattern2.1;
+                    c2.1;
                 let count: u64 = (&pcount)[0usize];
                 let res11: bool =
                     if count < 18446744073709551615u64
                     {
                         let size: usize = (&psize)[0usize];
-                        let _letpattern3: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                        let _out0: &[u8] = _letpattern3.0;
-                        let out1: &mut [u8] = _letpattern3.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                        let _out0: &[u8] = _letpattern1.0;
+                        let out1: &mut [u8] = _letpattern1.1;
                         let size1: usize =
                             match c11
                             {
@@ -17463,9 +16635,9 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                     if count1 < 18446744073709551615u64
                     {
                         let size: usize = (&psize)[0usize];
-                        let _letpattern3: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
-                        let _out0: &[u8] = _letpattern3.0;
-                        let out1: &mut [u8] = _letpattern3.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
+                        let _out0: &[u8] = _letpattern1.0;
+                        let out1: &mut [u8] = _letpattern1.1;
                         let mut pcount1: [u64; 1] = [0u64; 1usize];
                         let mut psize1: [usize; 1] = [0usize; 1usize];
                         let res: bool =
@@ -17681,9 +16853,8 @@ pub fn validate_and_parse_cose_sign <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_sign(rl);
               if test
               {
@@ -17752,9 +16923,8 @@ pub fn validate_cose_sign_tagged(c: crate::cbordetveraux::cbor_raw) -> bool
     if k == crate::cbordetveraux::cbor_major_type_tagged
     {
         let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-        let _letpattern: crate::cbordetver::cbor_det_view = v;
         let tag·: u64 =
-            match _letpattern
+            match v
             {
                 crate::cbordetver::cbor_det_view::Tagged { tag, .. } => tag,
                 _ => panic!("Incomplete pattern matching")
@@ -17762,9 +16932,8 @@ pub fn validate_cose_sign_tagged(c: crate::cbordetveraux::cbor_raw) -> bool
         if 98u64 == tag·
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern1: crate::cbordetver::cbor_det_view = v1;
             let c·: crate::cbordetveraux::cbor_raw =
-                match _letpattern1
+                match v1
                 {
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
@@ -17794,9 +16963,8 @@ parse_cose_sign_tagged
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let _letpattern: crate::cbordetver::cbor_det_view = v;
     let cpl: crate::cbordetveraux::cbor_raw =
-        match _letpattern
+        match v
         {
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
@@ -17812,17 +16980,16 @@ serialize_cose_sign_tagged(c: cose_sign, out: &mut [u8]) ->
     usize
 {
     let c·: (u64, cose_sign) = (98u64,cose_sign_tagged_left(c));
-    let _letpattern: (u64, cose_sign) = c·;
-    let ctag: u64 = _letpattern.0;
-    let cpayload: cose_sign = _letpattern.1;
+    let ctag: u64 = c·.0;
+    let cpayload: cose_sign = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
     else
     {
-        let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
-        let _tmp: &[u8] = _letpattern1.0;
-        let out2: &mut [u8] = _letpattern1.1;
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
+        let _tmp: &[u8] = _letpattern.0;
+        let out2: &mut [u8] = _letpattern.1;
         let psz: usize = serialize_cose_sign(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
@@ -17845,9 +17012,8 @@ pub fn validate_and_parse_cose_sign_tagged <'a>(s: &'a [u8]) ->
         { v: rlrem }
         =>
           {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
+              let rl: crate::cbordetveraux::cbor_raw = rlrem.0;
+              let rem: &[u8] = rlrem.1;
               let test: bool = validate_cose_sign_tagged(rl);
               if test
               {

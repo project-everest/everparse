@@ -27,13 +27,7 @@ pub fn cbor_det_parse <'a>(input: &'a [u8]) ->
     { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     else
     {
-        let s·: (&[u8], &[u8]) = input.split_at(len);
-        let _letpattern: (&[u8], &[u8]) =
-            {
-                let s1: &[u8] = s·.0;
-                let s2: &[u8] = s·.1;
-                (s1,s2)
-            };
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
         let input2: &[u8] = _letpattern.0;
         let rem: &[u8] = _letpattern.1;
         let len1: usize = input2.len();
@@ -297,9 +291,8 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
             { cbor_det_int_kind::UInt64 }
             else
             { cbor_det_int_kind::NegInt64 };
-        let _letpattern: crate::cbordetveraux::cbor_raw = c;
         let res: crate::cbordetveraux::raw_uint64 =
-            match _letpattern
+            match c
             {
                 crate::cbordetveraux::cbor_raw::CBOR_Case_Int { v: c· } =>
                   crate::cbordetveraux::raw_uint64
@@ -319,9 +312,8 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
             { cbor_det_string_kind::ByteString }
             else
             { cbor_det_string_kind::TextString };
-        let _letpattern: crate::cbordetveraux::cbor_raw = c;
         let s: &[u8] =
-            match _letpattern
+            match c
             {
                 crate::cbordetveraux::cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
                 _ => panic!("Incomplete pattern matching")
@@ -329,15 +321,9 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
         cbor_det_view::String { kind: k, payload: s }
     }
     else if ty == crate::cbordetveraux::cbor_major_type_array
-    {
-        let res: crate::cbordetveraux::cbor_raw = c;
-        cbor_det_view::Array { _0: res }
-    }
+    { cbor_det_view::Array { _0: c } }
     else if ty == crate::cbordetveraux::cbor_major_type_map
-    {
-        let res: crate::cbordetveraux::cbor_raw = c;
-        cbor_det_view::Map { _0: res }
-    }
+    { cbor_det_view::Map { _0: c } }
     else if ty == crate::cbordetveraux::cbor_major_type_tagged
     {
         let res: crate::cbordetveraux::raw_uint64 =
@@ -355,9 +341,8 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
     }
     else
     {
-        let _letpattern: crate::cbordetveraux::cbor_raw = c;
         let i: u8 =
-            match _letpattern
+            match c
             {
                 crate::cbordetveraux::cbor_raw::CBOR_Case_Simple { v: res } => res,
                 _ => panic!("Incomplete pattern matching")

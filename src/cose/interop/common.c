@@ -1,10 +1,5 @@
 #include "common.h"
 
-/* Abort.abort is an assume val realized by libc's abort.  karamel got the
-   unqualified C name from -no-prefix Abort; Custard's --custard_c_no_prefix
-   does not cover assume vals, so the realization is provided here. */
-void Abort_abort(void) { abort(); }
-
 EVP_PKEY *parse_ed25519_private_key(bstr cose_key) {
     FStar_Pervasives_Native_option__tuple2_cose_key_okp_slice_uint8
         parsed_key = COSE_Format_validate_and_parse_cose_key_okp(cose_key);
