@@ -181,11 +181,11 @@ pub type cbor_det_map_entry <'a> = crate::cbordetveraux::cbor_map_entry <'a>;
 
 pub fn cbor_det_mk_map_entry <'a>(
     xk: crate::cbordetveraux::cbor_raw <'a>,
-    eta: crate::cbordetveraux::cbor_raw <'a>
+    xv: crate::cbordetveraux::cbor_raw <'a>
 ) ->
     crate::cbordetveraux::cbor_map_entry
     <'a>
-{ crate::cbordetveraux::cbor_mk_map_entry(xk, eta) }
+{ crate::cbordetveraux::cbor_mk_map_entry(xk, xv) }
 
 pub fn cbor_det_mk_array <'a>(a: &'a [crate::cbordetveraux::cbor_raw <'a>]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -410,11 +410,11 @@ pub fn cbor_det_array_iterator_length(
 
 pub fn cbor_det_array_iterator_truncate <'a>(
     x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>,
-    eta: u64
+    len: u64
 ) ->
     crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
-{ crate::cbordetveraux::cbor_array_iterator_truncate(x, eta) }
+{ crate::cbordetveraux::cbor_array_iterator_truncate(x, len) }
 
 pub fn cbor_det_get_array_item <'a>(x: crate::cbordetveraux::cbor_raw <'a>, i: u64) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -556,8 +556,8 @@ pub fn cbor_det_serialize_array(len: u64, out: &mut [u8], off: usize) -> usize
     crate::cbordetveraux::cbor_serialize_array(rlen, out, off)
 }
 
-pub fn cbor_det_serialize_map_insert(out: &mut [u8], eta: usize, eta1: usize) -> bool
-{ crate::cbordetveraux::cbor_raw_map_insert(out, eta, eta1) }
+pub fn cbor_det_serialize_map_insert(out: &mut [u8], off2: usize, off3: usize) -> bool
+{ crate::cbordetveraux::cbor_raw_map_insert(out, off2, off3) }
 
 pub fn cbor_det_serialize_map(len: u64, out: &mut [u8], off: usize) -> usize
 {
