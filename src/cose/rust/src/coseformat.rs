@@ -575,9 +575,9 @@ pub fn values_left <'a>(x4: crate::cbordetveraux::cbor_raw <'a>) ->
 Serializer for values
 */
 pub fn
-serialize_values(c: crate::cbordetveraux::cbor_raw, eta: &mut [u8]) ->
+serialize_values(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
-{ serialize_any(values_left(c), eta) }
+{ serialize_any(values_left(c), out) }
 
 pub fn validate_uint(c: crate::cbordetveraux::cbor_raw) -> bool
 {
@@ -7241,9 +7241,9 @@ parse_null(c: crate::cbordetveraux::cbor_raw)
 Serializer for evercddl_null
 */
 pub fn
-serialize_null(eta: &mut [u8]) ->
+serialize_null(out: &mut [u8]) ->
     usize
-{ serialize_nil(eta) }
+{ serialize_nil(out) }
 
 pub fn validate_and_parse_null <'a>(s: &'a [u8]) ->
     option__······Pulse_Lib_Slice_slice·uint8_t·
@@ -7554,9 +7554,9 @@ parse_bytes
 Serializer for bytes
 */
 pub fn
-serialize_bytes(c: &[u8], eta: &mut [u8]) ->
+serialize_bytes(c: &[u8], out: &mut [u8]) ->
     usize
-{ serialize_bstr(bytes_left(c), eta) }
+{ serialize_bstr(bytes_left(c), out) }
 
 pub fn validate_and_parse_bytes <'a>(s: &'a [u8]) ->
     option__·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·
@@ -7613,9 +7613,9 @@ parse_text
 Serializer for text
 */
 pub fn
-serialize_text(c: &[u8], eta: &mut [u8]) ->
+serialize_text(c: &[u8], out: &mut [u8]) ->
     usize
-{ serialize_tstr(text_left(c), eta) }
+{ serialize_tstr(text_left(c), out) }
 
 pub fn validate_and_parse_text <'a>(s: &'a [u8]) ->
     option__·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·
@@ -8977,9 +8977,9 @@ parse_number(c: crate::cbordetveraux::cbor_raw) ->
 Serializer for number
 */
 pub fn
-serialize_number(c: evercddl_int, eta: &mut [u8]) ->
+serialize_number(c: evercddl_int, out: &mut [u8]) ->
     usize
-{ serialize_int(number_left(c), eta) }
+{ serialize_int(number_left(c), out) }
 
 pub fn validate_and_parse_number <'a>(s: &'a [u8]) ->
     option__·COSE_Format_evercddl_int···Pulse_Lib_Slice_slice·uint8_t·
@@ -15403,9 +15403,9 @@ parse_cose_key
 Serializer for cose_key
 */
 pub fn
-serialize_cose_key(c: cose_key_okp, eta: &mut [u8]) ->
+serialize_cose_key(c: cose_key_okp, out: &mut [u8]) ->
     usize
-{ serialize_cose_key_okp(cose_key_left(c), eta) }
+{ serialize_cose_key_okp(cose_key_left(c), out) }
 
 pub fn validate_and_parse_cose_key <'a>(s: &'a [u8]) ->
     option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·
@@ -17559,9 +17559,9 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                                               1]
                                               =
                                                   [i.cddl_array_iterator_contents; 1usize];
-                                              let discarded2: bool =
+                                              let discarded: bool =
                                                   (i.cddl_array_iterator_impl_validate)(&mut pj);
-                                              crate::lowstar::ignore::ignore::<bool>(discarded2);
+                                              crate::lowstar::ignore::ignore::<bool>(discarded);
                                               let
                                               ji:
                                               crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw

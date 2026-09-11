@@ -1902,7 +1902,7 @@ pub(crate) fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
     cbor_read(input1)
 }
 
-fn cbor_jump(input: &[u8], eta: usize) -> usize { jump_raw_data_item(input, eta) }
+fn cbor_jump(input: &[u8], offset: usize) -> usize { jump_raw_data_item(input, offset) }
 
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_map_insert_result
@@ -4712,8 +4712,8 @@ fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
     { 0usize }
 }
 
-pub(crate) fn cbor_serialize_array(len: raw_uint64, eta: &mut [u8], eta1: usize) -> usize
-{ cbor_serialize_array·(len, eta, eta1) }
+pub(crate) fn cbor_serialize_array(len: raw_uint64, out: &mut [u8], off: usize) -> usize
+{ cbor_serialize_array·(len, out, off) }
 
 fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
 {
@@ -4791,10 +4791,10 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
     { 0usize }
 }
 
-pub(crate) fn cbor_serialize_map(len: raw_uint64, eta: &mut [u8], eta1: usize) -> usize
-{ cbor_serialize_map·(len, eta, eta1) }
+pub(crate) fn cbor_serialize_map(len: raw_uint64, out: &mut [u8], off: usize) -> usize
+{ cbor_serialize_map·(len, out, off) }
 
-fn cbor_raw_compare(x1: cbor_raw, eta: cbor_raw) -> i16 { impl_cbor_compare(x1, eta) }
+fn cbor_raw_compare(x1: cbor_raw, x2: cbor_raw) -> i16 { impl_cbor_compare(x1, x2) }
 
 fn cbor_map_entry_raw_compare(x1: cbor_map_entry, x2: cbor_map_entry) -> i16
 { cbor_raw_compare(x1.cbor_map_entry_key, x2.cbor_map_entry_key) }
@@ -4939,8 +4939,8 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
 
 pub(crate) fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool { cbor_raw_sort_aux(a) }
 
-pub(crate) fn impl_cbor_det_compare(x1: cbor_raw, eta: cbor_raw) -> i16
-{ impl_cbor_compare(x1, eta) }
+pub(crate) fn impl_cbor_det_compare(x1: cbor_raw, x2: cbor_raw) -> i16
+{ impl_cbor_compare(x1, x2) }
 
 fn cbor_string_reset_perm <'a>(c: cbor_string <'a>) -> cbor_string <'a>
 {
