@@ -54,13 +54,14 @@ CUSTARD_C_ENTRY_MODULES := \
   CBOR.Pulse.API.Det.Type CBOR.Pulse.API.Det.Dummy
 
 # Mirrors the karamel-native build's -no-prefix flags, so the emitted C names
-# match the snapshot in ../c.  karamel's -no-prefix Abort has no counterpart
-# here: --custard_c_no_prefix covers definitions, not assume vals, so listing
-# Abort changes nothing.  Abort.abort is instead realized by the consumers,
-# which define Abort_abort; see README.custard.md.
+# match the snapshot in ../c.  Abort is in the list for the same reason it is
+# in karamel's: Abort.abort is an assume val realized by libc's abort(), so it
+# must be emitted unprefixed to link.  (FStarLang/FStar#4395 section 102 made
+# --custard_c_no_prefix cover assume vals; before that it did not, and the
+# consumers had to define Abort_abort themselves.)
 CUSTARD_C_NO_PREFIX := \
   CBOR.Pulse.API.Det.C CBOR.Pulse.API.Det.Type \
-  CBOR.Spec.Constants CBOR.Pulse.API.Det.Dummy
+  CBOR.Spec.Constants CBOR.Pulse.API.Det.Dummy Abort
 
 CUSTARD_RUST_ENTRY_MODULES := \
   COSE.Format CommonPulse EverCrypt.Ed25519 \
