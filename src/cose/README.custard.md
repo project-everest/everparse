@@ -14,7 +14,7 @@ Both legs consume the **same** `.checked` files as the karamel-native build, so
 
 ## Requirements
 
-An F\* built from the `gebner_custard` branch, at **`a1d6ba3f5a`** or later.
+An F\* built from the `gebner_custard` branch, at **`a1ce47361e`** or later.
 Earlier revisions hit blockers that are fixed there; in particular anything
 before `4af84d2f86` extracts COSE roughly **50× slower** (C: 1994 s → 37 s).
 Point `FSTAR_EXE` at that build as usual.

@@ -4237,36 +4237,15 @@ pub(crate) fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool { cbor_raw_sort_au
 pub(crate) fn impl_cbor_det_compare(x1: cbor_raw, x2: cbor_raw) -> i16
 { impl_cbor_compare(x1, x2) }
 
-fn cbor_string_reset_perm <'a>(c: cbor_string <'a>) -> cbor_string <'a>
-{
-    cbor_string
-    {
-        cbor_string_type: c.cbor_string_type,
-        cbor_string_size: c.cbor_string_size,
-        cbor_string_ptr: c.cbor_string_ptr
-    }
-}
+fn cbor_string_reset_perm <'a>(c: cbor_string <'a>) -> cbor_string <'a> { c }
 
-fn cbor_tagged_reset_perm <'a>(c: cbor_tagged <'a>) -> cbor_tagged <'a>
-{ cbor_tagged { cbor_tagged_tag: c.cbor_tagged_tag, cbor_tagged_ptr: c.cbor_tagged_ptr } }
+fn cbor_tagged_reset_perm <'a>(c: cbor_tagged <'a>) -> cbor_tagged <'a> { c }
 
-fn cbor_array_reset_perm <'a>(c: cbor_array <'a>) -> cbor_array <'a>
-{
-    cbor_array
-    { cbor_array_length_size: c.cbor_array_length_size, cbor_array_ptr: c.cbor_array_ptr }
-}
+fn cbor_array_reset_perm <'a>(c: cbor_array <'a>) -> cbor_array <'a> { c }
 
-fn cbor_map_reset_perm <'a>(c: cbor_map <'a>) -> cbor_map <'a>
-{ cbor_map { cbor_map_length_size: c.cbor_map_length_size, cbor_map_ptr: c.cbor_map_ptr } }
+fn cbor_map_reset_perm <'a>(c: cbor_map <'a>) -> cbor_map <'a> { c }
 
-fn cbor_serialized_reset_perm <'a>(c: cbor_serialized <'a>) -> cbor_serialized <'a>
-{
-    cbor_serialized
-    {
-        cbor_serialized_header: c.cbor_serialized_header,
-        cbor_serialized_payload: c.cbor_serialized_payload
-    }
-}
+fn cbor_serialized_reset_perm <'a>(c: cbor_serialized <'a>) -> cbor_serialized <'a> { c }
 
 pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
 {

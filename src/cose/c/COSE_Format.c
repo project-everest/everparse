@@ -154,23 +154,23 @@ CBOR_Pulse_Raw_Type_cbor_raw dummy_cbor_det_t(void) {
 }
 
 static CBOR_Pulse_Raw_Type_cbor_string CBOR_Pulse_Raw_Match_cbor_string_reset_perm(CBOR_Pulse_Raw_Type_cbor_string c) {
-  return (CBOR_Pulse_Raw_Type_cbor_string){ .cbor_string_type = c.cbor_string_type, .cbor_string_size = c.cbor_string_size, .cbor_string_ptr = c.cbor_string_ptr };
+  return c;
 }
 
 static CBOR_Pulse_Raw_Type_cbor_tagged CBOR_Pulse_Raw_Match_cbor_tagged_reset_perm(CBOR_Pulse_Raw_Type_cbor_tagged c) {
-  return (CBOR_Pulse_Raw_Type_cbor_tagged){ .cbor_tagged_tag = c.cbor_tagged_tag, .cbor_tagged_ptr = c.cbor_tagged_ptr };
+  return c;
 }
 
 static CBOR_Pulse_Raw_Type_cbor_array CBOR_Pulse_Raw_Match_cbor_array_reset_perm(CBOR_Pulse_Raw_Type_cbor_array c) {
-  return (CBOR_Pulse_Raw_Type_cbor_array){ .cbor_array_length_size = c.cbor_array_length_size, .cbor_array_ptr = c.cbor_array_ptr };
+  return c;
 }
 
 static CBOR_Pulse_Raw_Type_cbor_map CBOR_Pulse_Raw_Match_cbor_map_reset_perm(CBOR_Pulse_Raw_Type_cbor_map c) {
-  return (CBOR_Pulse_Raw_Type_cbor_map){ .cbor_map_length_size = c.cbor_map_length_size, .cbor_map_ptr = c.cbor_map_ptr };
+  return c;
 }
 
 static CBOR_Pulse_Raw_Type_cbor_serialized CBOR_Pulse_Raw_Match_cbor_serialized_reset_perm(CBOR_Pulse_Raw_Type_cbor_serialized c) {
-  return (CBOR_Pulse_Raw_Type_cbor_serialized){ .cbor_serialized_header = c.cbor_serialized_header, .cbor_serialized_payload = c.cbor_serialized_payload };
+  return c;
 }
 
 static CBOR_Pulse_Raw_Type_cbor_raw CBOR_Pulse_Raw_Match_cbor_raw_reset_perm_tot(CBOR_Pulse_Raw_Type_cbor_raw c) {
