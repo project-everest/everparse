@@ -317,8 +317,7 @@ serialize_uint(c: u64, out: &mut [u8]) ->
     usize
 {
     let mty: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
-    let x: crate::cbordetveraux::cbor_raw =
-        crate::cbordetver::cbor_det_mk_int64(mty, evercddl_uint_left(c));
+    let x: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, c);
     let ser: crate::cbordetver::option__size_t = crate::cbordetver::cbor_det_serialize(x, out);
     match ser
     {
@@ -347,8 +346,7 @@ serialize_nint(c: u64, out: &mut [u8]) ->
         { crate::cbordetver::cbor_det_int_kind::UInt64 }
         else
         { crate::cbordetver::cbor_det_int_kind::NegInt64 };
-    let x: crate::cbordetveraux::cbor_raw =
-        crate::cbordetver::cbor_det_mk_int64(mty, nint_left(c));
+    let x: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_mk_int64(mty, c);
     let ser: crate::cbordetver::option__size_t = crate::cbordetver::cbor_det_serialize(x, out);
     match ser
     {
@@ -382,11 +380,11 @@ pub fn
 serialize_tstr(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let len: usize = (tstr_left(c)).len();
+    let len: usize = c.len();
     let __anf0: bool = crate::cbordetveraux::sizet_lte_u64(len, 18446744073709551615u64);
     if __anf0
     {
-        let correct: bool = crate::cbordetver::cbor_impl_utf8_correct(tstr_left(c));
+        let correct: bool = crate::cbordetver::cbor_impl_utf8_correct(c);
         if correct
         {
             let mty: crate::cbordetver::cbor_det_string_kind =
@@ -398,7 +396,7 @@ serialize_tstr(c: &[u8], out: &mut [u8]) ->
                 else
                 { crate::cbordetver::cbor_det_string_kind::TextString };
             let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-                crate::cbordetver::cbor_det_mk_string(mty, tstr_left(c));
+                crate::cbordetver::cbor_det_mk_string(mty, c);
             let x: crate::cbordetveraux::cbor_raw =
                 match res
                 {
@@ -478,7 +476,7 @@ aux_env34_serialize_1(
         let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
         let _out0: &[u8] = _letpattern.0;
         let out1: &mut [u8] = _letpattern.1;
-        let size1: usize = serialize_evercddl_label(aux_env34_type_1_left(c), out1);
+        let size1: usize = serialize_evercddl_label(c, out1);
         if size1 == 0usize
         { false }
         else
@@ -501,14 +499,14 @@ pub fn
 serialize_bstr(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let len: usize = (bstr_left(c)).len();
+    let len: usize = c.len();
     let __anf0: bool = crate::cbordetveraux::sizet_lte_u64(len, 18446744073709551615u64);
     if __anf0
     {
         let mty: crate::cbordetver::cbor_det_string_kind =
             crate::cbordetver::cbor_det_string_kind::ByteString;
         let res: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
-            crate::cbordetver::cbor_det_mk_string(mty, bstr_left(c));
+            crate::cbordetver::cbor_det_mk_string(mty, c);
         let x: crate::cbordetveraux::cbor_raw =
             match res
             {
@@ -552,8 +550,7 @@ pub fn
 serialize_any(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let ser: crate::cbordetver::option__size_t =
-        crate::cbordetver::cbor_det_serialize(any_left(c), out);
+    let ser: crate::cbordetver::option__size_t = crate::cbordetver::cbor_det_serialize(c, out);
     match ser
     {
         crate::cbordetver::option__size_t::None => 0usize,
@@ -575,7 +572,7 @@ Serializer for values
 pub fn
 serialize_values(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
-{ serialize_any(values_left(c), out) }
+{ serialize_any(c, out) }
 
 pub fn validate_uint(c: crate::cbordetveraux::cbor_raw) -> bool
 {
@@ -3508,7 +3505,7 @@ pub fn
 serialize_cose_sign1_tagged(c: cose_sign1, out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, cose_sign1) = (18u64,cose_sign1_tagged_left(c));
+    let c·: (u64, cose_sign1) = (18u64,c);
     let ctag: u64 = c·.0;
     let cpayload: cose_sign1 = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -5141,7 +5138,7 @@ parse_values
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
-{ parse_any(c) }
+{ c }
 
 pub fn header_map_right <'a>(
     x6:
@@ -6598,8 +6595,7 @@ pub fn
 serialize_bool(c: bool, out: &mut [u8]) ->
     usize
 {
-    let c·: bool = evercddl_bool_left(c);
-    if c·
+    if c
     {
         if
         crate::cbordetveraux::simple_value_true
@@ -6760,9 +6756,8 @@ pub fn validate_and_parse_any <'a>(s: &'a [u8]) ->
               let test: bool = validate_any(rl);
               if test
               {
-                  let x: crate::cbordetveraux::cbor_raw = parse_any(rl);
                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                  { v: (x,rem) }
+                  { v: (rl,rem) }
               }
               else
               {
@@ -7220,7 +7215,7 @@ Serializer for bytes
 pub fn
 serialize_bytes(c: &[u8], out: &mut [u8]) ->
     usize
-{ serialize_bstr(bytes_left(c), out) }
+{ serialize_bstr(c, out) }
 
 pub fn validate_and_parse_bytes <'a>(s: &'a [u8]) ->
     option__·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·
@@ -7278,7 +7273,7 @@ Serializer for text
 pub fn
 serialize_text(c: &[u8], out: &mut [u8]) ->
     usize
-{ serialize_tstr(text_left(c), out) }
+{ serialize_tstr(c, out) }
 
 pub fn validate_and_parse_text <'a>(s: &'a [u8]) ->
     option__·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·
@@ -7478,13 +7473,11 @@ parse_cborany
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let cpl: crate::cbordetveraux::cbor_raw =
-        match v
-        {
-            crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
-            _ => panic!("Incomplete pattern matching")
-        };
-    parse_any(cpl)
+    match v
+    {
+        crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
 /**
@@ -7494,7 +7487,7 @@ pub fn
 serialize_cborany(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, crate::cbordetveraux::cbor_raw) = (55799u64,cborany_left(c));
+    let c·: (u64, crate::cbordetveraux::cbor_raw) = (55799u64,c);
     let ctag: u64 = c·.0;
     let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -7605,7 +7598,7 @@ pub fn
 serialize_mimemessage(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, &[u8]) = (36u64,mimemessage_left(c));
+    let c·: (u64, &[u8]) = (36u64,c);
     let ctag: u64 = c·.0;
     let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -7715,7 +7708,7 @@ pub fn
 serialize_regexp(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, &[u8]) = (35u64,regexp_left(c));
+    let c·: (u64, &[u8]) = (35u64,c);
     let ctag: u64 = c·.0;
     let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -7825,7 +7818,7 @@ pub fn
 serialize_b64legacy(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, &[u8]) = (34u64,b64legacy_left(c));
+    let c·: (u64, &[u8]) = (34u64,c);
     let ctag: u64 = c·.0;
     let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -7935,7 +7928,7 @@ pub fn
 serialize_b64url(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, &[u8]) = (33u64,b64url_left(c));
+    let c·: (u64, &[u8]) = (33u64,c);
     let ctag: u64 = c·.0;
     let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -8045,7 +8038,7 @@ pub fn
 serialize_uri(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, &[u8]) = (32u64,uri_left(c));
+    let c·: (u64, &[u8]) = (32u64,c);
     let ctag: u64 = c·.0;
     let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -8155,7 +8148,7 @@ pub fn
 serialize_encodedcbor(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, &[u8]) = (24u64,encodedcbor_left(c));
+    let c·: (u64, &[u8]) = (24u64,c);
     let ctag: u64 = c·.0;
     let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -8258,13 +8251,11 @@ parse_eb16
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let cpl: crate::cbordetveraux::cbor_raw =
-        match v
-        {
-            crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
-            _ => panic!("Incomplete pattern matching")
-        };
-    parse_any(cpl)
+    match v
+    {
+        crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
 /**
@@ -8274,7 +8265,7 @@ pub fn
 serialize_eb16(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, crate::cbordetveraux::cbor_raw) = (23u64,eb16_left(c));
+    let c·: (u64, crate::cbordetveraux::cbor_raw) = (23u64,c);
     let ctag: u64 = c·.0;
     let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -8378,13 +8369,11 @@ parse_eb64legacy
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let cpl: crate::cbordetveraux::cbor_raw =
-        match v
-        {
-            crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
-            _ => panic!("Incomplete pattern matching")
-        };
-    parse_any(cpl)
+    match v
+    {
+        crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
 /**
@@ -8394,7 +8383,7 @@ pub fn
 serialize_eb64legacy(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, crate::cbordetveraux::cbor_raw) = (22u64,eb64legacy_left(c));
+    let c·: (u64, crate::cbordetveraux::cbor_raw) = (22u64,c);
     let ctag: u64 = c·.0;
     let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -8498,13 +8487,11 @@ parse_eb64url
     <'a>
 {
     let v: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-    let cpl: crate::cbordetveraux::cbor_raw =
-        match v
-        {
-            crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
-            _ => panic!("Incomplete pattern matching")
-        };
-    parse_any(cpl)
+    match v
+    {
+        crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
 /**
@@ -8514,7 +8501,7 @@ pub fn
 serialize_eb64url(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, crate::cbordetveraux::cbor_raw) = (21u64,eb64url_left(c));
+    let c·: (u64, crate::cbordetveraux::cbor_raw) = (21u64,c);
     let ctag: u64 = c·.0;
     let cpayload: crate::cbordetveraux::cbor_raw = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -8588,7 +8575,7 @@ Serializer for number
 pub fn
 serialize_number(c: evercddl_int, out: &mut [u8]) ->
     usize
-{ serialize_int(number_left(c), out) }
+{ serialize_int(c, out) }
 
 pub fn validate_and_parse_number <'a>(s: &'a [u8]) ->
     option__·COSE_Format_evercddl_int···Pulse_Lib_Slice_slice·uint8_t·
@@ -8682,7 +8669,7 @@ pub fn
 serialize_tdate(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, &[u8]) = (0u64,tdate_left(c));
+    let c·: (u64, &[u8]) = (0u64,c);
     let ctag: u64 = c·.0;
     let cpayload: &[u8] = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
@@ -12186,7 +12173,7 @@ aux_env30_serialize_1(
         let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
         let _out0: &[u8] = _letpattern.0;
         let out1: &mut [u8] = _letpattern.1;
-        let size1: usize = serialize_cose_key_generic(aux_env30_type_1_left(c), out1);
+        let size1: usize = serialize_cose_key_generic(c, out1);
         if size1 == 0usize
         { false }
         else
@@ -14604,7 +14591,7 @@ Serializer for cose_key
 pub fn
 serialize_cose_key(c: cose_key_okp, out: &mut [u8]) ->
     usize
-{ serialize_cose_key_okp(cose_key_left(c), out) }
+{ serialize_cose_key_okp(c, out) }
 
 pub fn validate_and_parse_cose_key <'a>(s: &'a [u8]) ->
     option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·
@@ -16082,7 +16069,7 @@ aux_env41_serialize_1(
         let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
         let _out0: &[u8] = _letpattern.0;
         let out1: &mut [u8] = _letpattern.1;
-        let size1: usize = serialize_cose_signature(aux_env41_type_1_left(c), out1);
+        let size1: usize = serialize_cose_signature(c, out1);
         if size1 == 0usize
         { false }
         else
@@ -16979,7 +16966,7 @@ pub fn
 serialize_cose_sign_tagged(c: cose_sign, out: &mut [u8]) ->
     usize
 {
-    let c·: (u64, cose_sign) = (98u64,cose_sign_tagged_left(c));
+    let c·: (u64, cose_sign) = (98u64,c);
     let ctag: u64 = c·.0;
     let cpayload: cose_sign = c·.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);

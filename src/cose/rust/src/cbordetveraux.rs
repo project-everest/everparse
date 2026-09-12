@@ -4237,36 +4237,7 @@ pub(crate) fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool { cbor_raw_sort_au
 pub(crate) fn impl_cbor_det_compare(x1: cbor_raw, x2: cbor_raw) -> i16
 { impl_cbor_compare(x1, x2) }
 
-fn cbor_string_reset_perm <'a>(c: cbor_string <'a>) -> cbor_string <'a> { c }
-
-fn cbor_tagged_reset_perm <'a>(c: cbor_tagged <'a>) -> cbor_tagged <'a> { c }
-
-fn cbor_array_reset_perm <'a>(c: cbor_array <'a>) -> cbor_array <'a> { c }
-
-fn cbor_map_reset_perm <'a>(c: cbor_map <'a>) -> cbor_map <'a> { c }
-
-fn cbor_serialized_reset_perm <'a>(c: cbor_serialized <'a>) -> cbor_serialized <'a> { c }
-
-pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
-{
-    match c
-    {
-        cbor_raw::CBOR_Case_String { v } =>
-          cbor_raw::CBOR_Case_String { v: cbor_string_reset_perm(v) },
-        cbor_raw::CBOR_Case_Tagged { v } =>
-          cbor_raw::CBOR_Case_Tagged { v: cbor_tagged_reset_perm(v) },
-        cbor_raw::CBOR_Case_Array { v } => cbor_raw::CBOR_Case_Array { v: cbor_array_reset_perm(v) },
-        cbor_raw::CBOR_Case_Map { v } => cbor_raw::CBOR_Case_Map { v: cbor_map_reset_perm(v) },
-        cbor_raw::CBOR_Case_Serialized_Tagged { v } =>
-          cbor_raw::CBOR_Case_Serialized_Tagged { v: cbor_serialized_reset_perm(v) },
-        cbor_raw::CBOR_Case_Serialized_Array { v } =>
-          cbor_raw::CBOR_Case_Serialized_Array { v: cbor_serialized_reset_perm(v) },
-        cbor_raw::CBOR_Case_Serialized_Map { v } =>
-          cbor_raw::CBOR_Case_Serialized_Map { v: cbor_serialized_reset_perm(v) },
-        _tmp => c,
-        _ => panic!("Incomplete pattern matching")
-    }
-}
+pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a> { c }
 
 pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
     cbor_map_entry
