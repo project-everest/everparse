@@ -20,3 +20,32 @@ $(DET_C_DIRECTORY)/CBORDet.c: $(filter-out %CBOR_Pulse_API_Det_Rust.krml,$(ALL_K
 extract: $(NONDET_C_DIRECTORY)/CBORNondet.c $(DET_C_DIRECTORY)/CBORDet.c
 
 .PHONY: extract
+
+include $(EVERPARSE_SRC_PATH)/cbor/custard.Makefile
+
+# Custard's direct-to-C backend emits the whole program as a single translation
+# unit, so each snapshot is just CBORDet.{c,h} / CBORNondet.{c,h}: there is no
+# --custard_split for the C backend, hence no CBORxxxType.h, no internal/ header
+# and no krmllib.h.  The public function names are unchanged -- the
+# --custard_c_no_prefix lists mirror the -no-prefix flags above -- so the
+# standalone C consumers (test/, example/, share/everparse/tests/cbor) compile
+# and pass against this output with no source change.
+$(DET_C_DIRECTORY)/custard/CBORDet.c: $(ALL_CHECKED_FILES)
+	rm -rf $(dir $@)
+	mkdir -p $(dir $@)
+	$(CUSTARD_FSTAR) --custard_backend C --custard_monomorphize_types true \
+		$(addprefix --custard_entry_module ,$(CUSTARD_DET_C_ENTRY)) \
+		$(addprefix --custard_c_no_prefix ,$(CUSTARD_DET_C_NO_PREFIX)) \
+		$(CUSTARD_DET_ROOT) -o $@
+
+$(NONDET_C_DIRECTORY)/custard/CBORNondet.c: $(ALL_CHECKED_FILES)
+	rm -rf $(dir $@)
+	mkdir -p $(dir $@)
+	$(CUSTARD_FSTAR) --custard_backend C --custard_monomorphize_types true \
+		$(addprefix --custard_entry_module ,$(CUSTARD_NONDET_C_ENTRY)) \
+		$(addprefix --custard_c_no_prefix ,$(CUSTARD_NONDET_C_NO_PREFIX)) \
+		$(CUSTARD_NONDET_ROOT) -o $@
+
+extract-custard: $(DET_C_DIRECTORY)/custard/CBORDet.c $(NONDET_C_DIRECTORY)/custard/CBORNondet.c
+
+.PHONY: extract-custard

@@ -266,13 +266,24 @@ pub fn cbor_det_equal <'a>(
     crate::cbordetver::cbor_det_equal(x1, x2)
 }
 
+// Custard does not emit a type abbreviation for a single-field record whose
+// field is erased away, so `cbordetver::cbor_det_array' and `cbor_det_map'
+// -- which karamel emitted as aliases of `cbor_raw' -- are absent.  Both
+// backends drop them; reported upstream (FStarLang/FStar#4395).  Custard's
+// function signatures already use `cbor_raw' at every use site, so these
+// local aliases restore the names without changing any representation.
+#[allow(non_camel_case_types)]
+type cbor_det_array <'a> = crate::cbordetveraux::cbor_raw <'a>;
+#[allow(non_camel_case_types)]
+type cbor_det_map <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
 /// The read-only type of Deterministic CBOR arrays. Values of this
 /// type cannot be manually constructed by the user, they are meant to
 /// be obtained only via `cbor_det_destruct` below. The abstraction is
 /// justified by the use of a refinement type, as per the definition
 /// of `cbor_det_array` in `pulse/CBOR.Pulse.Det.API.Rust.fst`
 #[derive(PartialEq, Clone, Copy)]
-pub struct CborDetArray <'a> { array: crate::cbordetver::cbor_det_array <'a> }
+pub struct CborDetArray <'a> { array: cbor_det_array <'a> }
 
 /// The read-only type of Deterministic CBOR maps. Values of this
 /// type cannot be manually constructed by the user, they are meant to
@@ -280,7 +291,7 @@ pub struct CborDetArray <'a> { array: crate::cbordetver::cbor_det_array <'a> }
 /// justified by the use of a refinement type, as per the definition
 /// of `cbor_det_map` in `pulse/CBOR.Pulse.Det.API.Rust.fst`
 #[derive(PartialEq, Clone, Copy)]
-pub struct CborDetMap <'a> { map: crate::cbordetver::cbor_det_map <'a> }
+pub struct CborDetMap <'a> { map: cbor_det_map <'a> }
 
 /// A read-only view of a Deterministic CBOR object, as obtained by
 /// peeling the first layer of nesting via `cbor_det_destruct` below.

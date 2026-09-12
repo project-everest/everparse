@@ -2,7 +2,7 @@ all: extract-all
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 
-include $(EVERPARSE_SRC_PATH)/cose/custard-detect.Makefile
+include $(EVERPARSE_SRC_PATH)/custard-detect.Makefile
 
 OUTPUT=_output/COSE.Format.fst
 

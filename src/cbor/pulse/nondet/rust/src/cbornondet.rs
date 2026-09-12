@@ -267,13 +267,24 @@ pub fn cbor_nondet_equal <'a>(
     crate::cbornondetver::cbor_nondet_equal(x1, x2)
 }
 
+// Custard does not emit a type abbreviation for a single-field record whose
+// field is erased away, so `cbornondetver::cbor_nondet_array' and
+// `cbor_nondet_map' -- which karamel emitted as aliases of `cbor_raw' -- are
+// absent.  Both backends drop them; reported upstream (FStarLang/FStar#4395).
+// Custard's function signatures already use `cbor_raw' at every use site, so
+// these local aliases restore the names without changing any representation.
+#[allow(non_camel_case_types)]
+type cbor_nondet_array <'a> = crate::cbornondetveraux::cbor_raw <'a>;
+#[allow(non_camel_case_types)]
+type cbor_nondet_map <'a> = crate::cbornondetveraux::cbor_raw <'a>;
+
 /// The read-only type of CBOR arrays. Values of this
 /// type cannot be manually constructed by the user, they are meant to
 /// be obtained only via `cbor_nondet_destruct` below. The abstraction is
 /// justified by the use of a refinement type, as per the definition
 /// of `cbor_nondet_array` in `pulse/CBOR.Pulse.Nondet.API.Rust.fst`
 #[derive(PartialEq, Clone, Copy)]
-pub struct CborNondetArray <'a> { array: crate::cbornondetver::cbor_nondet_array <'a> }
+pub struct CborNondetArray <'a> { array: cbor_nondet_array <'a> }
 
 /// The read-only type of CBOR maps. Values of this
 /// type cannot be manually constructed by the user, they are meant to
@@ -281,7 +292,7 @@ pub struct CborNondetArray <'a> { array: crate::cbornondetver::cbor_nondet_array
 /// justified by the use of a refinement type, as per the definition
 /// of `cbor_nondet_map` in `pulse/CBOR.Pulse.Nondet.API.Rust.fst`
 #[derive(PartialEq, Clone, Copy)]
-pub struct CborNondetMap <'a> { map: crate::cbornondetver::cbor_nondet_map <'a> }
+pub struct CborNondetMap <'a> { map: cbor_nondet_map <'a> }
 
 /// A read-only view of a CBOR object, as obtained by
 /// peeling the first layer of nesting via `cbor_nondet_destruct` below.

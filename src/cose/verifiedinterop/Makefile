@@ -9,7 +9,7 @@ CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
-include $(EVERPARSE_SRC_PATH)/cose/custard-detect.Makefile
+include $(EVERPARSE_SRC_PATH)/custard-detect.Makefile
 
 ifeq (1,$(ADMIT))
 CDDL_ADMIT := --admit

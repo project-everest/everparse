@@ -1,8 +1,26 @@
 all: snapshot
 
+EVERPARSE_SRC_PATH ?= $(realpath ..)
+
+# CUSTARD defaults to 1 when the F* in use has Custard and to 0 otherwise.
+# Exported so the pulse/{det,nondet} snapshot rules and the pulse/krml
+# extraction rules all see the same decision.
+include $(EVERPARSE_SRC_PATH)/custard-detect.Makefile
+export CUSTARD
+
 interface: spec.do pulse.do
 
+ifeq (1,$(CUSTARD))
 snapshot: det/snapshot nondet/snapshot
+else
+# pulse/{det,nondet}/{c,rust} hold Custard output; karamel's is a different
+# shape (CBORxxxType.h, internal/, krmllib.h) and would not be an update of it.
+snapshot:
+	@echo 'ERROR: the CBOR snapshots are Custard output, and this F* has no Custard.' >&2
+	@echo '       Rebuild F* from the gebner_custard branch (FStarLang/FStar#4395);' >&2
+	@echo '       see ../cose/README.custard.md.' >&2
+	@false
+endif
 
 .PHONY: det/snapshot nondet/snapshot
 
@@ -41,10 +59,20 @@ extract-krml: slice-c slice-rust
 
 .PHONY: extract-krml
 
-extract: extract-krml
+# Under CUSTARD=1 the C leg needs no .krml pass at all (Custard goes straight
+# to C) and the Rust leg drives karamel itself, so extract-custard does not
+# depend on extract-krml.  Chosen in the recipe rather than with ifeq so the
+# decision does not depend on where this file is included from.
+extract:
+	+$(MAKE) $(if $(filter 1,$(CUSTARD)),extract-custard,extract-karamel)
+
+extract-karamel: extract-krml
 	+$(MAKE) -C pulse/krml
 
-.PHONY: extract
+extract-custard:
+	+$(MAKE) -C pulse/krml extract-custard
+
+.PHONY: extract extract-karamel extract-custard
 
 spec.do:
 
