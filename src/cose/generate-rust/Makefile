@@ -36,7 +36,7 @@ else
 snapshot: extract-all
 	@echo 'ERROR: ../rust/src holds Custard output, and this F* has no Custard.' >&2
 	@echo '       Rebuild F* from the gebner_custard branch (FStarLang/FStar#4395);' >&2
-	@echo '       see ../README.custard.md.' >&2
+	@echo '       see ../../README.custard.md.' >&2
 	@false
 endif
 
@@ -55,7 +55,7 @@ endif
 else
 test:
 	@echo 'NOTE: extracted with karamel; not diffed against ../rust/src, which'
-	@echo '      holds Custard output.  See ../README.custard.md.'
+	@echo '      holds Custard output.  See ../../README.custard.md.'
 endif
 
 .PHONY: test

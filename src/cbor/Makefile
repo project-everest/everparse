@@ -18,7 +18,7 @@ else
 snapshot:
 	@echo 'ERROR: the CBOR snapshots are Custard output, and this F* has no Custard.' >&2
 	@echo '       Rebuild F* from the gebner_custard branch (FStarLang/FStar#4395);' >&2
-	@echo '       see ../cose/README.custard.md.' >&2
+	@echo '       see ../README.custard.md.' >&2
 	@false
 endif
 

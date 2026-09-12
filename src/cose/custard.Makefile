@@ -9,7 +9,7 @@
 # Both are driven from the *same* verified .checked files as the karamel-native
 # build, so `verify` is shared and there is no second verification.
 #
-# Requires an F* built from the `gebner_custard` branch; see README.custard.md.
+# Requires an F* built from the `gebner_custard` branch; see ../README.custard.md.
 
 CUSTARD_EVERPARSE_SRC ?= $(realpath ../..)
 _CUSTARD_S := $(CUSTARD_EVERPARSE_SRC)

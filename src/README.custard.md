@@ -1,8 +1,8 @@
-# Extracting COSE with Custard
+# Extracting EverParse with Custard
 
 [Custard](https://github.com/FStarLang/FStar/pull/4395) is F\*'s work-in-progress
-replacement for the `--codegen krml` extraction pipeline.  This directory wires
-it up for the COSE formatter, on both targets:
+replacement for the `--codegen krml` extraction pipeline.  `src/cose` and
+`src/cbor` are both extracted with it, on both targets:
 
 | leg | pipeline |
 | --- | --- |
@@ -11,6 +11,27 @@ it up for the COSE formatter, on both targets:
 
 Both legs consume the **same** `.checked` files as the karamel-native build, so
 `make verify` is shared and nothing is verified twice.
+
+## What is and is not migrated
+
+`src/cose` and `src/cbor` (all four legs: det and nondet, C and Rust) use
+Custard.  `src/cddl` has not been migrated yet.
+
+`src/3d`, `src/ASN1` and `LowParse.Low.*` **cannot** be migrated: they are
+written against Low\*/`HyperStack`, which Custard does not support at all, and
+so they stay on `--codegen krml` + karamel indefinitely.  Only the Pulse-based
+parts of EverParse are candidates.
+
+## Shape of the C output
+
+Custard emits **one translation unit** per leg, where karamel split its output
+across a public header, a type header and an `internal/` header.  So
+`src/cbor/pulse/det/c` no longer has a real `CBORDetType.h` or
+`internal/CBORDet.h`; `CBORDetType.h` is a one-line shim that includes
+`CBORDet.h`, kept so the karamel-driven `cddl` tests and `cbor` vertests, which
+pass `-add-include '"CBORDetType.h"'`, keep building until `cddl` migrates.
+`krmllib.h` is kept for the same reason.  The public function names are
+unchanged, which is why every C consumer builds without modification.
 
 ## Requirements
 

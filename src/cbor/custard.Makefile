@@ -10,7 +10,7 @@
 # build, so `verify` is shared and there is no second verification.
 #
 # Requires an F* built from the `gebner_custard` branch; see
-# ../cose/README.custard.md.
+# ../README.custard.md.
 
 CUSTARD_EVERPARSE_SRC ?= $(realpath $(EVERPARSE_SRC_PATH))
 _CUSTARD_S := $(CUSTARD_EVERPARSE_SRC)

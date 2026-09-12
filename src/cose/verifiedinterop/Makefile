@@ -67,7 +67,7 @@ extract: extract-krml
 # Note the output layout differs from the karamel-native build, which splits
 # the program across COSE_Format.{c,h}, COSE_EverCrypt.{c,h}, CBORDetAPI.h and
 # internal/COSE_Format.h.  Custard emits a single translation unit and header.
-# See README.custard.md.
+# See ../../README.custard.md.
 # CUSTARD defaults to 1 when the F* in use has Custard and to 0 otherwise;
 # see custard-detect.Makefile, included at the top of this file.  The snapshot
 # in ../c, and the consumers in ../interop and ../verifiedinterop/test, are
@@ -116,12 +116,12 @@ else
 snapshot: extract
 	@echo 'ERROR: ../c holds Custard output, and this F* has no Custard.' >&2
 	@echo '       Rebuild F* from the gebner_custard branch (FStarLang/FStar#4395);' >&2
-	@echo '       see ../README.custard.md.' >&2
+	@echo '       see ../../README.custard.md.' >&2
 	@false
 
 test: extract
 	@echo 'NOTE: extracted with karamel; not diffed against ../c, which holds'
-	@echo '      Custard output.  See ../README.custard.md.'
+	@echo '      Custard output.  See ../../README.custard.md.'
 
 endif
 
