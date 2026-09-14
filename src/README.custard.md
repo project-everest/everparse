@@ -35,7 +35,7 @@ unchanged, which is why every C consumer builds without modification.
 
 ## Requirements
 
-An F\* built from the `gebner_custard` branch, at **`1cf2953b06`** or later.
+An F\* built from the `gebner_custard` branch, at **`09acba059a`** or later.
 Earlier revisions hit blockers that are fixed there; in particular anything
 before `4af84d2f86` extracts COSE roughly **50× slower** (C: 1994 s → 37 s).
 Point `FSTAR_EXE` at that build as usual.
@@ -117,7 +117,7 @@ karamel's, and the hand-written consumers had to follow.
 2. **Generated names and tagged-union layout.**  karamel emits
    `typedef enum { COSE_Format_Mkevercddl_int0, ... }` with payloads in
    `.case_Mkevercddl_int0`; Custard emits `COSE_FORMAT_MKEVERCDDL_INT0` with
-   payloads in `.val.COSE_Format_Mkevercddl_int0._x0`.  Tuple fields are `._1`
+   payloads in `.val.Mkevercddl_int0`.  Tuple fields are `._1`
    and `._2` rather than `.fst` and `.snd`; monomorphized names are abbreviated
    (`option___COSE_Format_cose_key_okp___Pulse_Lib_Slice_slice__uint8_t_` becomes
    `option__tuple2_cose_key_okp_slice_uint8`); and a constructor whose payloads
@@ -253,18 +253,22 @@ below, plus the shape of a tagged union:
 /* karamel: a one-payload-constructor union is flattened, and a multi-arm
    union is anonymous with short `case_<Ctor>' members. */
 o.v                 e.case_Inl
-/* Custard: every arm nests under `val', named after the specialized
-   constructor, with the payload wrapped in a struct. */
-o.val.FStar_Pervasives_Native_Some__evercddl_uint.v
-e.val.FStar_Pervasives_Inl__slice_tuple2_evercddl_uint_evercddl_uint_map_ite.v
+/* Custard: every arm nests under `val', named after the bare constructor.
+   A constructor with exactly one field *is* the member; two or more fields
+   keep a wrapper struct (`t.val.A.x'). */
+o.val.Some          e.val.Inl
 ```
 
-Neither is wrong, but the second cannot be abstracted with a `typedef` -- a
-member name is not a type name -- so each such field access needs a macro.
-This is reported upstream as
+Neither is wrong, and only the enclosing union member remains to be
+`#ifdef`-ed.  Custard originally spelled the member with the full, explicitly
+unstable specialization suffix and wrapped every payload in a struct; that was
+reported upstream as
 [§113](https://github.com/FStarLang/FStar/pull/4395#issuecomment-5667930537)
 and
-[§114](https://github.com/FStarLang/FStar/pull/4395#issuecomment-5667985942).
+[§114](https://github.com/FStarLang/FStar/pull/4395#issuecomment-5667985942)
+-- the argument being that a member name, unlike a type name, cannot be
+abstracted behind a `typedef`, so an unstable member name is load-bearing for
+consumers.  Both were fixed in `09acba059a`.
 
 ### Gotcha: expansion order
 

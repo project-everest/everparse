@@ -205,11 +205,15 @@ typedef struct FStar_Pervasives_Native_tuple2__uint64_cose_sign_s FStar_Pervasiv
 typedef struct FStar_Pervasives_Native_tuple2__cose_sign_tagged_slice_uint8_s FStar_Pervasives_Native_tuple2__cose_sign_tagged_slice_uint8;
 typedef struct FStar_Pervasives_Native_option__tuple2_cose_sign_tagged_slice_uint8_s FStar_Pervasives_Native_option__tuple2_cose_sign_tagged_slice_uint8;
 
+typedef uint8_t major_type_t;
+typedef uint8_t major_type_uint64_or_neg_int64;
 struct CBOR_Pulse_Raw_Type_cbor_int_s {
   uint8_t cbor_int_type;
   uint8_t cbor_int_size;
   uint64_t cbor_int_value;
 };
+typedef uint8_t simple_value;
+typedef uint8_t major_type_byte_string_or_text_string;
 struct Pulse_Lib_Slice_slice__uint8_s {
   uint8_t *elt;
   size_t len;
@@ -261,33 +265,15 @@ enum CBOR_Pulse_Raw_Type_cbor_raw_tags {
 struct CBOR_Pulse_Raw_Type_cbor_raw_s {
   enum CBOR_Pulse_Raw_Type_cbor_raw_tags tag;
   union {
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_int v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Int;
-    struct {
-      uint8_t v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Simple;
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_string v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_String;
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_tagged v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Tagged;
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_array v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Array;
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_map v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Map;
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_serialized v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Serialized_Tagged;
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_serialized v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Serialized_Array;
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_serialized v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Serialized_Map;
+    CBOR_Pulse_Raw_Type_cbor_int CBOR_Case_Int;
+    uint8_t CBOR_Case_Simple;
+    CBOR_Pulse_Raw_Type_cbor_string CBOR_Case_String;
+    CBOR_Pulse_Raw_Type_cbor_tagged CBOR_Case_Tagged;
+    CBOR_Pulse_Raw_Type_cbor_array CBOR_Case_Array;
+    CBOR_Pulse_Raw_Type_cbor_map CBOR_Case_Map;
+    CBOR_Pulse_Raw_Type_cbor_serialized CBOR_Case_Serialized_Tagged;
+    CBOR_Pulse_Raw_Type_cbor_serialized CBOR_Case_Serialized_Array;
+    CBOR_Pulse_Raw_Type_cbor_serialized CBOR_Case_Serialized_Map;
   } val;
 };
 struct CBOR_Pulse_Raw_Type_cbor_map_entry_s {
@@ -307,12 +293,8 @@ enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw_tags {
 struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw_s {
   enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_raw _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice__cbor_raw;
-    struct {
-      CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized__cbor_raw;
+    Pulse_Lib_Slice_slice__cbor_raw CBOR_Raw_Iterator_Slice;
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator CBOR_Raw_Iterator_Serialized;
   } val;
 };
 typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw cbor_det_array_iterator_t;
@@ -323,12 +305,8 @@ enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry_tags {
 struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry_s {
   enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_map_entry _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice__cbor_map_entry;
-    struct {
-      CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized__cbor_map_entry;
+    Pulse_Lib_Slice_slice__cbor_map_entry CBOR_Raw_Iterator_Slice;
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator CBOR_Raw_Iterator_Serialized;
   } val;
 };
 typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry cbor_det_map_iterator_t;
@@ -351,21 +329,11 @@ enum CBOR_Spec_Raw_EverParse_long_argument_tags {
 struct CBOR_Spec_Raw_EverParse_long_argument_s {
   enum CBOR_Spec_Raw_EverParse_long_argument_tags tag;
   union {
-    struct {
-      uint8_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue;
-    struct {
-      uint8_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU8;
-    struct {
-      uint16_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU16;
-    struct {
-      uint32_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU32;
-    struct {
-      uint64_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU64;
+    uint8_t LongArgumentSimpleValue;
+    uint8_t LongArgumentU8;
+    uint16_t LongArgumentU16;
+    uint32_t LongArgumentU32;
+    uint64_t LongArgumentU64;
   } val;
 };
 struct Prims_dtuple2__initial_byte_t_long_argument_s {
@@ -379,9 +347,7 @@ enum FStar_Pervasives_Native_option__with_perm_slice_cbor_raw_tags {
 struct FStar_Pervasives_Native_option__with_perm_slice_cbor_raw_s {
   enum FStar_Pervasives_Native_option__with_perm_slice_cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_raw v;
-    } FStar_Pervasives_Native_Some__with_perm_slice_cbor_raw;
+    Pulse_Lib_Slice_slice__cbor_raw Some;
   } val;
 };
 enum FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_tags {
@@ -391,9 +357,7 @@ enum FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_tags {
 struct FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_s {
   enum FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_map_entry v;
-    } FStar_Pervasives_Native_Some__with_perm_slice_cbor_map_entry;
+    Pulse_Lib_Slice_slice__cbor_map_entry Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__slice_cbor_map_entry_slice_cbor_map_entry_s {
@@ -415,9 +379,7 @@ enum FStar_Pervasives_Native_option__cbor_raw_tags {
 struct FStar_Pervasives_Native_option__cbor_raw_s {
   enum FStar_Pervasives_Native_option__cbor_raw_tags tag;
   union {
-    struct {
-      CBOR_Pulse_Raw_Type_cbor_raw v;
-    } FStar_Pervasives_Native_Some__cbor_raw;
+    CBOR_Pulse_Raw_Type_cbor_raw Some;
   } val;
 };
 typedef enum {
@@ -425,6 +387,8 @@ typedef enum {
   CBOR_PULSE_RAW_INSERT_CINPROGRESS,
   CBOR_PULSE_RAW_INSERT_CSUCCESS
 } CBOR_Pulse_Raw_Insert_cbor_raw_map_insert_result;
+typedef uint64_t COSE_Format_evercddl_uint;
+typedef uint64_t COSE_Format_nint;
 enum COSE_Format_evercddl_int_tags {
   COSE_FORMAT_MKEVERCDDL_INT0,
   COSE_FORMAT_MKEVERCDDL_INT1
@@ -432,14 +396,11 @@ enum COSE_Format_evercddl_int_tags {
 struct COSE_Format_evercddl_int_s {
   enum COSE_Format_evercddl_int_tags tag;
   union {
-    struct {
-      uint64_t _x0;
-    } COSE_Format_Mkevercddl_int0;
-    struct {
-      uint64_t _x0;
-    } COSE_Format_Mkevercddl_int1;
+    uint64_t Mkevercddl_int0;
+    uint64_t Mkevercddl_int1;
   } val;
 };
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_tstr;
 enum COSE_Format_evercddl_label_tags {
   COSE_FORMAT_MKEVERCDDL_LABEL0,
   COSE_FORMAT_MKEVERCDDL_LABEL1
@@ -447,14 +408,14 @@ enum COSE_Format_evercddl_label_tags {
 struct COSE_Format_evercddl_label_s {
   enum COSE_Format_evercddl_label_tags tag;
   union {
-    struct {
-      COSE_Format_evercddl_int _x0;
-    } COSE_Format_Mkevercddl_label0;
-    struct {
-      Pulse_Lib_Slice_slice__uint8 _x0;
-    } COSE_Format_Mkevercddl_label1;
+    COSE_Format_evercddl_int Mkevercddl_label0;
+    Pulse_Lib_Slice_slice__uint8 Mkevercddl_label1;
   } val;
 };
+typedef COSE_Format_evercddl_label COSE_Format_aux_env34_type_1;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_bstr;
+typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_any;
+typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_values;
 enum FStar_Pervasives_either__evercddl_int_tstr_tags {
   FSTAR_PERVASIVES_INL__EVERCDDL_INT_TSTR,
   FSTAR_PERVASIVES_INR__EVERCDDL_INT_TSTR
@@ -462,12 +423,8 @@ enum FStar_Pervasives_either__evercddl_int_tstr_tags {
 struct FStar_Pervasives_either__evercddl_int_tstr_s {
   enum FStar_Pervasives_either__evercddl_int_tstr_tags tag;
   union {
-    struct {
-      COSE_Format_evercddl_int v;
-    } FStar_Pervasives_Inl__evercddl_int_tstr;
-    struct {
-      Pulse_Lib_Slice_slice__uint8 v;
-    } FStar_Pervasives_Inr__evercddl_int_tstr;
+    COSE_Format_evercddl_int Inl;
+    Pulse_Lib_Slice_slice__uint8 Inr;
   } val;
 };
 enum FStar_Pervasives_Native_option__either_evercddl_int_tstr_tags {
@@ -477,9 +434,7 @@ enum FStar_Pervasives_Native_option__either_evercddl_int_tstr_tags {
 struct FStar_Pervasives_Native_option__either_evercddl_int_tstr_s {
   enum FStar_Pervasives_Native_option__either_evercddl_int_tstr_tags tag;
   union {
-    struct {
-      FStar_Pervasives_either__evercddl_int_tstr v;
-    } FStar_Pervasives_Native_Some__either_evercddl_int_tstr;
+    FStar_Pervasives_either__evercddl_int_tstr Some;
   } val;
 };
 struct Pulse_Lib_Slice_slice__aux_env34_type_1_s {
@@ -498,12 +453,8 @@ enum FStar_Pervasives_either__slice_aux_env34_type_1_array_iterator_t_cbor_raw_t
 struct FStar_Pervasives_either__slice_aux_env34_type_1_array_iterator_t_cbor_raw_s {
   enum FStar_Pervasives_either__slice_aux_env34_type_1_array_iterator_t_cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__aux_env34_type_1 v;
-    } FStar_Pervasives_Inl__slice_aux_env34_type_1_array_iterator_t_cbor_raw;
-    struct {
-      CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env34_type_1 v;
-    } FStar_Pervasives_Inr__slice_aux_env34_type_1_array_iterator_t_cbor_raw;
+    Pulse_Lib_Slice_slice__aux_env34_type_1 Inl;
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env34_type_1 Inr;
   } val;
 };
 enum FStar_Pervasives_Native_option__either_slice_aux_env34_type_1_array_iterator_t_c_tags {
@@ -513,9 +464,7 @@ enum FStar_Pervasives_Native_option__either_slice_aux_env34_type_1_array_iterato
 struct FStar_Pervasives_Native_option__either_slice_aux_env34_type_1_array_iterator_t_c_s {
   enum FStar_Pervasives_Native_option__either_slice_aux_env34_type_1_array_iterator_t_c_tags tag;
   union {
-    struct {
-      FStar_Pervasives_either__slice_aux_env34_type_1_array_iterator_t_cbor_raw v;
-    } FStar_Pervasives_Native_Some__either_slice_aux_env34_type_1_array_iterator_t_c;
+    FStar_Pervasives_either__slice_aux_env34_type_1_array_iterator_t_cbor_raw Some;
   } val;
 };
 enum FStar_Pervasives_either__tstr_evercddl_int_tags {
@@ -525,12 +474,8 @@ enum FStar_Pervasives_either__tstr_evercddl_int_tags {
 struct FStar_Pervasives_either__tstr_evercddl_int_s {
   enum FStar_Pervasives_either__tstr_evercddl_int_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__uint8 v;
-    } FStar_Pervasives_Inl__tstr_evercddl_int;
-    struct {
-      COSE_Format_evercddl_int v;
-    } FStar_Pervasives_Inr__tstr_evercddl_int;
+    Pulse_Lib_Slice_slice__uint8 Inl;
+    COSE_Format_evercddl_int Inr;
   } val;
 };
 enum FStar_Pervasives_Native_option__either_tstr_evercddl_int_tags {
@@ -540,9 +485,7 @@ enum FStar_Pervasives_Native_option__either_tstr_evercddl_int_tags {
 struct FStar_Pervasives_Native_option__either_tstr_evercddl_int_s {
   enum FStar_Pervasives_Native_option__either_tstr_evercddl_int_tags tag;
   union {
-    struct {
-      FStar_Pervasives_either__tstr_evercddl_int v;
-    } FStar_Pervasives_Native_Some__either_tstr_evercddl_int;
+    FStar_Pervasives_either__tstr_evercddl_int Some;
   } val;
 };
 enum FStar_Pervasives_Native_option__bstr_tags {
@@ -552,9 +495,7 @@ enum FStar_Pervasives_Native_option__bstr_tags {
 struct FStar_Pervasives_Native_option__bstr_s {
   enum FStar_Pervasives_Native_option__bstr_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__uint8 v;
-    } FStar_Pervasives_Native_Some__bstr;
+    Pulse_Lib_Slice_slice__uint8 Some;
   } val;
 };
 typedef enum {
@@ -576,12 +517,8 @@ enum FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_tuple2_optio_t
 struct FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_tuple2_optio_s {
   enum FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_tuple2_optio_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__bstr_option_everparsenomatch v;
-    } FStar_Pervasives_Inl__tuple2_bstr_option_everparsenomatch_tuple2_optio;
-    struct {
-      FStar_Pervasives_Native_tuple2__option_everparsenomatch_option_everparsenomatch v;
-    } FStar_Pervasives_Inr__tuple2_bstr_option_everparsenomatch_tuple2_optio;
+    FStar_Pervasives_Native_tuple2__bstr_option_everparsenomatch Inl;
+    FStar_Pervasives_Native_tuple2__option_everparsenomatch_option_everparsenomatch Inr;
   } val;
 };
 enum FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_either_tuple_tags {
@@ -591,12 +528,8 @@ enum FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_either_tuple_t
 struct FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_either_tuple_s {
   enum FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_either_tuple_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__bstr_option_everparsenomatch v;
-    } FStar_Pervasives_Inl__tuple2_bstr_option_everparsenomatch_either_tuple;
-    struct {
-      FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_tuple2_optio v;
-    } FStar_Pervasives_Inr__tuple2_bstr_option_everparsenomatch_either_tuple;
+    FStar_Pervasives_Native_tuple2__bstr_option_everparsenomatch Inl;
+    FStar_Pervasives_either__tuple2_bstr_option_everparsenomatch_tuple2_optio Inr;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__evercddl_label_values_s {
@@ -622,12 +555,8 @@ enum FStar_Pervasives_either__slice_tuple2_evercddl_label_values_map_iterator__t
 struct FStar_Pervasives_either__slice_tuple2_evercddl_label_values_map_iterator__s {
   enum FStar_Pervasives_either__slice_tuple2_evercddl_label_values_map_iterator__tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__tuple2_evercddl_label_values v;
-    } FStar_Pervasives_Inl__slice_tuple2_evercddl_label_values_map_iterator_;
-    struct {
-      CDDL_Pulse_Parse_MapGroup_map_iterator_t__cbor_raw_cbor_map_entry_cbor_raw_iterator_cbor_m v;
-    } FStar_Pervasives_Inr__slice_tuple2_evercddl_label_values_map_iterator_;
+    Pulse_Lib_Slice_slice__tuple2_evercddl_label_values Inl;
+    CDDL_Pulse_Parse_MapGroup_map_iterator_t__cbor_raw_cbor_map_entry_cbor_raw_iterator_cbor_m Inr;
   } val;
 };
 struct COSE_Format_header_map_s {
@@ -645,12 +574,8 @@ enum COSE_Format_empty_or_serialized_map_tags {
 struct COSE_Format_empty_or_serialized_map_s {
   enum COSE_Format_empty_or_serialized_map_tags tag;
   union {
-    struct {
-      COSE_Format_header_map _x0;
-    } COSE_Format_Mkempty_or_serialized_map0;
-    struct {
-      Pulse_Lib_Slice_slice__uint8 _x0;
-    } COSE_Format_Mkempty_or_serialized_map1;
+    COSE_Format_header_map Mkempty_or_serialized_map0;
+    Pulse_Lib_Slice_slice__uint8 Mkempty_or_serialized_map1;
   } val;
 };
 typedef enum {
@@ -672,12 +597,8 @@ enum FStar_Pervasives_either__tuple2_empty_or_serialized_map_tuple2_bstr_bstr__t
 struct FStar_Pervasives_either__tuple2_empty_or_serialized_map_tuple2_bstr_bstr__s {
   enum FStar_Pervasives_either__tuple2_empty_or_serialized_map_tuple2_bstr_bstr__tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__empty_or_serialized_map_tuple2_bstr_bstr v;
-    } FStar_Pervasives_Inl__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_;
-    struct {
-      FStar_Pervasives_Native_tuple2__bstr_bstr v;
-    } FStar_Pervasives_Inr__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_;
+    FStar_Pervasives_Native_tuple2__empty_or_serialized_map_tuple2_bstr_bstr Inl;
+    FStar_Pervasives_Native_tuple2__bstr_bstr Inr;
   } val;
 };
 struct COSE_Format_sig_structure_s {
@@ -701,12 +622,8 @@ enum FStar_Pervasives_either__header_map_slice_uint8_tags {
 struct FStar_Pervasives_either__header_map_slice_uint8_s {
   enum FStar_Pervasives_either__header_map_slice_uint8_tags tag;
   union {
-    struct {
-      COSE_Format_header_map v;
-    } FStar_Pervasives_Inl__header_map_slice_uint8;
-    struct {
-      Pulse_Lib_Slice_slice__uint8 v;
-    } FStar_Pervasives_Inr__header_map_slice_uint8;
+    COSE_Format_header_map Inl;
+    Pulse_Lib_Slice_slice__uint8 Inr;
   } val;
 };
 typedef FStar_Pervasives_either__header_map_slice_uint8 COSE_Format_empty_or_serialized_map_ugly;
@@ -738,12 +655,8 @@ enum FStar_Pervasives_either__evercddl_uint_nint_tags {
 struct FStar_Pervasives_either__evercddl_uint_nint_s {
   enum FStar_Pervasives_either__evercddl_uint_nint_tags tag;
   union {
-    struct {
-      uint64_t v;
-    } FStar_Pervasives_Inl__evercddl_uint_nint;
-    struct {
-      uint64_t v;
-    } FStar_Pervasives_Inr__evercddl_uint_nint;
+    uint64_t Inl;
+    uint64_t Inr;
   } val;
 };
 typedef FStar_Pervasives_either__evercddl_uint_nint COSE_Format_evercddl_int_ugly;
@@ -755,9 +668,7 @@ enum FStar_Pervasives_Native_option__uintsize_tags {
 struct FStar_Pervasives_Native_option__uintsize_s {
   enum FStar_Pervasives_Native_option__uintsize_tags tag;
   union {
-    struct {
-      size_t v;
-    } FStar_Pervasives_Native_Some__uintsize;
+    size_t Some;
   } val;
 };
 typedef uint64_t COSE_Format_nint_ugly;
@@ -782,11 +693,10 @@ enum FStar_Pervasives_Native_option__tuple2_cbor_raw_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cbor_raw_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cbor_raw_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cbor_raw_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cbor_raw_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cbor_raw_slice_uint8 Some;
   } val;
 };
+typedef FStar_Pervasives_Native_tuple2__evercddl_label_values COSE_EverCrypt_dummy_map_type;
 enum FStar_Pervasives_either__bstr_nil_tags {
   FSTAR_PERVASIVES_INL__BSTR_NIL,
   FSTAR_PERVASIVES_INR__BSTR_NIL
@@ -794,9 +704,7 @@ enum FStar_Pervasives_either__bstr_nil_tags {
 struct FStar_Pervasives_either__bstr_nil_s {
   enum FStar_Pervasives_either__bstr_nil_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__uint8 v;
-    } FStar_Pervasives_Inl__bstr_nil;
+    Pulse_Lib_Slice_slice__uint8 Inl;
   } val;
 };
 struct COSE_Format_cose_sign1_s {
@@ -805,6 +713,7 @@ struct COSE_Format_cose_sign1_s {
   FStar_Pervasives_either__bstr_nil payload;
   Pulse_Lib_Slice_slice__uint8 signature;
 };
+typedef COSE_Format_cose_sign1 COSE_Format_cose_sign1_tagged;
 typedef COSE_Format_cose_sign1 COSE_Format_cose_sign1_tagged_ugly;
 struct FStar_Pervasives_Native_tuple2__empty_or_serialized_map_header_map_s {
   COSE_Format_empty_or_serialized_map _1;
@@ -823,6 +732,8 @@ struct FStar_Pervasives_Native_tuple2__uint64_cose_sign1_s {
   uint64_t _1;
   COSE_Format_cose_sign1 _2;
 };
+typedef uint64_t COSE_Format_spect_evercddl_uint;
+typedef uint64_t COSE_Format_spect_nint;
 typedef enum {
   CDDL_PULSE_MAPGROUP_MGOK,
   CDDL_PULSE_MAPGROUP_MGFAIL,
@@ -839,9 +750,7 @@ enum FStar_Pervasives_Native_option__tuple2_cose_sign1_tagged_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_sign1_tagged_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_sign1_tagged_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_sign1_tagged_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_sign1_tagged_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_sign1_tagged_slice_uint8 Some;
   } val;
 };
 enum FStar_Pervasives_Native_option__slice_uint8_tags {
@@ -851,12 +760,11 @@ enum FStar_Pervasives_Native_option__slice_uint8_tags {
 struct FStar_Pervasives_Native_option__slice_uint8_s {
   enum FStar_Pervasives_Native_option__slice_uint8_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__uint8 v;
-    } FStar_Pervasives_Native_Some__slice_uint8;
+    Pulse_Lib_Slice_slice__uint8 Some;
   } val;
 };
 typedef bool COSE_Format_evercddl_bool_ugly;
+typedef bool COSE_Format_evercddl_bool;
 struct FStar_Pervasives_Native_tuple2__evercddl_bool_slice_uint8_s {
   bool _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -868,9 +776,7 @@ enum FStar_Pervasives_Native_option__tuple2_evercddl_bool_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_evercddl_bool_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_evercddl_bool_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__evercddl_bool_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_evercddl_bool_slice_uint8;
+    FStar_Pervasives_Native_tuple2__evercddl_bool_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__everparsenomatch_slice_uint8_s {
@@ -883,9 +789,7 @@ enum FStar_Pervasives_Native_option__tuple2_everparsenomatch_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_everparsenomatch_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_everparsenomatch_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__everparsenomatch_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_everparsenomatch_slice_uint8;
+    FStar_Pervasives_Native_tuple2__everparsenomatch_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__any_slice_uint8_s {
@@ -899,9 +803,7 @@ enum FStar_Pervasives_Native_option__tuple2_any_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_any_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_any_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__any_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_any_slice_uint8;
+    FStar_Pervasives_Native_tuple2__any_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__undefined_slice_uint8_s {
@@ -914,9 +816,7 @@ enum FStar_Pervasives_Native_option__tuple2_undefined_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_undefined_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_undefined_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__undefined_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_undefined_slice_uint8;
+    FStar_Pervasives_Native_tuple2__undefined_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__nil_slice_uint8_s {
@@ -929,9 +829,7 @@ enum FStar_Pervasives_Native_option__tuple2_nil_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_nil_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_nil_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__nil_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_nil_slice_uint8;
+    FStar_Pervasives_Native_tuple2__nil_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__evercddl_null_slice_uint8_s {
@@ -944,9 +842,7 @@ enum FStar_Pervasives_Native_option__tuple2_evercddl_null_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_evercddl_null_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_evercddl_null_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__evercddl_null_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_evercddl_null_slice_uint8;
+    FStar_Pervasives_Native_tuple2__evercddl_null_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__evercddl_true_slice_uint8_s {
@@ -959,9 +855,7 @@ enum FStar_Pervasives_Native_option__tuple2_evercddl_true_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_evercddl_true_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_evercddl_true_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__evercddl_true_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_evercddl_true_slice_uint8;
+    FStar_Pervasives_Native_tuple2__evercddl_true_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__evercddl_false_slice_uint8_s {
@@ -974,9 +868,7 @@ enum FStar_Pervasives_Native_option__tuple2_evercddl_false_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_evercddl_false_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_evercddl_false_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__evercddl_false_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_evercddl_false_slice_uint8;
+    FStar_Pervasives_Native_tuple2__evercddl_false_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__tstr_slice_uint8_s {
@@ -990,9 +882,7 @@ enum FStar_Pervasives_Native_option__tuple2_tstr_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_tstr_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_tstr_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__tstr_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_tstr_slice_uint8;
+    FStar_Pervasives_Native_tuple2__tstr_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__bstr_slice_uint8_s {
@@ -1006,12 +896,11 @@ enum FStar_Pervasives_Native_option__tuple2_bstr_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_bstr_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_bstr_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__bstr_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_bstr_slice_uint8;
+    FStar_Pervasives_Native_tuple2__bstr_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_bytes_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_bytes;
 struct FStar_Pervasives_Native_tuple2__bytes_slice_uint8_s {
   Pulse_Lib_Slice_slice__uint8 _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1023,12 +912,11 @@ enum FStar_Pervasives_Native_option__tuple2_bytes_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_bytes_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_bytes_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__bytes_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_bytes_slice_uint8;
+    FStar_Pervasives_Native_tuple2__bytes_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_text_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_text;
 struct FStar_Pervasives_Native_tuple2__text_slice_uint8_s {
   Pulse_Lib_Slice_slice__uint8 _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1040,9 +928,7 @@ enum FStar_Pervasives_Native_option__tuple2_text_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_text_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_text_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__text_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_text_slice_uint8;
+    FStar_Pervasives_Native_tuple2__text_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__nint_slice_uint8_s {
@@ -1056,9 +942,7 @@ enum FStar_Pervasives_Native_option__tuple2_nint_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_nint_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_nint_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__nint_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_nint_slice_uint8;
+    FStar_Pervasives_Native_tuple2__nint_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__evercddl_uint_slice_uint8_s {
@@ -1072,9 +956,7 @@ enum FStar_Pervasives_Native_option__tuple2_evercddl_uint_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_evercddl_uint_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_evercddl_uint_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__evercddl_uint_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_evercddl_uint_slice_uint8;
+    FStar_Pervasives_Native_tuple2__evercddl_uint_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__evercddl_int_slice_uint8_s {
@@ -1088,12 +970,11 @@ enum FStar_Pervasives_Native_option__tuple2_evercddl_int_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_evercddl_int_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_evercddl_int_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__evercddl_int_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_evercddl_int_slice_uint8;
+    FStar_Pervasives_Native_tuple2__evercddl_int_slice_uint8 Some;
   } val;
 };
 typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_cborany_ugly;
+typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_cborany;
 struct FStar_Pervasives_Native_tuple2__uint64_any_s {
   uint64_t _1;
   CBOR_Pulse_Raw_Type_cbor_raw _2;
@@ -1109,12 +990,11 @@ enum FStar_Pervasives_Native_option__tuple2_cborany_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cborany_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cborany_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cborany_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cborany_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cborany_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_mimemessage_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_mimemessage;
 struct FStar_Pervasives_Native_tuple2__uint64_tstr_s {
   uint64_t _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1130,12 +1010,11 @@ enum FStar_Pervasives_Native_option__tuple2_mimemessage_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_mimemessage_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_mimemessage_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__mimemessage_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_mimemessage_slice_uint8;
+    FStar_Pervasives_Native_tuple2__mimemessage_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_regexp_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_regexp;
 struct FStar_Pervasives_Native_tuple2__regexp_slice_uint8_s {
   Pulse_Lib_Slice_slice__uint8 _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1147,12 +1026,11 @@ enum FStar_Pervasives_Native_option__tuple2_regexp_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_regexp_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_regexp_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__regexp_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_regexp_slice_uint8;
+    FStar_Pervasives_Native_tuple2__regexp_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_b64legacy_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_b64legacy;
 struct FStar_Pervasives_Native_tuple2__b64legacy_slice_uint8_s {
   Pulse_Lib_Slice_slice__uint8 _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1164,12 +1042,11 @@ enum FStar_Pervasives_Native_option__tuple2_b64legacy_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_b64legacy_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_b64legacy_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__b64legacy_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_b64legacy_slice_uint8;
+    FStar_Pervasives_Native_tuple2__b64legacy_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_b64url_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_b64url;
 struct FStar_Pervasives_Native_tuple2__b64url_slice_uint8_s {
   Pulse_Lib_Slice_slice__uint8 _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1181,12 +1058,11 @@ enum FStar_Pervasives_Native_option__tuple2_b64url_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_b64url_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_b64url_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__b64url_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_b64url_slice_uint8;
+    FStar_Pervasives_Native_tuple2__b64url_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_uri_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_uri;
 struct FStar_Pervasives_Native_tuple2__uri_slice_uint8_s {
   Pulse_Lib_Slice_slice__uint8 _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1198,12 +1074,11 @@ enum FStar_Pervasives_Native_option__tuple2_uri_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_uri_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_uri_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__uri_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_uri_slice_uint8;
+    FStar_Pervasives_Native_tuple2__uri_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_encodedcbor_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_encodedcbor;
 struct FStar_Pervasives_Native_tuple2__uint64_bstr_s {
   uint64_t _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1219,12 +1094,11 @@ enum FStar_Pervasives_Native_option__tuple2_encodedcbor_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_encodedcbor_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_encodedcbor_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__encodedcbor_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_encodedcbor_slice_uint8;
+    FStar_Pervasives_Native_tuple2__encodedcbor_slice_uint8 Some;
   } val;
 };
 typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_eb16_ugly;
+typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_eb16;
 struct FStar_Pervasives_Native_tuple2__eb16_slice_uint8_s {
   CBOR_Pulse_Raw_Type_cbor_raw _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1236,12 +1110,11 @@ enum FStar_Pervasives_Native_option__tuple2_eb16_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_eb16_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_eb16_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__eb16_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_eb16_slice_uint8;
+    FStar_Pervasives_Native_tuple2__eb16_slice_uint8 Some;
   } val;
 };
 typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_eb64legacy_ugly;
+typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_eb64legacy;
 struct FStar_Pervasives_Native_tuple2__eb64legacy_slice_uint8_s {
   CBOR_Pulse_Raw_Type_cbor_raw _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1253,12 +1126,11 @@ enum FStar_Pervasives_Native_option__tuple2_eb64legacy_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_eb64legacy_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_eb64legacy_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__eb64legacy_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_eb64legacy_slice_uint8;
+    FStar_Pervasives_Native_tuple2__eb64legacy_slice_uint8 Some;
   } val;
 };
 typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_eb64url_ugly;
+typedef CBOR_Pulse_Raw_Type_cbor_raw COSE_Format_eb64url;
 struct FStar_Pervasives_Native_tuple2__eb64url_slice_uint8_s {
   CBOR_Pulse_Raw_Type_cbor_raw _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1270,12 +1142,11 @@ enum FStar_Pervasives_Native_option__tuple2_eb64url_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_eb64url_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_eb64url_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__eb64url_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_eb64url_slice_uint8;
+    FStar_Pervasives_Native_tuple2__eb64url_slice_uint8 Some;
   } val;
 };
 typedef COSE_Format_evercddl_int COSE_Format_number_ugly;
+typedef COSE_Format_evercddl_int COSE_Format_number;
 struct FStar_Pervasives_Native_tuple2__number_slice_uint8_s {
   COSE_Format_evercddl_int _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1287,12 +1158,11 @@ enum FStar_Pervasives_Native_option__tuple2_number_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_number_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_number_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__number_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_number_slice_uint8;
+    FStar_Pervasives_Native_tuple2__number_slice_uint8 Some;
   } val;
 };
 typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_tdate_ugly;
+typedef Pulse_Lib_Slice_slice__uint8 COSE_Format_tdate;
 struct FStar_Pervasives_Native_tuple2__tdate_slice_uint8_s {
   Pulse_Lib_Slice_slice__uint8 _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1304,9 +1174,7 @@ enum FStar_Pervasives_Native_option__tuple2_tdate_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_tdate_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_tdate_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__tdate_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_tdate_slice_uint8;
+    FStar_Pervasives_Native_tuple2__tdate_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__values_slice_uint8_s {
@@ -1320,9 +1188,7 @@ enum FStar_Pervasives_Native_option__tuple2_values_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_values_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_values_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__values_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_values_slice_uint8;
+    FStar_Pervasives_Native_tuple2__values_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__evercddl_label_slice_uint8_s {
@@ -1336,9 +1202,7 @@ enum FStar_Pervasives_Native_option__tuple2_evercddl_label_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_evercddl_label_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_evercddl_label_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__evercddl_label_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_evercddl_label_slice_uint8;
+    FStar_Pervasives_Native_tuple2__evercddl_label_slice_uint8 Some;
   } val;
 };
 typedef FStar_Pervasives_either__tstr_evercddl_int COSE_Format_aux_env29_type_1_ugly;
@@ -1349,12 +1213,8 @@ enum COSE_Format_aux_env29_type_1_tags {
 struct COSE_Format_aux_env29_type_1_s {
   enum COSE_Format_aux_env29_type_1_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__uint8 _x0;
-    } COSE_Format_Mkaux_env29_type_10;
-    struct {
-      COSE_Format_evercddl_int _x0;
-    } COSE_Format_Mkaux_env29_type_11;
+    Pulse_Lib_Slice_slice__uint8 Mkaux_env29_type_10;
+    COSE_Format_evercddl_int Mkaux_env29_type_11;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__either_tstr_evercddl_int_option_bstr_s {
@@ -1381,12 +1241,8 @@ enum FStar_Pervasives_either__slice_aux_env29_type_1_array_iterator_t_cbor_raw_t
 struct FStar_Pervasives_either__slice_aux_env29_type_1_array_iterator_t_cbor_raw_s {
   enum FStar_Pervasives_either__slice_aux_env29_type_1_array_iterator_t_cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__aux_env29_type_1 v;
-    } FStar_Pervasives_Inl__slice_aux_env29_type_1_array_iterator_t_cbor_raw;
-    struct {
-      CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env29_type_1 v;
-    } FStar_Pervasives_Inr__slice_aux_env29_type_1_array_iterator_t_cbor_raw;
+    Pulse_Lib_Slice_slice__aux_env29_type_1 Inl;
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env29_type_1 Inr;
   } val;
 };
 enum FStar_Pervasives_Native_option__either_slice_aux_env29_type_1_array_iterator_t_c_tags {
@@ -1396,9 +1252,7 @@ enum FStar_Pervasives_Native_option__either_slice_aux_env29_type_1_array_iterato
 struct FStar_Pervasives_Native_option__either_slice_aux_env29_type_1_array_iterator_t_c_s {
   enum FStar_Pervasives_Native_option__either_slice_aux_env29_type_1_array_iterator_t_c_tags tag;
   union {
-    struct {
-      FStar_Pervasives_either__slice_aux_env29_type_1_array_iterator_t_cbor_raw v;
-    } FStar_Pervasives_Native_Some__either_slice_aux_env29_type_1_array_iterator_t_c;
+    FStar_Pervasives_either__slice_aux_env29_type_1_array_iterator_t_cbor_raw Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__tuple2_tuple2_either_tstr_evercddl_int_option_bs_s {
@@ -1433,12 +1287,11 @@ enum FStar_Pervasives_Native_option__tuple2_cose_key_generic_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_key_generic_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_key_generic_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_key_generic_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_key_generic_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_key_generic_slice_uint8 Some;
   } val;
 };
 typedef COSE_Format_cose_key_generic COSE_Format_aux_env30_type_1_ugly;
+typedef COSE_Format_cose_key_generic COSE_Format_aux_env30_type_1;
 struct Pulse_Lib_Slice_slice__aux_env30_type_1_s {
   COSE_Format_cose_key_generic *elt;
   size_t len;
@@ -1455,12 +1308,8 @@ enum FStar_Pervasives_either__slice_aux_env30_type_1_array_iterator_t_cbor_raw_t
 struct FStar_Pervasives_either__slice_aux_env30_type_1_array_iterator_t_cbor_raw_s {
   enum FStar_Pervasives_either__slice_aux_env30_type_1_array_iterator_t_cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__aux_env30_type_1 v;
-    } FStar_Pervasives_Inl__slice_aux_env30_type_1_array_iterator_t_cbor_raw;
-    struct {
-      CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env30_type_1 v;
-    } FStar_Pervasives_Inr__slice_aux_env30_type_1_array_iterator_t_cbor_raw;
+    Pulse_Lib_Slice_slice__aux_env30_type_1 Inl;
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env30_type_1 Inr;
   } val;
 };
 typedef FStar_Pervasives_either__slice_aux_env30_type_1_array_iterator_t_cbor_raw COSE_Format_cose_keyset_ugly;
@@ -1471,12 +1320,8 @@ enum COSE_Format_cose_keyset_tags {
 struct COSE_Format_cose_keyset_s {
   enum COSE_Format_cose_keyset_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__aux_env30_type_1 _x0;
-    } COSE_Format_Mkcose_keyset0;
-    struct {
-      CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env30_type_1 _x0;
-    } COSE_Format_Mkcose_keyset1;
+    Pulse_Lib_Slice_slice__aux_env30_type_1 Mkcose_keyset0;
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env30_type_1 Mkcose_keyset1;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__cose_keyset_slice_uint8_s {
@@ -1490,9 +1335,7 @@ enum FStar_Pervasives_Native_option__tuple2_cose_keyset_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_keyset_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_keyset_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_keyset_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_keyset_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_keyset_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__unit_either_evercddl_int_tstr_s {
@@ -1528,12 +1371,11 @@ enum FStar_Pervasives_Native_option__tuple2_cose_key_okp_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_key_okp_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_key_okp_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_key_okp_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_key_okp_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_key_okp_slice_uint8 Some;
   } val;
 };
 typedef COSE_Format_cose_key_okp COSE_Format_cose_key_ugly;
+typedef COSE_Format_cose_key_okp COSE_Format_cose_key;
 struct FStar_Pervasives_Native_tuple2__cose_key_slice_uint8_s {
   COSE_Format_cose_key_okp _1;
   Pulse_Lib_Slice_slice__uint8 _2;
@@ -1545,9 +1387,7 @@ enum FStar_Pervasives_Native_option__tuple2_cose_key_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_key_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_key_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_key_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_key_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_key_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__header_map_slice_uint8_s {
@@ -1561,9 +1401,7 @@ enum FStar_Pervasives_Native_option__tuple2_header_map_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_header_map_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_header_map_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__header_map_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_header_map_slice_uint8;
+    FStar_Pervasives_Native_tuple2__header_map_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__empty_or_serialized_map_slice_uint8_s {
@@ -1577,9 +1415,7 @@ enum FStar_Pervasives_Native_option__tuple2_empty_or_serialized_map_slice_uint8_
 struct FStar_Pervasives_Native_option__tuple2_empty_or_serialized_map_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_empty_or_serialized_map_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__empty_or_serialized_map_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_empty_or_serialized_map_slice_uint8;
+    FStar_Pervasives_Native_tuple2__empty_or_serialized_map_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__sig_structure_slice_uint8_s {
@@ -1593,9 +1429,7 @@ enum FStar_Pervasives_Native_option__tuple2_sig_structure_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_sig_structure_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_sig_structure_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__sig_structure_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_sig_structure_slice_uint8;
+    FStar_Pervasives_Native_tuple2__sig_structure_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__cose_sign1_slice_uint8_s {
@@ -1609,9 +1443,7 @@ enum FStar_Pervasives_Native_option__tuple2_cose_sign1_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_sign1_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_sign1_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_sign1_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_sign1_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_sign1_slice_uint8 Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__tuple2_empty_or_serialized_map_header_map_bstr_s {
@@ -1635,12 +1467,11 @@ enum FStar_Pervasives_Native_option__tuple2_cose_signature_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_signature_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_signature_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_signature_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_signature_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_signature_slice_uint8 Some;
   } val;
 };
 typedef COSE_Format_cose_signature COSE_Format_aux_env41_type_1_ugly;
+typedef COSE_Format_cose_signature COSE_Format_aux_env41_type_1;
 struct Pulse_Lib_Slice_slice__aux_env41_type_1_s {
   COSE_Format_cose_signature *elt;
   size_t len;
@@ -1657,12 +1488,8 @@ enum FStar_Pervasives_either__slice_aux_env41_type_1_array_iterator_t_cbor_raw_t
 struct FStar_Pervasives_either__slice_aux_env41_type_1_array_iterator_t_cbor_raw_s {
   enum FStar_Pervasives_either__slice_aux_env41_type_1_array_iterator_t_cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__aux_env41_type_1 v;
-    } FStar_Pervasives_Inl__slice_aux_env41_type_1_array_iterator_t_cbor_raw;
-    struct {
-      CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env41_type_1 v;
-    } FStar_Pervasives_Inr__slice_aux_env41_type_1_array_iterator_t_cbor_raw;
+    Pulse_Lib_Slice_slice__aux_env41_type_1 Inl;
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env41_type_1 Inr;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__either_bstr_nil_either_slice_aux_env41_type_1_ar_s {
@@ -1691,12 +1518,11 @@ enum FStar_Pervasives_Native_option__tuple2_cose_sign_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_sign_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_sign_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_sign_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_sign_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_sign_slice_uint8 Some;
   } val;
 };
 typedef COSE_Format_cose_sign COSE_Format_cose_sign_tagged_ugly;
+typedef COSE_Format_cose_sign COSE_Format_cose_sign_tagged;
 struct FStar_Pervasives_Native_tuple2__uint64_cose_sign_s {
   uint64_t _1;
   COSE_Format_cose_sign _2;
@@ -1712,9 +1538,7 @@ enum FStar_Pervasives_Native_option__tuple2_cose_sign_tagged_slice_uint8_tags {
 struct FStar_Pervasives_Native_option__tuple2_cose_sign_tagged_slice_uint8_s {
   enum FStar_Pervasives_Native_option__tuple2_cose_sign_tagged_slice_uint8_tags tag;
   union {
-    struct {
-      FStar_Pervasives_Native_tuple2__cose_sign_tagged_slice_uint8 v;
-    } FStar_Pervasives_Native_Some__tuple2_cose_sign_tagged_slice_uint8;
+    FStar_Pervasives_Native_tuple2__cose_sign_tagged_slice_uint8 Some;
   } val;
 };
 

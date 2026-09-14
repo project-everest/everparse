@@ -20,15 +20,15 @@ extern "C" {
 #  define SLICE_U8        Pulse_Lib_Slice_slice__uint8
 #  define TAG_MKMAP0      BENCHMAP_MKMAP0
 #  define TAG_MKMAP1      BENCHMAP_MKMAP1
-#  define MK_MAP0(...)    { .tag = TAG_MKMAP0, .val = { .BenchMap_Mkmap0 = { ._x0 = __VA_ARGS__ } } }
-#  define MAP1_IT(m)      ((m).val.BenchMap_Mkmap1._x0)
+#  define MK_MAP0(...)    { .tag = TAG_MKMAP0, .val = { .Mkmap0 = __VA_ARGS__ } }
+#  define MAP1_IT(m)      ((m).val.Mkmap1)
 #  define MAP_ITER_T      CDDL_Pulse_Parse_MapGroup_map_iterator_t__cbor_raw_cbor_map_entry_cbor_raw_iterator_cbor_m
 #  define PAIR_UINT       FStar_Pervasives_Native_tuple2__evercddl_uint_evercddl_uint
 #  define PAIR_FST        _1
 #  define PAIR_SND        _2
 #  define OPT_MAP         FStar_Pervasives_Native_option__tuple2_map_slice_uint8
 #  define TAG_SOME_MAP    FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_MAP_SLICE_UINT8
-#  define SOME_MAP_V(o)   ((o).val.FStar_Pervasives_Native_Some__tuple2_map_slice_uint8.v)
+#  define SOME_MAP_V(o)   ((o).val.Some)
 #else
 #  define SLICE_U8        Pulse_Lib_Slice_slice__uint8_t
 #  define TAG_MKMAP0      BenchMap_Mkmap0

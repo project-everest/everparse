@@ -4,6 +4,10 @@
 #![allow(unused_assignments)]
 #![allow(unreachable_patterns)]
 
+pub type evercddl_uint = u64;
+
+pub type nint = u64;
+
 #[derive(PartialEq, Clone, Copy)]
 enum evercddl_int_tags
 {
@@ -31,6 +35,12 @@ pub enum evercddl_label <'a>
     Mkevercddl_label0 { _x0: evercddl_int },
     Mkevercddl_label1 { _x0: &'a [u8] }
 }
+
+pub type aux_env34_type_1 <'a> = evercddl_label <'a>;
+
+pub type any <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
+pub type values <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t_tags
@@ -3328,6 +3338,8 @@ pub struct cose_sign1 <'a>
     pub signature: &'a [u8]
 }
 
+pub type cose_sign1_tagged <'a> = cose_sign1 <'a>;
+
 pub type cose_sign1_tagged_ugly <'a> = cose_sign1 <'a>;
 
 pub fn cose_sign1_tagged_left <'a>(x4: cose_sign1 <'a>) -> cose_sign1 <'a> { x4 }
@@ -3520,6 +3532,10 @@ serialize_cose_sign1_tagged(c: cose_sign1, out: &mut [u8]) ->
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
 }
+
+pub type spect_evercddl_uint = u64;
+
+pub type spect_nint = u64;
 
 pub fn validate_everparsenomatch(c: crate::cbordetveraux::cbor_raw) -> bool
 {
@@ -6567,6 +6583,8 @@ pub fn validate_bool(c: crate::cbordetveraux::cbor_raw) -> bool
 
 pub type evercddl_bool_ugly = bool;
 
+pub type evercddl_bool = bool;
+
 pub fn evercddl_bool_right(x1: bool) -> bool { x1 }
 
 pub fn evercddl_bool_left(x4: bool) -> bool { x4 }
@@ -7453,6 +7471,8 @@ pub fn validate_cborany(c: crate::cbordetveraux::cbor_raw) -> bool
 
 pub type cborany_ugly <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
+pub type cborany <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
 pub fn cborany_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
@@ -8231,6 +8251,8 @@ pub fn validate_eb16(c: crate::cbordetveraux::cbor_raw) -> bool
 
 pub type eb16_ugly <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
+pub type eb16 <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
 pub fn eb16_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
@@ -8348,6 +8370,8 @@ pub fn validate_eb64legacy(c: crate::cbordetveraux::cbor_raw) -> bool
 }
 
 pub type eb64legacy_ugly <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
+pub type eb64legacy <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
 pub fn eb64legacy_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
@@ -8467,6 +8491,8 @@ pub fn validate_eb64url(c: crate::cbordetveraux::cbor_raw) -> bool
 
 pub type eb64url_ugly <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
+pub type eb64url <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
 pub fn eb64url_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
@@ -8556,6 +8582,8 @@ pub fn validate_and_parse_eb64url <'a>(s: &'a [u8]) ->
 pub fn validate_number(c: crate::cbordetveraux::cbor_raw) -> bool { validate_int(c) }
 
 pub type number_ugly = evercddl_int;
+
+pub type number = evercddl_int;
 
 pub fn number_right(x1: evercddl_int) -> evercddl_int { x1 }
 
@@ -12134,6 +12162,8 @@ pub fn aux_env30_validate_1(
 
 pub type aux_env30_type_1_ugly <'a> = cose_key_generic <'a>;
 
+pub type aux_env30_type_1 <'a> = cose_key_generic <'a>;
+
 pub fn aux_env30_type_1_right <'a>(x1: cose_key_generic <'a>) -> cose_key_generic <'a> { x1 }
 
 pub fn aux_env30_type_1_left <'a>(x4: cose_key_generic <'a>) -> cose_key_generic <'a> { x4 }
@@ -14571,6 +14601,8 @@ pub fn validate_cose_key(c: crate::cbordetveraux::cbor_raw) -> bool
 
 pub type cose_key_ugly <'a> = cose_key_okp <'a>;
 
+pub type cose_key <'a> = cose_key_okp <'a>;
+
 pub fn cose_key_right <'a>(x1: cose_key_okp <'a>) -> cose_key_okp <'a> { x1 }
 
 pub fn cose_key_left <'a>(x4: cose_key_okp <'a>) -> cose_key_okp <'a> { x4 }
@@ -16030,6 +16062,8 @@ pub fn aux_env41_validate_1(
 
 pub type aux_env41_type_1_ugly <'a> = cose_signature <'a>;
 
+pub type aux_env41_type_1 <'a> = cose_signature <'a>;
+
 pub fn aux_env41_type_1_right <'a>(x1: cose_signature <'a>) -> cose_signature <'a> { x1 }
 
 pub fn aux_env41_type_1_left <'a>(x4: cose_signature <'a>) -> cose_signature <'a> { x4 }
@@ -16935,6 +16969,8 @@ pub fn validate_cose_sign_tagged(c: crate::cbordetveraux::cbor_raw) -> bool
 }
 
 pub type cose_sign_tagged_ugly <'a> = cose_sign <'a>;
+
+pub type cose_sign_tagged <'a> = cose_sign <'a>;
 
 pub fn cose_sign_tagged_right <'a>(x1: cose_sign <'a>) -> cose_sign <'a> { x1 }
 

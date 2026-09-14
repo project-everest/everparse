@@ -256,6 +256,10 @@ pub fn cbor_det_equal(x1: crate::cbordetveraux::cbor_raw, x2: crate::cbordetvera
 pub fn cbor_det_major_type(x: crate::cbordetveraux::cbor_raw) -> u8
 { crate::cbordetveraux::impl_major_type(x) }
 
+pub type cbor_det_array <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
+pub type cbor_det_map <'a> = crate::cbordetveraux::cbor_raw <'a>;
+
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_det_view_tags
 {

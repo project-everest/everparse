@@ -84,7 +84,7 @@ void bench_serialize(EVP_PKEY *pkey) {
     bstr signed_msg = COSE_OpenSSL_sign1(pkey, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
     COSE_Format_cose_sign1 c =
         COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg)
-            .val.FStar_Pervasives_Native_Some__tuple2_cose_sign1_tagged_slice_uint8.v._1;
+            .val.Some._1;
 
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
@@ -108,13 +108,13 @@ void bench_serialize_sig_struct(EVP_PKEY *pkey) {
     bstr signed_msg = COSE_OpenSSL_sign1(pkey, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
     COSE_Format_cose_sign1 c =
         COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg)
-            .val.FStar_Pervasives_Native_Some__tuple2_cose_sign1_tagged_slice_uint8.v._1;
+            .val.Some._1;
     COSE_Format_sig_structure sig_struct = {
         .context = FSTAR_PERVASIVES_INR__UNIT_UNIT,
         .body_protected = c.protected,
         ._x0 = {
             .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
-            .val.FStar_Pervasives_Inr__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_.v = {
+            .val.Inr = {
                 ._1 = aad,
                 ._2 = payload,
             },
@@ -142,7 +142,7 @@ void bench_ed25519_sign(EVP_PKEY *pkey) {
         .body_protected = {},
         ._x0 = {
             .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
-            .val.FStar_Pervasives_Inr__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_.v = {
+            .val.Inr = {
                 ._1 = { .len = 0, .elt = (uint8_t[]) {} },
                 ._2 = payload,
             },
@@ -172,7 +172,7 @@ void bench_ed25519_verify(EVP_PKEY *pkey) {
         .body_protected = {},
         ._x0 = {
             .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
-            .val.FStar_Pervasives_Inr__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_.v = {
+            .val.Inr = {
                 ._1 = { .len = 0, .elt = (uint8_t[]) {} },
                 ._2 = payload,
             },

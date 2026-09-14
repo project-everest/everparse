@@ -24,7 +24,7 @@ bstr mk_sig_structure(COSE_Format_empty_or_serialized_map protected_headers,
         .body_protected = protected_headers,
         ._x0 = {
             .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
-            .val.FStar_Pervasives_Inr__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_.v = {
+            .val.Inr = {
                 ._1 = aad,
                 ._2 = payload,
             },
@@ -48,9 +48,9 @@ COSE_Format_header_map COSE_OpenSSL_empty_sig_headers() {
         .intkey4 = { .tag = FSTAR_PERVASIVES_NATIVE_NONE__BSTR },
         ._x0 = {
             .tag = FSTAR_PERVASIVES_INR__TUPLE2_BSTR_OPTION_EVERPARSENOMATCH_EITHER_TUPLE,
-            .val.FStar_Pervasives_Inr__tuple2_bstr_option_everparsenomatch_either_tuple.v = {
+            .val.Inr = {
                 .tag = FSTAR_PERVASIVES_INR__TUPLE2_BSTR_OPTION_EVERPARSENOMATCH_TUPLE2_OPTIO,
-                .val.FStar_Pervasives_Inr__tuple2_bstr_option_everparsenomatch_tuple2_optio.v = {
+                .val.Inr = {
                     ._1 = FSTAR_PERVASIVES_NATIVE_NONE__EVERPARSENOMATCH,
                     ._2 = FSTAR_PERVASIVES_NATIVE_NONE__EVERPARSENOMATCH,
                 },
@@ -58,7 +58,7 @@ COSE_Format_header_map COSE_OpenSSL_empty_sig_headers() {
         },
         ._x1 = {
             .tag = FSTAR_PERVASIVES_INL__SLICE_TUPLE2_EVERCDDL_LABEL_VALUES_MAP_ITERATOR_,
-            .val.FStar_Pervasives_Inl__slice_tuple2_evercddl_label_values_map_iterator_.v = {
+            .val.Inl = {
                 .elt = (FStar_Pervasives_Native_tuple2__evercddl_label_values[]) {},
                 .len = 0,
             },
@@ -88,17 +88,17 @@ bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
         bstr aad, bstr payload) {
     protected_headers.intkey1 = (FStar_Pervasives_Native_option__either_evercddl_int_tstr) {
         .tag = FSTAR_PERVASIVES_NATIVE_SOME__EITHER_EVERCDDL_INT_TSTR,
-        .val.FStar_Pervasives_Native_Some__either_evercddl_int_tstr.v = {
+        .val.Some = {
             .tag = FSTAR_PERVASIVES_INL__EVERCDDL_INT_TSTR,
-            .val.FStar_Pervasives_Inl__evercddl_int_tstr.v = { // -8 (COSE_ALGORITHM_EDDSA)
+            .val.Inl = { // -8 (COSE_ALGORITHM_EDDSA)
                 .tag = COSE_FORMAT_MKEVERCDDL_INT1,
-                .val.COSE_Format_Mkevercddl_int1._x0 = 7,
+                .val.Mkevercddl_int1 = 7,
             }
         },
     };
     COSE_Format_empty_or_serialized_map protected_headers_ = {
         .tag = COSE_FORMAT_MKEMPTY_OR_SERIALIZED_MAP0,
-        .val.COSE_Format_Mkempty_or_serialized_map0._x0 = protected_headers,
+        .val.Mkempty_or_serialized_map0 = protected_headers,
     };
 
     bstr sig_structure = mk_sig_structure(protected_headers_, aad, payload);
@@ -109,7 +109,7 @@ bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
         .protected = protected_headers_,
         .unprotected = unprotected_headers,
         .payload = { .tag = FSTAR_PERVASIVES_INL__BSTR_NIL,
-                     .val.FStar_Pervasives_Inl__bstr_nil.v = payload },
+                     .val.Inl = payload },
         .signature = sig,
     };
 
@@ -142,10 +142,10 @@ bstr COSE_OpenSSL_verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
         COSE_Format_validate_and_parse_cose_sign1_tagged(msg);
     check(parsed_msg.tag == FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_COSE_SIGN1_TAGGED_SLICE_UINT8);
     COSE_Format_cose_sign1 parsed =
-        parsed_msg.val.FStar_Pervasives_Native_Some__tuple2_cose_sign1_tagged_slice_uint8.v._1;
+        parsed_msg.val.Some._1;
 
     check(parsed.payload.tag == FSTAR_PERVASIVES_INL__BSTR_NIL); // detached payload not supported
-    bstr payload = parsed.payload.val.FStar_Pervasives_Inl__bstr_nil.v;
+    bstr payload = parsed.payload.val.Inl;
 
     bstr sig = parsed.signature;
 

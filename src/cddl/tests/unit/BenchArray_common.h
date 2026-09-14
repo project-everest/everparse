@@ -15,14 +15,14 @@
 #  define TAG_MKARR1     BENCHARRAY_MKARR1
 #  define TAG_MKSUBARR0  BENCHARRAY_MKSUBARR0
 #  define TAG_MKSUBARR1  BENCHARRAY_MKSUBARR1
-#  define MK_ARR0(...)     { .tag = TAG_MKARR0, .val = { .BenchArray_Mkarr0 = { ._x0 = __VA_ARGS__ } } }
-#  define MK_SUBARR0(...)  { .tag = TAG_MKSUBARR0, .val = { .BenchArray_Mksubarr0 = { ._x0 = __VA_ARGS__ } } }
-#  define ARR1_IT(m)     ((m).val.BenchArray_Mkarr1._x0)
-#  define SUBARR1_IT(m)  ((m).val.BenchArray_Mksubarr1._x0)
+#  define MK_ARR0(...)     { .tag = TAG_MKARR0, .val = { .Mkarr0 = __VA_ARGS__ } }
+#  define MK_SUBARR0(...)  { .tag = TAG_MKSUBARR0, .val = { .Mksubarr0 = __VA_ARGS__ } }
+#  define ARR1_IT(m)     ((m).val.Mkarr1)
+#  define SUBARR1_IT(m)  ((m).val.Mksubarr1)
 #  define SLICE_U8       Pulse_Lib_Slice_slice__uint8
 #  define OPT_ARR        FStar_Pervasives_Native_option__tuple2_arr_slice_uint8
 #  define TAG_SOME_ARR   FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_ARR_SLICE_UINT8
-#  define SOME_ARR_V(o)  ((o).val.FStar_Pervasives_Native_Some__tuple2_arr_slice_uint8.v)
+#  define SOME_ARR_V(o)  ((o).val.Some)
 #  define PAIR_FST       _1
 #  define PAIR_SND       _2
 #  define ARR_ITER_T     CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__cbor_raw_iterator_cbor_raw_aux_env4_type_1

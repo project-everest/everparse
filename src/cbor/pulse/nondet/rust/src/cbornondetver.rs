@@ -151,6 +151,10 @@ pub fn cbor_nondet_equal(
 pub fn cbor_nondet_major_type(x: crate::cbornondetveraux::cbor_raw) -> u8
 { crate::cbornondetveraux::cbor_nondet_major_type(x) }
 
+pub type cbor_nondet_array <'a> = crate::cbornondetveraux::cbor_raw <'a>;
+
+pub type cbor_nondet_map <'a> = crate::cbornondetveraux::cbor_raw <'a>;
+
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_nondet_view_tags
 {

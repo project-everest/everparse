@@ -4250,6 +4250,14 @@ pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
     }
 }
 
+pub type major_type_t = u8;
+
+pub type major_type_uint64_or_neg_int64 = u8;
+
+pub type simple_value = u8;
+
+pub type major_type_byte_string_or_text_string = u8;
+
 pub const cbor_major_type_simple_value: u8 = 7u8;
 
 pub const cbor_major_type_uint64: u8 = 0u8;

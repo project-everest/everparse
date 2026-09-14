@@ -5,7 +5,7 @@ bstr test_verify(bstr msg, bstr key_data) {
     FStar_Pervasives_Native_option__slice_uint8 verified_payload =
         COSE_EverCrypt_verify1_simple(signing_key, msg);
     check(verified_payload.tag == FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8);
-    return verified_payload.val.FStar_Pervasives_Native_Some__slice_uint8.v;
+    return verified_payload.val.Some;
 }
 
 int main(int argc, const char **argv) {

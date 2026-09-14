@@ -21,7 +21,7 @@ extern "C" {
 #  define SLICE_U8      Pulse_Lib_Slice_slice__uint8
 #  define OPT_REC       FStar_Pervasives_Native_option__tuple2_record_slice_uint8
 #  define TAG_SOME_REC  FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_RECORD_SLICE_UINT8
-#  define SOME_REC_V(o) ((o).val.FStar_Pervasives_Native_Some__tuple2_record_slice_uint8.v)
+#  define SOME_REC_V(o) ((o).val.Some)
 #  define PAIR_FST      _1
 #else
 #  define SLICE_U8      Pulse_Lib_Slice_slice__uint8_t

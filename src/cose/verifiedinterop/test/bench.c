@@ -78,7 +78,7 @@ void bench_ed25519_sign(uint8_t *privkey) {
         .body_protected = COSE_EverCrypt_mk_phdrs(-8, NULL),
         ._x0 = {
             .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
-            .val.FStar_Pervasives_Inr__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_.v = {
+            .val.Inr = {
                 ._1 = { .len = 0, .elt = (uint8_t[]) {} },
                 ._2 = payload,
             },
@@ -108,7 +108,7 @@ void bench_ed25519_verify(uint8_t *privkey, uint8_t *pubkey) {
         .body_protected = COSE_EverCrypt_mk_phdrs(-8, NULL),
         ._x0 = {
             .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
-            .val.FStar_Pervasives_Inr__tuple2_empty_or_serialized_map_tuple2_bstr_bstr_.v = {
+            .val.Inr = {
                 ._1 = { .len = 0, .elt = (uint8_t[]) {} },
                 ._2 = payload,
             },

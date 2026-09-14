@@ -24,9 +24,9 @@
 #  define TEST_OPT_UINT   FStar_Pervasives_Native_option__evercddl_uint
 #  define TEST_SOME       FSTAR_PERVASIVES_NATIVE_SOME__EVERCDDL_UINT
 #  define TEST_SLICE_U8   Pulse_Lib_Slice_slice__uint8
-#  define TEST_SOME_V(o)  ((o).val.FStar_Pervasives_Native_Some__evercddl_uint.v)
+#  define TEST_SOME_V(o)  ((o).val.Some)
 #  define TEST_MK_SOME(x) { .tag = TEST_SOME, \
-                            .val = { .FStar_Pervasives_Native_Some__evercddl_uint = { .v = (x) } } }
+                            .val = { .Some = (x) } }
 #else
 #  define TEST_OPT_UINT   FStar_Pervasives_Native_option__CDDLTest_Test_evercddl_uint
 #  define TEST_SOME       FStar_Pervasives_Native_Some

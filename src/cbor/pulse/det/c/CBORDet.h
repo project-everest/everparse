@@ -53,11 +53,15 @@ typedef struct FStar_Pervasives_Native_tuple2__slice_cbor_raw_slice_cbor_raw_s F
 typedef struct FStar_Pervasives_Native_tuple2__cbor_raw_cbor_raw_s FStar_Pervasives_Native_tuple2__cbor_raw_cbor_raw;
 typedef struct FStar_Pervasives_Native_option__cbor_raw_s FStar_Pervasives_Native_option__cbor_raw;
 
+typedef uint8_t major_type_t;
+typedef uint8_t major_type_uint64_or_neg_int64;
 struct cbor_int_s {
   uint8_t cbor_int_type;
   uint8_t cbor_int_size;
   uint64_t cbor_int_value;
 };
+typedef uint8_t simple_value;
+typedef uint8_t major_type_byte_string_or_text_string;
 struct Pulse_Lib_Slice_slice__uint8_s {
   uint8_t *elt;
   size_t len;
@@ -109,33 +113,15 @@ enum cbor_raw_tags {
 struct cbor_raw_s {
   enum cbor_raw_tags tag;
   union {
-    struct {
-      cbor_int v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Int;
-    struct {
-      uint8_t v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Simple;
-    struct {
-      cbor_string v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_String;
-    struct {
-      cbor_tagged v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Tagged;
-    struct {
-      cbor_array v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Array;
-    struct {
-      cbor_map v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Map;
-    struct {
-      cbor_serialized v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Serialized_Tagged;
-    struct {
-      cbor_serialized v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Serialized_Array;
-    struct {
-      cbor_serialized v;
-    } CBOR_Pulse_Raw_Type_CBOR_Case_Serialized_Map;
+    cbor_int CBOR_Case_Int;
+    uint8_t CBOR_Case_Simple;
+    cbor_string CBOR_Case_String;
+    cbor_tagged CBOR_Case_Tagged;
+    cbor_array CBOR_Case_Array;
+    cbor_map CBOR_Case_Map;
+    cbor_serialized CBOR_Case_Serialized_Tagged;
+    cbor_serialized CBOR_Case_Serialized_Array;
+    cbor_serialized CBOR_Case_Serialized_Map;
   } val;
 };
 struct cbor_map_entry_s {
@@ -155,12 +141,8 @@ enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw_tags {
 struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw_s {
   enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_raw _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice__cbor_raw;
-    struct {
-      CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized__cbor_raw;
+    Pulse_Lib_Slice_slice__cbor_raw CBOR_Raw_Iterator_Slice;
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator CBOR_Raw_Iterator_Serialized;
   } val;
 };
 typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_raw cbor_det_array_iterator_t;
@@ -171,12 +153,8 @@ enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry_tags {
 struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry_s {
   enum CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_map_entry _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice__cbor_map_entry;
-    struct {
-      CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator _0;
-    } CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized__cbor_map_entry;
+    Pulse_Lib_Slice_slice__cbor_map_entry CBOR_Raw_Iterator_Slice;
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator CBOR_Raw_Iterator_Serialized;
   } val;
 };
 typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__cbor_map_entry cbor_det_map_iterator_t;
@@ -204,18 +182,10 @@ enum cbor_freeable0_tags {
 struct cbor_freeable0_s {
   enum cbor_freeable0_tags tag;
   union {
-    struct {
-      uint8_t *v;
-    } CBOR_Pulse_Raw_Copy_CBOR_Copy_Bytes;
-    struct {
-      cbor_freeable_box b;
-    } CBOR_Pulse_Raw_Copy_CBOR_Copy_Box;
-    struct {
-      cbor_freeable_array a;
-    } CBOR_Pulse_Raw_Copy_CBOR_Copy_Array;
-    struct {
-      cbor_freeable_map m;
-    } CBOR_Pulse_Raw_Copy_CBOR_Copy_Map;
+    uint8_t *CBOR_Copy_Bytes;
+    cbor_freeable_box CBOR_Copy_Box;
+    cbor_freeable_array CBOR_Copy_Array;
+    cbor_freeable_map CBOR_Copy_Map;
   } val;
 };
 struct cbor_freeable_map_entry_s {
@@ -250,21 +220,11 @@ enum CBOR_Spec_Raw_EverParse_long_argument_tags {
 struct CBOR_Spec_Raw_EverParse_long_argument_s {
   enum CBOR_Spec_Raw_EverParse_long_argument_tags tag;
   union {
-    struct {
-      uint8_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue;
-    struct {
-      uint8_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU8;
-    struct {
-      uint16_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU16;
-    struct {
-      uint32_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU32;
-    struct {
-      uint64_t v;
-    } CBOR_Spec_Raw_EverParse_LongArgumentU64;
+    uint8_t LongArgumentSimpleValue;
+    uint8_t LongArgumentU8;
+    uint16_t LongArgumentU16;
+    uint32_t LongArgumentU32;
+    uint64_t LongArgumentU64;
   } val;
 };
 struct Prims_dtuple2__initial_byte_t_long_argument_s {
@@ -278,9 +238,7 @@ enum FStar_Pervasives_Native_option__with_perm_slice_cbor_raw_tags {
 struct FStar_Pervasives_Native_option__with_perm_slice_cbor_raw_s {
   enum FStar_Pervasives_Native_option__with_perm_slice_cbor_raw_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_raw v;
-    } FStar_Pervasives_Native_Some__with_perm_slice_cbor_raw;
+    Pulse_Lib_Slice_slice__cbor_raw Some;
   } val;
 };
 enum FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_tags {
@@ -290,9 +248,7 @@ enum FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_tags {
 struct FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_s {
   enum FStar_Pervasives_Native_option__with_perm_slice_cbor_map_entry_tags tag;
   union {
-    struct {
-      Pulse_Lib_Slice_slice__cbor_map_entry v;
-    } FStar_Pervasives_Native_Some__with_perm_slice_cbor_map_entry;
+    Pulse_Lib_Slice_slice__cbor_map_entry Some;
   } val;
 };
 struct FStar_Pervasives_Native_tuple2__slice_cbor_map_entry_slice_cbor_map_entry_s {
@@ -314,9 +270,7 @@ enum FStar_Pervasives_Native_option__cbor_raw_tags {
 struct FStar_Pervasives_Native_option__cbor_raw_s {
   enum FStar_Pervasives_Native_option__cbor_raw_tags tag;
   union {
-    struct {
-      cbor_raw v;
-    } FStar_Pervasives_Native_Some__cbor_raw;
+    cbor_raw Some;
   } val;
 };
 typedef enum {

@@ -5,13 +5,13 @@ EVP_PKEY *parse_ed25519_private_key(bstr cose_key) {
         parsed_key = COSE_Format_validate_and_parse_cose_key_okp(cose_key);
     check(parsed_key.tag == FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_COSE_KEY_OKP_SLICE_UINT8);
     COSE_Format_cose_key_okp key =
-        parsed_key.val.FStar_Pervasives_Native_Some__tuple2_cose_key_okp_slice_uint8.v._1;
+        parsed_key.val.Some._1;
     check(key.intkeyneg1.tag == FSTAR_PERVASIVES_INL__EVERCDDL_INT_TSTR);
-    COSE_Format_evercddl_int label = key.intkeyneg1.val.FStar_Pervasives_Inl__evercddl_int_tstr.v;
+    COSE_Format_evercddl_int label = key.intkeyneg1.val.Inl;
     check(label.tag == COSE_FORMAT_MKEVERCDDL_INT0);
-    check(label.val.COSE_Format_Mkevercddl_int0._x0 == 6);
+    check(label.val.Mkevercddl_int0 == 6);
     check(key.intkeyneg4.tag == FSTAR_PERVASIVES_NATIVE_SOME__BSTR);
-    bstr k4 = key.intkeyneg4.val.FStar_Pervasives_Native_Some__bstr.v;
+    bstr k4 = key.intkeyneg4.val.Some;
     check(k4.len == 32);
     EVP_PKEY *pkey;
     openssl_check(pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, k4.elt, k4.len));
@@ -23,13 +23,13 @@ EVP_PKEY *parse_ed25519_public_key(bstr cose_key) {
         parsed_key = COSE_Format_validate_and_parse_cose_key_okp(cose_key);
     check(parsed_key.tag == FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_COSE_KEY_OKP_SLICE_UINT8);
     COSE_Format_cose_key_okp key =
-        parsed_key.val.FStar_Pervasives_Native_Some__tuple2_cose_key_okp_slice_uint8.v._1;
+        parsed_key.val.Some._1;
     check(key.intkeyneg1.tag == FSTAR_PERVASIVES_INL__EVERCDDL_INT_TSTR);
-    COSE_Format_evercddl_int label = key.intkeyneg1.val.FStar_Pervasives_Inl__evercddl_int_tstr.v;
+    COSE_Format_evercddl_int label = key.intkeyneg1.val.Inl;
     check(label.tag == COSE_FORMAT_MKEVERCDDL_INT0);
-    check(label.val.COSE_Format_Mkevercddl_int0._x0 == 6);
+    check(label.val.Mkevercddl_int0 == 6);
     check(key.intkeyneg2.tag == FSTAR_PERVASIVES_NATIVE_SOME__BSTR);
-    bstr k2 = key.intkeyneg2.val.FStar_Pervasives_Native_Some__bstr.v;
+    bstr k2 = key.intkeyneg2.val.Some;
     check(k2.len == 32);
     EVP_PKEY *pkey;
     openssl_check(pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, NULL, k2.elt, k2.len));
