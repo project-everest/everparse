@@ -9,6 +9,8 @@ CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
+include $(EVERPARSE_SRC_PATH)/cose/custard-detect.Makefile
+
 ifeq (1,$(ADMIT))
 CDDL_ADMIT := --admit
 else
@@ -59,18 +61,71 @@ extract: extract-krml
 
 .PHONY: %.diff
 
-snapshot: extract
-	mkdir -p ../c/internal
-	rm -f $(addprefix ../c/,$(C_FILES))
-	cp $(addprefix $(OUTPUT_DIRECTORY)/,$(BASE_C_FILES)) ../c/
-	cp $(addprefix $(OUTPUT_DIRECTORY)/internal/,$(INTERNAL_C_FILES)) ../c/internal/
+# Custard: direct-to-C.  This replaces both the F* --codegen krml step and
+# karamel; Custard emits the C itself.
+#
+# Note the output layout differs from the karamel-native build, which splits
+# the program across COSE_Format.{c,h}, COSE_EverCrypt.{c,h}, CBORDetAPI.h and
+# internal/COSE_Format.h.  Custard emits a single translation unit and header.
+# See README.custard.md.
+# CUSTARD defaults to 1 when the F* in use has Custard and to 0 otherwise;
+# see custard-detect.Makefile, included at the top of this file.  The snapshot
+# in ../c, and the consumers in ../interop and ../verifiedinterop/test, are
+# written against Custard's output, so CUSTARD=0 gives a working karamel
+# extraction but one that nothing here consumes.
+CUSTARD_SLICE := c
+include $(EVERPARSE_SRC_PATH)/cose/custard.Makefile
 
-.PHONY: snapshot
+CUSTARD_C_DIR := $(OUTPUT_DIRECTORY)/custard
+
+extract-custard: $(ALL_CHECKED_FILES)
+	rm -rf $(CUSTARD_C_DIR)
+	mkdir -p $(CUSTARD_C_DIR)
+	$(CUSTARD_FSTAR) --custard_backend C --custard_monomorphize_types true \
+		$(addprefix --custard_entry_module ,$(CUSTARD_C_ENTRY_MODULES)) \
+		$(addprefix --custard_c_no_prefix ,$(CUSTARD_C_NO_PREFIX)) \
+		$(OUTPUT_DIRECTORY)/COSE.Format.fst \
+		-o $(CURDIR)/$(CUSTARD_C_DIR)/COSE_Format.c
+
+.PHONY: extract-custard
+
+ifeq (1,$(CUSTARD))
+
+# Custard emits the whole program as one translation unit, so the snapshot is
+# just COSE_Format.{c,h}; the karamel-native split files are removed.
+snapshot: extract-custard
+	rm -f $(addprefix ../c/,$(C_FILES))
+	rmdir ../c/internal 2>/dev/null || true
+	cp $(CUSTARD_C_DIR)/COSE_Format.c $(CUSTARD_C_DIR)/COSE_Format.h ../c/
+
+test: extract-custard
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
+test: COSE_Format.c.custard.diff COSE_Format.h.custard.diff
+endif
+
+%.custard.diff: extract-custard
+	diff ../c/$(basename $(basename $@)) $(CUSTARD_C_DIR)/$(basename $(basename $@))
+
+.PHONY: %.custard.diff
+
+else
+
+# Without Custard the karamel extraction still runs -- it is the same verified
+# .checked files, and keeping it working is the point -- but it must not touch
+# the snapshot, which belongs to the other backend.
+snapshot: extract
+	@echo 'ERROR: ../c holds Custard output, and this F* has no Custard.' >&2
+	@echo '       Rebuild F* from the gebner_custard branch (FStarLang/FStar#4395);' >&2
+	@echo '       see ../README.custard.md.' >&2
+	@false
 
 test: extract
-ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
-test: $(addsuffix .diff,$(C_FILES))
+	@echo 'NOTE: extracted with karamel; not diffed against ../c, which holds'
+	@echo '      Custard output.  See ../README.custard.md.'
+
 endif
+
+.PHONY: snapshot
 
 clean-output:
 	rm -rf $(OUTPUT_DIRECTORY)

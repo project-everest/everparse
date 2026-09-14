@@ -1,5 +1,4 @@
 #include "common.h"
-#include "COSE_EverCrypt.h"
 
 bstr test_sign(bstr payload, bstr key_data) {
     uint8_t *signing_key = parse_ed25519_private_key(key_data);
