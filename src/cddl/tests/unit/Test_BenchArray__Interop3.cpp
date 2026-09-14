@@ -145,20 +145,19 @@ int main()
     }
     printf("... \n");
 
-    Pulse_Lib_Slice_slice__uint8_t slice = {
+    SLICE_U8 slice = {
         .elt = (uint8_t *) buf,
         .len = len,
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice__uint8_t_
-      m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
-    assert (m_opt.tag == FStar_Pervasives_Native_Some);
+    OPT_ARR m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
+    assert (m_opt.tag == TAG_SOME_ARR);
     // printf("Original len %zu\n", len);
-    // printf("%zu bytes NOT parsed\n", m_opt.v.snd.len);
-    assert (m_opt.v.snd.len == 0); /* len is whatever remains */
+    // printf("%zu bytes NOT parsed\n", SOME_ARR_V(m_opt).PAIR_SND.len);
+    assert (SOME_ARR_V(m_opt).PAIR_SND.len == 0); /* len is whatever remains */
 
-    BenchArray_arr m = m_opt.v.fst;
+    BenchArray_arr m = SOME_ARR_V(m_opt).PAIR_FST;
 
     printf(" >>> VALIDATION BANDWIDTH: %f MB/s\n", len / f / 1e6);
 

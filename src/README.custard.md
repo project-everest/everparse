@@ -14,8 +14,8 @@ Both legs consume the **same** `.checked` files as the karamel-native build, so
 
 ## What is and is not migrated
 
-`src/cose` and `src/cbor` (all four legs: det and nondet, C and Rust) use
-Custard.  `src/cddl` has not been migrated yet.
+`src/cose`, `src/cbor` (all four legs: det and nondet, C and Rust) and
+`src/cddl/tests` use Custard.  That is every Pulse-based part of EverParse.
 
 `src/3d`, `src/ASN1` and `LowParse.Low.*` **cannot** be migrated: they are
 written against Low\*/`HyperStack`, which Custard does not support at all, and
@@ -35,7 +35,7 @@ unchanged, which is why every C consumer builds without modification.
 
 ## Requirements
 
-An F\* built from the `gebner_custard` branch, at **`c3f2c36f38`** or later.
+An F\* built from the `gebner_custard` branch, at **`1cf2953b06`** or later.
 Earlier revisions hit blockers that are fixed there; in particular anything
 before `4af84d2f86` extracts COSE roughly **50× slower** (C: 1994 s → 37 s).
 Point `FSTAR_EXE` at that build as usual.
@@ -198,6 +198,84 @@ The two backends differ here.  The Rust leg has a single
 (`--custard_monomorphize_types true`) over F* types, whereas the Rust leg leaves
 monomorphization to karamel, by which point Custard has already collapsed `bstr`
 away.
+
+## `src/cddl/tests`
+
+The five test corpora are wired the same way, through the shared fragment
+[`cddl/tests/custard.Makefile`](cddl/tests/custard.Makefile).  Unlike `cose`
+and `cbor`, **nothing here is snapshotted**: these are tests, and the C or Rust
+is regenerated from the `.cddl` sources on every run, so the only job is to
+produce a translation unit the existing consumers can be built against.
+
+| corpus | leg | how |
+| --- | --- | --- |
+| `demo` | C | one unit, `client.c` links against it |
+| `unit` | C | one unit per `.cddl`, nine hand-written C/C++ drivers |
+| `rust` | Rust | `--custard_backend KrmlRust`, then karamel unchanged |
+| `dpe` | C | one unit, compile-only (never linked or run) |
+| `roundtrip` | — | **not a Custard target**: it extracts to OCaml through F\*'s own backend.  It includes `karamel.Makefile` only for krmllib include paths, and runs no karamel extraction. |
+
+Each corpus builds either way: `make` picks the backend through
+`custard-detect.Makefile`, and `CUSTARD=0` forces the karamel-native path.
+Both are checked in CI.
+
+### The CBOR det API has to be published by the unit itself
+
+The karamel-native build gets `cbor_det_t` and `cbor_raw` from the `cbor`
+snapshot's `CBORDetType.h`, which is on its include path, and emits neither
+itself.  Custard folds the det API into the single unit it emits, so that unit
+has to publish those names -- and publishes them *unprefixed* only if the
+declaring module is named in `--custard_c_no_prefix`.  Hence
+`CBOR.Pulse.Raw.Type` in `CUSTARD_C_NO_PREFIX`, which karamel did not need.
+
+`CBORDetAPI.h` and `CBORDetType.h` are then generated shims so that consumers
+that spell them keep building.  There are two variants, and the choice matters:
+
+* `custard-cbor-shim` writes a one-line `#include` of the unit's header.  Use
+  it where the directory holds a *single* unit (`demo`, `dpe`).
+* `custard-cbor-shim-empty` writes a comment and nothing else.  Use it where a
+  directory holds *several* units side by side (`unit`).  Redirecting to any
+  one of them would drag a second copy of the det API into every other unit's
+  consumer, because each unit publishes the whole API.  It is safe for the
+  shim to be empty there because every consumer in that directory includes its
+  own unit's header, which already carries the API, before it includes
+  `CBORDetAPI.h`.
+
+### Consumers need `#ifdef EVERPARSE_CUSTARD`
+
+The C drivers are shared between the two backends, so the places where the two
+C surfaces differ are collected into a macro block at the top of each file and
+the body is left identical.  The Custard rules pass `-DEVERPARSE_CUSTARD`.
+The differences are the naming ones described under *Naming divergences*
+below, plus the shape of a tagged union:
+
+```c
+/* karamel: a one-payload-constructor union is flattened, and a multi-arm
+   union is anonymous with short `case_<Ctor>' members. */
+o.v                 e.case_Inl
+/* Custard: every arm nests under `val', named after the specialized
+   constructor, with the payload wrapped in a struct. */
+o.val.FStar_Pervasives_Native_Some__evercddl_uint.v
+e.val.FStar_Pervasives_Inl__slice_tuple2_evercddl_uint_evercddl_uint_map_ite.v
+```
+
+Neither is wrong, but the second cannot be abstracted with a `typedef` -- a
+member name is not a type name -- so each such field access needs a macro.
+This is reported upstream as
+[§113](https://github.com/FStarLang/FStar/pull/4395#issuecomment-5667930537)
+and
+[§114](https://github.com/FStarLang/FStar/pull/4395#issuecomment-5667985942).
+
+### Gotcha: expansion order
+
+`CUSTARD_C_ENTRY_MODULES` must be assigned with deferred `=`, not `:=`, when
+it names `$(CUSTARD_CBOR_DET_ENTRY_MODULES)` before the shared fragment is
+included -- and a rule whose prerequisites test `$(CUSTARD)` must be written
+*after* `custard-detect.Makefile` is included, because prerequisites are
+expanded where the rule is written.  Both mistakes fail quietly, producing a
+karamel build when a Custard one was asked for, or a unit with no CBOR API at
+all.  The tell for the second is `Warning 375: --custard_c_no_prefix X renamed
+nothing`, which means the entry module never took effect.
 
 ## Entry modules
 

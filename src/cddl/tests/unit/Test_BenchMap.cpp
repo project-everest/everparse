@@ -13,6 +13,36 @@
 extern "C" {
 #include "BenchMap.h"
 #include "CBORDetAPI.h"
+
+/* See the comment in Test_Basic1.c: the two backends differ in how they name
+ * specializations and in the shape they give a tagged union. */
+#ifdef EVERPARSE_CUSTARD
+#  define SLICE_U8        Pulse_Lib_Slice_slice__uint8
+#  define TAG_MKMAP0      BENCHMAP_MKMAP0
+#  define TAG_MKMAP1      BENCHMAP_MKMAP1
+#  define MK_MAP0(...)    { .tag = TAG_MKMAP0, .val = { .BenchMap_Mkmap0 = { ._x0 = __VA_ARGS__ } } }
+#  define MAP1_IT(m)      ((m).val.BenchMap_Mkmap1._x0)
+#  define MAP_ITER_T      CDDL_Pulse_Parse_MapGroup_map_iterator_t__cbor_raw_cbor_map_entry_cbor_raw_iterator_cbor_m
+#  define PAIR_UINT       FStar_Pervasives_Native_tuple2__evercddl_uint_evercddl_uint
+#  define PAIR_FST        _1
+#  define PAIR_SND        _2
+#  define OPT_MAP         FStar_Pervasives_Native_option__tuple2_map_slice_uint8
+#  define TAG_SOME_MAP    FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_MAP_SLICE_UINT8
+#  define SOME_MAP_V(o)   ((o).val.FStar_Pervasives_Native_Some__tuple2_map_slice_uint8.v)
+#else
+#  define SLICE_U8        Pulse_Lib_Slice_slice__uint8_t
+#  define TAG_MKMAP0      BenchMap_Mkmap0
+#  define TAG_MKMAP1      BenchMap_Mkmap1
+#  define MK_MAP0(...)    { .tag = TAG_MKMAP0, .case_Mkmap0 = __VA_ARGS__ }
+#  define MAP1_IT(m)      ((m).case_Mkmap1)
+#  define MAP_ITER_T      CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
+#  define PAIR_UINT       K___BenchMap_evercddl_uint_BenchMap_evercddl_uint
+#  define PAIR_FST        fst
+#  define PAIR_SND        snd
+#  define OPT_MAP         FStar_Pervasives_Native_option___BenchMap_map___Pulse_Lib_Slice_slice__uint8_t_
+#  define TAG_SOME_MAP    FStar_Pervasives_Native_Some
+#  define SOME_MAP_V(o)   ((o).v)
+#endif
 }
 
 #define N 8000 /* number of elements in map */
@@ -30,21 +60,20 @@ uint64_t bigrand() {
 
 bool lookup1(BenchMap_map m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
-    it = m.case_Mkmap1;
+  MAP_ITER_T it = MAP1_IT(m);
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
-    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
+    PAIR_UINT k =
         BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
-    // printf("EVERCDDL read key %llu\n", k.fst);
-    if (k.fst == key) {
+    // printf("EVERCDDL read key %llu\n", k.PAIR_FST);
+    if (k.PAIR_FST == key) {
       if (val) {
-          *val = k.snd;
+          *val = k.PAIR_SND;
       }
       return true;
     }
 
-    if (k.fst > key) {
+    if (k.PAIR_FST > key) {
       return false;
     }
   }
@@ -53,15 +82,14 @@ bool lookup1(BenchMap_map m, uint64_t key, uint64_t *val) {
 
 bool lookup1_no_short(BenchMap_map m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
-  it = m.case_Mkmap1;
+  MAP_ITER_T it = MAP1_IT(m);
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
-    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
+    PAIR_UINT k =
         BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
-    if (k.fst == key) {
+    if (k.PAIR_FST == key) {
       if (val) {
-          *val = k.snd;
+          *val = k.PAIR_SND;
       }
       return true;
     }
@@ -186,26 +214,20 @@ int main()
     float f;
     assert(buf);
 
-    Pulse_Lib_Slice_slice__uint8_t slice = {
+    SLICE_U8 slice = {
         .elt = (uint8_t *) buf,
         .len = len
     };
 
-    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint *elems =
-      (K___BenchMap_evercddl_uint_BenchMap_evercddl_uint*)
+    PAIR_UINT *elems =
+      (PAIR_UINT*)
       malloc(2 * N * 8);
     for (int i = 0; i < N; i++) {
-        elems[i].fst = bigrand ();
-        elems[i].snd = bigrand ();
+        elems[i].PAIR_FST = bigrand ();
+        elems[i].PAIR_SND = bigrand ();
     }
 
-    BenchMap_map m = {
-        .tag = BenchMap_Mkmap0,
-        .case_Mkmap0 = {
-            .elt = elems,
-            .len = N,
-        }
-    };
+    BenchMap_map m = MK_MAP0({ .elt = elems, .len = N });
 
     size_t size = TIME(BenchMap_serialize_map(m, slice), &f);
     if (size == 0) {
@@ -221,16 +243,15 @@ int main()
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchMap_map___Pulse_Lib_Slice_slice__uint8_t_
-      m_opt = TIME(BenchMap_validate_and_parse_map(slice), &f);
+    OPT_MAP m_opt = TIME(BenchMap_validate_and_parse_map(slice), &f);
 
     printf(" >>> EVERCDDL VALIDATION TOOK %f us\n", f * 1e6);
 
 
-    assert (m_opt.tag == FStar_Pervasives_Native_Some);
-    assert (m_opt.v.snd.len == BSIZE - size); /* len is whatever remains */
-    BenchMap_map m2 = m_opt.v.fst;
-    assert (m2.tag == BenchMap_Mkmap1);
+    assert (m_opt.tag == TAG_SOME_MAP);
+    assert (SOME_MAP_V(m_opt).PAIR_SND.len == BSIZE - size); /* len is whatever remains */
+    BenchMap_map m2 = SOME_MAP_V(m_opt).PAIR_FST;
+    assert (m2.tag == TAG_MKMAP1);
 
     uint64_t keys[K];
     for (int i = 0; i < K; i++)

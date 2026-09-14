@@ -97,23 +97,21 @@ int main()
     }
     printf("\n");
 
-    Pulse_Lib_Slice_slice__uint8_t slice = {
+    SLICE_U8 slice = {
         .elt = (uint8_t *) buf,
         .len = Encoded.len,
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice__uint8_t_
-      m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
-    assert (m_opt.tag == FStar_Pervasives_Native_Some);
+    OPT_ARR m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
+    assert (m_opt.tag == TAG_SOME_ARR);
     // printf("Original len %zu\n", Encoded.len);
-    // printf("%zu bytes were NOT parsed\n", m_opt.v.snd.len);
-    assert (m_opt.v.snd.len == 0); /* len is whatever remains */
+    // printf("%zu bytes were NOT parsed\n", SOME_ARR_V(m_opt).PAIR_SND.len);
+    assert (SOME_ARR_V(m_opt).PAIR_SND.len == 0); /* len is whatever remains */
 
-    BenchArray_arr m =  m_opt.v.fst;
-    assert (m.tag == BenchArray_Mkarr1);
-    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1
-      it = m.case_Mkarr1;
+    BenchArray_arr m =  SOME_ARR_V(m_opt).PAIR_FST;
+    assert (m.tag == TAG_MKARR1);
+    ARR_ITER_T it = ARR1_IT(m);
 
     printf(" >>> EVERCDDL VALIDATION BANDWIDTH: %f MB/s\n", Encoded.len / f / 1e6);
 
