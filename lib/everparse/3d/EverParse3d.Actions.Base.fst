@@ -18,6 +18,7 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module P = EverParse3d.Prelude
 module SZ = FStar.SizeT
+module Comment = Pulse.Lib.Comment
 
 open EverParse3d.State
 
@@ -179,7 +180,7 @@ fn act_with_comment
   (contents_sl: _)
   (v_sl: _)
 {
-  // TODO: add support for extracting compile-time comments in Pulse
+  Comment.comment s;
   a ctxt error_handler_fn sl_base sl_len sl_pos contents_sl v_sl
 }
 
@@ -466,6 +467,7 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
+  Comment.comment (normalize_term ("Validating field " ^ name1));
   let val_key = r1 sl_base sl_len sl_pos _ _;
   if (f val_key) {
     let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
@@ -552,8 +554,12 @@ fn validate_filter
   let mut pos = 0sz;
   let res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
+    Comment.comment cr;
     let val_key = r sl_base sl_len sl_pos _ _;
-    if (f val_key) {
+    Comment.comment (normalize_term ("start: " ^ cf));
+    let ok = f val_key;
+    Comment.comment (normalize_term ("end: " ^ cf));
+    if (ok) {
       validator_success
     } else {
       validator_error_constraint_failed
@@ -601,8 +607,12 @@ fn validate_filter_with_action
   let mut pos = 0sz;
   let res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
+    Comment.comment cr;
     let val_key = r sl_base sl_len sl_pos _ _;
-    if (f val_key) {
+    Comment.comment (normalize_term ("start: " ^ cf));
+    let ok = f val_key;
+    Comment.comment (normalize_term ("end: " ^ cf));
+    if (ok) {
       let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
       if (res_action) {
       	validator_success
@@ -1584,6 +1594,37 @@ fn action_ite
 ////////////////////////////////////////////////////////////////////////////////
 
 inline_for_extraction noextract
+fn validate_with_comment_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (c: string)
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  Comment.comment c;
+  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+}
+
+inline_for_extraction noextract
 fn validate_with_comment
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
@@ -1608,7 +1649,7 @@ fn validate_with_comment
   (contents_sl: _)
   (v_sl: _)
 {
-  // TODO: add support for extracting compile-time comments in Pulse
+  Comment.comment c;
   v ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
 }
 
@@ -1652,6 +1693,7 @@ fn validate_unit_refinement
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_filter_eq parse_unit f v_sl;
+  Comment.comment cf;
   if (f ()) {
     validator_success
   } else {
@@ -1861,6 +1903,7 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
+  Comment.comment (normalize_term ("Validating field " ^ name1));
   let val_key = r1 sl_base sl_len sl_pos _ _;
   if (f val_key) {
     v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
@@ -2030,7 +2073,9 @@ let validate____UINT8
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT8 1sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT8, i.e., 1 byte"
+    (validate_total_constant_size_no_read parse____UINT8 1sz ())
 
 inline_for_extraction noextract
 let read____UINT8
@@ -2046,7 +2091,9 @@ let validate____UINT8BE
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT8BE 1sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT8BE, i.e., 1 byte"
+    (validate_total_constant_size_no_read parse____UINT8BE 1sz ())
 
 inline_for_extraction noextract
 let read____UINT8BE
@@ -2062,7 +2109,9 @@ let validate____UINT16BE
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT16BE 2sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT16BE, i.e., 2 bytes"
+    (validate_total_constant_size_no_read parse____UINT16BE 2sz ())
 
 inline_for_extraction noextract
 let read____UINT16BE
@@ -2078,7 +2127,9 @@ let validate____UINT32BE
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT32BE 4sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT32BE, i.e., 4 bytes"
+    (validate_total_constant_size_no_read parse____UINT32BE 4sz ())
 
 inline_for_extraction noextract
 let read____UINT32BE
@@ -2094,7 +2145,9 @@ let validate____UINT64BE
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT64BE 8sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT64BE, i.e., 8 bytes"
+    (validate_total_constant_size_no_read parse____UINT64BE 8sz ())
 
 inline_for_extraction noextract
 let read____UINT64BE
@@ -2110,7 +2163,9 @@ let validate____UINT16
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT16 2sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT16, i.e., 2 bytes"
+    (validate_total_constant_size_no_read parse____UINT16 2sz ())
 
 inline_for_extraction noextract
 let read____UINT16
@@ -2126,7 +2181,9 @@ let validate____UINT32
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT32 4sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT32, i.e., 4 bytes"
+    (validate_total_constant_size_no_read parse____UINT32 4sz ())
 
 inline_for_extraction noextract
 let read____UINT32
@@ -2142,7 +2199,9 @@ let validate____UINT64
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler
-= validate_total_constant_size_no_read parse____UINT64 8sz ()
+= validate_with_comment_no_read
+    "Checking that we have enough space for a UINT64, i.e., 8 bytes"
+    (validate_total_constant_size_no_read parse____UINT64 8sz ())
 
 inline_for_extraction noextract
 let read____UINT64
@@ -3072,37 +3131,6 @@ fn validate_eta_no_read
   (v_sl: _)
   (v_pos: _)
 {
-  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
-}
-
-inline_for_extraction noextract
-fn validate_with_comment_no_read
-  (#base_t #len_t #pos_t: Type0)
-  {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (c: string)
-      (#nz:bool)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
-      (#[@@@erasable] extra_state: state_dict)
-      (#has_action:bool)
-      (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
-=
-  (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
-  (pos: _)
-  (extra: _)
-  (contents_sl: _)
-  (v_sl: _)
-  (v_pos: _)
-{
-  // TODO: add support for extracting compile-time comments in Pulse
   v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
 }
 

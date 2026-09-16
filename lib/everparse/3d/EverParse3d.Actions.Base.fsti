@@ -566,6 +566,22 @@ val action_ite
 : action #base_t #len_t #pos_t extra_state a use_error_handler
 
 inline_for_extraction noextract
+val validate_with_comment_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (c: string)
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#t:Type)
+      (#p:parser k t)
+      (#extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+
+inline_for_extraction noextract
 val validate_with_comment
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
@@ -1100,22 +1116,6 @@ inline_for_extraction noextract
 val validate_eta_no_read
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#nz:bool)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#t:Type)
-      (#p:parser k t)
-      (#extra_state: state_dict)
-      (#has_action:bool)
-      (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
-
-inline_for_extraction noextract
-val validate_with_comment_no_read
-  (#base_t #len_t #pos_t: Type0)
-  {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (c: string)
       (#nz:bool)
       (#wk: _)
       (#k:parser_kind nz wk)

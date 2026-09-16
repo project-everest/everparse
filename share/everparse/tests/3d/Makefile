@@ -96,6 +96,7 @@ clean_out_files := \
 	$(module_extern_apis)
 
 all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
+	pulse-comments-test \
 	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test \
 	pulse-batch-interpret-test pulse-subdirs
 
@@ -126,6 +127,7 @@ $(pulse_subdirs):
 
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
 .PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test
+.PHONY: pulse-comments-test
 .PHONY: pulse-batch-interpret-test
 
 # Generation, F* verification and KaRaMeL extraction to C, in one go, then a
@@ -198,6 +200,33 @@ echo-out-files:
 	echo "$$(ls $(CLEANUP_DIR) | sort)"
 
 .PHONY: echo-clean-out-files echo-out-files
+
+# Compile-time comments must survive extraction. Under --pulse they go through
+# Pulse.Lib.Comment, which KaRaMeL renders as EComment/EStandaloneComment; while
+# Pulse had no comment support they were silently dropped, and nothing here
+# noticed, because every other Comments.3d test only compares hashes of the .3d
+# source. So check one comment of each kind that the combinator library emits,
+# against the very strings the Low* backend produces for these same two inputs:
+#
+#   - "Validating field b"      -- validate_dep_pair_with_refinement_*, on the
+#                                  key of a dependent pair whose parser is total
+#                                  and consumes nothing;
+#   - "Checking that we ..."    -- validate_with_comment_no_read, wrapping a
+#                                  leaf validator;
+#   - "reading field_value" and
+#     "start:"/"end: checking constraint"
+#                               -- validate_filter's cr and cf, around the leaf
+#                                  read and the constraint test.
+#
+# T_with_comment (the .3d source comments themselves) is deliberately not
+# checked: the interpreter carries those strings as runtime values, so KaRaMeL
+# cannot turn them into literals, and Low* drops them too.
+pulse-comments-test: pulse-batch
+	grep -q '/\* Validating field b \*/' $(OUT_DIR)/Comments.c
+	grep -q '/\* Checking that we have enough space for a UINT32, i.e., 4 bytes \*/' $(OUT_DIR)/Comments.c
+	grep -q '/\* reading field_value \*/' $(OUT_DIR)/Demo.c
+	grep -q '/\* start: checking constraint \*/' $(OUT_DIR)/Demo.c
+	grep -q '/\* end: checking constraint \*/' $(OUT_DIR)/Demo.c
 
 # The in-place hash is embedded in the generated header, so that a consumer can
 # check a checked-in header against its .3d source without regenerating it.
