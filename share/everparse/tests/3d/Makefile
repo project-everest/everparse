@@ -114,9 +114,12 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 # probe and probe_error_handler_macro exercise probes end to end: a
 # hand-written client that both copies into and repoints the copy buffer, plus
 # z3 test-case generation on the same grammar.
+#
+# field_ptr checks at runtime that field_ptr, field_pos_64 and field_pos_32
+# report the start offset of the annotated field.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
-  probe
+  probe field_ptr
 
 # Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and

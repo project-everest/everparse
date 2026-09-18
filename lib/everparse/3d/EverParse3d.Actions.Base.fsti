@@ -903,8 +903,10 @@ let field_ptr_t
   (sl_pos: pos_t) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
+  (start_pos: SZ.t) ->
   stt ptr_t
-    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      pure (SZ.v start_pos + Seq.length v_sl <= Seq.length contents_sl))
     (fun _ -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
 
 inline_for_extraction noextract

@@ -370,17 +370,18 @@ inline_for_extraction
 fn field_ptr_impl
   (b: base_t) (len: len_t) (pos: pos_t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
-requires stream_pts_to b len pos contents v
+  (start_pos: SZ.t)
+requires stream_pts_to b len pos contents v **
+  pure (SZ.v start_pos + Seq.length v <= Seq.length contents)
 returns res: AP.ptr U8.t
 ensures stream_pts_to b len pos contents v
 {
   unfold (stream_pts_to b len pos contents v);
-  let p = !pos;
-  let s' = AP.split b p;
+  let s' = AP.split b start_pos;
   AP.join b s';
-  Seq.lemma_split contents (SZ.v p);
+  Seq.lemma_split contents (SZ.v start_pos);
   Seq.lemma_eq_elim
-    (Seq.append (Seq.slice contents 0 (SZ.v p)) (Seq.slice contents (SZ.v p) (Seq.length contents)))
+    (Seq.append (Seq.slice contents 0 (SZ.v start_pos)) (Seq.slice contents (SZ.v start_pos) (Seq.length contents)))
     contents;
   fold (stream_pts_to b len pos contents v);
   s'
