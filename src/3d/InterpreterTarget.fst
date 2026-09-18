@@ -997,7 +997,7 @@ let rec print_action (mname:string) (a:T.action)
             if not (pulse_has_field_ptr_after ())
             then A.error "The field_ptr_after action is only supported by the extern and static backends" A.dummy_range;
             Printf.sprintf
-              "(Action_field_ptr_after_with_setter (B.field_ptr_after_with_setter _) () %s (%s %s))"
+              "(atomic_action_call_extern (mk_field_ptr_after_with_setter (B.field_ptr_after_with_setter _) () %s (%s %s) _ ()))"
               (T.print_expr mname sz)
               (T.print_ident write_to_field)
               (T.print_expr mname write_to_obj)

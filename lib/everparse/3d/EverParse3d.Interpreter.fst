@@ -586,6 +586,32 @@ let mk_action_binding
   : action_binding base_t len_t pos_t inst d use_error_handler t
   = A.action_weaken #base_t #len_t #pos_t #inst (A.mk_external_action f) d sq
 
+(* The field-pointer setter is an external action in disguise: `write_to` runs
+   at the output type's own `state_dict`, not at the ambient one. Building it
+   as an `atomic_action` node pinned the whole enclosing `Action_seq` to that
+   dictionary, so a sibling `Action_assignment` on an unrelated mutable
+   parameter could no longer discharge its own weakening obligation. Take the
+   callee's dictionary as an argument and weaken here, exactly as
+   `mk_action_binding` does; the result is stored via `Action_call`, which is
+   what keeps `atomic_action` in universe 1. *)
+[@@specialize]
+let mk_field_ptr_after_with_setter
+    (#base_t #len_t #pos_t: Type0)
+    (#inst: I.input_stream_inst base_t len_t pos_t)
+    (#use_error_handler:bool)
+    (#ptr_t: Type0)
+    (#[@@@erasable] d': state_dict)
+    ($f: option (A.field_ptr_after_setter_t base_t len_t pos_t #inst d' ptr_t))
+    (_: squash (Some? f))
+    (sz: U64.t)
+    (write_to: (ptr_t -> extern_action d' unit))
+    ([@@@erasable] d: state_dict)
+    (sq: squash (state_dict_weaken_prop d' d))
+  : action_binding base_t len_t pos_t inst d use_error_handler bool
+  = A.action_weaken #base_t #len_t #pos_t #inst
+      (A.action_field_ptr_after_with_setter #_ #_ #_ #inst (Some?.v f) sz write_to)
+      d sq
+
 noeq
 type atomic_action
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
@@ -625,14 +651,6 @@ type atomic_action
       write_to:ref ptr_t ->
       _:squash (state_dict_weaken_prop
                   (state_dict_singleton name (pts_to write_to #1.0R)) d) ->
-      atomic_action base_t len_t pos_t inst d use_error_handler false false bool
-
-  | Action_field_ptr_after_with_setter:
-      #ptr_t:Type0 ->
-      f:option (A.field_ptr_after_setter_t base_t len_t pos_t #inst d ptr_t) ->
-      _:squash (Some? f) ->
-      sz:U64.t ->
-      write_to:(ptr_t -> extern_action d unit) ->
       atomic_action base_t len_t pos_t inst d use_error_handler false false bool
 
   | Action_deref:
@@ -687,8 +705,6 @@ let atomic_action_as_action
       A.action_field_ptr (Some?.v f)
     | Action_field_ptr_after f sq name sz write_to sq' ->
       A.action_weaken (A.action_field_ptr_after (Some?.v f) name sz write_to) d sq'
-    | Action_field_ptr_after_with_setter f sq sz write_to ->
-      A.action_field_ptr_after_with_setter (Some?.v f) sz write_to
     | Action_deref name x sq ->
       A.action_weaken (A.action_deref name x) d sq
     | Action_assignment name x rhs sq ->
