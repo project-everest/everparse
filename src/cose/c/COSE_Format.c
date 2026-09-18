@@ -176,7 +176,7 @@ static uint8_t Pulse_Lib_Slice_op_Dot_Lparen_Rparen__t(Pulse_Lib_Slice_slice__ui
 }
 
 static uint8_t LowParse_BitFields_get_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi) {
-  uint8_t op1 = ((uint8_t)(x << (8 - hi)));
+  uint8_t op1 = ((uint8_t)((unsigned int)(x) << (unsigned int)(8 - hi)));
   return (op1 >> ((8 - hi) + lo));
 }
 
@@ -1346,10 +1346,10 @@ size_t cbor_det_size(CBOR_Pulse_Raw_Type_cbor_raw x, size_t bound) {
 static uint8_t LowParse_BitFields_set_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi, uint8_t v) {
   uint8_t op0 = 255;
   uint8_t op1 = (op0 >> (8 - (hi - lo)));
-  uint8_t op2 = ((uint8_t)(op1 << lo));
+  uint8_t op2 = ((uint8_t)((unsigned int)(op1) << (unsigned int)(lo)));
   uint8_t op3 = ((uint8_t)(~(op2)));
   uint8_t op4 = (x & op3);
-  uint8_t op5 = ((uint8_t)(v << lo));
+  uint8_t op5 = ((uint8_t)((unsigned int)(v) << (unsigned int)(lo)));
   return (op4 | op5);
 }
 
@@ -4252,6 +4252,7 @@ static Pulse_Lib_Slice_slice__uint8 Pulse_Lib_Slice_subslice__t(Pulse_Lib_Slice_
 
 void COSE_EverCrypt_create_sig(uint8_t *privkey, COSE_Format_empty_or_serialized_map phdr, Pulse_Lib_Slice_slice__uint8 aad, Pulse_Lib_Slice_slice__uint8 payload, uint8_t *sigbuf) {
   size_t sz = 1024;
+  if ((sz) > SIZE_MAX / sizeof(uint8_t)) { abort(); }
   uint8_t *arr = (uint8_t *)malloc((sz) * sizeof(uint8_t));
   if (arr == NULL) { abort(); }
   for (size_t _ci1 = 0; _ci1 < (sz); _ci1++) {
@@ -4431,6 +4432,7 @@ Pulse_Lib_Slice_slice__uint8 COSE_EverCrypt_sign1_simple(uint8_t *privkey, Pulse
 
 bool COSE_EverCrypt_verify_sig(uint8_t *pubkey, COSE_Format_empty_or_serialized_map phdr, Pulse_Lib_Slice_slice__uint8 aad, Pulse_Lib_Slice_slice__uint8 payload, uint8_t *sigbuf) {
   size_t sz = 1024;
+  if ((sz) > SIZE_MAX / sizeof(uint8_t)) { abort(); }
   uint8_t *arr = (uint8_t *)malloc((sz) * sizeof(uint8_t));
   if (arr == NULL) { abort(); }
   for (size_t _ci1 = 0; _ci1 < (sz); _ci1++) {
@@ -5863,10 +5865,14 @@ FStar_Pervasives_Native_option__slice_uint8 COSE_EverCrypt_verify1(uint8_t *pubk
   FStar_Pervasives_Native_option__tuple2_cose_sign1_tagged_slice_uint8 res = COSE_Format_validate_and_parse_cose_sign1_tagged(msg);
   if (res.tag == FSTAR_PERVASIVES_NATIVE_NONE__TUPLE2_COSE_SIGN1_TAGGED_SLICE_UINT8) return (FStar_Pervasives_Native_option__slice_uint8){ .tag = FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8 };
   else {
-    bool _ct1;
-    if (res.val.Some._1.payload.tag == FSTAR_PERVASIVES_INL__BSTR_NIL) _ct1 = true;
-    else _ct1 = false;
-    if ((Pulse_Lib_Slice_len__t(res.val.Some._2) == 0) && _ct1) {
+    bool _csc2 = (Pulse_Lib_Slice_len__t(res.val.Some._2) == 0);
+    if (_csc2) {
+      bool _ct1;
+      if (res.val.Some._1.payload.tag == FSTAR_PERVASIVES_INL__BSTR_NIL) _ct1 = true;
+      else _ct1 = false;
+      _csc2 = _ct1;
+    }
+    if (_csc2) {
       bool success;
       if (Pulse_Lib_Slice_len__t(res.val.Some._1.signature) == 64) {
         uint8_t *sig_ = Pulse_Lib_Slice_slice_to_arrayptr_intro__t(res.val.Some._1.signature);

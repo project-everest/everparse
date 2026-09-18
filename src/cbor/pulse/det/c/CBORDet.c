@@ -199,6 +199,7 @@ static cbor_freeable CBOR_Pulse_Raw_Copy_cbor_copy0_with_depth(cbor_raw x) {
     CBOR_Spec_Raw_Base_raw_uint64 len = (CBOR_Spec_Raw_Base_raw_uint64){ .size = x.val.CBOR_Case_String.cbor_string_size, .value = (uint64_t)Pulse_Lib_Slice_len__t(x.val.CBOR_Case_String.cbor_string_ptr) };
     Pulse_Lib_Slice_slice__uint8 pl = x.val.CBOR_Case_String.cbor_string_ptr;
     size_t len_sz = Pulse_Lib_Slice_len__t(pl);
+    if ((len_sz) > SIZE_MAX / sizeof(uint8_t)) { abort(); }
     uint8_t *v_ = (uint8_t *)malloc((len_sz) * sizeof(uint8_t));
     if (v_ == NULL) { abort(); }
     for (size_t _ci1 = 0; _ci1 < (len_sz); _ci1++) {
@@ -236,11 +237,13 @@ static cbor_freeable CBOR_Pulse_Raw_Copy_cbor_copy0_with_depth(cbor_raw x) {
     cbor_array a1 = x.val.CBOR_Case_Array;
     size_t len_1 = Pulse_Lib_Slice_len__cbor_raw(a1.cbor_array_ptr);
     CBOR_Spec_Raw_Base_raw_uint64 len64 = (CBOR_Spec_Raw_Base_raw_uint64){ .size = a1.cbor_array_length_size, .value = (uint64_t)len_1 };
+    if ((len_1) > SIZE_MAX / sizeof(cbor_raw)) { abort(); }
     cbor_raw *v__1 = (cbor_raw *)malloc((len_1) * sizeof(cbor_raw));
     if (v__1 == NULL) { abort(); }
     for (size_t _ci6 = 0; _ci6 < (len_1); _ci6++) {
       v__1[_ci6] = (cbor_raw){ .tag = CBOR_CASE_SIMPLE, .val = { .CBOR_Case_Simple = 0 } };
     }
+    if ((len_1) > SIZE_MAX / sizeof(cbor_freeable0)) { abort(); }
     cbor_freeable0 *vf = (cbor_freeable0 *)malloc((len_1) * sizeof(cbor_freeable0));
     if (vf == NULL) { abort(); }
     for (size_t _ci7 = 0; _ci7 < (len_1); _ci7++) {
@@ -265,11 +268,13 @@ static cbor_freeable CBOR_Pulse_Raw_Copy_cbor_copy0_with_depth(cbor_raw x) {
     cbor_map a1_1 = x.val.CBOR_Case_Map;
     size_t len_2 = Pulse_Lib_Slice_len__cbor_map_entry(a1_1.cbor_map_ptr);
     CBOR_Spec_Raw_Base_raw_uint64 len64_1 = (CBOR_Spec_Raw_Base_raw_uint64){ .size = a1_1.cbor_map_length_size, .value = (uint64_t)len_2 };
+    if ((len_2) > SIZE_MAX / sizeof(cbor_map_entry)) { abort(); }
     cbor_map_entry *v__2 = (cbor_map_entry *)malloc((len_2) * sizeof(cbor_map_entry));
     if (v__2 == NULL) { abort(); }
     for (size_t _ci9 = 0; _ci9 < (len_2); _ci9++) {
       v__2[_ci9] = (cbor_map_entry){ .cbor_map_entry_key = (cbor_raw){ .tag = CBOR_CASE_SIMPLE, .val = { .CBOR_Case_Simple = 0 } }, .cbor_map_entry_value = (cbor_raw){ .tag = CBOR_CASE_SIMPLE, .val = { .CBOR_Case_Simple = 0 } } };
     }
+    if ((len_2) > SIZE_MAX / sizeof(cbor_freeable_map_entry)) { abort(); }
     cbor_freeable_map_entry *vf_1 = (cbor_freeable_map_entry *)malloc((len_2) * sizeof(cbor_freeable_map_entry));
     if (vf_1 == NULL) { abort(); }
     for (size_t _ci10 = 0; _ci10 < (len_2); _ci10++) {
@@ -296,6 +301,7 @@ static cbor_freeable CBOR_Pulse_Raw_Copy_cbor_copy0_with_depth(cbor_raw x) {
   }
   else if (x.tag == CBOR_CASE_SERIALIZED_ARRAY) {
     size_t len_3 = Pulse_Lib_Slice_len__t(x.val.CBOR_Case_Serialized_Array.cbor_serialized_payload);
+    if ((len_3) > SIZE_MAX / sizeof(uint8_t)) { abort(); }
     uint8_t *v__3 = (uint8_t *)malloc((len_3) * sizeof(uint8_t));
     if (v__3 == NULL) { abort(); }
     for (size_t _ci12 = 0; _ci12 < (len_3); _ci12++) {
@@ -308,6 +314,7 @@ static cbor_freeable CBOR_Pulse_Raw_Copy_cbor_copy0_with_depth(cbor_raw x) {
   }
   else if (x.tag == CBOR_CASE_SERIALIZED_MAP) {
     size_t len_4 = Pulse_Lib_Slice_len__t(x.val.CBOR_Case_Serialized_Map.cbor_serialized_payload);
+    if ((len_4) > SIZE_MAX / sizeof(uint8_t)) { abort(); }
     uint8_t *v__4 = (uint8_t *)malloc((len_4) * sizeof(uint8_t));
     if (v__4 == NULL) { abort(); }
     for (size_t _ci13 = 0; _ci13 < (len_4); _ci13++) {
@@ -320,6 +327,7 @@ static cbor_freeable CBOR_Pulse_Raw_Copy_cbor_copy0_with_depth(cbor_raw x) {
   }
   else {
     size_t len_5 = Pulse_Lib_Slice_len__t(x.val.CBOR_Case_Serialized_Tagged.cbor_serialized_payload);
+    if ((len_5) > SIZE_MAX / sizeof(uint8_t)) { abort(); }
     uint8_t *v__5 = (uint8_t *)malloc((len_5) * sizeof(uint8_t));
     if (v__5 == NULL) { abort(); }
     for (size_t _ci14 = 0; _ci14 < (len_5); _ci14++) {
@@ -407,7 +415,7 @@ static uint8_t Pulse_Lib_Slice_op_Dot_Lparen_Rparen__t(Pulse_Lib_Slice_slice__ui
 }
 
 static uint8_t LowParse_BitFields_get_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi) {
-  uint8_t op1 = ((uint8_t)(x << (8 - hi)));
+  uint8_t op1 = ((uint8_t)((unsigned int)(x) << (unsigned int)(8 - hi)));
   return (op1 >> ((8 - hi) + lo));
 }
 
@@ -1561,10 +1569,10 @@ size_t cbor_det_size(cbor_raw x, size_t bound) {
 static uint8_t LowParse_BitFields_set_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi, uint8_t v) {
   uint8_t op0 = 255;
   uint8_t op1 = (op0 >> (8 - (hi - lo)));
-  uint8_t op2 = ((uint8_t)(op1 << lo));
+  uint8_t op2 = ((uint8_t)((unsigned int)(op1) << (unsigned int)(lo)));
   uint8_t op3 = ((uint8_t)(~(op2)));
   uint8_t op4 = (x & op3);
-  uint8_t op5 = ((uint8_t)(v << lo));
+  uint8_t op5 = ((uint8_t)((unsigned int)(v) << (unsigned int)(lo)));
   return (op4 | op5);
 }
 

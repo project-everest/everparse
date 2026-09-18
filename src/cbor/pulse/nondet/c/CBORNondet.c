@@ -167,7 +167,7 @@ static uint8_t Pulse_Lib_Slice_op_Dot_Lparen_Rparen__t(Pulse_Lib_Slice_slice__ui
 }
 
 static uint8_t LowParse_BitFields_get_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi) {
-  uint8_t op1 = ((uint8_t)(x << (8 - hi)));
+  uint8_t op1 = ((uint8_t)((unsigned int)(x) << (unsigned int)(8 - hi)));
   return (op1 >> ((8 - hi) + lo));
 }
 
@@ -1993,10 +1993,10 @@ size_t cbor_nondet_size(cbor_raw x, size_t bound) {
 static uint8_t LowParse_BitFields_set_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi, uint8_t v) {
   uint8_t op0 = 255;
   uint8_t op1 = (op0 >> (8 - (hi - lo)));
-  uint8_t op2 = ((uint8_t)(op1 << lo));
+  uint8_t op2 = ((uint8_t)((unsigned int)(op1) << (unsigned int)(lo)));
   uint8_t op3 = ((uint8_t)(~(op2)));
   uint8_t op4 = (x & op3);
-  uint8_t op5 = ((uint8_t)(v << lo));
+  uint8_t op5 = ((uint8_t)((unsigned int)(v) << (unsigned int)(lo)));
   return (op4 | op5);
 }
 

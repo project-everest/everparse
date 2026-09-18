@@ -35,13 +35,15 @@ unchanged, which is why every C consumer builds without modification.
 
 ## Requirements
 
-An F\* built from the `gebner_custard` branch, at **`09acba059a`** or later.
-Earlier revisions hit blockers that are fixed there; in particular anything
-before `4af84d2f86` extracts COSE roughly **50× slower** (C: 1994 s → 37 s).
-Point `FSTAR_EXE` at that build as usual.
+An F\* master at **`d57a6d9ae3`** or later -- the merge of
+FStarLang/FStar#4395, which brought Custard into `master`.  (Before that merge
+this needed the `gebner_custard` branch at `09acba059a` or later; earlier
+revisions hit blockers, and anything before `4af84d2f86` extracts COSE roughly
+**50× slower** -- C: 1994 s → 37 s.)  Point `FSTAR_EXE` at that build as usual.
 
-Custard is not in any released F\*, so the choice of backend is made from the
-compiler at hand rather than hardcoded: `custard-detect.Makefile` asks
+Custard is in `master` but not in any *released* F\*, and EverParse's pinned
+`FStar_hash` predates the merge, so the choice of backend is still made from
+the compiler at hand rather than hardcoded: `custard-detect.Makefile` asks
 `$(FSTAR_EXE) --help` whether it knows `--custard_backend` and sets `CUSTARD`
 to 1 or 0 accordingly.  With a released F\* the COSE `.fst` sources still
 verify and still extract through `--codegen krml` + karamel; what a released
@@ -133,8 +135,8 @@ karamel's, and the hand-written consumers had to follow.
    covered definitions but not `assume val`s, so listing `Abort` did nothing
    and Custard emitted `Abort_abort`, which each consumer had to define itself.
    The only other mechanism, `[@@custard_extern "abort"]` on the declaration,
-   exists only on the `gebner_custard` branch, so using it stops `Abort.fst`
-   typechecking with a released F\* -- which broke EverParse's CI until it was
+   does not exist in a released F\*, so using it stops `Abort.fst`
+   typechecking there -- which broke EverParse's CI until it was
    backed out.  FStarLang/FStar#4395 section 102 extended the option to
    `assume val`s, which is why the shim is gone; this is the one item that
    requires `a1d6ba3f5a` rather than merely `12104fcba4`.
