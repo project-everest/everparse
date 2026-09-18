@@ -29,6 +29,7 @@ let print_make_rule
   mtype
   everparse_h
   input_stream_binding
+  (pulse: bool)
   (r: rule_t)
 : Tot string
 = 
@@ -49,7 +50,18 @@ let print_make_rule
           then ""
           else
             let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
-            let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
+            (* With --no_everparse_h the client compiles against a prebuilt
+               EverParse.h rather than a copy in the output directory, so the
+               include path has to name the runtime matching the backend. The
+               Low* one declares the same EVERPARSE_ERROR_FRAME as the Pulse
+               EverParsePulse.h that --pulse wrappers include, so picking it
+               here makes the two headers conflict. ddd_home still supplies
+               EverParsePulse{,Endianness}.h and EverParseEndianness.h. *)
+            let ddd_actions_home =
+              if pulse
+              then "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" `OS.concat` "krml" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
+              else ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
+            in
             Printf.sprintf "%s %s %s %s" iopt ddd_home iopt ddd_actions_home
         in
         let copt = match mtype with
@@ -626,7 +638,7 @@ let write_makefile
   let makefile_tmp = makefile_final ^ ".tmp" in
   let file = FStar.IO.open_write_file makefile_tmp in
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding (Options.get_pulse ())) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext = "h" && everparse_h
