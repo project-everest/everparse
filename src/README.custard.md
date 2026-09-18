@@ -41,9 +41,10 @@ this needed the `gebner_custard` branch at `09acba059a` or later; earlier
 revisions hit blockers, and anything before `4af84d2f86` extracts COSE roughly
 **50× slower** -- C: 1994 s → 37 s.)  Point `FSTAR_EXE` at that build as usual.
 
-Custard is in `master` but not in any *released* F\*, and EverParse's pinned
-`FStar_hash` predates the merge, so the choice of backend is still made from
-the compiler at hand rather than hardcoded: `custard-detect.Makefile` asks
+`opt/hashes.Makefile` pins `FStar_hash` to that merge, so CI builds and tests
+with a Custard-enabled compiler.  Custard is still not in any *released* F\*,
+though, so the choice of backend remains made from the compiler at hand rather
+than hardcoded: `custard-detect.Makefile` asks
 `$(FSTAR_EXE) --help` whether it knows `--custard_backend` and sets `CUSTARD`
 to 1 or 0 accordingly.  With a released F\* the COSE `.fst` sources still
 verify and still extract through `--codegen krml` + karamel; what a released
