@@ -193,6 +193,11 @@ endif
 	@echo export KRML_EXE=$(KRML_EXE)
 ifeq (,$(NO_PULSE))
 	@echo export PULSE_HOME=$(PULSE_HOME)
+else
+# src/package/package.sh reads this environment to decide whether to package
+# the Pulse runtime. Without it, a 3D-only build (EVERPARSE_ONLY_3D=1) would
+# take the Pulse branch and then dereference an empty PULSE_HOME.
+	@echo export NO_PULSE=$(NO_PULSE)
 endif
 ifeq ($(OS),Windows_NT)
 	@echo export EVERPARSE_HOME=$(shell cygpath -u $(CURDIR))
