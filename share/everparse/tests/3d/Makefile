@@ -116,8 +116,17 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 # z3 test-case generation on the same grammar.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
-  specialize_test specialize_test2 specialize_test_error_handler_macro \
-  specialize_tagged_union_array probe probe_error_handler_macro
+  probe
+
+# Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
+# build on Windows because of a UlongToPtr conflict, and
+# probe_error_handler_macro runs a Z3TestGen-generated checker that includes
+# <sys/mman.h>, which native Windows does not provide.
+ifneq ($(OS),Windows_NT)
+pulse_subdirs += specialize_test specialize_test2 \
+  specialize_test_error_handler_macro specialize_tagged_union_array \
+  probe_error_handler_macro
+endif
 
 .PHONY: pulse-subdirs $(pulse_subdirs)
 pulse-subdirs: $(pulse_subdirs)
