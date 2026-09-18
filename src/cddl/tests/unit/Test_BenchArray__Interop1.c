@@ -98,7 +98,7 @@ int main()
     float f, f0, f2;
     assert(buf);
 
-    Pulse_Lib_Slice_slice__uint8_t slice = {
+    SLICE_U8 slice = {
         .elt = (uint8_t *) buf,
         .len = len
     };

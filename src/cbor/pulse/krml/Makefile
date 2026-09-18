@@ -36,3 +36,15 @@ clean:
 	rm -rf extracted extracted-c extracted-rust
 
 .PHONY: clean
+
+extract-custard-c:
+	+$(MAKE) -f c.Makefile extract-custard
+
+extract-custard-rust:
+	+$(MAKE) -f rust.Makefile extract-custard
+
+# Custard needs no separate .krml pass for C, and drives karamel itself for
+# Rust, so unlike `extract' these do not depend on extract-krml-*.
+extract-custard: extract-custard-c extract-custard-rust
+
+.PHONY: extract-custard extract-custard-c extract-custard-rust

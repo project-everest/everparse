@@ -14,6 +14,22 @@
 extern "C" {
 #include "BenchFlat.h"
 #include "CBORDetAPI.h"
+
+/* See the comment in Test_Basic1.c: the two backends differ in how they name
+ * specializations and in the shape they give a tagged union. */
+#ifdef EVERPARSE_CUSTARD
+#  define SLICE_U8      Pulse_Lib_Slice_slice__uint8
+#  define OPT_REC       FStar_Pervasives_Native_option__tuple2_record_slice_uint8
+#  define TAG_SOME_REC  FSTAR_PERVASIVES_NATIVE_SOME__TUPLE2_RECORD_SLICE_UINT8
+#  define SOME_REC_V(o) ((o).val.Some)
+#  define PAIR_FST      _1
+#else
+#  define SLICE_U8      Pulse_Lib_Slice_slice__uint8_t
+#  define OPT_REC       FStar_Pervasives_Native_option___BenchFlat_record___Pulse_Lib_Slice_slice__uint8_t_
+#  define TAG_SOME_REC  FStar_Pervasives_Native_Some
+#  define SOME_REC_V(o) ((o).v)
+#  define PAIR_FST      fst
+#endif
 }
 
 #define EXPECTED_SIZE 97
@@ -29,7 +45,7 @@ uint64_t bigrand() {
 
 void bench_evercddl () {
     uint8_t *buf = (uint8_t *) malloc(EXPECTED_SIZE);
-    Pulse_Lib_Slice_slice__uint8_t slice = {
+    SLICE_U8 slice = {
         .elt = (uint8_t *) buf,
         .len = EXPECTED_SIZE
     };
@@ -55,12 +71,11 @@ void bench_evercddl () {
 
     printf(" >>> EVERCDDL SERIALIZATION OF RECORD TAKES: %f us\n", f * 1e6 / LAPS);
 
-    FStar_Pervasives_Native_option___BenchFlat_record___Pulse_Lib_Slice_slice__uint8_t_
-      rc;
+    OPT_REC rc;
     TIME_void(({
         for (int i = 0; i < LAPS; i++) {
             rc = BenchFlat_validate_and_parse_record(slice);
-            assert (rc.tag == FStar_Pervasives_Native_Some);
+            assert (rc.tag == TAG_SOME_REC);
             // size_t rc = BenchFlat_serialize_record(r, slice);
             // assert (rc == 97);
         }
@@ -68,7 +83,7 @@ void bench_evercddl () {
 
     BenchFlat_record_s r2;
  
-    r2 = rc.v.fst;
+    r2 = SOME_REC_V(rc).PAIR_FST;
 
     printf(" >>> EVERCDDL PARSING OF RECORD TAKES: %f us\n", f * 1e6 / LAPS);
     assert (r.f1 == r2.f1);

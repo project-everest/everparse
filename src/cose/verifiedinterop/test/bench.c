@@ -1,5 +1,4 @@
 #include "common.h"
-#include "COSE_EverCrypt.h"
 #include <time.h>
 
 extern void
@@ -75,13 +74,13 @@ void bench_ed25519_sign(uint8_t *privkey) {
     struct timespec start, finish;
 
     COSE_Format_sig_structure sig_struct = {
-        .context = 1,
+        .context = FSTAR_PERVASIVES_INR__UNIT_UNIT,
         .body_protected = COSE_EverCrypt_mk_phdrs(-8, NULL),
         ._x0 = {
-            .tag = COSE_Format_Inr,
-            .case_Inr = {
-                .fst = { .len = 0, .elt = (uint8_t[]) {} },
-                .snd = payload,
+            .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
+            .val.Inr = {
+                ._1 = { .len = 0, .elt = (uint8_t[]) {} },
+                ._2 = payload,
             },
         },
     };
@@ -105,13 +104,13 @@ void bench_ed25519_verify(uint8_t *privkey, uint8_t *pubkey) {
     struct timespec start, finish;
 
     COSE_Format_sig_structure sig_struct = {
-        .context = 1,
+        .context = FSTAR_PERVASIVES_INR__UNIT_UNIT,
         .body_protected = COSE_EverCrypt_mk_phdrs(-8, NULL),
         ._x0 = {
-            .tag = COSE_Format_Inr,
-            .case_Inr = {
-                .fst = { .len = 0, .elt = (uint8_t[]) {} },
-                .snd = payload,
+            .tag = FSTAR_PERVASIVES_INR__TUPLE2_EMPTY_OR_SERIALIZED_MAP_TUPLE2_BSTR_BSTR_,
+            .val.Inr = {
+                ._1 = { .len = 0, .elt = (uint8_t[]) {} },
+                ._2 = payload,
             },
         },
     };

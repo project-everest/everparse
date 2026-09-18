@@ -22,6 +22,11 @@ LDFLAGS += -lssl -lcrypto
 CFLAGS += -O3
 CFLAGS += -I ../c -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 CFLAGS += -Wall -Wenum-conversion
+# Custard emits the whole program as one translation unit, so COSE_Format.o
+# also contains the EverCrypt-backed entry points this suite does not use.
+# Section GC drops them, and with them the need to link libevercrypt.
+CFLAGS += -ffunction-sections -fdata-sections
+LDFLAGS += -Wl,--gc-sections
 
 HEADERDEPS = ../c/COSE_Format.h ../c/COSE_OpenSSL.h $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.h
 
@@ -37,14 +42,12 @@ COSE_Format.o: ../c/COSE_Format.c $(HEADERDEPS)
 
 COSE_OpenSSL.o: ../c/COSE_OpenSSL.c $(HEADERDEPS)
 
-CBOR_Det.o: $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)
-
 %.exe:
 	$(CC) $(LDFLAGS) $+ -o $@
 
-signtest.exe: signtest.o common.o COSE_OpenSSL.o COSE_Format.o CBOR_Det.o
-verifytest.exe: verifytest.o common.o COSE_OpenSSL.o COSE_Format.o CBOR_Det.o
-bench.exe: bench.o common.o COSE_OpenSSL.o COSE_Format.o CBOR_Det.o
+signtest.exe: signtest.o common.o COSE_OpenSSL.o COSE_Format.o
+verifytest.exe: verifytest.o common.o COSE_OpenSSL.o COSE_Format.o
+bench.exe: bench.o common.o COSE_OpenSSL.o COSE_Format.o
 
 clean:
 	rm -f *.o signtest.exe verifytest.exe bench.exe message.*

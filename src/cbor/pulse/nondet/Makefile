@@ -15,11 +15,17 @@ ifeq ($(OS),Windows_NT)
   local_curdir := $(shell cygpath -m $(local_curdir))
 endif
 
-c.snapshot: source_dir=c-extracted
-c.snapshot: target_dir=../c
+# Custard writes into a `custard' subdirectory of the extraction directory, so
+# under CUSTARD=1 the snapshot source is one level deeper and target_dir --
+# which snapshot.Makefile resolves relative to the source -- needs one more
+# `../' to compensate.
+custard_up = $(if $(filter 1,$(CUSTARD)),../)
 
-rust.snapshot: source_dir=rust-extracted
-rust.snapshot: target_dir=../rust/src
+c.snapshot: source_dir=c-extracted$(if $(filter 1,$(CUSTARD)),/custard)
+c.snapshot: target_dir=$(custard_up)../c
+
+rust.snapshot: source_dir=rust-extracted$(if $(filter 1,$(CUSTARD)),/custard)
+rust.snapshot: target_dir=$(custard_up)../rust/src
 
 %.snapshot:
 	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) $(subst .,,$(suffix $@))
@@ -27,8 +33,8 @@ rust.snapshot: target_dir=../rust/src
 
 .PHONY: %.snapshot snapshot
 
-c.test-snapshot: source_dir=c-extracted
-c.test-snapshot: target_dir=../c
+c.test-snapshot: source_dir=c-extracted$(if $(filter 1,$(CUSTARD)),/custard)
+c.test-snapshot: target_dir=$(custard_up)../c
 
 test-snapshot: c.test-snapshot
 

@@ -10,10 +10,35 @@ all: run-qcbor_bench
 
 ODIR := _output
 
+EVERPARSE_SRC_PATH = $(realpath ../../..)
+
+# --------------------------------------------------------------- Custard ---
+#
+# Custard (F*'s WIP extraction backend, see ../../README.custard.md) emits the
+# whole program as one translation unit per entry-point set, with the det CBOR
+# API folded in -- so there is no CBORDetAPI.h on an include path and no
+# CBORDet.o to link.  Everything downstream of the generated .c is identical
+# between the two backends, so rather than duplicate the nine driver rules we
+# just point them at a different directory and drop the two karamel-only
+# ingredients.
+include $(EVERPARSE_SRC_PATH)/custard-detect.Makefile
+
+ifeq (1,$(CUSTARD))
+  CDIR := $(ODIR)/custard
+  # The shim in $(CDIR) supplies CBORDetAPI.h; the snapshot's real one must
+  # not be on the path or it would shadow it and redeclare the folded-in API.
+  TEST_INCLUDES := -I $(CDIR) -DEVERPARSE_CUSTARD
+  CBORDET_O :=
+else
+  CDIR := $(ODIR)
+  TEST_INCLUDES := -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I $(CDIR)
+  CBORDET_O := $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o
+endif
+
 ALL_CDDLS = $(wildcard *.cddl)
 ALL_FSTS = $(patsubst %.cddl,$(ODIR)/%.fst,$(ALL_CDDLS))
 ALL_CHECKED = $(patsubst %.cddl,$(ODIR)/%.fst.checked,$(ALL_CDDLS))
-ALL_C_FILES = $(patsubst %.cddl,$(ODIR)/%.c,$(ALL_CDDLS))
+ALL_C_FILES = $(patsubst %.cddl,$(CDIR)/%.c,$(ALL_CDDLS))
 
 RUN += $(patsubst Test_%.c,%,$(wildcard Test_*.c))
 RUN += $(patsubst Test_%.cpp,%,$(wildcard Test_*.cpp))
@@ -38,13 +63,11 @@ all-checked: $(ALL_CHECKED)
 .PHONY: all-c
 all-c: $(ALL_C_FILES)
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
-
 $(ODIR)/%.fst: %.cddl
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only $(CDDL_ADMIT)
 
-$(ODIR)/%.o: $(ODIR)/%.c
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
+$(CDIR)/%.o: $(CDIR)/%.c
+	$(CC) -O3 $(TEST_INCLUDES) --std=gnu2x $(CFLAGS) -c $< -o $@
 
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 OUTPUT_DIRECTORY := _output
@@ -92,6 +115,11 @@ KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 CBOR_KRML_FILES = $(patsubst %,%.krml,$(subst .,_,$(CBOR_KRML_MODULES)))
 
+# The karamel-native rule.  Guarded so that under CUSTARD=1 the only way to
+# make a .c is the Custard rule below -- CDIR differs, so they cannot collide,
+# but leaving both enabled would let a stale karamel .c satisfy a Custard
+# prerequisite if the directories were ever unified again.
+ifneq (1,$(CUSTARD))
 $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTORY)/,$(CBOR_KRML_FILES))
 	$(KRML) -fnoshort-enums \
 	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+FStar.Pervasives.Native=CBOR.\*[rename=CBORDetAPI]' \
@@ -101,6 +129,19 @@ $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTO
 	 -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type \
 	 -no-prefix CBOR.Spec.Constants -skip-compilation $^ \
 	 -tmpdir $(OUTPUT_DIRECTORY)
+endif
+
+# Custard: one translation unit per .cddl, whose entry modules are the union
+# of the `+` lists of the two -bundle flags above -- the module itself plus
+# the det CBOR API.  That is the same program stated the other way round.
+CUSTARD_C_ENTRY_MODULES = $* $(CUSTARD_CBOR_DET_ENTRY_MODULES)
+
+include $(EVERPARSE_SRC_PATH)/cddl/tests/custard.Makefile
+
+$(ODIR)/custard/%.c: $(ODIR)/%.fst.checked
+	mkdir -p $(dir $@)
+	$(CUSTARD_FSTAR) $(CUSTARD_C_FLAGS) $(ODIR)/$*.fst -o $(CURDIR)/$@
+	$(call custard-cbor-shim-empty,$(dir $@))
 
 # $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
 # 	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
@@ -144,16 +185,16 @@ tinycbor-build/libtinycbor.a: tinycbor-build
 ifneq ($(OS),Windows_NT)
 with_qcbor := QCBOR/libqcbor.a
 endif
-$(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o $(with_qcbor) tinycbor-build/libtinycbor.a
-	$(CC) -O3 -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o -lm
+$(CDIR)/Test_%.exe: $(CDIR)/Test_%.o $(CDIR)/$$(call remove__,%).o $(with_qcbor) tinycbor-build/libtinycbor.a
+	$(CC) -O3 -o $@ $^ $(CBORDET_O) -lm
 
-$(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
+$(CDIR)/Test_%.o: Test_%.c $(CDIR)/$$(call remove__,%).c
+	$(CC) -O3 $(TEST_INCLUDES) --std=gnu2x $(CFLAGS) -c $< -o $@
 
-$(ODIR)/Test_%.o: Test_%.cpp $(ODIR)/$$(call remove__,%).c tinycbor-build
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor-build -I _output --std=c++2a $(CFLAGS) -c $< -o $@
+$(CDIR)/Test_%.o: Test_%.cpp $(CDIR)/$$(call remove__,%).c tinycbor-build
+	$(CC) -O3 $(TEST_INCLUDES) -I tinycbor-build/src -I tinycbor-build --std=c++2a $(CFLAGS) -c $< -o $@
 
-%.run: $(ODIR)/Test_%.exe
+%.run: $(CDIR)/Test_%.exe
 	./$<
 
 ifeq ($(OS),Windows_NT)
@@ -171,7 +212,7 @@ endif
 .PHONY: run-qcbor_bench
 
 .PHONY: all-build
-all-build: $(patsubst %,$(ODIR)/Test_%.exe,$(RUN))
+all-build: $(patsubst %,$(CDIR)/Test_%.exe,$(RUN))
 
 .PHONY: all-run
 all-run: $(patsubst %,%.run,$(RUN))
@@ -187,7 +228,7 @@ clean-QCBOR:
 .PHONY: clean-QCBOR
 
 clean-c:
-	rm -f *.o qcbor_bench $(ODIR)/*.o $(ODIR)/*.exe
+	rm -f *.o qcbor_bench $(ODIR)/*.o $(ODIR)/*.exe $(ODIR)/custard/*.o $(ODIR)/custard/*.exe
 
 .PHONY: clean-c
 

@@ -27,6 +27,39 @@ extract: $(ALL_KRML_FILES)
 
 .PHONY: extract
 
+# ---------------------------------------------------------------- Custard ---
+#
+# The Rust leg is Custard --custard_backend KrmlRust followed by karamel,
+# unchanged and on the same bundles: Custard replaces F* --codegen krml, not
+# karamel.  Entry modules are the union of the `+` lists of the -bundle flags
+# above -- the same program stated the other way round.
+CUSTARD_SLICE := rust
+CUSTARD_C_ENTRY_MODULES =
+include $(EVERPARSE_SRC_PATH)/cddl/tests/custard.Makefile
+
+CUSTARD_RUST_ENTRY_MODULES = CDDLTest.Test $(CUSTARD_CBOR_RUST_ENTRY_MODULES)
+
+CUSTARD_KRML_DIR := $(OUTPUT_DIRECTORY)/custard
+
+extract-custard-krml: $(ALL_CHECKED_FILES)
+	rm -rf $(CUSTARD_KRML_DIR)
+	mkdir -p $(CUSTARD_KRML_DIR)
+	$(CUSTARD_FSTAR) --custard_backend KrmlRust \
+		$(addprefix --custard_entry_module ,$(CUSTARD_RUST_ENTRY_MODULES)) \
+		--custard_split --odir $(CUSTARD_KRML_DIR) \
+		$(OUTPUT_DIRECTORY)/CDDLTest.Test.fst
+
+# karamel exits 0 even when it fails to print a function, so the log is
+# grepped rather than trusted.  (Same guard as src/cose/generate-rust.)
+extract-custard: extract-custard-krml
+	$(KRML) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking -bundle 'CDDLTest.Test=[rename=CDDLExtractionTest]' -bundle 'CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.API.Det.Type=\*[rename=CBORDetVerAux]' -tmpdir $(OUTPUT_DIRECTORY) -skip-compilation $(CUSTARD_KRML_DIR)/*.krml \
+		2>&1 | tee $(OUTPUT_DIRECTORY)/custard-krml.log
+	@ ! grep -q 'ERROR printing' $(OUTPUT_DIRECTORY)/custard-krml.log || \
+	  { echo 'karamel failed to print some functions:'; \
+	    grep 'ERROR printing' $(OUTPUT_DIRECTORY)/custard-krml.log; exit 1; }
+
+.PHONY: extract-custard extract-custard-krml
+
 clean-test:
 	rm -rf $(OUTPUT_DIRECTORY)
 
