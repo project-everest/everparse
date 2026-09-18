@@ -215,6 +215,25 @@ let leaf_reader
     end
   ))
 
+(* Several combinators below tag their local bindings with `rename_let`, so that
+   the extracted C names the temporaries after the 3D field they come from
+   rather than `res_key`, `val_key`, ... This mirrors what the Low* prelude does
+   in src/3d/prelude/EverParse3d.Actions.Base.fst. The names used are:
+
+     <field>                    the value read by the leaf reader
+     <field>ConstraintIsOk      the result of a refinement check
+     action_success_<field>     the boolean returned by an action
+     resultAfter<field>         the result of validating <field>
+
+   The last one is spelled `positionAfter<field>` in Low*, where a validator
+   returns the position it stopped at. Pulse validators keep the position in the
+   `sl_pos` reference and return an error code instead, so the Low* name would
+   be misleading here.
+
+   `name` is a parameter of these combinators, so the attribute only becomes a
+   string literal once the combinator is inlined into 3D-generated code; this
+   relies on binder attributes being substituted (Pulse.Syntax.Naming). *)
+
 inline_for_extraction noextract
 fn validate_with_success_action
   (#base_t #len_t #pos_t: Type0)
@@ -241,9 +260,9 @@ fn validate_with_success_action
   (contents_sl: _)
   (v_sl: _)
 {
-  let res_validate = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
+  let [@@@rename_let ("resultAfter" ^ name)] res_validate = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res_validate = validator_success) {
-    let res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("action_success_" ^ name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _;
     if (res_action) {
       validator_success
     } else {
@@ -281,7 +300,7 @@ fn validate_with_error_handler
   (contents_sl: _)
   (v_sl: _)
 {
-  let res = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
+  let [@@@rename_let ("resultAfter" ^ typename)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res = validator_success) { // TODO: turn this `if ... else` into a non-terminal `if (res <> validator_success)` with an `ensures` clause
     res
   } else {
@@ -350,7 +369,7 @@ fn validate_pair
   (v_sl: _)
 {
   LowParse.Spec.Combinators.nondep_then_eq p1 p2 v_sl;
-  let res1 = v1 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  let [@@@rename_let ("resultAfter" ^ name1)] res1 = v1 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   if (res1 = validator_success) {
     v2 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _
   } else {
@@ -403,11 +422,12 @@ fn validate_dep_pair_with_refinement_and_action'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   let mut pos = 0sz;
-  let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
-    let val_key = r1 sl_base sl_len sl_pos _ _;
-    if (f val_key) {
-      let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
+    let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+    if (ok) {
+      let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
       if (res_action) {
       	 v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
       } else {
@@ -468,9 +488,10 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
   Comment.comment (normalize_term ("Validating field " ^ name1));
-  let val_key = r1 sl_base sl_len sl_pos _ _;
-  if (f val_key) {
-    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+  let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
+  let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+  if (ok) {
+    let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
     if (res_action) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
@@ -552,12 +573,12 @@ fn validate_filter
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
   let mut pos = 0sz;
-  let res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
-    let val_key = r sl_base sl_len sl_pos _ _;
+    let [@@@rename_let name] val_key = r sl_base sl_len sl_pos _ _;
     Comment.comment (normalize_term ("start: " ^ cf));
-    let ok = f val_key;
+    let [@@@rename_let (name ^ "ConstraintIsOk")] ok = f val_key;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
       validator_success
@@ -605,15 +626,15 @@ fn validate_filter_with_action
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
   let mut pos = 0sz;
-  let res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
-    let val_key = r sl_base sl_len sl_pos _ _;
+    let [@@@rename_let name] val_key = r sl_base sl_len sl_pos _ _;
     Comment.comment (normalize_term ("start: " ^ cf));
-    let ok = f val_key;
+    let [@@@rename_let (name ^ "ConstraintIsOk")] ok = f val_key;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
-      let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+      let [@@@rename_let ("action_success_" ^ name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
       if (res_action) {
       	validator_success
       } else {
@@ -1275,7 +1296,7 @@ fn action_bind
   (contents_sl: _)
   (v_sl: _)
 {
-  let resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+  let [@@@rename_let name] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _;
   g resf ctxt error_handler_fn sl_base sl_len sl_pos _ _
 }
 
@@ -1742,9 +1763,9 @@ fn validate_dep_pair
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
   let mut pos = 0sz;
-  let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
-    let val_key = r1 sl_base sl_len sl_pos _ _;
+    let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
     v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   } else {
     res_key
@@ -1845,10 +1866,11 @@ fn validate_dep_pair_with_refinement'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   let mut pos = 0sz;
-  let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
-    let val_key = r1 sl_base sl_len sl_pos _ _;
-    if (f val_key) {
+    let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
+    let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+    if (ok) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
       validator_error_constraint_failed
@@ -1904,8 +1926,9 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
   Comment.comment (normalize_term ("Validating field " ^ name1));
-  let val_key = r1 sl_base sl_len sl_pos _ _;
-  if (f val_key) {
+  let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
+  let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+  if (ok) {
     v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   } else {
     validator_error_constraint_failed
@@ -1977,10 +2000,10 @@ fn validate_with_dep_action
   (v_sl: _)
 {
   let mut pos = 0sz;
-  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res = validator_success) {
-    let field_value = r sl_base sl_len sl_pos _ _;
-    let action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    let [@@@rename_let name] field_value = r sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("action_success_" ^ name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _;
     if (action_result) {
       validator_success
     } else {

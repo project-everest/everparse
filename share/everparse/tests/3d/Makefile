@@ -96,7 +96,7 @@ clean_out_files := \
 	$(module_extern_apis)
 
 all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
-	pulse-comments-test \
+	pulse-comments-test pulse-renamelet-test \
 	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test \
 	pulse-batch-interpret-test pulse-subdirs
 
@@ -127,7 +127,7 @@ $(pulse_subdirs):
 
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
 .PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test
-.PHONY: pulse-comments-test
+.PHONY: pulse-comments-test pulse-renamelet-test
 .PHONY: pulse-batch-interpret-test
 
 # Generation, F* verification and KaRaMeL extraction to C, in one go, then a
@@ -227,6 +227,21 @@ pulse-comments-test: pulse-batch
 	grep -q '/\* reading field_value \*/' $(OUT_DIR)/Demo.c
 	grep -q '/\* start: checking constraint \*/' $(OUT_DIR)/Demo.c
 	grep -q '/\* end: checking constraint \*/' $(OUT_DIR)/Demo.c
+
+# The combinators in lib/everparse/3d/EverParse3d.Actions.Base.fst tag their
+# local bindings with `rename_let`, so that the extracted C names temporaries
+# after the 3D field they come from. The attribute is only resolved once the
+# combinator has been inlined into the generated code, so this checks the whole
+# chain (Pulse binder-attribute substitution, F* extraction, KaRaMeL).
+#
+# `positionAfter<field>` in Low* is `resultAfter<field>` here: a Pulse validator
+# returns an error code and keeps the position in a reference.
+pulse-renamelet-test: pulse-batch
+	grep -q 'resultAfterrequestId' $(OUT_DIR)/Demo.c
+	grep -q 'majorConstraintIsOk' $(OUT_DIR)/Demo.c
+	grep -q 'uint32_t major = ' $(OUT_DIR)/Demo.c
+	grep -q 'resultAfterxx' $(OUT_DIR)/TestActions1.c
+	grep -q 'xxConstraintIsOk' $(OUT_DIR)/TestActions1.c
 
 # The in-place hash is embedded in the generated header, so that a consumer can
 # check a checked-in header against its .3d source without regenerating it.
