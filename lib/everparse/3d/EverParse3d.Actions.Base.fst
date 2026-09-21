@@ -342,8 +342,13 @@ fn validate_ret
   validator_success
 }
 
+(* [FStar.SizeT.t] is at least as large as [FStar.UInt32.t]. This is
+   guaranteed by the `EVERPARSE_STATIC_ASSERT(sizeof(size_t) >= sizeof(uint32_t))`
+   emitted by the 3D frontend in the generated Wrapper file. *)
+assume val size_t_fits_u32 : squash SZ.fits_u32
+
 inline_for_extraction noextract
-fn validate_pair
+fn validate_pair_slow
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
        (typename: string)
@@ -867,11 +872,6 @@ fn validate_ite
     v2 () ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   }
 }
-
-(* [FStar.SizeT.t] is at least as large as [FStar.UInt32.t]. This is
-   guaranteed by the `EVERPARSE_STATIC_ASSERT(sizeof(size_t) >= sizeof(uint32_t))`
-   emitted by the 3D frontend in the generated Wrapper file. *)
-assume val size_t_fits_u32 : squash SZ.fits_u32
 
 module FLD = LowParse.Spec.FLData
 
@@ -2349,6 +2349,90 @@ fn validate_drop
     res
   }
 }
+
+(* "Length-only" fast path: when both fields are constant-size, total and
+   action-free, fuse them into a single length check, erasing v1 and v2 (and any
+   per-field error handlers they carried). Re-wrap the fused check with an error
+   handler so that the failure of such a (sub-)struct -- including a
+   constant-size suffix following a variable-size prefix -- is still reported.
+   For nested constant-size structs the outer fast path discards the inner
+   validators, so only the outermost wrapper survives. This mirrors the Low*
+   prelude, and keeping the two in sync matters: it is what makes the field name
+   and error position reported to the client identical across backends. *)
+inline_for_extraction noextract
+let validate_pair_total_constant_size
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+       (#nz1:_)
+       (#k1:parser_kind nz1 WeakKindStrongPrefix)
+       (#[@@@erasable] t1:Type)
+       (#[@@@erasable] p1:parser k1 t1)
+       (#nz2:_)
+       (#wk2: _)
+       (#k2:parser_kind nz2 wk2)
+       (#[@@@erasable] t2:Type)
+       (#[@@@erasable] p2:parser k2 t2)
+       ([@@@erasable] u: squash (
+         k1.LP.parser_kind_high == Some k1.LP.parser_kind_low /\
+         k1.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal /\
+         k2.LP.parser_kind_high == Some k2.LP.parser_kind_low /\
+         k2.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal /\
+         k1.LP.parser_kind_low + k2.LP.parser_kind_low < 4294967296
+       ))
+       (#[@@@erasable] extra_state: state_dict)
+       (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t
+    (p1 `parse_pair` p2) extra_state false use_error_handler
+= validate_total_constant_size_no_read
+    #base_t #len_t #pos_t
+    (p1 `parse_pair` p2)
+    (SZ.uint32_to_sizet (FStar.UInt32.uint_to_t (k1.LP.parser_kind_low + k2.LP.parser_kind_low)))
+    ()
+    #extra_state
+    #use_error_handler
+
+inline_for_extraction noextract
+let validate_pair
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+       (typename: string)
+       (name1: string)
+       (#nz1:_)
+       (#k1:parser_kind nz1 WeakKindStrongPrefix)
+       (#[@@@erasable] t1:Type)
+       (#[@@@erasable] p1:parser k1 t1)
+       (k1_const: bool)
+       (#[@@@erasable] extra_state: state_dict)
+       (#has_action1:bool)
+       (#use_error_handler:bool)
+       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+       (#nz2:_)
+       (#wk2: _)
+       (#k2:parser_kind nz2 wk2)
+       (#[@@@erasable] t2:Type)
+       (#[@@@erasable] p2:parser k2 t2)
+       (k2_const: bool)
+       (#has_action2:bool)
+       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
+  : validate_with_action_read
+      #base_t #len_t #pos_t
+      (p1 `parse_pair` p2)
+      extra_state
+      (has_action1 || has_action2)
+      use_error_handler
+= if k1_const && k2_const &&
+     (not has_action1) && (not has_action2) && // IMPORTANT: do not erase actions from v1, v2
+     k1.LP.parser_kind_high = Some k1.LP.parser_kind_low &&
+     k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
+     k2.LP.parser_kind_high = Some k2.LP.parser_kind_low &&
+     k2.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
+     k1.LP.parser_kind_low + k2.LP.parser_kind_low < 4294967296
+  then
+    validate_with_error_handler error_handler_macro typename name1
+      (validate_drop (validate_pair_total_constant_size #base_t #len_t #pos_t #inst #nz1 #k1 #t1 #p1 #nz2 #wk2 #k2 #t2 #p2 () #extra_state #use_error_handler))
+  else
+    validate_pair_slow typename name1 k1_const v1 k2_const v2
 
 inline_for_extraction noextract
 let validate_without_reading

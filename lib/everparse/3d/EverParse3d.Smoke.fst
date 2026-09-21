@@ -17,7 +17,7 @@ let smoke_v
     state_dict_empty
     false
     false
-= A.validate_pair "smoke" "fst" true (A.validate_without_reading A.validate____UINT8) true (A.validate_without_reading A.validate____UINT16)
+= A.validate_pair B.error_handler_macro "smoke" "fst" true (A.validate_without_reading A.validate____UINT8) true (A.validate_without_reading A.validate____UINT16)
 
 inline_for_extraction noextract
 let smoke_r
@@ -36,7 +36,7 @@ let smoke_extern
     state_dict_empty
     false
     false
-= A.validate_pair #_ #_ #_ #E.input_stream_extern "smoke" "fst" true
+= A.validate_pair #_ #_ #_ #E.input_stream_extern E.error_handler_macro "smoke" "fst" true
     (A.validate_without_reading A.validate____UINT8) true
     (A.validate_without_reading A.validate____UINT16)
 

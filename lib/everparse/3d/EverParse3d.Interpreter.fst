@@ -1193,7 +1193,7 @@ let rec as_validator
     | T_pair fldname k1_const t1 k2_const t2 ->
       assert_norm (as_type (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == as_type t1 & as_type t2);
       assert_norm (as_parser (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == P.parse_pair (as_parser t1) (as_parser t2));
-      A.validate_pair typename fldname
+      A.validate_pair ehm typename fldname
           k1_const
           (A.validate_without_reading_gen _ (as_validator ehm typename t1))
           k2_const
