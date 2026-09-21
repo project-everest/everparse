@@ -133,10 +133,22 @@ lowparse-unit-test: lowparse
 
 .PHONY: 3d-pulse-test
 
+3d-pulse-diff-test: 3d-pulse-test 3d-unit-test
+	+$(MAKE) -C src/3d/tests/pulse-diff
+
+.PHONY: 3d-pulse-diff-test
+
 3d-test: 3d-unit-test 3d-doc-test
 
 ifeq (,$(NO_PULSE))
 3d-test: 3d-pulse-test
+
+ifneq ($(OS),Windows_NT)
+ifneq ($(OS),Darwin)
+3d-test: 3d-pulse-diff-test
+endif
+endif
+
 endif
 
 asn1-test: asn1
