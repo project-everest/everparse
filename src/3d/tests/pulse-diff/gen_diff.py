@@ -31,18 +31,31 @@ def parse_params(s):
 
 
 def collect(dirname):
-    entries = []
+    entries, skipped = [], []
     for hdr in sorted(glob.glob(os.path.join(dirname, '*Wrapper.h'))):
         text = open(hdr).read()
         mod = os.path.basename(hdr)[:-len('Wrapper.h')]
         for m in SIG_RE.finditer(text):
-            entries.append((mod, m.group(1), parse_params(m.group(2))))
-    return entries
+            params = parse_params(m.group(2))
+            if not buffer_abi(params):
+                skipped.append(m.group(1))
+                continue
+            entries.append((mod, m.group(1), params))
+    return entries, skipped
 
 
 SCALAR = {'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'BOOLEAN'}
 OUTPTR = {'uint8_t*': 'uint8_t', 'uint16_t*': 'uint16_t',
-          'uint32_t*': 'uint32_t', 'uint64_t*': 'uint64_t'}
+          'uint32_t*': 'uint32_t', 'uint64_t*': 'uint64_t',
+          'BOOLEAN*': 'BOOLEAN'}
+
+
+def buffer_abi(params):
+    """True for the `buffer` input-stream ABI, which is the only one this
+    harness can drive. The `extern` and `static` backends instead take an
+    opaque EVERPARSE_INPUT_STREAM_BASE that only the client can construct."""
+    tail = [ty for ty, _ in params[-2:]]
+    return tail == ['uint8_t*', 'uint32_t']
 
 
 def gen(entries, out):
@@ -81,6 +94,21 @@ def gen(entries, out):
                 args.append('&cb_' + name)
                 post.append(('cb', 'cb_' + name))
                 ncb += 1
+            elif ty.endswith('*'):
+                # An out-parameter of a type the test defines itself: an output
+                # type, or an external typedef such as iter's OUT_T. We cannot
+                # interpret it, but both backends are handed the same
+                # declaration, so comparing the raw bytes afterwards is exactly
+                # the right check.
+                #
+                # Zero, not a poison pattern: these structs may hold pointers
+                # that the test's own external API dereferences, and a
+                # well-behaved client hands over a freshly zeroed object.
+                base = ty[:-1].strip()
+                w('  %s o_%s; memset(&o_%s, 0, sizeof o_%s);\n'
+                  % (base, name, name, name))
+                args.append('&o_' + name)
+                post.append(('raw', 'o_' + name))
             else:
                 raise SystemExit('unhandled type %r in %s' % (ty, fn))
         w('  (void)A;\n')
@@ -95,6 +123,9 @@ def gen(entries, out):
                 w('    n += sprintf(d + n, "|%s=%%s", hx_off(%s, buf, len));\n' % (var, var))
             elif kind == 'cb':
                 w('    n += sprintf(d + n, "|%s=%%s", hx_cb_show(&%s));\n' % (var, var))
+            elif kind == 'raw':
+                w('    n += sprintf(d + n, "|%s=%%s", hx_bytes(&%s, sizeof %s));\n'
+                  % (var, var, var))
         w('    d[n] = 0; }\n')
         w('  return r;\n}\n\n')
 
@@ -107,7 +138,12 @@ def gen(entries, out):
 
 
 if __name__ == '__main__':
-    entries = collect(sys.argv[1])
-    sys.stderr.write('%d entrypoints\n' % len(entries))
+    entries, skipped = collect(sys.argv[1])
+    if not entries:
+        sys.exit('%s: no entrypoint with the buffer ABI' % sys.argv[1])
+    sys.stderr.write('%d entrypoints%s\n' %
+                     (len(entries),
+                      ', %d skipped (non-buffer ABI): %s' %
+                      (len(skipped), ' '.join(skipped)) if skipped else ''))
     with open(sys.argv[2], 'w') as f:
         gen(entries, f)

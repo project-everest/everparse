@@ -115,6 +115,16 @@ const char *hx_cb_show(const hx_cb_t *cb) {
   return p;
 }
 
+const char *hx_bytes(const void *p, size_t n) {
+  const uint8_t *b = p;
+  char *s = slot();
+  int o = snprintf(s, SLOTSZ, "[");
+  for (size_t i = 0; i < n && o < SLOTSZ - 8; i++)
+    o += snprintf(s + o, SLOTSZ - o, "%02x", b[i]);
+  snprintf(s + o, SLOTSZ - o, "]");
+  return s;
+}
+
 uint8_t *EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
   return ((hx_cb_t *)x)->buf;
 }
@@ -168,6 +178,18 @@ static uint32_t probe_read32(BOOLEAN *failed, uint64_t ro, uint64_t src,
   return v;
 }
 
+static uint64_t probe_read64(BOOLEAN *failed, uint64_t ro, uint64_t src,
+                             EVERPARSE_COPY_BUFFER_T dst) {
+  (void)dst;
+  uint64_t v = 0;
+  if (!src_ok(src, ro, 8)) {
+    *failed = 1;
+    return 0;
+  }
+  memcpy(&v, (const uint8_t *)(uintptr_t)(src + ro), 8);
+  return v;
+}
+
 static BOOLEAN write32(uint32_t v, uint64_t wo, EVERPARSE_COPY_BUFFER_T dst) {
   hx_cb_t *d = dst;
   if (wo > d->len || 4 > d->len - wo)
@@ -205,9 +227,21 @@ static BOOLEAN probe_init(EVERPARSE_STRING name, uint64_t n,
                                 EVERPARSE_COPY_BUFFER_T dst) {                \
     return probe_read32(f, ro, src, dst);                                     \
   }                                                                           \
+  uint64_t ProbeAndReadU64##SUF(BOOLEAN *f, uint64_t ro, uint64_t src,        \
+                                EVERPARSE_COPY_BUFFER_T dst) {                \
+    return probe_read64(f, ro, src, dst);                                     \
+  }                                                                           \
   BOOLEAN ProbeInit##SUF(EVERPARSE_STRING s, uint64_t n,                      \
                          EVERPARSE_COPY_BUFFER_T dst) {                       \
     return probe_init(s, n, dst);                                             \
+  }                                                                           \
+  /* "In place" means the validator is handed the source region rather than   \
+     a copy of it. Modelling it as a copy is behaviourally equivalent from    \
+     the validator's point of view, and keeps both backends on exactly the    \
+     same implementation, which is what the comparison needs. */              \
+  BOOLEAN ProbeInPlace##SUF(uint64_t n, uint64_t ro, uint64_t wo,             \
+                            uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {      \
+    return probe_copy(n, ro, wo, src, dst);                                   \
   }                                                                           \
   uint64_t UlongToPtr##SUF(uint32_t p) { return (uint64_t)p; }
 

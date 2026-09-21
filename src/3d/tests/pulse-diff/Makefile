@@ -62,9 +62,9 @@ CFLAGS_COMMON = -O1 -g -std=c11 -fwrapv -D_BSD_SOURCE -D_DEFAULT_SOURCE \
                 -Wno-unknown-warning-option \
                 -Wno-ignored-qualifiers -Wno-unused-parameter
 
-all: pulse-diff-test
+all: pulse-diff-test pulse-diff-subdirs
 
-.PHONY: all pulse-diff-test clean
+.PHONY: all pulse-diff-test pulse-diff-subdirs clean
 
 $(LO_DIR):
 	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d/tests batch-test
@@ -117,6 +117,63 @@ pulse-diff-test: trace_lo.txt trace_pu.txt
 	fi
 	@echo "pulse-diff: `wc -l <trace_lo.txt` cases, Low* and Pulse identical"
 
+# ------------------------------------------------------------------------
+# The sub-directory tests.
+#
+# The .3d files under src/3d/tests/*/ exercise things the top-level batch
+# does not: multi-module compilation, output types, external typedefs and
+# iterators, conditional compilation, specialization, probes, and the
+# error-handler macro. share/everparse/tests/3d mirrors the whole tree, so
+# each one has a Pulse counterpart built from the same grammar.
+#
+# Each entry names the generated-C directory, relative to either tree. The
+# `=` form is for the one layout that differs: the Low* side emits every
+# output_types test into a single interpret.out, while the Pulse side gives
+# each its own directory, so we pair the wide Low* directory against each
+# narrow Pulse one in turn.
+#
+# Not listed, and why:
+#   extern, static, funptr  the wrapper takes an opaque
+#                           EVERPARSE_INPUT_STREAM_BASE instead of a byte
+#                           array, so only the client can build an input;
+#                           gen_diff.py skips those signatures.
+#   exttype, goto_return    generation-only tests -- they compare emitted
+#                           sources against a snapshot and never build a
+#                           validator.
+#   output_types/           its ExternVector.out needs Push(), which the test
+#     ExternVector.out      supplies from a file that also carries its own
+#                           main and its own error callback, so it cannot be
+#                           linked against the generated driver.
+SUBDIR_TESTS ?= \
+  ifdefs/obj \
+  ifdefs/batch_obj \
+  iter/coarse/obj \
+  iter/fine/obj \
+  modules/obj \
+  output_types/modules/obj \
+  output_types/modules_batch/basic.out \
+  output_types/interpret.out=output_types/TPoint.out \
+  output_types/interpret.out=output_types/AnonUnion.out \
+  output_types/interpret.out=output_types/AnonStruct.out \
+  output_types/interpret.out=output_types/OutputBitFields.out \
+  probe/obj \
+  probe_error_handler_macro/obj \
+  save_hashes/obj \
+  specialize_tagged_union_array/obj \
+  specialize_test/obj \
+  specialize_test2/obj \
+  specialize_test_error_handler_macro/obj \
+  tcpip/interpret.out \
+  use_error_handler_macro/obj
+
+# Directories that are not built in both trees are skipped with a message
+# rather than failing, so that this works in a partial build.
+pulse-diff-subdirs:
+	set -e ; for t in $(SUBDIR_TESTS) ; do \
+	  CC='$(CC)' PYTHON='$(PYTHON)' ./run_subdir.sh $$t $(ITERS) ; \
+	done
+
 clean:
 	rm -f diff_lo diff_pu driver.c corpus_*.bin trace_*.txt fuzzlog_*.txt \
 	      semantics_lo.txt semantics_pu.txt
+	rm -rf sub

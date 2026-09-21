@@ -49,4 +49,10 @@ const char *hx_off(const uint8_t *p, const uint8_t *base, uint32_t len);
 void hx_cb_init(hx_cb_t *cb, int slot);
 const char *hx_cb_show(const hx_cb_t *cb);
 
+/* Renders an out-parameter whose type is defined by the test itself (an
+   output type, or an external typedef such as iter's OUT_T). We cannot
+   interpret those, but both backends see the same declaration, so comparing
+   the raw bytes is exactly the right check. */
+const char *hx_bytes(const void *p, size_t n);
+
 #endif
