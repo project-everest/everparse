@@ -18,10 +18,6 @@ ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 endif
 
-ifeq (1,$(EVERPARSE_ONLY_3D))
-NO_PULSE := 1
-endif
-
 EVERPARSE_Z3_VERSION ?= 4.13.3
 
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))
