@@ -137,10 +137,37 @@ def gen(entries, out):
     w('const int hx_nentries = %d;\n' % len(entries))
 
 
+def cross_check(adir, aentries, bdir):
+    """The whole method rests on one driver being valid against both backends,
+    so the two must expose exactly the same entrypoints with exactly the same
+    signatures. When they do not -- usually because a .3d was added on one
+    side and the other tree was not kept in step -- say so here, rather than
+    leaving it to surface as an undefined reference at link time."""
+    bentries, _ = collect(bdir)
+    a = {fn: params for _, fn, params in aentries}
+    b = {fn: params for _, fn, params in bentries}
+    problems = []
+    for fn in sorted(set(a) - set(b)):
+        problems.append('  %s: only in %s' % (fn, adir))
+    for fn in sorted(set(b) - set(a)):
+        problems.append('  %s: only in %s' % (fn, bdir))
+    for fn in sorted(set(a) & set(b)):
+        if a[fn] != b[fn]:
+            problems.append('  %s: signatures differ\n    %s\n    %s'
+                            % (fn, a[fn], b[fn]))
+    if problems:
+        sys.exit('pulse-diff: the two test trees have drifted apart:\n%s\n'
+                 'The .3d sources under src/3d/tests and '
+                 'share/everparse/tests/3d are meant to match; update the one '
+                 'that is behind and regenerate.' % '\n'.join(problems))
+
+
 if __name__ == '__main__':
     entries, skipped = collect(sys.argv[1])
     if not entries:
         sys.exit('%s: no entrypoint with the buffer ABI' % sys.argv[1])
+    if len(sys.argv) > 3:
+        cross_check(sys.argv[1], entries, sys.argv[3])
     sys.stderr.write('%d entrypoints%s\n' %
                      (len(entries),
                       ', %d skipped (non-buffer ABI): %s' %

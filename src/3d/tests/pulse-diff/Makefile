@@ -72,12 +72,12 @@ $(LO_DIR):
 $(PU_DIR):
 	+$(MAKE) -C $(PULSE_TESTS) pulse-batch
 
-# The dispatch table is derived from the generated *Wrapper.h. Both backends
-# emit identical entrypoint signatures -- which this test also relies on -- so
-# either directory would do; we read the Low* one and let the compiler reject
-# any mismatch when the same driver is built against Pulse.
-driver.c: gen_diff.py | $(LO_DIR)
-	$(PYTHON) gen_diff.py $(LO_DIR) $@
+# The dispatch table is derived from the generated *Wrapper.h. The same driver
+# has to be valid against both backends, so gen_diff.py is also handed the
+# Pulse directory and checks that the two agree on every entrypoint signature
+# before emitting anything.
+driver.c: gen_diff.py | $(LO_DIR) $(PU_DIR)
+	$(PYTHON) gen_diff.py $(LO_DIR) $@ $(PU_DIR)
 
 diff_lo: driver.c harness.c harness.h | $(LO_DIR)
 	$(CC) $(CFLAGS_COMMON) $(LO_INC) -o $@ harness.c driver.c $(LO_DIR)/*.c
