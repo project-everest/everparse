@@ -533,24 +533,24 @@ let rec parse_typ (env:global_env)
               fieldname
               (T.Parse_nlist t_size_constant e pt)
 
-  | T.T_app {v={name="t_at_most"}} KindSpec [Inr e; Inl t] ->
-    let pt = parse_typ env typename (extend_fieldname "element") t in
+  | T.T_app {v={name="t_at_most"}} KindSpec [Inr e; Inl telt] ->
+    let pt = parse_typ env typename (extend_fieldname "element") telt in
     mk_parser pk_t_at_most
               t
               typename
               fieldname
               (T.Parse_t_at_most e pt)
 
-  | T.T_app {v={name="t_exact"}} KindSpec [Inr e; Inl t] ->
-    let pt = parse_typ env typename (extend_fieldname "element") t in
+  | T.T_app {v={name="t_exact"}} KindSpec [Inr e; Inl telt] ->
+    let pt = parse_typ env typename (extend_fieldname "element") telt in
     mk_parser pk_t_exact
               t
               typename
               fieldname
               (T.Parse_t_exact e pt)
 
-  | T.T_app {v={name="cstring"}} KindSpec [Inl t; Inr e] ->
-    let pt = parse_typ env typename (extend_fieldname "element") t in
+  | T.T_app {v={name="cstring"}} KindSpec [Inl telt; Inr e] ->
+    let pt = parse_typ env typename (extend_fieldname "element") telt in
     mk_parser pk_string
               t
               typename

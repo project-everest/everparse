@@ -18,10 +18,6 @@ ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 endif
 
-ifeq (1,$(EVERPARSE_ONLY_3D))
-NO_PULSE := 1
-endif
-
 include src/z3-version.Makefile
 
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))
@@ -167,6 +163,13 @@ endif
 	@echo export EVERPARSE_USE_KRML_EXE=$(EVERPARSE_USE_KRML_EXE)
 	@echo export FSTAR_EXE=$(FSTAR_EXE)
 	@echo export KRML_EXE=$(KRML_EXE)
+ifeq (,$(NO_PULSE))
+else
+# src/package/package.sh reads this environment to decide whether to package
+# the Pulse runtime. Without it, a 3D-only build (EVERPARSE_ONLY_3D=1) would
+# take the Pulse branch and then dereference an empty PULSE_HOME.
+	@echo export NO_PULSE=$(NO_PULSE)
+endif
 ifeq ($(OS),Windows_NT)
 	@echo export EVERPARSE_HOME=$(shell cygpath -u $(CURDIR))
 else

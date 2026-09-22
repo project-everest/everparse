@@ -20,3 +20,9 @@ typedef struct _T {
    UINT16 str3[:zeroterm-byte-size-at-most 1729];
 } T;
 
+entrypoint
+typedef struct _Issue321 
+{
+   UINT8 a;
+   UINT8 z[:zeroterm];
+} Issue321;

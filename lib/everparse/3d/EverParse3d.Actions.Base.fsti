@@ -169,35 +169,6 @@ val validate_ret
       (#use_error_handler:bool)
   : validate_with_action_read #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler
 
-inline_for_extraction noextract
-val validate_pair
-  (#base_t #len_t #pos_t: Type0)
-  {| inst: I.input_stream_inst base_t len_t pos_t  |}
-       (typename: string)
-       (name1: string)
-       (#nz1:_)
-       (#k1:parser_kind nz1 WeakKindStrongPrefix)
-       (#t1:Type)
-       (#p1:parser k1 t1)
-       (k1_const: bool)
-       (#extra_state: state_dict)
-       (#has_action1:bool)
-       (#use_error_handler:bool)
-       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
-       (#nz2:_)
-       (#wk2: _)
-       (#k2:parser_kind nz2 wk2)
-       (#t2:Type)
-       (#p2:parser k2 t2)
-       (k2_const: bool)
-       (#has_action2:bool)
-       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
-  : validate_with_action_read
-      #base_t #len_t #pos_t
-      (p1 `parse_pair` p2)
-      extra_state
-      (has_action1 || has_action2)
-      use_error_handler
 
 inline_for_extraction noextract
 val validate_dep_pair_with_refinement_and_action
@@ -860,6 +831,37 @@ val validate_drop
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
 
 inline_for_extraction noextract
+val validate_pair
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+       (typename: string)
+       (name1: string)
+       (#nz1:_)
+       (#k1:parser_kind nz1 WeakKindStrongPrefix)
+       (#t1:Type)
+       (#p1:parser k1 t1)
+       (k1_const: bool)
+       (#extra_state: state_dict)
+       (#has_action1:bool)
+       (#use_error_handler:bool)
+       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+       (#nz2:_)
+       (#wk2: _)
+       (#k2:parser_kind nz2 wk2)
+       (#t2:Type)
+       (#p2:parser k2 t2)
+       (k2_const: bool)
+       (#has_action2:bool)
+       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
+  : validate_with_action_read
+      #base_t #len_t #pos_t
+      (p1 `parse_pair` p2)
+      extra_state
+      (has_action1 || has_action2)
+      use_error_handler
+
+inline_for_extraction noextract
 val validate_without_reading
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
@@ -903,8 +905,10 @@ let field_ptr_t
   (sl_pos: pos_t) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
+  (start_pos: SZ.t) ->
   stt ptr_t
-    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      pure (SZ.v start_pos + Seq.length v_sl <= Seq.length contents_sl))
     (fun _ -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
 
 inline_for_extraction noextract

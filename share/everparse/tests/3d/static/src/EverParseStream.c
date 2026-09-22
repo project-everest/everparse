@@ -116,8 +116,7 @@ uint8_t *EverParseStreamPeep(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
 
 /* field_ptr_after: the address just past the next sz bytes, or failure when
    they are not contiguous. Provided by `static` and `extern` alike. */
-BOOLEAN EverParseFieldPtrAfterImpl(uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
-  uint8_t *p = EverParseStreamPeep(x, (size_t)sz);
+BOOLEAN EverParseFieldPtrAfterImpl(uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {  uint8_t *p = EverParseStreamPeep(x, (size_t)sz);
   if (p == NULL)
     return FALSE;
   *out = p + (size_t)sz;
@@ -132,3 +131,8 @@ void EverParseHandleError(EVERPARSE_EXTRA_T _dummy, uint64_t parsedSize, const c
 void EverParseRetreat(EVERPARSE_EXTRA_T _dummy, EVERPARSE_INPUT_STREAM_BASE base, uint64_t parsedSize)
 {
 }
+
+// The value field_ptr_after's setter form initialises its output pointer to
+// before attempting the peep. Declared by the generated EverParse.h alongside
+// the other hooks this backend expects the client to supply.
+uint8_t *EverParseNullPtr = NULL;

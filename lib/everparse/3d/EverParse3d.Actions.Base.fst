@@ -22,6 +22,15 @@ module Comment = Pulse.Lib.Comment
 
 open EverParse3d.State
 
+(* `start_pos` is the position at which the field this action is attached to
+   begins, which is where `field_pos` and `field_ptr` must report. It cannot be
+   read off the stream when the action runs: by then the field's validator has
+   already consumed it, so the stream's own position is the field's *end*. It
+   therefore has to be sampled before the field is validated and passed in,
+   mirroring the `pos`/`posf` pair the Low* prelude threads through its own
+   `action` type. `field_ptr_after` is specified relative to the current
+   position, not the field start, so it ignores this and keeps reading the
+   stream. *)
 let action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
@@ -36,11 +45,13 @@ let action
   sl_pos: pos_t ->
   contents_sl: Ghost.erased (Seq.seq U8.t) ->
   v_sl: Ghost.erased (Seq.seq U8.t) ->
+  start_pos: SZ.t ->
   stt a
     (exists* v_ctxt extra .
       pts_to ctxt v_ctxt **
       I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-      forevery_state extra_state extra
+      forevery_state extra_state extra **
+      pure (SZ.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
     )
     (fun _ -> exists* v_ctxt' extra' .
       pts_to ctxt v_ctxt' **
@@ -179,9 +190,10 @@ fn act_with_comment
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   Comment.comment s;
-  a ctxt error_handler_fn sl_base sl_len sl_pos contents_sl v_sl
+  a ctxt error_handler_fn sl_base sl_len sl_pos contents_sl v_sl start_pos
 }
 
 inline_for_extraction
@@ -260,9 +272,10 @@ fn validate_with_success_action
   (contents_sl: _)
   (v_sl: _)
 {
+  let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let [@@@rename_let ("resultAfter" ^ name)] res_validate = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res_validate = validator_success) {
-    let [@@@rename_let ("action_success_" ^ name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("action_success_" ^ name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (res_action) {
       validator_success
     } else {
@@ -329,8 +342,13 @@ fn validate_ret
   validator_success
 }
 
+(* [FStar.SizeT.t] is at least as large as [FStar.UInt32.t]. This is
+   guaranteed by the `EVERPARSE_STATIC_ASSERT(sizeof(size_t) >= sizeof(uint32_t))`
+   emitted by the 3D frontend in the generated Wrapper file. *)
+assume val size_t_fits_u32 : squash SZ.fits_u32
+
 inline_for_extraction noextract
-fn validate_pair
+fn validate_pair_slow
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
        (typename: string)
@@ -421,13 +439,14 @@ fn validate_dep_pair_with_refinement_and_action'
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
+  let [@@@rename_let ("fieldStart" ^ name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let mut pos = 0sz;
   let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
     let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
     if (ok) {
-      let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+      let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
       if (res_action) {
       	 v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
       } else {
@@ -487,11 +506,12 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
+  let [@@@rename_let ("fieldStart" ^ name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   Comment.comment (normalize_term ("Validating field " ^ name1));
   let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
   let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
   if (ok) {
-    let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (res_action) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
@@ -625,6 +645,7 @@ fn validate_filter_with_action
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
+  let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let mut pos = 0sz;
   let [@@@rename_let ("resultAfter" ^ name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
@@ -634,7 +655,7 @@ fn validate_filter_with_action
     let [@@@rename_let (name ^ "ConstraintIsOk")] ok = f val_key;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
-      let [@@@rename_let ("action_success_" ^ name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+      let [@@@rename_let ("action_success_" ^ name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
       if (res_action) {
       	validator_success
       } else {
@@ -851,11 +872,6 @@ fn validate_ite
     v2 () ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   }
 }
-
-(* [FStar.SizeT.t] is at least as large as [FStar.UInt32.t]. This is
-   guaranteed by the `EVERPARSE_STATIC_ASSERT(sizeof(size_t) >= sizeof(uint32_t))`
-   emitted by the 3D frontend in the generated Wrapper file. *)
-assume val size_t_fits_u32 : squash SZ.fits_u32
 
 module FLD = LowParse.Spec.FLData
 
@@ -1301,9 +1317,10 @@ fn action_bind
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
-  let [@@@rename_let name] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _;
-  g resf ctxt error_handler_fn sl_base sl_len sl_pos _ _
+  let [@@@rename_let name] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
+  g resf ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
 }
 
 noextract
@@ -1326,11 +1343,12 @@ fn action_weaken
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   let d3 = state_dict_weaken_sub d2 d1;
   with extra2 . rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
   forevery_state_dict_prod_unfold () _;
-  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
   forevery_state_dict_prod_fold d1 d3 ();
   with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
   res
@@ -1358,9 +1376,10 @@ fn action_call
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   state_dict_rename_call d d' f g sq _;
-  let res = act ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+  let res = act ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
   state_dict_rename_return d d' f g sq _ _;
   res
 }
@@ -1381,6 +1400,7 @@ fn action_deref
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   let res = !x;
@@ -1404,6 +1424,7 @@ fn action_assignment
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   x := w;
@@ -1519,6 +1540,7 @@ fn action_return
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   x
 }
@@ -1539,6 +1561,7 @@ fn action_return_true
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   true
 }
@@ -1559,6 +1582,7 @@ fn action_abort
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   false
 }
@@ -1583,9 +1607,10 @@ fn action_seq
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
-  let ignored = f ctxt error_handler_fn sl_base sl_len sl_pos _ _;
-  g ctxt error_handler_fn sl_base sl_len sl_pos _ _
+  let ignored = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
+  g ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
 }
 
 noextract
@@ -1608,11 +1633,12 @@ fn action_ite
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   if (guard) {
-    then_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _
+    then_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
   } else {
-    else_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _
+    else_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
   }
 }
 
@@ -1816,11 +1842,12 @@ fn validate_dep_pair_with_action
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
+  let field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let mut pos = 0sz;
   let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let val_key = r1 sl_base sl_len sl_pos _ _;
-    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (res_action) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
@@ -2005,11 +2032,12 @@ fn validate_with_dep_action
   (contents_sl: _)
   (v_sl: _)
 {
+  let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let mut pos = 0sz;
   let [@@@rename_let ("resultAfter" ^ name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res = validator_success) {
     let [@@@rename_let name] field_value = r sl_base sl_len sl_pos _ _;
-    let [@@@rename_let ("action_success_" ^ name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("action_success_" ^ name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (action_result) {
       validator_success
     } else {
@@ -2328,6 +2356,90 @@ fn validate_drop
   }
 }
 
+(* "Length-only" fast path: when both fields are constant-size, total and
+   action-free, fuse them into a single length check, erasing v1 and v2 (and any
+   per-field error handlers they carried). Re-wrap the fused check with an error
+   handler so that the failure of such a (sub-)struct -- including a
+   constant-size suffix following a variable-size prefix -- is still reported.
+   For nested constant-size structs the outer fast path discards the inner
+   validators, so only the outermost wrapper survives. This mirrors the Low*
+   prelude, and keeping the two in sync matters: it is what makes the field name
+   and error position reported to the client identical across backends. *)
+inline_for_extraction noextract
+let validate_pair_total_constant_size
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+       (#nz1:_)
+       (#k1:parser_kind nz1 WeakKindStrongPrefix)
+       (#[@@@erasable] t1:Type)
+       (#[@@@erasable] p1:parser k1 t1)
+       (#nz2:_)
+       (#wk2: _)
+       (#k2:parser_kind nz2 wk2)
+       (#[@@@erasable] t2:Type)
+       (#[@@@erasable] p2:parser k2 t2)
+       ([@@@erasable] u: squash (
+         k1.LP.parser_kind_high == Some k1.LP.parser_kind_low /\
+         k1.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal /\
+         k2.LP.parser_kind_high == Some k2.LP.parser_kind_low /\
+         k2.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal /\
+         k1.LP.parser_kind_low + k2.LP.parser_kind_low < 4294967296
+       ))
+       (#[@@@erasable] extra_state: state_dict)
+       (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t
+    (p1 `parse_pair` p2) extra_state false use_error_handler
+= validate_total_constant_size_no_read
+    #base_t #len_t #pos_t
+    (p1 `parse_pair` p2)
+    (SZ.uint32_to_sizet (FStar.UInt32.uint_to_t (k1.LP.parser_kind_low + k2.LP.parser_kind_low)))
+    ()
+    #extra_state
+    #use_error_handler
+
+inline_for_extraction noextract
+let validate_pair
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (error_handler_macro: error_handler #base_t #len_t #pos_t)
+       (typename: string)
+       (name1: string)
+       (#nz1:_)
+       (#k1:parser_kind nz1 WeakKindStrongPrefix)
+       (#[@@@erasable] t1:Type)
+       (#[@@@erasable] p1:parser k1 t1)
+       (k1_const: bool)
+       (#[@@@erasable] extra_state: state_dict)
+       (#has_action1:bool)
+       (#use_error_handler:bool)
+       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+       (#nz2:_)
+       (#wk2: _)
+       (#k2:parser_kind nz2 wk2)
+       (#[@@@erasable] t2:Type)
+       (#[@@@erasable] p2:parser k2 t2)
+       (k2_const: bool)
+       (#has_action2:bool)
+       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
+  : validate_with_action_read
+      #base_t #len_t #pos_t
+      (p1 `parse_pair` p2)
+      extra_state
+      (has_action1 || has_action2)
+      use_error_handler
+= if k1_const && k2_const &&
+     (not has_action1) && (not has_action2) && // IMPORTANT: do not erase actions from v1, v2
+     k1.LP.parser_kind_high = Some k1.LP.parser_kind_low &&
+     k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
+     k2.LP.parser_kind_high = Some k2.LP.parser_kind_low &&
+     k2.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
+     k1.LP.parser_kind_low + k2.LP.parser_kind_low < 4294967296
+  then
+    validate_with_error_handler error_handler_macro typename name1
+      (validate_drop (validate_pair_total_constant_size #base_t #len_t #pos_t #inst #nz1 #k1 #t1 #p1 #nz2 #wk2 #k2 #t2 #p2 () #extra_state #use_error_handler))
+  else
+    validate_pair_slow typename name1 k1_const v1 k2_const v2
+
 inline_for_extraction noextract
 let validate_without_reading
   (#base_t #len_t #pos_t: Type0)
@@ -2364,9 +2476,9 @@ fn action_field_pos_64
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
-  let pos = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  SZ.sizet_to_uint64 pos
+  SZ.sizet_to_uint64 start_pos
 }
 
 noextract
@@ -2385,9 +2497,9 @@ fn action_field_pos_32
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
-  let pos = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  SZ.sizet_to_uint32 pos
+  SZ.sizet_to_uint32 start_pos
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2419,8 +2531,9 @@ fn action_field_ptr
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
-  f sl_base sl_len sl_pos contents_sl v_sl
+  f sl_base sl_len sl_pos contents_sl v_sl start_pos
 }
 
 noextract
@@ -2443,6 +2556,7 @@ fn action_field_ptr_after
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   with w . assert (pts_to write_to #1.0R w);
@@ -2957,6 +3071,7 @@ fn mk_external_action
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   f ()
 }
@@ -2984,6 +3099,7 @@ fn action_field_ptr_after_with_setter
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   f sz write_to sl_base sl_len sl_pos contents_sl v_sl
 }
@@ -3043,6 +3159,7 @@ fn probe_then_validate
   (sl_pos: _)
   (contents_sl: _)
   (v_sl: _)
+  (start_pos: _)
 {
   forevery_state_dict_prod_unfold
     #extra_state
