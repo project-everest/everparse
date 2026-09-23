@@ -38,6 +38,29 @@ static int test_reuse(void) {
   return 0;
 }
 
+// Regression test for field positions on a reused extern stream: see the
+// comment on FIELDPOS in Test.3d. Both validations must report x at offset 0.
+static int test_field_pos(void) {
+  uint8_t data[2 * testSize];
+  memset(data, 0, sizeof(data));
+  EVERPARSE_INPUT_STREAM_BASE stream = EverParseCreate();
+  if (stream == NULL)
+    return 1;
+  EverParsePush(stream, data, (size_t)sizeof(data));
+  uint64_t first = 0xFFFF, second = 0xFFFF;
+  uint64_t n1 = TestCheckFieldpos(&first, 0, stream);
+  uint64_t n2 = TestCheckFieldpos(&second, 0, stream);
+  free(stream);
+  printf("FieldPos: offsets = %llu %llu, sizes = %llu %llu\n",
+         (unsigned long long)first, (unsigned long long)second,
+         (unsigned long long)n1, (unsigned long long)n2);
+  if (first != 0 || second != 0 || n1 != 8 || n2 != 8) {
+    printf("FieldPos: FAILED, expected offsets 0 0 and sizes 8 8\n");
+    return 1;
+  }
+  return 0;
+}
+
 int main(void) {
   uint8_t *test = calloc(testSize, sizeof(uint8_t));
   if (test != NULL) {
@@ -53,5 +76,5 @@ int main(void) {
     }
     free(test);
   }
-  return test_reuse();
+  return test_reuse() || test_field_pos();
 }

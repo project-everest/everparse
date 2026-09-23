@@ -4,3 +4,22 @@ typedef struct _POINT {
   UINT32  y { y >= 18 };
   UINT32  z;
 } POINT;
+
+// Regression test for field positions on a reused extern stream. The stream's
+// own position is cumulative, but `field_pos_64` must report the offset of the
+// field within the record currently being validated, i.e. relative to the
+// position at which the wrapper was entered -- as in Low*, whose wrapper
+// always passes a start position of 0. Validating twice on one stream is what
+// exposes a cumulative field position.
+entrypoint
+typedef struct _FIELDPOS (mutable UINT64 *offset) {
+  UINT32 x {:on-success
+    var px = field_pos_64;
+    *offset = px;
+    return (px == 0);
+  };
+  UINT32 y {:on-success
+    var py = field_pos_64;
+    return (py == 4);
+  };
+} FIELDPOS;

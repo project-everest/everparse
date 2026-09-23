@@ -8,9 +8,23 @@ open Pulse.Lib.Pervasives
    client is trusted to implement the EverParseHas/Read/Peep/Skip/Empty
    primitives declared in EverParse.h.
 
-   Since the stream carries its own length and position, [len_t] and [pos_t]
-   are [unit]: KaRaMeL erases unit arguments, so the extracted C validators
-   take the stream as a single argument, as in Low*. *)
+   Since the stream carries its own length, [len_t] is [unit]: KaRaMeL erases
+   unit arguments.
+
+   [pos_t], on the other hand, is [SZ.t]: the *origin* of the current top-level
+   validation, that is, the absolute stream position at which the wrapper
+   invoked the validator. The stream's own position is cumulative across
+   successive validations of the same stream, whereas the field positions that
+   3D actions observe (`field_pos_32`, `field_pos_64`) must be offsets relative
+   to the start of the record being validated -- that is what Low* gets from
+   its explicit `StartPosition` argument, which the generated wrapper always
+   passes as 0. So the origin is subtracted in [stream_get_relative_position],
+   and it is threaded unchanged through nested type calls and truncations,
+   exactly as Low* threads its `pos`.
+
+   Every other primitive takes the origin as a [Ghost.erased], so that the C
+   signatures the client has to implement (EverParseHas/Read/Peep/Skip/...)
+   are unchanged; only the validators themselves gain the extra argument. *)
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
@@ -32,40 +46,48 @@ noextract
 let len_t = unit
 inline_for_extraction
 noextract
-let pos_t = unit
+let pos_t = SZ.t
 
 assume val stream_pts_to
-  (base: base_t) (len: len_t) (pos: pos_t)
+  (base: base_t) (len: len_t) (pos: Ghost.erased pos_t)
   (contents: Seq.seq U8.t) (v: Seq.seq U8.t)
 : slprop
 
 assume val stream_is_prefix_of
-  (base_x: base_t) (len_x: len_t) (pos_x: pos_t)
-  (base_y: base_t) (len_y: len_t) (pos_y: pos_t)
+  (base_x: base_t) (len_x: len_t) (pos_x: Ghost.erased pos_t)
+  (base_y: base_t) (len_y: len_t) (pos_y: Ghost.erased pos_t)
   (contents: Seq.seq U8.t) (suffix: Seq.seq U8.t)
 : slprop
 
 noextract
 inline_for_extraction
 let pts_to_inst : I.input_stream_pts_to base_t len_t pos_t = {
-  pts_to = stream_pts_to;
-  is_prefix_of = stream_is_prefix_of;
+  (* eta-expanded: the assumed primitives take the origin as a [Ghost.erased],
+     so that it is erased from their extracted C prototypes; F* inserts the
+     [Ghost.hide] coercion at the application. *)
+  pts_to = (fun b l (p: pos_t) c v -> stream_pts_to b l p c v);
+  is_prefix_of = (fun bx lx (px: pos_t) b2 l2 (p2: pos_t) c sfx -> stream_is_prefix_of bx lx px b2 l2 p2 c sfx);
 }
 
 assume val stream_pts_to_is_suffix_of :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (contents: Seq.seq U8.t) ->
     (v: Seq.seq U8.t) ->
     stt_ghost unit emp_inames
       (stream_pts_to base len pos contents v)
       (fun _ -> stream_pts_to base len pos contents v ** pure (v `seq_is_suffix_of` contents))
 
+(* The client's EverParseStreamGetPosition returns the *absolute* position of
+   the stream, i.e. the total number of bytes it has consumed since it was
+   created. By the meaning of [stream_pts_to base len origin contents v]
+   ("the stream has consumed [origin] bytes before [contents] started, and
+   [v] of [contents] is left"), that is [origin + (|contents| - |v|)]. *)
 assume val stream_get_position :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt SZ.t
@@ -75,14 +97,35 @@ assume val stream_get_position :
     (ensures fun res ->
       stream_pts_to base len pos contents v **
       pure (
-        SZ.v res + Seq.length v == Seq.length contents
+        Seq.length v <= Seq.length contents /\
+        SZ.v res == SZ.v pos + Seq.length contents - Seq.length v
       )
     )
+
+(* ... so the position relative to the current validation's origin, which is
+   what the `input_stream_inst` interface specifies and what the field-position
+   actions report, is obtained by subtracting the origin. *)
+inline_for_extraction
+noextract
+fn stream_get_relative_position
+  (base: base_t)
+  (len: len_t)
+  (pos: pos_t)
+  (contents: Ghost.erased (Seq.seq U8.t))
+  (v: Ghost.erased (Seq.seq U8.t))
+requires stream_pts_to base len pos contents v
+returns res: SZ.t
+ensures stream_pts_to base len pos contents v **
+  pure (SZ.v res + Seq.length v == Seq.length contents)
+{
+  let abs = stream_get_position base len pos contents v;
+  SZ.sub abs pos
+}
 
 assume val stream_has :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
@@ -102,7 +145,7 @@ assume val stream_has :
 assume val stream_has_at :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (off: SZ.t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
@@ -129,7 +172,7 @@ assume val stream_has_at :
 assume val stream_read_bytes :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (n: SZ.t) ->
     (dst: AP.ptr U8.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
@@ -198,7 +241,7 @@ fn stream_read
 assume val stream_skip :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
@@ -216,7 +259,7 @@ assume val stream_skip :
 assume val stream_empty :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt SZ.t
@@ -242,14 +285,18 @@ inline_for_extraction
 noextract
 let stream_trunc_len (b: base_t) (len: len_t) (pos: pos_t) (tr: base_t) : Tot len_t = ()
 
+(* Truncation preserves the origin: the truncated view continues the parent's
+   position accounting (see the [contents'] conjunct of [stream_truncate]'s
+   postcondition), so field positions inside a truncated sub-stream stay
+   relative to the same enclosing validation. *)
 inline_for_extraction
 noextract
-let stream_trunc_pos (b: base_t) (len: len_t) (pos: pos_t) (tr: base_t) : Tot pos_t = ()
+let stream_trunc_pos (b: base_t) (len: len_t) (pos: pos_t) (tr: base_t) : Tot pos_t = pos
 
 assume val stream_truncate :
 (base: base_t) ->
     (len: len_t) ->
-    (pos: pos_t) ->
+    (pos: Ghost.erased pos_t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
@@ -259,8 +306,8 @@ assume val stream_truncate :
       SZ.v n <= Seq.length v
     )))
     (ensures (fun res -> exists* contents' v1 v2 .
-      stream_pts_to res () () contents' v1 **
-      stream_is_prefix_of res () () base len pos contents v2 **
+      stream_pts_to res () pos contents' v1 **
+      stream_is_prefix_of res () pos base len pos contents v2 **
       pure (
       	SZ.v n <= Seq.length v /\
         Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\
@@ -273,10 +320,10 @@ assume val stream_truncate :
 assume val stream_untruncate :
 (base_x: base_t) ->
     (len_x: len_t) ->
-    (pos_x: pos_t) ->
+    (pos_x: Ghost.erased pos_t) ->
     (base_y: base_t) ->
     (len_y: len_t) ->
-    (pos_y: pos_t) ->
+    (pos_y: Ghost.erased pos_t) ->
     (contents: Seq.seq U8.t) ->
     (v: Seq.seq U8.t) ->
     (contents0: Seq.seq U8.t) ->
@@ -295,19 +342,19 @@ noextract
 inline_for_extraction
 instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
   pts_to_inst = pts_to_inst;
-  pts_to_is_suffix_of = stream_pts_to_is_suffix_of;
-  get_position = stream_get_position;
-  has = stream_has;
-  has_at = stream_has_at;
+  pts_to_is_suffix_of = (fun b l (p: pos_t) c v -> stream_pts_to_is_suffix_of b l p c v);
+  get_position = stream_get_relative_position;
+  has = (fun b l (p: pos_t) n c v -> stream_has b l p n c v);
+  has_at = (fun b l (p: pos_t) off n c v -> stream_has_at b l p off n c v);
   read = stream_read;
-  skip = stream_skip;
-  empty = stream_empty;
+  skip = (fun b l (p: pos_t) n c v -> stream_skip b l p n c v);
+  empty = (fun b l (p: pos_t) c v -> stream_empty b l p c v);
   trunc_t = base_t;
   trunc_base = stream_trunc_base;
   trunc_len = stream_trunc_len;
   trunc_pos = stream_trunc_pos;
-  truncate = stream_truncate;
-  untruncate = stream_untruncate;
+  truncate = (fun b l (p: pos_t) n c v -> stream_truncate b l p n c v);
+  untruncate = (fun bx lx (px: pos_t) b2 l2 (p2: pos_t) c v c0 sfx -> stream_untruncate bx lx px b2 l2 p2 c v c0 sfx);
 }
 
 (* The error handler used when 3d is invoked with `--use_error_handler_macro`.
@@ -332,15 +379,34 @@ noextract
 inline_for_extraction
 let ___PUINT8 = AP.ptr U8.t
 
+(* As for the stream primitives, the origin is erased from the assumed C
+   prototype: EverParseStreamPeep is unchanged. *)
 assume val field_ptr_after_impl
+  (sz: FStar.UInt64.t)
+  (w: R.ref ___PUINT8)
+  (sl_base: base_t)
+  (sl_len: len_t)
+  (sl_pos: Ghost.erased pos_t)
+  (w0: Ghost.erased ___PUINT8)
+  (contents_sl: Ghost.erased (Seq.seq U8.t))
+  (v_sl: Ghost.erased (Seq.seq U8.t))
+: stt bool
+    (R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len (Ghost.reveal sl_pos) contents_sl v_sl)
+    (fun _ -> exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len (Ghost.reveal sl_pos) contents_sl v_sl)
+
+noextract
+inline_for_extraction
+let field_ptr_after_fn
 : AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8
+= fun sz w sl_base sl_len (sl_pos: pos_t) w0 contents_sl v_sl ->
+    field_ptr_after_impl sz w sl_base sl_len sl_pos w0 contents_sl v_sl
 
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
 let field_ptr_after
 : option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8)
-= Some field_ptr_after_impl
+= Some field_ptr_after_fn
 
 assume val null_ptr : ___PUINT8
 
