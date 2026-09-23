@@ -58,6 +58,23 @@ backend), which is why they are reused rather than rebuilt here.
 `pulse-diff` is **not** part of `src/3d/tests`' `all` target, because it needs
 both backends and the Pulse one is absent from `NO_PULSE` builds.
 
+## When there is no Low\* backend
+
+On the `fstar2` branch there is only one backend left. F\*'s ulib no longer
+ships `FStar.HyperStack`, so neither `LowParse.Low.*` nor `src/3d/prelude`
+can be verified; the top-level Makefile has dropped its `3d-prelude` target;
+and `Options.get_pulse` is hardwired to `true`, so `3d.exe` emits Pulse
+whether or not `--pulse` is passed. A "differential" run would compare the
+Pulse backend against itself, and would not even get that far: the generated
+C includes `EverParse.h`, and the Low\* one is precisely what
+`src/3d/prelude/buffer` no longer produces.
+
+The Makefile therefore keys off `src/3d/prelude/buffer/EverParse.h`. When that
+header is missing the whole test skips itself with a message -- the same way
+`run_subdir.sh` skips a sub-directory that only one of the two trees has --
+instead of regenerating `out.batch` for twenty minutes and then failing to
+compile it. Restoring the Low\* prelude build restores the test.
+
 ## The sub-directory tests
 
 The top-level batch covers the 25 `.3d` files in `src/3d/tests` itself. The

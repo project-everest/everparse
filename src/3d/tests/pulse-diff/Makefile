@@ -29,7 +29,8 @@
 #
 #     make -C src/3d/tests pulse-diff
 #
-# Requires mmap (see harness.c), hence POSIX only.
+# Requires mmap (see harness.c), hence POSIX only. On a tree where the Low*
+# backend is no longer buildable at all (see LO_RUNTIME_H below) it skips.
 
 ifeq (,$(EVERPARSE_HOME))
   EVERPARSE_HOME := $(realpath ../../../..)
@@ -62,7 +63,33 @@ CFLAGS_COMMON = -O1 -g -std=c11 -fwrapv -D_BSD_SOURCE -D_DEFAULT_SOURCE \
                 -Wno-unknown-warning-option \
                 -Wno-ignored-qualifiers -Wno-unused-parameter
 
+# Is there still a Low* backend to compare against?
+#
+# On the fstar2 branch there is not: F*'s ulib no longer ships
+# FStar.HyperStack, so neither LowParse.Low.* nor src/3d/prelude can be
+# verified, `Options.get_pulse` is hardwired to true (3d.exe emits Pulse
+# whether or not --pulse is passed), and the top-level Makefile has dropped
+# the `3d-prelude` target accordingly. Both sides of the "differential" would
+# then be the very same Pulse code, and the Low* side would not even compile:
+# the generated C includes EverParse.h, and the Low* one is exactly what
+# src/3d/prelude/buffer no longer produces.
+#
+# So key off that header. When it is absent the whole test skips itself with a
+# message, the same way run_subdir.sh skips a sub-directory that only one of
+# the two trees has -- rather than spending twenty minutes regenerating
+# out.batch and then failing to compile it.
+LO_RUNTIME_H = $(EVERPARSE_HOME)/src/3d/prelude/buffer/EverParse.h
+
+ifeq (,$(wildcard $(LO_RUNTIME_H)))
+
+all:
+	@echo "pulse-diff: no Low* backend to compare against ($(LO_RUNTIME_H) is not built); skipping"
+
+else
+
 all: pulse-diff-test pulse-diff-subdirs
+
+endif
 
 .PHONY: all pulse-diff-test pulse-diff-subdirs clean
 
