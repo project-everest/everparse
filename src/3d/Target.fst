@@ -860,7 +860,7 @@ let rec print_as_c_type (t:typ) : ML string =
     | _ ->
          "__UNKNOWN__"
 
-let error_code_macros = 
+let error_code_macros_lowstar =
    //To be kept consistent with EverParse3d.ErrorCode.error_reason_of_result
    "#define EVERPARSE_SUCCESS 0ul\n\
     #define EVERPARSE_ERROR_GENERIC 1uL\n\
@@ -876,6 +876,33 @@ let error_code_macros =
     #define EVERPARSE_PROBE_FAILURE_PROBE 258uL\n\
     #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL\n\
     "
+
+(* The Pulse backend deliberately numbers its error codes differently: code 1
+   is reassigned to "action failed" so that validator postconditions can use
+   the shortcut `res > validator_error_action_failed`. These constants are the
+   values actually delivered to the error callback and returned by the
+   wrappers, so they must follow the Pulse numbering rather than the Low* one.
+   To be kept consistent with lib/everparse/3d/EverParse3d.ErrorCode.fst. *)
+let error_code_macros_pulse =
+   "#define EVERPARSE_SUCCESS 0ul\n\
+    #define EVERPARSE_ERROR_ACTION_FAILED 1uL\n\
+    #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL\n\
+    #define EVERPARSE_ERROR_IMPOSSIBLE 3uL\n\
+    #define EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE 4uL\n\
+    #define EVERPARSE_ERROR_CONSTRAINT_FAILED 5uL\n\
+    #define EVERPARSE_ERROR_UNEXPECTED_PADDING 6uL\n\
+    #define EVERPARSE_ERROR_PROBE_FAILED 7uL\n\
+    // Probe wrapper error codes\n\
+    #define EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE 256uL\n\
+    #define EVERPARSE_PROBE_FAILURE_INIT 257uL\n\
+    #define EVERPARSE_PROBE_FAILURE_PROBE 258uL\n\
+    #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL\n\
+    "
+
+let error_code_macros () : ML string =
+  if Options.get_pulse ()
+  then error_code_macros_pulse
+  else error_code_macros_lowstar
 
 let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
   match t with
@@ -1584,7 +1611,7 @@ let print_c_entry
       (if Options.get_pulse ()
        then "EverParsePulseEndianness.h\"\n#include \"EverParse.h"
        else "EverParseEndianness.h")
-      error_code_macros
+      (error_code_macros ())
       external_defs_includes
       (signatures |> List.filter (fun s -> s <> "") |> String.concat "\n\n")
   in
