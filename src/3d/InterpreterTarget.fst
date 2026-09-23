@@ -804,6 +804,18 @@ let pulse_sanitize_key (e:string) : ML string =
     (List.map (fun c -> if ok c then c else FStar.Char.char_of_int 95)
       (FStar.String.list_of_string e))
 
+(* Compiler-owned resources (currently only the output-expression state) need
+   identities that no user expression can ever denote. [pulse_sanitize_key]
+   maps every character outside [0-9A-Za-z_.'] to an underscore, so a key
+   containing ['#'] is unreachable from user syntax. Likewise, the generated
+   F* definition that carries the corresponding dictionary is named with
+   [Ast.reserved_prefix] followed by a lowercase letter: 3D rejects
+   identifiers starting with ["___"], and [Target.print_ident] only ever
+   produces that prefix in front of an uppercase letter, so the name cannot
+   be shadowed by a user parameter either. *)
+let pulse_output_state_key : string = "\"#output\""
+let pulse_output_state_name : string = A.reserved_prefix ^ "output_state"
+
 (* The key of a dictionary leaf, as it appears inside the definition. *)
 let pulse_key_of (e:string) : ML string =
   if pulse_in_kenv e
@@ -828,36 +840,42 @@ let pulse_key_arg_of (e:string) : ML string =
    `Inv_conj` may repeat the same resource (e.g. two fields writing the same
    pointer), whereas `state_dict_prod` requires disjoint key sets, so the
    leaves are deduplicated by key before being folded into a right-nested
-   product. *)
+   product.
+
+   Each leaf is a triple: the identity used for deduplication, the key as it
+   appears in generated F*, and the dictionary expression itself. The identity
+   is kept separate from the key so that compiler-owned resources can be given
+   a namespace of their own (see [pulse_output_state_key]). *)
 let rec pulse_state_dict_leaves (mname:string) (i:inv)
-  : ML (list (string & string))
+  : ML (list (string & string & string))
   = match i with
     | Inv_conj i j ->
       pulse_state_dict_leaves mname i @ pulse_state_dict_leaves mname j
     | Inv_ptr x ->
       let e = T.print_expr mname x in
-      [e, Printf.sprintf "(state_dict_singleton %s (pts_to %s #1.0R))" (pulse_key_of e) e]
+      [e, pulse_key_of e, Printf.sprintf "(state_dict_singleton %s (pts_to %s #1.0R))" (pulse_key_of e) e]
     | Inv_copy_buf x ->
       let e = T.print_expr mname x in
-      [e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
-    | Inv_output -> ["output_state", "output_state"]
+      [e, pulse_key_of e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
+    | Inv_output ->
+      [pulse_output_state_key, pulse_output_state_key, pulse_output_state_name]
 
-let rec pulse_dedup_leaves (l:list (string & string))
-  : ML (list (string & string))
+let rec pulse_dedup_leaves (l:list (string & string & string))
+  : ML (list (string & string & string))
   = match l with
     | [] -> []
-    | (k, v) :: tl ->
+    | (k, ke, v) :: tl ->
       let tl = pulse_dedup_leaves tl in
-      if Some? (List.tryFind (fun (k', _) -> k = k') tl)
+      if Some? (List.tryFind (fun (k', _, _) -> k = k') tl)
       then tl
-      else (k, v) :: tl
+      else (k, ke, v) :: tl
 
-let rec pulse_fold_prod (l:list (string & string))
+let rec pulse_fold_prod (l:list (string & string & string))
   : ML string
   = match l with
     | [] -> "state_dict_empty"
-    | [(_, v)] -> v
-    | (_, v) :: tl -> Printf.sprintf "(state_dict_prod %s %s)" v (pulse_fold_prod tl)
+    | [(_, _, v)] -> v
+    | (_, _, v) :: tl -> Printf.sprintf "(state_dict_prod %s %s)" v (pulse_fold_prod tl)
 
 let print_state_dict (mname:string) (i:index inv)
   : ML string
@@ -872,7 +890,7 @@ let pulse_state_dict_keys (mname:string) (i:index inv)
   = match i with
     | None -> []
     | Some i ->
-      List.map (fun (k, _) -> pulse_key_of k)
+      List.map (fun (_, ke, _) -> ke)
         (pulse_dedup_leaves (pulse_state_dict_leaves mname i))
 
 (* `state_dict_prod` requires disjoint key sets, which for the singletons the

@@ -876,7 +876,7 @@ let rec print_as_c_type (t:typ) : ML string =
     | _ ->
          "__UNKNOWN__"
 
-let error_code_macros = 
+let error_code_macros_lowstar =
    //To be kept consistent with EverParse3d.ErrorCode.error_reason_of_result
    "#define EVERPARSE_SUCCESS 0ul\n\
     #define EVERPARSE_ERROR_GENERIC 1uL\n\
@@ -892,6 +892,33 @@ let error_code_macros =
     #define EVERPARSE_PROBE_FAILURE_PROBE 258uL\n\
     #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL\n\
     "
+
+(* The Pulse backend deliberately numbers its error codes differently: code 1
+   is reassigned to "action failed" so that validator postconditions can use
+   the shortcut `res > validator_error_action_failed`. These constants are the
+   values actually delivered to the error callback and returned by the
+   wrappers, so they must follow the Pulse numbering rather than the Low* one.
+   To be kept consistent with lib/everparse/3d/EverParse3d.ErrorCode.fst. *)
+let error_code_macros_pulse =
+   "#define EVERPARSE_SUCCESS 0ul\n\
+    #define EVERPARSE_ERROR_ACTION_FAILED 1uL\n\
+    #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL\n\
+    #define EVERPARSE_ERROR_IMPOSSIBLE 3uL\n\
+    #define EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE 4uL\n\
+    #define EVERPARSE_ERROR_CONSTRAINT_FAILED 5uL\n\
+    #define EVERPARSE_ERROR_UNEXPECTED_PADDING 6uL\n\
+    #define EVERPARSE_ERROR_PROBE_FAILED 7uL\n\
+    // Probe wrapper error codes\n\
+    #define EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE 256uL\n\
+    #define EVERPARSE_PROBE_FAILURE_INIT 257uL\n\
+    #define EVERPARSE_PROBE_FAILURE_PROBE 258uL\n\
+    #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL\n\
+    "
+
+let error_code_macros () : ML string =
+  if Options.get_pulse ()
+  then error_code_macros_pulse
+  else error_code_macros_lowstar
 
 let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
   match t with
@@ -1015,8 +1042,10 @@ let print_c_entry
      then
        if not is_input_stream_buffer
        then
-       (* The `extern`/`static` Pulse validators pass the stream object alone:
-          its length and position are `unit`, hence erased. *)
+       (* The `extern`/`static` Pulse validators pass the stream object and
+          the origin of the current validation (its length is `unit`, hence
+          erased). The reported position is relative to that origin, as in
+          Low*, where the wrapper always passes a start position of 0. *)
        Printf.sprintf
           "%sstatic\n\
            void DefaultErrorHandler(\n\t\
@@ -1025,7 +1054,8 @@ let print_c_entry
                                const char *reason,\n\t\
                                uint8_t error_code,\n\t\
                                uint8_t *context,\n\t\
-                               EVERPARSE_INPUT_STREAM_BASE base)\n\
+                               EVERPARSE_INPUT_STREAM_BASE base,\n\t\
+                               size_t origin)\n\
            {\n\t\
              %s\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
@@ -1035,7 +1065,7 @@ let print_c_entry
                (uint64_t)error_code,\n\t\t\
                frame,\n\t\t\
                NULL,\n\t\t\
-               (uint64_t)EverParseStreamGetPosition(base)\n\t\
+               (uint64_t)(EverParseStreamGetPosition(base) - origin)\n\t\
              );\n\
            }"
           stream_pos_decl
@@ -1359,7 +1389,7 @@ let print_c_entry
        ^ Printf.sprintf "uint64_t startPosition%s;\n\n\t" scalar_zero
        ^ frame_init
        ^ "startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t"
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base);\n\t" name params error_handler_arg
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)startPosition);\n\t" name params error_handler_arg
        ^ "parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t"
        ^ tail
      else
@@ -1367,7 +1397,7 @@ let print_c_entry
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
          %s\
          uint64_t startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t\
-         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base);\n\t\
+         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)startPosition);\n\t\
          uint64_t parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t\
          %s"
         struct_zero
@@ -1600,7 +1630,7 @@ let print_c_entry
       (if Options.get_pulse ()
        then "EverParsePulseEndianness.h\"\n#include \"EverParse.h"
        else "EverParseEndianness.h")
-      error_code_macros
+      (error_code_macros ())
       external_defs_includes
       (signatures |> List.filter (fun s -> s <> "") |> String.concat "\n\n")
   in
@@ -1781,7 +1811,7 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     if Options.get_pulse ()
     then
       Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action output_state unit\n\n"
+        "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
         fn_name
         fn_arg1_t
         fn_arg2_t
@@ -1922,7 +1952,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params false ->
       (if Options.get_pulse ()
-       then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action output_state %s\n"
+       then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
@@ -1976,8 +2006,8 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      open EverParse3d.Interpreter\n\
      module B = %s\n\
      %s\n\
-     noextract val output_state_slprop : unit -> Pulse.Lib.Core.slprop\n\n\
-     noextract let output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"output_state\" output_state_slprop\n\n%s"
+     noextract val ___output_state_slprop : unit -> Pulse.Lib.Core.slprop\n\n\
+     noextract let ___output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"#output\" ___output_state_slprop\n\n%s"
     modul
     (Options.pulse_backend_module ())
     external_types_include

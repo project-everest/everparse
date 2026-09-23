@@ -117,9 +117,13 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 #
 # field_ptr checks at runtime that field_ptr, field_pos_64 and field_pos_32
 # report the start offset of the annotated field.
+#
+# output_state_name is compile-only: it checks that a mutable output parameter
+# named `output_state` does not collide with the Pulse backend's own generated
+# output state, which used to make the generated F* fail to typecheck.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
-  probe field_ptr
+  probe field_ptr output_state_name
 
 # Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and
