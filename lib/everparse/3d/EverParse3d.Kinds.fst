@@ -17,9 +17,41 @@ module EverParse3d.Kinds
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
 
+(* NOTE: this module deliberately has no interface. Every definition here is
+   [inline_for_extraction noextract], i.e. it is meant to be fully reduced away
+   before extraction, and the 3d backend relies on that: for each generated type
+   it emits a [kind_X] whose body is computed by a tactic that normalizes with
+   [delta_namespace ["EverParse3d"; "LowParse"; <module>]; ...], so that the
+   kind collapses to a literal [parser_kind] record right at its definition
+   site, bottom-up, one [and_then_kind]/[glb] at a time.
+
+   Hiding these definitions behind an interface used to defeat that: the kinds
+   stayed stuck until extraction (where cross-module inlining finally exposes
+   the implementation), and the whole nest of [and_then_kind] applications then
+   had to be reduced in one go. Since [LowParse.Spec.Combinators.and_then_kind]
+   projects each of its arguments several times and recent F* normalizers
+   re-normalize the scrutinee of a *stuck* projection once per projection
+   instead of sharing it, that made extraction of a wide struct (e.g.
+   [ELFTestGen]) blow up exponentially in the number of fields. *)
+
 ////////////////////////////////////////////////////////////////////////////////
 // Parsers
 ////////////////////////////////////////////////////////////////////////////////
+
+noextract
+type weak_kind =
+| WeakKindWeak
+| WeakKindStrongPrefix
+| WeakKindConsumesAll
+
+inline_for_extraction
+noextract
+let weak_kind_glb
+  (k1 k2: weak_kind)
+: Tot weak_kind
+= if k1 = k2
+  then k1
+  else WeakKindWeak
 
 let parser_kind_prop
   (nz: bool)
@@ -89,7 +121,7 @@ let kind_nlist_default
   
 inline_for_extraction
 noextract
-let kind_nlist #b #w kelt nopt
+let kind_nlist (#b:_) (#w:_) (kelt:parser_kind b w) (nopt:option nat)
   : parser_kind false WeakKindStrongPrefix
   = let open LP in
     match nopt with
@@ -176,3 +208,8 @@ inline_for_extraction noextract
 let kind____UINT64
   : parser_kind true WeakKindStrongPrefix
   = LowParse.Spec.Int.parse_u64_kind
+
+inline_for_extraction noextract
+let kind_unit
+  : parser_kind false WeakKindStrongPrefix
+= ret_kind

@@ -1,6 +1,5 @@
 module EverParse3d.Actions.Base
 #lang-pulse
-friend EverParse3d.Kinds
 friend EverParse3d.Prelude
 open EverParse3d.ErrorCode
 open EverParse3d.Prelude

@@ -544,6 +544,22 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
   | PK_string ->
     "parse_string_kind"
 
+(* The modules whose [kind_...] definitions occur in [k]. The Pulse backend
+   needs them in the [delta_namespace] of the [norm] that reduces a generated
+   kind to a literal record: a base kind is either defined in the current
+   module or imported from another 3d module, and leaving any of them stuck
+   leaves the whole nest of [and_then_kind]/[glb] applications unreduced. *)
+let rec kind_modules (mname:string) (k:parser_kind) : Tot (list string) =
+  match k.pk_kind with
+  | PK_base hd ->
+    let open A in
+    [ (match hd.v.modul_name with None -> mname | Some s -> s) ]
+  | PK_list k0 _ -> kind_modules mname k0
+  | PK_and_then k1 k2
+  | PK_glb k1 k2 -> kind_modules mname k1 `List.Tot.append` kind_modules mname k2
+  | PK_filter k0 -> kind_modules mname k0
+  | _ -> []
+
 let print_params (mname:string) (params:list param) : ML string =
   String.concat " " <|
   List.map 
