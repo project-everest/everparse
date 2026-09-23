@@ -1765,7 +1765,7 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     if Options.get_pulse ()
     then
       Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action output_state unit\n\n"
+        "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
         fn_name
         fn_arg1_t
         fn_arg2_t
@@ -1906,7 +1906,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params false ->
       (if Options.get_pulse ()
-       then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action output_state %s\n"
+       then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
@@ -1960,8 +1960,8 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      open EverParse3d.Interpreter\n\
      module B = %s\n\
      %s\n\
-     noextract val output_state_slprop : unit -> Pulse.Lib.Core.slprop\n\n\
-     noextract let output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"output_state\" output_state_slprop\n\n%s"
+     noextract val ___output_state_slprop : unit -> Pulse.Lib.Core.slprop\n\n\
+     noextract let ___output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"#output\" ___output_state_slprop\n\n%s"
     modul
     (Options.pulse_backend_module ())
     external_types_include
