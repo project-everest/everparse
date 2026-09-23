@@ -446,10 +446,7 @@ jobs:
       #    src\3d\tests, so that --check_hashes inplace, which rewrites the .3d
       #    file, does not clobber the hashes the Low* run just wrote.
       # Unlike test-macos / test-linux, this job has no job-level
-      # only_build_3d guard, so each --pulse step needs its own: a 3D-only
-      # release is packaged without the Pulse runtime.
       - name: Test EverParse (--pulse)
-        if: ${{ !inputs.only_build_3d }}
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\Arithmetic.3d ${{ github.workspace }}\everparse\share\everparse\tests\3d\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\share\everparse\tests\3d && ${{ github.workspace }}\test\everparse.cmd --pulse Comments.3d && ${{ github.workspace }}\test\everparse.cmd --pulse --check_hashes inplace Comments.3d
@@ -463,7 +460,6 @@ jobs:
       # code the Low* step above never exercises. Its own --odir, so the two do
       # not clobber each other.
       - name: Test EverParse test case generation (--pulse)
-        if: ${{ !inputs.only_build_3d }}
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
@@ -477,7 +473,6 @@ jobs:
       # EverParseStreamOf/Len, and EverParseStreamLen returns size_t. Z3TestGen
       # emits all three into the harness, so the test is self-contained.
       - name: Test EverParse test case generation with probe (--pulse)
-        if: ${{ !inputs.only_build_3d }}
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe-pulse --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
@@ -490,7 +485,6 @@ jobs:
       # called Comments.3d, so putting them in one artifact would change the
       # archive root and break the existing interop steps.
       - name: Upload test artifact (--pulse)
-        if: ${{ !inputs.only_build_3d }}
         uses: actions/upload-artifact@v4
         with:
           path: everparse\share\everparse\tests\3d\Comments*

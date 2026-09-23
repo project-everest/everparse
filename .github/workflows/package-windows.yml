@@ -10,6 +10,10 @@ on:
         description: Run full CI
         type: boolean
         default: false
+      only_build_3d:
+        description: Only build 3D
+        type: boolean
+        default: false
 
 jobs:
   fstar-src:
@@ -162,6 +166,8 @@ jobs:
 
       - name: Build package
         shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        env:
+          EVERPARSE_ONLY_3D: ${{ inputs.only_build_3d && '1' || '' }}
         run: >-
           cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile nuget-noversion -kj$(nproc)
 
@@ -207,6 +213,7 @@ jobs:
         run: |
           ${{ github.workspace }}\test\everparse.cmd --pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe-pulse --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
+        if: ${{ !inputs.only_build_3d }}
         run: |
           ${{ github.workspace }}\test\bin\cddl.exe ${{ github.workspace }}\everparse\src\cddl\tests\demo\test.cddl
 
