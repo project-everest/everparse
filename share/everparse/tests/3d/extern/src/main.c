@@ -61,6 +61,55 @@ static int test_field_pos(void) {
   return 0;
 }
 
+// Regression test for truncation on an extern stream: see the comment on EXACT
+// in Test.3d. The expected verdicts are those of the buffer backend, on which
+// the Low* and Pulse validators are known to agree, for the same bytes and the
+// same available length.
+typedef uint64_t (*trunc_check)(EVERPARSE_EXTRA_T, EVERPARSE_INPUT_STREAM_BASE);
+
+static int run_trunc(const char *label, trunc_check check, uint8_t len, size_t n,
+                     int expected) {
+  uint8_t data[6] = {len, 0xAA, 0xBB, 0x99, 0x77, 0x66};
+  EVERPARSE_INPUT_STREAM_BASE stream = EverParseCreate();
+  if (stream == NULL)
+    return 1;
+  EverParsePush(stream, data, n);
+  EverParseErrorCount = 0;
+  check(0, stream);
+  free(stream);
+  int accepted = (EverParseErrorCount == 0);
+  printf("Truncate: %-22s len=%u avail=%u -> %s\n", label, (unsigned)len,
+         (unsigned)n, accepted ? "accept" : "reject");
+  if (accepted != expected) {
+    printf("Truncate: FAILED, expected %s\n", expected ? "accept" : "reject");
+    return 1;
+  }
+  return 0;
+}
+
+static int test_truncation(void) {
+  int bad = 0;
+  bad |= run_trunc("exact/ok", &TestCheckExact, 2, 4, 1);
+  bad |= run_trunc("exact/too-long", &TestCheckExact, 3, 4, 0);
+  bad |= run_trunc("exact/too-short", &TestCheckExact, 1, 4, 0);
+  bad |= run_trunc("exact/empty", &TestCheckExact, 0, 2, 0);
+  bad |= run_trunc("exact/two-elements", &TestCheckExact, 4, 6, 0);
+  bad |= run_trunc("exact/no-room", &TestCheckExact, 2, 3, 0);
+  bad |= run_trunc("atmost/ok", &TestCheckAtmost, 2, 4, 1);
+  bad |= run_trunc("atmost/too-long", &TestCheckAtmost, 3, 4, 0);
+  bad |= run_trunc("atmost/too-short", &TestCheckAtmost, 1, 4, 0);
+  bad |= run_trunc("atmost/empty", &TestCheckAtmost, 0, 2, 0);
+  bad |= run_trunc("atmost/slack", &TestCheckAtmost, 4, 6, 1);
+  bad |= run_trunc("atmost/no-room", &TestCheckAtmost, 2, 3, 0);
+  bad |= run_trunc("nlist/ok", &TestCheckNlist, 2, 4, 1);
+  bad |= run_trunc("nlist/odd", &TestCheckNlist, 3, 4, 0);
+  bad |= run_trunc("nlist/too-short", &TestCheckNlist, 1, 4, 0);
+  bad |= run_trunc("nlist/empty", &TestCheckNlist, 0, 2, 1);
+  bad |= run_trunc("nlist/two-elements", &TestCheckNlist, 4, 6, 1);
+  bad |= run_trunc("nlist/no-room", &TestCheckNlist, 2, 3, 0);
+  return bad;
+}
+
 int main(void) {
   uint8_t *test = calloc(testSize, sizeof(uint8_t));
   if (test != NULL) {
@@ -76,5 +125,5 @@ int main(void) {
     }
     free(test);
   }
-  return test_reuse() || test_field_pos();
+  return test_reuse() || test_field_pos() || test_truncation();
 }

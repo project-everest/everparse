@@ -166,11 +166,10 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
      whichever *generated* module happens to use it first, and then has to
      share through an `internal/` header. Instead each instance names the one
      component it actually modifies -- [trunc_t] -- and recovers the other two
-     from the original stream through the projections below. Buffer sets
-     [trunc_t = len_t] (it re-bases nothing and only shortens the length),
-     extern sets [trunc_t = base_t] (its length and position are [unit]), so in
-     both backends [truncate] extracts to a scalar-returning function and no
-     struct is ever built. *)
+     from the original stream through the projections below. Both backends set
+     [trunc_t = len_t] -- neither re-bases anything, and truncating only
+     shortens the view -- so [truncate] extracts to a scalar-returning function
+     and no struct is ever built. *)
   [@@@FStar.Tactics.Typeclasses.no_method]
   trunc_t: Type0;
 

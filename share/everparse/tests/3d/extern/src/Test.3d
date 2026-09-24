@@ -23,3 +23,30 @@ typedef struct _FIELDPOS (mutable UINT64 *offset) {
     return (py == 4);
   };
 } FIELDPOS;
+
+// Regression test for truncation on an extern stream. `t_exact`, `t_at_most`
+// and variable-size `nlist` all validate a sub-parser against a bounded view
+// of the stream, and the client knows nothing of that bound: it reports what
+// the underlying stream still holds. So the bound has to be enforced on this
+// side, and a sub-parser that overruns it must fail rather than read on into
+// the bytes that follow.
+entrypoint
+typedef struct _EXACT {
+  UINT8  len;
+  UINT16 body[:byte-size-single-element-array len];
+  UINT8  trailer;
+} EXACT;
+
+entrypoint
+typedef struct _ATMOST {
+  UINT8  len;
+  UINT16 body[:byte-size-single-element-array-at-most len];
+  UINT8  trailer;
+} ATMOST;
+
+entrypoint
+typedef struct _NLIST {
+  UINT8  len;
+  UINT16 body[:byte-size len];
+  UINT8  trailer;
+} NLIST;

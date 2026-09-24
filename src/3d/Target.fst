@@ -1026,10 +1026,11 @@ let print_c_entry
      then
        if not is_input_stream_buffer
        then
-       (* The `extern`/`static` Pulse validators pass the stream object and
-          the origin of the current validation (its length is `unit`, hence
-          erased). The reported position is relative to that origin, as in
-          Low*, where the wrapper always passes a start position of 0. *)
+       (* The `extern`/`static` Pulse validators pass the stream object, the
+          truncation bound of the current view (0 at top level, i.e. the whole
+          stream) and the origin of the current validation. The reported
+          position is relative to that origin, as in Low*, where the wrapper
+          always passes a start position of 0. *)
        Printf.sprintf
           "%sstatic\n\
            void DefaultErrorHandler(\n\t\
@@ -1039,9 +1040,11 @@ let print_c_entry
                                uint8_t error_code,\n\t\
                                uint8_t *context,\n\t\
                                EVERPARSE_INPUT_STREAM_BASE base,\n\t\
+                               size_t len,\n\t\
                                size_t origin)\n\
            {\n\t\
              %s\n\t\
+             (void) len;\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
                typename_s,\n\t\t\
                fieldname,\n\t\t\
@@ -1373,7 +1376,7 @@ let print_c_entry
        ^ Printf.sprintf "uint64_t startPosition%s;\n\n\t" scalar_zero
        ^ frame_init
        ^ "startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t"
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)startPosition);\n\t" name params error_handler_arg
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)0U, (size_t)startPosition);\n\t" name params error_handler_arg
        ^ "parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t"
        ^ tail
      else
@@ -1381,7 +1384,7 @@ let print_c_entry
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
          %s\
          uint64_t startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t\
-         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)startPosition);\n\t\
+         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)0U, (size_t)startPosition);\n\t\
          uint64_t parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t\
          %s"
         struct_zero

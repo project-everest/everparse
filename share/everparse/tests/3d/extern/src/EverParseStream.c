@@ -100,8 +100,11 @@ int EverParsePush(EVERPARSE_INPUT_STREAM_BASE const x, uint8_t * const buf, size
   return 1;
 }
 
+int EverParseErrorCount = 0;
+
 void EverParseHandleError(EVERPARSE_EXTRA_T _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code)
 {
+  ++EverParseErrorCount;
   printf("Validation failed in Test, struct %s, field %s. Reason: %s\n", typename, fieldname, reason);
 }
 

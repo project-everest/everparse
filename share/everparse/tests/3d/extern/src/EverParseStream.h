@@ -43,6 +43,11 @@ int EverParsePush(EVERPARSE_INPUT_STREAM_BASE x, uint8_t * buf, size_t len);
 // dummy type, it is not used
 typedef int EVERPARSE_EXTRA_T;
 
+/* Number of errors reported through EverParseHandleError so far. The tests in
+   main.c read it to recover the accept/reject verdict: the generated wrapper
+   returns the parsed size, which is nonzero on failure too. */
+extern int EverParseErrorCount;
+
 void EverParseHandleError(EVERPARSE_EXTRA_T _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code);
 void EverParseRetreat(EVERPARSE_EXTRA_T _dummy, EVERPARSE_INPUT_STREAM_BASE base, uint64_t parsedSize);
 #endif // __EVERPARSESTREAM
