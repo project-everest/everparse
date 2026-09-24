@@ -729,10 +729,16 @@ let collect_files_from
             else []
       end @
       begin if wrappers then
+              (* all C files emitted by 3d itself, cf. Main.emit_entrypoint.
+                 Nonexistent ones are filtered out by collect_file. *)
               [
                 Printf.sprintf "%sWrapper.c" modul;
                 Printf.sprintf "%sWrapper.h" modul;
                 Printf.sprintf "%sStaticAssertions.c" modul;
+                Printf.sprintf "%sAutoStaticAssertions.c" modul;
+                Printf.sprintf "%s_OutputTypesDefs.h" modul;
+                Printf.sprintf "%s_ExternalTypedefs.h" modul;
+                Printf.sprintf "%s_OutputTypes.c" modul;
               ]
             else []
       end
