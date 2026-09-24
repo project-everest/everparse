@@ -1659,14 +1659,35 @@ let print_c_entry
     |> List.Tot.fold_left include_external_api_from_module ""
   in
   (* The generated wrappers keep their uint32_t/uint64_t argument types, but
-     the Pulse validators are indexed by size_t. Check the casts are lossless. *)
+     the Pulse validators are indexed by size_t, so both conversion directions
+     have to be lossless.
+
+     Widening: every `uint32_t -> size_t` cast (the wrapper's `len`, and the
+     `n` of `validate_nlist`/`validate_t_at_most`/`validate_t_exact`) is
+     justified in F* by `EverParse3d.Actions.Base.size_t_fits_u32`, an
+     `assume val` of `FStar.SizeT.fits_u32`. C only guarantees
+     `SIZE_MAX >= 65535`, so the first assertion is what backs that
+     assumption.
+
+     Narrowing: `size_t -> uint64_t` (the `field_pos_64` action, the
+     `field_ptr_after` bounds check, and the position reported to the error
+     callback) uses `FStar.SizeT.sizet_to_uint64`, which is specified modulo
+     `pow2 64`. The second assertion is what rules the modulo out. It is also
+     what makes the extern wrapper's `size_t -> uint64_t -> size_t` round trip
+     of the validation origin lossless.
+
+     Note the second assertion is an upper bound, not a lower one: nothing
+     converts a uint64_t to a size_t (probe offsets and sizes stay uint64_t
+     end to end, exactly as in Low*, and any narrowing there is the client's
+     to do), so requiring size_t to be at least 64 bits would reject 32-bit
+     targets for no reason. *)
   let pulse_static_asserts =
     if Options.get_pulse ()
     then
       "#include \"EverParsePulse.h\"\n\
        #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
        _Static_assert(sizeof(size_t) >= sizeof(uint32_t), \"EverParse: size_t must be at least as wide as uint32_t\");\n\
-       _Static_assert(sizeof(size_t) >= sizeof(uint64_t), \"EverParse: size_t must be at least as wide as uint64_t\");\n\
+       _Static_assert(sizeof(size_t) <= sizeof(uint64_t), \"EverParse: size_t must be no wider than uint64_t\");\n\
        #endif\n"
     else ""
   in
