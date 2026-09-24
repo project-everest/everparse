@@ -1,6 +1,8 @@
 module EverParse3d.ProbeActions
 #lang-pulse
 
+module U64 = FStar.UInt64
+
 
 let probe_fn_incremental
   (#copy_buffer_t: Type0)
