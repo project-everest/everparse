@@ -121,9 +121,12 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 # output_state_name is compile-only: it checks that a mutable output parameter
 # named `output_state` does not collide with the Pulse backend's own generated
 # output state, which used to make the generated F* fail to typecheck.
+#
+# field_pos_32_backend is generation-only: it pins which input-stream backends
+# accept field_pos_32 (buffer only, as in Low*) and field_pos_64 (all of them).
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
-  probe field_ptr output_state_name
+  probe field_ptr output_state_name field_pos_32_backend
 
 # Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and

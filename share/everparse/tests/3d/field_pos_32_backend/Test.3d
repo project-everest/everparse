@@ -1,0 +1,22 @@
+// `field_pos_32` narrows the validator position to 32 bits. That is only
+// lossless when the whole input is addressed by a 32-bit length, which is the
+// case for the `buffer` backend but not for `extern`/`static`, whose stream
+// position is cumulative and unbounded.
+//
+// Low* enforces this by giving `action_field_pos_32` a
+// `squash (backend_flag == BackendFlagBuffer)` argument, so a spec like this
+// one is rejected by F* with Error 19 on `extern` and `static`. This test
+// pins the same restriction for `--pulse`, where the frontend rejects it.
+//
+// `field_pos_64` is deliberately *not* restricted, in either backend: see the
+// positive half of this test.
+
+entrypoint typedef struct _fieldPos32 (mutable UINT32 *out_pos)
+{
+   UINT32 x
+    {:on-success
+       var i = field_pos_32;
+       *out_pos = i;
+       return true;
+     };
+} fieldPos32;
