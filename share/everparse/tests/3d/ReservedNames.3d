@@ -1,0 +1,38 @@
+// Regression test: a 3D parameter may be named after any of the F* library
+// definitions that the Pulse backend's state dictionary is built out of.
+//
+// The generated Pulse module opens EverParse3d.State and
+// Pulse.Lib.Pervasives, and a 3D parameter is printed as a plain F* binder
+// carrying the user's own name, so a parameter named `state_dict`, `pts_to`,
+// ... used to shadow the library name and the generated code did not
+// typecheck. The Low* backend has neither the opens nor the state dictionary
+// and always accepted these.
+//
+// Both the mutable parameters (which become dictionary leaves) and the plain
+// ones (which only appear in refinements) are covered, and `ReservedInner`
+// covers the non-entrypoint path, where the names appear in the `dtyp_`
+// signature rather than in a dictionary.
+
+typedef struct _ReservedInner (UINT32 state_dict_weaken_prop)
+{
+  UINT8 a { a == state_dict_weaken_prop };
+} ReservedInner;
+
+entrypoint
+typedef struct _ReservedNames (UINT32 state_dict_empty,
+                               mutable UINT32 *state_dict,
+                               mutable UINT32 *state_dict_singleton,
+                               mutable UINT32 *state_dict_prod,
+                               mutable UINT32 *pts_to)
+{
+  UINT32 n { n == state_dict_empty };
+  ReservedInner(n) inner;
+  UINT8 last
+   {:on-success
+      *state_dict = n;
+      *state_dict_singleton = n;
+      *state_dict_prod = n;
+      *pts_to = n;
+      return true;
+    };
+} ReservedNames;

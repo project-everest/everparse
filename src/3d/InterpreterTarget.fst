@@ -813,7 +813,15 @@ let pulse_sanitize_key (e:string) : ML string =
    [Ast.reserved_prefix] followed by a lowercase letter: 3D rejects
    identifiers starting with ["___"], and [Target.print_ident] only ever
    produces that prefix in front of an uppercase letter, so the name cannot
-   be shadowed by a user parameter either. *)
+   be shadowed by a user parameter either.
+
+   That argument covers the compiler-owned *definitions* only. Every library
+   name the state dictionary is built out of -- [state_dict] and friends from
+   [EverParse3d.State], and [pts_to] -- is in scope through an [open] in the
+   Pulse module prefix, and a 3D parameter is printed as a plain F* binder
+   carrying the user's own name, so such a parameter would shadow the library
+   name and the generated code would not typecheck. They are therefore printed
+   fully qualified below, as [A.copy_buffer_state_dict] already was. *)
 let pulse_output_state_key : string = "\"#output\""
 let pulse_output_state_name : string = A.reserved_prefix ^ "output_state"
 
@@ -854,7 +862,9 @@ let rec pulse_state_dict_leaves (mname:string) (i:inv)
       pulse_state_dict_leaves mname i @ pulse_state_dict_leaves mname j
     | Inv_ptr x ->
       let e = T.print_expr mname x in
-      [e, pulse_key_of e, Printf.sprintf "(state_dict_singleton %s (pts_to %s #1.0R))" (pulse_key_of e) e]
+      [e, pulse_key_of e,
+       Printf.sprintf "(EverParse3d.State.state_dict_singleton %s (Pulse.Class.PtsTo.pts_to %s #1.0R))"
+         (pulse_key_of e) e]
     | Inv_copy_buf x ->
       let e = T.print_expr mname x in
       [e, pulse_key_of e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
@@ -874,14 +884,15 @@ let rec pulse_dedup_leaves (l:list (string & string & string))
 let rec pulse_fold_prod (l:list (string & string & string))
   : ML string
   = match l with
-    | [] -> "state_dict_empty"
+    | [] -> "EverParse3d.State.state_dict_empty"
     | [(_, _, v)] -> v
-    | (_, _, v) :: tl -> Printf.sprintf "(state_dict_prod %s %s)" v (pulse_fold_prod tl)
+    | (_, _, v) :: tl ->
+      Printf.sprintf "(EverParse3d.State.state_dict_prod %s %s)" v (pulse_fold_prod tl)
 
 let print_state_dict (mname:string) (i:index inv)
   : ML string
   = match i with
-    | None -> "state_dict_empty"
+    | None -> "EverParse3d.State.state_dict_empty"
     | Some i -> pulse_fold_prod (pulse_dedup_leaves (pulse_state_dict_leaves mname i))
 
 (* The keys of the leaves of a declaration's own dictionary, in the order in
@@ -1402,7 +1413,8 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args
   let dtyp_t =
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                     noextract\n\
-                    val dtyp_%s %s (d: state_dict) (sq: squash (state_dict_weaken_prop %s d))\n\
+                    val dtyp_%s %s (d: EverParse3d.State.state_dict)\n\
+                       (sq: squash (EverParse3d.State.state_dict_weaken_prop %s d))\n\
                       : dtyp %s d %b kind_%s %b %b"
       root_name
       binders
@@ -1623,7 +1635,8 @@ let print_binding mname (td:type_decl)
     then
       Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                         noextract\n\
-                        let dtyp_%s %s (d: state_dict) (sq: squash (state_dict_weaken_prop %s d))\n\
+                        let dtyp_%s %s (d: EverParse3d.State.state_dict)\n\
+                                     (sq: squash (EverParse3d.State.state_dict_weaken_prop %s d))\n\
                           : dtyp %s d %b kind_%s %b %b\n\
                           = mk_dtyp_app\n\
                                     %s\n\
