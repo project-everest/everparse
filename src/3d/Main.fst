@@ -230,6 +230,10 @@ let emit_fstar_code_for_interpreter (en:env)
       else ""
     in
  
+    (* Each abbreviation here shadows a 3D module of the same name inside
+       every generated file, so keep the list to the abbreviations the
+       generated code actually uses. [I] was not one of them: nothing emitted
+       refers to [EverParse3d.InputStream.Base]. *)
     let module_prefix =
       if Options.get_pulse ()
       then
@@ -243,7 +247,6 @@ let emit_fstar_code_for_interpreter (en:env)
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.Base\n\
                              module P = EverParse3d.Prelude\n\
-                             module I = EverParse3d.InputStream.Base\n\
                              module B = %s\n\
                              #set-options \"--fuel 0 --ifuel 0 --z3rlimit 32 --ext optimize_let_vc\"\n"
                              modul maybe_open_external_api
