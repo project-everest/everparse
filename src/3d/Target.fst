@@ -1680,7 +1680,23 @@ let print_c_entry
      converts a uint64_t to a size_t (probe offsets and sizes stay uint64_t
      end to end, exactly as in Low*, and any narrowing there is the client's
      to do), so requiring size_t to be at least 64 bits would reject 32-bit
-     targets for no reason. *)
+     targets for no reason. In particular the extern round trip above starts
+     from a size_t, so widening it and narrowing it back recovers it exactly.
+
+     Both assertions are emitted for every backend. For the first that is
+     plainly right, since `size_t_fits_u32` is backend-independent. The second
+     looks at first sight as though it could be restricted to extern/static,
+     because those are the ones whose position is an unbounded cumulative
+     stream offset, whereas a buffer validator is entered from the wrapper
+     with a `uint32_t len` and so never sees a position above 2^32. That
+     reasoning is incomplete: `probe_then_validate` re-enters the inner
+     validator over the copy buffer, passing it the *same* error handler
+     together with `CP.len_of dest`, and for the buffer backend `len_t` is an
+     unrefined `FStar.SizeT.t` -- the client's EVERPARSE_COPY_BUFFER_T
+     capacity, not the wrapper's uint32_t. So inside a probe the buffer
+     backend is exactly as unbounded as extern/static, and since probes are
+     buffer-only under --pulse it is the backend that would be exempted.
+     Keep the assertion unconditional. *)
   let pulse_static_asserts =
     if Options.get_pulse ()
     then
