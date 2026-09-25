@@ -46,14 +46,21 @@ Knobs:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `ITERS` | `20000` | fuzzer iterations per entrypoint, per backend |
-| `LO_DIR` | `src/3d/tests/out.batch` | Low\* generated C |
-| `PU_DIR` | `share/everparse/tests/3d/out.pulse` | Pulse generated C |
+| `LO_DIR` | `src/3d/tests/out.batch-interpret` | Low\* generated C |
+| `PU_DIR` | `share/everparse/tests/3d/out.batch-interpret.pulse` | Pulse generated C |
 | `SUBDIR_TESTS` | see Makefile | which sub-directory tests to compare |
 
-The two input directories are produced by the ordinary `batch-test` and
-`pulse-batch` targets, so a normal build already has them; the Makefile builds
-them on demand otherwise. Regenerating them is slow (several minutes per
-backend), which is why they are reused rather than rebuilt here.
+The two input directories are produced by the ordinary `batch-interpret-test`
+and `pulse-batch-interpret-test` targets, so a normal build already has them;
+the Makefile builds them on demand otherwise. Regenerating them is slow
+(several minutes per backend), which is why they are reused rather than rebuilt
+here.
+
+We read those rather than the `batch-test`/`pulse-batch` outputs because the
+latter are built from `positive_tests`, which excludes `ActAndCheck.3d` and
+`FieldDependence0.3d`. Both targets drive an identical pipeline today and
+differ only in their file list, so taking the wider one costs nothing and buys
+coverage of the only test that exercises `:act`/`:check`.
 
 `pulse-diff` is **not** part of `src/3d/tests`' `all` target, because it needs
 both backends and the Pulse one is absent from `NO_PULSE` builds.

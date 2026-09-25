@@ -46,9 +46,20 @@ ITERS ?= 20000
 # Where each backend's generated C lives. Both are produced by the regular test
 # targets, so a normal build has them already; the rules below build them on
 # demand otherwise.
+#
+# We deliberately read the batch-interpret outputs rather than the batch ones.
+# The two targets drive the very same pipeline today and differ only in which
+# files they feed it: batch-test uses `positive_tests`, which excludes
+# ActAndCheck.3d and FieldDependence0.3d, whereas batch-interpret-test uses
+# `INTERPRETABLE_FILES`, i.e. every non-FAIL .3d. That exclusion is a leftover
+# from when 3D had two translation backends and `--interpret` chose between
+# them (commit 7b2764b70): those two files were only supported by the
+# interpreter one. Translate.fst and --interpret are both long gone, so the
+# exclusion now only costs coverage -- and ActAndCheck.3d is the sole test
+# exercising :act/:check, as well as one of only three using field_pos.
 PULSE_TESTS := $(EVERPARSE_HOME)/share/everparse/tests/3d
-LO_DIR ?= $(EVERPARSE_HOME)/src/3d/tests/out.batch
-PU_DIR ?= $(PULSE_TESTS)/out.pulse
+LO_DIR ?= $(EVERPARSE_HOME)/src/3d/tests/out.batch-interpret
+PU_DIR ?= $(PULSE_TESTS)/out.batch-interpret.pulse
 
 LO_INC = -I $(LO_DIR) -I $(EVERPARSE_HOME)/src/3d \
          -I $(EVERPARSE_HOME)/src/3d/prelude/buffer \
@@ -67,10 +78,10 @@ all: pulse-diff-test pulse-diff-subdirs
 .PHONY: all pulse-diff-test pulse-diff-subdirs clean
 
 $(LO_DIR):
-	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d/tests batch-test
+	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d/tests batch-interpret-test
 
 $(PU_DIR):
-	+$(MAKE) -C $(PULSE_TESTS) pulse-batch
+	+$(MAKE) -C $(PULSE_TESTS) pulse-batch-interpret-test
 
 # The dispatch table is derived from the generated *Wrapper.h. The same driver
 # has to be valid against both backends, so gen_diff.py is also handed the
