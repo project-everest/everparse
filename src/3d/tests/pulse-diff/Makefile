@@ -73,9 +73,21 @@ CFLAGS_COMMON = -O1 -g -std=c11 -fwrapv -D_BSD_SOURCE -D_DEFAULT_SOURCE \
                 -Wno-unknown-warning-option \
                 -Wno-ignored-qualifiers -Wno-unused-parameter
 
-all: pulse-diff-test pulse-diff-subdirs
+all: pulse-diff-test pulse-diff-abi pulse-diff-subdirs
 
-.PHONY: all pulse-diff-test pulse-diff-subdirs clean
+.PHONY: all pulse-diff-test pulse-diff-abi pulse-diff-subdirs clean
+
+# Compile-only ABI check: both backends must expose EVERPARSE_ERROR_HANDLER,
+# and it must match the error-handler binder of the generated validators. See
+# the comment at the top of abi_check.c.
+pulse-diff-abi: abi_check.c | $(LO_DIR) $(PU_DIR)
+	$(CC) $(CFLAGS_COMMON) -Werror=incompatible-pointer-types \
+	  -Werror=implicit-function-declaration -Werror=int-conversion \
+	  $(LO_INC) -c abi_check.c -o abi_check_lo.o
+	$(CC) $(CFLAGS_COMMON) -Werror=incompatible-pointer-types \
+	  -Werror=implicit-function-declaration -Werror=int-conversion \
+	  $(PU_INC) -I $(EVERPARSE_HOME)/src/3d -c abi_check.c -o abi_check_pu.o
+	@echo "pulse-diff: EVERPARSE_ERROR_HANDLER present and compatible in both backends"
 
 $(LO_DIR):
 	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d/tests batch-interpret-test
@@ -186,5 +198,5 @@ pulse-diff-subdirs:
 
 clean:
 	rm -f diff_lo diff_pu driver.c corpus_*.bin trace_*.txt fuzzlog_*.txt \
-	      semantics_lo.txt semantics_pu.txt
+	      semantics_lo.txt semantics_pu.txt abi_check_lo.o abi_check_pu.o
 	rm -rf sub
