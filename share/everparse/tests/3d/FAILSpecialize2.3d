@@ -1,0 +1,33 @@
+extern probe ProbeAndCopy
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT64) WriteU64
+extern probe (INIT) ProbeInit
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+typedef struct _TLV
+{
+    UINT8 tag;
+    UINT32 length;
+    UINT8 payload;
+} TLV;
+
+typedef struct _WRAPPER(UINT32 Len, EVERPARSE_COPY_BUFFER_T Output)
+{
+    TLV *pointer(UINT64) tlv
+        probe ProbeAndCopy(length=Len, destination=Output);
+} WRAPPER;
+
+specialize (pointer(*), pointer(UINT64)) WRAPPER WRAPPER_32;
+
+entrypoint
+casetype _ENTRY(Bool Requestor32, UINT32 Len, EVERPARSE_COPY_BUFFER_T Output)
+{
+    switch (Requestor32)
+    {
+        case true:
+            WRAPPER_32(Len,Output) w32;
+
+        case false:
+            WRAPPER(Len,Output) w64;
+    }
+} ENTRY;

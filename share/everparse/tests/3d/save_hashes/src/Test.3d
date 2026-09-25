@@ -1,0 +1,6 @@
+entrypoint
+typedef struct _Pair
+{
+  UINT32 fst;
+  UINT32 snd;
+} Pair;

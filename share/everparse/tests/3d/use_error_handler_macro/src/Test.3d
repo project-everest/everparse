@@ -1,0 +1,10 @@
+// A simple format with a constraint, used to test the
+// --use_error_handler_macro CLI option.  Validation will trigger the
+// generated EVERPARSE_ERROR_HANDLER_MACRO when the constraint fails
+// or when there is not enough input.
+
+entrypoint
+typedef struct _Point {
+  UINT32 x;
+  UINT32 y { y <= x };
+} Point;

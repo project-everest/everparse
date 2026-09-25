@@ -1045,7 +1045,7 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_false _
   | I.T_string _ _ _
   | I.T_denoted _ _
-  | I.T_probe_then_validate _ _ _ _ _ _ _ _ _
+  | I.T_probe_then_validate _ _ _ _ _ _ _ _ _ _
     -> 0
 
 let rec parse_typ (t : I.typ) : Tot (parser not_reading)
@@ -1078,7 +1078,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
       parse_nlist_total_constant_size i size
     else
       parse_nlist (fun _ -> mk_expr size) (parse_typ body)
-  | I.T_probe_then_validate _fn body _ptr_sz _nullable _probe _dest _as_u64 _probe_init dest_sz -> 
+  | I.T_probe_then_validate _fn body _ptr_sz _nullable _probe _dest _as_u64 _probe_init dest_sz _ -> 
     parse_probe (fun _ -> mk_expr dest_sz) (parse_denoted body)
 
 and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Tot (int -> parser not_reading)
@@ -1435,8 +1435,18 @@ let print_witness_call_as_c_aux
   out flight;
   out (string_of_int num);
   out "[0].buf, ";
-  out_witness_len out flight num;
-  out ", 0);"
+  if Options.get_pulse ()
+  then begin
+    (* Pulse validators take the input as (base, len, pos), where pos is an
+       in/out pointer rather than a by-value start position. *)
+    out "(size_t) ";
+    out_witness_len out flight num;
+    out ", &everparse_pos);"
+  end
+  else begin
+    out_witness_len out flight num;
+    out ", 0);"
+  end
 
 let pointer_elt_type_as_c (x: simple_arg_type true) : Tot (option string) =
   match x with
@@ -1546,17 +1556,61 @@ let alloc_ptr_copy_buffer
   arg_var
   arg_var
 
-let alloc_copy_buffer
-  (use_ptr: bool)
+(* The --pulse counterparts: same as the Low* ones plus the position cell that
+   EverParseStreamPos hands to the validator. *)
+let alloc_default_copy_buffer_pulse
   (flight: string)
   (wid: nat)
   (nblayers: nat)
   (arg_var: string)
 : Tot string
 =
-  if use_ptr
-  then alloc_ptr_copy_buffer flight wid arg_var
-  else alloc_default_copy_buffer flight wid nblayers arg_var
+  Printf.sprintf
+"
+  copy_buffer_t _contents_%s = { .layers = witness%s%d, .count = %d, .cur = 0U, .pos = (size_t) 0 };
+  EVERPARSE_COPY_BUFFER_T %s = (void* ) &_contents_%s;
+"
+  arg_var
+  flight
+  wid
+  nblayers
+  arg_var
+  arg_var
+
+let alloc_ptr_copy_buffer_pulse
+  (flight: string)
+  (wid: nat)
+  (arg_var: string)
+: Tot string
+=
+  Printf.sprintf
+"
+  copy_buffer_t _contents_%s = { .layer = witness%s%d[0], .pos = (size_t) 0 };
+  EVERPARSE_COPY_BUFFER_T %s = (void* ) &_contents_%s;
+"
+  arg_var
+  flight
+  wid
+  arg_var
+  arg_var
+
+let alloc_copy_buffer
+  (use_ptr: bool)
+  (flight: string)
+  (wid: nat)
+  (nblayers: nat)
+  (arg_var: string)
+: ML string
+=
+  if Options.get_pulse ()
+  then
+    if use_ptr
+    then alloc_ptr_copy_buffer_pulse flight wid arg_var
+    else alloc_default_copy_buffer_pulse flight wid nblayers arg_var
+  else
+    if use_ptr
+    then alloc_ptr_copy_buffer flight wid arg_var
+    else alloc_default_copy_buffer flight wid nblayers arg_var
 
 let print_witness_call_as_c
   (use_ptr: bool)
@@ -1583,17 +1637,29 @@ let print_witness_call_as_c
       | (_, ArgSimple _) -> ()
     )
     arg_types;
-  out "
+  let pulse = Options.get_pulse () in
+  if pulse
+  then out "
+    size_t everparse_pos = (size_t) 0U;
+    uint8_t output = "
+  else out "
     uint64_t output = ";
   print_witness_call_as_c_aux out flight validator_name arg_types args num;
   out "
     printf(\"  // ";
   print_witness_call_as_c_aux out flight validator_name arg_types args num;
   out " // \");
-    BOOLEAN result = !EverParseIsError(output);
-    BOOLEAN consumes_all_bytes_if_successful = true;
+";
+  if pulse
+  then out "    BOOLEAN result = (output == 0U);
+"
+  else out "    BOOLEAN result = !EverParseIsError(output);
+";
+  out "    BOOLEAN consumes_all_bytes_if_successful = true;
     if (result) {
-      consumes_all_bytes_if_successful = (output == ";
+      consumes_all_bytes_if_successful = (";
+  if pulse then out "(uint64_t) everparse_pos" else out "output";
+  out " == ";
   out_witness_len out flight num;
   out ");
       result = consumes_all_bytes_if_successful;
@@ -2057,7 +2123,7 @@ let mk_get_negative_test_witness (name: string) (l: list arg_type) : string =
 (assert (= state-witness-input-size -1)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
 "
 
-let test_error_handler_fn = "
+let test_error_handler_fn_lowstar = "
 static void TestErrorHandler (
   const char *typename_s,
   const char *fieldname,
@@ -2078,6 +2144,41 @@ static void TestErrorHandler (
 }
 "
 
+(* The Pulse backend passes the input as a (base, len, pos) triple rather
+   than an EVERPARSE_INPUT_BUFFER, and its error codes are uint8_t.  Pulse
+   does not thread a per-field start position to the error handler, so the
+   reported position is the current one, read back from the position pointer
+   and cast to uint64_t.  This mirrors what the generated *Wrapper.c does,
+   and is why positions reported here can differ from the Low* ones even
+   though the verdicts agree. *)
+let test_error_handler_fn_pulse = "
+static void TestErrorHandler (
+  const char *typename_s,
+  const char *fieldname,
+  const char *reason,
+  uint8_t error_code,
+  uint8_t *context,
+  uint8_t *base,
+  size_t len,
+  size_t *pos
+) {
+  (void) error_code;
+  (void) base;
+  (void) len;
+  if (*context) {
+    printf(\"// Reached from position %\" PRIu64 \": type name %s, field name %s\\n\", (uint64_t) *pos, typename_s, fieldname);
+  } else {
+    printf(\"// Parsing failed at position %\" PRIu64 \": type name %s, field name %s. Reason: %s\\n\", (uint64_t) *pos, typename_s, fieldname, reason);
+    *context = 1;
+  }
+}
+"
+
+let test_error_handler_fn () : ML string =
+  if Options.get_pulse ()
+  then test_error_handler_fn_pulse
+  else test_error_handler_fn_lowstar
+
 let witness_layer_typedef = "
 typedef struct {
   uint8_t *buf;
@@ -2094,7 +2195,7 @@ typedef struct {
 let test_error_handler () : ML string =
   (if Options.get_use_error_handler_macro ()
    then ""
-   else test_error_handler_fn)
+   else test_error_handler_fn ())
   ^ witness_layer_typedef
 
 let test_default_probe_functions = "
@@ -2129,8 +2230,62 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 }
 "
 
-let test_probe_functions (use_ptr: bool) : Tot string =
-  if use_ptr then test_ptr_probe_functions else test_default_probe_functions
+(* The --pulse counterparts.  The copy buffer is the same opaque void* handle
+   as in Low*, so the harness still defines its own copy_buffer_t and the
+   EverParseStreamOf/EverParseStreamLen hooks.  Two differences: Pulse input
+   stream lengths are size_t rather than uint64_t, and the read position lives
+   inside the stream rather than being passed to the validator, so there is a
+   third hook, EverParseStreamPos, returning a cell the harness owns. *)
+let test_default_probe_functions_pulse = "
+typedef struct {
+  witness_layer_t *layers;
+  uint64_t count;
+  uint64_t cur;
+  size_t pos;
+} copy_buffer_t;
+
+uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->layers[state->cur].buf;
+}
+
+size_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return (size_t) state->layers[state->cur].len;
+}
+
+size_t * EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return &state->pos;
+}
+"
+
+let test_ptr_probe_functions_pulse = "
+typedef struct {
+  witness_layer_t layer;
+  size_t pos;
+} copy_buffer_t;
+
+uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->layer.buf;
+}
+
+size_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return (size_t) state->layer.len;
+}
+
+size_t * EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return &state->pos;
+}
+"
+
+let test_probe_functions (use_ptr: bool) : ML string =
+  if Options.get_pulse ()
+  then (if use_ptr then test_ptr_probe_functions_pulse else test_default_probe_functions_pulse)
+  else (if use_ptr then test_ptr_probe_functions else test_default_probe_functions)
 
 let generate_default_probe_function (name: string) : Tot string = "
 BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
@@ -2177,17 +2332,61 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 }
 "
 
-let generate_probe_function (use_ptr: bool) (name: string) : Tot string =
-  if use_ptr
-  then generate_ptr_probe_function name
-  else generate_default_probe_function name
+(* The --pulse counterparts of the probe callbacks.  They differ from the Low*
+   ones only in also rewinding the harness-owned position cell: under --pulse
+   the position belongs to the stream, so a copy buffer reused across probe
+   sites has to be rewound.  (The interpreter calls `reset` too; doing it here
+   as well is harmless and keeps the harness self-contained.) *)
+let generate_default_probe_function_pulse (name: string) : Tot string = "
+BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+  if (ro != 0 || wo != 0) {
+    printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
+    exit(4);
+  };
+  copy_buffer_t *state = ((copy_buffer_t * ) dst);
+  if (src < state->count) {
+    uint64_t got_len = state->layers[src].len;
+    if (len != got_len) {
+      printf(\"ProbeAndCopy: layer length does not match spec. Expected %\" PRIu64 \", got %\" PRIu64 \"\\n\", len, got_len);
+      exit(4);
+    } else {
+      state->cur = src;
+      state->pos = (size_t) 0;
+      return true;
+    }
+  } else {
+    printf(\"ProbeAndCopy: incorrect pointer\\n\");
+    exit(4);
+  }
+}
+"
+
+let generate_ptr_probe_function_pulse (name: string) : Tot string = "
+BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+  if (ro != 0 || wo != 0) {
+    printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
+    exit(4);
+  };
+  copy_buffer_t *state = ((copy_buffer_t * ) dst);
+  state->layer.buf = (uint8_t* ) (void* ) src;
+  state->layer.len = len;
+  state->pos = (size_t) 0;
+  return true;
+}
+"
+
+let generate_probe_function (use_ptr: bool) (name: string) : ML string =
+  if Options.get_pulse ()
+  then (if use_ptr then generate_ptr_probe_function_pulse name else generate_default_probe_function_pulse name)
+  else (if use_ptr then generate_ptr_probe_function name else generate_default_probe_function name)
 
 let cout_test_probe_functions
   (use_ptr: bool)
   (cout: string -> ML unit)
   (prog: prog)
 : ML unit
-= cout (test_probe_functions use_ptr);
+= begin
+  cout (test_probe_functions use_ptr);
   List.iter
     (fun x -> match x with
     | (name, ProgProbe T.PQWithOffsets) ->
@@ -2197,6 +2396,7 @@ let cout_test_probe_functions
     | _ -> ()
     )
     prog
+  end
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   (use_ptr: bool)
@@ -2309,8 +2509,8 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 print_c_initializer use_ptr flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
-  do_diff_test_for out_dir counter cout z3 print_c_initializer use_ptr flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 use_ptr print_c_initializer flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 use_ptr print_c_initializer flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
   cout "  return 0;
   }
 "
@@ -2360,6 +2560,25 @@ let test_checker_c
   let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
   let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
   let nb_args_s = string_of_int (nb_cmd_and_args - 1) in
+  let pulse = Options.get_pulse () in
+  (* Pulse validators return a uint8_t status (0 on success) and report the
+     number of consumed bytes through their position pointer, whereas Low*
+     validators return the consumed length or an error code. *)
+  let validator_call =
+    if pulse
+    then "
+  size_t everparse_pos = (size_t) 0U;
+  uint8_t result = "^validator_name^"("^call_args_lhs^"&context, "^test_error_handler_call_arg ()^"buf, (size_t) len, &everparse_pos);
+  uint64_t consumed = (uint64_t) everparse_pos;
+"
+    else "
+  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, "^test_error_handler_call_arg ()^"buf, len, 0);
+  uint64_t consumed = result;
+"
+  in
+  let validator_failed =
+    if pulse then "result != 0U" else "EverParseIsError(result)"
+  in
   "
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -2411,17 +2630,15 @@ int main(int argc, char** argv) {
     buf = (uint8_t *) vbuf;
   };
   printf(\"Read %\" PRIuPTR \" bytes from %s\\n\", len, filename);
-  uint8_t context = 0;
-  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, "^test_error_handler_call_arg ()^"buf, len, 0);
-  if (len > 0)
+  uint8_t context = 0;"^validator_call^"  if (len > 0)
     munmap(vbuf, len);
   close(testfile);
-  if (EverParseIsError(result)) {
+  if ("^validator_failed^") {
     printf(\"// Witness from %s REJECTED because validator failed\\n\", filename);
     return 2;
   };
-  if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
-    printf(\"// Witness from %s REJECTED because validator only consumed %\" PRIu64 \" out of %\" PRIuPTR \" bytes\\n\", filename, result, len);
+  if (consumed != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
+    printf(\"// Witness from %s REJECTED because validator only consumed %\" PRIu64 \" out of %\" PRIuPTR \" bytes\\n\", filename, consumed, len);
     return 1;
   }
   printf(\"// Witness from %s ACCEPTED\\n\", filename);

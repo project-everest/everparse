@@ -5,6 +5,9 @@ open FStar.All
 val krmllib: string -> ML string
 val krmlinclude: string -> ML string
 
+(* EverParse's own Makefile.basic, used instead of KaRaMeL's under --pulse *)
+val pulse_makefile_basic: string
+
 val cl_wrapper: unit -> ML string
 
 (* The --print_in_place step has to be performed at source generation

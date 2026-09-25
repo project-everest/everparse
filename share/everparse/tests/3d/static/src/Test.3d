@@ -1,0 +1,29 @@
+entrypoint
+typedef struct _POINT(mutable PUINT8 *out) {
+  UINT32  x;
+  UINT32  y {:on-success
+    var is_not_null = *out = field_ptr_after(18uL);
+    return is_not_null;
+  };
+  UINT32  z;
+} POINT;
+
+output
+typedef struct _OPTR {
+  PUINT8  p;
+} OPTR;
+
+// Regression test: a field_ptr_after that writes through an output-type
+// setter runs at that output type's own state, while the assignment to
+// `seen` runs at the enclosing one. Both actions sit in the same sequence,
+// which is what previously pinned the whole sequence to the output state and
+// made the assignment impossible to typecheck under --pulse.
+entrypoint
+typedef struct _MIXED(mutable UINT32 *seen, mutable OPTR *out) {
+  UINT32  a;
+  UINT32  b {:on-success
+    *seen = a;
+    var ok = out->p = field_ptr_after(4uL);
+    return ok;
+  };
+} MIXED;

@@ -29,6 +29,7 @@ let print_make_rule
   mtype
   everparse_h
   input_stream_binding
+  (pulse: bool)
   (r: rule_t)
 : Tot string
 = 
@@ -49,7 +50,18 @@ let print_make_rule
           then ""
           else
             let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
-            let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
+            (* With --no_everparse_h the client compiles against a prebuilt
+               EverParse.h rather than a copy in the output directory, so the
+               include path has to name the runtime matching the backend. The
+               Low* one declares the same EVERPARSE_ERROR_FRAME as the Pulse
+               EverParsePulse.h that --pulse wrappers include, so picking it
+               here makes the two headers conflict. ddd_home still supplies
+               EverParsePulse{,Endianness}.h and EverParseEndianness.h. *)
+            let ddd_actions_home =
+              if pulse
+              then "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" `OS.concat` "krml" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
+              else ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
+            in
             Printf.sprintf "%s %s %s %s" iopt ddd_home iopt ddd_actions_home
         in
         let copt = match mtype with
@@ -510,7 +522,8 @@ let produce_clang_format_rule
 
 let produce_everparse_h_rule
   (everparse_h: bool)
-: Tot (list rule_t)
+  (all_modules: list string)
+: FStar.All.ML (list rule_t)
 =
   if everparse_h
   then [
@@ -522,7 +535,14 @@ let produce_everparse_h_rule
     };
     {
       ty = Nop;
-      from = [mk_filename "EverParseEndianness" "h"];
+      (* In --pulse mode EverParse.h is not copied from the prelude: KaRaMeL
+         emits it, carrying the bundled runtime, at the same time as the .c
+         files. So it is those, not EverParseEndianness.h, that it follows. *)
+      from =
+        if Options.get_pulse ()
+        then mk_filename "EverParseEndianness" "h" ::
+             List.Tot.map (fun m -> mk_filename m "c") all_modules
+        else [mk_filename "EverParseEndianness" "h"];
       to = mk_filename "EverParse" "h";
       args = "";
     }
@@ -577,7 +597,7 @@ let produce_makefile
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.module_name all_files in
   let rules =
-    produce_everparse_h_rule everparse_h `List.Tot.append`
+    produce_everparse_h_rule everparse_h all_modules `List.Tot.append`
     produce_clang_format_rule clang_format copy_clang_format_opt `List.Tot.append`
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule mtype everparse_h g) all_modules `List.Tot.append`
@@ -618,7 +638,7 @@ let write_makefile
   let makefile_tmp = makefile_final ^ ".tmp" in
   let file = FStar.IO.open_write_file makefile_tmp in
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding (Options.get_pulse ())) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext = "h" && everparse_h

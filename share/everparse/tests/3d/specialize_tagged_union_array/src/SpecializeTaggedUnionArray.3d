@@ -1,0 +1,70 @@
+extern probe ProbeAndCopy
+extern probe (READ UINT16) ProbeAndReadU16
+extern probe (WRITE UINT16) WriteU16
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT32) WriteU32
+extern probe (READ UINT64) ProbeAndReadU64
+extern probe (WRITE UINT64) WriteU64
+extern probe (INIT) ProbeInit
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+
+//64 bit size: 16
+//32 bit size: 8
+aligned
+typedef struct _PAYLOAD_0 {
+    UINT32 f0 { f0 == 0 || f0 == 2 || f0 == 4 || f0 == 6 };
+    UINT8 *ptr;
+} PAYLOAD_0;
+
+
+//64 bit size: 8
+//32 bit size: 4
+aligned
+typedef struct _PAYLOAD_DEFAULT {
+    UINT8 *ptr1;
+} PAYLOAD_DEFAULT;
+
+
+//64-bit size: 16
+//32-bit size: 8
+aligned
+casetype _PAYLOAD(UINT64 Tag) {
+    switch (Tag) {
+        case 0:
+            PAYLOAD_0 p0;
+
+        default: 
+            PAYLOAD_DEFAULT pdef;
+   }
+} PAYLOAD;
+
+aligned
+typedef struct _WRAPPER {
+    UINT64 Tag;
+    PAYLOAD(Tag) payload;
+} WRAPPER;
+
+typedef struct _WRAPPER_ARRAY(UINT16 Count) {
+    WRAPPER Chunks[:byte-size(sizeof(WRAPPER) * Count)];
+} WRAPPER_ARRAY;
+
+typedef struct _WRAPPER_64(UINT16 Count, EVERPARSE_COPY_BUFFER_T Out) {
+    WRAPPER_ARRAY(Count) *pointer(UINT64) Chunks
+    probe ProbeAndCopy(
+        length=(sizeof(WRAPPER) * Count),
+        destination=Out
+    );
+} WRAPPER_64;
+
+specialize (pointer(*), pointer(UINT32)) WRAPPER_64 WRAPPER_32;
+
+entrypoint
+casetype _MAIN(Bool Requestor32, UINT16 Count, EVERPARSE_COPY_BUFFER_T Out) {
+    switch (Requestor32) {
+        case true:
+            WRAPPER_32(Count, Out) w32;
+        default:
+            WRAPPER_64(Count, Out) w64;
+    }
+} MAIN;

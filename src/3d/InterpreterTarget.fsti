@@ -74,6 +74,8 @@ let nes (s:string)
   : non_empty_string
   = if s = "" then "missing" else s
 
+val typ_indexes : Type0
+
 noeq
 type typ : Type =
   | T_false:
@@ -197,9 +199,11 @@ type typ : Type =
       as_u64:A.ident ->
       probe_init:A.ident ->
       dest_sz:expr ->
+      // the indexes (in particular the invariant) of the probed type `t`,
+      // needed to name its `state_dict` under --pulse
+      probed_indexes:typ_indexes ->
       typ
 
-val typ_indexes : Type0
 noeq
 type type_decl = {
   name : T.typedef_name;
