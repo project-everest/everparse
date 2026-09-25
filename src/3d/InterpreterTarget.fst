@@ -980,7 +980,18 @@ let rec print_action (mname:string) (a:T.action)
 
         | T.Action_field_pos_32 ->
           if pulse ()
-          then "Action_field_pos_32"
+          then begin
+            (* Same restriction as Low*, where `action_field_pos_32` carries a
+               `squash (backend_flag == BackendFlagBuffer)`: the action narrows
+               the position to 32 bits, which is only lossless when the whole
+               input is addressed by a 32-bit length. The buffer backend is the
+               one that guarantees that; `extern` and `static` hand out an
+               opaque stream whose cumulative position has no such bound, so
+               the cast would silently truncate. *)
+            if not (pulse_is_buffer ())
+            then A.error "The field_pos_32 action (also spelled field_pos) is only supported by the buffer backend" A.dummy_range;
+            "Action_field_pos_32"
+          end
           else "(Action_field_pos_32 EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
 
         | T.Action_field_ptr ->
