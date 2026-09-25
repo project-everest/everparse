@@ -20,6 +20,7 @@
    meaningless. */
 
 #include "harness.h"
+#include "seeds.inc"
 #include <sys/mman.h>
 #include <inttypes.h>
 
@@ -95,7 +96,14 @@ const char *hx_errors(void) {
 /* ------------------------------------------------------------------ */
 
 #define CB_SLOTS 8
-#define CB_LEN 64
+/* Big enough for the largest probed type in the corpus: specialize_test's
+   `B64` is 80 bytes, so the 64 this used to be made
+   `ProbeAndCopy(length=sizeof(B))` fail unconditionally and no probe in that
+   test could ever succeed. Keep it comfortably above the largest one. */
+#define CB_LEN 256
+/* driver.c dumps every live copy buffer into a fixed-size description. */
+typedef char hx_descsz_covers_copy_buffers
+    [(CB_SLOTS * (2 * CB_LEN + 16) < HX_DESCSZ) ? 1 : -1];
 static uint8_t cb_store[CB_SLOTS][CB_LEN];
 
 void hx_cb_init(hx_cb_t *cb, int s) {
@@ -273,11 +281,20 @@ void hx_init(void) {
     s ^= s << 13; s ^= s >> 17; s ^= s << 5;
     hx_src[i] = (uint8_t)s;
   }
-  /* A pointer chain at the start, so probes that follow pointers land
-     somewhere valid. */
-  for (int i = 0; i < 16; i++) {
-    uint64_t a = HX_SRC_ADDR + 0x1000 * (i + 1);
-    memcpy(hx_src + 8 * i, &a, 8);
+  /* A pointer chain, so that probes which follow pointers land somewhere
+     valid. Replicated at the start of every page rather than only at the
+     start of the region: a chain written solely into the first 128 bytes is
+     exhausted after one hop, so any grammar that dereferences more than two
+     levels deep always lands in the xorshift noise below and can never
+     validate. With a copy in every page, following a pointer lands on another
+     pointer however deep the chain goes. */
+  for (size_t page = 0; page < HX_SRC_SIZE; page += 0x1000) {
+    for (int i = 0; i < 16; i++) {
+      /* Stay inside the region: wrap rather than run off the end. */
+      uint64_t a = HX_SRC_ADDR +
+                   ((page + 0x1000 * (uint64_t)(i + 1)) % HX_SRC_SIZE);
+      memcpy(hx_src + page + 8 * i, &a, 8);
+    }
   }
 }
 
@@ -299,10 +316,36 @@ static const uint64_t INTERESTING[] = {
 };
 #define NINTERESTING (int)(sizeof(INTERESTING) / sizeof(INTERESTING[0]))
 
-static void mutate(hx_case_t *c) {
+/* Writes a dictionary constant into the buffer, in the width and byte order
+   the field it is meant for might use. 3D grammars mix endiannesses freely
+   (ELF's `e_ident` is bytes, its `e_type` is little-endian, and TCP/IP is
+   big-endian), and the width a constant is compared at is not recoverable
+   from the literal, so try all of them. */
+static void plant(hx_case_t *c, uint64_t v) {
+  static const uint32_t widths[] = {1, 2, 4, 8};
+  uint32_t n = widths[rnd() % 4];
+  if (c->len < n) return;
+  uint32_t o = (uint32_t)(rnd() % (c->len - n + 1));
+  for (uint32_t i = 0; i < n; i++) {
+    /* Little-endian for even draws, big-endian for odd. */
+    uint32_t sh = (rnd() & 1) ? (n - 1 - i) : i;
+    c->buf[o + i] = (uint8_t)(v >> (8 * sh));
+  }
+}
+
+static void mutate(hx_case_t *c, const hx_entry_t *e) {
   int nops = 1 + (int)(rnd() % 4);
   for (int i = 0; i < nops; i++) {
-    switch (rnd() % 10) {
+    /* Draw from the dictionary about a third of the time when there is one. */
+    if (e->ndict && rnd() % 3 == 0) {
+      uint64_t v = e->dict[rnd() % (uint32_t)e->ndict];
+      if (rnd() % 4 == 0)
+        c->args[rnd() % HX_NARGS] = v;
+      else
+        plant(c, v);
+      continue;
+    }
+    switch (rnd() % 11) {
     case 0:                         /* flip a bit */
       if (c->len) {
         uint32_t o = (uint32_t)(rnd() % c->len);
@@ -341,7 +384,18 @@ static void mutate(hx_case_t *c) {
     case 7:                         /* random scalar argument */
       c->args[rnd() % HX_NARGS] = rnd();
       break;
-    case 8: {                       /* copy a chunk within the buffer */
+    case 8: {                       /* zero the tail of the buffer */
+      /* A [:zeroterm] array has to meet its terminator, and the last one in a
+         type has to meet it exactly at the end of the input for the whole
+         input to be consumed. Landing that by chance needs two specific zero
+         bytes at one specific offset, which is why TAtMost's `T` reached
+         `str3` constantly and never once got past it. */
+      uint32_t n = 1 + (uint32_t)(rnd() % 8);
+      if (n > c->len) n = c->len;
+      memset(c->buf + c->len - n, 0, n);
+      break;
+    }
+    case 9: {                       /* copy a chunk within the buffer */
       if (c->len >= 8) {
         uint32_t n = 1 + (uint32_t)(rnd() % 8);
         uint32_t a = (uint32_t)(rnd() % (c->len - n + 1));
@@ -354,8 +408,14 @@ static void mutate(hx_case_t *c) {
       if (c->len) {
         uint32_t o = (uint32_t)(rnd() % c->len);
         uint32_t n = 1 + (uint32_t)(rnd() % 8);
+        /* Half the time from INTERESTING rather than uniformly at random:
+           what terminates a [:zeroterm] array is a run of zeroes, and a
+           uniform byte is zero only once in 256, so TAtMost's three
+           zero-terminated strings were never all terminated at once. */
+        uint8_t v = (rnd() & 1) ? (uint8_t)INTERESTING[rnd() % NINTERESTING]
+                                : (uint8_t)rnd();
         if (o + n > c->len) n = c->len - o;
-        memset(c->buf + o, (uint8_t)rnd(), n);
+        memset(c->buf + o, v, n);
       }
       break;
     }
@@ -371,28 +431,95 @@ static void signature(char *out, size_t n, BOOLEAN r, const char *desc) {
 #define MAXCORPUS 3000
 #define MAXSIGS 3000
 
+/* How much longer to keep trying for an entrypoint no input has been accepted
+   for yet. */
+#define STARVED 20
+
+/* Corpus slots none of the (far more numerous) rejecting cases may take.
+   Without this, a grammar with thousands of distinct ways to fail fills the
+   corpus long before the fuzzer stumbles on an input that validates, and that
+   one valuable case is then dropped -- so the entrypoint contributes no
+   evidence at all about the accepting path, which is the one that exercises
+   the most backend code. */
+#define ACCEPT_RESERVE 256
+
 static int run_fuzz(const char *path, long iters) {
   FILE *f = fopen(path, "wb");
   if (!f) { perror(path); return 1; }
 
   for (int e = 0; e < hx_nentries; e++) {
     static hx_case_t corpus[MAXCORPUS];
-    static char sigs[MAXSIGS][8192];
+    static char sigs[MAXSIGS][HX_DESCSZ * 2];
     int ncorpus = 0, nsigs = 0;
-    char desc[4096], sig[8192];
+    char desc[HX_DESCSZ], sig[HX_DESCSZ * 2];
 
-    /* Seed the corpus: a spread of lengths and content families. */
-    for (uint32_t len = 0; len <= HX_MAXLEN && ncorpus < 16; len += 8) {
-      hx_case_t *c = &corpus[ncorpus++];
-      memset(c, 0, sizeof(*c));
-      c->len = len;
-      for (uint32_t i = 0; i < len; i++) c->buf[i] = (uint8_t)(i & 0xFF);
-      for (int a = 0; a < HX_NARGS; a++) c->args[a] = (uint64_t)(a + 1);
+    /* Seed the corpus: a spread of lengths across several content families.
+       All zeroes matters most and used to be missing: a field is very often
+       valid when zero, an empty [:zeroterm] array is two zero bytes, and a
+       zero length or tag selects the smallest case of a union, so the
+       all-zero input is the shortest accepted input of a good many grammars.
+       TAtMost's `T`, for one, is accepted by eighteen zero bytes and by
+       almost nothing else, and it was never accepted here at all while the
+       only family seeded was the byte ramp. */
+    for (int fam = 0; fam < 4; fam++) {
+      for (uint32_t len = 0; len <= HX_MAXLEN && ncorpus < MAXCORPUS;
+           len += 8) {
+        hx_case_t *c = &corpus[ncorpus++];
+        memset(c, 0, sizeof(*c));
+        c->len = len;
+        for (uint32_t i = 0; i < len; i++)
+          c->buf[i] = (uint8_t)(fam == 0 ? 0
+                              : fam == 1 ? 0xFF
+                              : fam == 2 ? (i & 0xFF)
+                                         : rnd());
+        for (int a = 0; a < HX_NARGS; a++) c->args[a] = (uint64_t)(a + 1);
+      }
     }
 
-    for (long it = 0; it < iters; it++) {
+    /* Seed with the dictionary laid down end to end, in each width, so that a
+       grammar whose opening field is a magic number has a starting point that
+       already matches rather than having to be mutated into one byte at a
+       time. */
+    /* Then anything a solver found for this entrypoint. */
+    for (size_t i = 0; i < sizeof(hx_seeds) / sizeof(hx_seeds[0]); i++) {
+      if (strcmp(hx_seeds[i].entry, hx_entries[e].name)) continue;
+      if (ncorpus >= MAXCORPUS) break;
+      hx_case_t *c = &corpus[ncorpus++];
+      memset(c, 0, sizeof(*c));
+      c->len = hx_seeds[i].len;
+      memcpy(c->buf, hx_seeds[i].buf, hx_seeds[i].len);
+    }
+
+    for (uint32_t width = 1; width <= 8 && hx_entries[e].ndict; width *= 2)
+    for (int be = 0; be < 2; be++)
+    /* The dictionary is in order of first appearance in the .3d, so a run of
+       it reproduces a multi-byte magic number verbatim -- but only once the
+       run is aligned with the start of that magic number, which the literals
+       of preceding fields shift. Seed a few rotations so one of them is. */
+    for (uint32_t rot = 0; rot < 4 && ncorpus < MAXCORPUS; rot++) {
+      const uint64_t *dict = hx_entries[e].dict;
+      uint32_t nd = (uint32_t)hx_entries[e].ndict;
+      hx_case_t *c = &corpus[ncorpus++];
+      memset(c, 0, sizeof(*c));
+      c->len = HX_MAXLEN;
+      for (int a = 0; a < HX_NARGS; a++) c->args[a] = dict[(rot + a) % nd];
+      for (uint32_t o = 0, k = rot; o + width <= HX_MAXLEN; o += width, k++) {
+        uint64_t v = dict[k % nd];
+        for (uint32_t i = 0; i < width; i++)
+          c->buf[o + i] = (uint8_t)(v >> (8 * (be ? width - 1 - i : i)));
+      }
+    }
+
+    /* An entrypoint that has never once been accepted has produced no
+       evidence about what the two backends do on a *valid* input, which is
+       the case that matters most. Those are exactly the entrypoints with the
+       most demanding grammars, so give them a larger budget rather than
+       letting them time out alongside the easy ones. Costs nothing for an
+       entrypoint that is accepting inputs already. */
+    long naccept = 0;
+    for (long it = 0; it < iters || (!naccept && it < iters * STARVED); it++) {
       hx_case_t c = corpus[rnd() % (uint64_t)ncorpus];
-      mutate(&c);
+      mutate(&c, &hx_entries[e]);
       if (c.len > HX_MAXLEN) c.len = HX_MAXLEN;
 
       uint8_t tmp[HX_MAXLEN];
@@ -400,12 +527,14 @@ static int run_fuzz(const char *path, long iters) {
       hx_reset();
       desc[0] = 0;
       BOOLEAN r = hx_entries[e].call(c.args, tmp, c.len, desc);
+      if (r) naccept++;
       signature(sig, sizeof(sig), r, desc);
 
       int fresh = 1;
       for (int s = 0; s < nsigs; s++)
         if (!strcmp(sigs[s], sig)) { fresh = 0; break; }
-      if (fresh && nsigs < MAXSIGS && ncorpus < MAXCORPUS) {
+      int room = r ? MAXCORPUS : MAXCORPUS - ACCEPT_RESERVE;
+      if (fresh && nsigs < MAXSIGS && ncorpus < room) {
         strncpy(sigs[nsigs], sig, sizeof(sigs[0]) - 1);
         sigs[nsigs][sizeof(sigs[0]) - 1] = 0;
         nsigs++;
@@ -418,8 +547,9 @@ static int run_fuzz(const char *path, long iters) {
       fwrite(&idx, sizeof(idx), 1, f);
       fwrite(&corpus[i], sizeof(hx_case_t), 1, f);
     }
-    fprintf(stderr, "%-34s corpus=%d sigs=%d\n", hx_entries[e].name,
-            ncorpus, nsigs);
+    fprintf(stderr, "%-34s corpus=%d sigs=%d accepted=%ld%s\n",
+            hx_entries[e].name, ncorpus, nsigs, naccept,
+            naccept ? "" : "   *** never accepted an input ***");
   }
   fclose(f);
   return 0;
@@ -436,7 +566,7 @@ static int run_replay(const char *path) {
     if (idx >= (uint32_t)hx_nentries) { fprintf(stderr, "bad index\n"); return 1; }
     uint8_t tmp[HX_MAXLEN];
     memcpy(tmp, c.buf, HX_MAXLEN);
-    char desc[2048];
+    char desc[HX_DESCSZ];
     desc[0] = 0;
     hx_reset();
     BOOLEAN r = hx_entries[idx].call(c.args, tmp, c.len, desc);

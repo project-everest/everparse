@@ -75,7 +75,7 @@ CFLAGS_COMMON = -O1 -g -std=c11 -fwrapv -D_BSD_SOURCE -D_DEFAULT_SOURCE \
 
 all: pulse-diff-test pulse-diff-abi pulse-diff-subdirs
 
-.PHONY: all pulse-diff-test pulse-diff-abi pulse-diff-subdirs clean
+.PHONY: all pulse-diff-test pulse-diff-abi pulse-diff-subdirs pulse-diff-seeds clean
 
 # Compile-only ABI check: both backends must expose EVERPARSE_ERROR_HANDLER,
 # and it must match the error-handler binder of the generated validators. See
@@ -102,10 +102,17 @@ $(PU_DIR):
 driver.c: gen_diff.py | $(LO_DIR) $(PU_DIR)
 	$(PYTHON) gen_diff.py $(LO_DIR) $@ $(PU_DIR)
 
-diff_lo: driver.c harness.c harness.h | $(LO_DIR)
+# seeds.inc is checked in, so that building and running this test needs
+# neither Z3 nor the witness generator -- the generator takes minutes and is
+# not available in every configuration. Regenerate it by hand, and only when
+# one of the grammars it covers changes.
+pulse-diff-seeds:
+	$(PYTHON) gen_seeds.py seeds.inc
+
+diff_lo: driver.c harness.c harness.h seeds.inc | $(LO_DIR)
 	$(CC) $(CFLAGS_COMMON) $(LO_INC) -o $@ harness.c driver.c $(LO_DIR)/*.c
 
-diff_pu: driver.c harness.c harness.h | $(PU_DIR)
+diff_pu: driver.c harness.c harness.h seeds.inc | $(PU_DIR)
 	$(CC) $(CFLAGS_COMMON) $(PU_INC) -o $@ harness.c driver.c $(PU_DIR)/*.c
 
 corpus_lo.bin: diff_lo

@@ -7,8 +7,16 @@
 #include <stdint.h>
 #include "EverParse.h"
 
-#define HX_MAXLEN 128
+/* Large enough to hold the longest solver-derived seed in seeds.inc; the
+   witness generator emits fixed 256-byte inputs. */
+#define HX_MAXLEN 256
 #define HX_NARGS 8
+
+/* Size of the per-case description that driver.c's generated call_* functions
+   fill in. It has to cover every argument, out-parameter and copy buffer an
+   entrypoint can report; the copy buffers dominate, at 2*CB_LEN hex characters
+   each, so this must be kept comfortably above CB_SLOTS * 2 * CB_LEN. */
+#define HX_DESCSZ 8192
 
 /* A copy buffer, as the client is expected to supply it. The Pulse backend
    additionally needs a position cell (EverParseStreamPos); the Low* backend
@@ -28,6 +36,12 @@ typedef struct {
   const char *name;
   hx_call_t call;
   int nargs;
+  /* The integer literals of this entrypoint's .3d specification, used as a
+     mutation dictionary. Magic numbers and enum tags are not reachable by
+     chance, so without this several entrypoints never validated once and so
+     produced no cross-backend evidence at all. */
+  const uint64_t *dict;
+  int ndict;
 } hx_entry_t;
 
 extern const hx_entry_t hx_entries[];
@@ -39,6 +53,13 @@ typedef struct {
   uint32_t len;
   uint8_t buf[HX_MAXLEN];
 } hx_case_t;
+
+/* An input a solver proved some entrypoint accepts. See gen_seeds.py. */
+typedef struct {
+  const char *entry;
+  uint32_t len;
+  const uint8_t *buf;
+} hx_seed_t;
 
 void hx_init(void);
 void hx_reset(void);

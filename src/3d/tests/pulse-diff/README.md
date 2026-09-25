@@ -118,13 +118,49 @@ likewise disabled on Windows for want of `sys/mman.h`.
 
 `python3` is required to generate the driver.
 
+## Reaching the accepting path
+
+Comparing two backends on inputs they both reject is worth much less than
+comparing them on inputs they accept: a rejection exercises one refinement and
+stops, while an accepted parse runs the whole validator. An entrypoint that is
+never once satisfied therefore contributes almost no evidence, and a blind
+mutator satisfies very few grammars. Four things get the corpus past that:
+
+- **A constant dictionary.** `gen_diff.py` collects every integer literal in
+  the entrypoint's `.3d` and hands it to the mutator, which plants them at
+  random offsets in each width and byte order. Literals are read from the
+  `.3d` rather than from generated code because the interpreter backend
+  compiles them away into a grammar data structure -- neither `ELF.c` nor
+  `ELF.fst` retains the ELF magic. They are kept in order of first appearance,
+  so laying a run of the dictionary down end to end reproduces a multi-byte
+  magic number verbatim; the corpus is seeded with several such runs.
+- **A solver-derived seed corpus.** Some grammars cannot be hit by search at
+  all: `Arithmetic`'s `_Check` is thirteen consecutive `UINT32`s each pinned
+  to an exact value computed from earlier fields. `gen_seeds.py` runs
+  EverParse's own `3d --z3_test` over those and checks the accepted witnesses
+  in as `seeds.inc`, so neither Z3 nor the generator is needed to build or run
+  this test. See `gen_seeds.py` for how to regenerate it.
+- **Seeds in several content families.** All zeroes above all: an empty
+  `[:zeroterm]` array is two zero bytes and a zero tag selects a union's
+  smallest case, so the all-zero input is the shortest accepted input of many
+  grammars.
+- **Budget where it is needed.** An entrypoint that has not yet accepted
+  anything keeps fuzzing for `STARVED` times the normal budget, and a slice of
+  the corpus is reserved so that a rare accepted case is not evicted by the
+  thousands of distinct ways to fail.
+
+The fuzz log names any entrypoint that never accepted an input, so this stays
+visible rather than having to be rediscovered.
+
 ## Known coverage gaps
 
-- Seven of the 41 entrypoints are never satisfied even after fuzzing, because
-  they need structured magic values the mutator will not stumble upon:
-  `ArithmeticCheckCheck`, `ElfCheckElf`, `ElftestGenCheckElftestGen`,
-  `FineGrainedProbeSpecializeCheckD`, `Specialize6CheckSri`, `TatMostCheckT`,
-  `TestActions1CheckC`. Seeding the corpus from Z3TestGen would close these.
+- Three entrypoints are still never satisfied. `ElfCheckElf` and
+  `TatMostCheckT` need a combination of magic values, lengths and terminators
+  that neither the dictionary nor the solver reaches in reasonable time --
+  `3d --z3_test` does not finish on either grammar. `Specialize6CheckSri` is
+  out of the witness generator's reach for a different reason: it rejects
+  probe arguments outright ("unsupported argument type"). All three are still
+  compared on thousands of rejecting inputs.
 - Only the `buffer` input-stream backend is exercised; `extern` and `static`
   are covered by the fixed-input tests elsewhere.
 - Error *position* is not observable through the `<Mod>Check<T>` ABI, so it is
@@ -141,7 +177,9 @@ length-only fast path. It showed up as a different reported field name on
 
 | File | Role |
 | --- | --- |
-| `gen_diff.py` | parses `*Wrapper.h`, emits `driver.c` (thunk + dispatch table per entrypoint) |
+| `gen_diff.py` | parses `*Wrapper.h`, emits `driver.c` (thunk + dispatch table per entrypoint, plus the per-module constant dictionary) |
+| `gen_seeds.py` | regenerates `seeds.inc` from `3d --z3_test`; run by hand, not by the build |
+| `seeds.inc` | checked-in inputs a solver proved are accepted, for entrypoints fuzzing cannot reach |
 | `run_subdir.sh` | compares one sub-directory test: works out the sources, builds both, fuzzes, replays, diffs |
 | `harness.h` | shared case/entry/callback types |
 | `harness.c` | probe & copy-buffer model, mmap'd source region, mutation engine, `fuzz`/`replay` `main` |
