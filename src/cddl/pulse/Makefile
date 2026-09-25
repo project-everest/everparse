@@ -5,8 +5,14 @@ INCLUDE_PATHS += $(realpath ../spec) $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE
 
 ALREADY_CACHED := *,-CDDL.Pulse,
 FSTAR_OPTIONS += --warn_error -342
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice'
 OUTPUT_DIRECTORY := _output
+
+# Whole-program extraction. A karamel -bundle clause is packaging, not
+# reachability: CDDL.Pulse.Test, named on the left of the `=', has to be
+# rooted here by hand.
+CUSTARD_BACKEND := KrmlC
+CUSTARD_ENTRY_MODULES := CDDL.Pulse.Test
+CUSTARD_ROOTS := CDDL.Pulse.Test.fst
 
 clean_rules += clean-output
 
@@ -16,7 +22,7 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE)
 
-extract: $(ALL_KRML_FILES)
+extract: $(CUSTARD_KRML)
 #	$(KRML) -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern=[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -bundle CDDL.Pulse.Test=*[rename=CDDLExtractionTest] -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY)
 	$(KRML) -bundle CDDL.Pulse.Test=*[rename=CDDLExtractionTest] -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY)
 

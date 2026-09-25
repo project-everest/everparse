@@ -5,27 +5,27 @@
 typedef Pulse_Lib_Slice_slice__uint8_t bstr;
 
 uint8_t *parse_ed25519_private_key(bstr cose_key) {
-    FStar_Pervasives_Native_option___COSE_Format_cose_key_okp___Pulse_Lib_Slice_slice__uint8_t_
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__COSE_Format_cose_key_okp_Pulse_Lib_Slice_slice__uint8_t
         parsed_key = COSE_Format_validate_and_parse_cose_key_okp(cose_key);
     check(parsed_key.tag);
-    check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int0);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.case_Mkevercddl_int0 == 6);
-    check(parsed_key.v.fst.intkeyneg4.tag);
-    check(parsed_key.v.fst.intkeyneg4.v.len == 32);
-    return parsed_key.v.fst.intkeyneg4.v.elt;
+    check(parsed_key.v._1.intkeyneg1.tag == COSE_Format_Inl);
+    check(parsed_key.v._1.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int0);
+    check(parsed_key.v._1.intkeyneg1.case_Inl.case_Mkevercddl_int0 == 6);
+    check(parsed_key.v._1.intkeyneg4.tag);
+    check(parsed_key.v._1.intkeyneg4.v.len == 32);
+    return parsed_key.v._1.intkeyneg4.v.elt;
 }
 
 uint8_t *parse_ed25519_public_key(bstr cose_key) {
-    FStar_Pervasives_Native_option___COSE_Format_cose_key_okp___Pulse_Lib_Slice_slice__uint8_t_
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__COSE_Format_cose_key_okp_Pulse_Lib_Slice_slice__uint8_t
         parsed_key = COSE_Format_validate_and_parse_cose_key_okp(cose_key);
     check(parsed_key.tag);
-    check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int0);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.case_Mkevercddl_int0 == 6);
-    check(parsed_key.v.fst.intkeyneg2.tag);
-    check(parsed_key.v.fst.intkeyneg2.v.len == 32);
-    return parsed_key.v.fst.intkeyneg2.v.elt;
+    check(parsed_key.v._1.intkeyneg1.tag == COSE_Format_Inl);
+    check(parsed_key.v._1.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int0);
+    check(parsed_key.v._1.intkeyneg1.case_Inl.case_Mkevercddl_int0 == 6);
+    check(parsed_key.v._1.intkeyneg2.tag);
+    check(parsed_key.v._1.intkeyneg2.v.len == 32);
+    return parsed_key.v._1.intkeyneg2.v.elt;
 }
 
 void write_to_file(const char *fn, const uint8_t *content, size_t content_len) {

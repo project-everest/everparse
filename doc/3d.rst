@@ -219,6 +219,21 @@ Options are treated from left to right:
   compile-time flags (see compile-time configuration in the 3D
   language reference.)
 
+* ``--json``
+
+  Print the abstract syntax tree of each input ``.3d`` file, as it
+  stands after name resolution and type-checking, to standard output
+  as a JSON value, one per line. This is a debugging aid: the encoding
+  follows the shape of the 3d abstract syntax rather than any
+  documented schema, and it is not stable across EverParse versions.
+
+  A constructor is encoded as an array whose first element is the
+  constructor name followed by one element per argument, so a
+  constructor with no argument is a one-element array; a record is
+  encoded as an object keyed by the field names; ``None`` is ``null``
+  and ``Some x`` is the encoding of ``x``. Source locations and
+  comments are omitted.
+
 * ``--fstar path/to/fstar.exe``
 
   Allows to specify the location of the F* executable. The

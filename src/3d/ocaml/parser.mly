@@ -251,7 +251,7 @@ pointer_qualifier:
   | nullable=pointer_tag qual=pointer_qual
     { 
       let (w, d) = qual in
-      PQ (w, d, nullable)
+      mk_pointer_qualifier w d nullable
     }
 
 pointer_typ:
@@ -259,7 +259,7 @@ pointer_typ:
     { 
       let q =
         match qopt with
-        | None -> PQ(UInt64, false, false)
+        | None -> mk_pointer_qualifier UInt64 false false
         | Some q -> q 
       in
       with_range (Pointer(t,q)) $startpos }
@@ -278,7 +278,7 @@ array_size:
 
 array_annot:
   | { FieldScalar }
-  | a=array_size { FieldArrayQualified a }
+  | a=array_size { let (sz, q) = a in FieldArrayQualified (sz, q) }
   | LBRACK_STRING RBRACK { FieldString None }
   | LBRACK_STRING_AT_MOST e=expr RBRACK { FieldString (Some e) }
   | LBRACK_CONSUME_ALL RBRACK { FieldConsumeAll }
@@ -359,7 +359,7 @@ anonymous_casetype_field:
   | SWITCH LPAREN i=IDENT RPAREN LBRACE cs=cases RBRACE fn=IDENT
     {
         let e = with_range (Identifier i) ($startpos(i)) in
-        SwitchCaseField((e, cs), fn)
+        SwitchCaseField(e, cs, fn)
     }
 
 maybe_hash_else_fields:
@@ -388,7 +388,7 @@ static_conditional_body:
         let case_then = Case (tt, f_then) in
         let case_else = DefaultCase f_else in
         let e = with_range (Static e) ($startpos(e)) in
-        SwitchCaseField ((e, [case_then; case_else]), dummy_identifier)
+        SwitchCaseField (e, [case_then; case_else], dummy_identifier)
     }
   
 static_conditional_field:
@@ -607,7 +607,7 @@ decl_no_range:
     }
 
   | SPECIALIZE LPAREN specialize_lhs COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
-    { let PQ(p2, _, _) = p2 in
+    { let p2 = pq_as_integer_type p2 in
       Specialize ([UInt64, p2], i, j) }
 
   | OUTPUT TYPEDEF STRUCT i=IDENT

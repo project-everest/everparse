@@ -4,25 +4,12 @@
 
 #include "COSE_Format.h"
 #include "CBORDetAPI.h"
+#include "internal/fstar.h"
 #include "internal/COSE_Format.h"
 
+extern void EverCrypt_Ed25519_sign(uint8_t *x0, uint8_t *x1, uint32_t x2, uint8_t *x3);
+
 extern void abort(void);
-
-extern void
-EverCrypt_Ed25519_sign(
-  uint8_t *signature,
-  uint8_t *private_key,
-  uint32_t msg_len,
-  uint8_t *msg
-);
-
-extern bool
-EverCrypt_Ed25519_verify(
-  uint8_t *public_key,
-  uint32_t msg_len,
-  uint8_t *msg,
-  uint8_t *signature
-);
 
 COSE_Format_evercddl_int COSE_EverCrypt_mk_int(int32_t i)
 {
@@ -65,7 +52,7 @@ COSE_EverCrypt_create_sig(
         (COSE_Format_sig_structure){
           .context = COSE_Format_Inr,
           .body_protected = phdr,
-          ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { .fst = aad, .snd = payload } } }
+          ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { ._1 = aad, ._2 = payload } } }
         }
       ),
       outbuf);
@@ -83,12 +70,13 @@ COSE_EverCrypt_create_sig(
   }
 }
 
-K___COSE_Format_evercddl_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void)
+FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+COSE_EverCrypt_dummy_map_val(void)
 {
   return
     (
-      (K___COSE_Format_evercddl_label_COSE_Format_values){
-        .fst = {
+      (FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t){
+        ._1 = {
           .tag = COSE_Format_Mkevercddl_label0,
           {
             .case_Mkevercddl_label0 = {
@@ -97,20 +85,21 @@ K___COSE_Format_evercddl_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(v
             }
           }
         },
-        .snd = dummy_cbor_det_t()
+        ._2 = dummy_cbor_det_t()
       }
     );
 }
 
-static Pulse_Lib_Slice_slice___COSE_Format_evercddl_label___COSE_Format_values_
-from_array___COSE_Format_evercddl_label___COSE_Format_values_(
-  K___COSE_Format_evercddl_label_COSE_Format_values *a,
+static Pulse_Lib_Slice_slice__FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+from_array__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(
+  FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+  *a,
   size_t alen
 )
 {
   return
     (
-      (Pulse_Lib_Slice_slice___COSE_Format_evercddl_label___COSE_Format_values_){
+      (Pulse_Lib_Slice_slice__FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t){
         .elt = a,
         .len = alen
       }
@@ -118,7 +107,11 @@ from_array___COSE_Format_evercddl_label___COSE_Format_values_(
 }
 
 COSE_Format_empty_or_serialized_map
-COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_evercddl_label_COSE_Format_values *rest)
+COSE_EverCrypt_mk_phdrs(
+  int32_t alg,
+  FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+  *rest
+)
 {
   COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int(alg);
   return
@@ -140,8 +133,8 @@ COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_evercddl_label_COSE_Format_
                   .tag = COSE_Format_Inr,
                   {
                     .case_Inr = {
-                      .fst = { .tag = FStar_Pervasives_Native_None },
-                      .snd = { .tag = FStar_Pervasives_Native_None }
+                      ._1 = FStar_Pervasives_Native_None,
+                      ._2 = FStar_Pervasives_Native_None
                     }
                   }
                 }
@@ -150,7 +143,7 @@ COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_evercddl_label_COSE_Format_
             ._x1 = {
               .tag = COSE_Format_Inl,
               {
-                .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_values_(rest,
+                .case_Inl = from_array__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(rest,
                   (size_t)0U)
               }
             }
@@ -169,8 +162,12 @@ COSE_EverCrypt_sign1(
   Pulse_Lib_Slice_slice__uint8_t outbuf
 )
 {
-  KRML_CHECK_SIZE(sizeof (K___COSE_Format_evercddl_label_COSE_Format_values), (size_t)0U);
-  K___COSE_Format_evercddl_label_COSE_Format_values phdrauxbuf[0U];
+  KRML_CHECK_SIZE(sizeof (
+      FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+    ),
+    (size_t)0U);
+  FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+  phdrauxbuf[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     phdrauxbuf[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int(-8);
@@ -193,8 +190,8 @@ COSE_EverCrypt_sign1(
                 .tag = COSE_Format_Inr,
                 {
                   .case_Inr = {
-                    .fst = { .tag = FStar_Pervasives_Native_None },
-                    .snd = { .tag = FStar_Pervasives_Native_None }
+                    ._1 = FStar_Pervasives_Native_None,
+                    ._2 = FStar_Pervasives_Native_None
                   }
                 }
               }
@@ -203,7 +200,7 @@ COSE_EverCrypt_sign1(
           ._x1 = {
             .tag = COSE_Format_Inl,
             {
-              .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_values_(phdrauxbuf,
+              .case_Inl = from_array__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(phdrauxbuf,
                 (size_t)0U)
             }
           }
@@ -219,7 +216,7 @@ COSE_EverCrypt_sign1(
         (COSE_Format_cose_sign1){
           .protected0 = phdr,
           .unprotected = uhdr,
-          .payload = { .tag = COSE_Format_Inl, { .case_Inl = payload } },
+          .payload = { .tag = COSE_Format_Inl, .v = payload },
           .signature = Pulse_Lib_Slice_from_array__uint8_t(sigbuf, (size_t)64U)
         }
       ),
@@ -240,8 +237,12 @@ COSE_EverCrypt_sign1_simple(
   Pulse_Lib_Slice_slice__uint8_t outbuf
 )
 {
-  KRML_CHECK_SIZE(sizeof (K___COSE_Format_evercddl_label_COSE_Format_values), (size_t)0U);
-  K___COSE_Format_evercddl_label_COSE_Format_values buf0[0U];
+  KRML_CHECK_SIZE(sizeof (
+      FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+    ),
+    (size_t)0U);
+  FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+  buf0[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     buf0[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_header_map
@@ -257,10 +258,7 @@ COSE_EverCrypt_sign1_simple(
           .case_Inr = {
             .tag = COSE_Format_Inr,
             {
-              .case_Inr = {
-                .fst = { .tag = FStar_Pervasives_Native_None },
-                .snd = { .tag = FStar_Pervasives_Native_None }
-              }
+              .case_Inr = { ._1 = FStar_Pervasives_Native_None, ._2 = FStar_Pervasives_Native_None }
             }
           }
         }
@@ -268,7 +266,7 @@ COSE_EverCrypt_sign1_simple(
       ._x1 = {
         .tag = COSE_Format_Inl,
         {
-          .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_values_(buf0,
+          .case_Inl = from_array__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(buf0,
             (size_t)0U)
         }
       }
@@ -301,7 +299,7 @@ COSE_EverCrypt_verify_sig(
         (COSE_Format_sig_structure){
           .context = COSE_Format_Inr,
           .body_protected = phdr,
-          ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { .fst = aad, .snd = payload } } }
+          ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { ._1 = aad, ._2 = payload } } }
         }
       ),
       outbuf);
@@ -332,20 +330,21 @@ COSE_EverCrypt_verify1(
   Pulse_Lib_Slice_slice__uint8_t msg
 )
 {
-  FStar_Pervasives_Native_option___COSE_Format_cose_sign1_tagged___Pulse_Lib_Slice_slice__uint8_t_
-  scrut0 = COSE_Format_validate_and_parse_cose_sign1_tagged(msg);
-  if (scrut0.tag == FStar_Pervasives_Native_None)
+  FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__COSE_Format_cose_sign1_Pulse_Lib_Slice_slice__uint8_t
+  scrut = COSE_Format_validate_and_parse_cose_sign1_tagged(msg);
+  if (scrut.tag == FStar_Pervasives_Native_None)
     return
       (
         (FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t){
           .tag = FStar_Pervasives_Native_None
         }
       );
-  else if (scrut0.tag == FStar_Pervasives_Native_Some)
+  else if (scrut.tag == FStar_Pervasives_Native_Some)
   {
-    K___COSE_Format_cose_sign1_tagged_Pulse_Lib_Slice_slice__uint8_t res1 = scrut0.v;
-    COSE_Format_cose_sign1 x = res1.fst;
-    Pulse_Lib_Slice_slice__uint8_t rem = res1.snd;
+    FStar_Pervasives_Native_tuple2__COSE_Format_cose_sign1_Pulse_Lib_Slice_slice__uint8_t
+    res1 = scrut.v;
+    COSE_Format_cose_sign1 x = res1._1;
+    Pulse_Lib_Slice_slice__uint8_t rem = res1._2;
     if (Pulse_Lib_Slice_len__uint8_t(rem) == (size_t)0U && x.payload.tag == COSE_Format_Inl)
     {
       Pulse_Lib_Slice_slice__uint8_t sig = x.signature;
@@ -353,10 +352,9 @@ COSE_EverCrypt_verify1(
       if (Pulse_Lib_Slice_len__uint8_t(sig) == (size_t)64U)
       {
         uint8_t *sig_ = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(sig);
-        FStar_Pervasives_either__COSE_Format_bstr_COSE_Format_nil scrut = x.payload;
         Pulse_Lib_Slice_slice__uint8_t ite;
-        if (scrut.tag == COSE_Format_Inl)
-          ite = scrut.case_Inl;
+        if (x.payload.tag == COSE_Format_Inl)
+          ite = x.payload.v;
         else
           ite =
             KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
@@ -367,10 +365,9 @@ COSE_EverCrypt_verify1(
         ite0 = false;
       if (ite0)
       {
-        FStar_Pervasives_either__COSE_Format_bstr_COSE_Format_nil scrut = x.payload;
         Pulse_Lib_Slice_slice__uint8_t ite;
-        if (scrut.tag == COSE_Format_Inl)
-          ite = scrut.case_Inl;
+        if (x.payload.tag == COSE_Format_Inl)
+          ite = x.payload.v;
         else
           ite =
             KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,

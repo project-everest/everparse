@@ -288,7 +288,10 @@ and asn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_
   | ASN1_CHOICE_ILC lc pf ->
     let lp = asn1_lc_as_parser lc in
     let _ = make_asn1_choice_parser_twin_cases_injective lc pf k lp in
-    (make_asn1_choice_parser lc pf k lp, make_asn1_choice_parser_twin lc pf k lp)
+    let fp : (fp: (asn1_id_t -> asn1_strong_parser (asn1_t k)) { and_then_cases_injective fp }) =
+      make_asn1_choice_parser_twin lc pf k lp
+    in
+    (make_asn1_choice_parser lc pf k lp, fp)
   | ASN1_ANY_ILC -> 
     let _ = parse_asn1_anyILC_twin_and_then_cases_injective () in
     (parse_asn1_anyILC, parse_asn1_anyILC_twin)

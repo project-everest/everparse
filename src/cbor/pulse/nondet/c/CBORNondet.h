@@ -11,11 +11,17 @@ extern "C" {
 
 #include "CBORNondetType.h"
 
+typedef uint8_t major_type_t;
+
+typedef uint8_t major_type_uint64_or_neg_int64;
+
+typedef uint8_t simple_value;
+
+typedef uint8_t major_type_byte_string_or_text_string;
+
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
-#define CBOR_MAJOR_TYPE_UINT64 (0U)
-
-#define CBOR_MAJOR_TYPE_NEG_INT64 (1U)
+#define MIN_SIMPLE_VALUE_LONG_ARGUMENT (32U)
 
 #define CBOR_MAJOR_TYPE_BYTE_STRING (2U)
 
@@ -27,7 +33,9 @@ extern "C" {
 
 #define CBOR_MAJOR_TYPE_TAGGED (6U)
 
-#define MIN_SIMPLE_VALUE_LONG_ARGUMENT (32U)
+#define CBOR_MAJOR_TYPE_UINT64 (0U)
+
+#define CBOR_MAJOR_TYPE_NEG_INT64 (1U)
 
 #define MAX_SIMPLE_VALUE_ADDITIONAL_INFO (23U)
 
@@ -62,30 +70,35 @@ bool cbor_nondet_get_tagged(cbor_raw x, cbor_raw *dest, uint64_t *dtag);
 
 bool cbor_nondet_get_array_length(cbor_raw x, uint64_t *dest);
 
-bool cbor_nondet_array_iterator_start(cbor_raw x, cbor_array_iterator *dest);
+bool cbor_nondet_array_iterator_start(cbor_raw x, cbor_nondet_array_iterator_t *dest);
 
-bool cbor_nondet_array_iterator_is_empty(cbor_array_iterator x);
+bool cbor_nondet_array_iterator_is_empty(cbor_nondet_array_iterator_t x);
 
-uint64_t cbor_nondet_array_iterator_length(cbor_array_iterator x);
+uint64_t cbor_nondet_array_iterator_length(cbor_nondet_array_iterator_t x);
 
-bool cbor_nondet_array_iterator_next(cbor_array_iterator *x, cbor_raw *dest);
+bool cbor_nondet_array_iterator_next(cbor_nondet_array_iterator_t *x, cbor_raw *dest);
 
-cbor_array_iterator cbor_nondet_array_iterator_truncate(cbor_array_iterator x, uint64_t len);
+cbor_nondet_array_iterator_t
+cbor_nondet_array_iterator_truncate(cbor_nondet_array_iterator_t x, uint64_t len);
 
 bool cbor_nondet_get_array_item(cbor_raw x, uint64_t i, cbor_raw *dest);
 
 bool cbor_nondet_get_map_length(cbor_raw x, uint64_t *dest);
 
-bool cbor_nondet_map_iterator_start(cbor_raw x, cbor_map_iterator *dest);
+bool cbor_nondet_map_iterator_start(cbor_raw x, cbor_nondet_map_iterator_t *dest);
 
-bool cbor_nondet_map_iterator_is_empty(cbor_map_iterator x);
+bool cbor_nondet_map_iterator_is_empty(cbor_nondet_map_iterator_t x);
 
 cbor_raw cbor_nondet_map_entry_key(cbor_map_entry x);
 
 cbor_raw cbor_nondet_map_entry_value(cbor_map_entry x);
 
 bool
-cbor_nondet_map_iterator_next(cbor_map_iterator *x, cbor_raw *dest_key, cbor_raw *dest_value);
+cbor_nondet_map_iterator_next(
+  cbor_nondet_map_iterator_t *x,
+  cbor_raw *dest_key,
+  cbor_raw *dest_value
+);
 
 bool cbor_nondet_equal(cbor_raw x1, cbor_raw x2);
 

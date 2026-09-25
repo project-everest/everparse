@@ -1,15 +1,7 @@
-let lp_bytes_of_bytes (b:FStar_Bytes.bytes)
-  : LowParse_Bytes.bytes
-  = let rec aux (i:int) (out:LowParse_Bytes.bytes)
-     : LowParse_Bytes.bytes
-     = if Z.of_int i = FStar_Bytes.length b
-       then out
-       else aux (i + 1) (FStar_Seq_Properties.snoc out (FStar_Bytes.get b (Stdint.Uint32.of_int i)))
-    in
-    aux 0 (FStar_Seq_Base.empty())
-
-let lp_bytes_of_string s : LowParse_Bytes.bytes
-  = FStar_Seq_Base.MkSeq (List.map int_of_char (List.init (String.length s) (String.get s)))
+(* Custard represents [LowParse.Bytes.bytes = Seq.seq byte] as an OCaml
+   [int list], so a byte string is converted directly. *)
+let lp_bytes_of_string (s:string) : int list
+  = List.map int_of_char (List.init (String.length s) (String.get s))
 
 let check_omitted_default (s:string)
   : bool
@@ -132,7 +124,7 @@ let main =
       let str = really_input_string file filelen in
       close_in file;
       let b = lp_bytes_of_string str in
-      print_string ("About to parse " ^ string_of_int (Z.to_int (FStar_Bytes.length str)) ^ " bytes from " ^ filename ^ " ... \n");
+      print_string ("About to parse " ^ string_of_int (String.length str) ^ " bytes from " ^ filename ^ " ... \n");
       match p b with
       | None -> print_string "parsing failed\n"; 
                 if formatname = "X509" then
