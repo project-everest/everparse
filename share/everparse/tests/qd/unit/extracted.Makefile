@@ -19,7 +19,12 @@ CACHE_DIRECTORY := cache$(LAX_EXT)
 OUTPUT_DIRECTORY := krml
 FSTAR_DEP_FILE := .depend$(LAX_EXT)
 FSTAR_FILES := $(wildcard *.fst *.fsti) ../Test.fst
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice'
+
+# The point of this test is that every generated module extracts and compiles,
+# so each one is a root, not just the part Test.fst happens to exercise.
+CUSTARD_BACKEND := KrmlC
+CUSTARD_ENTRY_MODULES := Test $(basename $(wildcard *.fst))
+CUSTARD_ROOTS := ../Test.fst
 
 clean_rules += clean-local
 
@@ -41,13 +46,11 @@ KRML = $(KRML_EXE) \
 	 -ccopt "-Wno-tautological-overlap-compare" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
-	 -bundle 'FStar.\*,Prims,Pulse.\*,PulseCore.\*,LowParse.\*,C,C.\*' \
+	 -bundle 'FStar.\*,Prims,Pulse.\*,PulseCore.\*,LowParse.\*,C,C.\*,Custard.\*' \
 	 $(KRML_OPTS) \
 	 -warn-error '@2@15-26'
 
-ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
-
-test: $(ALL_KRML_FILES) krml/Test.krml
+test: $(CUSTARD_KRML)
 	-@mkdir out
 	$(KRML) -no-prefix Test $^
 	$(CC) -c -I out -I .. $$f out/*.c

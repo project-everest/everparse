@@ -415,7 +415,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
     match Deps.get_config () with
     | None -> krml_args
     | Some (cfg, module_name) ->
-      let include_file = Printf.sprintf "\"%s\"" cfg.compile_time_flags.include_file in
+      let include_file = Printf.sprintf "\"%s\"" (Config.config_compile_time_flags cfg).include_file in
       "-no-prefix" :: module_name :: "-add-include" :: include_file  :: krml_args
   in
   krml_args

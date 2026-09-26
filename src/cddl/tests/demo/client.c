@@ -2,7 +2,7 @@
 #include "CBORDetAPI.h"
 
 int main(void) {
-  FStar_Pervasives_Native_option__CDDLTest_Test_evercddl_uint test_snd = {
+  FStar_Pervasives_Native_option__uint64_t test_snd = {
     .tag = FStar_Pervasives_Native_Some,
     .v = 42L
   };

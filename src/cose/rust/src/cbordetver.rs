@@ -27,13 +27,7 @@ pub fn cbor_det_parse <'a>(input: &'a [u8]) ->
     { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     else
     {
-        let s·: (&[u8], &[u8]) = input.split_at(len);
-        let _letpattern: (&[u8], &[u8]) =
-            {
-                let s1: &[u8] = s·.0;
-                let s2: &[u8] = s·.1;
-                (s1,s2)
-            };
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
         let input2: &[u8] = _letpattern.0;
         let rem: &[u8] = _letpattern.1;
         let len1: usize = input2.len();
@@ -101,12 +95,6 @@ pub enum cbor_det_int_kind
     NegInt64
 }
 
-pub fn uu___is_UInt64(projectee: cbor_det_int_kind) -> bool
-{ match projectee { cbor_det_int_kind::UInt64 => true, _ => false } }
-
-pub fn uu___is_NegInt64(projectee: cbor_det_int_kind) -> bool
-{ match projectee { cbor_det_int_kind::NegInt64 => true, _ => false } }
-
 pub fn cbor_det_mk_int64 <'a>(ty: cbor_det_int_kind, v: u64) ->
     crate::cbordetveraux::cbor_raw
     <'a>
@@ -125,20 +113,14 @@ pub fn cbor_det_mk_int64 <'a>(ty: cbor_det_int_kind, v: u64) ->
     crate::cbordetveraux::cbor_raw::CBOR_Case_Int { v: resi }
 }
 
+pub fn cbor_impl_utf8_correct(s: &[u8]) -> bool { crate::cbordetveraux::impl_correct(s) }
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum cbor_det_string_kind
 {
     ByteString,
     TextString
 }
-
-pub fn uu___is_ByteString(projectee: cbor_det_string_kind) -> bool
-{ match projectee { cbor_det_string_kind::ByteString => true, _ => false } }
-
-pub fn uu___is_TextString(projectee: cbor_det_string_kind) -> bool
-{ match projectee { cbor_det_string_kind::TextString => true, _ => false } }
-
-pub fn cbor_impl_utf8_correct(s: &[u8]) -> bool { crate::cbordetveraux::impl_correct(s) }
 
 pub fn cbor_det_mk_string <'a>(ty: cbor_det_string_kind, s: &'a [u8]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -249,7 +231,7 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [crate::cbordetveraux::cbor_map_entry <'a
                     { cbor_map_length_size: raw_len.size, cbor_map_ptr: a };
                 let res: crate::cbordetveraux::cbor_raw =
                     crate::cbordetveraux::cbor_raw::CBOR_Case_Map { v: res· };
-                (&mut dest)[0] = res;
+                (&mut dest)[0usize] = res;
                 true
             }
             else
@@ -257,7 +239,7 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [crate::cbordetveraux::cbor_map_entry <'a
         };
     if bres
     {
-        let res: crate::cbordetveraux::cbor_raw = (&dest)[0];
+        let res: crate::cbordetveraux::cbor_raw = (&dest)[0usize];
         option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
     }
     else
@@ -300,24 +282,6 @@ pub enum cbor_det_view <'a>
     SimpleValue { _0: u8 }
 }
 
-pub fn uu___is_Int64(projectee: cbor_det_view) -> bool
-{ match projectee { cbor_det_view::Int64 { .. } => true, _ => false } }
-
-pub fn uu___is_String(projectee: cbor_det_view) -> bool
-{ match projectee { cbor_det_view::String { .. } => true, _ => false } }
-
-pub fn uu___is_Array(projectee: cbor_det_view) -> bool
-{ match projectee { cbor_det_view::Array { .. } => true, _ => false } }
-
-pub fn uu___is_Map(projectee: cbor_det_view) -> bool
-{ match projectee { cbor_det_view::Map { .. } => true, _ => false } }
-
-pub fn uu___is_Tagged(projectee: cbor_det_view) -> bool
-{ match projectee { cbor_det_view::Tagged { .. } => true, _ => false } }
-
-pub fn uu___is_SimpleValue(projectee: cbor_det_view) -> bool
-{ match projectee { cbor_det_view::SimpleValue { .. } => true, _ => false } }
-
 pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_det_view <'a>
 {
     let ty: u8 = cbor_det_major_type(c);
@@ -331,9 +295,8 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
             { cbor_det_int_kind::UInt64 }
             else
             { cbor_det_int_kind::NegInt64 };
-        let _letpattern: crate::cbordetveraux::cbor_raw = c;
         let res: crate::cbordetveraux::raw_uint64 =
-            match _letpattern
+            match c
             {
                 crate::cbordetveraux::cbor_raw::CBOR_Case_Int { v: c· } =>
                   crate::cbordetveraux::raw_uint64
@@ -353,9 +316,8 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
             { cbor_det_string_kind::ByteString }
             else
             { cbor_det_string_kind::TextString };
-        let _letpattern: crate::cbordetveraux::cbor_raw = c;
         let s: &[u8] =
-            match _letpattern
+            match c
             {
                 crate::cbordetveraux::cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
                 _ => panic!("Incomplete pattern matching")
@@ -363,15 +325,9 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
         cbor_det_view::String { kind: k, payload: s }
     }
     else if ty == crate::cbordetveraux::cbor_major_type_array
-    {
-        let res: crate::cbordetveraux::cbor_raw = c;
-        cbor_det_view::Array { _0: res }
-    }
+    { cbor_det_view::Array { _0: c } }
     else if ty == crate::cbordetveraux::cbor_major_type_map
-    {
-        let res: crate::cbordetveraux::cbor_raw = c;
-        cbor_det_view::Map { _0: res }
-    }
+    { cbor_det_view::Map { _0: c } }
     else if ty == crate::cbordetveraux::cbor_major_type_tagged
     {
         let res: crate::cbordetveraux::raw_uint64 =
@@ -389,9 +345,8 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
     }
     else
     {
-        let _letpattern: crate::cbordetveraux::cbor_raw = c;
         let i: u8 =
-            match _letpattern
+            match c
             {
                 crate::cbordetveraux::cbor_raw::CBOR_Case_Simple { v: res } => res,
                 _ => panic!("Incomplete pattern matching")
@@ -485,11 +440,7 @@ crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
 pub fn cbor_det_map_iterator_start <'a>(x: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
     <'a>
-{
-    let res: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-        crate::cbordetveraux::cbor_map_iterator_init(x);
-    res
-}
+{ crate::cbordetveraux::cbor_map_iterator_init(x) }
 
 pub fn cbor_det_map_iterator_is_empty(
     x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
@@ -522,9 +473,8 @@ pub fn cbor_det_map_get <'a>(
     <'a>
 {
     let mut dest: [crate::cbordetveraux::cbor_raw; 1] = [k; 1usize];
-    let res: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+    let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
         crate::cbordetveraux::cbor_map_iterator_init(x);
-    let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = res;
     let mut pi: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
         [i; 1usize];
     let mut pres: [option__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
@@ -533,7 +483,7 @@ pub fn cbor_det_map_get <'a>(
     let cont: bool = ! i_is_empty;
     let mut pcont: [bool; 1] = [cont; 1usize];
     while
-    (&pcont)[0]
+    (&pcont)[0usize]
     {
         let entry: crate::cbordetveraux::cbor_map_entry =
             crate::cbordetveraux::cbor_map_iterator_next(&mut pi);
@@ -542,35 +492,35 @@ pub fn cbor_det_map_get <'a>(
         if comp == 0i16
         {
             let value: crate::cbordetveraux::cbor_raw = entry.cbor_map_entry_value;
-            (&mut pres)[0] = option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: value };
-            (&mut pcont)[0] = false
+            (&mut pres)[0usize] = option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: value };
+            (&mut pcont)[0usize] = false
         }
         else if comp > 0i16
-        { (&mut pcont)[0] = false }
+        { (&mut pcont)[0usize] = false }
         else
         {
             let i·: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                (&pi)[0];
+                (&pi)[0usize];
             let is_empty: bool = crate::cbordetveraux::cbor_map_iterator_is_empty(i·);
             let cont1: bool = ! is_empty;
-            (&mut pcont)[0] = cont1
+            (&mut pcont)[0usize] = cont1
         }
     };
-    let res0: option__CBOR_Pulse_Raw_Type_cbor_raw = (&pres)[0];
+    let res: option__CBOR_Pulse_Raw_Type_cbor_raw = (&pres)[0usize];
     let bres: bool =
-        match res0
+        match res
         {
             option__CBOR_Pulse_Raw_Type_cbor_raw::None => false,
             option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: vres } =>
               {
-                  (&mut dest)[0] = vres;
+                  (&mut dest)[0usize] = vres;
                   true
               },
             _ => panic!("Incomplete pattern matching")
         };
     if bres
     {
-        let res1: crate::cbordetveraux::cbor_raw = (&dest)[0];
+        let res1: crate::cbordetveraux::cbor_raw = (&dest)[0usize];
         option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res1 }
     }
     else
@@ -580,8 +530,7 @@ pub fn cbor_det_map_get <'a>(
 pub fn cbor_det_serialize_string(ty: u8, off: u64, out: &mut [u8]) -> usize
 {
     let roff: crate::cbordetveraux::raw_uint64 = crate::cbordetveraux::mk_raw_uint64(off);
-    let res: usize = crate::cbordetveraux::cbor_serialize_string(ty, roff, out);
-    res
+    crate::cbordetveraux::cbor_serialize_string(ty, roff, out)
 }
 
 pub fn cbor_det_serialize_tag(tag: u64, output: &mut [u8]) -> usize

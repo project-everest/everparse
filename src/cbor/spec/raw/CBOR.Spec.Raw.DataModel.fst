@@ -405,8 +405,8 @@ let cbor_list_of_list_cbor_correct
 = U.list_for_all_truep l;
   assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
   assert_norm (R.raw_data_item_sorted order == R.holds_on_raw_data_item (R.raw_data_item_sorted_elem order));
-  U.list_for_all_map cast_from_cbor l U.truep R.raw_data_item_ints_optimal (fun _ -> ());
-  U.list_for_all_map cast_from_cbor l U.truep (R.raw_data_item_sorted order)  (fun _ -> ())
+  U.list_for_all_map cast_from_cbor l (U.truep #(cbor order compare)) R.raw_data_item_ints_optimal (fun _ -> ());
+  U.list_for_all_map cast_from_cbor l (U.truep #(cbor order compare)) (R.raw_data_item_sorted order)  (fun _ -> ())
 
 let pack #order #compare x =
   let m : R.raw_data_item = match x with

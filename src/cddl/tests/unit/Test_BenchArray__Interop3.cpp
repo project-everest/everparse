@@ -151,14 +151,14 @@ int main()
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice__uint8_t_
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__BenchArray_arr_Pulse_Lib_Slice_slice__uint8_t
       m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     // printf("Original len %zu\n", len);
-    // printf("%zu bytes NOT parsed\n", m_opt.v.snd.len);
-    assert (m_opt.v.snd.len == 0); /* len is whatever remains */
+    // printf("%zu bytes NOT parsed\n", m_opt.v._2.len);
+    assert (m_opt.v._2.len == 0); /* len is whatever remains */
 
-    BenchArray_arr m = m_opt.v.fst;
+    BenchArray_arr m = m_opt.v._1;
 
     printf(" >>> VALIDATION BANDWIDTH: %f MB/s\n", len / f / 1e6);
 

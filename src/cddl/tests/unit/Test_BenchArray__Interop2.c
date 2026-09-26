@@ -103,16 +103,16 @@ int main()
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice__uint8_t_
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__BenchArray_arr_Pulse_Lib_Slice_slice__uint8_t
       m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     // printf("Original len %zu\n", Encoded.len);
-    // printf("%zu bytes were NOT parsed\n", m_opt.v.snd.len);
-    assert (m_opt.v.snd.len == 0); /* len is whatever remains */
+    // printf("%zu bytes were NOT parsed\n", m_opt.v._2.len);
+    assert (m_opt.v._2.len == 0); /* len is whatever remains */
 
-    BenchArray_arr m =  m_opt.v.fst;
+    BenchArray_arr m =  m_opt.v._1;
     assert (m.tag == BenchArray_Mkarr1);
-    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_subarr
       it = m.case_Mkarr1;
 
     printf(" >>> EVERCDDL VALIDATION BANDWIDTH: %f MB/s\n", Encoded.len / f / 1e6);

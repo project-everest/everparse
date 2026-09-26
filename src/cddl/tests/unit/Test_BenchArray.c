@@ -38,10 +38,10 @@ int main()
     printf(" >>> SERIALIZATION BANDWIDTH (COMBINED): %f MB/s\n", size / (f0 + f) / 1e6);
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice__uint8_t_
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__BenchArray_arr_Pulse_Lib_Slice_slice__uint8_t
       m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
-    assert (m_opt.v.snd.len == BSIZE - size); /* len is whatever remains */
+    assert (m_opt.v._2.len == BSIZE - size); /* len is whatever remains */
 
     printf(" >>> PARSING BANDWIDTH: %f MB/s\n", size / f / 1e6);
 
