@@ -1413,9 +1413,9 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args
   let dtyp_t =
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                     noextract\n\
-                    val dtyp_%s %s (d: EverParse3d.State.state_dict)\n\
-                       (sq: squash (EverParse3d.State.state_dict_weaken_prop %s d))\n\
-                      : dtyp %s d %b kind_%s %b %b"
+                    val dtyp_%s %s (___d: EverParse3d.State.state_dict)\n\
+                       (___sq: Prims.squash (EverParse3d.State.state_dict_weaken_prop %s ___d))\n\
+                      : dtyp %s ___d %b kind_%s %b %b"
       root_name
       binders
       sd
@@ -1635,12 +1635,12 @@ let print_binding mname (td:type_decl)
     then
       Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                         noextract\n\
-                        let dtyp_%s %s (d: EverParse3d.State.state_dict)\n\
-                                     (sq: squash (EverParse3d.State.state_dict_weaken_prop %s d))\n\
-                          : dtyp %s d %b kind_%s %b %b\n\
+                        let dtyp_%s %s (___d: EverParse3d.State.state_dict)\n\
+                                     (___sq: Prims.squash (EverParse3d.State.state_dict_weaken_prop %s ___d))\n\
+                          : dtyp %s ___d %b kind_%s %b %b\n\
                           = mk_dtyp_app\n\
                                     %s\n\
-                                    d\n\
+                                    ___d\n\
                                     %b\n\
                                     kind_%s\n\
                                     (type_%s %s)\n\
@@ -1648,7 +1648,7 @@ let print_binding mname (td:type_decl)
                                     %s\n\
                                     %b\n\
                                     %b\n\
-                                    (A.validate_weaken_gen \"%s\" %b ((coerce (_ by %s) (validate_%s %s)) <: A.validate_with_action_t #B.base_t #B.len_t #B.pos_t #%s (parser_%s %s) %s %b %b %b) d sq)\n\
+                                    (A.validate_weaken_gen \"%s\" %b ((coerce (_ by %s) (validate_%s %s)) <: A.validate_with_action_t #B.base_t #B.len_t #B.pos_t #%s (parser_%s %s) %s %b %b %b) ___d ___sq)\n\
                                     (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
                       root_name binders sd
                       (pulse_inst_args ())

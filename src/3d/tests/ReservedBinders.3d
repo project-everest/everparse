@@ -1,0 +1,22 @@
+// Regression test: user parameters must not collide with the binders the
+// Pulse backend generates for the ambient state dictionary and its weakening
+// proof. Those used to be printed as `d` and `sq`, so any 3D parameter called
+// `d` or `sq` -- mutable or not -- produced ill-formed F* ("Non-linear
+// patterns are not permitted" / an unsolvable `has_pts_to` constraint).
+// They are now `___d` and `___sq`, which the 3D lexer rejects as identifiers.
+//
+// The Low* backend never had these binders; the test is kept in both corpora
+// so that the two stay diffable.
+
+typedef struct _ReservedBindersInner(mutable UINT32 *d, UINT32 sq)
+{
+  UINT8 a;
+  UINT8 b { b < sq } {:on-success *d = a; return true; };
+} ReservedBindersInner;
+
+entrypoint
+typedef struct _ReservedBinders(mutable UINT32 *d, UINT32 sq)
+{
+  ReservedBindersInner(d, sq) inner;
+  UINT8 c { c < sq };
+} ReservedBinders;
