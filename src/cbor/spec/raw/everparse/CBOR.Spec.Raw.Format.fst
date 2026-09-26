@@ -37,13 +37,19 @@ let deterministically_encoded_cbor_map_key_order_irrefl x =
 let deterministically_encoded_cbor_map_key_order_trans x y z =
   F.deterministically_encoded_cbor_map_key_order_trans x y z
 
+#push-options "--z3rlimit 64"
+
 let deterministically_encoded_cbor_map_key_order_assoc_ext m1 m2 ext =
+  assert (deterministically_encoded_cbor_map_key_order == F.deterministically_encoded_cbor_map_key_order)
+    by (FStar.Tactics.trefl ());
   let sq1 : squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m1) = () in
   let sq2 : squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m2) = () in
  F.deterministically_encoded_cbor_map_key_order_assoc_ext m1 m2 (fun k ->
   CBOR.Spec.Raw.EverParse.Assoc.list_ghost_assoc_eq k m1;
   CBOR.Spec.Raw.EverParse.Assoc.list_ghost_assoc_eq k m2;
   ext k) sq1 sq2
+
+#pop-options
 
 let list_sorted_map_entry_order_deterministically_encoded_cbor_map_key_order_no_repeats
   (#t: Type)

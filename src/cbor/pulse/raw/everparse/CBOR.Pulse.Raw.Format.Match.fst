@@ -204,7 +204,7 @@ ensures
   with n r' . assert (
     pts_to_serialized (serialize_nlist n serialize_raw_data_item) c #p r'
   );
-  pts_to_serialized_copy #(nlist n raw_data_item) #(parse_nlist_kind n parse_raw_data_item_kind) #(coerce_eq () (parse_nlist n parse_raw_data_item)) (coerce_eq () (serialize_nlist n serialize_raw_data_item <: serializer (parse_nlist n parse_raw_data_item))) c c';
+  pts_to_serialized_copy #(nlist n raw_data_item) #(parse_nlist_kind n parse_raw_data_item_kind) #(coerce_eq () ((parse_nlist n parse_raw_data_item) <: parser (parse_nlist_kind n parse_raw_data_item_kind) (nlist n raw_data_item))) (coerce_eq () (serialize_nlist n serialize_raw_data_item <: serializer (parse_nlist n parse_raw_data_item))) c c';
   fold (cbor_match_serialized_payload_array c p r);
   fold (cbor_match_serialized_payload_array c' 1.0R r);
   intro
@@ -247,7 +247,7 @@ ensures
   with n r' . assert (
     pts_to_serialized (serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #p r'
   );
-  pts_to_serialized_copy #(nlist n (raw_data_item & raw_data_item)) #(parse_nlist_kind n (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) #(coerce_eq () (parse_nlist n (nondep_then parse_raw_data_item parse_raw_data_item))) (coerce_eq () (serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) <: serializer (parse_nlist n (nondep_then parse_raw_data_item parse_raw_data_item)))) c c';
+  pts_to_serialized_copy #(nlist n (raw_data_item & raw_data_item)) #(parse_nlist_kind n (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) #(coerce_eq () ((parse_nlist n (nondep_then parse_raw_data_item parse_raw_data_item)) <: parser (parse_nlist_kind n (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) (nlist n (raw_data_item & raw_data_item)))) (coerce_eq () (serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) <: serializer (parse_nlist n (nondep_then parse_raw_data_item parse_raw_data_item)))) c c';
   fold (cbor_match_serialized_payload_map c p r);
   fold (cbor_match_serialized_payload_map c' 1.0R r);
   intro

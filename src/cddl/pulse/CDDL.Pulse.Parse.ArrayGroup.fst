@@ -662,7 +662,7 @@ let cddl_array_iterator_next_t
       pure (Ghost.reveal l == a :: q)
     )
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 inline_for_extraction
 fn cddl_array_iterator_next

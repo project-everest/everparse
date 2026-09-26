@@ -190,6 +190,7 @@ let _ = assert (Success? (check (Seq.cons 0xF0uy (Seq.cons 0x90uy (Seq.cons 0x8C
 #push-options "--fuel 5 --z3rlimit 64"
 let _ = assert (Success? (check (Seq.cons 0x4Duy (Seq.cons 0xD0uy (Seq.cons 0xB0uy (Seq.cons 0xE4uy (Seq.cons 0xBAuy (Seq.cons 0x8Cuy (Seq.cons 0xF0uy (Seq.cons 0x90uy (Seq.cons 0x8Cuy (Seq.cons 0x82uy Seq.empty))))))))))))
 #pop-options
+#push-options "--z3rlimit 64"
 let _ = assert (Error? (check (Seq.cons 0xC0uy (Seq.cons 0xAFuy Seq.empty))))
 let _ = assert (Error? (check (Seq.cons 0xE0uy (Seq.cons 0x9Fuy (Seq.cons 0x80uy Seq.empty)))))
 let _ = assert (Success? (check (Seq.cons 0xF4uy (Seq.cons 0x80uy (Seq.cons 0x83uy (Seq.cons 0x92uy Seq.empty))))))
@@ -207,3 +208,5 @@ let rec ascii_is_utf8
   if Seq.length s = 0
   then ()
   else ascii_is_utf8 (Seq.slice s 1 (Seq.length s))
+
+#pop-options

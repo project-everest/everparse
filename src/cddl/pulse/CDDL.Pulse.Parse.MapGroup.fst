@@ -1378,7 +1378,8 @@ let impl_zero_copy_map_zero_or_more_aux
   assert (sp1 == i.sp1);
   assert (except == i.tex);
   assert (i.t2 == value);
-  assert (Ghost.reveal i.ser2 == coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable);
+  assert (Ghost.reveal i.ser2 == coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable)
+    by (FStar.Tactics.norm [delta_only [`%coerce_eq; `%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec]; iota; primops]; FStar.Tactics.smt ());
   assert (i.ps2 === Ghost.hide sp2.parser);
   assert (sp2.parser == coerce_eq () (Ghost.reveal i.ps2));
   assert (parse_table_entries sp1.parser except sp2.parser li == parse_table_entries i.sp1.parser i.tex i.ps2 li);

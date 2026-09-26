@@ -684,6 +684,14 @@ ensures
 
 #pop-options
 
+let cbor_map_sub_prop (m1 m2: cbor_map) : Lemma
+  (requires cbor_map_included m2 m1)
+  (ensures
+    cbor_map_disjoint m2 (cbor_map_sub m1 m2) /\
+    cbor_map_union m2 (cbor_map_sub m1 m2) == m1
+  )
+= ()
+
 #push-options "--z3rlimit 768 --fuel 2 --ifuel 1"
 
 #restart-solver
@@ -770,7 +778,8 @@ if (not count) {
     } else {
       assert (pure (cbor_map_included s (cbor_map_filter (Util.notp f) v1_future)));
       assert (pure (cbor_map_included s v1_future));
-      let v1_future' = Ghost.hide (cbor_map_sub v1_future s);
+      cbor_map_sub_prop v1_future s;
+      let v1_future' : Ghost.erased cbor_map = Ghost.hide (cbor_map_sub v1_future s);
       cbor_map_length_disjoint_union s v1_future';
       cbor_map_length_singleton hd_k hd_v;
       assert (pure (cbor_map_length v1_future' == cbor_map_length v1_future - 1));

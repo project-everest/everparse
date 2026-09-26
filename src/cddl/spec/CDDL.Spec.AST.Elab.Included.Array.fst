@@ -76,7 +76,7 @@ let array_group_included_gdef_snd
 = let (g0, a1r) = destruct_group a2 in
   array_group_sem_destruct_group e.e_sem_env a2;
   let GDef n = g0 in
-  let en = match e.e_sem_env.se_bound n with
+  let en : group = match e.e_sem_env.se_bound n with
     | Some NGroup -> (e.e_env n)
     | Some NType -> GElem false (TElem EAny) (e.e_env n)
   in

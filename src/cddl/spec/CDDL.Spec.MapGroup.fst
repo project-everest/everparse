@@ -161,6 +161,7 @@ let parser_spec_map_group
 let parser_spec_map_group_eq
   source0 #source #source_fp p target_prop' x
 = let f = (source_fp) in
+  cbor_map_split f (CMap?.c (unpack x));
   assert (
     (let x' = cbor_map_filter f (CMap?.c (unpack x)) in
     map_group_parser_spec_arg_prop source source_fp x' /\
@@ -278,6 +279,7 @@ let map_group_parser_spec_concat_eq
   l
 = let f1 =  (source_fp1) in
   let f2 =  (source_fp2) in
+  let _ = map_group_parser_spec_concat' s1 s2 target_size target_prop l in
   assert (
     let l1 = cbor_map_filter f1 l in
     let l2 = cbor_map_filter f2 l in

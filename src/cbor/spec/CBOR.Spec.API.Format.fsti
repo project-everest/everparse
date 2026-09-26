@@ -49,7 +49,8 @@ let cbor_det_parse_inj
 = let Some (y1, n1) = cbor_det_parse x1 in
   let Some (y2, n2) = cbor_det_parse x2 in
   assert (Seq.slice x1 0 n1 == Seq.slice x2 0 n2);
-  assert (Seq.length (Seq.slice x1 0 n1) == Seq.length (Seq.slice x2 0 n2))
+  Seq.lemma_len_slice x1 0 n1;
+  Seq.lemma_len_slice x2 0 n2
 
 val cbor_det_parse_prefix
   (x y: Seq.seq U8.t)

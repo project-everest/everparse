@@ -33,6 +33,8 @@ let u8_in_80_BF
 : Tot bool
 = U8.lte 0x80uy x && U8.lte x 0xBFuy
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_fetch_utf8_correct
   (s: S.slice U8.t)
@@ -105,6 +107,8 @@ ensures
     }
   }
 }
+
+#pop-options
 
 #push-options "--z3rlimit 32"
 
