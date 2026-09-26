@@ -25,10 +25,16 @@ touch -c -d "$old" \
       opt/opam opt/opam/opam-init/init.sh \
       opt/fstar-deps.opam opt/everparse-deps.opam
 
-touch opam-env.Makefile \
+touch -c opam-env.Makefile \
       opt/opam.done opt/FStar.done opt/karamel.done opt/z3
 
-# Report what make makes of the result, so that a regression here is easy to
-# diagnose from the job log.
-echo '--- make -f deps.Makefile -n --debug=b deps ---'
-make -f deps.Makefile -n --debug=b deps || true
+# Report the result, so that a regression here is easy to diagnose from the
+# job log.  .github/ci-make.sh additionally tells make outright not to remake
+# any of these, so a mistake here should no longer be fatal.
+ls -ld --full-time \
+   opt/hashes.Makefile \
+   opt/FStar/Makefile \
+   opt/karamel/Makefile \
+   opt/opam/opam-init/init.sh \
+   opam-env.Makefile \
+   opt/opam.done opt/FStar.done opt/karamel.done opt/z3 || true
