@@ -783,7 +783,12 @@ let get_pulse_kenv () : ML (list string) =
   FStar.ST.recall pulse_kenv;
   !pulse_kenv
 
-let pulse_key_binder_of (p:string) : string = Printf.sprintf "k__%s" p
+(* The ghost key binder for a parameter. It must not be expressible in 3D, or
+   a user parameter of that very name would collide with it: [Ast.reserved_prefix]
+   followed by a lowercase letter is unreachable, exactly as for
+   [pulse_output_state_name] below. *)
+let pulse_key_binder_of (p:string) : string =
+  Printf.sprintf "%sk_%s" A.reserved_prefix p
 
 let pulse_in_kenv (e:string) : ML bool =
   Some? (List.Tot.find (fun (x:string) -> x = e) (get_pulse_kenv ()))

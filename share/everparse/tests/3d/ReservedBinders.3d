@@ -9,7 +9,11 @@
 //   - the key-distinctness binder was `(sq_keys_: squash True)`, with `squash`
 //     and `True` unqualified. A parameter called `squash` or `True` shadowed
 //     them, and one called `sq_keys_` collided with the binder itself. It is
-//     now `(___sq_keys: Prims.squash Prims.l_True)`.
+//     now `(___sq_keys: Prims.squash Prims.l_True)`;
+//
+//   - each parameter also gets a ghost key binder, which used to be named
+//     `k__<param>`. A parameter literally called `k__x`, next to one called
+//     `x`, therefore bound the same name twice. It is now `___k_<param>`.
 //
 // `Ast.check_reserved_identifier` rejects any 3D identifier beginning with
 // `___`, so none of these names is reachable from 3D source any more.
@@ -19,18 +23,20 @@
 
 typedef struct _ReservedBindersInner(mutable UINT32 *d, UINT32 sq,
                                      mutable UINT32 *squash, UINT32 sq_keys_,
-                                     UINT32 True)
+                                     UINT32 True,
+                                     mutable UINT32 *x, mutable UINT32 *k__x)
 {
   UINT8 a;
   UINT8 b { b < sq && b < sq_keys_ && b < True }
-         {:on-success *d = a; *squash = a; return true; };
+         {:on-success *d = a; *squash = a; *x = a; *k__x = a; return true; };
 } ReservedBindersInner;
 
 entrypoint
 typedef struct _ReservedBinders(mutable UINT32 *d, UINT32 sq,
                                 mutable UINT32 *squash, UINT32 sq_keys_,
-                                UINT32 True)
+                                UINT32 True,
+                                mutable UINT32 *x, mutable UINT32 *k__x)
 {
-  ReservedBindersInner(d, sq, squash, sq_keys_, True) inner;
+  ReservedBindersInner(d, sq, squash, sq_keys_, True, x, k__x) inner;
   UINT8 c { c < sq };
 } ReservedBinders;
