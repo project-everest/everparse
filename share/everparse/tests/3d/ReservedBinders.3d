@@ -1,22 +1,36 @@
-// Regression test: user parameters must not collide with the binders the
-// Pulse backend generates for the ambient state dictionary and its weakening
-// proof. Those used to be printed as `d` and `sq`, so any 3D parameter called
-// `d` or `sq` -- mutable or not -- produced ill-formed F* ("Non-linear
-// patterns are not permitted" / an unsolvable `has_pts_to` constraint).
-// They are now `___d` and `___sq`, which the 3D lexer rejects as identifiers.
+// Regression test: user parameters must neither collide with, nor shadow
+// anything used by, the binders the Pulse backend generates around them.
 //
-// The Low* backend never had these binders; the test is kept in both corpora
-// so that the two stay diffable.
+//   - the ambient state dictionary and its weakening proof used to be printed
+//     as `d` and `sq`, so a 3D parameter called `d` or `sq` -- mutable or not
+//     -- produced ill-formed F* ("Non-linear patterns are not permitted", or
+//     an unsolvable `has_pts_to` constraint). They are now `___d` and `___sq`;
+//
+//   - the key-distinctness binder was `(sq_keys_: squash True)`, with `squash`
+//     and `True` unqualified. A parameter called `squash` or `True` shadowed
+//     them, and one called `sq_keys_` collided with the binder itself. It is
+//     now `(___sq_keys: Prims.squash Prims.l_True)`.
+//
+// `Ast.check_reserved_identifier` rejects any 3D identifier beginning with
+// `___`, so none of these names is reachable from 3D source any more.
+//
+// The Low* backend has none of these binders; the test is kept in both
+// corpora so that the two stay diffable.
 
-typedef struct _ReservedBindersInner(mutable UINT32 *d, UINT32 sq)
+typedef struct _ReservedBindersInner(mutable UINT32 *d, UINT32 sq,
+                                     mutable UINT32 *squash, UINT32 sq_keys_,
+                                     UINT32 True)
 {
   UINT8 a;
-  UINT8 b { b < sq } {:on-success *d = a; return true; };
+  UINT8 b { b < sq && b < sq_keys_ && b < True }
+         {:on-success *d = a; *squash = a; return true; };
 } ReservedBindersInner;
 
 entrypoint
-typedef struct _ReservedBinders(mutable UINT32 *d, UINT32 sq)
+typedef struct _ReservedBinders(mutable UINT32 *d, UINT32 sq,
+                                mutable UINT32 *squash, UINT32 sq_keys_,
+                                UINT32 True)
 {
-  ReservedBindersInner(d, sq) inner;
+  ReservedBindersInner(d, sq, squash, sq_keys_, True) inner;
   UINT8 c { c < sq };
 } ReservedBinders;

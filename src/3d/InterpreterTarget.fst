@@ -927,8 +927,8 @@ let pulse_keys_binder (mname:string) (i:index inv)
   : ML string
   = let c = pulse_key_distinct_conj (pulse_state_dict_keys mname i) in
     if c = ""
-    then "(sq_keys_: squash True)"
-    else Printf.sprintf "(sq_keys_: squash (%s))" c
+    then "(___sq_keys: Prims.squash Prims.l_True)"
+    else Printf.sprintf "(___sq_keys: Prims.squash (%s))" c
 
 let print_dtyp_at (mname:string) (d:string) (dt:dtyp) =
   match dt with
@@ -1497,7 +1497,7 @@ let print_binding mname (td:type_decl)
         (pulse_key_binders mname tdn.td_params)
         (print_binders tdn.td_params)
         (pulse_keys_binder mname inv),
-      Printf.sprintf "%s %s sq_keys_"
+      Printf.sprintf "%s %s ___sq_keys"
         (pulse_key_binder_args mname tdn.td_params)
         (print_args tdn.td_params)
     else print_binders tdn.td_params, print_args tdn.td_params
