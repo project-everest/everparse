@@ -114,12 +114,21 @@ uint8_t *EverParseStreamPeep(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
   return head->buf;
 }
 
-/* field_ptr_after: the address just past the next sz bytes, or failure when
-   they are not contiguous. Provided by `static` and `extern` alike. */
-BOOLEAN EverParseFieldPtrAfterImpl(uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {  uint8_t *p = EverParseStreamPeep(x, (size_t)sz);
+/* field_ptr_after: the address of the next sz bytes -- that is, of the field
+   that comes after the one carrying the action -- or failure when they are not
+   contiguous. Provided by `static` and `extern` alike.
+
+   The pointer is the *start* of those sz bytes, not the address past them:
+   this must agree with the Low* backend, whose action writes the Peep result
+   unchanged (src/3d/prelude/extern/EverParse3d.Actions.All.fst,
+   action_field_ptr_after). Note that the F* signature of
+   field_ptr_after_impl leaves the written pointer unconstrained, so nothing
+   but this agreement pins it down; see the value checks in main.c. */
+BOOLEAN EverParseFieldPtrAfterImpl(uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
+  uint8_t *p = EverParseStreamPeep(x, (size_t)sz);
   if (p == NULL)
     return FALSE;
-  *out = p + (size_t)sz;
+  *out = p;
   return TRUE;
 }
 

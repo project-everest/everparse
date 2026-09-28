@@ -687,9 +687,18 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 (* No `copy_buffer` instance: probing is unavailable for the `extern` backend,
    as in Low*. *)
 
-(* `field_ptr_after`: the address just past the next `sz` bytes of the input
-   stream, obtained from the client-provided `EverParseStreamPeep` primitive.
-   Only the `extern` backend provides it, as in Low*. *)
+(* `field_ptr_after`: the address of the next `sz` bytes of the input stream --
+   the start of the field that follows the one carrying the action -- obtained
+   from the client-provided `EverParseStreamPeep` primitive. Only the `extern`
+   backend provides it, as in Low*.
+
+   The address is the start of those `sz` bytes, not the address past them, so
+   that this agrees with Low*, whose `action_field_ptr_after` writes the `peep`
+   result unchanged and whose `peep` is specified to return
+   `Seq.slice (get_remaining x h) 0 (U64.v n)`. Nothing below pins this down:
+   the post-condition of `field_ptr_after_impl` leaves the written pointer
+   existentially quantified, so the agreement is the client's obligation and is
+   guarded by the value checks in the `static` test's `main.c`. *)
 
 module AP = Pulse.Lib.ArrayPtr
 module R = Pulse.Lib.Reference

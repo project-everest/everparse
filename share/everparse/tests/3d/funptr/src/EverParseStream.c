@@ -33,11 +33,14 @@ size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
   return x->consumed;
 }
 
+/* The pointer is the start of the next sz bytes, not the address past them, so
+   that --pulse agrees with the Low* backend. See the longer note in
+   ../../static/src/EverParseStream.c. */
 BOOLEAN EverParseFieldPtrAfterImpl(uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
   uint8_t *p = x->vtable.peep(x, (size_t)sz);
   if (p == NULL)
     return FALSE;
-  *out = p + (size_t)sz;
+  *out = p;
   return TRUE;
 }
 
