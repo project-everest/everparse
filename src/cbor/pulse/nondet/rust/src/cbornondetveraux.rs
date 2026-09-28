@@ -5639,7 +5639,12 @@ fn impl_check_equiv_list_basic(
 }
 
 fn impl_check_equiv_basic(map_bound: option__size_t, l1: &[u8], l2: &[u8]) -> option__bool
-{ impl_check_equiv_list_basic(map_bound, 1usize, l1, 1usize, l2) }
+{
+    if 1usize == 0usize
+    { option__bool::Some { v: true } }
+    else
+    { impl_check_equiv_list_basic(map_bound, 1usize, l1, 1usize, l2) }
+}
 
 fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_basic(
     nl1: usize,

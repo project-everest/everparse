@@ -5071,12 +5071,16 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_basic(
   CBOR_Pulse_Raw_Slice_byte_slice l2
 )
 {
-  return
-    CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(map_bound,
-      (size_t)1U,
-      l1,
-      (size_t)1U,
-      l2);
+  if ((size_t)1U == (size_t)0U)
+    return
+      ((FStar_Pervasives_Native_option__bool){ .tag = FStar_Pervasives_Native_Some, .v = true });
+  else
+    return
+      CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(map_bound,
+        (size_t)1U,
+        l1,
+        (size_t)1U,
+        l2);
 }
 
 static FStar_Pervasives_Native_option__bool
