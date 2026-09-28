@@ -1,13 +1,15 @@
 module EverParse3d.ProbeActions
 #lang-pulse
 
-(* [I] is also brought into scope by the interface, but an abbreviation that
-   only leaks from the .fsti is invisible to F*'s dependency analysis, which
-   then resolves [I.] against a *client* module literally named [I] and
-   reports a recursive dependency (Error 308). Declaring it here keeps a 3D
-   module named [I] compilable, as it already is with the Low* backend, whose
-   prelude declares the abbreviation in every file that uses it. *)
+(* [I] and [CB] are also brought into scope by the interface, but an
+   abbreviation that only leaks from the .fsti is invisible to F*'s dependency
+   analysis, which then resolves [I.] / [CB.] against a *client* module
+   literally named [I] / [CB] and reports a recursive dependency (Error 308).
+   Declaring them here keeps a 3D module named [I] or [CB] compilable, as it
+   already is with the Low* backend, whose prelude declares the abbreviation in
+   every file that uses it. *)
 module I = EverParse3d.InputStream.Base
+module CB = EverParse3d.CopyBuffer
 module U64 = FStar.UInt64
 
 
