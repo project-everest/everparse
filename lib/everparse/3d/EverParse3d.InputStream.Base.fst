@@ -150,7 +150,14 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   (* [has_at base len pos off n] tests whether [n] bytes are available
      starting [off] bytes after the current position, without consuming
      anything. This is what the "no read" (non-consuming) validators need,
-     since they track their position in a separate [SZ.t] reference. *)
+     since they track their position in a separate [SZ.t] reference.
+
+     [off] is *relative* to the current position. It carries no precondition:
+     on the extern/static backends [has_at] is a client-provided C primitive,
+     and a precondition here would be an unchecked proof obligation on
+     hand-written code. The out-of-range case is instead left underspecified
+     -- callers always have [off] in range, so nothing is lost, and an
+     existing client stays correct whatever it answers there. *)
   has_at:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (base: base_t) ->
@@ -162,13 +169,14 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt bool
     (requires (
-      pts_to base len pos contents v ** pure (
-      SZ.v off <= Seq.length v
-    )))
+      pts_to base len pos contents v
+    ))
     (ensures (fun res ->
       pts_to base len pos contents v ** pure (
-      (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-      (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+      SZ.v off <= Seq.length v ==> (
+        (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+        (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+      )
     )));
 
   read:

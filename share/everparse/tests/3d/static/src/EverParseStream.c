@@ -32,7 +32,9 @@ BOOLEAN _EverParseStreamHas(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE
 
 BOOLEAN _EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
   EverParseCheckExtra(extra);
-  /** assumes off bytes are available */
+  /* `off` is relative to the current position. The validators never ask about
+     an off beyond the end of the stream, so that case is unspecified; we just
+     answer FALSE rather than special-case it. */
   size_t total = off + n;
   if (total < off)
     return FALSE; /* overflow */

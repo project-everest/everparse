@@ -226,7 +226,14 @@ ensures stream_pts_to base len pos contents v **
 (* [has_at base len pos off n] tests whether [n] bytes are available
      starting [off] bytes after the current position, without consuming
      anything. This is what the "no read" (non-consuming) validators need,
-     since they track their position in a separate [SZ.t] reference. *)
+     since they track their position in a separate [SZ.t] reference.
+
+     [off] is *relative* to the current position. There is deliberately no
+     precondition on it: this is a client-provided C primitive, so a
+     precondition would be an unchecked proof obligation on hand-written code.
+     The out-of-range case is left underspecified instead -- the validators
+     never reach it, so an existing client stays correct whatever it answers
+     there, as long as it does not read out of bounds to decide. *)
 assume val stream_has_at :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -237,13 +244,14 @@ assume val stream_has_at :
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt bool
     (requires (
-      stream_pts_to_raw base pos contents v ** pure (
-      SZ.v off <= Seq.length v
-    )))
+      stream_pts_to_raw base pos contents v
+    ))
     (ensures (fun res ->
       stream_pts_to_raw base pos contents v ** pure (
-      (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-      (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+      SZ.v off <= Seq.length v ==> (
+        (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+        (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+      )
     )))
 
 inline_for_extraction
@@ -257,17 +265,23 @@ fn stream_has_at_bounded
   (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t))
   (v: Ghost.erased (Seq.seq U8.t))
-requires stream_pts_to base len pos contents v ** pure (SZ.v off <= Seq.length v)
+requires stream_pts_to base len pos contents v
 returns res: bool
 ensures stream_pts_to base len pos contents v **
   pure (
-    (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-    (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+    SZ.v off <= Seq.length v ==> (
+      (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+      (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+    )
   )
 {
   if bounded len {
     let rem = stream_remaining base len pos contents v;
-    SZ.lte n (SZ.sub rem off)
+    if (SZ.lte off rem) {
+      SZ.lte n (SZ.sub rem off)
+    } else {
+      false
+    }
   } else {
     unfold (stream_pts_to base len pos contents v);
     let res = stream_has_at base pos off n contents v;

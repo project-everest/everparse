@@ -69,23 +69,33 @@ ensures stream_pts_to b len pos contents v **
   SZ.lte n avail
 }
 
+(* [off] is relative to the current position, and has no precondition; see the
+   [has_at] field of EverParse3d.InputStream.Base.input_stream_inst. The guard
+   below is what keeps [SZ.sub] from underflowing when [off] is out of range;
+   the answer in that case is unspecified. *)
 inline_for_extraction
 fn stream_has_at
     (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (off: SZ.t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
-requires stream_pts_to b len pos contents v ** pure (SZ.v off <= Seq.length v)
+requires stream_pts_to b len pos contents v
 returns res: bool
 ensures stream_pts_to b len pos contents v ** pure (
-  (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-  (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+  SZ.v off <= Seq.length v ==> (
+    (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+    (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+  )
 )
 {
   unfold (stream_pts_to b len pos contents v);
   let p = !pos;
-  let avail = SZ.sub (SZ.sub len p) off;
+  let rem = SZ.sub len p;
   fold (stream_pts_to b len pos contents v);
-  SZ.lte n avail
+  if (SZ.lte off rem) {
+    SZ.lte n (SZ.sub rem off)
+  } else {
+    false
+  }
 }
 
 inline_for_extraction

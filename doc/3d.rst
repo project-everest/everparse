@@ -364,6 +364,20 @@ Options are treated from left to right:
   call to recover the parsed size, so it must be cumulative and must
   not be reset by ``EverParseRetreat``.
 
+  ``EverParseStreamHasAt(extra, base, off, n)`` returns ``TRUE`` iff ``n``
+  bytes are available starting ``off`` bytes **after the current position**,
+  and must not consume anything. Unlike
+  ``EverParseStreamGetPosition``'s return value, ``off`` is *relative*; an
+  implementation that treats it as an absolute offset will read out of
+  bounds and accept truncated input, since this call is the entire bounds
+  check performed by the non-consuming validators. The validators never ask
+  about an ``off`` beyond the end of the stream, so the answer in that case
+  is unspecified — but the implementation must still reach it safely, in
+  particular by guarding against ``off + n`` overflowing.
+
+  ``EverParseStreamEmpty(extra, base)`` returns the number of bytes
+  remaining **and consumes all of them**; it is used for ``all_bytes``.
+
   Three differences from the Low\* contract are worth calling out when
   porting a client:
 
