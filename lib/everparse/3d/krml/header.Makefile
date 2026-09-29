@@ -59,8 +59,7 @@ WARN_static := $(WARN_extern)
 # The Pulse prelude is built *once* and instantiated through a typeclass, so
 # its error_handler is parameterized by the stream types. KaRaMeL has no
 # parameterized typedefs: it can only inline such an abbreviation at each use
-# site, which is why the generated prototypes spell the function-pointer type
-# out in full, and why -no-inline-type-abbrev cannot be applied to
+# site, so -no-inline-type-abbrev cannot be applied to
 # EverParse3d.Actions.Common.error_handler itself -- it would leave an
 # un-inlined TApp that the KaRaMeL checker rejects as "not a function type".
 #
@@ -71,9 +70,13 @@ WARN_static := $(WARN_extern)
 # it EverParse_error_handler and -fmicrosoft uppercases it to
 # EVERPARSE_ERROR_HANDLER, matching the Low* backend exactly.
 #
+# The same alias is what 3d.exe preserves in the client's own KaRaMeL run (see
+# src/3d/ocaml/Batch.ml), so generated validator prototypes name the typedef
+# too, exactly as under Low*.
+#
 # The typedef is therefore derived from the Pulse definition, not snapshotted:
-# if the error_handler binder in EverParse3d.Actions.Common changes, this
-# typedef changes with it.
+# if EverParse3d.InputStream.Base.error_handler_arrow changes, this typedef
+# changes with it.
 HANDLER_buffer := EverParse3d.Actions.ErrorHandler.Buffer.error_handler
 HANDLER_extern := EverParse3d.Actions.ErrorHandler.Extern.error_handler
 HANDLER_static := $(HANDLER_extern)

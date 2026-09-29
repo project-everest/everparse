@@ -318,7 +318,7 @@ fn validate_with_error_handler
   if (res = validator_success) { // TODO: turn this `if ... else` into a non-terminal `if (res <> validator_success)` with an `ensures` clause
     res
   } else {
-    ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos _ _;
+    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos;
     res
   };
 }
@@ -3247,11 +3247,11 @@ fn probe_then_validate
         extra_state
         (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
         ();
-      ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)
+      (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst))
         typename fieldname
         (error_reason_of_result validator_error_probe_failed)
         validator_error_probe_failed
-        ctxt sl_base sl_len sl_pos _ _;
+        ctxt sl_base sl_len sl_pos;
       false
     }
   }
@@ -3349,7 +3349,7 @@ fn validate_with_error_handler_no_read
   if (res = validator_success) {
     res
   } else {
-    ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos _ _;
+    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos;
     res
   };
 }

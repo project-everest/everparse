@@ -216,12 +216,11 @@ ensures exists* v_ctxt' .
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
 {
   unfold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
-  ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)
+  (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst))
     tn fn_ det 0uy ctxt
       (CB.base_of #_ #base_t #len_t #pos_t dest)
       (CB.len_of #_ #base_t #len_t #pos_t dest)
-      (CB.pos_of #_ #base_t #len_t #pos_t dest)
-      contents_dest v_dest;
+      (CB.pos_of #_ #base_t #len_t #pos_t dest);
   fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
 }
 

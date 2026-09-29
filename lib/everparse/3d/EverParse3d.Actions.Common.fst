@@ -15,28 +15,39 @@ let specialize_backend = ()
 
 let app_ctxt = AppCtxt.app_ctxt
 
+(* The error-handler callback type.
+
+   This is the instance's [error_handler_t] member rather than the arrow type
+   itself, so that it extracts to a 0-ary, per-backend alias that KaRaMeL can
+   preserve as EVERPARSE_ERROR_HANDLER. See EverParse3d.InputStream.Base for
+   why, and [I.error_handler_arrow] for the shape it is equal to.
+
+   [unfold]: this is a *generic* projection out of the instance. If a
+   declaration survives to extraction, KaRaMeL gets an unrepresentable type
+   (`void *`) which, under the `EverParse` bundle's rename-prefix, additionally
+   steals the C name from the backend alias it is supposed to resolve to.
+   Unfolding it at each use site is what lets extraction resolve the
+   projection to that alias.
+
+   [noextract_to "krml"]: `unfold` removes it from every use site, but F* still
+   emits a declaration for it, which extracts as an opaque `any`; KaRaMeL drops
+   its (now unused) type parameters and turns it into a 0-ary
+   `typedef void *`, stealing the C name from the backend alias. *)
+[@@noextract_to "krml"]
+unfold
 let error_handler
     {| inst: I.input_stream_inst 'base_t 'len_t 'pos_t  |}
-= 
-    typename:string ->
-    fieldname:string ->
-    error_reason:string ->
-    error_code:U8.t ->
-    ctxt: app_ctxt ->
-    sl_base: 'base_t ->
-    sl_len: 'len_t ->
-    sl_pos: 'pos_t ->
-    contents_sl: Ghost.erased (Seq.seq U8.t) ->
-    v_sl: Ghost.erased (Seq.seq U8.t) ->
-    stt unit
-      (requires exists* v_ctxt .
-        I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-	pts_to ctxt v_ctxt
-      )
-      (ensures fun _ -> exists* v_ctxt' .
-	I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-	pts_to ctxt v_ctxt'
-      )
+= inst.error_handler_t
+
+(* Erased at extraction: every instance discharges [error_handler_arrow_of_t]
+   with the identity. *)
+unfold
+let error_handler_arrow_of
+    (#base_t #len_t #pos_t: Type0)
+    {| inst: I.input_stream_inst base_t len_t pos_t |}
+    (h: error_handler #base_t #len_t #pos_t)
+: I.error_handler_arrow base_t len_t pos_t
+= inst.error_handler_arrow_of_t h
 
 (*
 // The C macro used as the error handler when 3d is invoked with

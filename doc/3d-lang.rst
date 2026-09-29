@@ -1998,26 +1998,13 @@ An error handling callback is a C procedure with the following signature:
   );
 
 EverParse also emits this type as a public ``EVERPARSE_ERROR_HANDLER``
-typedef in the generated ``EverParse.h``, under both backends. Two details
-differ between them:
+typedef in the generated ``EverParse.h``, under both backends, and the
+generated validator prototypes in ``<Mod>.h`` name that typedef.
 
-* The generated validator prototypes in ``<Mod>.h`` name the typedef under
-  the default backend, but spell the function-pointer type out in full under
-  ``--pulse``. The two types are compatible; only the generated header's
-  spelling differs. Client code may name ``EVERPARSE_ERROR_HANDLER`` under
-  either backend.
-
-  (The Pulse runtime is built once and instantiated through a typeclass, so
-  its ``error_handler`` is parameterized by the input-stream types. KaRaMeL
-  has no parameterized typedefs, so it inlines the abbreviation at each use
-  site in the generated code. See
-  ``lib/everparse/3d/krml/header.Makefile`` for how the public typedef is
-  nonetheless recovered.)
-
-* The argument list above is indicative. The handler takes seven arguments
-  under the default backend and eight under ``--pulse``, which additionally
-  passes the current stream position. Consult the ``EVERPARSE_ERROR_HANDLER``
-  typedef in the generated ``EverParse.h`` for the exact signature.
+The argument list above is indicative: the handler takes seven arguments
+under the default backend and eight under ``--pulse``, which additionally
+passes the current stream position. Consult the ``EVERPARSE_ERROR_HANDLER``
+typedef in the generated ``EverParse.h`` for the exact signature.
 
 Every EverParse validator is parameterized by:
 

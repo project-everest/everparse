@@ -6,6 +6,8 @@ module SZ = FStar.SizeT
 module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
 module Util = EverParse3d.Util
+module AppCtxt = EverParse3d.AppCtxt
+module PR = Pulse.Lib.Reference
 
 let seq_is_suffix_of (#t: Type) (small large: Seq.seq t) : Tot prop =
     Seq.length small <= Seq.length large /\
@@ -29,12 +31,68 @@ class input_stream_pts_to (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type =
     Tot slprop;
 }
 
+(* The type of the error-handler callback.
+
+   This lives here, rather than in EverParse3d.Actions.Common where it used to,
+   because [input_stream_inst] below must mention it, and Actions.Common
+   depends on this module.
+
+   NOTE: this arrow must have exactly as many binders as the C function-pointer
+   type it extracts to. Ghost binders would be extracted by F* as extra [unit]
+   parameters of the type abbreviation, whereas Pulse drops them at application
+   sites and KaRaMeL drops them when emitting C; the resulting arity mismatch
+   makes KaRaMeL's Low* checker reject every generated validator as soon as the
+   abbreviation is preserved with -no-inline-type-abbrev (which is what gives
+   it the name EVERPARSE_ERROR_HANDLER). Hence the error handler is given
+   permission on the application context only: callers keep (and frame) their
+   permission on the input stream across the call.
+*)
+let error_handler_arrow
+  (base_t: Type0) (len_t: Type0) (pos_t: Type0)
+=
+    typename:string ->
+    fieldname:string ->
+    error_reason:string ->
+    error_code:U8.t ->
+    ctxt: AppCtxt.app_ctxt ->
+    sl_base: base_t ->
+    sl_len: len_t ->
+    sl_pos: pos_t ->
+    stt unit
+      (requires exists* v_ctxt . PR.pts_to ctxt v_ctxt)
+      (ensures fun _ -> exists* v_ctxt' . PR.pts_to ctxt v_ctxt')
+
 noextract
 inline_for_extraction
 class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
 
   [@@@FStar.Tactics.Typeclasses.no_method]
   pts_to_inst: input_stream_pts_to base_t len_t pos_t;
+
+  (* The error-handler callback type, carried as a member rather than named
+     directly as [error_handler_arrow base_t len_t pos_t].
+
+     KaRaMeL has no parameterized typedefs: it inlines such an abbreviation at
+     every use site, so a generated validator's prototype would spell the whole
+     function-pointer type out instead of naming EVERPARSE_ERROR_HANDLER, as the
+     Low* backend does. Carrying the type as a member lets each backend supply
+     its own 0-ary alias -- which KaRaMeL can preserve, and the `EverParse`
+     bundle can rename -- while [error_handler_arrow_of_t] keeps it
+     interchangeable with the arrow type for the few places that call a handler.
+     See EverParse3d.Actions.ErrorHandler.Buffer. *)
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  error_handler_t: Type0;
+
+  (* The way back to the arrow type, for the few places that actually call a
+     handler. This is the identity, but it must be a member rather than a
+     coercion derived from [error_handler_t == error_handler_arrow ...]: F*
+     elaborates such a coercion to [FStar.Pervasives.coerce_eq], which is
+     `irreducible` and therefore survives extraction as a real (monomorphized)
+     C function. Each backend discharges this with `fun h -> h`, which needs no
+     coercion because its alias is transparent there. *)
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  error_handler_arrow_of_t:
+    error_handler_t -> error_handler_arrow base_t len_t pos_t;
 
   (* The client-supplied context (`EVERPARSE_EXTRA_T`) that the 3D frontend
      threads from the generated wrapper down to the stream primitives. The

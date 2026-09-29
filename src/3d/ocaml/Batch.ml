@@ -456,12 +456,21 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
-                                    (* the Pulse error_handler abbreviation is
-                                       parameterized by the input stream types,
-                                       which KaRaMeL cannot keep opaque *)
-                                    (if Options.get_pulse ()
-                                     then []
-                                     else ["-no-inline-type-abbrev"; "EverParse3d.Actions.Common.error_handler"]) @
+                                    (* EverParse3d.Actions.Common.error_handler is
+                                       parameterized by the input stream types in
+                                       the Pulse prelude, and KaRaMeL has no
+                                       parameterized typedefs. The monomorphic
+                                       instantiation for this backend lives in a
+                                       leaf module; keeping *that* abbreviation
+                                       yields the same EVERPARSE_ERROR_HANDLER
+                                       typedef as the Low* backend. *)
+                                    ["-no-inline-type-abbrev";
+                                     if Options.get_pulse ()
+                                     then
+                                       match string_of_input_stream_binding input_stream_binding with
+                                       | "extern" | "static" -> "EverParse3d.Actions.ErrorHandler.Extern.error_handler"
+                                       | _ -> "EverParse3d.Actions.ErrorHandler.Buffer.error_handler"
+                                     else "EverParse3d.Actions.Common.error_handler"] @
                                     (if Options.get_hoist_locals ()
                                      then ["-fhoist-locals"]
                                      else []) @
