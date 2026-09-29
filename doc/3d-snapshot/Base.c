@@ -15,29 +15,29 @@ BaseValidateUlong(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAftermissing;
+  uint64_t positionAfterMissing;
   if (hasBytes)
   {
-    positionAftermissing = StartPosition + 4ULL;
+    positionAfterMissing = StartPosition + 4ULL;
   }
   else
   {
-    positionAftermissing =
+    positionAfterMissing =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAftermissing))
+  if (EverParseIsSuccess(positionAfterMissing))
   {
-    return positionAftermissing;
+    return positionAfterMissing;
   }
   ErrorHandlerFn("___ULONG",
     "missing",
-    EverParseErrorReasonOfResult(positionAftermissing),
-    EverParseGetValidatorErrorKind(positionAftermissing),
+    EverParseErrorReasonOfResult(positionAfterMissing),
+    EverParseGetValidatorErrorKind(positionAfterMissing),
     Ctxt,
     Input,
     StartPosition);
-  return positionAftermissing;
+  return positionAfterMissing;
 }
 
 uint64_t
@@ -51,7 +51,7 @@ BaseValidatePair(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
-  uint64_t positionAfterfirst;
+  uint64_t positionAfterFirst;
   if (hasBytes)
   {
     res = StartPosition + 8ULL;
@@ -60,18 +60,18 @@ BaseValidatePair(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterfirst = res;
-  if (EverParseIsSuccess(positionAfterfirst))
+  positionAfterFirst = res;
+  if (EverParseIsSuccess(positionAfterFirst))
   {
-    return positionAfterfirst;
+    return positionAfterFirst;
   }
   ErrorHandlerFn("_Pair",
     "first",
-    EverParseErrorReasonOfResult(positionAfterfirst),
-    EverParseGetValidatorErrorKind(positionAfterfirst),
+    EverParseErrorReasonOfResult(positionAfterFirst),
+    EverParseGetValidatorErrorKind(positionAfterFirst),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterfirst;
+  return positionAfterFirst;
 }
 

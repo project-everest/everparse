@@ -17,98 +17,98 @@ ValidateT(
 {
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
-  uint64_t positionAfterx0;
-  uint64_t positionAfterx;
+  uint64_t positionAfterX0;
+  uint64_t positionAfterX;
   uint16_t x;
   BOOLEAN xConstraintIsOk;
-  uint64_t positionAfterCheckedx;
+  uint64_t positionAfterCheckedX;
   BOOLEAN hasBytes;
-  uint64_t positionAftery_refinement;
-  uint64_t positionAftery_refinement0;
+  uint64_t positionAfterY_refinement;
+  uint64_t positionAfterY_refinement0;
   uint16_t y_refinement;
   BOOLEAN y_refinementConstraintIsOk;
   if (hasBytes0)
   {
-    positionAfterx0 = StartPosition + 2ULL;
+    positionAfterX0 = StartPosition + 2ULL;
   }
   else
   {
-    positionAfterx0 =
+    positionAfterX0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsError(positionAfterx0))
+  if (EverParseIsError(positionAfterX0))
   {
-    positionAfterx = positionAfterx0;
+    positionAfterX = positionAfterX0;
   }
   else
   {
     x = Load16Le(Input + (uint32_t)StartPosition);
     xConstraintIsOk = (uint32_t)x >= Bound;
-    positionAfterCheckedx = EverParseCheckConstraintOk(xConstraintIsOk, positionAfterx0);
-    if (EverParseIsError(positionAfterCheckedx))
+    positionAfterCheckedX = EverParseCheckConstraintOk(xConstraintIsOk, positionAfterX0);
+    if (EverParseIsError(positionAfterCheckedX))
     {
-      positionAfterx = positionAfterCheckedx;
+      positionAfterX = positionAfterCheckedX;
     }
     else
     {
       /* Validating field y */
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      hasBytes = (InputLength - positionAfterCheckedx) >= 2ULL;
+      hasBytes = (InputLength - positionAfterCheckedX) >= 2ULL;
       if (hasBytes)
       {
-        positionAftery_refinement = positionAfterCheckedx + 2ULL;
+        positionAfterY_refinement = positionAfterCheckedX + 2ULL;
       }
       else
       {
-        positionAftery_refinement =
+        positionAfterY_refinement =
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-            positionAfterCheckedx);
+            positionAfterCheckedX);
       }
-      if (EverParseIsError(positionAftery_refinement))
+      if (EverParseIsError(positionAfterY_refinement))
       {
-        positionAftery_refinement0 = positionAftery_refinement;
+        positionAfterY_refinement0 = positionAfterY_refinement;
       }
       else
       {
         /* reading field_value */
-        y_refinement = Load16Le(Input + (uint32_t)positionAfterCheckedx);
+        y_refinement = Load16Le(Input + (uint32_t)positionAfterCheckedX);
         /* start: checking constraint */
         y_refinementConstraintIsOk = y_refinement >= x;
         /* end: checking constraint */
-        positionAftery_refinement0 =
+        positionAfterY_refinement0 =
           EverParseCheckConstraintOk(y_refinementConstraintIsOk,
-            positionAftery_refinement);
+            positionAfterY_refinement);
       }
-      if (EverParseIsSuccess(positionAftery_refinement0))
+      if (EverParseIsSuccess(positionAfterY_refinement0))
       {
-        positionAfterx = positionAftery_refinement0;
+        positionAfterX = positionAfterY_refinement0;
       }
       else
       {
         ErrorHandlerFn("_T",
           "y.refinement",
-          EverParseErrorReasonOfResult(positionAftery_refinement0),
-          EverParseGetValidatorErrorKind(positionAftery_refinement0),
+          EverParseErrorReasonOfResult(positionAfterY_refinement0),
+          EverParseGetValidatorErrorKind(positionAfterY_refinement0),
           Ctxt,
           Input,
-          positionAfterCheckedx);
-        positionAfterx = positionAftery_refinement0;
+          positionAfterCheckedX);
+        positionAfterX = positionAfterY_refinement0;
       }
     }
   }
-  if (EverParseIsSuccess(positionAfterx))
+  if (EverParseIsSuccess(positionAfterX))
   {
-    return positionAfterx;
+    return positionAfterX;
   }
   ErrorHandlerFn("_T",
     "x",
-    EverParseErrorReasonOfResult(positionAfterx),
-    EverParseGetValidatorErrorKind(positionAfterx),
+    EverParseErrorReasonOfResult(positionAfterX),
+    EverParseGetValidatorErrorKind(positionAfterX),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterx;
+  return positionAfterX;
 }
 
 uint64_t
@@ -123,12 +123,12 @@ ProbeValidateS(
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
-  uint64_t positionAfterbound0;
-  uint64_t positionAfterbound;
+  uint64_t positionAfterBound0;
+  uint64_t positionAfterBound;
   uint8_t bound;
   BOOLEAN hasBytes;
-  uint64_t positionAftertpointer0;
-  uint64_t positionAftertpointer;
+  uint64_t positionAfterTpointer0;
+  uint64_t positionAfterTpointer;
   uint64_t tpointer;
   uint64_t src64;
   uint64_t readOffset;
@@ -145,53 +145,53 @@ ProbeValidateS(
   uint64_t result;
   if (hasBytes0)
   {
-    positionAfterbound0 = StartPosition + 1ULL;
+    positionAfterBound0 = StartPosition + 1ULL;
   }
   else
   {
-    positionAfterbound0 =
+    positionAfterBound0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterbound0))
+  if (EverParseIsSuccess(positionAfterBound0))
   {
-    positionAfterbound = positionAfterbound0;
+    positionAfterBound = positionAfterBound0;
   }
   else
   {
     ErrorHandlerFn("_S",
       "bound",
-      EverParseErrorReasonOfResult(positionAfterbound0),
-      EverParseGetValidatorErrorKind(positionAfterbound0),
+      EverParseErrorReasonOfResult(positionAfterBound0),
+      EverParseGetValidatorErrorKind(positionAfterBound0),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterbound = positionAfterbound0;
+    positionAfterBound = positionAfterBound0;
   }
-  if (EverParseIsError(positionAfterbound))
+  if (EverParseIsError(positionAfterBound))
   {
-    return positionAfterbound;
+    return positionAfterBound;
   }
   bound = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterbound) >= 8ULL;
+  hasBytes = (InputLength - positionAfterBound) >= 8ULL;
   if (hasBytes)
   {
-    positionAftertpointer0 = positionAfterbound + 8ULL;
+    positionAfterTpointer0 = positionAfterBound + 8ULL;
   }
   else
   {
-    positionAftertpointer0 =
+    positionAfterTpointer0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterbound);
+        positionAfterBound);
   }
-  if (EverParseIsError(positionAftertpointer0))
+  if (EverParseIsError(positionAfterTpointer0))
   {
-    positionAftertpointer = positionAftertpointer0;
+    positionAfterTpointer = positionAfterTpointer0;
   }
   else
   {
-    tpointer = Load64Le(Input + (uint32_t)positionAfterbound);
+    tpointer = Load64Le(Input + (uint32_t)positionAfterBound);
     src64 = tpointer;
     readOffset = 0ULL;
     writeOffset = 0ULL;
@@ -246,32 +246,32 @@ ProbeValidateS(
         EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
         Ctxt,
         Input,
-        positionAfterbound);
+        positionAfterBound);
       actionResult = FALSE;
     }
     if (actionResult)
     {
-      positionAftertpointer = positionAftertpointer0;
+      positionAfterTpointer = positionAfterTpointer0;
     }
     else
     {
-      positionAftertpointer =
+      positionAfterTpointer =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAftertpointer0);
+          positionAfterTpointer0);
     }
   }
-  if (EverParseIsSuccess(positionAftertpointer))
+  if (EverParseIsSuccess(positionAfterTpointer))
   {
-    return positionAftertpointer;
+    return positionAfterTpointer;
   }
   ErrorHandlerFn("_S",
     "tpointer",
-    EverParseErrorReasonOfResult(positionAftertpointer),
-    EverParseGetValidatorErrorKind(positionAftertpointer),
+    EverParseErrorReasonOfResult(positionAfterTpointer),
+    EverParseGetValidatorErrorKind(positionAfterTpointer),
     Ctxt,
     Input,
-    positionAfterbound);
-  return positionAftertpointer;
+    positionAfterBound);
+  return positionAfterTpointer;
 }
 
 uint64_t
@@ -288,12 +288,12 @@ ProbeValidateU(
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
-  uint64_t positionAftertag0;
+  uint64_t positionAfterTag0;
   uint64_t res;
-  uint64_t positionAftertag;
+  uint64_t positionAfterTag;
   BOOLEAN hasBytes;
-  uint64_t positionAfterspointer0;
-  uint64_t positionAfterspointer;
+  uint64_t positionAfterSpointer0;
+  uint64_t positionAfterSpointer;
   uint64_t spointer;
   uint64_t src64;
   uint64_t readOffset;
@@ -310,53 +310,53 @@ ProbeValidateU(
   uint64_t result;
   if (hasBytes0)
   {
-    positionAftertag0 = StartPosition + 1ULL;
+    positionAfterTag0 = StartPosition + 1ULL;
   }
   else
   {
-    positionAftertag0 =
+    positionAfterTag0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAftertag0))
+  if (EverParseIsSuccess(positionAfterTag0))
   {
-    res = positionAftertag0;
+    res = positionAfterTag0;
   }
   else
   {
     ErrorHandlerFn("_U",
       "tag",
-      EverParseErrorReasonOfResult(positionAftertag0),
-      EverParseGetValidatorErrorKind(positionAftertag0),
+      EverParseErrorReasonOfResult(positionAfterTag0),
+      EverParseGetValidatorErrorKind(positionAfterTag0),
       Ctxt,
       Input,
       StartPosition);
-    res = positionAftertag0;
+    res = positionAfterTag0;
   }
-  positionAftertag = res;
-  if (EverParseIsError(positionAftertag))
+  positionAfterTag = res;
+  if (EverParseIsError(positionAfterTag))
   {
-    return positionAftertag;
+    return positionAfterTag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAftertag) >= 8ULL;
+  hasBytes = (InputLength - positionAfterTag) >= 8ULL;
   if (hasBytes)
   {
-    positionAfterspointer0 = positionAftertag + 8ULL;
+    positionAfterSpointer0 = positionAfterTag + 8ULL;
   }
   else
   {
-    positionAfterspointer0 =
+    positionAfterSpointer0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftertag);
+        positionAfterTag);
   }
-  if (EverParseIsError(positionAfterspointer0))
+  if (EverParseIsError(positionAfterSpointer0))
   {
-    positionAfterspointer = positionAfterspointer0;
+    positionAfterSpointer = positionAfterSpointer0;
   }
   else
   {
-    spointer = Load64Le(Input + (uint32_t)positionAftertag);
+    spointer = Load64Le(Input + (uint32_t)positionAfterTag);
     src64 = spointer;
     readOffset = 0ULL;
     writeOffset = 0ULL;
@@ -411,32 +411,32 @@ ProbeValidateU(
         EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
         Ctxt,
         Input,
-        positionAftertag);
+        positionAfterTag);
       actionResult = FALSE;
     }
     if (actionResult)
     {
-      positionAfterspointer = positionAfterspointer0;
+      positionAfterSpointer = positionAfterSpointer0;
     }
     else
     {
-      positionAfterspointer =
+      positionAfterSpointer =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAfterspointer0);
+          positionAfterSpointer0);
     }
   }
-  if (EverParseIsSuccess(positionAfterspointer))
+  if (EverParseIsSuccess(positionAfterSpointer))
   {
-    return positionAfterspointer;
+    return positionAfterSpointer;
   }
   ErrorHandlerFn("_U",
     "spointer",
-    EverParseErrorReasonOfResult(positionAfterspointer),
-    EverParseGetValidatorErrorKind(positionAfterspointer),
+    EverParseErrorReasonOfResult(positionAfterSpointer),
+    EverParseGetValidatorErrorKind(positionAfterSpointer),
     Ctxt,
     Input,
-    positionAftertag);
-  return positionAfterspointer;
+    positionAfterTag);
+  return positionAfterSpointer;
 }
 
 uint64_t
@@ -452,12 +452,12 @@ ProbeValidateV(
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
-  uint64_t positionAftertag0;
-  uint64_t positionAftertag;
+  uint64_t positionAfterTag0;
+  uint64_t positionAfterTag;
   uint8_t tag;
   BOOLEAN hasBytes1;
-  uint64_t positionAftersptr0;
-  uint64_t positionAftersptr1;
+  uint64_t positionAfterSptr0;
+  uint64_t positionAfterSptr1;
   uint64_t sptr;
   uint64_t src640;
   uint64_t readOffset;
@@ -472,10 +472,10 @@ ProbeValidateV(
   uint64_t b0;
   BOOLEAN actionResult;
   uint64_t result0;
-  uint64_t positionAftersptr;
+  uint64_t positionAfterSptr;
   BOOLEAN hasBytes2;
-  uint64_t positionAftertptr0;
-  uint64_t positionAftertptr1;
+  uint64_t positionAfterTptr0;
+  uint64_t positionAfterTptr1;
   uint64_t tptr;
   uint64_t src641;
   uint64_t readOffset0;
@@ -490,10 +490,10 @@ ProbeValidateV(
   uint64_t b1;
   BOOLEAN actionResult0;
   uint64_t result1;
-  uint64_t positionAftertptr;
+  uint64_t positionAfterTptr;
   BOOLEAN hasBytes;
-  uint64_t positionAftert2ptr0;
-  uint64_t positionAftert2ptr;
+  uint64_t positionAfterT2ptr0;
+  uint64_t positionAfterT2ptr;
   uint64_t t2ptr;
   uint64_t src64;
   uint64_t readOffset1;
@@ -510,53 +510,53 @@ ProbeValidateV(
   uint64_t result;
   if (hasBytes0)
   {
-    positionAftertag0 = StartPosition + 1ULL;
+    positionAfterTag0 = StartPosition + 1ULL;
   }
   else
   {
-    positionAftertag0 =
+    positionAfterTag0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAftertag0))
+  if (EverParseIsSuccess(positionAfterTag0))
   {
-    positionAftertag = positionAftertag0;
+    positionAfterTag = positionAfterTag0;
   }
   else
   {
     ErrorHandlerFn("_V",
       "tag",
-      EverParseErrorReasonOfResult(positionAftertag0),
-      EverParseGetValidatorErrorKind(positionAftertag0),
+      EverParseErrorReasonOfResult(positionAfterTag0),
+      EverParseGetValidatorErrorKind(positionAfterTag0),
       Ctxt,
       Input,
       StartPosition);
-    positionAftertag = positionAftertag0;
+    positionAfterTag = positionAfterTag0;
   }
-  if (EverParseIsError(positionAftertag))
+  if (EverParseIsError(positionAfterTag))
   {
-    return positionAftertag;
+    return positionAfterTag;
   }
   tag = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes1 = (InputLength - positionAftertag) >= 8ULL;
+  hasBytes1 = (InputLength - positionAfterTag) >= 8ULL;
   if (hasBytes1)
   {
-    positionAftersptr0 = positionAftertag + 8ULL;
+    positionAfterSptr0 = positionAfterTag + 8ULL;
   }
   else
   {
-    positionAftersptr0 =
+    positionAfterSptr0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftertag);
+        positionAfterTag);
   }
-  if (EverParseIsError(positionAftersptr0))
+  if (EverParseIsError(positionAfterSptr0))
   {
-    positionAftersptr1 = positionAftersptr0;
+    positionAfterSptr1 = positionAfterSptr0;
   }
   else
   {
-    sptr = Load64Le(Input + (uint32_t)positionAftertag);
+    sptr = Load64Le(Input + (uint32_t)positionAfterTag);
     src640 = sptr;
     readOffset = 0ULL;
     writeOffset = 0ULL;
@@ -611,58 +611,58 @@ ProbeValidateV(
         EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
         Ctxt,
         Input,
-        positionAftertag);
+        positionAfterTag);
       actionResult = FALSE;
     }
     if (actionResult)
     {
-      positionAftersptr1 = positionAftersptr0;
+      positionAfterSptr1 = positionAfterSptr0;
     }
     else
     {
-      positionAftersptr1 =
+      positionAfterSptr1 =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAftersptr0);
+          positionAfterSptr0);
     }
   }
-  if (EverParseIsSuccess(positionAftersptr1))
+  if (EverParseIsSuccess(positionAfterSptr1))
   {
-    positionAftersptr = positionAftersptr1;
+    positionAfterSptr = positionAfterSptr1;
   }
   else
   {
     ErrorHandlerFn("_V",
       "sptr",
-      EverParseErrorReasonOfResult(positionAftersptr1),
-      EverParseGetValidatorErrorKind(positionAftersptr1),
+      EverParseErrorReasonOfResult(positionAfterSptr1),
+      EverParseGetValidatorErrorKind(positionAfterSptr1),
       Ctxt,
       Input,
-      positionAftertag);
-    positionAftersptr = positionAftersptr1;
+      positionAfterTag);
+    positionAfterSptr = positionAfterSptr1;
   }
-  if (EverParseIsError(positionAftersptr))
+  if (EverParseIsError(positionAfterSptr))
   {
-    return positionAftersptr;
+    return positionAfterSptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes2 = (InputLength - positionAftersptr) >= 8ULL;
+  hasBytes2 = (InputLength - positionAfterSptr) >= 8ULL;
   if (hasBytes2)
   {
-    positionAftertptr0 = positionAftersptr + 8ULL;
+    positionAfterTptr0 = positionAfterSptr + 8ULL;
   }
   else
   {
-    positionAftertptr0 =
+    positionAfterTptr0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftersptr);
+        positionAfterSptr);
   }
-  if (EverParseIsError(positionAftertptr0))
+  if (EverParseIsError(positionAfterTptr0))
   {
-    positionAftertptr1 = positionAftertptr0;
+    positionAfterTptr1 = positionAfterTptr0;
   }
   else
   {
-    tptr = Load64Le(Input + (uint32_t)positionAftersptr);
+    tptr = Load64Le(Input + (uint32_t)positionAfterSptr);
     src641 = tptr;
     readOffset0 = 0ULL;
     writeOffset0 = 0ULL;
@@ -717,58 +717,58 @@ ProbeValidateV(
         EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
         Ctxt,
         Input,
-        positionAftersptr);
+        positionAfterSptr);
       actionResult0 = FALSE;
     }
     if (actionResult0)
     {
-      positionAftertptr1 = positionAftertptr0;
+      positionAfterTptr1 = positionAfterTptr0;
     }
     else
     {
-      positionAftertptr1 =
+      positionAfterTptr1 =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAftertptr0);
+          positionAfterTptr0);
     }
   }
-  if (EverParseIsSuccess(positionAftertptr1))
+  if (EverParseIsSuccess(positionAfterTptr1))
   {
-    positionAftertptr = positionAftertptr1;
+    positionAfterTptr = positionAfterTptr1;
   }
   else
   {
     ErrorHandlerFn("_V",
       "tptr",
-      EverParseErrorReasonOfResult(positionAftertptr1),
-      EverParseGetValidatorErrorKind(positionAftertptr1),
+      EverParseErrorReasonOfResult(positionAfterTptr1),
+      EverParseGetValidatorErrorKind(positionAfterTptr1),
       Ctxt,
       Input,
-      positionAftersptr);
-    positionAftertptr = positionAftertptr1;
+      positionAfterSptr);
+    positionAfterTptr = positionAfterTptr1;
   }
-  if (EverParseIsError(positionAftertptr))
+  if (EverParseIsError(positionAfterTptr))
   {
-    return positionAftertptr;
+    return positionAfterTptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAftertptr) >= 8ULL;
+  hasBytes = (InputLength - positionAfterTptr) >= 8ULL;
   if (hasBytes)
   {
-    positionAftert2ptr0 = positionAftertptr + 8ULL;
+    positionAfterT2ptr0 = positionAfterTptr + 8ULL;
   }
   else
   {
-    positionAftert2ptr0 =
+    positionAfterT2ptr0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftertptr);
+        positionAfterTptr);
   }
-  if (EverParseIsError(positionAftert2ptr0))
+  if (EverParseIsError(positionAfterT2ptr0))
   {
-    positionAftert2ptr = positionAftert2ptr0;
+    positionAfterT2ptr = positionAfterT2ptr0;
   }
   else
   {
-    t2ptr = Load64Le(Input + (uint32_t)positionAftertptr);
+    t2ptr = Load64Le(Input + (uint32_t)positionAfterTptr);
     src64 = t2ptr;
     readOffset1 = 0ULL;
     writeOffset1 = 0ULL;
@@ -823,32 +823,32 @@ ProbeValidateV(
         EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
         Ctxt,
         Input,
-        positionAftertptr);
+        positionAfterTptr);
       actionResult1 = FALSE;
     }
     if (actionResult1)
     {
-      positionAftert2ptr = positionAftert2ptr0;
+      positionAfterT2ptr = positionAfterT2ptr0;
     }
     else
     {
-      positionAftert2ptr =
+      positionAfterT2ptr =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAftert2ptr0);
+          positionAfterT2ptr0);
     }
   }
-  if (EverParseIsSuccess(positionAftert2ptr))
+  if (EverParseIsSuccess(positionAfterT2ptr))
   {
-    return positionAftert2ptr;
+    return positionAfterT2ptr;
   }
   ErrorHandlerFn("_V",
     "t2ptr",
-    EverParseErrorReasonOfResult(positionAftert2ptr),
-    EverParseGetValidatorErrorKind(positionAftert2ptr),
+    EverParseErrorReasonOfResult(positionAfterT2ptr),
+    EverParseGetValidatorErrorKind(positionAfterT2ptr),
     Ctxt,
     Input,
-    positionAftertptr);
-  return positionAftert2ptr;
+    positionAfterTptr);
+  return positionAfterT2ptr;
 }
 
 uint64_t
@@ -862,7 +862,7 @@ ProbeValidateIndirect(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 9ULL;
   uint64_t res;
-  uint64_t positionAfterfst;
+  uint64_t positionAfterFst;
   if (hasBytes)
   {
     res = StartPosition + 9ULL;
@@ -871,19 +871,19 @@ ProbeValidateIndirect(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterfst = res;
-  if (EverParseIsSuccess(positionAfterfst))
+  positionAfterFst = res;
+  if (EverParseIsSuccess(positionAfterFst))
   {
-    return positionAfterfst;
+    return positionAfterFst;
   }
   ErrorHandlerFn("_Indirect",
     "fst",
-    EverParseErrorReasonOfResult(positionAfterfst),
-    EverParseGetValidatorErrorKind(positionAfterfst),
+    EverParseErrorReasonOfResult(positionAfterFst),
+    EverParseGetValidatorErrorKind(positionAfterFst),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterfst;
+  return positionAfterFst;
 }
 
 static inline uint64_t
@@ -897,7 +897,7 @@ ValidateTt(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 9ULL;
   uint64_t res;
-  uint64_t positionAfterfst;
+  uint64_t positionAfterFst;
   if (hasBytes)
   {
     res = StartPosition + 9ULL;
@@ -906,19 +906,19 @@ ValidateTt(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterfst = res;
-  if (EverParseIsSuccess(positionAfterfst))
+  positionAfterFst = res;
+  if (EverParseIsSuccess(positionAfterFst))
   {
-    return positionAfterfst;
+    return positionAfterFst;
   }
   ErrorHandlerFn("_TT",
     "fst",
-    EverParseErrorReasonOfResult(positionAfterfst),
-    EverParseGetValidatorErrorKind(positionAfterfst),
+    EverParseErrorReasonOfResult(positionAfterFst),
+    EverParseGetValidatorErrorKind(positionAfterFst),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterfst;
+  return positionAfterFst;
 }
 
 uint64_t
@@ -933,8 +933,8 @@ ProbeValidateI(
 {
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
-  uint64_t positionAfterttptr0;
-  uint64_t positionAfterttptr;
+  uint64_t positionAfterTtptr0;
+  uint64_t positionAfterTtptr;
   uint64_t ttptr;
   uint64_t src64;
   uint64_t readOffset;
@@ -951,17 +951,17 @@ ProbeValidateI(
   uint64_t result;
   if (hasBytes)
   {
-    positionAfterttptr0 = StartPosition + 8ULL;
+    positionAfterTtptr0 = StartPosition + 8ULL;
   }
   else
   {
-    positionAfterttptr0 =
+    positionAfterTtptr0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsError(positionAfterttptr0))
+  if (EverParseIsError(positionAfterTtptr0))
   {
-    positionAfterttptr = positionAfterttptr0;
+    positionAfterTtptr = positionAfterTtptr0;
   }
   else
   {
@@ -1024,27 +1024,27 @@ ProbeValidateI(
     }
     if (actionResult)
     {
-      positionAfterttptr = positionAfterttptr0;
+      positionAfterTtptr = positionAfterTtptr0;
     }
     else
     {
-      positionAfterttptr =
+      positionAfterTtptr =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAfterttptr0);
+          positionAfterTtptr0);
     }
   }
-  if (EverParseIsSuccess(positionAfterttptr))
+  if (EverParseIsSuccess(positionAfterTtptr))
   {
-    return positionAfterttptr;
+    return positionAfterTtptr;
   }
   ErrorHandlerFn("_I",
     "ttptr",
-    EverParseErrorReasonOfResult(positionAfterttptr),
-    EverParseGetValidatorErrorKind(positionAfterttptr),
+    EverParseErrorReasonOfResult(positionAfterTtptr),
+    EverParseGetValidatorErrorKind(positionAfterTtptr),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterttptr;
+  return positionAfterTtptr;
 }
 
 uint64_t
@@ -1061,20 +1061,20 @@ ProbeValidateMultiProbe(
   /* Validating field fst */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterfst0;
+  uint64_t positionAfterFst0;
   uint64_t res0;
-  uint64_t positionAfterfst;
+  uint64_t positionAfterFst;
   BOOLEAN hasBytes1;
-  uint64_t positionAftersnd0;
+  uint64_t positionAfterSnd0;
   uint64_t res1;
-  uint64_t positionAftersnd;
+  uint64_t positionAfterSnd;
   BOOLEAN hasBytes2;
-  uint64_t positionAftertag0;
+  uint64_t positionAfterTag0;
   uint64_t res;
-  uint64_t positionAftertag;
+  uint64_t positionAfterTag;
   BOOLEAN hasBytes3;
-  uint64_t positionAftertptr10;
-  uint64_t positionAftertptr11;
+  uint64_t positionAfterTptr10;
+  uint64_t positionAfterTptr11;
   uint64_t tptr1;
   uint64_t src640;
   uint64_t readOffset;
@@ -1089,10 +1089,10 @@ ProbeValidateMultiProbe(
   uint64_t b0;
   BOOLEAN actionResult;
   uint64_t result0;
-  uint64_t positionAftertptr1;
+  uint64_t positionAfterTptr1;
   BOOLEAN hasBytes;
-  uint64_t positionAftertptr20;
-  uint64_t positionAftertptr2;
+  uint64_t positionAfterTptr20;
+  uint64_t positionAfterTptr2;
   uint64_t tptr2;
   uint64_t src64;
   uint64_t readOffset0;
@@ -1109,119 +1109,119 @@ ProbeValidateMultiProbe(
   uint64_t result;
   if (hasBytes0)
   {
-    positionAfterfst0 = StartPosition + 4ULL;
+    positionAfterFst0 = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterfst0 =
+    positionAfterFst0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterfst0))
+  if (EverParseIsSuccess(positionAfterFst0))
   {
-    res0 = positionAfterfst0;
+    res0 = positionAfterFst0;
   }
   else
   {
     ErrorHandlerFn("_MultiProbe",
       "fst",
-      EverParseErrorReasonOfResult(positionAfterfst0),
-      EverParseGetValidatorErrorKind(positionAfterfst0),
+      EverParseErrorReasonOfResult(positionAfterFst0),
+      EverParseGetValidatorErrorKind(positionAfterFst0),
       Ctxt,
       Input,
       StartPosition);
-    res0 = positionAfterfst0;
+    res0 = positionAfterFst0;
   }
-  positionAfterfst = res0;
-  if (EverParseIsError(positionAfterfst))
+  positionAfterFst = res0;
+  if (EverParseIsError(positionAfterFst))
   {
-    return positionAfterfst;
+    return positionAfterFst;
   }
   /* Validating field snd */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes1 = (InputLength - positionAfterfst) >= 4ULL;
+  hasBytes1 = (InputLength - positionAfterFst) >= 4ULL;
   if (hasBytes1)
   {
-    positionAftersnd0 = positionAfterfst + 4ULL;
+    positionAfterSnd0 = positionAfterFst + 4ULL;
   }
   else
   {
-    positionAftersnd0 =
+    positionAfterSnd0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterfst);
+        positionAfterFst);
   }
-  if (EverParseIsSuccess(positionAftersnd0))
+  if (EverParseIsSuccess(positionAfterSnd0))
   {
-    res1 = positionAftersnd0;
+    res1 = positionAfterSnd0;
   }
   else
   {
     ErrorHandlerFn("_MultiProbe",
       "snd",
-      EverParseErrorReasonOfResult(positionAftersnd0),
-      EverParseGetValidatorErrorKind(positionAftersnd0),
+      EverParseErrorReasonOfResult(positionAfterSnd0),
+      EverParseGetValidatorErrorKind(positionAfterSnd0),
       Ctxt,
       Input,
-      positionAfterfst);
-    res1 = positionAftersnd0;
+      positionAfterFst);
+    res1 = positionAfterSnd0;
   }
-  positionAftersnd = res1;
-  if (EverParseIsError(positionAftersnd))
+  positionAfterSnd = res1;
+  if (EverParseIsError(positionAfterSnd))
   {
-    return positionAftersnd;
+    return positionAfterSnd;
   }
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  hasBytes2 = (InputLength - positionAftersnd) >= 1ULL;
+  hasBytes2 = (InputLength - positionAfterSnd) >= 1ULL;
   if (hasBytes2)
   {
-    positionAftertag0 = positionAftersnd + 1ULL;
+    positionAfterTag0 = positionAfterSnd + 1ULL;
   }
   else
   {
-    positionAftertag0 =
+    positionAfterTag0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftersnd);
+        positionAfterSnd);
   }
-  if (EverParseIsSuccess(positionAftertag0))
+  if (EverParseIsSuccess(positionAfterTag0))
   {
-    res = positionAftertag0;
+    res = positionAfterTag0;
   }
   else
   {
     ErrorHandlerFn("_MultiProbe",
       "tag",
-      EverParseErrorReasonOfResult(positionAftertag0),
-      EverParseGetValidatorErrorKind(positionAftertag0),
+      EverParseErrorReasonOfResult(positionAfterTag0),
+      EverParseGetValidatorErrorKind(positionAfterTag0),
       Ctxt,
       Input,
-      positionAftersnd);
-    res = positionAftertag0;
+      positionAfterSnd);
+    res = positionAfterTag0;
   }
-  positionAftertag = res;
-  if (EverParseIsError(positionAftertag))
+  positionAfterTag = res;
+  if (EverParseIsError(positionAfterTag))
   {
-    return positionAftertag;
+    return positionAfterTag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes3 = (InputLength - positionAftertag) >= 8ULL;
+  hasBytes3 = (InputLength - positionAfterTag) >= 8ULL;
   if (hasBytes3)
   {
-    positionAftertptr10 = positionAftertag + 8ULL;
+    positionAfterTptr10 = positionAfterTag + 8ULL;
   }
   else
   {
-    positionAftertptr10 =
+    positionAfterTptr10 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftertag);
+        positionAfterTag);
   }
-  if (EverParseIsError(positionAftertptr10))
+  if (EverParseIsError(positionAfterTptr10))
   {
-    positionAftertptr11 = positionAftertptr10;
+    positionAfterTptr11 = positionAfterTptr10;
   }
   else
   {
-    tptr1 = Load64Le(Input + (uint32_t)positionAftertag);
+    tptr1 = Load64Le(Input + (uint32_t)positionAfterTag);
     src640 = tptr1;
     readOffset = 0ULL;
     writeOffset = 0ULL;
@@ -1276,58 +1276,58 @@ ProbeValidateMultiProbe(
         EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
         Ctxt,
         Input,
-        positionAftertag);
+        positionAfterTag);
       actionResult = FALSE;
     }
     if (actionResult)
     {
-      positionAftertptr11 = positionAftertptr10;
+      positionAfterTptr11 = positionAfterTptr10;
     }
     else
     {
-      positionAftertptr11 =
+      positionAfterTptr11 =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAftertptr10);
+          positionAfterTptr10);
     }
   }
-  if (EverParseIsSuccess(positionAftertptr11))
+  if (EverParseIsSuccess(positionAfterTptr11))
   {
-    positionAftertptr1 = positionAftertptr11;
+    positionAfterTptr1 = positionAfterTptr11;
   }
   else
   {
     ErrorHandlerFn("_MultiProbe",
       "tptr1",
-      EverParseErrorReasonOfResult(positionAftertptr11),
-      EverParseGetValidatorErrorKind(positionAftertptr11),
+      EverParseErrorReasonOfResult(positionAfterTptr11),
+      EverParseGetValidatorErrorKind(positionAfterTptr11),
       Ctxt,
       Input,
-      positionAftertag);
-    positionAftertptr1 = positionAftertptr11;
+      positionAfterTag);
+    positionAfterTptr1 = positionAfterTptr11;
   }
-  if (EverParseIsError(positionAftertptr1))
+  if (EverParseIsError(positionAfterTptr1))
   {
-    return positionAftertptr1;
+    return positionAfterTptr1;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAftertptr1) >= 8ULL;
+  hasBytes = (InputLength - positionAfterTptr1) >= 8ULL;
   if (hasBytes)
   {
-    positionAftertptr20 = positionAftertptr1 + 8ULL;
+    positionAfterTptr20 = positionAfterTptr1 + 8ULL;
   }
   else
   {
-    positionAftertptr20 =
+    positionAfterTptr20 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftertptr1);
+        positionAfterTptr1);
   }
-  if (EverParseIsError(positionAftertptr20))
+  if (EverParseIsError(positionAfterTptr20))
   {
-    positionAftertptr2 = positionAftertptr20;
+    positionAfterTptr2 = positionAfterTptr20;
   }
   else
   {
-    tptr2 = Load64Le(Input + (uint32_t)positionAftertptr1);
+    tptr2 = Load64Le(Input + (uint32_t)positionAfterTptr1);
     src64 = tptr2;
     readOffset0 = 0ULL;
     writeOffset0 = 0ULL;
@@ -1382,32 +1382,32 @@ ProbeValidateMultiProbe(
         EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
         Ctxt,
         Input,
-        positionAftertptr1);
+        positionAfterTptr1);
       actionResult0 = FALSE;
     }
     if (actionResult0)
     {
-      positionAftertptr2 = positionAftertptr20;
+      positionAfterTptr2 = positionAfterTptr20;
     }
     else
     {
-      positionAftertptr2 =
+      positionAfterTptr2 =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAftertptr20);
+          positionAfterTptr20);
     }
   }
-  if (EverParseIsSuccess(positionAftertptr2))
+  if (EverParseIsSuccess(positionAfterTptr2))
   {
-    return positionAftertptr2;
+    return positionAfterTptr2;
   }
   ErrorHandlerFn("_MultiProbe",
     "tptr2",
-    EverParseErrorReasonOfResult(positionAftertptr2),
-    EverParseGetValidatorErrorKind(positionAftertptr2),
+    EverParseErrorReasonOfResult(positionAfterTptr2),
+    EverParseGetValidatorErrorKind(positionAfterTptr2),
     Ctxt,
     Input,
-    positionAftertptr1);
-  return positionAftertptr2;
+    positionAfterTptr1);
+  return positionAfterTptr2;
 }
 
 uint64_t
@@ -1426,8 +1426,8 @@ ProbeValidateMaybeT(
   uint64_t positionAfterBound;
   uint32_t bound;
   BOOLEAN hasBytes;
-  uint64_t positionAfterptr0;
-  uint64_t positionAfterptr;
+  uint64_t positionAfterPtr0;
+  uint64_t positionAfterPtr;
   uint64_t ptr;
   uint64_t src64;
   BOOLEAN actionResult;
@@ -1476,17 +1476,17 @@ ProbeValidateMaybeT(
   hasBytes = (InputLength - positionAfterBound) >= 8ULL;
   if (hasBytes)
   {
-    positionAfterptr0 = positionAfterBound + 8ULL;
+    positionAfterPtr0 = positionAfterBound + 8ULL;
   }
   else
   {
-    positionAfterptr0 =
+    positionAfterPtr0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterBound);
   }
-  if (EverParseIsError(positionAfterptr0))
+  if (EverParseIsError(positionAfterPtr0))
   {
-    positionAfterptr = positionAfterptr0;
+    positionAfterPtr = positionAfterPtr0;
   }
   else
   {
@@ -1557,27 +1557,27 @@ ProbeValidateMaybeT(
     }
     if (actionResult)
     {
-      positionAfterptr = positionAfterptr0;
+      positionAfterPtr = positionAfterPtr0;
     }
     else
     {
-      positionAfterptr =
+      positionAfterPtr =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAfterptr0);
+          positionAfterPtr0);
     }
   }
-  if (EverParseIsSuccess(positionAfterptr))
+  if (EverParseIsSuccess(positionAfterPtr))
   {
-    return positionAfterptr;
+    return positionAfterPtr;
   }
   ErrorHandlerFn("_MaybeT",
     "ptr",
-    EverParseErrorReasonOfResult(positionAfterptr),
-    EverParseGetValidatorErrorKind(positionAfterptr),
+    EverParseErrorReasonOfResult(positionAfterPtr),
+    EverParseGetValidatorErrorKind(positionAfterPtr),
     Ctxt,
     Input,
     positionAfterBound);
-  return positionAfterptr;
+  return positionAfterPtr;
 }
 
 uint64_t
@@ -1596,8 +1596,8 @@ ProbeValidateCoercePtr(
   uint64_t positionAfterBound;
   uint32_t bound;
   BOOLEAN hasBytes;
-  uint64_t positionAfterptr0;
-  uint64_t positionAfterptr;
+  uint64_t positionAfterPtr0;
+  uint64_t positionAfterPtr;
   uint32_t ptr;
   uint64_t src64;
   uint64_t readOffset;
@@ -1646,17 +1646,17 @@ ProbeValidateCoercePtr(
   hasBytes = (InputLength - positionAfterBound) >= 4ULL;
   if (hasBytes)
   {
-    positionAfterptr0 = positionAfterBound + 4ULL;
+    positionAfterPtr0 = positionAfterBound + 4ULL;
   }
   else
   {
-    positionAfterptr0 =
+    positionAfterPtr0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterBound);
   }
-  if (EverParseIsError(positionAfterptr0))
+  if (EverParseIsError(positionAfterPtr0))
   {
-    positionAfterptr = positionAfterptr0;
+    positionAfterPtr = positionAfterPtr0;
   }
   else
   {
@@ -1720,27 +1720,27 @@ ProbeValidateCoercePtr(
     }
     if (actionResult)
     {
-      positionAfterptr = positionAfterptr0;
+      positionAfterPtr = positionAfterPtr0;
     }
     else
     {
-      positionAfterptr =
+      positionAfterPtr =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAfterptr0);
+          positionAfterPtr0);
     }
   }
-  if (EverParseIsSuccess(positionAfterptr))
+  if (EverParseIsSuccess(positionAfterPtr))
   {
-    return positionAfterptr;
+    return positionAfterPtr;
   }
   ErrorHandlerFn("_CoercePtr",
     "ptr",
-    EverParseErrorReasonOfResult(positionAfterptr),
-    EverParseGetValidatorErrorKind(positionAfterptr),
+    EverParseErrorReasonOfResult(positionAfterPtr),
+    EverParseGetValidatorErrorKind(positionAfterPtr),
     Ctxt,
     Input,
     positionAfterBound);
-  return positionAfterptr;
+  return positionAfterPtr;
 }
 
 uint64_t
@@ -1754,7 +1754,7 @@ ProbeValidateProbeOnly(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
-  uint64_t positionAfterx;
+  uint64_t positionAfterX;
   if (hasBytes)
   {
     res = StartPosition + 8ULL;
@@ -1763,19 +1763,19 @@ ProbeValidateProbeOnly(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterx = res;
-  if (EverParseIsSuccess(positionAfterx))
+  positionAfterX = res;
+  if (EverParseIsSuccess(positionAfterX))
   {
-    return positionAfterx;
+    return positionAfterX;
   }
   ErrorHandlerFn("_ProbeOnly",
     "x",
-    EverParseErrorReasonOfResult(positionAfterx),
-    EverParseGetValidatorErrorKind(positionAfterx),
+    EverParseErrorReasonOfResult(positionAfterX),
+    EverParseGetValidatorErrorKind(positionAfterX),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterx;
+  return positionAfterX;
 }
 
 uint64_t
@@ -1789,7 +1789,7 @@ ProbeValidateBothEntrypoints(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
-  uint64_t positionAfterx;
+  uint64_t positionAfterX;
   if (hasBytes)
   {
     res = StartPosition + 8ULL;
@@ -1798,19 +1798,19 @@ ProbeValidateBothEntrypoints(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterx = res;
-  if (EverParseIsSuccess(positionAfterx))
+  positionAfterX = res;
+  if (EverParseIsSuccess(positionAfterX))
   {
-    return positionAfterx;
+    return positionAfterX;
   }
   ErrorHandlerFn("_BothEntrypoints",
     "x",
-    EverParseErrorReasonOfResult(positionAfterx),
-    EverParseGetValidatorErrorKind(positionAfterx),
+    EverParseErrorReasonOfResult(positionAfterX),
+    EverParseGetValidatorErrorKind(positionAfterX),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterx;
+  return positionAfterX;
 }
 
 uint64_t
@@ -1824,7 +1824,7 @@ ProbeValidateNamedPlainEp(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
-  uint64_t positionAfterx;
+  uint64_t positionAfterX;
   if (hasBytes)
   {
     res = StartPosition + 8ULL;
@@ -1833,19 +1833,19 @@ ProbeValidateNamedPlainEp(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterx = res;
-  if (EverParseIsSuccess(positionAfterx))
+  positionAfterX = res;
+  if (EverParseIsSuccess(positionAfterX))
   {
-    return positionAfterx;
+    return positionAfterX;
   }
   ErrorHandlerFn("_NamedPlainEp",
     "x",
-    EverParseErrorReasonOfResult(positionAfterx),
-    EverParseGetValidatorErrorKind(positionAfterx),
+    EverParseErrorReasonOfResult(positionAfterX),
+    EverParseGetValidatorErrorKind(positionAfterX),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterx;
+  return positionAfterX;
 }
 
 uint64_t
@@ -1859,7 +1859,7 @@ ProbeValidateNamedProbeEp(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
-  uint64_t positionAfterx;
+  uint64_t positionAfterX;
   if (hasBytes)
   {
     res = StartPosition + 8ULL;
@@ -1868,19 +1868,19 @@ ProbeValidateNamedProbeEp(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterx = res;
-  if (EverParseIsSuccess(positionAfterx))
+  positionAfterX = res;
+  if (EverParseIsSuccess(positionAfterX))
   {
-    return positionAfterx;
+    return positionAfterX;
   }
   ErrorHandlerFn("_NamedProbeEp",
     "x",
-    EverParseErrorReasonOfResult(positionAfterx),
-    EverParseGetValidatorErrorKind(positionAfterx),
+    EverParseErrorReasonOfResult(positionAfterX),
+    EverParseGetValidatorErrorKind(positionAfterX),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterx;
+  return positionAfterX;
 }
 
 uint64_t
@@ -1894,7 +1894,7 @@ ProbeValidateNamedBothEp(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
-  uint64_t positionAfterx;
+  uint64_t positionAfterX;
   if (hasBytes)
   {
     res = StartPosition + 8ULL;
@@ -1903,18 +1903,18 @@ ProbeValidateNamedBothEp(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterx = res;
-  if (EverParseIsSuccess(positionAfterx))
+  positionAfterX = res;
+  if (EverParseIsSuccess(positionAfterX))
   {
-    return positionAfterx;
+    return positionAfterX;
   }
   ErrorHandlerFn("_NamedBothEp",
     "x",
-    EverParseErrorReasonOfResult(positionAfterx),
-    EverParseGetValidatorErrorKind(positionAfterx),
+    EverParseErrorReasonOfResult(positionAfterX),
+    EverParseGetValidatorErrorKind(positionAfterX),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterx;
+  return positionAfterX;
 }
 

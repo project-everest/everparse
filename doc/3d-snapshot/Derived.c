@@ -15,7 +15,7 @@ DerivedValidateTriple(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 12ULL;
   uint64_t res;
-  uint64_t positionAfterpair;
+  uint64_t positionAfterPair;
   if (hasBytes)
   {
     res = StartPosition + 12ULL;
@@ -24,19 +24,19 @@ DerivedValidateTriple(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterpair = res;
-  if (EverParseIsSuccess(positionAfterpair))
+  positionAfterPair = res;
+  if (EverParseIsSuccess(positionAfterPair))
   {
-    return positionAfterpair;
+    return positionAfterPair;
   }
   ErrorHandlerFn("_Triple",
     "pair",
-    EverParseErrorReasonOfResult(positionAfterpair),
-    EverParseGetValidatorErrorKind(positionAfterpair),
+    EverParseErrorReasonOfResult(positionAfterPair),
+    EverParseGetValidatorErrorKind(positionAfterPair),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterpair;
+  return positionAfterPair;
 }
 
 uint64_t

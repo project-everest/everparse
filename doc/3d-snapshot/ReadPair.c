@@ -18,29 +18,29 @@ ReadPairValidatePair(
   /* Validating field first */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterfirst0;
-  uint64_t positionAfterfirst1;
+  uint64_t positionAfterFirst0;
+  uint64_t positionAfterFirst1;
   uint32_t first;
   BOOLEAN actionResult;
-  uint64_t positionAfterfirst;
+  uint64_t positionAfterFirst;
   BOOLEAN hasBytes;
-  uint64_t positionAftersecond0;
-  uint64_t positionAftersecond;
+  uint64_t positionAfterSecond0;
+  uint64_t positionAfterSecond;
   uint32_t second;
   BOOLEAN actionResult0;
   if (hasBytes0)
   {
-    positionAfterfirst0 = StartPosition + 4ULL;
+    positionAfterFirst0 = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterfirst0 =
+    positionAfterFirst0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsError(positionAfterfirst0))
+  if (EverParseIsError(positionAfterFirst0))
   {
-    positionAfterfirst1 = positionAfterfirst0;
+    positionAfterFirst1 = positionAfterFirst0;
   }
   else
   {
@@ -48,63 +48,63 @@ ReadPairValidatePair(
     *X = first;
     actionResult = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionResult);
-    positionAfterfirst1 = positionAfterfirst0;
+    positionAfterFirst1 = positionAfterFirst0;
   }
-  if (EverParseIsSuccess(positionAfterfirst1))
+  if (EverParseIsSuccess(positionAfterFirst1))
   {
-    positionAfterfirst = positionAfterfirst1;
+    positionAfterFirst = positionAfterFirst1;
   }
   else
   {
     ErrorHandlerFn("_Pair",
       "first",
-      EverParseErrorReasonOfResult(positionAfterfirst1),
-      EverParseGetValidatorErrorKind(positionAfterfirst1),
+      EverParseErrorReasonOfResult(positionAfterFirst1),
+      EverParseGetValidatorErrorKind(positionAfterFirst1),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterfirst = positionAfterfirst1;
+    positionAfterFirst = positionAfterFirst1;
   }
-  if (EverParseIsError(positionAfterfirst))
+  if (EverParseIsError(positionAfterFirst))
   {
-    return positionAfterfirst;
+    return positionAfterFirst;
   }
   /* Validating field second */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterfirst) >= 4ULL;
+  hasBytes = (InputLength - positionAfterFirst) >= 4ULL;
   if (hasBytes)
   {
-    positionAftersecond0 = positionAfterfirst + 4ULL;
+    positionAfterSecond0 = positionAfterFirst + 4ULL;
   }
   else
   {
-    positionAftersecond0 =
+    positionAfterSecond0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterfirst);
+        positionAfterFirst);
   }
-  if (EverParseIsError(positionAftersecond0))
+  if (EverParseIsError(positionAfterSecond0))
   {
-    positionAftersecond = positionAftersecond0;
+    positionAfterSecond = positionAfterSecond0;
   }
   else
   {
-    second = Load32Le(Input + (uint32_t)positionAfterfirst);
+    second = Load32Le(Input + (uint32_t)positionAfterFirst);
     *Y = second;
     actionResult0 = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionResult0);
-    positionAftersecond = positionAftersecond0;
+    positionAfterSecond = positionAfterSecond0;
   }
-  if (EverParseIsSuccess(positionAftersecond))
+  if (EverParseIsSuccess(positionAfterSecond))
   {
-    return positionAftersecond;
+    return positionAfterSecond;
   }
   ErrorHandlerFn("_Pair",
     "second",
-    EverParseErrorReasonOfResult(positionAftersecond),
-    EverParseGetValidatorErrorKind(positionAftersecond),
+    EverParseErrorReasonOfResult(positionAfterSecond),
+    EverParseGetValidatorErrorKind(positionAfterSecond),
     Ctxt,
     Input,
-    positionAfterfirst);
-  return positionAftersecond;
+    positionAfterFirst);
+  return positionAfterSecond;
 }
 

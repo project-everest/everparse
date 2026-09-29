@@ -15,7 +15,7 @@ AlignValidateColoredPoint1(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 6ULL;
   uint64_t res;
-  uint64_t positionAftercolor;
+  uint64_t positionAfterColor;
   if (hasBytes)
   {
     res = StartPosition + 6ULL;
@@ -24,18 +24,18 @@ AlignValidateColoredPoint1(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAftercolor = res;
-  if (EverParseIsSuccess(positionAftercolor))
+  positionAfterColor = res;
+  if (EverParseIsSuccess(positionAfterColor))
   {
-    return positionAftercolor;
+    return positionAfterColor;
   }
   ErrorHandlerFn("_coloredPoint1",
     "color",
-    EverParseErrorReasonOfResult(positionAftercolor),
-    EverParseGetValidatorErrorKind(positionAftercolor),
+    EverParseErrorReasonOfResult(positionAfterColor),
+    EverParseGetValidatorErrorKind(positionAfterColor),
     Ctxt,
     Input,
     StartPosition);
-  return positionAftercolor;
+  return positionAfterColor;
 }
 

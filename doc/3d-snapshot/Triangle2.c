@@ -16,7 +16,7 @@ Triangle2ValidateTriangle(
   /* Validating field corners */
   BOOLEAN hasBytes = (InputLength - StartPosition) >= (uint64_t)12U;
   uint64_t res;
-  uint64_t positionAftercorners;
+  uint64_t positionAfterCorners;
   if (hasBytes)
   {
     res = StartPosition + (uint64_t)12U;
@@ -25,18 +25,18 @@ Triangle2ValidateTriangle(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAftercorners = res;
-  if (EverParseIsSuccess(positionAftercorners))
+  positionAfterCorners = res;
+  if (EverParseIsSuccess(positionAfterCorners))
   {
-    return positionAftercorners;
+    return positionAfterCorners;
   }
   ErrorHandlerFn("_triangle",
     "corners",
-    EverParseErrorReasonOfResult(positionAftercorners),
-    EverParseGetValidatorErrorKind(positionAftercorners),
+    EverParseErrorReasonOfResult(positionAfterCorners),
+    EverParseGetValidatorErrorKind(positionAfterCorners),
     Ctxt,
     Input,
     StartPosition);
-  return positionAftercorners;
+  return positionAfterCorners;
 }
 
