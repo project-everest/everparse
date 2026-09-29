@@ -2,6 +2,7 @@ module EverParse3d.InputStream.Base
 open Pulse.Lib.Pervasives
 
 module U8 = FStar.UInt8
+module U64 = FStar.UInt64
 module SZ = FStar.SizeT
 module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
@@ -58,6 +59,34 @@ let error_handler_arrow
     sl_base: base_t ->
     sl_len: len_t ->
     sl_pos: pos_t ->
+    (* The offset at which the failing field *started*, sampled before the
+       field's validator ran. This is what doc/3d-lang.rst calls
+       `StartPosition`, and it is what the Low* backend reports; it is
+       measured the same way as the [start_pos] of an [action], i.e. relative
+       to the origin of the current validation.
+
+       It has to be passed separately rather than recovered from [sl_pos]:
+       [sl_pos] is the live position (a reference, on the buffer backend) and
+       has already moved past the bytes the field consumed by the time the
+       handler runs, and on the extern backend [pos_t] is the truncation
+       origin rather than a position at all.
+
+       It is a [U64.t] rather than a [SZ.t] to match the Low* error handler
+       and `EVERPARSE_ERROR_FRAME.start_pos`, and because the no-read wrapper
+       has to add the current stream position to the relative offset that the
+       non-consuming validators keep in their [pos] reference. [SZ.add] needs
+       `fits` of that sum, and none is available there: [get_position] fits by
+       construction, but the remaining-length summand carries no such
+       evidence.
+
+       Making [validate_with_action_no_read]'s [pos] absolute would remove the
+       addition, but it does not remove the obligation -- it moves it onto the
+       client. The relative [pos] advances by [SZ.add p0 sz], whose `fits` is
+       handed to it by [has_at] below (`res == true ==> SZ.fits (SZ.v off +
+       SZ.v n)`); an absolute [pos] would need `fits` of the *absolute* sum,
+       i.e. a strengthened [has_at] postcondition, which is one more unchecked
+       proof obligation on hand-written C. *)
+    start_pos:U64.t ->
     stt unit
       (requires exists* v_ctxt . PR.pts_to ctxt v_ctxt)
       (ensures fun _ -> exists* v_ctxt' . PR.pts_to ctxt v_ctxt')

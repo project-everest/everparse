@@ -19,10 +19,12 @@ void DefaultErrorHandler(
 	uint8_t *context,
 	uint8_t *base,
 	size_t len,
-	size_t *pos)
+	size_t *pos,
+	uint64_t start_pos)
 {
 	EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;
 	(void) len;
+	(void) pos;
 	EverParseDefaultErrorHandler(
 		typename_s,
 		fieldname,
@@ -30,7 +32,7 @@ void DefaultErrorHandler(
 		(uint64_t)error_code,
 		frame,
 		base,
-		(uint64_t)*pos
+		start_pos
 	);
 }
 

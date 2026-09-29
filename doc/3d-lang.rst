@@ -2002,9 +2002,18 @@ typedef in the generated ``EverParse.h``, under both backends, and the
 generated validator prototypes in ``<Mod>.h`` name that typedef.
 
 The argument list above is indicative: the handler takes seven arguments
-under the default backend and eight under ``--pulse``, which additionally
-passes the current stream position. Consult the ``EVERPARSE_ERROR_HANDLER``
-typedef in the generated ``EverParse.h`` for the exact signature.
+under the default backend and nine under ``--pulse``, which passes the
+input stream as several arguments (a ``(base, length, position)`` triple
+for ``--input_stream buffer``, a stream object, a truncation bound and an
+origin otherwise) followed by a trailing ``uint64_t StartPosition``.
+Consult the ``EVERPARSE_ERROR_HANDLER`` typedef in the generated
+``EverParse.h`` for the exact signature.
+
+Note that under ``--pulse`` the stream position that is part of that
+input-stream triple is the *current* position, which has already moved
+past whatever the failing field consumed. ``StartPosition`` --- the
+trailing argument, and the one that carries the same meaning as under the
+default backend --- is what a handler should report.
 
 Every EverParse validator is parameterized by:
 

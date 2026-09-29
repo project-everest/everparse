@@ -11,6 +11,7 @@ module EverParse3d.ProbeActions
 module I = EverParse3d.InputStream.Base
 module CB = EverParse3d.CopyBuffer
 module U64 = FStar.UInt64
+module SZ = FStar.SizeT
 
 
 let probe_fn_incremental
@@ -216,11 +217,19 @@ ensures exists* v_ctxt' .
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
 {
   unfold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
+  // The error is reported against the probe destination, so the position to
+  // report is the one reached in that copy buffer.
+  let dest_pos = I.get_position
+      (CB.base_of #_ #base_t #len_t #pos_t dest)
+      (CB.len_of #_ #base_t #len_t #pos_t dest)
+      (CB.pos_of #_ #base_t #len_t #pos_t dest)
+      contents_dest v_dest;
   (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst))
     tn fn_ det 0uy ctxt
       (CB.base_of #_ #base_t #len_t #pos_t dest)
       (CB.len_of #_ #base_t #len_t #pos_t dest)
-      (CB.pos_of #_ #base_t #len_t #pos_t dest);
+      (CB.pos_of #_ #base_t #len_t #pos_t dest)
+      (SZ.sizet_to_uint64 dest_pos);
   fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
 }
 

@@ -385,8 +385,8 @@ Options are treated from left to right:
     the stream object, so the generated ``<Mod>Check<Type>`` wrapper
     recovers the parsed size from ``EverParseStreamGetPosition``. That
     is the one primitive that takes no ``EVERPARSE_EXTRA_T``, because it
-    is also called from the generated default error handler, whose
-    signature has none.
+    is called from the generated ``<Mod>Wrapper.c`` outside the scope of
+    any ``EVERPARSE_EXTRA_T`` binder.
 
   * **Reads always copy.** ``EverParseStreamReadBytes`` returns
     ``void``, so, unlike ``EverParseRead``, it cannot hand back a

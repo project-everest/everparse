@@ -1028,9 +1028,10 @@ let print_c_entry
        then
        (* The `extern`/`static` Pulse validators pass the stream object, the
           truncation bound of the current view (0 at top level, i.e. the whole
-          stream) and the origin of the current validation. The reported
-          position is relative to that origin, as in Low*, where the wrapper
-          always passes a start position of 0. *)
+          stream), the origin of the current validation, and the position at
+          which the failing field started. That start position is already
+          relative to the origin, as in Low*, where the wrapper always passes
+          a start position of 0. *)
        Printf.sprintf
           "%sstatic\n\
            void DefaultErrorHandler(\n\t\
@@ -1041,10 +1042,13 @@ let print_c_entry
                                uint8_t *context,\n\t\
                                EVERPARSE_INPUT_STREAM_BASE base,\n\t\
                                size_t len,\n\t\
-                               size_t origin)\n\
+                               size_t origin,\n\t\
+                               uint64_t start_pos)\n\
            {\n\t\
              %s\n\t\
              (void) len;\n\t\
+             (void) base;\n\t\
+             (void) origin;\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
                typename_s,\n\t\t\
                fieldname,\n\t\t\
@@ -1052,7 +1056,7 @@ let print_c_entry
                (uint64_t)error_code,\n\t\t\
                frame,\n\t\t\
                NULL,\n\t\t\
-               (uint64_t)(EverParseStreamGetPosition(base) - origin)\n\t\
+               start_pos\n\t\
              );\n\
            }"
           stream_pos_decl
@@ -1060,7 +1064,10 @@ let print_c_entry
        else
        (* The Pulse `error_handler` takes a uint8_t error code and the three
           components of the input stream, rather than a uint64_t code and an
-          EVERPARSE_INPUT_BUFFER. *)
+          EVERPARSE_INPUT_BUFFER, plus the start position of the failing field.
+          `pos` is the *live* position and has already moved past the field by
+          the time we are called, so the reported offset comes from
+          `start_pos`, matching the Low* backend and doc/3d-lang.rst. *)
        Printf.sprintf
           "static\n\
            void DefaultErrorHandler(\n\t\
@@ -1071,10 +1078,12 @@ let print_c_entry
                                uint8_t *context,\n\t\
                                uint8_t *base,\n\t\
                                size_t len,\n\t\
-                               size_t *pos)\n\
+                               size_t *pos,\n\t\
+                               uint64_t start_pos)\n\
            {\n\t\
              %s\n\t\
              (void) len;\n\t\
+             (void) pos;\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
                typename_s,\n\t\t\
                fieldname,\n\t\t\
@@ -1082,7 +1091,7 @@ let print_c_entry
                (uint64_t)error_code,\n\t\t\
                frame,\n\t\t\
                base,\n\t\t\
-               (uint64_t)*pos\n\t\
+               start_pos\n\t\
              );\n\
            }"
           frame_decl

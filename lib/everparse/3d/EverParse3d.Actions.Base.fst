@@ -314,11 +314,19 @@ fn validate_with_error_handler
   (contents_sl: _)
   (v_sl: _)
 {
+  // Sample the position *before* running the field's validator: that is the
+  // start of the field, which is what the error handler must report (see
+  // doc/3d-lang.rst's `StartPosition`). By the time the handler runs, sl_pos
+  // has already advanced past whatever the field consumed.
+  let [@@@rename_let ("fieldStart" ^ typename)] field_start =
+    I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("startPosition" ^ typename)] start_pos =
+    SZ.sizet_to_uint64 field_start;
   let [@@@rename_let ("resultAfter" ^ typename)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res = validator_success) { // TODO: turn this `if ... else` into a non-terminal `if (res <> validator_success)` with an `ensures` clause
     res
   } else {
-    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos;
+    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos start_pos;
     res
   };
 }
@@ -3251,7 +3259,7 @@ fn probe_then_validate
         typename fieldname
         (error_reason_of_result validator_error_probe_failed)
         validator_error_probe_failed
-        ctxt sl_base sl_len sl_pos;
+        ctxt sl_base sl_len sl_pos (SZ.sizet_to_uint64 start_pos);
       false
     }
   }
@@ -3345,11 +3353,19 @@ fn validate_with_error_handler_no_read
   (v_sl: _)
   (v_pos: _)
 {
+  // As in [validate_with_error_handler], sample the start of the field before
+  // running its validator. Here the stream position [sl_pos] is not advanced
+  // at all -- the non-consuming validators track their offset in the separate
+  // [pos] reference, relative to the current stream position -- so the field
+  // starts at [get_position sl + !pos].
+  let view_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let field_off = !pos;
+  let start_pos = U64.add_mod (SZ.sizet_to_uint64 view_start) (SZ.sizet_to_uint64 field_off);
   let res = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos;
   if (res = validator_success) {
     res
   } else {
-    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos;
+    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos start_pos;
     res
   };
 }
