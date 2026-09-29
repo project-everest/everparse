@@ -390,7 +390,7 @@ let validate_with_error_handler
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h0 = HST.get () in
-    [@(rename_let ("positionAfter" ^ typename))]
+    [@(rename_let ("positionAfter" ^ fieldname))]
     let pos1 = v1 ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
