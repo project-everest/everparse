@@ -15,38 +15,38 @@ OrderedPairValidateOrderedPair(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterOrderedPair;
+  uint64_t positionAfterlesser0;
   uint64_t positionAfterlesser;
   uint32_t lesser;
   BOOLEAN hasBytes;
   uint64_t positionAftergreater_refinement;
-  uint64_t positionAfterOrderedPair0;
+  uint64_t positionAftergreater_refinement0;
   uint32_t greater_refinement;
   BOOLEAN greater_refinementConstraintIsOk;
   if (hasBytes0)
   {
-    positionAfterOrderedPair = StartPosition + 4ULL;
+    positionAfterlesser0 = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterOrderedPair =
+    positionAfterlesser0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterOrderedPair))
+  if (EverParseIsSuccess(positionAfterlesser0))
   {
-    positionAfterlesser = positionAfterOrderedPair;
+    positionAfterlesser = positionAfterlesser0;
   }
   else
   {
     ErrorHandlerFn("_orderedPair",
       "lesser",
-      EverParseErrorReasonOfResult(positionAfterOrderedPair),
-      EverParseGetValidatorErrorKind(positionAfterOrderedPair),
+      EverParseErrorReasonOfResult(positionAfterlesser0),
+      EverParseGetValidatorErrorKind(positionAfterlesser0),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterlesser = positionAfterOrderedPair;
+    positionAfterlesser = positionAfterlesser0;
   }
   if (EverParseIsError(positionAfterlesser))
   {
@@ -68,7 +68,7 @@ OrderedPairValidateOrderedPair(
   }
   if (EverParseIsError(positionAftergreater_refinement))
   {
-    positionAfterOrderedPair0 = positionAftergreater_refinement;
+    positionAftergreater_refinement0 = positionAftergreater_refinement;
   }
   else
   {
@@ -77,21 +77,21 @@ OrderedPairValidateOrderedPair(
     /* start: checking constraint */
     greater_refinementConstraintIsOk = lesser <= greater_refinement;
     /* end: checking constraint */
-    positionAfterOrderedPair0 =
+    positionAftergreater_refinement0 =
       EverParseCheckConstraintOk(greater_refinementConstraintIsOk,
         positionAftergreater_refinement);
   }
-  if (EverParseIsSuccess(positionAfterOrderedPair0))
+  if (EverParseIsSuccess(positionAftergreater_refinement0))
   {
-    return positionAfterOrderedPair0;
+    return positionAftergreater_refinement0;
   }
   ErrorHandlerFn("_orderedPair",
     "greater.refinement",
-    EverParseErrorReasonOfResult(positionAfterOrderedPair0),
-    EverParseGetValidatorErrorKind(positionAfterOrderedPair0),
+    EverParseErrorReasonOfResult(positionAftergreater_refinement0),
+    EverParseGetValidatorErrorKind(positionAftergreater_refinement0),
     Ctxt,
     Input,
     positionAfterlesser);
-  return positionAfterOrderedPair0;
+  return positionAftergreater_refinement0;
 }
 

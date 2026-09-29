@@ -15,7 +15,7 @@ ColoredPointValidateColoredPoint1(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 5ULL;
   uint64_t res;
-  uint64_t positionAfterColoredPoint1;
+  uint64_t positionAftercolor;
   if (hasBytes)
   {
     res = StartPosition + 5ULL;
@@ -24,19 +24,19 @@ ColoredPointValidateColoredPoint1(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterColoredPoint1 = res;
-  if (EverParseIsSuccess(positionAfterColoredPoint1))
+  positionAftercolor = res;
+  if (EverParseIsSuccess(positionAftercolor))
   {
-    return positionAfterColoredPoint1;
+    return positionAftercolor;
   }
   ErrorHandlerFn("_coloredPoint1",
     "color",
-    EverParseErrorReasonOfResult(positionAfterColoredPoint1),
-    EverParseGetValidatorErrorKind(positionAfterColoredPoint1),
+    EverParseErrorReasonOfResult(positionAftercolor),
+    EverParseGetValidatorErrorKind(positionAftercolor),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterColoredPoint1;
+  return positionAftercolor;
 }
 
 uint64_t
@@ -50,7 +50,7 @@ ColoredPointValidateColoredPoint2(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 5ULL;
   uint64_t res;
-  uint64_t positionAfterColoredPoint2;
+  uint64_t positionAfterpt;
   if (hasBytes)
   {
     res = StartPosition + 5ULL;
@@ -59,18 +59,18 @@ ColoredPointValidateColoredPoint2(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterColoredPoint2 = res;
-  if (EverParseIsSuccess(positionAfterColoredPoint2))
+  positionAfterpt = res;
+  if (EverParseIsSuccess(positionAfterpt))
   {
-    return positionAfterColoredPoint2;
+    return positionAfterpt;
   }
   ErrorHandlerFn("_coloredPoint2",
     "pt",
-    EverParseErrorReasonOfResult(positionAfterColoredPoint2),
-    EverParseGetValidatorErrorKind(positionAfterColoredPoint2),
+    EverParseErrorReasonOfResult(positionAfterpt),
+    EverParseGetValidatorErrorKind(positionAfterpt),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterColoredPoint2;
+  return positionAfterpt;
 }
 

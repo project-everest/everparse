@@ -17,13 +17,13 @@ GetFieldPtrValidateT(
   /* Validating field f1 */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
   uint64_t res0;
-  uint64_t positionAfterT;
+  uint64_t positionAfterf10;
   uint64_t positionAfterf1;
   BOOLEAN hasBytes;
   uint64_t res;
-  uint64_t positionAfterT0;
+  uint64_t positionAfterf2_base;
+  uint64_t positionAfterf20;
   uint64_t positionAfterf2;
-  uint64_t positionAfterT1;
   uint8_t *hd;
   BOOLEAN actionSuccessF2;
   if (hasBytes0)
@@ -34,21 +34,21 @@ GetFieldPtrValidateT(
   {
     res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterT = res0;
-  if (EverParseIsSuccess(positionAfterT))
+  positionAfterf10 = res0;
+  if (EverParseIsSuccess(positionAfterf10))
   {
-    positionAfterf1 = positionAfterT;
+    positionAfterf1 = positionAfterf10;
   }
   else
   {
     ErrorHandlerFn("_T",
       "f1",
-      EverParseErrorReasonOfResult(positionAfterT),
-      EverParseGetValidatorErrorKind(positionAfterT),
+      EverParseErrorReasonOfResult(positionAfterf10),
+      EverParseGetValidatorErrorKind(positionAfterf10),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterf1 = positionAfterT;
+    positionAfterf1 = positionAfterf10;
   }
   if (EverParseIsError(positionAfterf1))
   {
@@ -64,46 +64,46 @@ GetFieldPtrValidateT(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterf1);
   }
-  positionAfterT0 = res;
-  if (EverParseIsSuccess(positionAfterT0))
+  positionAfterf2_base = res;
+  if (EverParseIsSuccess(positionAfterf2_base))
   {
-    positionAfterf2 = positionAfterT0;
+    positionAfterf20 = positionAfterf2_base;
   }
   else
   {
     ErrorHandlerFn("_T",
       "f2.base",
-      EverParseErrorReasonOfResult(positionAfterT0),
-      EverParseGetValidatorErrorKind(positionAfterT0),
+      EverParseErrorReasonOfResult(positionAfterf2_base),
+      EverParseGetValidatorErrorKind(positionAfterf2_base),
       Ctxt,
       Input,
       positionAfterf1);
-    positionAfterf2 = positionAfterT0;
+    positionAfterf20 = positionAfterf2_base;
   }
-  if (EverParseIsSuccess(positionAfterf2))
+  if (EverParseIsSuccess(positionAfterf20))
   {
     hd = Input + (uint32_t)positionAfterf1;
     *Out = hd;
     actionSuccessF2 = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionSuccessF2);
-    positionAfterT1 = positionAfterf2;
+    positionAfterf2 = positionAfterf20;
   }
   else
   {
-    positionAfterT1 = positionAfterf2;
+    positionAfterf2 = positionAfterf20;
   }
-  if (EverParseIsSuccess(positionAfterT1))
+  if (EverParseIsSuccess(positionAfterf2))
   {
-    return positionAfterT1;
+    return positionAfterf2;
   }
   ErrorHandlerFn("_T",
     "f2",
-    EverParseErrorReasonOfResult(positionAfterT1),
-    EverParseGetValidatorErrorKind(positionAfterT1),
+    EverParseErrorReasonOfResult(positionAfterf2),
+    EverParseGetValidatorErrorKind(positionAfterf2),
     Ctxt,
     Input,
     positionAfterf1);
-  return positionAfterT1;
+  return positionAfterf2;
 }
 
 uint64_t
@@ -119,13 +119,13 @@ GetFieldPtrValidateTact(
   /* Validating field f1 */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
   uint64_t res0;
-  uint64_t positionAfterTact;
+  uint64_t positionAfterf10;
   uint64_t positionAfterf1;
   BOOLEAN hasBytes;
   uint64_t res;
-  uint64_t positionAfterTact0;
+  uint64_t positionAfterf2_base;
+  uint64_t positionAfterf20;
   uint64_t positionAfterf2;
-  uint64_t positionAfterTact1;
   uint8_t *hd;
   BOOLEAN actionSuccessF2;
   if (hasBytes0)
@@ -136,21 +136,21 @@ GetFieldPtrValidateTact(
   {
     res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterTact = res0;
-  if (EverParseIsSuccess(positionAfterTact))
+  positionAfterf10 = res0;
+  if (EverParseIsSuccess(positionAfterf10))
   {
-    positionAfterf1 = positionAfterTact;
+    positionAfterf1 = positionAfterf10;
   }
   else
   {
     ErrorHandlerFn("_TAct",
       "f1",
-      EverParseErrorReasonOfResult(positionAfterTact),
-      EverParseGetValidatorErrorKind(positionAfterTact),
+      EverParseErrorReasonOfResult(positionAfterf10),
+      EverParseGetValidatorErrorKind(positionAfterf10),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterf1 = positionAfterTact;
+    positionAfterf1 = positionAfterf10;
   }
   if (EverParseIsError(positionAfterf1))
   {
@@ -166,45 +166,45 @@ GetFieldPtrValidateTact(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterf1);
   }
-  positionAfterTact0 = res;
-  if (EverParseIsSuccess(positionAfterTact0))
+  positionAfterf2_base = res;
+  if (EverParseIsSuccess(positionAfterf2_base))
   {
-    positionAfterf2 = positionAfterTact0;
+    positionAfterf20 = positionAfterf2_base;
   }
   else
   {
     ErrorHandlerFn("_TAct",
       "f2.base",
-      EverParseErrorReasonOfResult(positionAfterTact0),
-      EverParseGetValidatorErrorKind(positionAfterTact0),
+      EverParseErrorReasonOfResult(positionAfterf2_base),
+      EverParseGetValidatorErrorKind(positionAfterf2_base),
       Ctxt,
       Input,
       positionAfterf1);
-    positionAfterf2 = positionAfterTact0;
+    positionAfterf20 = positionAfterf2_base;
   }
-  if (EverParseIsSuccess(positionAfterf2))
+  if (EverParseIsSuccess(positionAfterf20))
   {
     hd = Input + (uint32_t)positionAfterf1;
     *Out = hd;
     actionSuccessF2 = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionSuccessF2);
-    positionAfterTact1 = positionAfterf2;
+    positionAfterf2 = positionAfterf20;
   }
   else
   {
-    positionAfterTact1 = positionAfterf2;
+    positionAfterf2 = positionAfterf20;
   }
-  if (EverParseIsSuccess(positionAfterTact1))
+  if (EverParseIsSuccess(positionAfterf2))
   {
-    return positionAfterTact1;
+    return positionAfterf2;
   }
   ErrorHandlerFn("_TAct",
     "f2",
-    EverParseErrorReasonOfResult(positionAfterTact1),
-    EverParseGetValidatorErrorKind(positionAfterTact1),
+    EverParseErrorReasonOfResult(positionAfterf2),
+    EverParseGetValidatorErrorKind(positionAfterf2),
     Ctxt,
     Input,
     positionAfterf1);
-  return positionAfterTact1;
+  return positionAfterf2;
 }
 

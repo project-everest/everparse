@@ -14,68 +14,68 @@ ValidateInt(
 )
 {
   BOOLEAN hasBytes0;
-  uint64_t positionAfterInt;
+  uint64_t positionAfterx0;
   BOOLEAN hasBytes;
-  uint64_t positionAfterInt0;
+  uint64_t positionAfterx;
   #if ARCH64
   {
-    KRML_MAYBE_UNUSED_VAR(positionAfterInt0);
+    KRML_MAYBE_UNUSED_VAR(positionAfterx);
     KRML_MAYBE_UNUSED_VAR(hasBytes);
     /* Validating field x */
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
     hasBytes0 = (InputLen - StartPosition) >= 8ULL;
     if (hasBytes0)
     {
-      positionAfterInt = StartPosition + 8ULL;
+      positionAfterx0 = StartPosition + 8ULL;
     }
     else
     {
-      positionAfterInt =
+      positionAfterx0 =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
           StartPosition);
     }
-    if (EverParseIsSuccess(positionAfterInt))
+    if (EverParseIsSuccess(positionAfterx0))
     {
-      return positionAfterInt;
+      return positionAfterx0;
     }
     ErrorHandlerFn("_INT",
       "x",
-      EverParseErrorReasonOfResult(positionAfterInt),
-      EverParseGetValidatorErrorKind(positionAfterInt),
+      EverParseErrorReasonOfResult(positionAfterx0),
+      EverParseGetValidatorErrorKind(positionAfterx0),
       Ctxt,
       Input,
       StartPosition);
-    return positionAfterInt;
+    return positionAfterx0;
   }
   #else
   {
-    KRML_MAYBE_UNUSED_VAR(positionAfterInt);
+    KRML_MAYBE_UNUSED_VAR(positionAfterx0);
     KRML_MAYBE_UNUSED_VAR(hasBytes0);
     /* Validating field x */
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     hasBytes = (InputLen - StartPosition) >= 4ULL;
     if (hasBytes)
     {
-      positionAfterInt0 = StartPosition + 4ULL;
+      positionAfterx = StartPosition + 4ULL;
     }
     else
     {
-      positionAfterInt0 =
+      positionAfterx =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
           StartPosition);
     }
-    if (EverParseIsSuccess(positionAfterInt0))
+    if (EverParseIsSuccess(positionAfterx))
     {
-      return positionAfterInt0;
+      return positionAfterx;
     }
     ErrorHandlerFn("_INT",
       "x",
-      EverParseErrorReasonOfResult(positionAfterInt0),
-      EverParseGetValidatorErrorKind(positionAfterInt0),
+      EverParseErrorReasonOfResult(positionAfterx),
+      EverParseGetValidatorErrorKind(positionAfterx),
       Ctxt,
       Input,
       StartPosition);
-    return positionAfterInt0;
+    return positionAfterx;
   }
   #endif
 }
@@ -91,41 +91,41 @@ PointArch3264ValidatePoint(
 {
   /* Validating field x */
   uint64_t
-  positionAfterPoint = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
+  positionAfterx0 = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
   uint64_t positionAfterx;
-  uint64_t positionAfterPoint0;
-  if (EverParseIsSuccess(positionAfterPoint))
+  uint64_t positionAftery;
+  if (EverParseIsSuccess(positionAfterx0))
   {
-    positionAfterx = positionAfterPoint;
+    positionAfterx = positionAfterx0;
   }
   else
   {
     ErrorHandlerFn("_POINT",
       "x",
-      EverParseErrorReasonOfResult(positionAfterPoint),
-      EverParseGetValidatorErrorKind(positionAfterPoint),
+      EverParseErrorReasonOfResult(positionAfterx0),
+      EverParseGetValidatorErrorKind(positionAfterx0),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterx = positionAfterPoint;
+    positionAfterx = positionAfterx0;
   }
   if (EverParseIsError(positionAfterx))
   {
     return positionAfterx;
   }
   /* Validating field y */
-  positionAfterPoint0 = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, positionAfterx);
-  if (EverParseIsSuccess(positionAfterPoint0))
+  positionAftery = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, positionAfterx);
+  if (EverParseIsSuccess(positionAftery))
   {
-    return positionAfterPoint0;
+    return positionAftery;
   }
   ErrorHandlerFn("_POINT",
     "y",
-    EverParseErrorReasonOfResult(positionAfterPoint0),
-    EverParseGetValidatorErrorKind(positionAfterPoint0),
+    EverParseErrorReasonOfResult(positionAftery),
+    EverParseGetValidatorErrorKind(positionAftery),
     Ctxt,
     Input,
     positionAfterx);
-  return positionAfterPoint0;
+  return positionAftery;
 }
 

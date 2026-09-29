@@ -15,7 +15,7 @@ DerivedValidateTriple(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 12ULL;
   uint64_t res;
-  uint64_t positionAfterTriple;
+  uint64_t positionAfterpair;
   if (hasBytes)
   {
     res = StartPosition + 12ULL;
@@ -24,19 +24,19 @@ DerivedValidateTriple(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterTriple = res;
-  if (EverParseIsSuccess(positionAfterTriple))
+  positionAfterpair = res;
+  if (EverParseIsSuccess(positionAfterpair))
   {
-    return positionAfterTriple;
+    return positionAfterpair;
   }
   ErrorHandlerFn("_Triple",
     "pair",
-    EverParseErrorReasonOfResult(positionAfterTriple),
-    EverParseGetValidatorErrorKind(positionAfterTriple),
+    EverParseErrorReasonOfResult(positionAfterpair),
+    EverParseGetValidatorErrorKind(positionAfterpair),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterTriple;
+  return positionAfterpair;
 }
 
 uint64_t
@@ -50,7 +50,7 @@ DerivedValidateQuad(
 {
   BOOLEAN hasBytes = (InputLength - StartPosition) >= 16ULL;
   uint64_t res;
-  uint64_t positionAfterQuad;
+  uint64_t positionAfter12;
   if (hasBytes)
   {
     res = StartPosition + 16ULL;
@@ -59,18 +59,18 @@ DerivedValidateQuad(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterQuad = res;
-  if (EverParseIsSuccess(positionAfterQuad))
+  positionAfter12 = res;
+  if (EverParseIsSuccess(positionAfter12))
   {
-    return positionAfterQuad;
+    return positionAfter12;
   }
   ErrorHandlerFn("_Quad",
     "_12",
-    EverParseErrorReasonOfResult(positionAfterQuad),
-    EverParseGetValidatorErrorKind(positionAfterQuad),
+    EverParseErrorReasonOfResult(positionAfter12),
+    EverParseGetValidatorErrorKind(positionAfter12),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterQuad;
+  return positionAfter12;
 }
 

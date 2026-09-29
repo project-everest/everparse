@@ -15,98 +15,98 @@ EnumConstraintValidateEnumConstraint(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  uint64_t positionAftercol0;
   uint64_t positionAftercol;
-  uint64_t positionAfterEnumConstraint;
   uint32_t col;
   BOOLEAN colConstraintIsOk;
-  uint64_t positionAftercol1;
+  uint64_t positionAfterCheckedcol;
   BOOLEAN hasBytes;
   uint64_t positionAfterx_refinement;
-  uint64_t positionAfterEnumConstraint0;
+  uint64_t positionAfterx_refinement0;
   uint32_t x_refinement;
   BOOLEAN x_refinementConstraintIsOk;
   if (hasBytes0)
   {
-    positionAftercol = StartPosition + 4ULL;
+    positionAftercol0 = StartPosition + 4ULL;
   }
   else
   {
-    positionAftercol =
+    positionAftercol0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsError(positionAftercol))
+  if (EverParseIsError(positionAftercol0))
   {
-    positionAfterEnumConstraint = positionAftercol;
+    positionAftercol = positionAftercol0;
   }
   else
   {
     col = Load32Le(Input + (uint32_t)StartPosition);
     colConstraintIsOk =
       col == ENUMCONSTRAINT_RED || col == ENUMCONSTRAINT_GREEN || col == ENUMCONSTRAINT_BLUE;
-    positionAftercol1 = EverParseCheckConstraintOk(colConstraintIsOk, positionAftercol);
-    if (EverParseIsError(positionAftercol1))
+    positionAfterCheckedcol = EverParseCheckConstraintOk(colConstraintIsOk, positionAftercol0);
+    if (EverParseIsError(positionAfterCheckedcol))
     {
-      positionAfterEnumConstraint = positionAftercol1;
+      positionAftercol = positionAfterCheckedcol;
     }
     else
     {
       /* Validating field x */
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      hasBytes = (InputLength - positionAftercol1) >= 4ULL;
+      hasBytes = (InputLength - positionAfterCheckedcol) >= 4ULL;
       if (hasBytes)
       {
-        positionAfterx_refinement = positionAftercol1 + 4ULL;
+        positionAfterx_refinement = positionAfterCheckedcol + 4ULL;
       }
       else
       {
         positionAfterx_refinement =
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-            positionAftercol1);
+            positionAfterCheckedcol);
       }
       if (EverParseIsError(positionAfterx_refinement))
       {
-        positionAfterEnumConstraint0 = positionAfterx_refinement;
+        positionAfterx_refinement0 = positionAfterx_refinement;
       }
       else
       {
         /* reading field_value */
-        x_refinement = Load32Le(Input + (uint32_t)positionAftercol1);
+        x_refinement = Load32Le(Input + (uint32_t)positionAfterCheckedcol);
         /* start: checking constraint */
         x_refinementConstraintIsOk = x_refinement == 0U || col == ENUMCONSTRAINT_GREEN;
         /* end: checking constraint */
-        positionAfterEnumConstraint0 =
+        positionAfterx_refinement0 =
           EverParseCheckConstraintOk(x_refinementConstraintIsOk,
             positionAfterx_refinement);
       }
-      if (EverParseIsSuccess(positionAfterEnumConstraint0))
+      if (EverParseIsSuccess(positionAfterx_refinement0))
       {
-        positionAfterEnumConstraint = positionAfterEnumConstraint0;
+        positionAftercol = positionAfterx_refinement0;
       }
       else
       {
         ErrorHandlerFn("_enum_constraint",
           "x.refinement",
-          EverParseErrorReasonOfResult(positionAfterEnumConstraint0),
-          EverParseGetValidatorErrorKind(positionAfterEnumConstraint0),
+          EverParseErrorReasonOfResult(positionAfterx_refinement0),
+          EverParseGetValidatorErrorKind(positionAfterx_refinement0),
           Ctxt,
           Input,
-          positionAftercol1);
-        positionAfterEnumConstraint = positionAfterEnumConstraint0;
+          positionAfterCheckedcol);
+        positionAftercol = positionAfterx_refinement0;
       }
     }
   }
-  if (EverParseIsSuccess(positionAfterEnumConstraint))
+  if (EverParseIsSuccess(positionAftercol))
   {
-    return positionAfterEnumConstraint;
+    return positionAftercol;
   }
   ErrorHandlerFn("_enum_constraint",
     "col",
-    EverParseErrorReasonOfResult(positionAfterEnumConstraint),
-    EverParseGetValidatorErrorKind(positionAfterEnumConstraint),
+    EverParseErrorReasonOfResult(positionAftercol),
+    EverParseGetValidatorErrorKind(positionAftercol),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterEnumConstraint;
+  return positionAftercol;
 }
 

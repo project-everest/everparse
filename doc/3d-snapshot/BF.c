@@ -15,121 +15,121 @@ ValidateBf2bis(
 {
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
-  uint64_t positionAfterBf2bis;
   uint64_t positionAfterBitfield0;
+  uint64_t positionAfterBitfield00;
   uint16_t bitfield0;
   BOOLEAN hasBytes1;
   uint64_t positionAfterBitfield1;
-  uint64_t positionAfterBf2bis0;
+  uint64_t positionAfterBitfield10;
   uint16_t bitfield1;
   BOOLEAN bitfield1constraintIsOk;
-  uint64_t positionAfterBitfield11;
+  uint64_t positionAfterCheckedBitfield1;
   BOOLEAN hasBytes;
-  uint64_t positionAfterBf2bis1;
+  uint64_t positionAfterz;
   uint64_t res;
   if (hasBytes0)
   {
-    positionAfterBf2bis = StartPosition + 2ULL;
+    positionAfterBitfield0 = StartPosition + 2ULL;
   }
   else
   {
-    positionAfterBf2bis =
+    positionAfterBitfield0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterBf2bis))
+  if (EverParseIsSuccess(positionAfterBitfield0))
   {
-    positionAfterBitfield0 = positionAfterBf2bis;
+    positionAfterBitfield00 = positionAfterBitfield0;
   }
   else
   {
     ErrorHandlerFn("_BF2bis",
       "__bitfield_0",
-      EverParseErrorReasonOfResult(positionAfterBf2bis),
-      EverParseGetValidatorErrorKind(positionAfterBf2bis),
+      EverParseErrorReasonOfResult(positionAfterBitfield0),
+      EverParseGetValidatorErrorKind(positionAfterBitfield0),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterBitfield0 = positionAfterBf2bis;
+    positionAfterBitfield00 = positionAfterBitfield0;
   }
-  if (EverParseIsError(positionAfterBitfield0))
+  if (EverParseIsError(positionAfterBitfield00))
   {
-    return positionAfterBitfield0;
+    return positionAfterBitfield00;
   }
   bitfield0 = Load16Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  hasBytes1 = (InputLength - positionAfterBitfield0) >= 2ULL;
+  hasBytes1 = (InputLength - positionAfterBitfield00) >= 2ULL;
   if (hasBytes1)
   {
-    positionAfterBitfield1 = positionAfterBitfield0 + 2ULL;
+    positionAfterBitfield1 = positionAfterBitfield00 + 2ULL;
   }
   else
   {
     positionAfterBitfield1 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterBitfield0);
+        positionAfterBitfield00);
   }
   if (EverParseIsError(positionAfterBitfield1))
   {
-    positionAfterBf2bis0 = positionAfterBitfield1;
+    positionAfterBitfield10 = positionAfterBitfield1;
   }
   else
   {
-    bitfield1 = Load16Le(Input + (uint32_t)positionAfterBitfield0);
+    bitfield1 = Load16Le(Input + (uint32_t)positionAfterBitfield00);
     bitfield1constraintIsOk =
       EverParseGetBitfield16(bitfield1, 0U, 12U) < EverParseGetBitfield16(bitfield0, 0U, 6U);
-    positionAfterBitfield11 =
+    positionAfterCheckedBitfield1 =
       EverParseCheckConstraintOk(bitfield1constraintIsOk,
         positionAfterBitfield1);
-    if (EverParseIsError(positionAfterBitfield11))
+    if (EverParseIsError(positionAfterCheckedBitfield1))
     {
-      positionAfterBf2bis0 = positionAfterBitfield11;
+      positionAfterBitfield10 = positionAfterCheckedBitfield1;
     }
     else
     {
       /* Validating field z */
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      hasBytes = (InputLength - positionAfterBitfield11) >= 1ULL;
+      hasBytes = (InputLength - positionAfterCheckedBitfield1) >= 1ULL;
       if (hasBytes)
       {
-        positionAfterBf2bis1 = positionAfterBitfield11 + 1ULL;
+        positionAfterz = positionAfterCheckedBitfield1 + 1ULL;
       }
       else
       {
-        positionAfterBf2bis1 =
+        positionAfterz =
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-            positionAfterBitfield11);
+            positionAfterCheckedBitfield1);
       }
-      if (EverParseIsSuccess(positionAfterBf2bis1))
+      if (EverParseIsSuccess(positionAfterz))
       {
-        res = positionAfterBf2bis1;
+        res = positionAfterz;
       }
       else
       {
         ErrorHandlerFn("_BF2bis",
           "z",
-          EverParseErrorReasonOfResult(positionAfterBf2bis1),
-          EverParseGetValidatorErrorKind(positionAfterBf2bis1),
+          EverParseErrorReasonOfResult(positionAfterz),
+          EverParseGetValidatorErrorKind(positionAfterz),
           Ctxt,
           Input,
-          positionAfterBitfield11);
-        res = positionAfterBf2bis1;
+          positionAfterCheckedBitfield1);
+        res = positionAfterz;
       }
-      positionAfterBf2bis0 = res;
+      positionAfterBitfield10 = res;
     }
   }
-  if (EverParseIsSuccess(positionAfterBf2bis0))
+  if (EverParseIsSuccess(positionAfterBitfield10))
   {
-    return positionAfterBf2bis0;
+    return positionAfterBitfield10;
   }
   ErrorHandlerFn("_BF2bis",
     "__bitfield_1",
-    EverParseErrorReasonOfResult(positionAfterBf2bis0),
-    EverParseGetValidatorErrorKind(positionAfterBf2bis0),
+    EverParseErrorReasonOfResult(positionAfterBitfield10),
+    EverParseGetValidatorErrorKind(positionAfterBitfield10),
     Ctxt,
     Input,
-    positionAfterBitfield0);
-  return positionAfterBf2bis0;
+    positionAfterBitfield00);
+  return positionAfterBitfield10;
 }
 
 static inline uint64_t
@@ -143,124 +143,124 @@ ValidateBf3(
 {
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
-  uint64_t positionAfterBf3;
   uint64_t positionAfterBitfield0;
+  uint64_t positionAfterBitfield00;
   uint16_t bitfield0;
   BOOLEAN hasBytes1;
   uint64_t positionAfterBitfield1;
-  uint64_t positionAfterBf30;
+  uint64_t positionAfterBitfield10;
   uint16_t bitfield1;
   BOOLEAN bitfield1constraintIsOk;
-  uint64_t positionAfterBitfield11;
+  uint64_t positionAfterCheckedBitfield1;
   BOOLEAN hasBytes;
-  uint64_t positionAfterBf31;
+  uint64_t positionAfterz;
   uint64_t res;
   if (hasBytes0)
   {
-    positionAfterBf3 = StartPosition + 2ULL;
+    positionAfterBitfield0 = StartPosition + 2ULL;
   }
   else
   {
-    positionAfterBf3 =
+    positionAfterBitfield0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterBf3))
+  if (EverParseIsSuccess(positionAfterBitfield0))
   {
-    positionAfterBitfield0 = positionAfterBf3;
+    positionAfterBitfield00 = positionAfterBitfield0;
   }
   else
   {
     ErrorHandlerFn("_BF3",
       "__bitfield_0",
-      EverParseErrorReasonOfResult(positionAfterBf3),
-      EverParseGetValidatorErrorKind(positionAfterBf3),
+      EverParseErrorReasonOfResult(positionAfterBitfield0),
+      EverParseGetValidatorErrorKind(positionAfterBitfield0),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterBitfield0 = positionAfterBf3;
+    positionAfterBitfield00 = positionAfterBitfield0;
   }
-  if (EverParseIsError(positionAfterBitfield0))
+  if (EverParseIsError(positionAfterBitfield00))
   {
-    return positionAfterBitfield0;
+    return positionAfterBitfield00;
   }
   bitfield0 = Load16Be(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-  hasBytes1 = (InputLength - positionAfterBitfield0) >= 2ULL;
+  hasBytes1 = (InputLength - positionAfterBitfield00) >= 2ULL;
   if (hasBytes1)
   {
-    positionAfterBitfield1 = positionAfterBitfield0 + 2ULL;
+    positionAfterBitfield1 = positionAfterBitfield00 + 2ULL;
   }
   else
   {
     positionAfterBitfield1 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterBitfield0);
+        positionAfterBitfield00);
   }
   if (EverParseIsError(positionAfterBitfield1))
   {
-    positionAfterBf30 = positionAfterBitfield1;
+    positionAfterBitfield10 = positionAfterBitfield1;
   }
   else
   {
-    bitfield1 = Load16Be(Input + (uint32_t)positionAfterBitfield0);
+    bitfield1 = Load16Be(Input + (uint32_t)positionAfterBitfield00);
     bitfield1constraintIsOk =
       EverParseGetBitfield16MsbFirst(bitfield1, 0U, 12U) <
         EverParseGetBitfield16MsbFirst(bitfield0,
           0U,
           6U);
-    positionAfterBitfield11 =
+    positionAfterCheckedBitfield1 =
       EverParseCheckConstraintOk(bitfield1constraintIsOk,
         positionAfterBitfield1);
-    if (EverParseIsError(positionAfterBitfield11))
+    if (EverParseIsError(positionAfterCheckedBitfield1))
     {
-      positionAfterBf30 = positionAfterBitfield11;
+      positionAfterBitfield10 = positionAfterCheckedBitfield1;
     }
     else
     {
       /* Validating field z */
       /* Checking that we have enough space for a UINT8BE, i.e., 1 byte */
-      hasBytes = (InputLength - positionAfterBitfield11) >= 1ULL;
+      hasBytes = (InputLength - positionAfterCheckedBitfield1) >= 1ULL;
       if (hasBytes)
       {
-        positionAfterBf31 = positionAfterBitfield11 + 1ULL;
+        positionAfterz = positionAfterCheckedBitfield1 + 1ULL;
       }
       else
       {
-        positionAfterBf31 =
+        positionAfterz =
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-            positionAfterBitfield11);
+            positionAfterCheckedBitfield1);
       }
-      if (EverParseIsSuccess(positionAfterBf31))
+      if (EverParseIsSuccess(positionAfterz))
       {
-        res = positionAfterBf31;
+        res = positionAfterz;
       }
       else
       {
         ErrorHandlerFn("_BF3",
           "z",
-          EverParseErrorReasonOfResult(positionAfterBf31),
-          EverParseGetValidatorErrorKind(positionAfterBf31),
+          EverParseErrorReasonOfResult(positionAfterz),
+          EverParseGetValidatorErrorKind(positionAfterz),
           Ctxt,
           Input,
-          positionAfterBitfield11);
-        res = positionAfterBf31;
+          positionAfterCheckedBitfield1);
+        res = positionAfterz;
       }
-      positionAfterBf30 = res;
+      positionAfterBitfield10 = res;
     }
   }
-  if (EverParseIsSuccess(positionAfterBf30))
+  if (EverParseIsSuccess(positionAfterBitfield10))
   {
-    return positionAfterBf30;
+    return positionAfterBitfield10;
   }
   ErrorHandlerFn("_BF3",
     "__bitfield_1",
-    EverParseErrorReasonOfResult(positionAfterBf30),
-    EverParseGetValidatorErrorKind(positionAfterBf30),
+    EverParseErrorReasonOfResult(positionAfterBitfield10),
+    EverParseGetValidatorErrorKind(positionAfterBitfield10),
     Ctxt,
     Input,
-    positionAfterBitfield0);
-  return positionAfterBf30;
+    positionAfterBitfield00);
+  return positionAfterBitfield10;
 }
 
 uint64_t
@@ -274,41 +274,41 @@ BfValidateDummy(
 {
   /* Validating field emp2 */
   uint64_t
-  positionAfterDummy = ValidateBf2bis(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
+  positionAfteremp20 = ValidateBf2bis(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
   uint64_t positionAfteremp2;
-  uint64_t positionAfterDummy0;
-  if (EverParseIsSuccess(positionAfterDummy))
+  uint64_t positionAfteremp3;
+  if (EverParseIsSuccess(positionAfteremp20))
   {
-    positionAfteremp2 = positionAfterDummy;
+    positionAfteremp2 = positionAfteremp20;
   }
   else
   {
     ErrorHandlerFn("_dummy",
       "emp2",
-      EverParseErrorReasonOfResult(positionAfterDummy),
-      EverParseGetValidatorErrorKind(positionAfterDummy),
+      EverParseErrorReasonOfResult(positionAfteremp20),
+      EverParseGetValidatorErrorKind(positionAfteremp20),
       Ctxt,
       Input,
       StartPosition);
-    positionAfteremp2 = positionAfterDummy;
+    positionAfteremp2 = positionAfteremp20;
   }
   if (EverParseIsError(positionAfteremp2))
   {
     return positionAfteremp2;
   }
   /* Validating field emp3 */
-  positionAfterDummy0 = ValidateBf3(Ctxt, ErrorHandlerFn, Input, InputLength, positionAfteremp2);
-  if (EverParseIsSuccess(positionAfterDummy0))
+  positionAfteremp3 = ValidateBf3(Ctxt, ErrorHandlerFn, Input, InputLength, positionAfteremp2);
+  if (EverParseIsSuccess(positionAfteremp3))
   {
-    return positionAfterDummy0;
+    return positionAfteremp3;
   }
   ErrorHandlerFn("_dummy",
     "emp3",
-    EverParseErrorReasonOfResult(positionAfterDummy0),
-    EverParseGetValidatorErrorKind(positionAfterDummy0),
+    EverParseErrorReasonOfResult(positionAfteremp3),
+    EverParseGetValidatorErrorKind(positionAfteremp3),
     Ctxt,
     Input,
     positionAfteremp2);
-  return positionAfterDummy0;
+  return positionAfteremp3;
 }
 

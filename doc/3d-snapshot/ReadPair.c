@@ -19,13 +19,13 @@ ReadPairValidatePair(
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterfirst0;
-  uint64_t positionAfterPair;
+  uint64_t positionAfterfirst1;
   uint32_t first;
   BOOLEAN actionResult;
   uint64_t positionAfterfirst;
   BOOLEAN hasBytes;
+  uint64_t positionAftersecond0;
   uint64_t positionAftersecond;
-  uint64_t positionAfterPair0;
   uint32_t second;
   BOOLEAN actionResult0;
   if (hasBytes0)
@@ -40,7 +40,7 @@ ReadPairValidatePair(
   }
   if (EverParseIsError(positionAfterfirst0))
   {
-    positionAfterPair = positionAfterfirst0;
+    positionAfterfirst1 = positionAfterfirst0;
   }
   else
   {
@@ -48,22 +48,22 @@ ReadPairValidatePair(
     *X = first;
     actionResult = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionResult);
-    positionAfterPair = positionAfterfirst0;
+    positionAfterfirst1 = positionAfterfirst0;
   }
-  if (EverParseIsSuccess(positionAfterPair))
+  if (EverParseIsSuccess(positionAfterfirst1))
   {
-    positionAfterfirst = positionAfterPair;
+    positionAfterfirst = positionAfterfirst1;
   }
   else
   {
     ErrorHandlerFn("_Pair",
       "first",
-      EverParseErrorReasonOfResult(positionAfterPair),
-      EverParseGetValidatorErrorKind(positionAfterPair),
+      EverParseErrorReasonOfResult(positionAfterfirst1),
+      EverParseGetValidatorErrorKind(positionAfterfirst1),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterfirst = positionAfterPair;
+    positionAfterfirst = positionAfterfirst1;
   }
   if (EverParseIsError(positionAfterfirst))
   {
@@ -74,17 +74,17 @@ ReadPairValidatePair(
   hasBytes = (InputLength - positionAfterfirst) >= 4ULL;
   if (hasBytes)
   {
-    positionAftersecond = positionAfterfirst + 4ULL;
+    positionAftersecond0 = positionAfterfirst + 4ULL;
   }
   else
   {
-    positionAftersecond =
+    positionAftersecond0 =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterfirst);
   }
-  if (EverParseIsError(positionAftersecond))
+  if (EverParseIsError(positionAftersecond0))
   {
-    positionAfterPair0 = positionAftersecond;
+    positionAftersecond = positionAftersecond0;
   }
   else
   {
@@ -92,19 +92,19 @@ ReadPairValidatePair(
     *Y = second;
     actionResult0 = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionResult0);
-    positionAfterPair0 = positionAftersecond;
+    positionAftersecond = positionAftersecond0;
   }
-  if (EverParseIsSuccess(positionAfterPair0))
+  if (EverParseIsSuccess(positionAftersecond))
   {
-    return positionAfterPair0;
+    return positionAftersecond;
   }
   ErrorHandlerFn("_Pair",
     "second",
-    EverParseErrorReasonOfResult(positionAfterPair0),
-    EverParseGetValidatorErrorKind(positionAfterPair0),
+    EverParseErrorReasonOfResult(positionAftersecond),
+    EverParseGetValidatorErrorKind(positionAftersecond),
     Ctxt,
     Input,
     positionAfterfirst);
-  return positionAfterPair0;
+  return positionAftersecond;
 }
 
