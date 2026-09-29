@@ -59,6 +59,7 @@ module Common = EverParse3d.Actions.Common
 module AP = Pulse.Lib.ArrayPtr
 module Util = EverParse3d.Util
 module EH = EverParse3d.Actions.ErrorHandler.Extern
+module NP = EverParse3d.InputStream.Extern.NullPtr
 
 open EverParse3d.InputStream.Base { seq_is_suffix_of }
 
@@ -750,8 +751,6 @@ let field_ptr_after
 : option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8)
 = Some field_ptr_after_fn
 
-assume val null_ptr : ___PUINT8
-
 (* An opaque alias for the state-dictionary invariant. It is a plain (hence
    delta-reducible) definition, so that it is convertible with the `exists*`
    that `field_ptr_after_setter_t` expects, while being opaque enough that
@@ -786,7 +785,7 @@ ensures
   I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
   all_states extra_state
 {
-  let mut w = null_ptr;
+  let mut w = NP.null_ptr;
   let ok = field_ptr_after_wrapped sz w sl_base sl_len sl_pos _ contents_sl v_sl;
   if ok {
     let q = !w;

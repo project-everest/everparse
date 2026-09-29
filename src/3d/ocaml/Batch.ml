@@ -543,7 +543,7 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
          extracted declarations of its own, so it needs nothing public. *)
       let backend_api =
         match string_of_input_stream_binding input_stream_binding with
-        | "extern" | "static" -> ["EverParse3d.InputStream.Extern"]
+        | "extern" | "static" -> ["EverParse3d.InputStream.Extern"; "EverParse3d.InputStream.Extern.NullPtr"]
         | _ -> ["EverParse3d.CopyBuffer.Buffer"]
       in
       let api =

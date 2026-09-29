@@ -315,7 +315,16 @@ Options are treated from left to right:
        described below.
 
   + ``static`` is like ``extern`` except that the functions on
-    ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static``.
+    ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static inline``
+    rather than ``extern``, so that the compiler sees each stream
+    operation at every validator call site instead of linking against
+    it. This holds under both backends. The client must therefore
+    *define* those functions, not merely implement them in a separate
+    translation unit: the header named by ``--input_stream_include`` is
+    included into every generated ``.c`` file, so that is where the
+    definitions belong. ``EverParseNullPtr`` is the exception -- it is a
+    value, not a function, and stays ``extern`` under both input
+    streams.
 
   In any case, to compile the C code produced by EverParse, you need
   to add to the include path the subdirectory
@@ -343,6 +352,11 @@ Options are treated from left to right:
      extern BOOLEAN  EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **w,
                                                 EVERPARSE_INPUT_STREAM_BASE base);
      extern uint8_t *EverParseNullPtr;
+
+  With ``--input_stream static`` every one of these is declared
+  ``static inline`` instead of ``extern``, except ``EverParseNullPtr``;
+  see ``--input_stream static`` above. ``share/everparse/tests/3d/static``
+  is a worked example.
 
   ``EverParseStreamGetPosition`` returns the *absolute* position of the
   stream, that is, the total number of bytes it has consumed since it

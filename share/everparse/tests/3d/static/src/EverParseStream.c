@@ -25,12 +25,12 @@ static size_t es_avail(EVERPARSE_INPUT_STREAM_BASE const x, size_t const limit) 
   return got;
 }
 
-BOOLEAN EverParseStreamHas(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+BOOLEAN _EverParseStreamHas(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
   EverParseCheckExtra(extra);
   return es_avail(x, n) >= n ? TRUE : FALSE;
 }
 
-BOOLEAN EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
+BOOLEAN _EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
   EverParseCheckExtra(extra);
   /** assumes off bytes are available */
   size_t total = off + n;
@@ -39,7 +39,7 @@ BOOLEAN EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BAS
   return es_avail(x, total) >= total ? TRUE : FALSE;
 }
 
-size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
+size_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
   return x->consumed;
 }
 
@@ -68,19 +68,19 @@ static void es_consume(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t *d
   }
 }
 
-void EverParseStreamReadBytes(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+void _EverParseStreamReadBytes(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
   EverParseCheckExtra(extra);
   /** assumes EverParseStreamHas(x, n) */
   es_consume(x, n, dst);
 }
 
-void EverParseStreamSkip(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+void _EverParseStreamSkip(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
   EverParseCheckExtra(extra);
   /** assumes EverParseStreamHas(x, n) */
   es_consume(x, n, NULL);
 }
 
-size_t EverParseStreamEmpty(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x) {
+size_t _EverParseStreamEmpty(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x) {
   EverParseCheckExtra(extra);
   size_t res = 0;
   struct es_cell *head = x->head;
@@ -138,7 +138,7 @@ uint8_t *EverParseStreamPeep(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
    action_field_ptr_after). Note that the F* signature of
    field_ptr_after_impl leaves the written pointer unconstrained, so nothing
    but this agreement pins it down; see the value checks in main.c. */
-BOOLEAN EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
+BOOLEAN _EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
   EverParseCheckExtra(extra);
   uint8_t *p = EverParseStreamPeep(x, (size_t)sz);
   if (p == NULL)

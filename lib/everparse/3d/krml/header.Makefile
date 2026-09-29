@@ -35,10 +35,29 @@ KRML_FILES := $(wildcard extracted/*.krml)
 # Buffer/Extern/Static owns a [@@CMacro] error_handler_macro and making two
 # public at once collides on EVERPARSE_ERROR_HANDLER_MACRO (KaRaMeL warning 23).
 API_COMMON := EverParse3d.Actions.Common+EverParse3d.ErrorCode+EverParse3d.Prelude.StaticHeader
+API_EXTERN := EverParse3d.InputStream.Extern+EverParse3d.InputStream.Extern.NullPtr+EverParse3d.Actions.ErrorHandler.Extern
 API_buffer := $(API_COMMON)+EverParse3d.CopyBuffer.Buffer+EverParse3d.Actions.ErrorHandler.Buffer
-API_extern := $(API_COMMON)+EverParse3d.InputStream.Extern+EverParse3d.Actions.ErrorHandler.Extern
+API_extern := $(API_COMMON)+$(API_EXTERN)
 # static re-exports extern's instance and has no extracted declarations of its own
 API_static := $(API_extern)
+
+# `--input_stream static` asks for the stream primitives to be declared
+# `static inline` rather than `extern`, so that the compiler sees each stream
+# operation at every validator call site instead of linking against it. That is
+# the whole of the static/extern distinction at the C level, and KaRaMeL
+# produces it from -static-header applied to the module holding the assumed
+# primitives -- exactly as the Low* prelude does in
+# src/3d/prelude/extern/Makefile (KRML_STATIC).
+#
+# The pattern names EverParse3d.InputStream.Extern *exactly*, with no trailing
+# `\*`: EverParse3d.InputStream.Extern.NullPtr must stay out of it. -static-header
+# applied to an assumed *value* rather than an assumed function emits a
+# per-translation-unit tentative definition instead of a declaration. See that
+# module.
+STATIC_HEADER_COMMON := Pulse.\*,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode
+STATIC_HEADER_buffer := $(STATIC_HEADER_COMMON)
+STATIC_HEADER_extern := $(STATIC_HEADER_COMMON)
+STATIC_HEADER_static := $(STATIC_HEADER_COMMON),EverParse3d.InputStream.Extern
 
 # With `extern` (and `static`) the stream primitives are assumed vals that the
 # client implements in C, so KaRaMeL's "no corresponding implementation"
@@ -91,7 +110,7 @@ $(1)/EverParse.h: $$(KRML_FILES)
 	  -minimal \
 	  -header $$(DDD_HOME)/noheader.txt \
 	  -add-include 'EverParse:"EverParsePulseEndianness.h"' \
-	  -static-header 'Pulse.\*,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode' \
+	  -static-header '$$(STATIC_HEADER_$(1))' \
 	  -no-inline-type-abbrev '$$(HANDLER_$(1))' \
 	  -warn-error '$$(WARN_$(1))' \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -fno-shadow \
