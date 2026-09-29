@@ -311,7 +311,7 @@ let validate_with_success_action'
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h0 = HST.get () in
-    [@(rename_let ("positionAfter" ^ name))]
+    [@(rename_let ("positionAfter" ^ (capitalize name)))]
     let pos1 = v1 ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
@@ -390,7 +390,7 @@ let validate_with_error_handler
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h0 = HST.get () in
-    [@(rename_let ("positionAfter" ^ fieldname))]
+    [@(rename_let ("positionAfter" ^ (capitalize fieldname)))]
     let pos1 = v1 ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
@@ -503,7 +503,7 @@ let validate_pair
     [@inline_let] let pos = start_position in
     let h = HST.get () in
     LPC.nondep_then_eq p1 p2 (I.get_remaining input h);
-    [@(rename_let ("positionAfter" ^ name1))]
+    [@(rename_let ("positionAfter" ^ (capitalize name1)))]
     let pos1 = validate_drop v1 ctxt error_handler_fn input input_length pos in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h1;
@@ -526,7 +526,7 @@ let validate_dep_pair
       [@inline_let] let pos = start_position in
       let h = HST.get () in
       LPC.parse_dtuple2_eq p1 p2 (I.get_remaining input h);
-      [@(rename_let ("positionAfter" ^ name1))]
+      [@(rename_let ("positionAfter" ^ (capitalize name1)))]
       let pos1 = v1 ctxt error_handler_fn input input_length pos in
       let h1 = HST.get() in
       if LPE.is_error pos1
@@ -570,7 +570,7 @@ let validate_dep_pair_with_refinement_and_action'
       let h0 = HST.get () in
       LPC.parse_dtuple2_eq' #_ #_ (p1 `LPC.parse_filter` f) #_ #t2 p2 (I.get_remaining input h0);
       LPC.parse_filter_eq p1 f (I.get_remaining input h0);
-      [@(rename_let ("positionAfter" ^ name1))]
+      [@(rename_let ("positionAfter" ^ (capitalize name1)))]
       let res = v1 ctxt error_handler_fn input input_length startPosition in
       let h1 = HST.get() in
       modifies_address_liveness_insensitive_unused_in h0 h1;
@@ -584,7 +584,7 @@ let validate_dep_pair_with_refinement_and_action'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfterChecked" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ (capitalize name1)))]
         let res1 = LPE.check_constraint_ok ok res in
         let h2 = HST.get() in
         if LPE.is_error res1
@@ -653,7 +653,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfterChecked" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ (capitalize name1)))]
         let res1 = LPE.check_constraint_ok ok startPosition in
         if LPE.is_error res1
         then
@@ -763,7 +763,7 @@ let validate_dep_pair_with_refinement'
       let h0 = HST.get () in
       LPC.parse_dtuple2_eq' #_ #_ (p1 `LPC.parse_filter` f) #_ #t2 p2 (I.get_remaining input h0);
       LPC.parse_filter_eq p1 f (I.get_remaining input h0);
-      [@(rename_let ("positionAfter" ^ name1))]
+      [@(rename_let ("positionAfter" ^ (capitalize name1)))]
       let res = v1 ctxt error_handler_fn input input_length startPosition in
       let h1 = HST.get() in
       modifies_address_liveness_insensitive_unused_in h0 h1;
@@ -776,7 +776,7 @@ let validate_dep_pair_with_refinement'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfterChecked" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ (capitalize name1)))]
         let res1 = LPE.check_constraint_ok ok res in
         if LPE.is_error res1
         then
@@ -831,7 +831,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfterChecked" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ (capitalize name1)))]
         let res1 = LPE.check_constraint_ok ok startPosition in
         if LPE.is_error res1
         then res1
@@ -882,7 +882,7 @@ let validate_filter
     [@inline_let] let pos = start_position in
     let h = HST.get () in
     LPC.parse_filter_eq p f (I.get_remaining input h);
-    [@(rename_let ("positionAfter" ^ name))]
+    [@(rename_let ("positionAfter" ^ (capitalize name)))]
     let res = v ctxt error_handler_fn input input_length pos in
     let h1 = HST.get () in
     if LPE.is_error res
@@ -912,7 +912,7 @@ let validate_filter_with_action
     [@inline_let] let pos0 = start_position in
     let h = HST.get () in
     LPC.parse_filter_eq p f (I.get_remaining input h);
-    [@(rename_let ("positionAfter" ^ name))]
+    [@(rename_let ("positionAfter" ^ (capitalize name)))]
     let res = v ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     if LPE.is_error res
@@ -950,7 +950,7 @@ let validate_with_dep_action
 = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h = HST.get () in
-    [@(rename_let ("positionAfter" ^ name))]
+    [@(rename_let ("positionAfter" ^ (capitalize name)))]
     let res = v ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     if LPE.is_error res

@@ -1559,6 +1559,7 @@ let specialization_steps =
    delta_attr [`%specialize];
    delta_only ([`%Some?;
                 `%Some?.v;
+                `%A.capitalize;
                 `%as_validator;
                 `%nz_of_binding;
                 `%wk_of_binding;

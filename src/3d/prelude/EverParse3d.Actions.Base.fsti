@@ -25,6 +25,30 @@ inline_for_extraction
 noextract
 let is_range_okay = EverParse3d.ErrorCode.is_range_okay
 
+(* Capitalize the first character of a field name, so that the locals KaRaMeL
+   derives from the `rename_let` attributes in this module read as
+   `positionAfterFoo` rather than `positionAfterfoo`.
+
+   This is only ever applied to string literals, and it is written using
+   nothing but normalizer primitives -- `list_of_string`, `string_of_list`,
+   `uppercase` and `^`, see FStarC.TypeChecker.Primops -- plus one iota
+   reduction, so that it reduces to a literal before extraction inspects the
+   attribute. In particular, `FStar.Char.uppercase` is *not* a primitive and
+   would get stuck, hence the detour through `String.uppercase`.
+
+   The definition lives in this interface, rather than in the implementation,
+   so that `EverParse3d.Interpreter.specialization_steps` can list it in
+   `delta_only`: a definition hidden behind an interface cannot be unfolded by
+   the normalizer. *)
+noextract
+inline_for_extraction
+let capitalize (s: string) : Tot string =
+  match FStar.String.list_of_string s with
+  | [] -> s
+  | c :: cs ->
+    FStar.String.uppercase (FStar.String.string_of_list [c]) ^
+    FStar.String.string_of_list cs
+
 [@@erasable]
 val slice_inv : Type u#1
 val inv_implies (inv0 inv1: slice_inv) : Tot prop
