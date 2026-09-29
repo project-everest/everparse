@@ -306,7 +306,14 @@ Options are treated from left to right:
     In all such functions, ``EVERPARSE_EXTRA_T`` is a user-defined
     type for the context used for error handling (see "Error handling"
     in the 3d language reference.)
-    
+
+    .. note::
+
+       The primitives above are those of the **Low\* backend**, which is
+       the default. With ``--pulse``, the ``extern`` and ``static``
+       input streams require a *different* set of client primitives,
+       described below.
+
   + ``static`` is like ``extern`` except that the functions on
     ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static``.
 
@@ -315,6 +322,55 @@ Options are treated from left to right:
   ``src/3d/prelude/<input_stream_format>`` of the EverParse binary
   package or repository; this directory contains the ``EverParse.h``
   corresponding to the input stream format given by ``--input_stream``
+  (with ``--pulse``, ``EverParse.h`` is copied into the output
+  directory instead, and ``src/3d/prelude`` is not used at all).
+
+  With ``--pulse``, ``extern`` and ``static`` instead require the
+  following primitives. As in Low\*, each one receives the
+  ``EVERPARSE_EXTRA_T`` context that was passed to the validator; byte
+  counts are ``size_t``:
+
+  .. code-block:: c
+
+     extern size_t  EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);
+     extern BOOLEAN EverParseStreamHas        (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t n);
+     extern BOOLEAN EverParseStreamHasAt      (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t off, size_t n);
+     extern void    EverParseStreamReadBytes  (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t n, uint8_t *dst);
+     extern void    EverParseStreamSkip       (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t n);
+     extern size_t  EverParseStreamEmpty      (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base);
+
+     /* only if the grammar uses the `field_ptr_after` action */
+     extern BOOLEAN  EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **w,
+                                                EVERPARSE_INPUT_STREAM_BASE base);
+     extern uint8_t *EverParseNullPtr;
+
+  ``EverParseStreamGetPosition`` returns the *absolute* position of the
+  stream, that is, the total number of bytes it has consumed since it
+  was created; the generated wrapper samples it on both sides of the
+  call to recover the parsed size, so it must be cumulative and must
+  not be reset by ``EverParseRetreat``.
+
+  Three differences from the Low\* contract are worth calling out when
+  porting a client:
+
+  * **The stream tracks its own position.** The validator takes only
+    the stream object, so the generated ``<Mod>Check<Type>`` wrapper
+    recovers the parsed size from ``EverParseStreamGetPosition``. That
+    is the one primitive that takes no ``EVERPARSE_EXTRA_T``, because it
+    is also called from the generated default error handler, whose
+    signature has none.
+
+  * **Reads always copy.** ``EverParseStreamReadBytes`` returns
+    ``void``, so, unlike ``EverParseRead``, it cannot hand back a
+    pointer into the client's own storage. It is only ever asked for a
+    leaf integer, so at most 8 bytes.
+
+  * **There is no** ``EverParsePeep``. The ``field_ptr`` action is
+    restricted to the ``buffer`` backend on both Low\* and Pulse, so
+    nothing is lost there; but on ``extern``/``static`` under
+    ``--pulse``, ``field_ptr_after`` is backed by the explicit
+    ``EverParseFieldPtrAfterImpl`` primitive above rather than by
+    ``EverParsePeep``, and it needs ``EverParseNullPtr`` as well.
 
 * ``--input_stream_include myinclude.h``
 

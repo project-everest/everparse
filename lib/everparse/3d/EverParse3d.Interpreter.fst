@@ -176,6 +176,7 @@ let allow_reader_of_itype (i:itype)
 let itype_as_leaf_reader
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (i:itype { allow_reader_of_itype i })
   : A.leaf_reader #base_t #len_t #pos_t (itype_as_parser i)
   = match i with
@@ -193,6 +194,7 @@ let itype_as_leaf_reader
 let itype_as_validator
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#[@@@erasable] d: state_dict)
   (#use_error_handler:bool)
   (i:itype)
@@ -358,7 +360,7 @@ let dtyp_as_parser #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
     | DT_App _ _ _ b _ -> parser_of_binding b
 
 [@@specialize]
-let dtyp_as_validator #base_t #len_t #pos_t #inst (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
+let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                       #nz #wk (#pk:P.parser_kind nz wk) (#ha #hr:_)
                       (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha hr)
   : A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(dtyp_as_type t)
@@ -372,14 +374,14 @@ let dtyp_as_validator #base_t #len_t #pos_t #inst (#[@@@erasable] d: state_dict)
         d
         ha hr use_error_handler
     with
-    | DT_IType i -> itype_as_validator #base_t #len_t #pos_t #inst #d #use_error_handler i
+    | DT_IType i -> itype_as_validator #base_t #len_t #pos_t #inst #_extra #d #use_error_handler i
     | DT_App _ _ _ b _ -> validator_of_binding b
 
 (* At `hr = true`, `validate_with_action_t` reduces to the non-consuming
    validator, which is what the combinators that are followed by a leaf reader
    expect. *)
 [@@specialize]
-let dtyp_as_validator_no_read #base_t #len_t #pos_t #inst (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
+let dtyp_as_validator_no_read #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                       #nz #wk (#pk:P.parser_kind nz wk) (#ha:_)
                       (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha true)
   : A.validate_with_action_no_read #base_t #len_t #pos_t #inst
@@ -389,12 +391,12 @@ let dtyp_as_validator_no_read #base_t #len_t #pos_t #inst (#[@@@erasable] d: sta
   = dtyp_as_validator t
 
 [@@specialize]
-let dtyp_as_leaf_reader #base_t #len_t #pos_t #inst (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
+let dtyp_as_leaf_reader #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                         #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #ha
                         (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha true)
   : A.leaf_reader #base_t #len_t #pos_t #inst (dtyp_as_parser t)
   = match t with
-    | DT_IType i -> itype_as_leaf_reader #base_t #len_t #pos_t #inst i
+    | DT_IType i -> itype_as_leaf_reader #base_t #len_t #pos_t #inst #_extra i
     | DT_App _ _ _ b _ -> let (| _, lr |) = get_leaf_reader b in lr
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -598,6 +600,7 @@ let mk_action_binding
 let mk_field_ptr_after_with_setter
     (#base_t #len_t #pos_t: Type0)
     (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
     (#use_error_handler:bool)
     (#ptr_t: Type0)
     (#[@@@erasable] d': state_dict)
@@ -683,6 +686,7 @@ type atomic_action
 let atomic_action_as_action
    (#base_t #len_t #pos_t: Type0)
    (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
    (#[@@@erasable] d: state_dict)
    (#use_error_handler:bool)
    (#b #rt #t:_)
@@ -756,6 +760,7 @@ type action
 let rec action_as_action
    (#base_t #len_t #pos_t: Type0)
    (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
    (#[@@@erasable] d: state_dict)
    (#use_error_handler:bool)
    (#b #rt #t:_)
@@ -1139,6 +1144,7 @@ let rec as_parser
 let rec as_reader
           (#base_t #len_t #pos_t: Type0)
           (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
           (#[@@@erasable] d: state_dict)
           (#use_error_handler:bool)
           #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix) #ha
@@ -1166,6 +1172,7 @@ let rec as_reader
 let rec as_validator
           (#base_t #len_t #pos_t: Type0)
           (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
           (#[@@@erasable] d: state_dict)
           (#use_error_handler:bool)
           (ehm: error_handler #base_t #len_t #pos_t #inst)
@@ -1404,6 +1411,7 @@ let coerce (#[@@@erasable]a:Type)
 let t_probe_then_validate
       (#base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
       (#use_error_handler:bool)
@@ -1443,6 +1451,7 @@ let t_probe_then_validate
 let t_probe_then_validate_alt
       (#base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
       (#use_error_handler:bool)
@@ -1485,6 +1494,7 @@ let t_probe_then_validate_alt
 let t_probe_then_validate_gen
       (#base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
       (#use_error_handler:bool)
@@ -1530,6 +1540,7 @@ let t_probe_then_validate_gen
 let t_probe_then_validate_alt_gen
       (#base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
       (#use_error_handler:bool)

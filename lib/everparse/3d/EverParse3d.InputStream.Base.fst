@@ -5,6 +5,7 @@ module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
+module Util = EverParse3d.Util
 
 let seq_is_suffix_of (#t: Type) (small large: Seq.seq t) : Tot prop =
     Seq.length small <= Seq.length large /\
@@ -35,6 +36,15 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   [@@@FStar.Tactics.Typeclasses.no_method]
   pts_to_inst: input_stream_pts_to base_t len_t pos_t;
 
+  (* The client-supplied context (`EVERPARSE_EXTRA_T`) that the 3D frontend
+     threads from the generated wrapper down to the stream primitives. The
+     buffer backend sets this to `unit`; the extern/static backends leave it
+     abstract so it becomes a real C parameter. Each method below takes it as
+     an implicit resolved by [Util.solve_from_ctx] from the enclosing binder,
+     exactly as the Low* prelude does. *)
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  extra_t: Type0;
+
   pts_to_is_suffix_of:
     (base: base_t) ->
     (len: len_t) ->
@@ -63,6 +73,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     );
 
   has:
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -83,6 +94,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
      anything. This is what the "no read" (non-consuming) validators need,
      since they track their position in a separate [SZ.t] reference. *)
   has_at:
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -102,6 +114,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     )));
 
   read:
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (t': Type0) ->
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->
@@ -129,6 +142,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     )));
 
   skip:
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -147,6 +161,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     )));
   
   empty:
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -180,6 +195,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   trunc_pos: (base: base_t) -> (len: len_t) -> (pos: pos_t) -> (tr: trunc_t) -> Tot pos_t;
 
   truncate:
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->

@@ -1369,7 +1369,7 @@ let print_c_entry
         frame.reason = \"UNKNOWN\";\n\t\
         frame.error_code = 0uL;\n\t"
      in
-     if hoist then
+     (if hoist then
        Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ Printf.sprintf "uint8_t ep_status%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t parsedSize%s;\n\t" scalar_zero
@@ -1392,7 +1392,7 @@ let print_c_entry
         name
         params
         error_handler_arg
-        tail
+        tail)
    in
    let wrapped_call_stream name params =
      let tail =
@@ -1481,10 +1481,6 @@ let print_c_entry
     (* Main wrapper *)
     let pparams = print_params params in
     let pargs = print_arguments params in
-    (* The Pulse extern/static validators do not take an EVERPARSE_EXTRA_T:
-       only the client's own EverParseHandleError/EverParseRetreat do, so it
-       stays in the wrapper's signature but is not forwarded. *)
-    let pargs_no_extra = print_arguments d.decl_name.td_params in
     let mk_main_signature (name: string) =
       if is_input_stream_buffer 
       then Printf.sprintf
@@ -1505,7 +1501,7 @@ let print_c_entry
         then wrapped_call_buffer_pulse validator_name pargs
         else wrapped_call_buffer validator_name pargs
       else if Options.get_pulse ()
-      then wrapped_call_stream_pulse validator_name pargs_no_extra
+      then wrapped_call_stream_pulse validator_name pargs
       else wrapped_call_stream validator_name pargs
     in
     (* Probe wrapper *)

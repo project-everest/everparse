@@ -56,7 +56,7 @@ static void test_point_not_contiguous(uint8_t *test) {
   EverParsePush(s, test, (size_t)testSize);
   // POINT is 12 bytes; stopping after the 8 that precede the action is how a
   // rejection shows up in the parsed size the wrapper returns.
-  check(TestCheckPoint(&out, 0, s) == 8, "POINT: non-contiguous field_ptr_after is rejected");
+  check(TestCheckPoint(&out, EVERPARSE_EXTRA_COOKIE, s) == 8, "POINT: non-contiguous field_ptr_after is rejected");
   check(out == NULL, "POINT: rejected field_ptr_after leaves the output untouched");
   free(s);
 }
@@ -75,7 +75,7 @@ static void test_field_ptr_after_value(uint8_t *test) {
     check(0, "PTRVAL: stream allocation");
     return;
   }
-  check(TestCheckPtrval(&out, 0, s) == 10, "PTRVAL: validation accepted all 10 bytes");
+  check(TestCheckPtrval(&out, EVERPARSE_EXTRA_COOKIE, s) == 10, "PTRVAL: validation accepted all 10 bytes");
   check_ptr(out, test + 6, test,
             "PTRVAL: field_ptr_after points at the next 4 bytes, not past them");
   free(s);
@@ -93,7 +93,7 @@ static void test_field_ptr_after_setter_value(uint8_t *test) {
     return;
   }
   out.p = NULL;
-  check(TestCheckMixed(&seen, &out, 0, s) == 8, "MIXED: validation accepted all 8 bytes");
+  check(TestCheckMixed(&seen, &out, EVERPARSE_EXTRA_COOKIE, s) == 8, "MIXED: validation accepted all 8 bytes");
   check_ptr(out.p, test + 8, test,
             "MIXED: field_ptr_after setter writes the next 4 bytes, not past them");
   free(s);

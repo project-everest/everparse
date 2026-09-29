@@ -8,17 +8,21 @@
 /* A client-provided input stream for `3d --pulse --input_stream static`.
 
    `static` and `extern` are one F* development, so they ask the client for the
-   same primitives:
+   same primitives. As in Low*, each one receives the client context
+   EVERPARSE_EXTRA_T that was passed to the validator:
 
-     BOOLEAN  EverParseStreamHasAt(base, off, n)
-     BOOLEAN  EverParseStreamHas(base, n)
-     void     EverParseStreamReadBytes(base, n, dst)
-     void     EverParseStreamSkip(base, n)
-     size_t   EverParseStreamEmpty(base)
+     BOOLEAN  EverParseStreamHasAt(extra, base, off, n)
+     BOOLEAN  EverParseStreamHas(extra, base, n)
+     void     EverParseStreamReadBytes(extra, base, n, dst)
+     void     EverParseStreamSkip(extra, base, n)
+     size_t   EverParseStreamEmpty(extra, base)
      size_t   EverParseStreamGetPosition(base)
-     BOOLEAN  EverParseFieldPtrAfterImpl(sz, out, base)
+     BOOLEAN  EverParseFieldPtrAfterImpl(extra, sz, out, base)
 
-   The last one backs the field_ptr_after action, which `buffer` does not have.
+   EverParseFieldPtrAfterImpl backs the field_ptr_after action, which `buffer`
+   does not have. EverParseStreamGetPosition is the one primitive that takes no
+   context, because it is also called from the generated DefaultErrorHandler,
+   whose signature has none.
 
    Note on `static` under --pulse. In Low* the two backends differ in the C
    linkage of these primitives: the prelude ships a hand-written EverParse.h
@@ -55,8 +59,16 @@ int EverParsePush(EVERPARSE_INPUT_STREAM_BASE x, uint8_t * buf, size_t len);
 
 uint8_t *EverParseStreamPeep(EVERPARSE_INPUT_STREAM_BASE x, size_t n);
 
-// dummy type, it is not used
+/* The client context threaded through the validator down to the stream
+   primitives above. This test only checks that it arrives intact. */
 typedef int EVERPARSE_EXTRA_T;
+
+/* A sentinel context value. main.c passes it to every validator, and each
+   stream primitive checks that it arrives intact, so that a backend which
+   silently dropped EVERPARSE_EXTRA_T would fail this test rather than pass it
+   unnoticed. */
+#define EVERPARSE_EXTRA_COOKIE 0x5EED
+void EverParseCheckExtra(EVERPARSE_EXTRA_T extra);
 
 void EverParseHandleError(EVERPARSE_EXTRA_T _dummy, uint64_t parsedSize, const char *typename, const char *fieldname, const char *reason, uint64_t error_code);
 void EverParseRetreat(EVERPARSE_EXTRA_T _dummy, EVERPARSE_INPUT_STREAM_BASE base, uint64_t parsedSize);

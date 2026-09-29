@@ -57,8 +57,16 @@ module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
 module Common = EverParse3d.Actions.Common
 module AP = Pulse.Lib.ArrayPtr
+module Util = EverParse3d.Util
 
 open EverParse3d.InputStream.Base { seq_is_suffix_of }
+
+(* The client-supplied per-invocation context, `EVERPARSE_EXTRA_T`. The 3D
+   frontend passes it into the generated wrapper, which threads it down to the
+   primitives below. It is abstract here so that KaRaMeL emits it as a real C
+   parameter, matching the Low* prelude
+   (`src/3d/prelude/extern/EverParse3d.InputStream.Extern.Base.fsti`). *)
+assume val extra_t : Type0
 
 assume val input_stream_base : Type0
 
@@ -243,6 +251,7 @@ ensures stream_pts_to base len pos contents v **
 }
 
 assume val stream_has :
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
     (n: SZ.t) ->
@@ -263,6 +272,7 @@ assume val stream_has :
 inline_for_extraction
 noextract
 fn stream_has_bounded
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -290,6 +300,7 @@ ensures stream_pts_to base len pos contents v **
      anything. This is what the "no read" (non-consuming) validators need,
      since they track their position in a separate [SZ.t] reference. *)
 assume val stream_has_at :
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
     (off: SZ.t) ->
@@ -310,6 +321,7 @@ assume val stream_has_at :
 inline_for_extraction
 noextract
 fn stream_has_at_bounded
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -345,6 +357,7 @@ ensures stream_pts_to base len pos contents v **
    exchange the C signature carries no aliasing obligation and the separation
    logic postcondition stays a plain points-to. *)
 assume val stream_read_bytes :
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
     (n: SZ.t) ->
@@ -372,6 +385,7 @@ assume val stream_read_bytes :
 inline_for_extraction
 noextract
 fn stream_read_bytes_bounded
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -409,6 +423,7 @@ ensures exists* v' dv' .
 inline_for_extraction
 noextract
 fn stream_read
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (t': Type0)
   (k: LP.parser_kind)
   (p: LP.parser k t')
@@ -446,6 +461,7 @@ fn stream_read
 }
 
 assume val stream_skip :
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
     (n: SZ.t) ->
@@ -465,6 +481,7 @@ assume val stream_skip :
 inline_for_extraction
 noextract
 fn stream_skip_bounded
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -485,6 +502,7 @@ ensures exists* v' .
 }
 
 assume val stream_empty :
+    (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
@@ -504,6 +522,7 @@ assume val stream_empty :
 inline_for_extraction
 noextract
 fn stream_empty_bounded
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -602,6 +621,7 @@ assume val stream_join :
 inline_for_extraction
 noextract
 fn stream_truncate
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -663,6 +683,7 @@ noextract
 inline_for_extraction
 instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
   pts_to_inst = pts_to_inst;
+  extra_t = extra_t;
   pts_to_is_suffix_of = (fun b l (p: pos_t) c v -> stream_pts_to_is_suffix_of b l p c v);
   get_position = stream_get_relative_position;
   has = (fun b l (p: pos_t) n c v -> stream_has_bounded b l p n c v);
@@ -710,8 +731,10 @@ inline_for_extraction
 let ___PUINT8 = AP.ptr U8.t
 
 (* As for the stream primitives, the origin and the truncation bound are absent
-   from the assumed C prototype: EverParseStreamPeep is unchanged. *)
+   from the assumed C prototype: EverParseStreamPeep is unchanged. The client
+   context is threaded, as it is to every other assumed primitive. *)
 assume val field_ptr_after_impl
+  (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)
   (w: R.ref ___PUINT8)
   (sl_base: base_t)
@@ -726,6 +749,7 @@ assume val field_ptr_after_impl
 inline_for_extraction
 noextract
 fn field_ptr_after_unchecked
+  (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)
   (w: R.ref ___PUINT8)
   (sl_base: base_t)
@@ -754,6 +778,7 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
 inline_for_extraction
 noextract
 fn field_ptr_after_wrapped
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)
   (w: R.ref ___PUINT8)
   (sl_base: base_t)
@@ -786,8 +811,8 @@ noextract
 inline_for_extraction
 let field_ptr_after_fn
 : AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8
-= fun sz w sl_base sl_len (sl_pos: pos_t) w0 contents_sl v_sl ->
-    field_ptr_after_wrapped sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+= fun _extra sz w sl_base sl_len (sl_pos: pos_t) w0 contents_sl v_sl ->
+    field_ptr_after_wrapped #_extra sz w sl_base sl_len sl_pos w0 contents_sl v_sl
 
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract
@@ -816,6 +841,7 @@ noextract
 inline_for_extraction
 fn field_ptr_after_with_setter_impl
   (#extra_state: state_dict)
+  (_extra: extra_t)
   (sz: FStar.UInt64.t)
   (write_to: (___PUINT8 -> AB.external_action extra_state unit))
   (sl_base: base_t)

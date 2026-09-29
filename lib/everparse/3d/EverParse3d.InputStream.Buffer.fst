@@ -12,6 +12,7 @@ module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module I = EverParse3d.InputStream.Base
+module Util = EverParse3d.Util
 module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
 module Trade = Pulse.Lib.Trade.Util
@@ -89,6 +90,7 @@ ensures stream_pts_to b len pos contents v **
 
 inline_for_extraction
 fn stream_has
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v
@@ -105,6 +107,7 @@ ensures stream_pts_to b len pos contents v **
 
 inline_for_extraction
 fn stream_has_at
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (off: SZ.t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v ** pure (SZ.v off <= Seq.length v)
@@ -123,6 +126,7 @@ ensures stream_pts_to b len pos contents v ** pure (
 
 inline_for_extraction
 fn stream_skip
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v ** pure (Seq.length v >= SZ.v n)
@@ -142,6 +146,7 @@ ensures exists* v' .
 
 inline_for_extraction
 fn stream_empty
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v
@@ -175,6 +180,7 @@ let stream_trunc_pos (b: base_t) (len: len_t) (pos: pos_t) (tr: len_t) : Tot pos
 
 inline_for_extraction
 fn stream_truncate
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v ** pure (SZ.v n <= Seq.length v)
@@ -236,6 +242,7 @@ ensures stream_pts_to base_y len_y pos_y contents0 (Seq.append v suffix)
 
 inline_for_extraction
 fn stream_read
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (t': Type0) (k: LP.parser_kind) (p: LP.parser k t') (r: API.leaf_reader p)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
@@ -284,6 +291,8 @@ noextract
 inline_for_extraction
 instance input_stream_buffer : I.input_stream_inst base_t len_t pos_t = {
   pts_to_inst = pts_to_inst;
+  (* The buffer backend has no client context, so it erases. *)
+  extra_t = unit;
   pts_to_is_suffix_of = stream_pts_to_is_suffix_of;
   get_position = stream_get_position;
   has = stream_has;

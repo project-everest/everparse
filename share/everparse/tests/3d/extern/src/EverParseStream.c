@@ -4,6 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+void EverParseCheckExtra(EVERPARSE_EXTRA_T const extra) {
+  if (extra != EVERPARSE_EXTRA_COOKIE) {
+    fprintf(stderr, "EverParseCheckExtra: context not threaded to the stream "
+                    "primitives (expected %d, got %d)\n",
+            EVERPARSE_EXTRA_COOKIE, extra);
+    exit(1);
+  }
+}
+
 /* Number of bytes still available, capped at `limit` so that a long chain is
    not walked further than the caller cares about. */
 static size_t es_avail(EVERPARSE_INPUT_STREAM_BASE const x, size_t const limit) {
@@ -16,11 +25,13 @@ static size_t es_avail(EVERPARSE_INPUT_STREAM_BASE const x, size_t const limit) 
   return got;
 }
 
-BOOLEAN EverParseStreamHas(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+BOOLEAN EverParseStreamHas(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  EverParseCheckExtra(extra);
   return es_avail(x, n) >= n ? TRUE : FALSE;
 }
 
-BOOLEAN EverParseStreamHasAt(EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
+BOOLEAN EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
+  EverParseCheckExtra(extra);
   /** assumes off bytes are available */
   size_t total = off + n;
   if (total < off)
@@ -57,17 +68,20 @@ static void es_consume(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t *d
   }
 }
 
-void EverParseStreamReadBytes(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+void EverParseStreamReadBytes(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+  EverParseCheckExtra(extra);
   /** assumes EverParseStreamHas(x, n) */
   es_consume(x, n, dst);
 }
 
-void EverParseStreamSkip(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+void EverParseStreamSkip(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  EverParseCheckExtra(extra);
   /** assumes EverParseStreamHas(x, n) */
   es_consume(x, n, NULL);
 }
 
-size_t EverParseStreamEmpty(EVERPARSE_INPUT_STREAM_BASE const x) {
+size_t EverParseStreamEmpty(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x) {
+  EverParseCheckExtra(extra);
   size_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {

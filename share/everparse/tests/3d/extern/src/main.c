@@ -26,8 +26,8 @@ static int test_reuse(void) {
   if (stream == NULL)
     return 1;
   EverParsePush(stream, data, (size_t)sizeof(data));
-  uint64_t first = TestCheckPoint(0, stream);
-  uint64_t second = TestCheckPoint(0, stream);
+  uint64_t first = TestCheckPoint(EVERPARSE_EXTRA_COOKIE, stream);
+  uint64_t second = TestCheckPoint(EVERPARSE_EXTRA_COOKIE, stream);
   free(stream);
   printf("Reuse: first = %llu, second = %llu\n", (unsigned long long)first,
          (unsigned long long)second);
@@ -48,8 +48,8 @@ static int test_field_pos(void) {
     return 1;
   EverParsePush(stream, data, (size_t)sizeof(data));
   uint64_t first = 0xFFFF, second = 0xFFFF;
-  uint64_t n1 = TestCheckFieldpos(&first, 0, stream);
-  uint64_t n2 = TestCheckFieldpos(&second, 0, stream);
+  uint64_t n1 = TestCheckFieldpos(&first, EVERPARSE_EXTRA_COOKIE, stream);
+  uint64_t n2 = TestCheckFieldpos(&second, EVERPARSE_EXTRA_COOKIE, stream);
   free(stream);
   printf("FieldPos: offsets = %llu %llu, sizes = %llu %llu\n",
          (unsigned long long)first, (unsigned long long)second,
@@ -75,7 +75,7 @@ static int run_trunc(const char *label, trunc_check check, uint8_t len, size_t n
     return 1;
   EverParsePush(stream, data, n);
   EverParseErrorCount = 0;
-  check(0, stream);
+  check(EVERPARSE_EXTRA_COOKIE, stream);
   free(stream);
   int accepted = (EverParseErrorCount == 0);
   printf("Truncate: %-22s len=%u avail=%u -> %s\n", label, (unsigned)len,
@@ -118,7 +118,7 @@ int main(void) {
       EverParsePush(testStream, test, (size_t)testSize);
       EverParsePush(testStream, test, (size_t)testSize);
       EverParsePush(testStream, test, (size_t)testSize);
-      if (TestCheckPoint(0, testStream)) {
+      if (TestCheckPoint(EVERPARSE_EXTRA_COOKIE, testStream)) {
         printf("Validation succeeded\n");
       }
       free(testStream);

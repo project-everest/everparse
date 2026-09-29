@@ -53,6 +53,17 @@ let pulse_ehm () : ML string = "B.error_handler_macro"
 let pulse_cb_inst_args () : ML string =
   " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer"
 
+(* The client context (`EVERPARSE_EXTRA_T`) that the extern/static backends
+   thread down to the stream primitives. The generated validator binds it so
+   that `EverParse3d.Util.solve_from_ctx` can resolve it inside the body, and
+   so that KaRaMeL emits it as the validator's first C parameter -- exactly as
+   the Low* backend does. The buffer backend has no context (`extra_t = unit`),
+   so nothing is emitted and the binder erases. *)
+let pulse_extra_binder () : ML string =
+  if HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+  then ""
+  else " (#[EverParse3d.Util.solve_from_ctx ()] _extra: B.extra_t)"
+
 let pulse_is_buffer () : ML bool =
   HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
 
@@ -1498,10 +1509,11 @@ let print_binding mname (td:type_decl)
     if pulse ()
     then
       let inv, _, _, _ = td.typ_indexes in
-      Printf.sprintf "%s %s %s"
+      Printf.sprintf "%s %s %s%s"
         (pulse_key_binders mname tdn.td_params)
         (print_binders tdn.td_params)
-        (pulse_keys_binder mname inv),
+        (pulse_keys_binder mname inv)
+        (pulse_extra_binder ()),
       Printf.sprintf "%s %s ___sq_keys"
         (pulse_key_binder_args mname tdn.td_params)
         (print_args tdn.td_params)
