@@ -584,7 +584,7 @@ let validate_dep_pair_with_refinement_and_action'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfter" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ name1))]
         let res1 = LPE.check_constraint_ok ok res in
         let h2 = HST.get() in
         if LPE.is_error res1
@@ -653,7 +653,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfter" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ name1))]
         let res1 = LPE.check_constraint_ok ok startPosition in
         if LPE.is_error res1
         then
@@ -776,7 +776,7 @@ let validate_dep_pair_with_refinement'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfter" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ name1))]
         let res1 = LPE.check_constraint_ok ok res in
         if LPE.is_error res1
         then
@@ -831,7 +831,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
         let field_value = r1 input startPosition in
         [@(rename_let (name1 ^ "ConstraintIsOk"))]
         let ok = f field_value in
-        [@(rename_let ("positionAfter" ^ name1))]
+        [@(rename_let ("positionAfterChecked" ^ name1))]
         let res1 = LPE.check_constraint_ok ok startPosition in
         if LPE.is_error res1
         then res1
