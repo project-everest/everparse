@@ -2,41 +2,49 @@
 #include "EverParseStream.h"
 #include <stdlib.h>
 
-/* The primitives the generated code calls. Each one only keeps the position
-   up to date and forwards to the client's function pointer. */
+/* The primitives the generated code calls, reached through the `static inline`
+   forwarders in EverParseStream.h. Each one only keeps the position up to date
+   and forwards to the client's function pointer; the context is unused here
+   beyond showing that it is threaded all the way down. */
 
-BOOLEAN EverParseStreamHas(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+BOOLEAN _EverParseStreamHas(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  (void) extra;
   return x->vtable.has(x, n);
 }
 
-BOOLEAN EverParseStreamHasAt(EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
+BOOLEAN _EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
+  (void) extra;
   return x->vtable.hasAt(x, off, n);
 }
 
-void EverParseStreamReadBytes(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+void _EverParseStreamReadBytes(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+  (void) extra;
   x->vtable.readBytes(x, n, dst);
   x->consumed += n;
 }
 
-void EverParseStreamSkip(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+void _EverParseStreamSkip(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  (void) extra;
   x->vtable.skip(x, n);
   x->consumed += n;
 }
 
-size_t EverParseStreamEmpty(EVERPARSE_INPUT_STREAM_BASE const x) {
+size_t _EverParseStreamEmpty(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x) {
+  (void) extra;
   size_t res = x->vtable.empty(x);
   x->consumed += res;
   return res;
 }
 
-size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
+size_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
   return x->consumed;
 }
 
 /* The pointer is the start of the next sz bytes, not the address past them, so
    that --pulse agrees with the Low* backend. See the longer note in
    ../../static/src/EverParseStream.c. */
-BOOLEAN EverParseFieldPtrAfterImpl(uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
+BOOLEAN _EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
+  (void) extra;
   uint8_t *p = x->vtable.peep(x, (size_t)sz);
   if (p == NULL)
     return FALSE;
