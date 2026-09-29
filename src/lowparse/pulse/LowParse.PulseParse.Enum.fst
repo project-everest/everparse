@@ -161,6 +161,7 @@ let read_enum_key
   leaf_reader_of_reader
     (read_synth
       (read_filter (reader_of_leaf_reader r) (parse_enum_key_cond e))
+      #(enum_key e)
       (parse_enum_key_synth e)
       (serialize_enum_key_synth_recip e)
       (fun (x: parse_filter_refine (parse_enum_key_cond e)) ->

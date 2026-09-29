@@ -129,5 +129,6 @@ let make_asn1_choice_parser_twin_cases_injective
   : 
   Lemma 
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
-  (ensures and_then_cases_injective (make_asn1_choice_parser_twin lc pf k lp))
+  (ensures and_then_cases_injective (make_asn1_choice_parser_twin lc pf k lp <: (asn1_id_t -> parser asn1_strong_parser_kind (asn1_t k))) /\
+           and_then_cases_injective (make_asn1_choice_parser_twin lc pf k lp <: (asn1_id_t -> asn1_strong_parser (asn1_t k))))
 = parse_tagged_union_payload_and_then_cases_injective (project_tags lp) (make_gen_choice_strong_payload_parser lp)

@@ -76,7 +76,10 @@ let parse_synth_eq
 
 let tot_parse_synth
   #k #t1 #t2 p1 f2
-= coerce (tot_parser k t2) (tot_and_then p1 (fun v1 -> tot_parse_fret f2 v1))
+= let p : tot_parser (and_then_kind k parse_ret_kind) t2 =
+    tot_and_then p1 (fun v1 -> tot_parse_fret f2 v1)
+  in
+  coerce (tot_parser k t2) p
 
 let bare_serialize_synth_correct #k #t1 #t2 p1 f2 s1 g1 =
   ()
@@ -334,7 +337,10 @@ let serialize_dtuple2
   (#p2: (x: t1) -> parser k2 (t2 x))
   (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
 : Tot (serializer (parse_dtuple2 p1 p2))
-= serialize_tagged_union
+= assert (parse_tagged_union p1 dfst (fun (x: t1) -> parse_synth (p2 x) (synth_dtuple2 x)) ==
+            parse_dtuple2 p1 p2)
+    by (FStar.Tactics.trefl ());
+  serialize_tagged_union
     s1
     dfst
     (fun (x: t1) -> serialize_synth (p2 x) (synth_dtuple2 x) (s2 x) (synth_dtuple2_recip x) ())
@@ -456,7 +462,10 @@ let serialize_nondep_then
   (#p2: parser k2 t2)
   (s2: serializer p2)
 : Tot (serializer (nondep_then p1 p2))
-= serialize_tagged_union
+= assert (parse_tagged_union p1 fst (fun x -> parse_synth p2 (fun y -> (x, y) <: refine_with_tag fst x)) ==
+            nondep_then p1 p2)
+    by (FStar.Tactics.trefl ());
+  serialize_tagged_union
     s1
     fst
     (fun x -> serialize_synth p2 (fun y -> (x, y) <: refine_with_tag fst x) s2 (fun (xy: refine_with_tag fst x) -> snd xy) ())

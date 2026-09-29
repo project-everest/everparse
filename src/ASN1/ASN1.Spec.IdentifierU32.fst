@@ -369,6 +369,7 @@ let parse_loop_continuation_type (i : nat {i <= 3}) =
   (state : asn1_partial_id_t {partial_state_bound_f32 state = i}) -> byte ->
   (parser (parse_asn1_identifier_loop_kind (i)) (state' : asn1_partial_id_t {partial_state_prefixr state state'}))
 
+unfold
 let parse_loop_continuation_spec (i : nat {i <= 3}) (c : parse_loop_continuation_type i) =
   forall (state' : asn1_partial_id_t). (partial_state_bound_f32 state' = i) ==> and_then_cases_injective (c state')
 
@@ -405,7 +406,7 @@ let lemma_parse_asn1_identifier_loop'_cases_injective'
   (requires (parse_loop_continuation_spec (i + 1) c))
   (ensures (and_then_cases_injective (parse_asn1_identifier_loop' i c state)))
 = let p = parse_asn1_identifier_loop' i c state in
-  and_then_cases_injective_intro p (fun x1 x2 b1 b2 ->
+  and_then_cases_injective_intro (parse_asn1_identifier_loop' i c state) (fun x1 x2 b1 b2 ->
     match (parse (p x1) b1) with
     | Some (id1, l1) -> match (parse (p x2) b2) with
                  | Some (id2, l2) -> 
@@ -438,7 +439,17 @@ let lemma_parse_asn1_identifier_loop'_cases_injective
 : Lemma 
   (requires (parse_loop_continuation_spec (i + 1) c))
   (ensures (parse_loop_continuation_spec i (parse_asn1_identifier_loop' i c)))
-= Classical.forall_intro (Classical.move_requires (lemma_parse_asn1_identifier_loop'_cases_injective' i c))
+= let aux (state' : asn1_partial_id_t)
+  : Lemma
+    (partial_state_bound_f32 state' = i ==> (
+      let state'' : (s: asn1_partial_id_t { partial_state_bound_f32 s = i }) = state' in
+      and_then_cases_injective (parse_asn1_identifier_loop' i c state'')
+    ))
+  = if partial_state_bound_f32 state' = i
+    then lemma_parse_asn1_identifier_loop'_cases_injective' i c state'
+    else ()
+  in
+  Classical.forall_intro aux
 
 let rec parse_asn1_identifier_loop
   (i : nat {i <= 3})

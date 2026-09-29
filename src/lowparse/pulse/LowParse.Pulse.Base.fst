@@ -1654,7 +1654,10 @@ let vmatch_ref_wf
   (r: with_perm (ref tl))
   (vh: th)
 : Tot slprop
-= if FStar.IndefiniteDescription.strong_excluded_middle (vh << bound)
+= let b : (b: bool { b = true <==> (vh << bound) }) =
+    FStar.IndefiniteDescription.strong_excluded_middle (vh << bound)
+  in
+  if b
   then vmatch_ref_wf0 bound vmatch r vh (Some ())
   else pure False
 

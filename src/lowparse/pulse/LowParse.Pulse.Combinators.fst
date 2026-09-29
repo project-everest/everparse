@@ -1040,7 +1040,7 @@ fn split_nondep_then
 {
   pts_to_serialized_ext_trade'
     (serialize_nondep_then s1 s2)
-    (serialize_synth #(and_then_kind k1 k2) #(_: t1 & t2) #(t1 & t2)
+    (serialize_synth #(and_then_kind k1 k2) #(dtuple2 t1 (const_fun #t1 #Type0 t2)) #(t1 & t2)
       (parse_dtuple2 #k1 #t1 p1 #k2 #(const_fun t2) (const_fun p2))
       (pair_of_dtuple2 #t1 #t2)
       (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
@@ -1194,7 +1194,7 @@ ghost fn ghost_split_nondep_then
 {
   pts_to_serialized_ext'
     (serialize_nondep_then s1 s2)
-    (serialize_synth #(and_then_kind k1 k2) #(_: t1 & t2) #(t1 & t2)
+    (serialize_synth #(and_then_kind k1 k2) #(dtuple2 t1 (const_fun #t1 #Type0 t2)) #(t1 & t2)
       (parse_dtuple2 #k1 #t1 p1 #k2 #(const_fun t2) (const_fun p2))
       (pair_of_dtuple2 #t1 #t2)
       (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))

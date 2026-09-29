@@ -634,7 +634,9 @@ let serialize_der_length_weak_unfold
        serialize_u8_spec (U8.uint_to_t y);
        ()
    end else begin
-    let len : nat = U8.v x - 128 in
+    let len : (len: nat { len >= 1 /\ len == U8.v x - 128 }) = U8.v x - 128 in
+    assert (U8.v x > 129 /\ U8.v x < 255);
+    assert (tag_of_der_length y == x);
     synth_be_int_injective len; // FIXME: WHY WHY WHY does the pattern not trigger, even with higher rlimit?
     assert (
       serialize (serialize_der_length_payload x) y == serialize (serialize_der_length_payload_greater x len) y

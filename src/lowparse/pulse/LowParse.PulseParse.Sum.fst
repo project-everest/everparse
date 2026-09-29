@@ -3164,6 +3164,8 @@ let l2r_safe_writer_dsum_noroom_lemma
     assert (Seq.length (serialize (serialize_dsum t s f sr g sg) yh) ==
       Seq.length (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) tg) +
       Seq.length (serialize (serialize_dsum_cases t f sr g sg tg) yh));
+    let payload : Seq.seq byte = serialize (serialize_dsum_cases t f sr g sg tg) yh in
+    assert (Seq.length payload >= 0);
     assert (Seq.length (serialize (serialize_dsum t s f sr g sg) yh) >= SZ.v tag_sz)
 
 inline_for_extraction

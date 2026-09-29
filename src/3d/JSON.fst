@@ -588,7 +588,7 @@ let rec skip_ws (cs:list Char.char) : list Char.char =
 
 (* [\uXXXX] is decoded to the code point it names; a surrogate pair is not
    recombined, which is what Yojson did too. *)
-let hex_value (c:Char.char) : ML int =
+let hex_value (c:Char.char) : ML (n: nat { n < 16 }) =
   let i = Char.int_of_char c in
   if i >= 0x30 && i <= 0x39 then i - 0x30
   else if i >= 0x61 && i <= 0x66 then i - 0x61 + 10
@@ -613,11 +613,17 @@ let rec parse_string_chars (acc:list Char.char) (cs:list Char.char)
         else if e = 'u'
         then match tl with
              | a :: b :: c :: d :: tl ->
-               let v = ((hex_value a * 16 + hex_value b) * 16 +
-                        hex_value c) * 16 + hex_value d in
+               let va = hex_value a in
+               let vb = hex_value b in
+               let vc = hex_value c in
+               let vd = hex_value d in
+               let v : (v: nat { v < 0x10000 }) =
+                 ((va * 16 + vb) * 16 + vc) * 16 + vd
+               in
                (* A lone surrogate has no code point of its own; U+FFFD is
-                  what a decoder is expected to put in its place. *)
-               (if v >= 0xd800 && v <= 0xdfff
+                  what a decoder is expected to put in its place.  U+D7FF
+                  goes the same way: FStar.Char.char_code excludes it. *)
+               (if v >= 0xd7ff && v <= 0xdfff
                 then Char.char_of_int 0xfffd
                 else Char.char_of_int v), tl
              | _ -> fail "Truncated \\u escape"
@@ -746,3 +752,4 @@ let config_of_json (s:string) : ML (FStar.Pervasives.either Config.config string
     FStar.Pervasives.Inl ({ compile_time_flags = flags } <: Config.config)
   with
   | JSONError msg -> FStar.Pervasives.Inr msg
+  | e -> raise e

@@ -291,9 +291,8 @@ let make_asn1_sequence_any_parser_guard_and_then_cases_injective
   (pbody : asn1_sequence_any_parser_body_type itemtwins suffix_t)
 : Lemma 
   (requires and_then_cases_injective pbody)
-  (ensures (and_then_cases_injective_some (make_asn1_sequence_any_parser_guard itemtwins pbody)))
-= let p = make_asn1_sequence_any_parser_guard itemtwins pbody in
-  and_then_cases_injective_some_intro p (fun s1 s2 b1 b2 ->
+  (ensures (and_then_cases_injective_some (make_asn1_sequence_any_parser_guard itemtwins pbody <: (option asn1_id_t -> asn1_sequence_any_parser_type itemtwins suffix_t))))
+= and_then_cases_injective_some_intro (make_asn1_sequence_any_parser_guard itemtwins pbody) (fun s1 s2 b1 b2 ->
     match s1 with | Some x1 ->
     match s2 with | Some x2 ->
     let p1 = weaken asn1_strong_parser_kind (parse_ret x1) in
