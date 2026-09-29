@@ -27,8 +27,7 @@ pub fn create_sig(
     sigbuf: &mut [u8]
 )
 {
-    let sz: usize = 1024usize;
-    let mut arr: Box<[u8]> = vec![0u8; sz].into_boxed_slice();
+    let mut arr: Box<[u8]> = vec![0u8; 1024usize].into_boxed_slice();
     let outbuf: &mut [u8] = &mut arr;
     let sig_struct: crate::coseformat::sig_structure =
         crate::coseformat::sig_structure
@@ -109,10 +108,9 @@ pub fn sign1 <'a>(
 ) ->
     &'a [u8]
 {
-    let alg: i32 = -8i32;
     let phdrauxbuf: [(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw); 0] =
         [dummy_map_val(); 0usize];
-    let alg·: crate::coseformat::evercddl_int = mk_int(alg);
+    let alg·: crate::coseformat::evercddl_int = mk_int(-8i32);
     let rest2: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
         &phdrauxbuf;
     let phdr: crate::coseformat::empty_or_serialized_map =
@@ -202,10 +200,9 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
         };
     let aadbuf: [u8; 0] = [0u8; 0usize];
     let aadslice: &[u8] = &aadbuf;
-    let alg: i32 = -8i32;
     let phdrauxbuf: [(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw); 0] =
         [dummy_map_val(); 0usize];
-    let alg·: crate::coseformat::evercddl_int = mk_int(alg);
+    let alg·: crate::coseformat::evercddl_int = mk_int(-8i32);
     let rest21: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
         &phdrauxbuf;
     let phdr: crate::coseformat::empty_or_serialized_map =
@@ -271,8 +268,7 @@ pub fn verify_sig(
 ) ->
     bool
 {
-    let sz: usize = 1024usize;
-    let mut arr: Box<[u8]> = vec![0u8; sz].into_boxed_slice();
+    let mut arr: Box<[u8]> = vec![0u8; 1024usize].into_boxed_slice();
     let outbuf: &mut [u8] = &mut arr;
     let sig_struct: crate::coseformat::sig_structure =
         crate::coseformat::sig_structure

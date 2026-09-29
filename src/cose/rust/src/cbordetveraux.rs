@@ -88,8 +88,7 @@ fn get_bitfield_gen8(x: u8, lo: u32, hi: u32) -> u8
 
 fn set_bitfield_gen8(x: u8, lo: u32, hi: u32, v: u8) -> u8
 {
-    let op0: u8 = 255u8;
-    let op1: u8 = op0.wrapping_shr(8u32.wrapping_sub(hi.wrapping_sub(lo)));
+    let op1: u8 = 255u8.wrapping_shr(8u32.wrapping_sub(hi.wrapping_sub(lo)));
     let op2: u8 = op1.wrapping_shl(lo);
     let op3: u8 = ! op2;
     let op4: u8 = x & op3;
@@ -458,8 +457,7 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
 fn read_header(input: &[u8]) ->
     dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
 {
-    let i: usize = 1usize;
-    let _letpattern: (&[u8], &[u8]) = input.split_at(i);
+    let _letpattern: (&[u8], &[u8]) = input.split_at(1usize);
     let input1: &[u8] = _letpattern.0;
     let input2: &[u8] = _letpattern.1;
     let x1: initial_byte_t = read_initial_byte_t(input1);
@@ -479,8 +477,7 @@ fn read_header(input: &[u8]) ->
         }
         else if x1.additional_info == additional_info_long_argument_16_bits
         {
-            let pos·: usize = 1usize;
-            let last: u8 = input2[pos·];
+            let last: u8 = input2[1usize];
             let last1: u8 = input2[0usize];
             let n: u16 = last1 as u16;
             let blast: u16 = last as u16;
@@ -489,12 +486,11 @@ fn read_header(input: &[u8]) ->
         }
         else if x1.additional_info == additional_info_long_argument_32_bits
         {
-            let pos·: usize = 3usize;
-            let last: u8 = input2[pos·];
+            let last: u8 = input2[3usize];
+            let pos·: usize = 3usize.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·];
             let pos·1: usize = pos·.wrapping_sub(1usize);
-            let last1: u8 = input2[pos·1];
-            let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let last2: u8 = input2[pos·2];
+            let last2: u8 = input2[pos·1];
             let last3: u8 = input2[0usize];
             let n: u32 = last3 as u32;
             let blast: u32 = last2 as u32;
@@ -507,20 +503,19 @@ fn read_header(input: &[u8]) ->
         }
         else if x1.additional_info == additional_info_long_argument_64_bits
         {
-            let pos·: usize = 7usize;
-            let last: u8 = input2[pos·];
+            let last: u8 = input2[7usize];
+            let pos·: usize = 7usize.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·];
             let pos·1: usize = pos·.wrapping_sub(1usize);
-            let last1: u8 = input2[pos·1];
+            let last2: u8 = input2[pos·1];
             let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let last2: u8 = input2[pos·2];
+            let last3: u8 = input2[pos·2];
             let pos·3: usize = pos·2.wrapping_sub(1usize);
-            let last3: u8 = input2[pos·3];
+            let last4: u8 = input2[pos·3];
             let pos·4: usize = pos·3.wrapping_sub(1usize);
-            let last4: u8 = input2[pos·4];
+            let last5: u8 = input2[pos·4];
             let pos·5: usize = pos·4.wrapping_sub(1usize);
-            let last5: u8 = input2[pos·5];
-            let pos·6: usize = pos·5.wrapping_sub(1usize);
-            let last6: u8 = input2[pos·6];
+            let last6: u8 = input2[pos·5];
             let last7: u8 = input2[0usize];
             let n: u64 = last7 as u64;
             let blast: u64 = last6 as u64;

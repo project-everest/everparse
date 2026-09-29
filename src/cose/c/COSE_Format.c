@@ -12658,19 +12658,17 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
           if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
             if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
               if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
-              {
-                size_t i_4 = (size_t)5U;
                 if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
                 {
-                  size_t i_5 = i_4 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                  size_t i_4 = (size_t)6U;
+                  if (op_Array_Access__uint8_t(s, (size_t)5U) == 116U)
                   {
-                    size_t i_6 = i_5 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                    size_t i_5 = i_4 + (size_t)1U;
+                    if (op_Array_Access__uint8_t(s, i_4) == 117U)
                     {
-                      size_t i_7 = i_6 + (size_t)1U;
-                      if (op_Array_Access__uint8_t(s, i_6) == 114U)
-                        if (op_Array_Access__uint8_t(s, i_7) == 101U)
+                      size_t i_6 = i_5 + (size_t)1U;
+                      if (op_Array_Access__uint8_t(s, i_5) == 114U)
+                        if (op_Array_Access__uint8_t(s, i_6) == 101U)
                           ite = true;
                         else
                           ite = false;
@@ -12685,7 +12683,6 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
                 }
                 else
                   ite = false;
-              }
               else
                 ite = false;
             else
@@ -12710,22 +12707,20 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
           if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
             if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
               if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
-              {
-                size_t i_4 = (size_t)5U;
                 if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
                 {
-                  size_t i_5 = i_4 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                  size_t i_4 = (size_t)6U;
+                  if (op_Array_Access__uint8_t(s, (size_t)5U) == 116U)
                   {
-                    size_t i_6 = i_5 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                    size_t i_5 = i_4 + (size_t)1U;
+                    if (op_Array_Access__uint8_t(s, i_4) == 117U)
                     {
-                      size_t i_7 = i_6 + (size_t)1U;
-                      if (op_Array_Access__uint8_t(s, i_6) == 114U)
+                      size_t i_6 = i_5 + (size_t)1U;
+                      if (op_Array_Access__uint8_t(s, i_5) == 114U)
                       {
-                        size_t i_8 = i_7 + (size_t)1U;
-                        if (op_Array_Access__uint8_t(s, i_7) == 101U)
-                          if (op_Array_Access__uint8_t(s, i_8) == 49U)
+                        size_t i_7 = i_6 + (size_t)1U;
+                        if (op_Array_Access__uint8_t(s, i_6) == 101U)
+                          if (op_Array_Access__uint8_t(s, i_7) == 49U)
                             ite0 = true;
                           else
                             ite0 = false;
@@ -12743,7 +12738,6 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
                 }
                 else
                   ite0 = false;
-              }
               else
                 ite0 = false;
             else
@@ -12866,19 +12860,17 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
         if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
           if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
             if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
-            {
-              size_t i_4 = (size_t)5U;
               if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
               {
-                size_t i_5 = i_4 + (size_t)1U;
-                if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                size_t i_4 = (size_t)6U;
+                if (op_Array_Access__uint8_t(s, (size_t)5U) == 116U)
                 {
-                  size_t i_6 = i_5 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                  size_t i_5 = i_4 + (size_t)1U;
+                  if (op_Array_Access__uint8_t(s, i_4) == 117U)
                   {
-                    size_t i_7 = i_6 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_6) == 114U)
-                      if (op_Array_Access__uint8_t(s, i_7) == 101U)
+                    size_t i_6 = i_5 + (size_t)1U;
+                    if (op_Array_Access__uint8_t(s, i_5) == 114U)
+                      if (op_Array_Access__uint8_t(s, i_6) == 101U)
                         ite = true;
                       else
                         ite = false;
@@ -12893,7 +12885,6 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
               }
               else
                 ite = false;
-            }
             else
               ite = false;
           else
@@ -12918,22 +12909,20 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
         if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
           if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
             if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
-            {
-              size_t i_4 = (size_t)5U;
               if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
               {
-                size_t i_5 = i_4 + (size_t)1U;
-                if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                size_t i_4 = (size_t)6U;
+                if (op_Array_Access__uint8_t(s, (size_t)5U) == 116U)
                 {
-                  size_t i_6 = i_5 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                  size_t i_5 = i_4 + (size_t)1U;
+                  if (op_Array_Access__uint8_t(s, i_4) == 117U)
                   {
-                    size_t i_7 = i_6 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_6) == 114U)
+                    size_t i_6 = i_5 + (size_t)1U;
+                    if (op_Array_Access__uint8_t(s, i_5) == 114U)
                     {
-                      size_t i_8 = i_7 + (size_t)1U;
-                      if (op_Array_Access__uint8_t(s, i_7) == 101U)
-                        if (op_Array_Access__uint8_t(s, i_8) == 49U)
+                      size_t i_7 = i_6 + (size_t)1U;
+                      if (op_Array_Access__uint8_t(s, i_6) == 101U)
+                        if (op_Array_Access__uint8_t(s, i_7) == 49U)
                           ite0 = true;
                         else
                           ite0 = false;
@@ -12951,7 +12940,6 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
               }
               else
                 ite0 = false;
-            }
             else
               ite0 = false;
           else
@@ -12981,19 +12969,17 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
       if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
         if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
           if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
-          {
-            size_t i_4 = (size_t)5U;
             if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
             {
-              size_t i_5 = i_4 + (size_t)1U;
-              if (op_Array_Access__uint8_t(s, i_4) == 116U)
+              size_t i_4 = (size_t)6U;
+              if (op_Array_Access__uint8_t(s, (size_t)5U) == 116U)
               {
-                size_t i_6 = i_5 + (size_t)1U;
-                if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                size_t i_5 = i_4 + (size_t)1U;
+                if (op_Array_Access__uint8_t(s, i_4) == 117U)
                 {
-                  size_t i_7 = i_6 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_6) == 114U)
-                    if (op_Array_Access__uint8_t(s, i_7) == 101U)
+                  size_t i_6 = i_5 + (size_t)1U;
+                  if (op_Array_Access__uint8_t(s, i_5) == 114U)
+                    if (op_Array_Access__uint8_t(s, i_6) == 101U)
                       ite1 = true;
                     else
                       ite1 = false;
@@ -13008,7 +12994,6 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
             }
             else
               ite1 = false;
-          }
           else
             ite1 = false;
         else
@@ -13185,13 +13170,12 @@ COSE_Format_serialize_sig_structure(
           op_Array_Assignment__uint8_t(s, (size_t)2U, 103U);
           op_Array_Assignment__uint8_t(s, (size_t)3U, 110U);
           op_Array_Assignment__uint8_t(s, (size_t)4U, 97U);
-          size_t i_4 = (size_t)5U;
-          op_Array_Assignment__uint8_t(s, i_4, 116U);
+          op_Array_Assignment__uint8_t(s, (size_t)5U, 116U);
+          size_t i_4 = (size_t)6U;
+          op_Array_Assignment__uint8_t(s, i_4, 117U);
           size_t i_5 = i_4 + (size_t)1U;
-          op_Array_Assignment__uint8_t(s, i_5, 117U);
-          size_t i_6 = i_5 + (size_t)1U;
-          op_Array_Assignment__uint8_t(s, i_6, 114U);
-          op_Array_Assignment__uint8_t(s, i_6 + (size_t)1U, 101U);
+          op_Array_Assignment__uint8_t(s, i_5, 114U);
+          op_Array_Assignment__uint8_t(s, i_5 + (size_t)1U, 101U);
           uint8_t *a1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(s);
           cbor_det_t pres = dummy_cbor_det_t();
           bool ite;
@@ -13240,15 +13224,14 @@ COSE_Format_serialize_sig_structure(
           op_Array_Assignment__uint8_t(s, (size_t)2U, 103U);
           op_Array_Assignment__uint8_t(s, (size_t)3U, 110U);
           op_Array_Assignment__uint8_t(s, (size_t)4U, 97U);
-          size_t i_4 = (size_t)5U;
-          op_Array_Assignment__uint8_t(s, i_4, 116U);
+          op_Array_Assignment__uint8_t(s, (size_t)5U, 116U);
+          size_t i_4 = (size_t)6U;
+          op_Array_Assignment__uint8_t(s, i_4, 117U);
           size_t i_5 = i_4 + (size_t)1U;
-          op_Array_Assignment__uint8_t(s, i_5, 117U);
+          op_Array_Assignment__uint8_t(s, i_5, 114U);
           size_t i_6 = i_5 + (size_t)1U;
-          op_Array_Assignment__uint8_t(s, i_6, 114U);
-          size_t i_7 = i_6 + (size_t)1U;
-          op_Array_Assignment__uint8_t(s, i_7, 101U);
-          op_Array_Assignment__uint8_t(s, i_7 + (size_t)1U, 49U);
+          op_Array_Assignment__uint8_t(s, i_6, 101U);
+          op_Array_Assignment__uint8_t(s, i_6 + (size_t)1U, 49U);
           uint8_t *a1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(s);
           cbor_det_t pres = dummy_cbor_det_t();
           bool ite;

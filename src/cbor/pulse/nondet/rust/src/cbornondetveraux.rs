@@ -18,8 +18,7 @@ fn get_bitfield_gen8(x: u8, lo: u32, hi: u32) -> u8
 
 fn set_bitfield_gen8(x: u8, lo: u32, hi: u32, v: u8) -> u8
 {
-    let op0: u8 = 255u8;
-    let op1: u8 = op0.wrapping_shr(8u32.wrapping_sub(hi.wrapping_sub(lo)));
+    let op1: u8 = 255u8.wrapping_shr(8u32.wrapping_sub(hi.wrapping_sub(lo)));
     let op2: u8 = op1.wrapping_shl(lo);
     let op3: u8 = ! op2;
     let op4: u8 = x & op3;
@@ -388,8 +387,7 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
 fn read_header(input: &[u8]) ->
     dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
 {
-    let i: usize = 1usize;
-    let _letpattern: (&[u8], &[u8]) = input.split_at(i);
+    let _letpattern: (&[u8], &[u8]) = input.split_at(1usize);
     let input1: &[u8] = _letpattern.0;
     let input2: &[u8] = _letpattern.1;
     let x1: initial_byte_t = read_initial_byte_t(input1);
@@ -409,8 +407,7 @@ fn read_header(input: &[u8]) ->
         }
         else if x1.additional_info == additional_info_long_argument_16_bits
         {
-            let pos·: usize = 1usize;
-            let last: u8 = input2[pos·];
+            let last: u8 = input2[1usize];
             let last1: u8 = input2[0usize];
             let n: u16 = last1 as u16;
             let blast: u16 = last as u16;
@@ -419,12 +416,11 @@ fn read_header(input: &[u8]) ->
         }
         else if x1.additional_info == additional_info_long_argument_32_bits
         {
-            let pos·: usize = 3usize;
-            let last: u8 = input2[pos·];
+            let last: u8 = input2[3usize];
+            let pos·: usize = 3usize.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·];
             let pos·1: usize = pos·.wrapping_sub(1usize);
-            let last1: u8 = input2[pos·1];
-            let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let last2: u8 = input2[pos·2];
+            let last2: u8 = input2[pos·1];
             let last3: u8 = input2[0usize];
             let n: u32 = last3 as u32;
             let blast: u32 = last2 as u32;
@@ -437,20 +433,19 @@ fn read_header(input: &[u8]) ->
         }
         else if x1.additional_info == additional_info_long_argument_64_bits
         {
-            let pos·: usize = 7usize;
-            let last: u8 = input2[pos·];
+            let last: u8 = input2[7usize];
+            let pos·: usize = 7usize.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·];
             let pos·1: usize = pos·.wrapping_sub(1usize);
-            let last1: u8 = input2[pos·1];
+            let last2: u8 = input2[pos·1];
             let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let last2: u8 = input2[pos·2];
+            let last3: u8 = input2[pos·2];
             let pos·3: usize = pos·2.wrapping_sub(1usize);
-            let last3: u8 = input2[pos·3];
+            let last4: u8 = input2[pos·3];
             let pos·4: usize = pos·3.wrapping_sub(1usize);
-            let last4: u8 = input2[pos·4];
+            let last5: u8 = input2[pos·4];
             let pos·5: usize = pos·4.wrapping_sub(1usize);
-            let last5: u8 = input2[pos·5];
-            let pos·6: usize = pos·5.wrapping_sub(1usize);
-            let last6: u8 = input2[pos·6];
+            let last6: u8 = input2[pos·5];
             let last7: u8 = input2[0usize];
             let n: u64 = last7 as u64;
             let blast: u64 = last6 as u64;
@@ -2951,705 +2946,382 @@ fn impl_check_map_depth_opt(bound: option__size_t, n0: usize, l0: &[u8]) -> bool
 pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8], l2: &[u8]) ->
     option__bool
 {
-    let __anf0: bool = false;
-    if __anf0
-    { option__bool::Some { v: true } }
-    else
-    {
-        let i: usize = jump_header(l1, 0usize);
-        let _letpattern: (&[u8], &[u8]) = l1.split_at(i);
-        let ph1: &[u8] =
-            {
-                let input1: &[u8] = _letpattern.0;
-                let _input2: &[u8] = _letpattern.1;
-                input1
-            };
-        let
-        h1: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-        =
-            read_header(ph1);
-        let i1: usize = jump_header(l2, 0usize);
-        let _letpattern1: (&[u8], &[u8]) = l2.split_at(i1);
-        let ph2: &[u8] =
-            {
-                let input1: &[u8] = _letpattern1.0;
-                let _input2: &[u8] = _letpattern1.1;
-                input1
-            };
-        let
-        h2: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-        =
-            read_header(ph2);
-        let mt1: u8 = get_header_major_type(h1);
-        let mt2: u8 = get_header_major_type(h2);
-        if mt1 == cbor_major_type_map && mt2 == cbor_major_type_map
+    let i: usize = jump_header(l1, 0usize);
+    let _letpattern: (&[u8], &[u8]) = l1.split_at(i);
+    let ph1: &[u8] =
         {
-            if eq_Some_0sz(map_bound)
-            { option__bool::None }
-            else
-            {
-                let map_bound·: option__size_t =
-                    match map_bound
-                    {
-                        option__size_t::None => option__size_t::None,
-                        option__size_t::Some { v: b } =>
-                          option__size_t::Some { v: b.wrapping_sub(1usize) },
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                let i2: usize = jump_raw_data_item(l1, 0usize);
-                let _letpattern2: (&[u8], &[u8]) = l1.split_at(i2);
-                let map1: &[u8] =
-                    {
-                        let input1: &[u8] = _letpattern2.0;
-                        let _input2: &[u8] = _letpattern2.1;
-                        input1
-                    };
-                let
-                mut
-                ph:
-                [dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument;
-                1]
-                =
-                    [h1; 1usize];
-                let i3: usize = jump_header(map1, 0usize);
-                let _letpattern3: (&[u8], &[u8]) = map1.split_at(i3);
-                let c1: &[u8] =
-                    {
-                        let ph3: &[u8] = _letpattern3.0;
-                        let outc: &[u8] = _letpattern3.1;
-                        let
-                        h:
-                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                        =
-                            read_header(ph3);
-                        (&mut ph)[0usize] = h;
-                        outc
-                    };
-                let nv1: usize =
-                    argument_as_uint64(
-                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h1
-                        ),
-                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h1
-                        )
-                    )
-                    as
-                    usize;
-                let i4: usize = jump_raw_data_item(l2, 0usize);
-                let _letpattern4: (&[u8], &[u8]) = l2.split_at(i4);
-                let map2: &[u8] =
-                    {
-                        let input1: &[u8] = _letpattern4.0;
-                        let _input2: &[u8] = _letpattern4.1;
-                        input1
-                    };
-                let i5: usize = jump_header(map2, 0usize);
-                let _letpattern5: (&[u8], &[u8]) = map2.split_at(i5);
-                let c2: &[u8] =
-                    {
-                        let ph3: &[u8] = _letpattern5.0;
-                        let outc: &[u8] = _letpattern5.1;
-                        let
-                        h:
-                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                        =
-                            read_header(ph3);
-                        (&mut ph)[0usize] = h;
-                        outc
-                    };
-                let nv2: usize =
-                    argument_as_uint64(
-                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h2
-                        ),
-                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h2
-                        )
-                    )
-                    as
-                    usize;
-                let mut pl: [&[u8]; 1] = [c1; 1usize];
-                let mut pn: [usize; 1] = [nv1; 1usize];
-                let mut pres: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
-                let n: usize = (&pn)[0usize];
-                let res: option__bool = (&pres)[0usize];
-                let mut cond: bool = n > 0usize && eq_Some_true(res);
-                while
-                cond
+            let input1: &[u8] = _letpattern.0;
+            let _input2: &[u8] = _letpattern.1;
+            input1
+        };
+    let h1: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument =
+        read_header(ph1);
+    let i1: usize = jump_header(l2, 0usize);
+    let _letpattern1: (&[u8], &[u8]) = l2.split_at(i1);
+    let ph2: &[u8] =
+        {
+            let input1: &[u8] = _letpattern1.0;
+            let _input2: &[u8] = _letpattern1.1;
+            input1
+        };
+    let h2: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument =
+        read_header(ph2);
+    let mt1: u8 = get_header_major_type(h1);
+    let mt2: u8 = get_header_major_type(h2);
+    if mt1 == cbor_major_type_map && mt2 == cbor_major_type_map
+    {
+        if eq_Some_0sz(map_bound)
+        { option__bool::None }
+        else
+        {
+            let map_bound·: option__size_t =
+                match map_bound
                 {
-                    let l: &[u8] = (&pl)[0usize];
-                    let n0: usize = (&pn)[0usize];
-                    let n·: usize = n0.wrapping_sub(1usize);
-                    let i6: usize = jump_raw_data_item(l, 0usize);
-                    let _letpattern6: (&[u8], &[u8]) = l.split_at(i6);
+                    option__size_t::None => option__size_t::None,
+                    option__size_t::Some { v: b } =>
+                      option__size_t::Some { v: b.wrapping_sub(1usize) },
+                    _ => panic!("Incomplete pattern matching")
+                };
+            let i2: usize = jump_raw_data_item(l1, 0usize);
+            let _letpattern2: (&[u8], &[u8]) = l1.split_at(i2);
+            let map1: &[u8] =
+                {
+                    let input1: &[u8] = _letpattern2.0;
+                    let _input2: &[u8] = _letpattern2.1;
+                    input1
+                };
+            let
+            mut
+            ph:
+            [dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument;
+            1]
+            =
+                [h1; 1usize];
+            let i3: usize = jump_header(map1, 0usize);
+            let _letpattern3: (&[u8], &[u8]) = map1.split_at(i3);
+            let c1: &[u8] =
+                {
+                    let ph3: &[u8] = _letpattern3.0;
+                    let outc: &[u8] = _letpattern3.1;
+                    let
+                    h:
+                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                    =
+                        read_header(ph3);
+                    (&mut ph)[0usize] = h;
+                    outc
+                };
+            let nv1: usize =
+                argument_as_uint64(
+                    dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                        h1
+                    ),
+                    dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                        h1
+                    )
+                )
+                as
+                usize;
+            let i4: usize = jump_raw_data_item(l2, 0usize);
+            let _letpattern4: (&[u8], &[u8]) = l2.split_at(i4);
+            let map2: &[u8] =
+                {
+                    let input1: &[u8] = _letpattern4.0;
+                    let _input2: &[u8] = _letpattern4.1;
+                    input1
+                };
+            let i5: usize = jump_header(map2, 0usize);
+            let _letpattern5: (&[u8], &[u8]) = map2.split_at(i5);
+            let c2: &[u8] =
+                {
+                    let ph3: &[u8] = _letpattern5.0;
+                    let outc: &[u8] = _letpattern5.1;
+                    let
+                    h:
+                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                    =
+                        read_header(ph3);
+                    (&mut ph)[0usize] = h;
+                    outc
+                };
+            let nv2: usize =
+                argument_as_uint64(
+                    dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                        h2
+                    ),
+                    dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                        h2
+                    )
+                )
+                as
+                usize;
+            let mut pl: [&[u8]; 1] = [c1; 1usize];
+            let mut pn: [usize; 1] = [nv1; 1usize];
+            let mut pres: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
+            let n: usize = (&pn)[0usize];
+            let res: option__bool = (&pres)[0usize];
+            let mut cond: bool = n > 0usize && eq_Some_true(res);
+            while
+            cond
+            {
+                let l: &[u8] = (&pl)[0usize];
+                let n0: usize = (&pn)[0usize];
+                let n·: usize = n0.wrapping_sub(1usize);
+                let i6: usize = jump_raw_data_item(l, 0usize);
+                let _letpattern6: (&[u8], &[u8]) = l.split_at(i6);
+                {
+                    let lh: &[u8] = _letpattern6.0;
+                    let lt: &[u8] = _letpattern6.1;
+                    let i7: usize = jump_raw_data_item(lt, 0usize);
+                    let _letpattern7: (&[u8], &[u8]) = lt.split_at(i7);
+                    let lv: &[u8] = _letpattern7.0;
+                    let lt·: &[u8] = _letpattern7.1;
+                    let mut pll: [&[u8]; 1] = [c2; 1usize];
+                    let mut pn1: [usize; 1] = [nv2; 1usize];
+                    let mut pres1: [option__bool; 1] = [option__bool::Some { v: false }; 1usize];
+                    let mut pcont: [bool; 1] = [true; 1usize];
+                    let n1: usize = (&pn1)[0usize];
+                    let res0: option__bool = (&pres1)[0usize];
+                    let cont: bool = (&pcont)[0usize];
+                    let mut cond0: bool = n1 > 0usize && eq_Some_false(res0) && cont;
+                    while
+                    cond0
                     {
-                        let lh: &[u8] = _letpattern6.0;
-                        let lt: &[u8] = _letpattern6.1;
-                        let i7: usize = jump_raw_data_item(lt, 0usize);
-                        let _letpattern7: (&[u8], &[u8]) = lt.split_at(i7);
-                        let lv: &[u8] = _letpattern7.0;
-                        let lt·: &[u8] = _letpattern7.1;
-                        let mut pll: [&[u8]; 1] = [c2; 1usize];
-                        let mut pn1: [usize; 1] = [nv2; 1usize];
-                        let mut pres1: [option__bool; 1] =
-                            [option__bool::Some { v: false }; 1usize];
-                        let mut pcont: [bool; 1] = [true; 1usize];
-                        let n1: usize = (&pn1)[0usize];
-                        let res0: option__bool = (&pres1)[0usize];
-                        let cont: bool = (&pcont)[0usize];
-                        let mut cond0: bool = n1 > 0usize && eq_Some_false(res0) && cont;
-                        while
-                        cond0
+                        let l3: &[u8] = (&pll)[0usize];
+                        let n10: usize = (&pn1)[0usize];
+                        let n·1: usize = n10.wrapping_sub(1usize);
+                        let i8: usize = jump_raw_data_item(l3, 0usize);
+                        let _letpattern8: (&[u8], &[u8]) = l3.split_at(i8);
                         {
-                            let l3: &[u8] = (&pll)[0usize];
-                            let n10: usize = (&pn1)[0usize];
-                            let n·1: usize = n10.wrapping_sub(1usize);
-                            let i8: usize = jump_raw_data_item(l3, 0usize);
-                            let _letpattern8: (&[u8], &[u8]) = l3.split_at(i8);
+                            let lh1: &[u8] = _letpattern8.0;
+                            let lt1: &[u8] = _letpattern8.1;
+                            let mut pn2: [usize; 1] = [1usize; 1usize];
+                            let mut pl1: [&[u8]; 1] = [lh; 1usize];
+                            let mut pl2: [&[u8]; 1] = [lh1; 1usize];
+                            let mut pres2: [option__bool; 1] =
+                                [option__bool::Some { v: true }; 1usize];
+                            let res1: option__bool = (&pres2)[0usize];
+                            let n2: usize = (&pn2)[0usize];
+                            let mut cond1: bool = eq_Some_true(res1) && n2 > 0usize;
+                            while
+                            cond1
                             {
-                                let lh1: &[u8] = _letpattern8.0;
-                                let lt1: &[u8] = _letpattern8.1;
-                                let mut pn2: [usize; 1] = [1usize; 1usize];
-                                let mut pl1: [&[u8]; 1] = [lh; 1usize];
-                                let mut pl2: [&[u8]; 1] = [lh1; 1usize];
-                                let mut pres2: [option__bool; 1] =
-                                    [option__bool::Some { v: true }; 1usize];
-                                let res1: option__bool = (&pres2)[0usize];
-                                let n2: usize = (&pn2)[0usize];
-                                let mut cond1: bool = eq_Some_true(res1) && n2 > 0usize;
-                                while
-                                cond1
-                                {
-                                    let l1·: &[u8] = (&pl1)[0usize];
-                                    let l2·: &[u8] = (&pl2)[0usize];
-                                    let r: option__bool =
-                                        impl_check_equiv_map_hd_basic(map_bound·, l1·, l2·);
-                                    if
-                                    match r
-                                    {
-                                        option__bool::None => true,
-                                        _tmp => false,
-                                        _ => panic!("Incomplete pattern matching")
-                                    }
-                                    { (&mut pres2)[0usize] = r }
-                                    else
-                                    {
-                                        let n20: usize = (&pn2)[0usize];
-                                        if eq_Some_true(r)
-                                        {
-                                            let n·2: usize = n20.wrapping_sub(1usize);
-                                            let i9: usize = jump_raw_data_item(l1·, 0usize);
-                                            let _letpattern9: (&[u8], &[u8]) = l1·.split_at(i9);
-                                            let tl1: &[u8] =
-                                                {
-                                                    let _input1: &[u8] = _letpattern9.0;
-                                                    let input2: &[u8] = _letpattern9.1;
-                                                    input2
-                                                };
-                                            let i10: usize = jump_raw_data_item(l2·, 0usize);
-                                            let _letpattern10: (&[u8], &[u8]) = l2·.split_at(i10);
-                                            let tl2: &[u8] =
-                                                {
-                                                    let _input1: &[u8] = _letpattern10.0;
-                                                    let input2: &[u8] = _letpattern10.1;
-                                                    input2
-                                                };
-                                            (&mut pn2)[0usize] = n·2;
-                                            (&mut pl1)[0usize] = tl1;
-                                            (&mut pl2)[0usize] = tl2
-                                        }
-                                        else
-                                        {
-                                            let i9: usize = jump_header(l1·, 0usize);
-                                            let _letpattern9: (&[u8], &[u8]) = l1·.split_at(i9);
-                                            let hd1: &[u8] = _letpattern9.0;
-                                            let tl1: &[u8] = _letpattern9.1;
-                                            let
-                                            h11:
-                                            dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                                            =
-                                                read_header(hd1);
-                                            let mt11: u8 = get_header_major_type(h11);
-                                            let i10: usize = jump_header(l2·, 0usize);
-                                            let _letpattern10: (&[u8], &[u8]) = l2·.split_at(i10);
-                                            let hd2: &[u8] = _letpattern10.0;
-                                            let tl2: &[u8] = _letpattern10.1;
-                                            let
-                                            h21:
-                                            dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                                            =
-                                                read_header(hd2);
-                                            let mt21: u8 = get_header_major_type(h21);
-                                            if mt11 != mt21
-                                            {
-                                                (&mut pres2)[0usize] =
-                                                    option__bool::Some { v: false }
-                                            }
-                                            else
-                                            {
-                                                let b: initial_byte_t = h11._1;
-                                                let i11: usize =
-                                                    if
-                                                    b.major_type == cbor_major_type_byte_string
-                                                    ||
-                                                    b.major_type == cbor_major_type_text_string
-                                                    { argument_as_uint64(h11._1, h11._2) as usize }
-                                                    else
-                                                    { 0usize };
-                                                let _letpattern11: (&[u8], &[u8]) =
-                                                    tl1.split_at(i11);
-                                                let lc1: &[u8] = _letpattern11.0;
-                                                let tl1·: &[u8] = _letpattern11.1;
-                                                let n·2: usize =
-                                                    (impl_remaining_data_items_header(h11)).wrapping_add(
-                                                        n20.wrapping_sub(1usize)
-                                                    );
-                                                let b0: initial_byte_t = h21._1;
-                                                let i12: usize =
-                                                    if
-                                                    b0.major_type == cbor_major_type_byte_string
-                                                    ||
-                                                    b0.major_type == cbor_major_type_text_string
-                                                    { argument_as_uint64(h21._1, h21._2) as usize }
-                                                    else
-                                                    { 0usize };
-                                                let _letpattern12: (&[u8], &[u8]) =
-                                                    tl2.split_at(i12);
-                                                let lc2: &[u8] = _letpattern12.0;
-                                                let tl2·: &[u8] = _letpattern12.1;
-                                                let mt12: u8 = get_header_major_type(h11);
-                                                let __anf01: bool =
-                                                    if mt12 == cbor_major_type_simple_value
-                                                    {
-                                                        let sv1: u8 =
-                                                            match
-                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                h11
-                                                            )
-                                                            {
-                                                                long_argument::LongArgumentOther =>
-                                                                  (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                      h11
-                                                                  )).additional_info,
-                                                                long_argument::LongArgumentSimpleValue
-                                                                { v }
-                                                                => v,
-                                                                _ =>
-                                                                  panic!(
-                                                                      "Incomplete pattern matching"
-                                                                  )
-                                                            };
-                                                        let sv2: u8 =
-                                                            match
-                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                h21
-                                                            )
-                                                            {
-                                                                long_argument::LongArgumentOther =>
-                                                                  (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                      h21
-                                                                  )).additional_info,
-                                                                long_argument::LongArgumentSimpleValue
-                                                                { v }
-                                                                => v,
-                                                                _ =>
-                                                                  panic!(
-                                                                      "Incomplete pattern matching"
-                                                                  )
-                                                            };
-                                                        sv1 == sv2
-                                                    }
-                                                    else
-                                                    {
-                                                        let len: u64 =
-                                                            argument_as_uint64(
-                                                                dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                    h11
-                                                                ),
-                                                                dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                    h11
-                                                                )
-                                                            );
-                                                        let len2: u64 =
-                                                            argument_as_uint64(
-                                                                dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                    h21
-                                                                ),
-                                                                dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                    h21
-                                                                )
-                                                            );
-                                                        if len != len2
-                                                        { false }
-                                                        else if
-                                                        mt12 == cbor_major_type_byte_string
-                                                        ||
-                                                        mt12 == cbor_major_type_text_string
-                                                        {
-                                                            let cmp: i16 =
-                                                                lex_compare_bytes(lc1, lc2);
-                                                            cmp == 0i16
-                                                        }
-                                                        else
-                                                        { mt12 != cbor_major_type_map }
-                                                    };
-                                                if __anf01
-                                                {
-                                                    (&mut pn2)[0usize] = n·2;
-                                                    (&mut pl1)[0usize] = tl1·;
-                                                    (&mut pl2)[0usize] = tl2·
-                                                }
-                                                else
-                                                {
-                                                    (&mut pres2)[0usize] =
-                                                        option__bool::Some { v: false }
-                                                }
-                                            }
-                                        }
-                                    };
-                                    let res2: option__bool = (&pres2)[0usize];
-                                    let n20: usize = (&pn2)[0usize];
-                                    cond1 = eq_Some_true(res2) && n20 > 0usize
-                                };
-                                let res2: option__bool = (&pres2)[0usize];
+                                let l1·: &[u8] = (&pl1)[0usize];
+                                let l2·: &[u8] = (&pl2)[0usize];
+                                let r: option__bool =
+                                    impl_check_equiv_map_hd_basic(map_bound·, l1·, l2·);
                                 if
-                                match res2
+                                match r
                                 {
                                     option__bool::None => true,
                                     _tmp => false,
                                     _ => panic!("Incomplete pattern matching")
                                 }
-                                { (&mut pres1)[0usize] = res2 }
+                                { (&mut pres2)[0usize] = r }
                                 else
                                 {
-                                    let i9: usize = jump_raw_data_item(lt1, 0usize);
-                                    let _letpattern9: (&[u8], &[u8]) = lt1.split_at(i9);
-                                    let lv1: &[u8] = _letpattern9.0;
-                                    let lt·1: &[u8] = _letpattern9.1;
-                                    if
-                                    match res2
+                                    let n20: usize = (&pn2)[0usize];
+                                    if eq_Some_true(r)
                                     {
-                                        option__bool::Some { v } => v,
-                                        _ => panic!("Incomplete pattern matching")
-                                    }
-                                    {
-                                        let mut pn3: [usize; 1] = [1usize; 1usize];
-                                        let mut pl11: [&[u8]; 1] = [lv; 1usize];
-                                        let mut pl21: [&[u8]; 1] = [lv1; 1usize];
-                                        let mut pres3: [option__bool; 1] =
-                                            [option__bool::Some { v: true }; 1usize];
-                                        let res10: option__bool = (&pres3)[0usize];
-                                        let n20: usize = (&pn3)[0usize];
-                                        let mut cond2: bool = eq_Some_true(res10) && n20 > 0usize;
-                                        while
-                                        cond2
-                                        {
-                                            let l1·: &[u8] = (&pl11)[0usize];
-                                            let l2·: &[u8] = (&pl21)[0usize];
-                                            let r: option__bool =
-                                                impl_check_equiv_map_hd_basic(
-                                                    map_bound·,
-                                                    l1·,
-                                                    l2·
-                                                );
-                                            if
-                                            match r
+                                        let n·2: usize = n20.wrapping_sub(1usize);
+                                        let i9: usize = jump_raw_data_item(l1·, 0usize);
+                                        let _letpattern9: (&[u8], &[u8]) = l1·.split_at(i9);
+                                        let tl1: &[u8] =
                                             {
-                                                option__bool::None => true,
-                                                _tmp => false,
-                                                _ => panic!("Incomplete pattern matching")
-                                            }
-                                            { (&mut pres3)[0usize] = r }
-                                            else
-                                            {
-                                                let n21: usize = (&pn3)[0usize];
-                                                if eq_Some_true(r)
-                                                {
-                                                    let n·2: usize = n21.wrapping_sub(1usize);
-                                                    let i10: usize =
-                                                        jump_raw_data_item(l1·, 0usize);
-                                                    let _letpattern10: (&[u8], &[u8]) =
-                                                        l1·.split_at(i10);
-                                                    let tl1: &[u8] =
-                                                        {
-                                                            let _input1: &[u8] = _letpattern10.0;
-                                                            let input2: &[u8] = _letpattern10.1;
-                                                            input2
-                                                        };
-                                                    let i11: usize =
-                                                        jump_raw_data_item(l2·, 0usize);
-                                                    let _letpattern11: (&[u8], &[u8]) =
-                                                        l2·.split_at(i11);
-                                                    let tl2: &[u8] =
-                                                        {
-                                                            let _input1: &[u8] = _letpattern11.0;
-                                                            let input2: &[u8] = _letpattern11.1;
-                                                            input2
-                                                        };
-                                                    (&mut pn3)[0usize] = n·2;
-                                                    (&mut pl11)[0usize] = tl1;
-                                                    (&mut pl21)[0usize] = tl2
-                                                }
-                                                else
-                                                {
-                                                    let i10: usize = jump_header(l1·, 0usize);
-                                                    let _letpattern10: (&[u8], &[u8]) =
-                                                        l1·.split_at(i10);
-                                                    let hd1: &[u8] = _letpattern10.0;
-                                                    let tl1: &[u8] = _letpattern10.1;
-                                                    let
-                                                    h11:
-                                                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                                                    =
-                                                        read_header(hd1);
-                                                    let mt11: u8 = get_header_major_type(h11);
-                                                    let i11: usize = jump_header(l2·, 0usize);
-                                                    let _letpattern11: (&[u8], &[u8]) =
-                                                        l2·.split_at(i11);
-                                                    let hd2: &[u8] = _letpattern11.0;
-                                                    let tl2: &[u8] = _letpattern11.1;
-                                                    let
-                                                    h21:
-                                                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                                                    =
-                                                        read_header(hd2);
-                                                    let mt21: u8 = get_header_major_type(h21);
-                                                    if mt11 != mt21
-                                                    {
-                                                        (&mut pres3)[0usize] =
-                                                            option__bool::Some { v: false }
-                                                    }
-                                                    else
-                                                    {
-                                                        let b: initial_byte_t = h11._1;
-                                                        let i12: usize =
-                                                            if
-                                                            b.major_type
-                                                            ==
-                                                            cbor_major_type_byte_string
-                                                            ||
-                                                            b.major_type
-                                                            ==
-                                                            cbor_major_type_text_string
-                                                            {
-                                                                argument_as_uint64(h11._1, h11._2)
-                                                                as
-                                                                usize
-                                                            }
-                                                            else
-                                                            { 0usize };
-                                                        let _letpattern12: (&[u8], &[u8]) =
-                                                            tl1.split_at(i12);
-                                                        let lc1: &[u8] = _letpattern12.0;
-                                                        let tl1·: &[u8] = _letpattern12.1;
-                                                        let n·2: usize =
-                                                            (impl_remaining_data_items_header(h11)).wrapping_add(
-                                                                n21.wrapping_sub(1usize)
-                                                            );
-                                                        let b0: initial_byte_t = h21._1;
-                                                        let i13: usize =
-                                                            if
-                                                            b0.major_type
-                                                            ==
-                                                            cbor_major_type_byte_string
-                                                            ||
-                                                            b0.major_type
-                                                            ==
-                                                            cbor_major_type_text_string
-                                                            {
-                                                                argument_as_uint64(h21._1, h21._2)
-                                                                as
-                                                                usize
-                                                            }
-                                                            else
-                                                            { 0usize };
-                                                        let _letpattern13: (&[u8], &[u8]) =
-                                                            tl2.split_at(i13);
-                                                        let lc2: &[u8] = _letpattern13.0;
-                                                        let tl2·: &[u8] = _letpattern13.1;
-                                                        let mt12: u8 = get_header_major_type(h11);
-                                                        let __anf01: bool =
-                                                            if mt12 == cbor_major_type_simple_value
-                                                            {
-                                                                let sv1: u8 =
-                                                                    match
-                                                                    dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                        h11
-                                                                    )
-                                                                    {
-                                                                        long_argument::LongArgumentOther
-                                                                        =>
-                                                                          (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                              h11
-                                                                          )).additional_info,
-                                                                        long_argument::LongArgumentSimpleValue
-                                                                        { v }
-                                                                        => v,
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                let sv2: u8 =
-                                                                    match
-                                                                    dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                        h21
-                                                                    )
-                                                                    {
-                                                                        long_argument::LongArgumentOther
-                                                                        =>
-                                                                          (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                              h21
-                                                                          )).additional_info,
-                                                                        long_argument::LongArgumentSimpleValue
-                                                                        { v }
-                                                                        => v,
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                sv1 == sv2
-                                                            }
-                                                            else
-                                                            {
-                                                                let len: u64 =
-                                                                    argument_as_uint64(
-                                                                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                            h11
-                                                                        ),
-                                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                            h11
-                                                                        )
-                                                                    );
-                                                                let len2: u64 =
-                                                                    argument_as_uint64(
-                                                                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                            h21
-                                                                        ),
-                                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                            h21
-                                                                        )
-                                                                    );
-                                                                if len != len2
-                                                                { false }
-                                                                else if
-                                                                mt12 == cbor_major_type_byte_string
-                                                                ||
-                                                                mt12 == cbor_major_type_text_string
-                                                                {
-                                                                    let cmp: i16 =
-                                                                        lex_compare_bytes(lc1, lc2);
-                                                                    cmp == 0i16
-                                                                }
-                                                                else
-                                                                { mt12 != cbor_major_type_map }
-                                                            };
-                                                        if __anf01
-                                                        {
-                                                            (&mut pn3)[0usize] = n·2;
-                                                            (&mut pl11)[0usize] = tl1·;
-                                                            (&mut pl21)[0usize] = tl2·
-                                                        }
-                                                        else
-                                                        {
-                                                            (&mut pres3)[0usize] =
-                                                                option__bool::Some { v: false }
-                                                        }
-                                                    }
-                                                }
+                                                let _input1: &[u8] = _letpattern9.0;
+                                                let input2: &[u8] = _letpattern9.1;
+                                                input2
                                             };
-                                            let res11: option__bool = (&pres3)[0usize];
-                                            let n21: usize = (&pn3)[0usize];
-                                            cond2 = eq_Some_true(res11) && n21 > 0usize
-                                        };
-                                        let __anf01: option__bool = (&pres3)[0usize];
-                                        (&mut pres1)[0usize] = __anf01;
-                                        (&mut pcont)[0usize] = false
+                                        let i10: usize = jump_raw_data_item(l2·, 0usize);
+                                        let _letpattern10: (&[u8], &[u8]) = l2·.split_at(i10);
+                                        let tl2: &[u8] =
+                                            {
+                                                let _input1: &[u8] = _letpattern10.0;
+                                                let input2: &[u8] = _letpattern10.1;
+                                                input2
+                                            };
+                                        (&mut pn2)[0usize] = n·2;
+                                        (&mut pl1)[0usize] = tl1;
+                                        (&mut pl2)[0usize] = tl2
                                     }
                                     else
                                     {
-                                        (&mut pll)[0usize] = lt·1;
-                                        (&mut pn1)[0usize] = n·1
+                                        let i9: usize = jump_header(l1·, 0usize);
+                                        let _letpattern9: (&[u8], &[u8]) = l1·.split_at(i9);
+                                        let hd1: &[u8] = _letpattern9.0;
+                                        let tl1: &[u8] = _letpattern9.1;
+                                        let
+                                        h11:
+                                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                                        =
+                                            read_header(hd1);
+                                        let mt11: u8 = get_header_major_type(h11);
+                                        let i10: usize = jump_header(l2·, 0usize);
+                                        let _letpattern10: (&[u8], &[u8]) = l2·.split_at(i10);
+                                        let hd2: &[u8] = _letpattern10.0;
+                                        let tl2: &[u8] = _letpattern10.1;
+                                        let
+                                        h21:
+                                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                                        =
+                                            read_header(hd2);
+                                        let mt21: u8 = get_header_major_type(h21);
+                                        if mt11 != mt21
+                                        { (&mut pres2)[0usize] = option__bool::Some { v: false } }
+                                        else
+                                        {
+                                            let b: initial_byte_t = h11._1;
+                                            let i11: usize =
+                                                if
+                                                b.major_type == cbor_major_type_byte_string
+                                                ||
+                                                b.major_type == cbor_major_type_text_string
+                                                { argument_as_uint64(h11._1, h11._2) as usize }
+                                                else
+                                                { 0usize };
+                                            let _letpattern11: (&[u8], &[u8]) = tl1.split_at(i11);
+                                            let lc1: &[u8] = _letpattern11.0;
+                                            let tl1·: &[u8] = _letpattern11.1;
+                                            let n·2: usize =
+                                                (impl_remaining_data_items_header(h11)).wrapping_add(
+                                                    n20.wrapping_sub(1usize)
+                                                );
+                                            let b0: initial_byte_t = h21._1;
+                                            let i12: usize =
+                                                if
+                                                b0.major_type == cbor_major_type_byte_string
+                                                ||
+                                                b0.major_type == cbor_major_type_text_string
+                                                { argument_as_uint64(h21._1, h21._2) as usize }
+                                                else
+                                                { 0usize };
+                                            let _letpattern12: (&[u8], &[u8]) = tl2.split_at(i12);
+                                            let lc2: &[u8] = _letpattern12.0;
+                                            let tl2·: &[u8] = _letpattern12.1;
+                                            let mt12: u8 = get_header_major_type(h11);
+                                            let __anf0: bool =
+                                                if mt12 == cbor_major_type_simple_value
+                                                {
+                                                    let sv1: u8 =
+                                                        match
+                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                            h11
+                                                        )
+                                                        {
+                                                            long_argument::LongArgumentOther =>
+                                                              (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                  h11
+                                                              )).additional_info,
+                                                            long_argument::LongArgumentSimpleValue
+                                                            { v }
+                                                            => v,
+                                                            _ =>
+                                                              panic!("Incomplete pattern matching")
+                                                        };
+                                                    let sv2: u8 =
+                                                        match
+                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                            h21
+                                                        )
+                                                        {
+                                                            long_argument::LongArgumentOther =>
+                                                              (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                  h21
+                                                              )).additional_info,
+                                                            long_argument::LongArgumentSimpleValue
+                                                            { v }
+                                                            => v,
+                                                            _ =>
+                                                              panic!("Incomplete pattern matching")
+                                                        };
+                                                    sv1 == sv2
+                                                }
+                                                else
+                                                {
+                                                    let len: u64 =
+                                                        argument_as_uint64(
+                                                            dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                h11
+                                                            ),
+                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                h11
+                                                            )
+                                                        );
+                                                    let len2: u64 =
+                                                        argument_as_uint64(
+                                                            dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                h21
+                                                            ),
+                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                h21
+                                                            )
+                                                        );
+                                                    if len != len2
+                                                    { false }
+                                                    else if
+                                                    mt12 == cbor_major_type_byte_string
+                                                    ||
+                                                    mt12 == cbor_major_type_text_string
+                                                    {
+                                                        let cmp: i16 = lex_compare_bytes(lc1, lc2);
+                                                        cmp == 0i16
+                                                    }
+                                                    else
+                                                    { mt12 != cbor_major_type_map }
+                                                };
+                                            if __anf0
+                                            {
+                                                (&mut pn2)[0usize] = n·2;
+                                                (&mut pl1)[0usize] = tl1·;
+                                                (&mut pl2)[0usize] = tl2·
+                                            }
+                                            else
+                                            {
+                                                (&mut pres2)[0usize] =
+                                                    option__bool::Some { v: false }
+                                            }
+                                        }
                                     }
-                                }
+                                };
+                                let res2: option__bool = (&pres2)[0usize];
+                                let n20: usize = (&pn2)[0usize];
+                                cond1 = eq_Some_true(res2) && n20 > 0usize
                             };
-                            let n11: usize = (&pn1)[0usize];
-                            let res1: option__bool = (&pres1)[0usize];
-                            let cont0: bool = (&pcont)[0usize];
-                            cond0 = n11 > 0usize && eq_Some_false(res1) && cont0
-                        };
-                        let res1: option__bool = (&pres1)[0usize];
-                        if eq_Some_true(res1)
-                        {
-                            (&mut pl)[0usize] = lt·;
-                            (&mut pn)[0usize] = n·
-                        }
-                        else
-                        { (&mut pres)[0usize] = res1 }
-                    };
-                    let n1: usize = (&pn)[0usize];
-                    let res0: option__bool = (&pres)[0usize];
-                    cond = n1 > 0usize && eq_Some_true(res0)
-                };
-                let res0: option__bool = (&pres)[0usize];
-                if eq_Some_true(res0)
-                {
-                    let mut pl1: [&[u8]; 1] = [c2; 1usize];
-                    let mut pn1: [usize; 1] = [nv2; 1usize];
-                    let mut pres1: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
-                    let n0: usize = (&pn1)[0usize];
-                    let res1: option__bool = (&pres1)[0usize];
-                    let mut cond0: bool = n0 > 0usize && eq_Some_true(res1);
-                    while
-                    cond0
-                    {
-                        let l: &[u8] = (&pl1)[0usize];
-                        let n1: usize = (&pn1)[0usize];
-                        let n·: usize = n1.wrapping_sub(1usize);
-                        let i6: usize = jump_raw_data_item(l, 0usize);
-                        let _letpattern6: (&[u8], &[u8]) = l.split_at(i6);
-                        {
-                            let lh: &[u8] = _letpattern6.0;
-                            let lt: &[u8] = _letpattern6.1;
-                            let i7: usize = jump_raw_data_item(lt, 0usize);
-                            let _letpattern7: (&[u8], &[u8]) = lt.split_at(i7);
-                            let lv: &[u8] = _letpattern7.0;
-                            let lt·: &[u8] = _letpattern7.1;
-                            let mut pll: [&[u8]; 1] = [c1; 1usize];
-                            let mut pn2: [usize; 1] = [nv1; 1usize];
-                            let mut pres2: [option__bool; 1] =
-                                [option__bool::Some { v: false }; 1usize];
-                            let mut pcont: [bool; 1] = [true; 1usize];
-                            let n10: usize = (&pn2)[0usize];
-                            let res10: option__bool = (&pres2)[0usize];
-                            let cont: bool = (&pcont)[0usize];
-                            let mut cond1: bool = n10 > 0usize && eq_Some_false(res10) && cont;
-                            while
-                            cond1
+                            let res2: option__bool = (&pres2)[0usize];
+                            if
+                            match res2
                             {
-                                let l3: &[u8] = (&pll)[0usize];
-                                let n11: usize = (&pn2)[0usize];
-                                let n·1: usize = n11.wrapping_sub(1usize);
-                                let i8: usize = jump_raw_data_item(l3, 0usize);
-                                let _letpattern8: (&[u8], &[u8]) = l3.split_at(i8);
+                                option__bool::None => true,
+                                _tmp => false,
+                                _ => panic!("Incomplete pattern matching")
+                            }
+                            { (&mut pres1)[0usize] = res2 }
+                            else
+                            {
+                                let i9: usize = jump_raw_data_item(lt1, 0usize);
+                                let _letpattern9: (&[u8], &[u8]) = lt1.split_at(i9);
+                                let lv1: &[u8] = _letpattern9.0;
+                                let lt·1: &[u8] = _letpattern9.1;
+                                if
+                                match res2
                                 {
-                                    let lh1: &[u8] = _letpattern8.0;
-                                    let lt1: &[u8] = _letpattern8.1;
+                                    option__bool::Some { v } => v,
+                                    _ => panic!("Incomplete pattern matching")
+                                }
+                                {
                                     let mut pn3: [usize; 1] = [1usize; 1usize];
-                                    let mut pl11: [&[u8]; 1] = [lh; 1usize];
-                                    let mut pl2: [&[u8]; 1] = [lh1; 1usize];
+                                    let mut pl11: [&[u8]; 1] = [lv; 1usize];
+                                    let mut pl21: [&[u8]; 1] = [lv1; 1usize];
                                     let mut pres3: [option__bool; 1] =
                                         [option__bool::Some { v: true }; 1usize];
-                                    let res11: option__bool = (&pres3)[0usize];
-                                    let n2: usize = (&pn3)[0usize];
-                                    let mut cond2: bool = eq_Some_true(res11) && n2 > 0usize;
+                                    let res10: option__bool = (&pres3)[0usize];
+                                    let n20: usize = (&pn3)[0usize];
+                                    let mut cond2: bool = eq_Some_true(res10) && n20 > 0usize;
                                     while
                                     cond2
                                     {
                                         let l1·: &[u8] = (&pl11)[0usize];
-                                        let l2·: &[u8] = (&pl2)[0usize];
+                                        let l2·: &[u8] = (&pl21)[0usize];
                                         let r: option__bool =
                                             impl_check_equiv_map_hd_basic(map_bound·, l1·, l2·);
                                         if
@@ -3662,50 +3334,50 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                         { (&mut pres3)[0usize] = r }
                                         else
                                         {
-                                            let n20: usize = (&pn3)[0usize];
+                                            let n21: usize = (&pn3)[0usize];
                                             if eq_Some_true(r)
                                             {
-                                                let n·2: usize = n20.wrapping_sub(1usize);
-                                                let i9: usize = jump_raw_data_item(l1·, 0usize);
-                                                let _letpattern9: (&[u8], &[u8]) =
-                                                    l1·.split_at(i9);
-                                                let tl1: &[u8] =
-                                                    {
-                                                        let _input1: &[u8] = _letpattern9.0;
-                                                        let input2: &[u8] = _letpattern9.1;
-                                                        input2
-                                                    };
-                                                let i10: usize = jump_raw_data_item(l2·, 0usize);
+                                                let n·2: usize = n21.wrapping_sub(1usize);
+                                                let i10: usize = jump_raw_data_item(l1·, 0usize);
                                                 let _letpattern10: (&[u8], &[u8]) =
-                                                    l2·.split_at(i10);
-                                                let tl2: &[u8] =
+                                                    l1·.split_at(i10);
+                                                let tl1: &[u8] =
                                                     {
                                                         let _input1: &[u8] = _letpattern10.0;
                                                         let input2: &[u8] = _letpattern10.1;
                                                         input2
                                                     };
+                                                let i11: usize = jump_raw_data_item(l2·, 0usize);
+                                                let _letpattern11: (&[u8], &[u8]) =
+                                                    l2·.split_at(i11);
+                                                let tl2: &[u8] =
+                                                    {
+                                                        let _input1: &[u8] = _letpattern11.0;
+                                                        let input2: &[u8] = _letpattern11.1;
+                                                        input2
+                                                    };
                                                 (&mut pn3)[0usize] = n·2;
                                                 (&mut pl11)[0usize] = tl1;
-                                                (&mut pl2)[0usize] = tl2
+                                                (&mut pl21)[0usize] = tl2
                                             }
                                             else
                                             {
-                                                let i9: usize = jump_header(l1·, 0usize);
-                                                let _letpattern9: (&[u8], &[u8]) =
-                                                    l1·.split_at(i9);
-                                                let hd1: &[u8] = _letpattern9.0;
-                                                let tl1: &[u8] = _letpattern9.1;
+                                                let i10: usize = jump_header(l1·, 0usize);
+                                                let _letpattern10: (&[u8], &[u8]) =
+                                                    l1·.split_at(i10);
+                                                let hd1: &[u8] = _letpattern10.0;
+                                                let tl1: &[u8] = _letpattern10.1;
                                                 let
                                                 h11:
                                                 dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                                                 =
                                                     read_header(hd1);
                                                 let mt11: u8 = get_header_major_type(h11);
-                                                let i10: usize = jump_header(l2·, 0usize);
-                                                let _letpattern10: (&[u8], &[u8]) =
-                                                    l2·.split_at(i10);
-                                                let hd2: &[u8] = _letpattern10.0;
-                                                let tl2: &[u8] = _letpattern10.1;
+                                                let i11: usize = jump_header(l2·, 0usize);
+                                                let _letpattern11: (&[u8], &[u8]) =
+                                                    l2·.split_at(i11);
+                                                let hd2: &[u8] = _letpattern11.0;
+                                                let tl2: &[u8] = _letpattern11.1;
                                                 let
                                                 h21:
                                                 dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
@@ -3720,7 +3392,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                 else
                                                 {
                                                     let b: initial_byte_t = h11._1;
-                                                    let i11: usize =
+                                                    let i12: usize =
                                                         if
                                                         b.major_type == cbor_major_type_byte_string
                                                         ||
@@ -3732,16 +3404,16 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                         }
                                                         else
                                                         { 0usize };
-                                                    let _letpattern11: (&[u8], &[u8]) =
-                                                        tl1.split_at(i11);
-                                                    let lc1: &[u8] = _letpattern11.0;
-                                                    let tl1·: &[u8] = _letpattern11.1;
+                                                    let _letpattern12: (&[u8], &[u8]) =
+                                                        tl1.split_at(i12);
+                                                    let lc1: &[u8] = _letpattern12.0;
+                                                    let tl1·: &[u8] = _letpattern12.1;
                                                     let n·2: usize =
                                                         (impl_remaining_data_items_header(h11)).wrapping_add(
-                                                            n20.wrapping_sub(1usize)
+                                                            n21.wrapping_sub(1usize)
                                                         );
                                                     let b0: initial_byte_t = h21._1;
-                                                    let i12: usize =
+                                                    let i13: usize =
                                                         if
                                                         b0.major_type == cbor_major_type_byte_string
                                                         ||
@@ -3753,12 +3425,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                         }
                                                         else
                                                         { 0usize };
-                                                    let _letpattern12: (&[u8], &[u8]) =
-                                                        tl2.split_at(i12);
-                                                    let lc2: &[u8] = _letpattern12.0;
-                                                    let tl2·: &[u8] = _letpattern12.1;
+                                                    let _letpattern13: (&[u8], &[u8]) =
+                                                        tl2.split_at(i13);
+                                                    let lc2: &[u8] = _letpattern13.0;
+                                                    let tl2·: &[u8] = _letpattern13.1;
                                                     let mt12: u8 = get_header_major_type(h11);
-                                                    let __anf01: bool =
+                                                    let __anf0: bool =
                                                         if mt12 == cbor_major_type_simple_value
                                                         {
                                                             let sv1: u8 =
@@ -3835,11 +3507,11 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                             else
                                                             { mt12 != cbor_major_type_map }
                                                         };
-                                                    if __anf01
+                                                    if __anf0
                                                     {
                                                         (&mut pn3)[0usize] = n·2;
                                                         (&mut pl11)[0usize] = tl1·;
-                                                        (&mut pl2)[0usize] = tl2·
+                                                        (&mut pl21)[0usize] = tl2·
                                                     }
                                                     else
                                                     {
@@ -3849,320 +3521,574 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                 }
                                             }
                                         };
-                                        let res12: option__bool = (&pres3)[0usize];
-                                        let n20: usize = (&pn3)[0usize];
-                                        cond2 = eq_Some_true(res12) && n20 > 0usize
+                                        let res11: option__bool = (&pres3)[0usize];
+                                        let n21: usize = (&pn3)[0usize];
+                                        cond2 = eq_Some_true(res11) && n21 > 0usize
                                     };
-                                    let res12: option__bool = (&pres3)[0usize];
+                                    let __anf0: option__bool = (&pres3)[0usize];
+                                    (&mut pres1)[0usize] = __anf0;
+                                    (&mut pcont)[0usize] = false
+                                }
+                                else
+                                {
+                                    (&mut pll)[0usize] = lt·1;
+                                    (&mut pn1)[0usize] = n·1
+                                }
+                            }
+                        };
+                        let n11: usize = (&pn1)[0usize];
+                        let res1: option__bool = (&pres1)[0usize];
+                        let cont0: bool = (&pcont)[0usize];
+                        cond0 = n11 > 0usize && eq_Some_false(res1) && cont0
+                    };
+                    let res1: option__bool = (&pres1)[0usize];
+                    if eq_Some_true(res1)
+                    {
+                        (&mut pl)[0usize] = lt·;
+                        (&mut pn)[0usize] = n·
+                    }
+                    else
+                    { (&mut pres)[0usize] = res1 }
+                };
+                let n1: usize = (&pn)[0usize];
+                let res0: option__bool = (&pres)[0usize];
+                cond = n1 > 0usize && eq_Some_true(res0)
+            };
+            let res0: option__bool = (&pres)[0usize];
+            if eq_Some_true(res0)
+            {
+                let mut pl1: [&[u8]; 1] = [c2; 1usize];
+                let mut pn1: [usize; 1] = [nv2; 1usize];
+                let mut pres1: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
+                let n0: usize = (&pn1)[0usize];
+                let res1: option__bool = (&pres1)[0usize];
+                let mut cond0: bool = n0 > 0usize && eq_Some_true(res1);
+                while
+                cond0
+                {
+                    let l: &[u8] = (&pl1)[0usize];
+                    let n1: usize = (&pn1)[0usize];
+                    let n·: usize = n1.wrapping_sub(1usize);
+                    let i6: usize = jump_raw_data_item(l, 0usize);
+                    let _letpattern6: (&[u8], &[u8]) = l.split_at(i6);
+                    {
+                        let lh: &[u8] = _letpattern6.0;
+                        let lt: &[u8] = _letpattern6.1;
+                        let i7: usize = jump_raw_data_item(lt, 0usize);
+                        let _letpattern7: (&[u8], &[u8]) = lt.split_at(i7);
+                        let lv: &[u8] = _letpattern7.0;
+                        let lt·: &[u8] = _letpattern7.1;
+                        let mut pll: [&[u8]; 1] = [c1; 1usize];
+                        let mut pn2: [usize; 1] = [nv1; 1usize];
+                        let mut pres2: [option__bool; 1] =
+                            [option__bool::Some { v: false }; 1usize];
+                        let mut pcont: [bool; 1] = [true; 1usize];
+                        let n10: usize = (&pn2)[0usize];
+                        let res10: option__bool = (&pres2)[0usize];
+                        let cont: bool = (&pcont)[0usize];
+                        let mut cond1: bool = n10 > 0usize && eq_Some_false(res10) && cont;
+                        while
+                        cond1
+                        {
+                            let l3: &[u8] = (&pll)[0usize];
+                            let n11: usize = (&pn2)[0usize];
+                            let n·1: usize = n11.wrapping_sub(1usize);
+                            let i8: usize = jump_raw_data_item(l3, 0usize);
+                            let _letpattern8: (&[u8], &[u8]) = l3.split_at(i8);
+                            {
+                                let lh1: &[u8] = _letpattern8.0;
+                                let lt1: &[u8] = _letpattern8.1;
+                                let mut pn3: [usize; 1] = [1usize; 1usize];
+                                let mut pl11: [&[u8]; 1] = [lh; 1usize];
+                                let mut pl2: [&[u8]; 1] = [lh1; 1usize];
+                                let mut pres3: [option__bool; 1] =
+                                    [option__bool::Some { v: true }; 1usize];
+                                let res11: option__bool = (&pres3)[0usize];
+                                let n2: usize = (&pn3)[0usize];
+                                let mut cond2: bool = eq_Some_true(res11) && n2 > 0usize;
+                                while
+                                cond2
+                                {
+                                    let l1·: &[u8] = (&pl11)[0usize];
+                                    let l2·: &[u8] = (&pl2)[0usize];
+                                    let r: option__bool =
+                                        impl_check_equiv_map_hd_basic(map_bound·, l1·, l2·);
                                     if
-                                    match res12
+                                    match r
                                     {
                                         option__bool::None => true,
                                         _tmp => false,
                                         _ => panic!("Incomplete pattern matching")
                                     }
-                                    { (&mut pres2)[0usize] = res12 }
+                                    { (&mut pres3)[0usize] = r }
                                     else
                                     {
-                                        let i9: usize = jump_raw_data_item(lt1, 0usize);
-                                        let _letpattern9: (&[u8], &[u8]) = lt1.split_at(i9);
-                                        let lv1: &[u8] = _letpattern9.0;
-                                        let lt·1: &[u8] = _letpattern9.1;
-                                        if
-                                        match res12
+                                        let n20: usize = (&pn3)[0usize];
+                                        if eq_Some_true(r)
                                         {
-                                            option__bool::Some { v } => v,
-                                            _ => panic!("Incomplete pattern matching")
+                                            let n·2: usize = n20.wrapping_sub(1usize);
+                                            let i9: usize = jump_raw_data_item(l1·, 0usize);
+                                            let _letpattern9: (&[u8], &[u8]) = l1·.split_at(i9);
+                                            let tl1: &[u8] =
+                                                {
+                                                    let _input1: &[u8] = _letpattern9.0;
+                                                    let input2: &[u8] = _letpattern9.1;
+                                                    input2
+                                                };
+                                            let i10: usize = jump_raw_data_item(l2·, 0usize);
+                                            let _letpattern10: (&[u8], &[u8]) = l2·.split_at(i10);
+                                            let tl2: &[u8] =
+                                                {
+                                                    let _input1: &[u8] = _letpattern10.0;
+                                                    let input2: &[u8] = _letpattern10.1;
+                                                    input2
+                                                };
+                                            (&mut pn3)[0usize] = n·2;
+                                            (&mut pl11)[0usize] = tl1;
+                                            (&mut pl2)[0usize] = tl2
                                         }
+                                        else
                                         {
-                                            let mut pn4: [usize; 1] = [1usize; 1usize];
-                                            let mut pl12: [&[u8]; 1] = [lv; 1usize];
-                                            let mut pl21: [&[u8]; 1] = [lv1; 1usize];
-                                            let mut pres4: [option__bool; 1] =
-                                                [option__bool::Some { v: true }; 1usize];
-                                            let res2: option__bool = (&pres4)[0usize];
-                                            let n20: usize = (&pn4)[0usize];
-                                            let mut cond3: bool =
-                                                eq_Some_true(res2) && n20 > 0usize;
-                                            while
-                                            cond3
+                                            let i9: usize = jump_header(l1·, 0usize);
+                                            let _letpattern9: (&[u8], &[u8]) = l1·.split_at(i9);
+                                            let hd1: &[u8] = _letpattern9.0;
+                                            let tl1: &[u8] = _letpattern9.1;
+                                            let
+                                            h11:
+                                            dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                                            =
+                                                read_header(hd1);
+                                            let mt11: u8 = get_header_major_type(h11);
+                                            let i10: usize = jump_header(l2·, 0usize);
+                                            let _letpattern10: (&[u8], &[u8]) = l2·.split_at(i10);
+                                            let hd2: &[u8] = _letpattern10.0;
+                                            let tl2: &[u8] = _letpattern10.1;
+                                            let
+                                            h21:
+                                            dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                                            =
+                                                read_header(hd2);
+                                            let mt21: u8 = get_header_major_type(h21);
+                                            if mt11 != mt21
                                             {
-                                                let l1·: &[u8] = (&pl12)[0usize];
-                                                let l2·: &[u8] = (&pl21)[0usize];
-                                                let r: option__bool =
-                                                    impl_check_equiv_map_hd_basic(
-                                                        map_bound·,
-                                                        l1·,
-                                                        l2·
+                                                (&mut pres3)[0usize] =
+                                                    option__bool::Some { v: false }
+                                            }
+                                            else
+                                            {
+                                                let b: initial_byte_t = h11._1;
+                                                let i11: usize =
+                                                    if
+                                                    b.major_type == cbor_major_type_byte_string
+                                                    ||
+                                                    b.major_type == cbor_major_type_text_string
+                                                    { argument_as_uint64(h11._1, h11._2) as usize }
+                                                    else
+                                                    { 0usize };
+                                                let _letpattern11: (&[u8], &[u8]) =
+                                                    tl1.split_at(i11);
+                                                let lc1: &[u8] = _letpattern11.0;
+                                                let tl1·: &[u8] = _letpattern11.1;
+                                                let n·2: usize =
+                                                    (impl_remaining_data_items_header(h11)).wrapping_add(
+                                                        n20.wrapping_sub(1usize)
                                                     );
-                                                if
-                                                match r
-                                                {
-                                                    option__bool::None => true,
-                                                    _tmp => false,
-                                                    _ => panic!("Incomplete pattern matching")
-                                                }
-                                                { (&mut pres4)[0usize] = r }
-                                                else
-                                                {
-                                                    let n21: usize = (&pn4)[0usize];
-                                                    if eq_Some_true(r)
+                                                let b0: initial_byte_t = h21._1;
+                                                let i12: usize =
+                                                    if
+                                                    b0.major_type == cbor_major_type_byte_string
+                                                    ||
+                                                    b0.major_type == cbor_major_type_text_string
+                                                    { argument_as_uint64(h21._1, h21._2) as usize }
+                                                    else
+                                                    { 0usize };
+                                                let _letpattern12: (&[u8], &[u8]) =
+                                                    tl2.split_at(i12);
+                                                let lc2: &[u8] = _letpattern12.0;
+                                                let tl2·: &[u8] = _letpattern12.1;
+                                                let mt12: u8 = get_header_major_type(h11);
+                                                let __anf0: bool =
+                                                    if mt12 == cbor_major_type_simple_value
                                                     {
-                                                        let n·2: usize = n21.wrapping_sub(1usize);
-                                                        let i10: usize =
-                                                            jump_raw_data_item(l1·, 0usize);
-                                                        let _letpattern10: (&[u8], &[u8]) =
-                                                            l1·.split_at(i10);
-                                                        let tl1: &[u8] =
+                                                        let sv1: u8 =
+                                                            match
+                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                h11
+                                                            )
                                                             {
-                                                                let _input1: &[u8] =
-                                                                    _letpattern10.0;
-                                                                let input2: &[u8] = _letpattern10.1;
-                                                                input2
+                                                                long_argument::LongArgumentOther =>
+                                                                  (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                      h11
+                                                                  )).additional_info,
+                                                                long_argument::LongArgumentSimpleValue
+                                                                { v }
+                                                                => v,
+                                                                _ =>
+                                                                  panic!(
+                                                                      "Incomplete pattern matching"
+                                                                  )
                                                             };
-                                                        let i11: usize =
-                                                            jump_raw_data_item(l2·, 0usize);
-                                                        let _letpattern11: (&[u8], &[u8]) =
-                                                            l2·.split_at(i11);
-                                                        let tl2: &[u8] =
+                                                        let sv2: u8 =
+                                                            match
+                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                h21
+                                                            )
                                                             {
-                                                                let _input1: &[u8] =
-                                                                    _letpattern11.0;
-                                                                let input2: &[u8] = _letpattern11.1;
-                                                                input2
+                                                                long_argument::LongArgumentOther =>
+                                                                  (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                      h21
+                                                                  )).additional_info,
+                                                                long_argument::LongArgumentSimpleValue
+                                                                { v }
+                                                                => v,
+                                                                _ =>
+                                                                  panic!(
+                                                                      "Incomplete pattern matching"
+                                                                  )
                                                             };
-                                                        (&mut pn4)[0usize] = n·2;
-                                                        (&mut pl12)[0usize] = tl1;
-                                                        (&mut pl21)[0usize] = tl2
+                                                        sv1 == sv2
                                                     }
                                                     else
                                                     {
-                                                        let i10: usize = jump_header(l1·, 0usize);
-                                                        let _letpattern10: (&[u8], &[u8]) =
-                                                            l1·.split_at(i10);
-                                                        let hd1: &[u8] = _letpattern10.0;
-                                                        let tl1: &[u8] = _letpattern10.1;
-                                                        let
-                                                        h11:
-                                                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                                                        =
-                                                            read_header(hd1);
-                                                        let mt11: u8 = get_header_major_type(h11);
-                                                        let i11: usize = jump_header(l2·, 0usize);
-                                                        let _letpattern11: (&[u8], &[u8]) =
-                                                            l2·.split_at(i11);
-                                                        let hd2: &[u8] = _letpattern11.0;
-                                                        let tl2: &[u8] = _letpattern11.1;
-                                                        let
-                                                        h21:
-                                                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                                                        =
-                                                            read_header(hd2);
-                                                        let mt21: u8 = get_header_major_type(h21);
-                                                        if mt11 != mt21
+                                                        let len: u64 =
+                                                            argument_as_uint64(
+                                                                dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                    h11
+                                                                ),
+                                                                dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                    h11
+                                                                )
+                                                            );
+                                                        let len2: u64 =
+                                                            argument_as_uint64(
+                                                                dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                    h21
+                                                                ),
+                                                                dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                    h21
+                                                                )
+                                                            );
+                                                        if len != len2
+                                                        { false }
+                                                        else if
+                                                        mt12 == cbor_major_type_byte_string
+                                                        ||
+                                                        mt12 == cbor_major_type_text_string
+                                                        {
+                                                            let cmp: i16 =
+                                                                lex_compare_bytes(lc1, lc2);
+                                                            cmp == 0i16
+                                                        }
+                                                        else
+                                                        { mt12 != cbor_major_type_map }
+                                                    };
+                                                if __anf0
+                                                {
+                                                    (&mut pn3)[0usize] = n·2;
+                                                    (&mut pl11)[0usize] = tl1·;
+                                                    (&mut pl2)[0usize] = tl2·
+                                                }
+                                                else
+                                                {
+                                                    (&mut pres3)[0usize] =
+                                                        option__bool::Some { v: false }
+                                                }
+                                            }
+                                        }
+                                    };
+                                    let res12: option__bool = (&pres3)[0usize];
+                                    let n20: usize = (&pn3)[0usize];
+                                    cond2 = eq_Some_true(res12) && n20 > 0usize
+                                };
+                                let res12: option__bool = (&pres3)[0usize];
+                                if
+                                match res12
+                                {
+                                    option__bool::None => true,
+                                    _tmp => false,
+                                    _ => panic!("Incomplete pattern matching")
+                                }
+                                { (&mut pres2)[0usize] = res12 }
+                                else
+                                {
+                                    let i9: usize = jump_raw_data_item(lt1, 0usize);
+                                    let _letpattern9: (&[u8], &[u8]) = lt1.split_at(i9);
+                                    let lv1: &[u8] = _letpattern9.0;
+                                    let lt·1: &[u8] = _letpattern9.1;
+                                    if
+                                    match res12
+                                    {
+                                        option__bool::Some { v } => v,
+                                        _ => panic!("Incomplete pattern matching")
+                                    }
+                                    {
+                                        let mut pn4: [usize; 1] = [1usize; 1usize];
+                                        let mut pl12: [&[u8]; 1] = [lv; 1usize];
+                                        let mut pl21: [&[u8]; 1] = [lv1; 1usize];
+                                        let mut pres4: [option__bool; 1] =
+                                            [option__bool::Some { v: true }; 1usize];
+                                        let res2: option__bool = (&pres4)[0usize];
+                                        let n20: usize = (&pn4)[0usize];
+                                        let mut cond3: bool = eq_Some_true(res2) && n20 > 0usize;
+                                        while
+                                        cond3
+                                        {
+                                            let l1·: &[u8] = (&pl12)[0usize];
+                                            let l2·: &[u8] = (&pl21)[0usize];
+                                            let r: option__bool =
+                                                impl_check_equiv_map_hd_basic(
+                                                    map_bound·,
+                                                    l1·,
+                                                    l2·
+                                                );
+                                            if
+                                            match r
+                                            {
+                                                option__bool::None => true,
+                                                _tmp => false,
+                                                _ => panic!("Incomplete pattern matching")
+                                            }
+                                            { (&mut pres4)[0usize] = r }
+                                            else
+                                            {
+                                                let n21: usize = (&pn4)[0usize];
+                                                if eq_Some_true(r)
+                                                {
+                                                    let n·2: usize = n21.wrapping_sub(1usize);
+                                                    let i10: usize =
+                                                        jump_raw_data_item(l1·, 0usize);
+                                                    let _letpattern10: (&[u8], &[u8]) =
+                                                        l1·.split_at(i10);
+                                                    let tl1: &[u8] =
+                                                        {
+                                                            let _input1: &[u8] = _letpattern10.0;
+                                                            let input2: &[u8] = _letpattern10.1;
+                                                            input2
+                                                        };
+                                                    let i11: usize =
+                                                        jump_raw_data_item(l2·, 0usize);
+                                                    let _letpattern11: (&[u8], &[u8]) =
+                                                        l2·.split_at(i11);
+                                                    let tl2: &[u8] =
+                                                        {
+                                                            let _input1: &[u8] = _letpattern11.0;
+                                                            let input2: &[u8] = _letpattern11.1;
+                                                            input2
+                                                        };
+                                                    (&mut pn4)[0usize] = n·2;
+                                                    (&mut pl12)[0usize] = tl1;
+                                                    (&mut pl21)[0usize] = tl2
+                                                }
+                                                else
+                                                {
+                                                    let i10: usize = jump_header(l1·, 0usize);
+                                                    let _letpattern10: (&[u8], &[u8]) =
+                                                        l1·.split_at(i10);
+                                                    let hd1: &[u8] = _letpattern10.0;
+                                                    let tl1: &[u8] = _letpattern10.1;
+                                                    let
+                                                    h11:
+                                                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                                                    =
+                                                        read_header(hd1);
+                                                    let mt11: u8 = get_header_major_type(h11);
+                                                    let i11: usize = jump_header(l2·, 0usize);
+                                                    let _letpattern11: (&[u8], &[u8]) =
+                                                        l2·.split_at(i11);
+                                                    let hd2: &[u8] = _letpattern11.0;
+                                                    let tl2: &[u8] = _letpattern11.1;
+                                                    let
+                                                    h21:
+                                                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                                                    =
+                                                        read_header(hd2);
+                                                    let mt21: u8 = get_header_major_type(h21);
+                                                    if mt11 != mt21
+                                                    {
+                                                        (&mut pres4)[0usize] =
+                                                            option__bool::Some { v: false }
+                                                    }
+                                                    else
+                                                    {
+                                                        let b: initial_byte_t = h11._1;
+                                                        let i12: usize =
+                                                            if
+                                                            b.major_type
+                                                            ==
+                                                            cbor_major_type_byte_string
+                                                            ||
+                                                            b.major_type
+                                                            ==
+                                                            cbor_major_type_text_string
+                                                            {
+                                                                argument_as_uint64(h11._1, h11._2)
+                                                                as
+                                                                usize
+                                                            }
+                                                            else
+                                                            { 0usize };
+                                                        let _letpattern12: (&[u8], &[u8]) =
+                                                            tl1.split_at(i12);
+                                                        let lc1: &[u8] = _letpattern12.0;
+                                                        let tl1·: &[u8] = _letpattern12.1;
+                                                        let n·2: usize =
+                                                            (impl_remaining_data_items_header(h11)).wrapping_add(
+                                                                n21.wrapping_sub(1usize)
+                                                            );
+                                                        let b0: initial_byte_t = h21._1;
+                                                        let i13: usize =
+                                                            if
+                                                            b0.major_type
+                                                            ==
+                                                            cbor_major_type_byte_string
+                                                            ||
+                                                            b0.major_type
+                                                            ==
+                                                            cbor_major_type_text_string
+                                                            {
+                                                                argument_as_uint64(h21._1, h21._2)
+                                                                as
+                                                                usize
+                                                            }
+                                                            else
+                                                            { 0usize };
+                                                        let _letpattern13: (&[u8], &[u8]) =
+                                                            tl2.split_at(i13);
+                                                        let lc2: &[u8] = _letpattern13.0;
+                                                        let tl2·: &[u8] = _letpattern13.1;
+                                                        let mt12: u8 = get_header_major_type(h11);
+                                                        let __anf0: bool =
+                                                            if mt12 == cbor_major_type_simple_value
+                                                            {
+                                                                let sv1: u8 =
+                                                                    match
+                                                                    dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                        h11
+                                                                    )
+                                                                    {
+                                                                        long_argument::LongArgumentOther
+                                                                        =>
+                                                                          (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                              h11
+                                                                          )).additional_info,
+                                                                        long_argument::LongArgumentSimpleValue
+                                                                        { v }
+                                                                        => v,
+                                                                        _ =>
+                                                                          panic!(
+                                                                              "Incomplete pattern matching"
+                                                                          )
+                                                                    };
+                                                                let sv2: u8 =
+                                                                    match
+                                                                    dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                        h21
+                                                                    )
+                                                                    {
+                                                                        long_argument::LongArgumentOther
+                                                                        =>
+                                                                          (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                              h21
+                                                                          )).additional_info,
+                                                                        long_argument::LongArgumentSimpleValue
+                                                                        { v }
+                                                                        => v,
+                                                                        _ =>
+                                                                          panic!(
+                                                                              "Incomplete pattern matching"
+                                                                          )
+                                                                    };
+                                                                sv1 == sv2
+                                                            }
+                                                            else
+                                                            {
+                                                                let len: u64 =
+                                                                    argument_as_uint64(
+                                                                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                            h11
+                                                                        ),
+                                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                            h11
+                                                                        )
+                                                                    );
+                                                                let len2: u64 =
+                                                                    argument_as_uint64(
+                                                                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                            h21
+                                                                        ),
+                                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                                                            h21
+                                                                        )
+                                                                    );
+                                                                if len != len2
+                                                                { false }
+                                                                else if
+                                                                mt12 == cbor_major_type_byte_string
+                                                                ||
+                                                                mt12 == cbor_major_type_text_string
+                                                                {
+                                                                    let cmp: i16 =
+                                                                        lex_compare_bytes(lc1, lc2);
+                                                                    cmp == 0i16
+                                                                }
+                                                                else
+                                                                { mt12 != cbor_major_type_map }
+                                                            };
+                                                        if __anf0
+                                                        {
+                                                            (&mut pn4)[0usize] = n·2;
+                                                            (&mut pl12)[0usize] = tl1·;
+                                                            (&mut pl21)[0usize] = tl2·
+                                                        }
+                                                        else
                                                         {
                                                             (&mut pres4)[0usize] =
                                                                 option__bool::Some { v: false }
                                                         }
-                                                        else
-                                                        {
-                                                            let b: initial_byte_t = h11._1;
-                                                            let i12: usize =
-                                                                if
-                                                                b.major_type
-                                                                ==
-                                                                cbor_major_type_byte_string
-                                                                ||
-                                                                b.major_type
-                                                                ==
-                                                                cbor_major_type_text_string
-                                                                {
-                                                                    argument_as_uint64(
-                                                                        h11._1,
-                                                                        h11._2
-                                                                    )
-                                                                    as
-                                                                    usize
-                                                                }
-                                                                else
-                                                                { 0usize };
-                                                            let _letpattern12: (&[u8], &[u8]) =
-                                                                tl1.split_at(i12);
-                                                            let lc1: &[u8] = _letpattern12.0;
-                                                            let tl1·: &[u8] = _letpattern12.1;
-                                                            let n·2: usize =
-                                                                (impl_remaining_data_items_header(
-                                                                    h11
-                                                                )).wrapping_add(
-                                                                    n21.wrapping_sub(1usize)
-                                                                );
-                                                            let b0: initial_byte_t = h21._1;
-                                                            let i13: usize =
-                                                                if
-                                                                b0.major_type
-                                                                ==
-                                                                cbor_major_type_byte_string
-                                                                ||
-                                                                b0.major_type
-                                                                ==
-                                                                cbor_major_type_text_string
-                                                                {
-                                                                    argument_as_uint64(
-                                                                        h21._1,
-                                                                        h21._2
-                                                                    )
-                                                                    as
-                                                                    usize
-                                                                }
-                                                                else
-                                                                { 0usize };
-                                                            let _letpattern13: (&[u8], &[u8]) =
-                                                                tl2.split_at(i13);
-                                                            let lc2: &[u8] = _letpattern13.0;
-                                                            let tl2·: &[u8] = _letpattern13.1;
-                                                            let mt12: u8 =
-                                                                get_header_major_type(h11);
-                                                            let __anf01: bool =
-                                                                if
-                                                                mt12 == cbor_major_type_simple_value
-                                                                {
-                                                                    let sv1: u8 =
-                                                                        match
-                                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                            h11
-                                                                        )
-                                                                        {
-                                                                            long_argument::LongArgumentOther
-                                                                            =>
-                                                                              (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                                  h11
-                                                                              )).additional_info,
-                                                                            long_argument::LongArgumentSimpleValue
-                                                                            { v }
-                                                                            => v,
-                                                                            _ =>
-                                                                              panic!(
-                                                                                  "Incomplete pattern matching"
-                                                                              )
-                                                                        };
-                                                                    let sv2: u8 =
-                                                                        match
-                                                                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                            h21
-                                                                        )
-                                                                        {
-                                                                            long_argument::LongArgumentOther
-                                                                            =>
-                                                                              (dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                                  h21
-                                                                              )).additional_info,
-                                                                            long_argument::LongArgumentSimpleValue
-                                                                            { v }
-                                                                            => v,
-                                                                            _ =>
-                                                                              panic!(
-                                                                                  "Incomplete pattern matching"
-                                                                              )
-                                                                        };
-                                                                    sv1 == sv2
-                                                                }
-                                                                else
-                                                                {
-                                                                    let len: u64 =
-                                                                        argument_as_uint64(
-                                                                            dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                                h11
-                                                                            ),
-                                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                                h11
-                                                                            )
-                                                                        );
-                                                                    let len2: u64 =
-                                                                        argument_as_uint64(
-                                                                            dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                                h21
-                                                                            ),
-                                                                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                                                                h21
-                                                                            )
-                                                                        );
-                                                                    if len != len2
-                                                                    { false }
-                                                                    else if
-                                                                    mt12
-                                                                    ==
-                                                                    cbor_major_type_byte_string
-                                                                    ||
-                                                                    mt12
-                                                                    ==
-                                                                    cbor_major_type_text_string
-                                                                    {
-                                                                        let cmp: i16 =
-                                                                            lex_compare_bytes(
-                                                                                lc1,
-                                                                                lc2
-                                                                            );
-                                                                        cmp == 0i16
-                                                                    }
-                                                                    else
-                                                                    { mt12 != cbor_major_type_map }
-                                                                };
-                                                            if __anf01
-                                                            {
-                                                                (&mut pn4)[0usize] = n·2;
-                                                                (&mut pl12)[0usize] = tl1·;
-                                                                (&mut pl21)[0usize] = tl2·
-                                                            }
-                                                            else
-                                                            {
-                                                                (&mut pres4)[0usize] =
-                                                                    option__bool::Some { v: false }
-                                                            }
-                                                        }
                                                     }
-                                                };
-                                                let res20: option__bool = (&pres4)[0usize];
-                                                let n21: usize = (&pn4)[0usize];
-                                                cond3 = eq_Some_true(res20) && n21 > 0usize
+                                                }
                                             };
-                                            let __anf01: option__bool = (&pres4)[0usize];
-                                            (&mut pres2)[0usize] = __anf01;
-                                            (&mut pcont)[0usize] = false
-                                        }
-                                        else
-                                        {
-                                            (&mut pll)[0usize] = lt·1;
-                                            (&mut pn2)[0usize] = n·1
-                                        }
+                                            let res20: option__bool = (&pres4)[0usize];
+                                            let n21: usize = (&pn4)[0usize];
+                                            cond3 = eq_Some_true(res20) && n21 > 0usize
+                                        };
+                                        let __anf0: option__bool = (&pres4)[0usize];
+                                        (&mut pres2)[0usize] = __anf0;
+                                        (&mut pcont)[0usize] = false
                                     }
-                                };
-                                let n12: usize = (&pn2)[0usize];
-                                let res11: option__bool = (&pres2)[0usize];
-                                let cont0: bool = (&pcont)[0usize];
-                                cond1 = n12 > 0usize && eq_Some_false(res11) && cont0
+                                    else
+                                    {
+                                        (&mut pll)[0usize] = lt·1;
+                                        (&mut pn2)[0usize] = n·1
+                                    }
+                                }
                             };
+                            let n12: usize = (&pn2)[0usize];
                             let res11: option__bool = (&pres2)[0usize];
-                            if eq_Some_true(res11)
-                            {
-                                (&mut pl1)[0usize] = lt·;
-                                (&mut pn1)[0usize] = n·
-                            }
-                            else
-                            { (&mut pres1)[0usize] = res11 }
+                            let cont0: bool = (&pcont)[0usize];
+                            cond1 = n12 > 0usize && eq_Some_false(res11) && cont0
                         };
-                        let n2: usize = (&pn1)[0usize];
-                        let res10: option__bool = (&pres1)[0usize];
-                        cond0 = n2 > 0usize && eq_Some_true(res10)
+                        let res11: option__bool = (&pres2)[0usize];
+                        if eq_Some_true(res11)
+                        {
+                            (&mut pl1)[0usize] = lt·;
+                            (&mut pn1)[0usize] = n·
+                        }
+                        else
+                        { (&mut pres1)[0usize] = res11 }
                     };
-                    (&pres1)[0usize]
-                }
-                else
-                { res0 }
+                    let n2: usize = (&pn1)[0usize];
+                    let res10: option__bool = (&pres1)[0usize];
+                    cond0 = n2 > 0usize && eq_Some_true(res10)
+                };
+                (&pres1)[0usize]
             }
+            else
+            { res0 }
         }
-        else
-        { option__bool::Some { v: false } }
     }
+    else
+    { option__bool::Some { v: false } }
 }
 
 fn impl_check_equiv_list_basic(

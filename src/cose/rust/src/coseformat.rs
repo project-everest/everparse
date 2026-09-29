@@ -13814,38 +13814,37 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                         else
                         {
                             let x: u8 = s[0usize];
-                            let i·: usize = 1usize;
                             if x == 83u8
                             {
-                                let x1: u8 = s[i·];
-                                let i·1: usize = i·.wrapping_add(1usize);
+                                let x1: u8 = s[1usize];
+                                let i·: usize = 2usize;
                                 if x1 == 105u8
                                 {
-                                    let x2: u8 = s[i·1];
-                                    let i·2: usize = i·1.wrapping_add(1usize);
+                                    let x2: u8 = s[i·];
+                                    let i·1: usize = i·.wrapping_add(1usize);
                                     if x2 == 103u8
                                     {
-                                        let x3: u8 = s[i·2];
-                                        let i·3: usize = i·2.wrapping_add(1usize);
+                                        let x3: u8 = s[i·1];
+                                        let i·2: usize = i·1.wrapping_add(1usize);
                                         if x3 == 110u8
                                         {
-                                            let x4: u8 = s[i·3];
-                                            let i·4: usize = i·3.wrapping_add(1usize);
+                                            let x4: u8 = s[i·2];
+                                            let i·3: usize = i·2.wrapping_add(1usize);
                                             if x4 == 97u8
                                             {
-                                                let x5: u8 = s[i·4];
-                                                let i·5: usize = i·4.wrapping_add(1usize);
+                                                let x5: u8 = s[i·3];
+                                                let i·4: usize = i·3.wrapping_add(1usize);
                                                 if x5 == 116u8
                                                 {
-                                                    let x6: u8 = s[i·5];
-                                                    let i·6: usize = i·5.wrapping_add(1usize);
+                                                    let x6: u8 = s[i·4];
+                                                    let i·5: usize = i·4.wrapping_add(1usize);
                                                     if x6 == 117u8
                                                     {
-                                                        let x7: u8 = s[i·6];
-                                                        let i·7: usize = i·6.wrapping_add(1usize);
+                                                        let x7: u8 = s[i·5];
+                                                        let i·6: usize = i·5.wrapping_add(1usize);
                                                         if x7 == 114u8
                                                         {
-                                                            let x8: u8 = s[i·7];
+                                                            let x8: u8 = s[i·6];
                                                             x8 == 101u8
                                                         }
                                                         else
@@ -13897,43 +13896,42 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                         else
                         {
                             let x: u8 = s[0usize];
-                            let i·: usize = 1usize;
                             if x == 83u8
                             {
-                                let x1: u8 = s[i·];
-                                let i·1: usize = i·.wrapping_add(1usize);
+                                let x1: u8 = s[1usize];
+                                let i·: usize = 2usize;
                                 if x1 == 105u8
                                 {
-                                    let x2: u8 = s[i·1];
-                                    let i·2: usize = i·1.wrapping_add(1usize);
+                                    let x2: u8 = s[i·];
+                                    let i·1: usize = i·.wrapping_add(1usize);
                                     if x2 == 103u8
                                     {
-                                        let x3: u8 = s[i·2];
-                                        let i·3: usize = i·2.wrapping_add(1usize);
+                                        let x3: u8 = s[i·1];
+                                        let i·2: usize = i·1.wrapping_add(1usize);
                                         if x3 == 110u8
                                         {
-                                            let x4: u8 = s[i·3];
-                                            let i·4: usize = i·3.wrapping_add(1usize);
+                                            let x4: u8 = s[i·2];
+                                            let i·3: usize = i·2.wrapping_add(1usize);
                                             if x4 == 97u8
                                             {
-                                                let x5: u8 = s[i·4];
-                                                let i·5: usize = i·4.wrapping_add(1usize);
+                                                let x5: u8 = s[i·3];
+                                                let i·4: usize = i·3.wrapping_add(1usize);
                                                 if x5 == 116u8
                                                 {
-                                                    let x6: u8 = s[i·5];
-                                                    let i·6: usize = i·5.wrapping_add(1usize);
+                                                    let x6: u8 = s[i·4];
+                                                    let i·5: usize = i·4.wrapping_add(1usize);
                                                     if x6 == 117u8
                                                     {
-                                                        let x7: u8 = s[i·6];
-                                                        let i·7: usize = i·6.wrapping_add(1usize);
+                                                        let x7: u8 = s[i·5];
+                                                        let i·6: usize = i·5.wrapping_add(1usize);
                                                         if x7 == 114u8
                                                         {
-                                                            let x8: u8 = s[i·7];
-                                                            let i·8: usize =
-                                                                i·7.wrapping_add(1usize);
+                                                            let x8: u8 = s[i·6];
+                                                            let i·7: usize =
+                                                                i·6.wrapping_add(1usize);
                                                             if x8 == 101u8
                                                             {
-                                                                let x9: u8 = s[i·8];
+                                                                let x9: u8 = s[i·7];
                                                                 x9 == 49u8
                                                             }
                                                             else
@@ -14188,38 +14186,37 @@ parse_sig_structure
                     else
                     {
                         let x: u8 = s[0usize];
-                        let i·: usize = 1usize;
                         if x == 83u8
                         {
-                            let x1: u8 = s[i·];
-                            let i·1: usize = i·.wrapping_add(1usize);
+                            let x1: u8 = s[1usize];
+                            let i·: usize = 2usize;
                             if x1 == 105u8
                             {
-                                let x2: u8 = s[i·1];
-                                let i·2: usize = i·1.wrapping_add(1usize);
+                                let x2: u8 = s[i·];
+                                let i·1: usize = i·.wrapping_add(1usize);
                                 if x2 == 103u8
                                 {
-                                    let x3: u8 = s[i·2];
-                                    let i·3: usize = i·2.wrapping_add(1usize);
+                                    let x3: u8 = s[i·1];
+                                    let i·2: usize = i·1.wrapping_add(1usize);
                                     if x3 == 110u8
                                     {
-                                        let x4: u8 = s[i·3];
-                                        let i·4: usize = i·3.wrapping_add(1usize);
+                                        let x4: u8 = s[i·2];
+                                        let i·3: usize = i·2.wrapping_add(1usize);
                                         if x4 == 97u8
                                         {
-                                            let x5: u8 = s[i·4];
-                                            let i·5: usize = i·4.wrapping_add(1usize);
+                                            let x5: u8 = s[i·3];
+                                            let i·4: usize = i·3.wrapping_add(1usize);
                                             if x5 == 116u8
                                             {
-                                                let x6: u8 = s[i·5];
-                                                let i·6: usize = i·5.wrapping_add(1usize);
+                                                let x6: u8 = s[i·4];
+                                                let i·5: usize = i·4.wrapping_add(1usize);
                                                 if x6 == 117u8
                                                 {
-                                                    let x7: u8 = s[i·6];
-                                                    let i·7: usize = i·6.wrapping_add(1usize);
+                                                    let x7: u8 = s[i·5];
+                                                    let i·6: usize = i·5.wrapping_add(1usize);
                                                     if x7 == 114u8
                                                     {
-                                                        let x8: u8 = s[i·7];
+                                                        let x8: u8 = s[i·6];
                                                         x8 == 101u8
                                                     }
                                                     else
@@ -14271,42 +14268,41 @@ parse_sig_structure
                     else
                     {
                         let x: u8 = s[0usize];
-                        let i·: usize = 1usize;
                         if x == 83u8
                         {
-                            let x1: u8 = s[i·];
-                            let i·1: usize = i·.wrapping_add(1usize);
+                            let x1: u8 = s[1usize];
+                            let i·: usize = 2usize;
                             if x1 == 105u8
                             {
-                                let x2: u8 = s[i·1];
-                                let i·2: usize = i·1.wrapping_add(1usize);
+                                let x2: u8 = s[i·];
+                                let i·1: usize = i·.wrapping_add(1usize);
                                 if x2 == 103u8
                                 {
-                                    let x3: u8 = s[i·2];
-                                    let i·3: usize = i·2.wrapping_add(1usize);
+                                    let x3: u8 = s[i·1];
+                                    let i·2: usize = i·1.wrapping_add(1usize);
                                     if x3 == 110u8
                                     {
-                                        let x4: u8 = s[i·3];
-                                        let i·4: usize = i·3.wrapping_add(1usize);
+                                        let x4: u8 = s[i·2];
+                                        let i·3: usize = i·2.wrapping_add(1usize);
                                         if x4 == 97u8
                                         {
-                                            let x5: u8 = s[i·4];
-                                            let i·5: usize = i·4.wrapping_add(1usize);
+                                            let x5: u8 = s[i·3];
+                                            let i·4: usize = i·3.wrapping_add(1usize);
                                             if x5 == 116u8
                                             {
-                                                let x6: u8 = s[i·5];
-                                                let i·6: usize = i·5.wrapping_add(1usize);
+                                                let x6: u8 = s[i·4];
+                                                let i·5: usize = i·4.wrapping_add(1usize);
                                                 if x6 == 117u8
                                                 {
-                                                    let x7: u8 = s[i·6];
-                                                    let i·7: usize = i·6.wrapping_add(1usize);
+                                                    let x7: u8 = s[i·5];
+                                                    let i·6: usize = i·5.wrapping_add(1usize);
                                                     if x7 == 114u8
                                                     {
-                                                        let x8: u8 = s[i·7];
-                                                        let i·8: usize = i·7.wrapping_add(1usize);
+                                                        let x8: u8 = s[i·6];
+                                                        let i·7: usize = i·6.wrapping_add(1usize);
                                                         if x8 == 101u8
                                                         {
-                                                            let x9: u8 = s[i·8];
+                                                            let x9: u8 = s[i·7];
                                                             x9 == 49u8
                                                         }
                                                         else
@@ -14368,38 +14364,37 @@ parse_sig_structure
             else
             {
                 let x1: u8 = s[0usize];
-                let i·: usize = 1usize;
                 if x1 == 83u8
                 {
-                    let x2: u8 = s[i·];
-                    let i·1: usize = i·.wrapping_add(1usize);
+                    let x2: u8 = s[1usize];
+                    let i·: usize = 2usize;
                     if x2 == 105u8
                     {
-                        let x3: u8 = s[i·1];
-                        let i·2: usize = i·1.wrapping_add(1usize);
+                        let x3: u8 = s[i·];
+                        let i·1: usize = i·.wrapping_add(1usize);
                         if x3 == 103u8
                         {
-                            let x4: u8 = s[i·2];
-                            let i·3: usize = i·2.wrapping_add(1usize);
+                            let x4: u8 = s[i·1];
+                            let i·2: usize = i·1.wrapping_add(1usize);
                             if x4 == 110u8
                             {
-                                let x5: u8 = s[i·3];
-                                let i·4: usize = i·3.wrapping_add(1usize);
+                                let x5: u8 = s[i·2];
+                                let i·3: usize = i·2.wrapping_add(1usize);
                                 if x5 == 97u8
                                 {
-                                    let x6: u8 = s[i·4];
-                                    let i·5: usize = i·4.wrapping_add(1usize);
+                                    let x6: u8 = s[i·3];
+                                    let i·4: usize = i·3.wrapping_add(1usize);
                                     if x6 == 116u8
                                     {
-                                        let x7: u8 = s[i·5];
-                                        let i·6: usize = i·5.wrapping_add(1usize);
+                                        let x7: u8 = s[i·4];
+                                        let i·5: usize = i·4.wrapping_add(1usize);
                                         if x7 == 117u8
                                         {
-                                            let x8: u8 = s[i·6];
-                                            let i·7: usize = i·6.wrapping_add(1usize);
+                                            let x8: u8 = s[i·5];
+                                            let i·6: usize = i·5.wrapping_add(1usize);
                                             if x8 == 114u8
                                             {
-                                                let x9: u8 = s[i·7];
+                                                let x9: u8 = s[i·6];
                                                 x9 == 101u8
                                             }
                                             else
@@ -14692,22 +14687,21 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                                   let len_sz: usize = 9u64 as usize;
                                   let s: &mut [u8] = &mut a;
                                   s[0usize] = 83u8;
-                                  let i·: usize = 1usize;
-                                  s[i·] = 105u8;
+                                  s[1usize] = 105u8;
+                                  let i·: usize = 2usize;
+                                  s[i·] = 103u8;
                                   let i·1: usize = i·.wrapping_add(1usize);
-                                  s[i·1] = 103u8;
+                                  s[i·1] = 110u8;
                                   let i·2: usize = i·1.wrapping_add(1usize);
-                                  s[i·2] = 110u8;
+                                  s[i·2] = 97u8;
                                   let i·3: usize = i·2.wrapping_add(1usize);
-                                  s[i·3] = 97u8;
+                                  s[i·3] = 116u8;
                                   let i·4: usize = i·3.wrapping_add(1usize);
-                                  s[i·4] = 116u8;
+                                  s[i·4] = 117u8;
                                   let i·5: usize = i·4.wrapping_add(1usize);
-                                  s[i·5] = 117u8;
+                                  s[i·5] = 114u8;
                                   let i·6: usize = i·5.wrapping_add(1usize);
-                                  s[i·6] = 114u8;
-                                  let i·7: usize = i·6.wrapping_add(1usize);
-                                  s[i·7] = 101u8;
+                                  s[i·6] = 101u8;
                                   let mty: crate::cbordetver::cbor_det_string_kind =
                                       if
                                       crate::cbordetveraux::cbor_major_type_text_string
@@ -14742,24 +14736,23 @@ serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
                                   let len_sz: usize = 10u64 as usize;
                                   let s: &mut [u8] = &mut a;
                                   s[0usize] = 83u8;
-                                  let i·: usize = 1usize;
-                                  s[i·] = 105u8;
+                                  s[1usize] = 105u8;
+                                  let i·: usize = 2usize;
+                                  s[i·] = 103u8;
                                   let i·1: usize = i·.wrapping_add(1usize);
-                                  s[i·1] = 103u8;
+                                  s[i·1] = 110u8;
                                   let i·2: usize = i·1.wrapping_add(1usize);
-                                  s[i·2] = 110u8;
+                                  s[i·2] = 97u8;
                                   let i·3: usize = i·2.wrapping_add(1usize);
-                                  s[i·3] = 97u8;
+                                  s[i·3] = 116u8;
                                   let i·4: usize = i·3.wrapping_add(1usize);
-                                  s[i·4] = 116u8;
+                                  s[i·4] = 117u8;
                                   let i·5: usize = i·4.wrapping_add(1usize);
-                                  s[i·5] = 117u8;
+                                  s[i·5] = 114u8;
                                   let i·6: usize = i·5.wrapping_add(1usize);
-                                  s[i·6] = 114u8;
+                                  s[i·6] = 101u8;
                                   let i·7: usize = i·6.wrapping_add(1usize);
-                                  s[i·7] = 101u8;
-                                  let i·8: usize = i·7.wrapping_add(1usize);
-                                  s[i·8] = 49u8;
+                                  s[i·7] = 49u8;
                                   let mty: crate::cbordetver::cbor_det_string_kind =
                                       if
                                       crate::cbordetveraux::cbor_major_type_text_string

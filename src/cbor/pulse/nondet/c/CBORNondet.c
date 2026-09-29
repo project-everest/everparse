@@ -509,11 +509,13 @@ CBOR_Pulse_Raw_EverParse_Format_read_header(CBOR_Pulse_Raw_Slice_byte_slice inpu
     last3 =
       Pulse_Lib_Slice_op_Array_Access__uint8_t(input2,
         (size_t)7U - (size_t)1U - (size_t)1U - (size_t)1U);
-    size_t pos_4 = (size_t)7U - (size_t)1U - (size_t)1U - (size_t)1U - (size_t)1U;
-    uint8_t last4 = Pulse_Lib_Slice_op_Array_Access__uint8_t(input2, pos_4);
-    size_t pos_5 = pos_4 - (size_t)1U;
-    uint8_t last5 = Pulse_Lib_Slice_op_Array_Access__uint8_t(input2, pos_5);
-    uint8_t last6 = Pulse_Lib_Slice_op_Array_Access__uint8_t(input2, pos_5 - (size_t)1U);
+    uint8_t
+    last4 =
+      Pulse_Lib_Slice_op_Array_Access__uint8_t(input2,
+        (size_t)7U - (size_t)1U - (size_t)1U - (size_t)1U - (size_t)1U);
+    size_t pos_4 = (size_t)7U - (size_t)1U - (size_t)1U - (size_t)1U - (size_t)1U - (size_t)1U;
+    uint8_t last5 = Pulse_Lib_Slice_op_Array_Access__uint8_t(input2, pos_4);
+    uint8_t last6 = Pulse_Lib_Slice_op_Array_Access__uint8_t(input2, pos_4 - (size_t)1U);
     ite =
       (
         (CBOR_Spec_Raw_EverParse_long_argument){
