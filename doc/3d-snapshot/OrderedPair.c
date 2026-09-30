@@ -14,84 +14,84 @@ OrderedPairValidateOrderedPair(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterOrderedPair;
-  uint64_t positionAfterlesser;
+  BOOLEAN hasBytesForLesser = (InputLength - StartPosition) >= 4ULL;
+  uint64_t positionAfterLesserOrError;
+  uint64_t positionAfterLesser;
   uint32_t lesser;
-  BOOLEAN hasBytes;
-  uint64_t positionAftergreater_refinement;
-  uint64_t positionAfterOrderedPair0;
+  BOOLEAN hasBytesForGreater_refinement;
+  uint64_t positionAfterGreater_refinement;
+  uint64_t positionAfterGreater_refinementOrError;
   uint32_t greater_refinement;
   BOOLEAN greater_refinementConstraintIsOk;
-  if (hasBytes0)
+  if (hasBytesForLesser)
   {
-    positionAfterOrderedPair = StartPosition + 4ULL;
+    positionAfterLesserOrError = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterOrderedPair =
+    positionAfterLesserOrError =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterOrderedPair))
+  if (EverParseIsSuccess(positionAfterLesserOrError))
   {
-    positionAfterlesser = positionAfterOrderedPair;
+    positionAfterLesser = positionAfterLesserOrError;
   }
   else
   {
     ErrorHandlerFn("_orderedPair",
       "lesser",
-      EverParseErrorReasonOfResult(positionAfterOrderedPair),
-      EverParseGetValidatorErrorKind(positionAfterOrderedPair),
+      EverParseErrorReasonOfResult(positionAfterLesserOrError),
+      EverParseGetValidatorErrorKind(positionAfterLesserOrError),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterlesser = positionAfterOrderedPair;
+    positionAfterLesser = positionAfterLesserOrError;
   }
-  if (EverParseIsError(positionAfterlesser))
+  if (EverParseIsError(positionAfterLesser))
   {
-    return positionAfterlesser;
+    return positionAfterLesser;
   }
   lesser = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field greater */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterlesser) >= 4ULL;
-  if (hasBytes)
+  hasBytesForGreater_refinement = (InputLength - positionAfterLesser) >= 4ULL;
+  if (hasBytesForGreater_refinement)
   {
-    positionAftergreater_refinement = positionAfterlesser + 4ULL;
+    positionAfterGreater_refinement = positionAfterLesser + 4ULL;
   }
   else
   {
-    positionAftergreater_refinement =
+    positionAfterGreater_refinement =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterlesser);
+        positionAfterLesser);
   }
-  if (EverParseIsError(positionAftergreater_refinement))
+  if (EverParseIsError(positionAfterGreater_refinement))
   {
-    positionAfterOrderedPair0 = positionAftergreater_refinement;
+    positionAfterGreater_refinementOrError = positionAfterGreater_refinement;
   }
   else
   {
     /* reading field_value */
-    greater_refinement = Load32Le(Input + (uint32_t)positionAfterlesser);
+    greater_refinement = Load32Le(Input + (uint32_t)positionAfterLesser);
     /* start: checking constraint */
     greater_refinementConstraintIsOk = lesser <= greater_refinement;
     /* end: checking constraint */
-    positionAfterOrderedPair0 =
+    positionAfterGreater_refinementOrError =
       EverParseCheckConstraintOk(greater_refinementConstraintIsOk,
-        positionAftergreater_refinement);
+        positionAfterGreater_refinement);
   }
-  if (EverParseIsSuccess(positionAfterOrderedPair0))
+  if (EverParseIsSuccess(positionAfterGreater_refinementOrError))
   {
-    return positionAfterOrderedPair0;
+    return positionAfterGreater_refinementOrError;
   }
   ErrorHandlerFn("_orderedPair",
     "greater.refinement",
-    EverParseErrorReasonOfResult(positionAfterOrderedPair0),
-    EverParseGetValidatorErrorKind(positionAfterOrderedPair0),
+    EverParseErrorReasonOfResult(positionAfterGreater_refinementOrError),
+    EverParseGetValidatorErrorKind(positionAfterGreater_refinementOrError),
     Ctxt,
     Input,
-    positionAfterlesser);
-  return positionAfterOrderedPair0;
+    positionAfterLesser);
+  return positionAfterGreater_refinementOrError;
 }
 
