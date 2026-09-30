@@ -16,11 +16,11 @@ GetFieldPtrValidateT(
 {
   /* Validating field f1 */
   BOOLEAN hasBytesForF1 = (InputLength - StartPosition) >= (uint64_t)10U;
-  uint64_t res0;
+  uint64_t resForF1;
   uint64_t positionAfterF10;
   uint64_t positionAfterF1;
   BOOLEAN hasBytesForF2_base;
-  uint64_t res;
+  uint64_t resForF2_base;
   uint64_t positionAfterF2_base;
   uint64_t positionAfterF20;
   uint64_t positionAfterF2;
@@ -28,13 +28,15 @@ GetFieldPtrValidateT(
   BOOLEAN actionSuccessF2;
   if (hasBytesForF1)
   {
-    res0 = StartPosition + (uint64_t)10U;
+    resForF1 = StartPosition + (uint64_t)10U;
   }
   else
   {
-    res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForF1 =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterF10 = res0;
+  positionAfterF10 = resForF1;
   if (EverParseIsSuccess(positionAfterF10))
   {
     positionAfterF1 = positionAfterF10;
@@ -58,13 +60,15 @@ GetFieldPtrValidateT(
   hasBytesForF2_base = (InputLength - positionAfterF1) >= (uint64_t)20U;
   if (hasBytesForF2_base)
   {
-    res = positionAfterF1 + (uint64_t)20U;
+    resForF2_base = positionAfterF1 + (uint64_t)20U;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterF1);
+    resForF2_base =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        positionAfterF1);
   }
-  positionAfterF2_base = res;
+  positionAfterF2_base = resForF2_base;
   if (EverParseIsSuccess(positionAfterF2_base))
   {
     positionAfterF20 = positionAfterF2_base;
@@ -118,11 +122,11 @@ GetFieldPtrValidateTact(
 {
   /* Validating field f1 */
   BOOLEAN hasBytesForF1 = (InputLength - StartPosition) >= (uint64_t)10U;
-  uint64_t res0;
+  uint64_t resForF1;
   uint64_t positionAfterF10;
   uint64_t positionAfterF1;
   BOOLEAN hasBytesForF2_base;
-  uint64_t res;
+  uint64_t resForF2_base;
   uint64_t positionAfterF2_base;
   uint64_t positionAfterF20;
   uint64_t positionAfterF2;
@@ -130,13 +134,15 @@ GetFieldPtrValidateTact(
   BOOLEAN actionSuccessF2;
   if (hasBytesForF1)
   {
-    res0 = StartPosition + (uint64_t)10U;
+    resForF1 = StartPosition + (uint64_t)10U;
   }
   else
   {
-    res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForF1 =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterF10 = res0;
+  positionAfterF10 = resForF1;
   if (EverParseIsSuccess(positionAfterF10))
   {
     positionAfterF1 = positionAfterF10;
@@ -160,13 +166,15 @@ GetFieldPtrValidateTact(
   hasBytesForF2_base = (InputLength - positionAfterF1) >= (uint64_t)20U;
   if (hasBytesForF2_base)
   {
-    res = positionAfterF1 + (uint64_t)20U;
+    resForF2_base = positionAfterF1 + (uint64_t)20U;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterF1);
+    resForF2_base =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        positionAfterF1);
   }
-  positionAfterF2_base = res;
+  positionAfterF2_base = resForF2_base;
   if (EverParseIsSuccess(positionAfterF2_base))
   {
     positionAfterF20 = positionAfterF2_base;

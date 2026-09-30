@@ -50,17 +50,19 @@ BaseValidatePair(
 )
 {
   BOOLEAN hasBytesForFirstSecond = (InputLength - StartPosition) >= 8ULL;
-  uint64_t res;
+  uint64_t resForFirstSecond;
   uint64_t positionAfterFirst;
   if (hasBytesForFirstSecond)
   {
-    res = StartPosition + 8ULL;
+    resForFirstSecond = StartPosition + 8ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForFirstSecond =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterFirst = res;
+  positionAfterFirst = resForFirstSecond;
   if (EverParseIsSuccess(positionAfterFirst))
   {
     return positionAfterFirst;

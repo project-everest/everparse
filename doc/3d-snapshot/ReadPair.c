@@ -21,13 +21,13 @@ ReadPairValidatePair(
   uint64_t positionAfterFirst0;
   uint64_t positionAfterFirst1;
   uint32_t first;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForFirst;
   uint64_t positionAfterFirst;
   BOOLEAN hasBytesForSecond;
   uint64_t positionAfterSecond0;
   uint64_t positionAfterSecond;
   uint32_t second;
-  BOOLEAN actionResult0;
+  BOOLEAN actionResultForSecond;
   if (hasBytesForFirst)
   {
     positionAfterFirst0 = StartPosition + 4ULL;
@@ -46,8 +46,8 @@ ReadPairValidatePair(
   {
     first = Load32Le(Input + (uint32_t)StartPosition);
     *X = first;
-    actionResult = TRUE;
-    KRML_MAYBE_UNUSED_VAR(actionResult);
+    actionResultForFirst = TRUE;
+    KRML_MAYBE_UNUSED_VAR(actionResultForFirst);
     positionAfterFirst1 = positionAfterFirst0;
   }
   if (EverParseIsSuccess(positionAfterFirst1))
@@ -90,8 +90,8 @@ ReadPairValidatePair(
   {
     second = Load32Le(Input + (uint32_t)positionAfterFirst);
     *Y = second;
-    actionResult0 = TRUE;
-    KRML_MAYBE_UNUSED_VAR(actionResult0);
+    actionResultForSecond = TRUE;
+    KRML_MAYBE_UNUSED_VAR(actionResultForSecond);
     positionAfterSecond = positionAfterSecond0;
   }
   if (EverParseIsSuccess(positionAfterSecond))

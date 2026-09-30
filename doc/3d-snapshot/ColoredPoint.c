@@ -14,17 +14,19 @@ ColoredPointValidateColoredPoint1(
 )
 {
   BOOLEAN hasBytesForColorPt = (InputLength - StartPosition) >= 5ULL;
-  uint64_t res;
+  uint64_t resForColorPt;
   uint64_t positionAfterColor;
   if (hasBytesForColorPt)
   {
-    res = StartPosition + 5ULL;
+    resForColorPt = StartPosition + 5ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForColorPt =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterColor = res;
+  positionAfterColor = resForColorPt;
   if (EverParseIsSuccess(positionAfterColor))
   {
     return positionAfterColor;
@@ -49,17 +51,19 @@ ColoredPointValidateColoredPoint2(
 )
 {
   BOOLEAN hasBytesForPtColor = (InputLength - StartPosition) >= 5ULL;
-  uint64_t res;
+  uint64_t resForPtColor;
   uint64_t positionAfterPt;
   if (hasBytesForPtColor)
   {
-    res = StartPosition + 5ULL;
+    resForPtColor = StartPosition + 5ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForPtColor =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterPt = res;
+  positionAfterPt = resForPtColor;
   if (EverParseIsSuccess(positionAfterPt))
   {
     return positionAfterPt;

@@ -15,17 +15,19 @@ Triangle2ValidateTriangle(
 {
   /* Validating field corners */
   BOOLEAN hasBytesForCorners = (InputLength - StartPosition) >= (uint64_t)12U;
-  uint64_t res;
+  uint64_t resForCorners;
   uint64_t positionAfterCorners;
   if (hasBytesForCorners)
   {
-    res = StartPosition + (uint64_t)12U;
+    resForCorners = StartPosition + (uint64_t)12U;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForCorners =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterCorners = res;
+  positionAfterCorners = resForCorners;
   if (EverParseIsSuccess(positionAfterCorners))
   {
     return positionAfterCorners;

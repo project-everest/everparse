@@ -19,7 +19,7 @@ ValidateT(
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytesForT1 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterT10;
-  uint64_t res;
+  uint64_t resForT1;
   uint64_t positionAfterT1;
   BOOLEAN hasBytesForT2_refinement;
   uint64_t positionAfterT2_refinement;
@@ -38,7 +38,7 @@ ValidateT(
   }
   if (EverParseIsSuccess(positionAfterT10))
   {
-    res = positionAfterT10;
+    resForT1 = positionAfterT10;
   }
   else
   {
@@ -49,9 +49,9 @@ ValidateT(
       Ctxt,
       Input,
       StartPosition);
-    res = positionAfterT10;
+    resForT1 = positionAfterT10;
   }
-  positionAfterT1 = res;
+  positionAfterT1 = resForT1;
   if (EverParseIsError(positionAfterT1))
   {
     return positionAfterT1;
@@ -251,7 +251,7 @@ ValidateS64(
   BOOLEAN s1ConstraintIsOk;
   uint64_t positionAfterCheckedS1;
   BOOLEAN hasBytesForAlignmentPadding4;
-  uint64_t res0;
+  uint64_t resForAlignmentPadding4;
   uint64_t positionAfterAlignmentPadding4;
   uint64_t positionAfterAlignmentPadding40;
   BOOLEAN hasBytesForPtrT;
@@ -262,15 +262,15 @@ ValidateS64(
   uint64_t readOffset;
   uint64_t writeOffset;
   BOOLEAN failed;
-  BOOLEAN ok;
+  BOOLEAN okForPtrT;
   uint64_t wr;
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailedForPtrT;
   uint64_t b;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForPtrT;
   uint64_t result;
   uint64_t positionAfterPtrT;
   BOOLEAN hasBytesForS2;
-  uint64_t res;
+  uint64_t resForS2;
   uint64_t positionAfterS2;
   if (hasBytesForS1)
   {
@@ -301,15 +301,15 @@ ValidateS64(
       hasBytesForAlignmentPadding4 = (InputLength - positionAfterCheckedS1) >= (uint64_t)4U;
       if (hasBytesForAlignmentPadding4)
       {
-        res0 = positionAfterCheckedS1 + (uint64_t)4U;
+        resForAlignmentPadding4 = positionAfterCheckedS1 + (uint64_t)4U;
       }
       else
       {
-        res0 =
+        resForAlignmentPadding4 =
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
             positionAfterCheckedS1);
       }
-      positionAfterAlignmentPadding4 = res0;
+      positionAfterAlignmentPadding4 = resForAlignmentPadding4;
       if (EverParseIsSuccess(positionAfterAlignmentPadding4))
       {
         positionAfterAlignmentPadding40 = positionAfterAlignmentPadding4;
@@ -354,8 +354,8 @@ ValidateS64(
           readOffset = 0ULL;
           writeOffset = 0ULL;
           failed = FALSE;
-          ok = ProbeInit1("_S64.ptrT", (uint64_t)8U, Dest);
-          if (ok)
+          okForPtrT = ProbeInit1("_S64.ptrT", (uint64_t)8U, Dest);
+          if (okForPtrT)
           {
             ProbePtrT(s1,
               "_S64",
@@ -375,8 +375,8 @@ ValidateS64(
             failed = TRUE;
           }
           wr = writeOffset;
-          hasFailed = failed;
-          if (hasFailed)
+          hasFailedForPtrT = failed;
+          if (hasFailedForPtrT)
           {
             ErrorHandlerFn("_S64", "ptrT", "probe", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
             b = 0ULL;
@@ -394,7 +394,7 @@ ValidateS64(
                 EverParseStreamOf(Dest),
                 EverParseStreamLen(Dest),
                 0ULL);
-            actionResult = !EverParseIsError(result);
+            actionResultForPtrT = !EverParseIsError(result);
           }
           else
           {
@@ -405,9 +405,9 @@ ValidateS64(
               Ctxt,
               Input,
               positionAfterAlignmentPadding40);
-            actionResult = FALSE;
+            actionResultForPtrT = FALSE;
           }
-          if (actionResult)
+          if (actionResultForPtrT)
           {
             positionAfterPtrT1 = positionAfterPtrT0;
           }
@@ -442,15 +442,15 @@ ValidateS64(
           hasBytesForS2 = (InputLength - positionAfterPtrT) >= 8ULL;
           if (hasBytesForS2)
           {
-            res = positionAfterPtrT + 8ULL;
+            resForS2 = positionAfterPtrT + 8ULL;
           }
           else
           {
-            res =
+            resForS2 =
               EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
                 positionAfterPtrT);
           }
-          positionAfterS2 = res;
+          positionAfterS2 = resForS2;
           if (EverParseIsSuccess(positionAfterS2))
           {
             positionAfterS1 = positionAfterS2;
@@ -597,7 +597,7 @@ ValidateR64(
   uint64_t positionAfterR1;
   uint32_t r1;
   BOOLEAN hasBytesForAlignmentPadding6;
-  uint64_t res;
+  uint64_t resForAlignmentPadding6;
   uint64_t positionAfterAlignmentPadding6;
   uint64_t positionAfterAlignmentPadding60;
   BOOLEAN hasBytesForPtrS;
@@ -608,11 +608,11 @@ ValidateR64(
   uint64_t readOffset;
   uint64_t writeOffset;
   BOOLEAN failed;
-  BOOLEAN ok;
+  BOOLEAN okForPtrS;
   uint64_t wr;
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailedForPtrS;
   uint64_t b;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForPtrS;
   uint64_t result;
   if (hasBytesForR1)
   {
@@ -648,13 +648,15 @@ ValidateR64(
   hasBytesForAlignmentPadding6 = (InputLength - positionAfterR1) >= (uint64_t)4U;
   if (hasBytesForAlignmentPadding6)
   {
-    res = positionAfterR1 + (uint64_t)4U;
+    resForAlignmentPadding6 = positionAfterR1 + (uint64_t)4U;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterR1);
+    resForAlignmentPadding6 =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        positionAfterR1);
   }
-  positionAfterAlignmentPadding6 = res;
+  positionAfterAlignmentPadding6 = resForAlignmentPadding6;
   if (EverParseIsSuccess(positionAfterAlignmentPadding6))
   {
     positionAfterAlignmentPadding60 = positionAfterAlignmentPadding6;
@@ -697,8 +699,8 @@ ValidateR64(
     readOffset = 0ULL;
     writeOffset = 0ULL;
     failed = FALSE;
-    ok = ProbeInit1("_R64.ptrS", (uint64_t)24U, DestS);
-    if (ok)
+    okForPtrS = ProbeInit1("_R64.ptrS", (uint64_t)24U, DestS);
+    if (okForPtrS)
     {
       ProbePtrS(r1,
         "_R64",
@@ -718,8 +720,8 @@ ValidateR64(
       failed = TRUE;
     }
     wr = writeOffset;
-    hasFailed = failed;
-    if (hasFailed)
+    hasFailedForPtrS = failed;
+    if (hasFailedForPtrS)
     {
       ErrorHandlerFn("_R64", "ptrS", "probe", 0ULL, Ctxt, EverParseStreamOf(DestS), 0ULL);
       b = 0ULL;
@@ -739,7 +741,7 @@ ValidateR64(
           EverParseStreamOf(DestS),
           EverParseStreamLen(DestS),
           0ULL);
-      actionResult = !EverParseIsError(result);
+      actionResultForPtrS = !EverParseIsError(result);
     }
     else
     {
@@ -750,9 +752,9 @@ ValidateR64(
         Ctxt,
         Input,
         positionAfterAlignmentPadding60);
-      actionResult = FALSE;
+      actionResultForPtrS = FALSE;
     }
-    if (actionResult)
+    if (actionResultForPtrS)
     {
       positionAfterPtrS = positionAfterPtrS0;
     }
@@ -801,11 +803,11 @@ ValidateSpecializedR32(
   uint64_t readOffset;
   uint64_t writeOffset;
   BOOLEAN failed;
-  BOOLEAN ok;
+  BOOLEAN okForPtrS;
   uint64_t wr;
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailedForPtrS;
   uint64_t b;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForPtrS;
   uint64_t result;
   if (hasBytesForR1)
   {
@@ -860,8 +862,8 @@ ValidateSpecializedR32(
     readOffset = 0ULL;
     writeOffset = 0ULL;
     failed = FALSE;
-    ok = ProbeInit1("___specialized_R32.ptrS", (uint64_t)24U, DestS);
-    if (ok)
+    okForPtrS = ProbeInit1("___specialized_R32.ptrS", (uint64_t)24U, DestS);
+    if (okForPtrS)
     {
       Specialized32ProbeS64("___specialized_R32",
         "ptrS",
@@ -879,8 +881,8 @@ ValidateSpecializedR32(
       failed = TRUE;
     }
     wr = writeOffset;
-    hasFailed = failed;
-    if (hasFailed)
+    hasFailedForPtrS = failed;
+    if (hasFailedForPtrS)
     {
       ErrorHandlerFn("___specialized_R32",
         "ptrS",
@@ -906,7 +908,7 @@ ValidateSpecializedR32(
           EverParseStreamOf(DestS),
           EverParseStreamLen(DestS),
           0ULL);
-      actionResult = !EverParseIsError(result);
+      actionResultForPtrS = !EverParseIsError(result);
     }
     else
     {
@@ -917,9 +919,9 @@ ValidateSpecializedR32(
         Ctxt,
         Input,
         positionAfterR1);
-      actionResult = FALSE;
+      actionResultForPtrS = FALSE;
     }
-    if (actionResult)
+    if (actionResultForPtrS)
     {
       positionAfterPtrS = positionAfterPtrS0;
     }
@@ -1153,16 +1155,16 @@ ValidateS32Attempt(
   uint64_t readOffset;
   uint64_t writeOffset;
   BOOLEAN failed;
-  BOOLEAN ok;
+  BOOLEAN okForPtrT;
   uint64_t wr;
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailedForPtrT;
   uint64_t b;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForPtrT;
   uint64_t result;
   uint64_t positionAfterPtrT;
   BOOLEAN hasBytesForG;
   uint64_t positionAfterG;
-  uint64_t res;
+  uint64_t resForG;
   if (hasBytesForF)
   {
     positionAfterF0 = StartPosition + 4ULL;
@@ -1211,8 +1213,8 @@ ValidateS32Attempt(
         readOffset = 0ULL;
         writeOffset = 0ULL;
         failed = FALSE;
-        ok = ProbeInit1("_S32_Attempt.ptrT", (uint64_t)8U, Dest);
-        if (ok)
+        okForPtrT = ProbeInit1("_S32_Attempt.ptrT", (uint64_t)8U, Dest);
+        if (okForPtrT)
         {
           S32attemptProbePtrTT("_S32_Attempt",
             "ptrT",
@@ -1230,8 +1232,8 @@ ValidateS32Attempt(
           failed = TRUE;
         }
         wr = writeOffset;
-        hasFailed = failed;
-        if (hasFailed)
+        hasFailedForPtrT = failed;
+        if (hasFailedForPtrT)
         {
           ErrorHandlerFn("_S32_Attempt",
             "ptrT",
@@ -1255,7 +1257,7 @@ ValidateS32Attempt(
               EverParseStreamOf(Dest),
               EverParseStreamLen(Dest),
               0ULL);
-          actionResult = !EverParseIsError(result);
+          actionResultForPtrT = !EverParseIsError(result);
         }
         else
         {
@@ -1266,9 +1268,9 @@ ValidateS32Attempt(
             Ctxt,
             Input,
             positionAfterCheckedF);
-          actionResult = FALSE;
+          actionResultForPtrT = FALSE;
         }
-        if (actionResult)
+        if (actionResultForPtrT)
         {
           positionAfterPtrT1 = positionAfterPtrT0;
         }
@@ -1315,7 +1317,7 @@ ValidateS32Attempt(
         }
         if (EverParseIsSuccess(positionAfterG))
         {
-          res = positionAfterG;
+          resForG = positionAfterG;
         }
         else
         {
@@ -1326,9 +1328,9 @@ ValidateS32Attempt(
             Ctxt,
             Input,
             positionAfterPtrT);
-          res = positionAfterG;
+          resForG = positionAfterG;
         }
-        positionAfterF = res;
+        positionAfterF = resForG;
       }
     }
   }
@@ -1406,11 +1408,11 @@ ValidateR32Attempt(
   uint64_t readOffset;
   uint64_t writeOffset;
   BOOLEAN failed;
-  BOOLEAN ok;
+  BOOLEAN okForPtrS;
   uint64_t wr;
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailedForPtrS;
   uint64_t b;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForPtrS;
   uint64_t result;
   if (hasBytesForF)
   {
@@ -1465,8 +1467,8 @@ ValidateR32Attempt(
     readOffset = 0ULL;
     writeOffset = 0ULL;
     failed = FALSE;
-    ok = ProbeInit1("_R32_Attempt.ptrS", (uint64_t)12U, DestS);
-    if (ok)
+    okForPtrS = ProbeInit1("_R32_Attempt.ptrS", (uint64_t)12U, DestS);
+    if (okForPtrS)
     {
       R32AttemptProbePtrSS32attempt("_R32_Attempt",
         "ptrS",
@@ -1484,8 +1486,8 @@ ValidateR32Attempt(
       failed = TRUE;
     }
     wr = writeOffset;
-    hasFailed = failed;
-    if (hasFailed)
+    hasFailedForPtrS = failed;
+    if (hasFailedForPtrS)
     {
       ErrorHandlerFn("_R32_Attempt", "ptrS", "probe", 0ULL, Ctxt, EverParseStreamOf(DestS), 0ULL);
       b = 0ULL;
@@ -1504,7 +1506,7 @@ ValidateR32Attempt(
           EverParseStreamOf(DestS),
           EverParseStreamLen(DestS),
           0ULL);
-      actionResult = !EverParseIsError(result);
+      actionResultForPtrS = !EverParseIsError(result);
     }
     else
     {
@@ -1515,9 +1517,9 @@ ValidateR32Attempt(
         Ctxt,
         Input,
         positionAfterF);
-      actionResult = FALSE;
+      actionResultForPtrS = FALSE;
     }
-    if (actionResult)
+    if (actionResultForPtrS)
     {
       positionAfterPtrS = positionAfterPtrS0;
     }

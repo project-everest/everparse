@@ -204,12 +204,12 @@ ValidateTlv(
   uint64_t positionAfterPayload;
   uint8_t *truncatedInput;
   uint64_t truncatedInputLength;
-  uint64_t result;
+  uint64_t listResultForPayload;
   uint64_t position;
   BOOLEAN ite;
   uint64_t positionAfterPayload_element;
-  uint64_t result1;
-  uint64_t res;
+  uint64_t resultForPayload;
+  uint64_t resForPayload;
   if (hasBytesForTag)
   {
     positionAfterTag0 = StartPosition + 1ULL;
@@ -281,10 +281,10 @@ ValidateTlv(
       {
         truncatedInput = Input;
         truncatedInputLength = positionAfterCheckedLength + (uint64_t)(uint32_t)Len;
-        result = positionAfterCheckedLength;
+        listResultForPayload = positionAfterCheckedLength;
         while (TRUE)
         {
-          position = result;
+          position = listResultForPayload;
           if (!((truncatedInputLength - position) >= 1ULL))
           {
             ite = TRUE;
@@ -300,7 +300,7 @@ ValidateTlv(
                 position);
             if (EverParseIsSuccess(positionAfterPayload_element))
             {
-              result1 = positionAfterPayload_element;
+              resultForPayload = positionAfterPayload_element;
             }
             else
             {
@@ -311,18 +311,18 @@ ValidateTlv(
                 Ctxt,
                 truncatedInput,
                 position);
-              result1 = positionAfterPayload_element;
+              resultForPayload = positionAfterPayload_element;
             }
-            result = result1;
-            ite = EverParseIsError(result1);
+            listResultForPayload = resultForPayload;
+            ite = EverParseIsError(resultForPayload);
           }
           if (ite)
           {
             break;
           }
         }
-        res = result;
-        positionAfterPayload = res;
+        resForPayload = listResultForPayload;
+        positionAfterPayload = resForPayload;
       }
       if (EverParseIsSuccess(positionAfterPayload))
       {
@@ -500,11 +500,11 @@ ValidateWrapper(
   uint64_t readOffset;
   uint64_t writeOffset;
   BOOLEAN failed;
-  BOOLEAN ok;
+  BOOLEAN okForTlv;
   uint64_t wr;
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailedForTlv;
   uint64_t b;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForTlv;
   uint64_t result;
   if (EverParseIsError(positionAfterPrecondition))
   {
@@ -545,8 +545,8 @@ ValidateWrapper(
         readOffset = 0ULL;
         writeOffset = 0ULL;
         failed = FALSE;
-        ok = ProbeInit("_WRAPPER.tlv", (uint64_t)(uint32_t)Len, Output);
-        if (ok)
+        okForTlv = ProbeInit("_WRAPPER.tlv", (uint64_t)(uint32_t)Len, Output);
+        if (okForTlv)
         {
           ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
             "_WRAPPER",
@@ -566,8 +566,8 @@ ValidateWrapper(
           failed = TRUE;
         }
         wr = writeOffset;
-        hasFailed = failed;
-        if (hasFailed)
+        hasFailedForTlv = failed;
+        if (hasFailedForTlv)
         {
           ErrorHandlerFn("_WRAPPER", "tlv", "probe", 0ULL, Ctxt, EverParseStreamOf(Output), 0ULL);
           b = 0ULL;
@@ -585,7 +585,7 @@ ValidateWrapper(
               EverParseStreamOf(Output),
               EverParseStreamLen(Output),
               0ULL);
-          actionResult = !EverParseIsError(result);
+          actionResultForTlv = !EverParseIsError(result);
         }
         else
         {
@@ -596,9 +596,9 @@ ValidateWrapper(
             Ctxt,
             Input,
             positionAfterCheckedPrecondition);
-          actionResult = FALSE;
+          actionResultForTlv = FALSE;
         }
-        if (actionResult)
+        if (actionResultForTlv)
         {
           positionAfterTlv = positionAfterTlv0;
         }
@@ -663,11 +663,11 @@ ValidateSpecializedWrapper32(
   uint64_t readOffset;
   uint64_t writeOffset;
   BOOLEAN failed;
-  BOOLEAN ok;
+  BOOLEAN okForTlv;
   uint64_t wr;
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailedForTlv;
   uint64_t b;
-  BOOLEAN actionResult;
+  BOOLEAN actionResultForTlv;
   uint64_t result;
   if (EverParseIsError(positionAfterPrecondition))
   {
@@ -708,8 +708,8 @@ ValidateSpecializedWrapper32(
         readOffset = 0ULL;
         writeOffset = 0ULL;
         failed = FALSE;
-        ok = ProbeInit("___specialized_WRAPPER_32.tlv", (uint64_t)(uint32_t)Len, Output);
-        if (ok)
+        okForTlv = ProbeInit("___specialized_WRAPPER_32.tlv", (uint64_t)(uint32_t)Len, Output);
+        if (okForTlv)
         {
           Specialized32ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
             "___specialized_WRAPPER_32",
@@ -728,8 +728,8 @@ ValidateSpecializedWrapper32(
           failed = TRUE;
         }
         wr = writeOffset;
-        hasFailed = failed;
-        if (hasFailed)
+        hasFailedForTlv = failed;
+        if (hasFailedForTlv)
         {
           ErrorHandlerFn("___specialized_WRAPPER_32",
             "tlv",
@@ -753,7 +753,7 @@ ValidateSpecializedWrapper32(
               EverParseStreamOf(Output),
               EverParseStreamLen(Output),
               0ULL);
-          actionResult = !EverParseIsError(result);
+          actionResultForTlv = !EverParseIsError(result);
         }
         else
         {
@@ -764,9 +764,9 @@ ValidateSpecializedWrapper32(
             Ctxt,
             Input,
             positionAfterCheckedPrecondition);
-          actionResult = FALSE;
+          actionResultForTlv = FALSE;
         }
-        if (actionResult)
+        if (actionResultForTlv)
         {
           positionAfterTlv = positionAfterTlv0;
         }

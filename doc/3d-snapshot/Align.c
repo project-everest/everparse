@@ -14,17 +14,19 @@ AlignValidateColoredPoint1(
 )
 {
   BOOLEAN hasBytesForColorAlignmentPadding0pt = (InputLength - StartPosition) >= 6ULL;
-  uint64_t res;
+  uint64_t resForColorAlignmentPadding0pt;
   uint64_t positionAfterColor;
   if (hasBytesForColorAlignmentPadding0pt)
   {
-    res = StartPosition + 6ULL;
+    resForColorAlignmentPadding0pt = StartPosition + 6ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForColorAlignmentPadding0pt =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterColor = res;
+  positionAfterColor = resForColorAlignmentPadding0pt;
   if (EverParseIsSuccess(positionAfterColor))
   {
     return positionAfterColor;

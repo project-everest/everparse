@@ -14,17 +14,19 @@ HelloWorldValidatePoint(
 )
 {
   BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 4ULL;
-  uint64_t res;
+  uint64_t resForXY;
   uint64_t positionAfterX;
   if (hasBytesForXY)
   {
-    res = StartPosition + 4ULL;
+    resForXY = StartPosition + 4ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForXY =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterX = res;
+  positionAfterX = resForXY;
   if (EverParseIsSuccess(positionAfterX))
   {
     return positionAfterX;

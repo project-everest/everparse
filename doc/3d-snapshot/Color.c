@@ -22,7 +22,7 @@ ColorValidateColoredPoint(
   BOOLEAN col_refinementConstraintIsOk;
   uint64_t positionAfterCol_refinement1;
   BOOLEAN hasBytesForXY;
-  uint64_t res;
+  uint64_t resForXY;
   uint64_t positionAfterX;
   if (hasBytesForCol_refinement)
   {
@@ -72,15 +72,15 @@ ColorValidateColoredPoint(
   hasBytesForXY = (InputLength - positionAfterCol_refinement1) >= 8ULL;
   if (hasBytesForXY)
   {
-    res = positionAfterCol_refinement1 + 8ULL;
+    resForXY = positionAfterCol_refinement1 + 8ULL;
   }
   else
   {
-    res =
+    resForXY =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterCol_refinement1);
   }
-  positionAfterX = res;
+  positionAfterX = resForXY;
   if (EverParseIsSuccess(positionAfterX))
   {
     return positionAfterX;

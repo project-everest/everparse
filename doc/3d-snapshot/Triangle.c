@@ -14,17 +14,19 @@ TriangleValidateTriangle(
 )
 {
   BOOLEAN hasBytesForABC = (InputLength - StartPosition) >= 12ULL;
-  uint64_t res;
+  uint64_t resForABC;
   uint64_t positionAfterA;
   if (hasBytesForABC)
   {
-    res = StartPosition + 12ULL;
+    resForABC = StartPosition + 12ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForABC =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterA = res;
+  positionAfterA = resForABC;
   if (EverParseIsSuccess(positionAfterA))
   {
     return positionAfterA;

@@ -22,7 +22,7 @@ SmokerValidateSmoker(
   uint64_t positionAfterCheckedAge;
   BOOLEAN hasBytesForCigarettesConsumed;
   uint64_t positionAfterCigarettesConsumed;
-  uint64_t res;
+  uint64_t resForAge;
   if (hasBytesForAge)
   {
     positionAfterAge0 = StartPosition + 4ULL;
@@ -63,7 +63,7 @@ SmokerValidateSmoker(
       }
       if (EverParseIsSuccess(positionAfterCigarettesConsumed))
       {
-        res = positionAfterCigarettesConsumed;
+        resForAge = positionAfterCigarettesConsumed;
       }
       else
       {
@@ -74,9 +74,9 @@ SmokerValidateSmoker(
           Ctxt,
           Input,
           positionAfterCheckedAge);
-        res = positionAfterCigarettesConsumed;
+        resForAge = positionAfterCigarettesConsumed;
       }
-      positionAfterAge = res;
+      positionAfterAge = resForAge;
     }
   }
   if (EverParseIsSuccess(positionAfterAge))

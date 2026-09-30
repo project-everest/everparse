@@ -26,7 +26,7 @@ ValidateBf2bis(
   uint64_t positionAfterCheckedBitfield1;
   BOOLEAN hasBytesForZ;
   uint64_t positionAfterZ;
-  uint64_t res;
+  uint64_t resForBitfield1;
   if (hasBytesForBitfield0)
   {
     positionAfterBitfield0 = StartPosition + 2ULL;
@@ -102,7 +102,7 @@ ValidateBf2bis(
       }
       if (EverParseIsSuccess(positionAfterZ))
       {
-        res = positionAfterZ;
+        resForBitfield1 = positionAfterZ;
       }
       else
       {
@@ -113,9 +113,9 @@ ValidateBf2bis(
           Ctxt,
           Input,
           positionAfterCheckedBitfield1);
-        res = positionAfterZ;
+        resForBitfield1 = positionAfterZ;
       }
-      positionAfterBitfield10 = res;
+      positionAfterBitfield10 = resForBitfield1;
     }
   }
   if (EverParseIsSuccess(positionAfterBitfield10))
@@ -154,7 +154,7 @@ ValidateBf3(
   uint64_t positionAfterCheckedBitfield1;
   BOOLEAN hasBytesForZ;
   uint64_t positionAfterZ;
-  uint64_t res;
+  uint64_t resForBitfield1;
   if (hasBytesForBitfield0)
   {
     positionAfterBitfield0 = StartPosition + 2ULL;
@@ -233,7 +233,7 @@ ValidateBf3(
       }
       if (EverParseIsSuccess(positionAfterZ))
       {
-        res = positionAfterZ;
+        resForBitfield1 = positionAfterZ;
       }
       else
       {
@@ -244,9 +244,9 @@ ValidateBf3(
           Ctxt,
           Input,
           positionAfterCheckedBitfield1);
-        res = positionAfterZ;
+        resForBitfield1 = positionAfterZ;
       }
-      positionAfterBitfield10 = res;
+      positionAfterBitfield10 = resForBitfield1;
     }
   }
   if (EverParseIsSuccess(positionAfterBitfield10))
