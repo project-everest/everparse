@@ -1000,9 +1000,12 @@ let print_c_entry
    let is_input_stream_buffer =
      HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
    in
-   (* Under --pulse with an `extern` (or `static`) input stream, `len_t` and
-      `pos_t` are `unit` and hence erased, so the validator carries no position
-      of its own. The stream object does, so the wrapper asks it. *)
+   (* Under --pulse with an `extern` (or `static`) input stream, the validator
+      is passed the stream object together with a truncation bound of 0 (i.e.
+      none) and, as its origin, the stream's current position. It does not
+      report how far it got: its result is a plain error code. The stream is
+      what tracks the position, so the wrapper asks it, on both sides of the
+      call. *)
    let stream_get_position_decl =
      "extern size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);\n"
    in
