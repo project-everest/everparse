@@ -393,7 +393,12 @@ let validate_with_error_handler
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h0 = HST.get () in
-    [@(rename_let ("positionAfter" ^ (capitalize fieldname)))]
+    // The caller binds the very same value under the name
+    // `positionAfter<Field>`; name this one differently so that KaRaMeL does
+    // not have to disambiguate the two with a numeric suffix.  This is the
+    // validator's raw answer: a position on success, an error code otherwise,
+    // not yet passed to the error handler.
+    [@(rename_let ("positionAfter" ^ (capitalize fieldname) ^ "OrError"))]
     let pos1 = v1 ctxt error_handler_fn input input_length pos0 in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
