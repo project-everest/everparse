@@ -98,16 +98,19 @@ clean_out_files := \
 all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 	pulse-comments-test pulse-renamelet-test \
 	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test \
-	pulse-batch-interpret-test pulse-subdirs
+	pulse-batch-interpret-test pulse-subdirs \
+	pulse-reserved-module-name-test
 
 # Subdirectories with their own build. Only those already ported to --pulse are
 # listed; the rest were copied from src/3d/tests and still drive the Low*
 # backend, so building them here would prove nothing.
 #
-# extern and static are the only tests that select an --input_stream other than
-# buffer, so they are what exercises those two backends, including
+# extern, static and funptr are the only tests that select an --input_stream
+# other than buffer, so they are what exercises those two backends, including
 # field_ptr_after, end to end -- each builds a test program against a
-# hand-written client stream and runs it. modules covers multi-module input,
+# hand-written client stream and runs it. funptr additionally reaches every
+# stream operation through a function pointer, so none of them is resolved at
+# link time. modules covers multi-module input,
 # output_types covers output types and their external actions, and the rest
 # cover individual frontend options.
 #
@@ -121,9 +124,12 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 # output_state_name is compile-only: it checks that a mutable output parameter
 # named `output_state` does not collide with the Pulse backend's own generated
 # output state, which used to make the generated F* fail to typecheck.
+#
+# field_pos_32_backend is generation-only: it pins which input-stream backends
+# accept field_pos_32 (buffer only, as in Low*) and field_pos_64 (all of them).
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
-  probe field_ptr output_state_name
+  probe field_ptr output_state_name field_pos_32_backend
 
 # Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and
@@ -297,9 +303,25 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 	      $(3D) --odir out.fail.pulse --__micro_step verify $$f || exit 1 ; \
 	    done ) >$@.out 2>$@.err
 
+# TEMPORARY, to be removed together with the frontend check it exercises: see
+# the comment on check_no_reserved_module_name in src/3d/Main.fst. A module
+# named C must be rejected up front under --pulse, rather than reaching KaRaMeL
+# and failing there with an unintelligible message about C._zero_for_deref.
+# This cannot be expressed as a FAIL*.3d negative test, because the whole point
+# is the module name. It is also deliberately absent from src/3d/tests: the
+# Low* backend accepts a module named C, and must keep accepting it.
+.PHONY: pulse-reserved-module-name-test
+pulse-reserved-module-name-test:
+	rm -rf out.reserved.pulse && mkdir -p out.reserved.pulse
+	printf 'entrypoint\ntypedef struct _P {\n  UINT8 x;\n} P;\n' > out.reserved.pulse/C.3d
+	! $(3D) --odir out.reserved.pulse --no_batch out.reserved.pulse/C.3d \
+	  > out.reserved.pulse/C.out 2>&1
+	grep -q 'cannot be named C' out.reserved.pulse/C.out
+
 clean-files:
 	rm -rf $(OUT_DIR) $(VERIFY_DIR) $(ELF_DIR) $(CLEANUP_DIR) $(INPLACE_DIR) \
-	  $(Z3TESTGEN_DIR) $(INTERPRET_DIR) out.fail.pulse test-cpp.pulse.exe \
+	  $(Z3TESTGEN_DIR) $(INTERPRET_DIR) out.fail.pulse out.reserved.pulse \
+	  test-cpp.pulse.exe \
 	  test-cpp-interpret.pulse.exe *.out *.err
 	set -e ; for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
 

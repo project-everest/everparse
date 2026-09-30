@@ -35,10 +35,29 @@ KRML_FILES := $(wildcard extracted/*.krml)
 # Buffer/Extern/Static owns a [@@CMacro] error_handler_macro and making two
 # public at once collides on EVERPARSE_ERROR_HANDLER_MACRO (KaRaMeL warning 23).
 API_COMMON := EverParse3d.Actions.Common+EverParse3d.ErrorCode+EverParse3d.Prelude.StaticHeader
-API_buffer := $(API_COMMON)+EverParse3d.CopyBuffer.Buffer
-API_extern := $(API_COMMON)+EverParse3d.InputStream.Extern
+API_EXTERN := EverParse3d.InputStream.Extern+EverParse3d.InputStream.Extern.NullPtr+EverParse3d.Actions.ErrorHandler.Extern
+API_buffer := $(API_COMMON)+EverParse3d.CopyBuffer.Buffer+EverParse3d.Actions.ErrorHandler.Buffer
+API_extern := $(API_COMMON)+$(API_EXTERN)
 # static re-exports extern's instance and has no extracted declarations of its own
 API_static := $(API_extern)
+
+# `--input_stream static` asks for the stream primitives to be declared
+# `static inline` rather than `extern`, so that the compiler sees each stream
+# operation at every validator call site instead of linking against it. That is
+# the whole of the static/extern distinction at the C level, and KaRaMeL
+# produces it from -static-header applied to the module holding the assumed
+# primitives -- exactly as the Low* prelude does in
+# src/3d/prelude/extern/Makefile (KRML_STATIC).
+#
+# The pattern names EverParse3d.InputStream.Extern *exactly*, with no trailing
+# `\*`: EverParse3d.InputStream.Extern.NullPtr must stay out of it. -static-header
+# applied to an assumed *value* rather than an assumed function emits a
+# per-translation-unit tentative definition instead of a declaration. See that
+# module.
+STATIC_HEADER_COMMON := Pulse.\*,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode
+STATIC_HEADER_buffer := $(STATIC_HEADER_COMMON)
+STATIC_HEADER_extern := $(STATIC_HEADER_COMMON)
+STATIC_HEADER_static := $(STATIC_HEADER_COMMON),EverParse3d.InputStream.Extern
 
 # With `extern` (and `static`) the stream primitives are assumed vals that the
 # client implements in C, so KaRaMeL's "no corresponding implementation"
@@ -46,6 +65,40 @@ API_static := $(API_extern)
 WARN_buffer := -9@4-20-26
 WARN_extern := -9@4-20-26-2
 WARN_static := $(WARN_extern)
+
+# The public EVERPARSE_ERROR_HANDLER typedef.
+#
+# The Low* backend gets this typedef from KaRaMeL for free: there,
+# EverParse3d.Actions.Common.error_handler is a *monomorphic* F* type
+# abbreviation, because the Low* prelude is built once per input stream
+# backend with the stream type already fixed. 3d.exe passes
+# `-no-inline-type-abbrev EverParse3d.Actions.Common.error_handler`, KaRaMeL
+# keeps the abbreviation as a C typedef, and -fmicrosoft uppercases it.
+#
+# The Pulse prelude is built *once* and instantiated through a typeclass, so
+# its error_handler is parameterized by the stream types. KaRaMeL has no
+# parameterized typedefs: it can only inline such an abbreviation at each use
+# site, so -no-inline-type-abbrev cannot be applied to
+# EverParse3d.Actions.Common.error_handler itself -- it would leave an
+# un-inlined TApp that the KaRaMeL checker rejects as "not a function type".
+#
+# So we recover a monomorphic abbreviation the same way the Low* backend has
+# one, by instantiating it at the backend's stream types in a leaf module:
+# EverParse3d.Actions.ErrorHandler.<Backend>.error_handler. That module is an
+# API module of the bundle below, so `[rename=EverParse,rename-prefix]` names
+# it EverParse_error_handler and -fmicrosoft uppercases it to
+# EVERPARSE_ERROR_HANDLER, matching the Low* backend exactly.
+#
+# The same alias is what 3d.exe preserves in the client's own KaRaMeL run (see
+# src/3d/ocaml/Batch.ml), so generated validator prototypes name the typedef
+# too, exactly as under Low*.
+#
+# The typedef is therefore derived from the Pulse definition, not snapshotted:
+# if EverParse3d.InputStream.Base.error_handler_arrow changes, this typedef
+# changes with it.
+HANDLER_buffer := EverParse3d.Actions.ErrorHandler.Buffer.error_handler
+HANDLER_extern := EverParse3d.Actions.ErrorHandler.Extern.error_handler
+HANDLER_static := $(HANDLER_extern)
 
 define header_rule
 $(1)/EverParse.h: $$(KRML_FILES)
@@ -57,7 +110,8 @@ $(1)/EverParse.h: $$(KRML_FILES)
 	  -minimal \
 	  -header $$(DDD_HOME)/noheader.txt \
 	  -add-include 'EverParse:"EverParsePulseEndianness.h"' \
-	  -static-header 'Pulse.\*,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode' \
+	  -static-header '$$(STATIC_HEADER_$(1))' \
+	  -no-inline-type-abbrev '$$(HANDLER_$(1))' \
 	  -warn-error '$$(WARN_$(1))' \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -fno-shadow \
 	  -fextern-c \
@@ -68,6 +122,7 @@ $(1)/EverParse.h: $$(KRML_FILES)
 	test '!' -e $(1)/EverParse.c
 	test '!' -e $(1)/SHOULDNOTBETHERE.h
 	test '!' -d $(1)/internal
+	grep -q 'EVERPARSE_ERROR_HANDLER)' $(1)/EverParse.h
 endef
 
 $(foreach b,$(BACKENDS),$(eval $(call header_rule,$(b))))

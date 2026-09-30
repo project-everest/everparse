@@ -4,7 +4,7 @@
 #include "EverParsePulse.h"
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(size_t) >= sizeof(uint32_t), "EverParse: size_t must be at least as wide as uint32_t");
-_Static_assert(sizeof(size_t) >= sizeof(uint64_t), "EverParse: size_t must be at least as wide as uint64_t");
+_Static_assert(sizeof(size_t) <= sizeof(uint64_t), "EverParse: size_t must be no wider than uint64_t");
 #endif
 #include "GotoReturn_ExternalAPI.h"
 
@@ -19,10 +19,12 @@ void DefaultErrorHandler(
 	uint8_t *context,
 	uint8_t *base,
 	size_t len,
-	size_t *pos)
+	size_t *pos,
+	uint64_t start_pos)
 {
 	EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;
 	(void) len;
+	(void) pos;
 	EverParseDefaultErrorHandler(
 		typename_s,
 		fieldname,
@@ -30,7 +32,7 @@ void DefaultErrorHandler(
 		(uint64_t)error_code,
 		frame,
 		base,
-		(uint64_t)*pos
+		start_pos
 	);
 }
 

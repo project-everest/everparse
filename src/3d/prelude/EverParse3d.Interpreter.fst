@@ -19,6 +19,7 @@ module EverParse3d.Interpreter
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module A = EverParse3d.Actions.All
+module AC = EverParse3d.Actions.Common
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module CP = EverParse3d.CopyBuffer
@@ -181,7 +182,7 @@ let itype_as_leaf_reader (i:itype { allow_reader_of_itype i })
 (* Interpretation of an itype as a validator
    -- Notice that the type shows that it is related to the parser *)
 [@@specialize]
-let itype_as_validator (#use_error_handler:bool) (i:itype)
+let itype_as_validator (#use_error_handler:bool) (name:string) (i:itype)
   : A.validate_with_action_t
       (itype_as_parser i)
       A.true_inv
@@ -191,14 +192,14 @@ let itype_as_validator (#use_error_handler:bool) (i:itype)
       (allow_reader_of_itype i)
       use_error_handler
   = match i with
-    | UInt8 -> A.validate____UINT8
-    | UInt16 -> A.validate____UINT16
-    | UInt32 -> A.validate____UINT32
-    | UInt64 -> A.validate____UINT64
-    | UInt8BE -> A.validate____UINT8BE
-    | UInt16BE -> A.validate____UINT16BE
-    | UInt32BE -> A.validate____UINT32BE
-    | UInt64BE -> A.validate____UINT64BE
+    | UInt8 -> A.validate____UINT8 name
+    | UInt16 -> A.validate____UINT16 name
+    | UInt32 -> A.validate____UINT32 name
+    | UInt64 -> A.validate____UINT64 name
+    | UInt8BE -> A.validate____UINT8BE name
+    | UInt16BE -> A.validate____UINT16BE name
+    | UInt32BE -> A.validate____UINT32BE name
+    | UInt64BE -> A.validate____UINT64BE name
     | Unit -> A.validate_unit
     | AllBytes -> A.validate_all_bytes
     | AllZeros -> A.validate_all_zeros
@@ -451,7 +452,7 @@ let dtyp_as_parser (#use_error_handler:bool) #nz #wk (#pk:P.parser_kind nz wk) #
       parser_of_binding b
 
 [@@specialize]
-let dtyp_as_validator (#use_error_handler:bool) #nz #wk (#pk:P.parser_kind nz wk)
+let dtyp_as_validator (#use_error_handler:bool) (name:string) #nz #wk (#pk:P.parser_kind nz wk)
                       (#ha #hr:_)
                       (#[@@@erasable] i:inv_index)
                       (#[@@@erasable] disj:disj_index)
@@ -473,7 +474,7 @@ let dtyp_as_validator (#use_error_handler:bool) #nz #wk (#pk:P.parser_kind nz wk
             ha hr use_error_handler
     with
     | DT_IType i -> 
-      itype_as_validator #use_error_handler i
+      itype_as_validator #use_error_handler name i
 
     | DT_App _ _ _ _ _ _ b _ ->
       // assert_norm (dtyp_as_type (DT_App_Alt ps b args) == (type_of_binding_alt (apply_arrow b args)));
@@ -768,7 +769,7 @@ let atomic_action_as_action
       c
     | Action_probe_then_validate typename fieldname dt src as_u64 nullable dest init_cb dest_sz probe ->
       A.index_equations();
-      let v = dtyp_as_validator #use_error_handler dt in
+      let v = dtyp_as_validator #use_error_handler fieldname dt in
       A.probe_then_validate typename fieldname v src as_u64 nullable dest init_cb dest_sz (probe_action_as_probe_m probe)
 
 (* A sub-language of monadic actions.
@@ -1086,6 +1087,27 @@ type typ (use_error_handler:bool)
       terminator:dtyp_as_type element_type ->
       typ use_error_handler P.parse_string_kind inv_none disj_none loc_none ha false
 
+(* The capitalized field names covered by a type, concatenated. This is used to
+   name the single length check that `validate_pair` emits when it fuses a run of
+   constant-size, action-free fields into one. Only the constructors that can
+   appear in such a run need to contribute a name. *)
+[@@specialize]
+let rec typ_fieldnames
+      (#use_error_handler:bool) (#nz:_) (#wk:_) (#pk:P.parser_kind nz wk)
+      (#[@@@erasable] i:inv_index)
+      (#[@@@erasable] d:disj_index)
+      (#[@@@erasable] l:loc_index)
+      (#ha #b:_)
+      (t:typ use_error_handler pk i d l ha b)
+  : Tot string (decreases t)
+  = match t with
+    | T_pair _ _ t1 _ t2 -> typ_fieldnames t1 ^ typ_fieldnames t2
+    | T_drop t -> typ_fieldnames t
+    | T_with_comment _ t _ -> typ_fieldnames t
+    | T_denoted fn _ -> AC.capitalize fn
+    | T_false fn -> AC.capitalize fn
+    | _ -> ""
+
 [@@specialize]
 inline_for_extraction
 let coerce (#[@@@erasable]a:Type)
@@ -1357,12 +1379,12 @@ let rec as_validator
     | T_denoted fn td ->
       assert_norm (as_type #use_error_handler (T_denoted fn td) == dtyp_as_type #use_error_handler td);
       assert_norm (as_parser #use_error_handler (T_denoted fn td) == dtyp_as_parser #use_error_handler td);
-      A.validate_with_error_handler typename fn (A.validate_eta (dtyp_as_validator #use_error_handler td))
+      A.validate_with_error_handler typename fn (A.validate_eta (dtyp_as_validator #use_error_handler fn td))
 
     | T_pair fn k1_const t1 k2_const t2 ->
       assert_norm (as_type #use_error_handler (T_pair fn k1_const t1 k2_const t2) == as_type #use_error_handler t1 & as_type #use_error_handler t2);
       assert_norm (as_parser #use_error_handler (T_pair fn k1_const t1 k2_const t2) == P.parse_pair (as_parser #use_error_handler t1) (as_parser #use_error_handler t2));
-      A.validate_pair typename fn
+      A.validate_pair typename fn (typ_fieldnames t2) (typ_fieldnames t1 ^ typ_fieldnames t2)
           k1_const
           (as_validator typename #use_error_handler t1)
           k2_const
@@ -1374,7 +1396,7 @@ let rec as_validator
                    P.parse_dep_pair (dtyp_as_parser #use_error_handler i) (fun (x:dtyp_as_type #use_error_handler i) -> as_parser #use_error_handler (t x)));
       A.validate_weaken_inv_loc (interp_inv inv) _ (interp_loc loc)
           (A.validate_dep_pair fn
-              (A.validate_with_error_handler typename fn (dtyp_as_validator #use_error_handler i))
+              (A.validate_with_error_handler typename fn (dtyp_as_validator #use_error_handler fn i))
               (dtyp_as_leaf_reader #use_error_handler i)
               (fun x -> as_validator typename #use_error_handler (t x)))
 
@@ -1383,7 +1405,7 @@ let rec as_validator
       assert_norm (as_parser #use_error_handler (T_refine fn t f) == P.parse_filter (dtyp_as_parser #use_error_handler t) f);
       A.validate_with_error_handler typename fn      
         (A.validate_filter fn
-          (dtyp_as_validator #use_error_handler t)
+          (dtyp_as_validator #use_error_handler fn t)
           (dtyp_as_leaf_reader #use_error_handler t)
           f "reading field_value" "checking constraint")
 
@@ -1393,7 +1415,7 @@ let rec as_validator
       assert_norm (as_parser #use_error_handler (T_refine fn t f) == P.parse_filter (dtyp_as_parser #use_error_handler t) f);      
       A.validate_with_error_handler typename fn            
         (A.validate_filter_with_action fn
-          (dtyp_as_validator #use_error_handler t)
+          (dtyp_as_validator #use_error_handler fn t)
           (dtyp_as_leaf_reader #use_error_handler t)
           f "reading field_value" "checking constraint"
           (fun x -> action_as_action #use_error_handler (a x)))
@@ -1406,7 +1428,7 @@ let rec as_validator
       A.validate_with_error_handler typename fn                              
         (A.validate_weaken_inv_loc _ _ _ (
           A.validate_dep_pair_with_refinement false fn
-            (dtyp_as_validator #use_error_handler base)
+            (dtyp_as_validator #use_error_handler fn base)
             (dtyp_as_leaf_reader #use_error_handler base)
             refinement
             (fun x -> as_validator typename #use_error_handler (k x))))
@@ -1419,7 +1441,8 @@ let rec as_validator
       A.validate_with_error_handler typename fn                              
         (A.validate_weaken_inv_loc _ _ _ (
           A.validate_dep_pair_with_action 
-            (dtyp_as_validator #use_error_handler base)
+            fn
+            (dtyp_as_validator #use_error_handler fn base)
             (dtyp_as_leaf_reader #use_error_handler base)
             (fun x -> action_as_action #use_error_handler (act x))
             (fun x -> as_validator typename #use_error_handler (t x))))
@@ -1432,7 +1455,7 @@ let rec as_validator
       A.validate_weaken_inv_loc _ _ _ (
           A.validate_dep_pair_with_refinement_and_action false fn
             (A.validate_with_error_handler typename fn                              
-              (dtyp_as_validator #use_error_handler base))
+              (dtyp_as_validator #use_error_handler fn base))
             (dtyp_as_leaf_reader #use_error_handler base)
             refinement
             (fun x -> action_as_action #use_error_handler (act x))
@@ -1479,14 +1502,14 @@ let rec as_validator
       A.validate_with_error_handler typename fn 
         (A.validate_weaken_inv_loc _ _ _ (
           A.validate_with_dep_action fn
-            (dtyp_as_validator #use_error_handler i)
+            (dtyp_as_validator #use_error_handler fn i)
             (dtyp_as_leaf_reader #use_error_handler i)
             (fun x -> action_as_action #use_error_handler (a typename x))))
 
     | T_drop t ->
       assert_norm (as_type #use_error_handler (T_drop t) == as_type #use_error_handler t);
       assert_norm (as_parser #use_error_handler (T_drop t) == as_parser #use_error_handler t);
-      A.validate_without_reading (as_validator typename #use_error_handler t)
+      A.validate_without_reading (typ_fieldnames t) (as_validator typename #use_error_handler t)
 
     | T_with_comment fn t c ->
       assert_norm (as_type #use_error_handler (T_with_comment fn t c) == as_type #use_error_handler t);
@@ -1499,30 +1522,30 @@ let rec as_validator
       if ha
       then (
         A.validate_with_error_handler typename fn 
-          (A.validate_nlist n n_is_const (as_validator typename #use_error_handler t))
+          (A.validate_nlist fn n n_is_const (as_validator typename #use_error_handler t))
       )
       else (
         A.validate_with_error_handler typename fn 
-          (A.validate_nlist_constant_size_without_actions n n_is_const payload_is_constant_size (as_validator typename #use_error_handler t))
+          (A.validate_nlist_constant_size_without_actions fn n n_is_const payload_is_constant_size (as_validator typename #use_error_handler t))
       )
 
     | T_at_most fn n t ->
       assert_norm (as_type #use_error_handler (T_at_most fn n t) == P.t_at_most n (as_type #use_error_handler t));
       assert_norm (as_parser #use_error_handler (T_at_most fn n t) == P.parse_t_at_most n (as_parser #use_error_handler t));
       A.validate_with_error_handler typename fn 
-        (A.validate_t_at_most n (as_validator typename #use_error_handler t))
+        (A.validate_t_at_most fn n (as_validator typename #use_error_handler t))
 
     | T_exact fn n t ->
       assert_norm (as_type #use_error_handler (T_exact fn n t) == P.t_exact n (as_type #use_error_handler t));
       assert_norm (as_parser #use_error_handler (T_exact fn n t) == P.parse_t_exact n (as_parser #use_error_handler t));
       A.validate_with_error_handler typename fn 
-        (A.validate_t_exact n (as_validator typename #use_error_handler t))
+        (A.validate_t_exact fn n (as_validator typename #use_error_handler t))
 
     | T_string fn elt_t terminator ->
       assert_norm (as_type #use_error_handler (T_string fn elt_t terminator) == P.cstring (dtyp_as_type #use_error_handler elt_t) terminator);
       assert_norm (as_parser #use_error_handler (T_string fn elt_t terminator) == P.parse_string (dtyp_as_parser #use_error_handler elt_t) terminator);
       A.validate_with_error_handler typename fn 
-        (A.validate_string (dtyp_as_validator #use_error_handler elt_t)
+        (A.validate_string fn (dtyp_as_validator #use_error_handler fn elt_t)
                            (dtyp_as_leaf_reader #use_error_handler elt_t)
                            terminator)
 #pop-options 
@@ -1559,6 +1582,7 @@ let specialization_steps =
    delta_attr [`%specialize];
    delta_only ([`%Some?;
                 `%Some?.v;
+                `%AC.capitalize;
                 `%as_validator;
                 `%nz_of_binding;
                 `%wk_of_binding;

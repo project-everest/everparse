@@ -14,9 +14,6 @@
 #define EVERPARSE_PROBE_FAILURE_PROBE 258uL
 #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL
 
-
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif

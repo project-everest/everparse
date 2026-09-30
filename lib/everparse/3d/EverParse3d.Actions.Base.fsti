@@ -130,6 +130,7 @@ inline_for_extraction noextract
 val validate_with_success_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (name: string)
       (#nz:bool)
       (#wk: _)
@@ -174,6 +175,7 @@ inline_for_extraction noextract
 val validate_dep_pair_with_refinement_and_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (#nz1:_)
@@ -224,6 +226,7 @@ inline_for_extraction noextract
 val validate_filter_with_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
        (name: string)
        (#nz:_)
        (#k:parser_kind nz WeakKindStrongPrefix)
@@ -359,6 +362,7 @@ noextract inline_for_extraction
 val validate_nlist
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
        (n:U32.t)
        (n_is_const:option nat { memoizes_n_as_const n_is_const n})
        (#wk: _)
@@ -375,6 +379,7 @@ noextract inline_for_extraction
 val validate_t_at_most
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
        (n:U32.t)
        (#nz: _)
        (#wk: _)
@@ -391,6 +396,7 @@ noextract inline_for_extraction
 val validate_t_exact
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
        (n:U32.t)
        (#nz: _)
        (#wk: _)
@@ -618,6 +624,7 @@ inline_for_extraction noextract
 val validate_dep_pair_with_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#nz1:_)
       (#k1:parser_kind nz1 WeakKindStrongPrefix)
       (#t1:Type)
@@ -676,6 +683,7 @@ inline_for_extraction noextract
 val validate_with_dep_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (name: string)
       (#nz:_)
       (#k:parser_kind nz WeakKindStrongPrefix)
@@ -693,6 +701,7 @@ inline_for_extraction noextract
 val validate____UINT8
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler
@@ -701,12 +710,14 @@ inline_for_extraction noextract
 val read____UINT8
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT8
 
 inline_for_extraction noextract
 val validate____UINT8BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler
@@ -715,12 +726,14 @@ inline_for_extraction noextract
 val read____UINT8BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT8BE
 
 inline_for_extraction noextract
 val validate____UINT16BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler
@@ -729,12 +742,14 @@ inline_for_extraction noextract
 val read____UINT16BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT16BE
 
 inline_for_extraction noextract
 val validate____UINT32BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler
@@ -743,12 +758,14 @@ inline_for_extraction noextract
 val read____UINT32BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT32BE
 
 inline_for_extraction noextract
 val validate____UINT64BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler
@@ -757,12 +774,14 @@ inline_for_extraction noextract
 val read____UINT64BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT64BE
 
 inline_for_extraction noextract
 val validate____UINT16
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler
@@ -771,12 +790,14 @@ inline_for_extraction noextract
 val read____UINT16
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT16
 
 inline_for_extraction noextract
 val validate____UINT32
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler
@@ -785,12 +806,14 @@ inline_for_extraction noextract
 val read____UINT32
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT32
 
 inline_for_extraction noextract
 val validate____UINT64
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler
@@ -799,6 +822,7 @@ inline_for_extraction noextract
 val read____UINT64
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
 : leaf_reader #base_t #len_t #pos_t parse____UINT64
 
 inline_for_extraction noextract
@@ -811,6 +835,7 @@ inline_for_extraction noextract
 val validate_all_bytes
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_read #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler
@@ -819,6 +844,7 @@ inline_for_extraction noextract
 val validate_drop
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#nz:bool)
       (#wk: _)
       (#k:parser_kind nz wk)
@@ -834,6 +860,7 @@ inline_for_extraction noextract
 val validate_pair
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
        (typename: string)
        (name1: string)
@@ -865,6 +892,7 @@ inline_for_extraction noextract
 val validate_without_reading
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#nz:bool)
       (#wk: _)
       (#k:parser_kind nz wk)
@@ -890,6 +918,7 @@ inline_for_extraction
 val action_field_pos_32
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
 : action #base_t #len_t #pos_t extra_state U32.t use_error_handler
@@ -917,7 +946,11 @@ let field_ptr_after_t
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (ptr_t: Type0)
 : Type0
-= (sz: U64.t) ->
+= (* Explicit, not a `solve_from_ctx` implicit: this arrow is *stored* (in the
+     `option (field_ptr_after_t ...)` that each backend exports), so the tactic
+     would have to run where the binders are not yet in scope. *)
+  (_extra: inst.extra_t) ->
+  (sz: U64.t) ->
   (write_to: ref ptr_t) ->
   (sl_base: base_t) ->
   (sl_len: len_t) ->
@@ -945,6 +978,7 @@ inline_for_extraction
 val action_field_ptr_after
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#ptr_t: Type0)
       (f: field_ptr_after_t base_t len_t pos_t ptr_t)
       (name: Ghost.erased string)
@@ -957,6 +991,7 @@ inline_for_extraction noextract
 val validate_all_zeros
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
@@ -980,6 +1015,7 @@ inline_for_extraction noextract
 val validate_nlist_constant_size_without_actions
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (n:U32.t)
       (n_is_const:option nat { memoizes_n_as_const n_is_const n})
       (payload_is_constant_size: bool)
@@ -1010,7 +1046,10 @@ let field_ptr_after_setter_t
   (extra_state: state_dict)
   (ptr_t: Type0)
 : Type0
-= (sz: U64.t) ->
+= (* Explicit for the same reason as `field_ptr_after_t`: this arrow is stored,
+     so `solve_from_ctx` cannot run with the binders in scope. *)
+  (_extra: inst.extra_t) ->
+  (sz: U64.t) ->
   (write_to: (ptr_t -> external_action extra_state unit)) ->
   (sl_base: base_t) ->
   (sl_len: len_t) ->
@@ -1062,6 +1101,7 @@ inline_for_extraction
 val action_field_ptr_after_with_setter
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#extra_state: state_dict)
       (#ptr_t: Type0)
       (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
@@ -1224,6 +1264,7 @@ inline_for_extraction noextract
 let validate_without_reading_gen
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#nz:bool)
       (#wk: _)
       (#k:parser_kind nz wk)

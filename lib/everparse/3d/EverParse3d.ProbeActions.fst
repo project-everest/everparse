@@ -1,16 +1,19 @@
 module EverParse3d.ProbeActions
 #lang-pulse
 
-module AppCtxt = EverParse3d.AppCtxt
+(* [I] and [CB] are also brought into scope by the interface, but an
+   abbreviation that only leaks from the .fsti is invisible to F*'s dependency
+   analysis, which then resolves [I.] / [CB.] against a *client* module
+   literally named [I] / [CB] and reports a recursive dependency (Error 308).
+   Declaring them here keeps a 3D module named [I] or [CB] compilable, as it
+   already is with the Low* backend, whose prelude declares the abbreviation in
+   every file that uses it. *)
 module I = EverParse3d.InputStream.Base
 module U8 = FStar.UInt8
-module U16 = FStar.UInt16
-module U32 = FStar.UInt32
 module U64 = FStar.UInt64
-open EverParse3d.CopyBuffer
 module CB = EverParse3d.CopyBuffer
-open Pulse.Lib.Pervasives
-open EverParse3d.Actions.Common
+module U64 = FStar.UInt64
+module SZ = FStar.SizeT
 
 
 let probe_fn_incremental
@@ -216,12 +219,19 @@ ensures exists* v_ctxt' .
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
 {
   unfold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
-  ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)
-    tn fn_ det 0uy ctxt
+  // The error is reported against the probe destination, so the position to
+  // report is the one reached in that copy buffer.
+  let dest_pos = I.get_position
       (CB.base_of #_ #base_t #len_t #pos_t dest)
       (CB.len_of #_ #base_t #len_t #pos_t dest)
       (CB.pos_of #_ #base_t #len_t #pos_t dest)
       contents_dest v_dest;
+  (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst))
+    tn fn_ det 0uy ctxt
+      (CB.base_of #_ #base_t #len_t #pos_t dest)
+      (CB.len_of #_ #base_t #len_t #pos_t dest)
+      (CB.pos_of #_ #base_t #len_t #pos_t dest)
+      (SZ.sizet_to_uint64 dest_pos);
   fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
 }
 

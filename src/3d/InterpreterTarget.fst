@@ -54,6 +54,17 @@ let pulse_ehm () : ML string = "B.error_handler_macro"
 let pulse_cb_inst_args () : ML string =
   " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer"
 
+(* The client context (`EVERPARSE_EXTRA_T`) that the extern/static backends
+   thread down to the stream primitives. The generated validator binds it so
+   that `EverParse3d.Util.solve_from_ctx` can resolve it inside the body, and
+   so that KaRaMeL emits it as the validator's first C parameter -- exactly as
+   the Low* backend does. The buffer backend has no context (`extra_t = unit`),
+   so nothing is emitted and the binder erases. *)
+let pulse_extra_binder () : ML string =
+  if HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+  then ""
+  else " (#[EverParse3d.Util.solve_from_ctx ()] _extra: B.extra_t)"
+
 let pulse_is_buffer () : ML bool =
   HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
 
@@ -782,7 +793,12 @@ let set_pulse_kenv (l:list string) : ML unit =
 let get_pulse_kenv () : ML (list string) =
   !pulse_kenv
 
-let pulse_key_binder_of (p:string) : string = Printf.sprintf "k__%s" p
+(* The ghost key binder for a parameter. It must not be expressible in 3D, or
+   a user parameter of that very name would collide with it: [Ast.reserved_prefix]
+   followed by a lowercase letter is unreachable, exactly as for
+   [pulse_output_state_name] below. *)
+let pulse_key_binder_of (p:string) : string =
+  Printf.sprintf "%sk_%s" A.reserved_prefix p
 
 let pulse_in_kenv (e:string) : ML bool =
   Some? (List.Tot.find (fun (x:string) -> x = e) (get_pulse_kenv ()))
@@ -812,7 +828,15 @@ let pulse_sanitize_key (e:string) : ML string =
    [Ast.reserved_prefix] followed by a lowercase letter: 3D rejects
    identifiers starting with ["___"], and [Target.print_ident] only ever
    produces that prefix in front of an uppercase letter, so the name cannot
-   be shadowed by a user parameter either. *)
+   be shadowed by a user parameter either.
+
+   That argument covers the compiler-owned *definitions* only. Every library
+   name the state dictionary is built out of -- [state_dict] and friends from
+   [EverParse3d.State], and [pts_to] -- is in scope through an [open] in the
+   Pulse module prefix, and a 3D parameter is printed as a plain F* binder
+   carrying the user's own name, so such a parameter would shadow the library
+   name and the generated code would not typecheck. They are therefore printed
+   fully qualified below, as [A.copy_buffer_state_dict] already was. *)
 let pulse_output_state_key : string = "\"#output\""
 let pulse_output_state_name : string = A.reserved_prefix ^ "output_state"
 
@@ -853,7 +877,9 @@ let rec pulse_state_dict_leaves (mname:string) (i:inv)
       pulse_state_dict_leaves mname i @ pulse_state_dict_leaves mname j
     | Inv_ptr x ->
       let e = T.print_expr mname x in
-      [e, pulse_key_of e, Printf.sprintf "(state_dict_singleton %s (pts_to %s #1.0R))" (pulse_key_of e) e]
+      [e, pulse_key_of e,
+       Printf.sprintf "(EverParse3d.State.state_dict_singleton %s (Pulse.Class.PtsTo.pts_to %s #1.0R))"
+         (pulse_key_of e) e]
     | Inv_copy_buf x ->
       let e = T.print_expr mname x in
       [e, pulse_key_of e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
@@ -873,14 +899,15 @@ let rec pulse_dedup_leaves (l:list (string & string & string))
 let rec pulse_fold_prod (l:list (string & string & string))
   : ML string
   = match l with
-    | [] -> "state_dict_empty"
+    | [] -> "EverParse3d.State.state_dict_empty"
     | [(_, _, v)] -> v
-    | (_, _, v) :: tl -> Printf.sprintf "(state_dict_prod %s %s)" v (pulse_fold_prod tl)
+    | (_, _, v) :: tl ->
+      Printf.sprintf "(EverParse3d.State.state_dict_prod %s %s)" v (pulse_fold_prod tl)
 
 let print_state_dict (mname:string) (i:index inv)
   : ML string
   = match i with
-    | None -> "state_dict_empty"
+    | None -> "EverParse3d.State.state_dict_empty"
     | Some i -> pulse_fold_prod (pulse_dedup_leaves (pulse_state_dict_leaves mname i))
 
 (* The keys of the leaves of a declaration's own dictionary, in the order in
@@ -915,8 +942,8 @@ let pulse_keys_binder (mname:string) (i:index inv)
   : ML string
   = let c = pulse_key_distinct_conj (pulse_state_dict_keys mname i) in
     if c = ""
-    then "(sq_keys_: squash True)"
-    else Printf.sprintf "(sq_keys_: squash (%s))" c
+    then "(___sq_keys: Prims.squash Prims.l_True)"
+    else Printf.sprintf "(___sq_keys: Prims.squash (%s))" c
 
 let print_dtyp_at (mname:string) (d:string) (dt:dtyp) =
   match dt with
@@ -979,7 +1006,18 @@ let rec print_action (mname:string) (a:T.action)
 
         | T.Action_field_pos_32 ->
           if pulse ()
-          then "Action_field_pos_32"
+          then begin
+            (* Same restriction as Low*, where `action_field_pos_32` carries a
+               `squash (backend_flag == BackendFlagBuffer)`: the action narrows
+               the position to 32 bits, which is only lossless when the whole
+               input is addressed by a 32-bit length. The buffer backend is the
+               one that guarantees that; `extern` and `static` hand out an
+               opaque stream whose cumulative position has no such bound, so
+               the cast would silently truncate. *)
+            if not (pulse_is_buffer ())
+            then A.error "The field_pos_32 action (also spelled field_pos) is only supported by the buffer backend" A.dummy_range;
+            "Action_field_pos_32"
+          end
           else "(Action_field_pos_32 EverParse3d.Actions.BackendFlagValue.backend_flag_value)"
 
         | T.Action_field_ptr ->
@@ -1357,9 +1395,15 @@ let print_disj mname (i:index disj) =
 let print_td_iface_pulse is_entrypoint mname root_name binders args
                          sd ha ar pk_wk pk_nz =
   let ar = if is_entrypoint then false else ar in
-  (* NOTE: the kind itself is *not* declared here; `print_binding` emits its
-     definition into the interface instead, for every type decl. *)
-  let kind_t = "" in
+  let kind_t =
+    Printf.sprintf "[@@noextract_to \"krml\"]\n\
+                    inline_for_extraction\n\
+                    noextract\n\
+                    val kind_%s : P.parser_kind %b P.%s"
+      root_name
+      pk_nz
+      pk_wk
+  in
   let def'_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
@@ -1384,8 +1428,9 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args
   let dtyp_t =
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                     noextract\n\
-                    val dtyp_%s %s (d: state_dict) (sq: squash (state_dict_weaken_prop %s d))\n\
-                      : dtyp %s d %b kind_%s %b %b"
+                    val dtyp_%s %s (___d: EverParse3d.State.state_dict)\n\
+                       (___sq: Prims.squash (EverParse3d.State.state_dict_weaken_prop %s ___d))\n\
+                      : dtyp %s ___d %b kind_%s %b %b"
       root_name
       binders
       sd
@@ -1447,14 +1492,6 @@ let print_binders_as_args mname binders =
     List.map (fun (i, _) -> print_ident mname i) binders |>
     String.concat " "
 
-// This large ML pretty-printer builds its result through ~20 chained
-// `let` bindings, so its (trivial) verification condition is a deep
-// continuation-passing term. The whole query verifies using ~8 rlimit,
-// but the default budget of 5 makes F* cancel it and retry by splitting,
-// and the split subquery then diverges into a quantifier cascade over the
-// effect continuations ("incomplete quantifiers"). Raising the budget lets
-// the whole query succeed in one shot, avoiding the split entirely.
-#push-options "--z3rlimit 32"
 let print_binding mname (td:type_decl)
 : ML (string & string)
 = let tdn = td.name in
@@ -1471,11 +1508,12 @@ let print_binding mname (td:type_decl)
     if pulse ()
     then
       let inv, _, _, _ = td.typ_indexes in
-      Printf.sprintf "%s %s %s"
+      Printf.sprintf "%s %s %s%s"
         (pulse_key_binders mname tdn.td_params)
         (print_binders tdn.td_params)
-        (pulse_keys_binder mname inv),
-      Printf.sprintf "%s %s sq_keys_"
+        (pulse_keys_binder mname inv)
+        (pulse_extra_binder ()),
+      Printf.sprintf "%s %s ___sq_keys"
         (pulse_key_binder_args mname tdn.td_params)
         (print_args tdn.td_params)
     else print_binders tdn.td_params, print_args tdn.td_params
@@ -1483,46 +1521,18 @@ let print_binding mname (td:type_decl)
   let def = print_type_decl mname binders td in
   let weak_kind = A.print_weak_kind k.pk_weak_kind in
   let pk_of_binding =
+      (* The kind expression is a nest of `and_then_kind`/`glb` applications,
+         each of which mentions its arguments several times. Left unreduced,
+         F* extraction unfolds them and the term grows exponentially with the
+         nesting depth. Reduce the nest to a literal record here. *)
+      let kind_expr =
+        Printf.sprintf "coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s"
+          (T.print_kind mname k)
+      in
       let kind_expr =
         if pulse ()
-        then
-          (* The kind expression is a nest of `and_then_kind`/`glb`
-             applications, each of which mentions its arguments several times.
-             Left unreduced, F* extraction unfolds the whole nest at once and
-             the term grows exponentially with the nesting depth (one level per
-             struct field), because each record projection on a not-yet-reduced
-             argument is a *stuck* projection that recent F* normalizers
-             re-normalize instead of sharing.
-
-             So we reduce the nest to a literal `parser_kind` record right
-             here, and -- crucially -- we do it with `T.exact_with_ref (T.norm_term ...)`
-             rather than with `norm [...] (...)`: the former makes the *body* of
-             `kind_X` be the literal record, whereas the latter leaves the
-             unreduced nest (under a `norm` marker) in the body, so that every
-             later unfolding of `kind_X` would redo the work. With the literal
-             body, kinds are computed bottom-up, one `and_then_kind` at a time,
-             and the whole process is linear in the number of fields.
-
-             The base kinds referenced here live either in `EverParse3d.Kinds`
-             (which, for this reason, has no interface hiding them), or in the
-             current module, or in another 3d module, hence the
-             `delta_namespace` below. *)
-          let modules =
-            "EverParse3d" :: "LowParse" :: T.kind_modules mname k
-          in
-          let modules = List.Tot.fold_left
-            (fun acc m -> if List.Tot.mem m acc then acc else acc `List.Tot.append` [m])
-            []
-            modules
-          in
-          Printf.sprintf
-            "_ by (T.norm [delta_namespace [%s]; zeta; iota; primops]; T.exact_with_ref (T.norm_term [delta_namespace [%s]; zeta; iota; primops] (`(%s))))"
-            (String.concat "; " (List.map (fun m -> Printf.sprintf "\"%s\"" m) modules))
-            (String.concat "; " (List.map (fun m -> Printf.sprintf "\"%s\"" m) modules))
-            (T.print_kind mname k)
-        else
-          Printf.sprintf "coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s"
-            (T.print_kind mname k)
+        then Printf.sprintf "norm [delta_namespace [\"EverParse3d\"; \"LowParse\"]; zeta; iota; primops] (%s)" kind_expr
+        else kind_expr
       in
       Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction noextract\n\
@@ -1633,7 +1643,12 @@ let print_binding mname (td:type_decl)
       else "None"
     in
     let coerce_validator =
-      Printf.sprintf "(T.norm [delta_only [`%%parser_%s; `%%type_%s; `%%coerce]]; T.trefl())"
+      (* `validator_of` must be unfolded here: for an entrypoint, `validate_X`
+         is declared in the generated interface with type `validator_of ...`,
+         so without it `T.trefl` falls back to unification with full delta,
+         which unfolds the whole nest of `def'_X` and blows up exponentially
+         with the nesting depth. *)
+      Printf.sprintf "(T.norm [delta_only [`%%parser_%s; `%%type_%s; `%%coerce; `%%validator_of]]; T.trefl())"
         root_name
         root_name
     in
@@ -1641,11 +1656,12 @@ let print_binding mname (td:type_decl)
     then
       Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                         noextract\n\
-                        let dtyp_%s %s (d: state_dict) (sq: squash (state_dict_weaken_prop %s d))\n\
-                          : dtyp %s d %b kind_%s %b %b\n\
+                        let dtyp_%s %s (___d: EverParse3d.State.state_dict)\n\
+                                     (___sq: Prims.squash (EverParse3d.State.state_dict_weaken_prop %s ___d))\n\
+                          : dtyp %s ___d %b kind_%s %b %b\n\
                           = mk_dtyp_app\n\
                                     %s\n\
-                                    d\n\
+                                    ___d\n\
                                     %b\n\
                                     kind_%s\n\
                                     (type_%s %s)\n\
@@ -1653,7 +1669,7 @@ let print_binding mname (td:type_decl)
                                     %s\n\
                                     %b\n\
                                     %b\n\
-                                    (A.validate_weaken_gen \"%s\" %b ((coerce (_ by %s) (validate_%s %s)) <: A.validate_with_action_t #B.base_t #B.len_t #B.pos_t #%s (parser_%s %s) %s %b %b %b) d sq)\n\
+                                    (A.validate_weaken_gen \"%s\" %b (coerce (_ by %s) (validate_%s %s)) ___d ___sq)\n\
                                     (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
                       root_name binders sd
                       (pulse_inst_args ())
@@ -1671,12 +1687,6 @@ let print_binding mname (td:type_decl)
                       root_name
                       td.allow_reading
                       coerce_validator root_name args
-                      (pulse_inst ())
-                      root_name args
-                      sd
-                      td.has_action
-                      td.allow_reading
-                      (use_error_handler ())
     else
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\
@@ -1718,10 +1728,10 @@ let print_binding mname (td:type_decl)
          root_name
          (T.print_typ mname t)
   in
-  let impl_with (pk:string) =
+  let impl =
     String.concat "\n"
       [def;
-      pk;
+      pk_of_binding;
       def';
       (as_type_or_parser "type");
       (as_type_or_parser "parser");
@@ -1729,20 +1739,15 @@ let print_binding mname (td:type_decl)
       dtyp;
       enum_typ_of_binding]
   in
-  let impl = impl_with pk_of_binding in
   // impl, ""
   if Some? td.enum_typ
   && (td.name.td_entrypoint || td.attrs.is_exported)
   then "", impl //exported enums are fully revealed
-  else if pulse ()
+  else if td.name.td_entrypoint
+      || td.attrs.is_exported
   then
-    (* The kind definition always goes to the interface, even for a type that
-       is not otherwise exported: a client module builds its own kinds on top
-       of ours, and can only reduce them to a literal `parser_kind` record if
-       ours are transparent. It must then not be repeated in the
-       implementation. See the comment on `pk_of_binding` above. *)
-    let iface_rest =
-      if td.name.td_entrypoint || td.attrs.is_exported
+    let iface =
+      if pulse ()
       then
         print_td_iface_pulse td.name.td_entrypoint
                     mname root_name binders args
@@ -1762,7 +1767,6 @@ let print_binding mname (td:type_decl)
     in
     impl, iface
   else impl, ""
-#pop-options
 
 let print_decl mname (d:decl)
   : ML (string & string) =

@@ -49,6 +49,10 @@ Then, EverParse/3d produces:
   helpers for the implementation of verified validators, common to
   ``MyFile1.3d`` and ``MyFile2.3d``
 
+* with ``--pulse``, two additional headers, ``EverParsePulse.h`` and
+  ``EverParsePulseEndianness.h``, which play the same role for the Pulse
+  backend
+
 3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
    compilation units that need to call a validator from
    ``MyFile1.3d``, and similarly for ``MyFile2.3d``.
@@ -227,6 +231,17 @@ Options are treated from left to right:
   the package. Otherwise, the default is to use the ``fstar.exe``
   found from the ``PATH``.
   
+* ``--pulse``
+
+  Generates the verified validators with the Pulse backend instead of the
+  default Low\* backend. The entrypoint API in ``<Mod>Wrapper.h`` is
+  unchanged, so client code that only calls the entrypoints ports over
+  unchanged; but the error-code constants, the error-handler signature,
+  the copy-buffer projections and the ``--input_stream`` client primitives
+  all differ. See the *Pulse backend primitives* part of
+  ``--input_stream`` below, and, in the :ref:`3d language reference
+  <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
+
 * ``--input_stream buffer|extern|static``
 
   Specifies the format of validator input buffers:
@@ -236,8 +251,12 @@ Options are treated from left to right:
 
   + With ``extern``, a validator takes as argument a value of a
     user-defined ``EVERPARSE_INPUT_STREAM_BASE`` type, representing an
-    input byte stream, for which the following functions need to be
-    defined:
+    input byte stream. The client must define that type, and a set of
+    functions over it that **depends on the backend**: Low\* and Pulse
+    do not ask for the same primitives, nor even for the same argument
+    types. Both sets are given below.
+
+    **Low\* backend primitives** (the default)
 
     .. code-block:: c
 
@@ -306,15 +325,154 @@ Options are treated from left to right:
     In all such functions, ``EVERPARSE_EXTRA_T`` is a user-defined
     type for the context used for error handling (see "Error handling"
     in the 3d language reference.)
-    
+
+    **Pulse backend primitives** (with ``--pulse``)
+
+    With ``--pulse``, none of the primitives above are used. The
+    ``extern`` and ``static`` input streams instead require the
+    following set. As in Low\*, each one receives the
+    ``EVERPARSE_EXTRA_T`` context that was passed to the validator, but
+    byte counts are ``size_t`` rather than ``uint64_t``:
+
+    .. code-block:: c
+
+       extern size_t  EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);
+       extern BOOLEAN EverParseStreamHas        (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t n);
+       extern BOOLEAN EverParseStreamHasAt      (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t off, size_t n);
+       extern void    EverParseStreamReadBytes  (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t n, uint8_t *dst);
+       extern void    EverParseStreamSkip       (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base, size_t n);
+       extern size_t  EverParseStreamEmpty      (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base);
+
+       /* only if the grammar uses the `field_ptr_after` action */
+       extern BOOLEAN  EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **w,
+                                                  EVERPARSE_INPUT_STREAM_BASE base);
+       extern uint8_t *EverParseNullPtr;
+
+    With ``--input_stream static``, every one of these is declared
+    ``static inline`` rather than ``extern``, except
+    ``EverParseNullPtr``; see the ``static`` bullet below.
+    ``share/everparse/tests/3d/static`` is a worked example, and the
+    ``EverParse.h`` that ``--pulse`` copies into the output directory is
+    the authoritative declaration of this set.
+
+    ``EverParseStreamGetPosition(base)`` returns the *absolute*
+    position of the stream, that is, the total number of bytes it has
+    consumed since it was created. The generated wrapper samples it on
+    both sides of the validator call and subtracts the two, to recover
+    the parsed size; it must therefore be cumulative, and in particular
+    must keep counting across successive validations on the same
+    stream. It is the one primitive whose signature has no
+    ``EVERPARSE_EXTRA_T`` parameter; besides being used inside the
+    validators, it is called directly from the generated
+    ``<Mod>Wrapper.c``.
+
+    ``EverParseStreamHas(extra, base, n)`` returns ``TRUE`` iff ``n``
+    bytes are available at the current position, and must consume
+    nothing.
+
+    ``EverParseStreamHasAt(extra, base, off, n)`` returns ``TRUE`` iff
+    ``n`` bytes are available starting ``off`` bytes **after the
+    current position**, and must consume nothing. Unlike
+    ``EverParseStreamGetPosition``'s result, ``off`` is *relative*; an
+    implementation that treats it as an absolute offset will read out
+    of bounds and accept truncated input, since this call is the entire
+    bounds check performed by the non-consuming validators. The
+    validators never ask about an ``off`` beyond the end of the stream,
+    so the answer in that case is unspecified -- but the implementation
+    must still reach it safely, in particular by guarding against
+    ``off + n`` overflowing.
+
+    ``EverParseStreamReadBytes(extra, base, n, dst)`` copies the next
+    ``n`` bytes of the stream into ``dst`` and advances the stream by
+    ``n``. It is only ever called to read a leaf integer, so ``n`` is
+    at most 8.
+
+    ``EverParseStreamSkip(extra, base, n)`` advances the stream by
+    ``n`` bytes without reading them.
+
+    ``EverParseStreamEmpty(extra, base)`` returns the number of bytes
+    remaining **and consumes all of them**; it backs ``all_bytes``. It
+    is only ever called on an unbounded stream: within a size-bounded
+    field such as ``t_at_most``, the generated code instead computes
+    what the bound says is left and drains it with
+    ``EverParseStreamSkip``, so that the bytes following the bounded
+    region are not swallowed.
+
+    ``EverParseFieldPtrAfterImpl(extra, sz, w, base)`` backs the
+    ``field_ptr_after`` action, which the ``buffer`` input stream does
+    not have. It should store into ``*w`` a pointer to the next ``sz``
+    bytes of the stream, advance the stream by ``sz``, and return
+    ``TRUE``; if it cannot, it must return ``FALSE`` and leave ``*w``
+    alone, in which case the generated code reports a failure. Its F\*
+    specification constrains neither the pointer written nor the
+    stream, so -- exactly as for ``EverParsePeep`` in Low\* -- it is the
+    responsibility of the application to ensure double-fetch freedom on
+    the contents of the returned field is preserved.
+    ``EverParseNullPtr`` is the value the generated code stores into
+    ``*w`` before the call.
+
+    Finally, and exactly as in Low\*, the client supplies the two
+    wrapper-level callbacks below. These are common to both backends,
+    and their signatures are unchanged by ``--pulse``:
+
+    .. code-block:: c
+
+       extern void EverParseHandleError(EVERPARSE_EXTRA_T extra, uint64_t parsedSize,
+                                        const char *typename, const char *fieldname,
+                                        const char *reason, uint64_t error_code);
+       extern void EverParseRetreat    (EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE base,
+                                        uint64_t parsedSize);
+
+    ``EverParseHandleError`` is the error callback described under
+    "Error handling" in the 3d language reference. ``EverParseRetreat``
+    is called by the generated wrapper on the way out, with the number
+    of bytes the validator consumed; a client that makes it genuinely
+    rewind the stream must nevertheless *not* let it rewind
+    ``EverParseStreamGetPosition``, on which the wrapper's arithmetic
+    depends.
+
+    Three differences from the Low\* contract are worth calling out
+    when porting a client:
+
+    * **The stream tracks its own position.** The generated
+      ``<Mod>Check<Type>`` wrapper has the same signature as in Low\*,
+      but the Pulse validator it calls returns a plain ``uint8_t``
+      error code rather than a packed ``uint64_t``, so the wrapper
+      cannot read the parsed size out of the result. It recovers that
+      size by sampling ``EverParseStreamGetPosition`` on either side of
+      the call and subtracting -- which is why that primitive has to be
+      cumulative.
+
+    * **Reads always copy.** ``EverParseStreamReadBytes`` returns
+      ``void``, so, unlike ``EverParseRead``, it cannot hand back a
+      pointer into the client's own storage.
+
+    * **There is no** ``EverParsePeep``. The ``field_ptr`` action is
+      restricted to the ``buffer`` input stream on both Low\* and
+      Pulse, so nothing is lost there; but ``field_ptr_after`` is
+      backed by the explicit ``EverParseFieldPtrAfterImpl`` primitive
+      above rather than by ``EverParsePeep``, and it needs
+      ``EverParseNullPtr`` as well.
+
   + ``static`` is like ``extern`` except that the functions on
-    ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static``.
+    ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static inline``
+    rather than ``extern``, so that the compiler sees each stream
+    operation at every validator call site instead of linking against
+    it. This holds under both backends. The client must therefore
+    *define* those functions, not merely implement them in a separate
+    translation unit: the header named by ``--input_stream_include`` is
+    included into every generated ``.c`` file, so that is where the
+    definitions belong. ``EverParseNullPtr`` is the exception -- it is a
+    value, not a function, and stays ``extern`` under both input
+    streams.
 
   In any case, to compile the C code produced by EverParse, you need
   to add to the include path the subdirectory
   ``src/3d/prelude/<input_stream_format>`` of the EverParse binary
   package or repository; this directory contains the ``EverParse.h``
   corresponding to the input stream format given by ``--input_stream``
+  (with ``--pulse``, ``EverParse.h`` is copied into the output
+  directory instead, and ``src/3d/prelude`` is not used at all).
 
 * ``--input_stream_include myinclude.h``
 

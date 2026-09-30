@@ -230,6 +230,10 @@ let emit_fstar_code_for_interpreter (en:env)
       else ""
     in
  
+    (* Each abbreviation here shadows a 3D module of the same name inside
+       every generated file, so keep the list to the abbreviations the
+       generated code actually uses. [I] was not one of them: nothing emitted
+       refers to [EverParse3d.InputStream.Base]. *)
     let module_prefix =
       if Options.get_pulse ()
       then
@@ -243,7 +247,6 @@ let emit_fstar_code_for_interpreter (en:env)
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.Base\n\
                              module P = EverParse3d.Prelude\n\
-                             module I = EverParse3d.InputStream.Base\n\
                              module B = %s\n\
                              #set-options \"--fuel 0 --ifuel 0 --z3rlimit 32 --ext optimize_let_vc\"\n"
                              modul maybe_open_external_api
@@ -294,7 +297,6 @@ let emit_static_assertions
           (Options.output_dir())
           modul
           filename_suffix) in
-    FStar.IO.write_string c_static_asserts_file "\n\n";
     FStar.IO.write_string c_static_asserts_file 
     (StaticAssertions.print_static_asserts 
        (RefineCStruct.print_ctypes ctypes)
@@ -373,10 +375,10 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
       FStar.IO.write_string extern_typedefs_file
         (Printf.sprintf
           "#ifndef __%s_ExternalTypedefs_H\n\
-           #define __%s_ExternalTypedefs_H\n
+           #define __%s_ExternalTypedefs_H\n\n\
            #if defined(__cplusplus)\n\
            extern \"C\" {\n\
-           #endif\n\n\n\
+           #endif\n\n\
            %s#include \"%s_OutputTypesDefs.h\"\n\n\
            #if defined(__cplusplus)\n\
            }\n\
@@ -706,9 +708,29 @@ let produce_and_postprocess_c
     modul
     dep_files_and_modules
 
+(* TEMPORARY. In --pulse mode, Pulse's extraction encodes every reference
+   dereference as an access at the distinguished index C._zero_for_deref, which
+   KaRaMeL rewrites back into `*r`. KaRaMeL provides that marker as a builtin,
+   but only if no input file is named C (karamel/lib/Builtin.ml, `prepare`). So
+   a 3d module named C makes KaRaMeL skip the builtin and then fail on the
+   dangling reference, with a fatal Warning 2 mentioning C._zero_for_deref,
+   which gives the user no clue as to the actual cause. Reject the name up
+   front instead. To be removed once the marker is fixed upstream. *)
+let check_no_reserved_module_name (files: list string) : ML unit =
+  if Options.get_pulse ()
+  then
+    List.iter
+      (fun file ->
+        if OS.extension (OS.basename file) = ".3d" &&
+           OS.remove_extension (OS.basename file) = "C"
+        then raise (Error "A 3d module cannot be named C in --pulse mode, because the name collides with KaRaMeL's builtin C module. Please rename it.\n")
+      )
+      files
+
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let cmd_line_files = Options.parse_cmd_line() in
+  let _ = check_no_reserved_module_name cmd_line_files in
   let cfg_opt = Deps.get_config () in
   (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.check_inplace_hashes () in
@@ -799,6 +821,7 @@ let go () : ML unit =
     then List.Tot.rev cmd_line_files (* files are accumulated in reverse on the command line *)
     else Deps.collect_and_sort_dependencies cmd_line_files
   in
+  let _ = check_no_reserved_module_name all_files in
   let all_files_and_modules = List.map (fun file -> (file, Options.module_name file)) all_files in
   (* Special mode: --emit_smt_encoding *)
   if Options.get_emit_smt_encoding ()

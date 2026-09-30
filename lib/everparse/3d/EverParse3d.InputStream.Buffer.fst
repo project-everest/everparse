@@ -12,51 +12,16 @@ module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module I = EverParse3d.InputStream.Base
+module Util = EverParse3d.Util
 module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
 module Trade = Pulse.Lib.Trade.Util
 module Common = EverParse3d.Actions.Common
 module CB = EverParse3d.CopyBuffer
+module EH = EverParse3d.Actions.ErrorHandler.Buffer
 
-let base_t = AP.ptr U8.t
-let len_t = SZ.t
-let pos_t = R.ref SZ.t
+include EverParse3d.InputStream.Buffer.Types
 
-let stream_pts_to
-  (b: base_t) (len: len_t) (pos: pos_t)
-  (contents: Seq.seq U8.t) (v: Seq.seq U8.t)
-: Tot slprop
-= exists* (p: SZ.t).
-    AP.pts_to b contents **
-    R.pts_to pos p **
-    pure (
-      Seq.length contents == SZ.v len /\
-      SZ.v p <= SZ.v len /\
-      v == Seq.slice contents (SZ.v p) (SZ.v len)
-    )
-
-(* After [truncate], the enclosing stream keeps the ownership of the bytes
-   beyond the truncation point, together with the fact that they are physically
-   adjacent to the truncated prefix. *)
-let stream_is_prefix_of
-  (base_x: base_t) (len_x: len_t) (pos_x: pos_t)
-  (base_y: base_t) (len_y: len_t) (pos_y: pos_t)
-  (contents0: Seq.seq U8.t) (suffix: Seq.seq U8.t)
-: Tot slprop
-= exists* (s': base_t).
-    AP.pts_to s' suffix **
-    pure (
-      base_x == base_y /\ pos_x == pos_y /\
-      AP.adjacent base_x (SZ.v len_x) s' /\
-      SZ.v len_x + Seq.length suffix == SZ.v len_y
-    )
-
-noextract
-inline_for_extraction
-let pts_to_inst : I.input_stream_pts_to base_t len_t pos_t = {
-  pts_to = stream_pts_to;
-  is_prefix_of = stream_is_prefix_of;
-}
 
 ghost
 fn stream_pts_to_is_suffix_of
@@ -89,6 +54,7 @@ ensures stream_pts_to b len pos contents v **
 
 inline_for_extraction
 fn stream_has
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v
@@ -103,26 +69,38 @@ ensures stream_pts_to b len pos contents v **
   SZ.lte n avail
 }
 
+(* [off] is relative to the current position, and has no precondition; see the
+   [has_at] field of EverParse3d.InputStream.Base.input_stream_inst. The guard
+   below is what keeps [SZ.sub] from underflowing when [off] is out of range;
+   the answer in that case is unspecified. *)
 inline_for_extraction
 fn stream_has_at
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (off: SZ.t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
-requires stream_pts_to b len pos contents v ** pure (SZ.v off <= Seq.length v)
+requires stream_pts_to b len pos contents v
 returns res: bool
 ensures stream_pts_to b len pos contents v ** pure (
-  (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-  (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+  SZ.v off <= Seq.length v ==> (
+    (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+    (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+  )
 )
 {
   unfold (stream_pts_to b len pos contents v);
   let p = !pos;
-  let avail = SZ.sub (SZ.sub len p) off;
+  let rem = SZ.sub len p;
   fold (stream_pts_to b len pos contents v);
-  SZ.lte n avail
+  if (SZ.lte off rem) {
+    SZ.lte n (SZ.sub rem off)
+  } else {
+    false
+  }
 }
 
 inline_for_extraction
 fn stream_skip
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v ** pure (Seq.length v >= SZ.v n)
@@ -142,6 +120,7 @@ ensures exists* v' .
 
 inline_for_extraction
 fn stream_empty
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v
@@ -175,6 +154,7 @@ let stream_trunc_pos (b: base_t) (len: len_t) (pos: pos_t) (tr: len_t) : Tot pos
 
 inline_for_extraction
 fn stream_truncate
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v ** pure (SZ.v n <= Seq.length v)
@@ -236,6 +216,7 @@ ensures stream_pts_to base_y len_y pos_y contents0 (Seq.append v suffix)
 
 inline_for_extraction
 fn stream_read
+    (#[Util.solve_from_ctx ()] _extra: unit)
   (t': Type0) (k: LP.parser_kind) (p: LP.parser k t') (r: API.leaf_reader p)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
@@ -284,6 +265,10 @@ noextract
 inline_for_extraction
 instance input_stream_buffer : I.input_stream_inst base_t len_t pos_t = {
   pts_to_inst = pts_to_inst;
+  error_handler_t = EH.error_handler;
+  error_handler_arrow_of_t = EH.error_handler_arrow_of;
+  (* The buffer backend has no client context, so it erases. *)
+  extra_t = unit;
   pts_to_is_suffix_of = stream_pts_to_is_suffix_of;
   get_position = stream_get_position;
   has = stream_has;

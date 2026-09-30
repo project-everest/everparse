@@ -1016,9 +1016,12 @@ let print_c_entry
    let is_input_stream_buffer =
      HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
    in
-   (* Under --pulse with an `extern` (or `static`) input stream, `len_t` and
-      `pos_t` are `unit` and hence erased, so the validator carries no position
-      of its own. The stream object does, so the wrapper asks it. *)
+   (* Under --pulse with an `extern` (or `static`) input stream, the validator
+      is passed the stream object together with a truncation bound of 0 (i.e.
+      none) and, as its origin, the stream's current position. It does not
+      report how far it got: its result is a plain error code. The stream is
+      what tracks the position, so the wrapper asks it, on both sides of the
+      call. *)
    let stream_get_position_decl =
      "extern size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);\n"
    in
@@ -1042,10 +1045,12 @@ let print_c_entry
      then
        if not is_input_stream_buffer
        then
-       (* The `extern`/`static` Pulse validators pass the stream object and
-          the origin of the current validation (its length is `unit`, hence
-          erased). The reported position is relative to that origin, as in
-          Low*, where the wrapper always passes a start position of 0. *)
+       (* The `extern`/`static` Pulse validators pass the stream object, the
+          truncation bound of the current view (0 at top level, i.e. the whole
+          stream), the origin of the current validation, and the position at
+          which the failing field started. That start position is already
+          relative to the origin, as in Low*, where the wrapper always passes
+          a start position of 0. *)
        Printf.sprintf
           "%sstatic\n\
            void DefaultErrorHandler(\n\t\
@@ -1055,9 +1060,14 @@ let print_c_entry
                                uint8_t error_code,\n\t\
                                uint8_t *context,\n\t\
                                EVERPARSE_INPUT_STREAM_BASE base,\n\t\
-                               size_t origin)\n\
+                               size_t len,\n\t\
+                               size_t origin,\n\t\
+                               uint64_t start_pos)\n\
            {\n\t\
              %s\n\t\
+             (void) len;\n\t\
+             (void) base;\n\t\
+             (void) origin;\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
                typename_s,\n\t\t\
                fieldname,\n\t\t\
@@ -1065,7 +1075,7 @@ let print_c_entry
                (uint64_t)error_code,\n\t\t\
                frame,\n\t\t\
                NULL,\n\t\t\
-               (uint64_t)(EverParseStreamGetPosition(base) - origin)\n\t\
+               start_pos\n\t\
              );\n\
            }"
           stream_pos_decl
@@ -1073,7 +1083,10 @@ let print_c_entry
        else
        (* The Pulse `error_handler` takes a uint8_t error code and the three
           components of the input stream, rather than a uint64_t code and an
-          EVERPARSE_INPUT_BUFFER. *)
+          EVERPARSE_INPUT_BUFFER, plus the start position of the failing field.
+          `pos` is the *live* position and has already moved past the field by
+          the time we are called, so the reported offset comes from
+          `start_pos`, matching the Low* backend and doc/3d-lang.rst. *)
        Printf.sprintf
           "static\n\
            void DefaultErrorHandler(\n\t\
@@ -1084,10 +1097,12 @@ let print_c_entry
                                uint8_t *context,\n\t\
                                uint8_t *base,\n\t\
                                size_t len,\n\t\
-                               size_t *pos)\n\
+                               size_t *pos,\n\t\
+                               uint64_t start_pos)\n\
            {\n\t\
              %s\n\t\
              (void) len;\n\t\
+             (void) pos;\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
                typename_s,\n\t\t\
                fieldname,\n\t\t\
@@ -1095,7 +1110,7 @@ let print_c_entry
                (uint64_t)error_code,\n\t\t\
                frame,\n\t\t\
                base,\n\t\t\
-               (uint64_t)*pos\n\t\
+               start_pos\n\t\
              );\n\
            }"
           frame_decl
@@ -1382,14 +1397,14 @@ let print_c_entry
         frame.reason = \"UNKNOWN\";\n\t\
         frame.error_code = 0uL;\n\t"
      in
-     if hoist then
+     (if hoist then
        Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ Printf.sprintf "uint8_t ep_status%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t parsedSize%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t startPosition%s;\n\n\t" scalar_zero
        ^ frame_init
        ^ "startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t"
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)startPosition);\n\t" name params error_handler_arg
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)0U, (size_t)startPosition);\n\t" name params error_handler_arg
        ^ "parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t"
        ^ tail
      else
@@ -1397,7 +1412,7 @@ let print_c_entry
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
          %s\
          uint64_t startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t\
-         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)startPosition);\n\t\
+         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)0U, (size_t)startPosition);\n\t\
          uint64_t parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t\
          %s"
         struct_zero
@@ -1405,7 +1420,7 @@ let print_c_entry
         name
         params
         error_handler_arg
-        tail
+        tail)
    in
    let wrapped_call_stream name params =
      let tail =
@@ -1494,10 +1509,6 @@ let print_c_entry
     (* Main wrapper *)
     let pparams = print_params params in
     let pargs = print_arguments params in
-    (* The Pulse extern/static validators do not take an EVERPARSE_EXTRA_T:
-       only the client's own EverParseHandleError/EverParseRetreat do, so it
-       stays in the wrapper's signature but is not forwarded. *)
-    let pargs_no_extra = print_arguments d.decl_name.td_params in
     let mk_main_signature (name: string) =
       if is_input_stream_buffer 
       then Printf.sprintf
@@ -1518,7 +1529,7 @@ let print_c_entry
         then wrapped_call_buffer_pulse validator_name pargs
         else wrapped_call_buffer validator_name pargs
       else if Options.get_pulse ()
-      then wrapped_call_stream_pulse validator_name pargs_no_extra
+      then wrapped_call_stream_pulse validator_name pargs
       else wrapped_call_stream validator_name pargs
     in
     (* Probe wrapper *)
@@ -1601,19 +1612,17 @@ let print_c_entry
   let external_defs_includes =
     if not (Options.get_emit_output_types_defs ()) then "" else
     let deps =
-      if List.length signatures_output_typ_deps = 0
-      then ""
-      else
         String.concat
           ""
           (List.map
-             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
+             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" dep)
              signatures_output_typ_deps) in
     let self =
       if has_output_types ds || has_extern_types ds
       then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
       else "" in
-    Printf.sprintf "%s\n%s\n\n" deps self in
+    let includes = deps ^ self in
+    if includes = "" then "" else includes ^ "\n" in
 
   let header =
     Printf.sprintf
@@ -1663,43 +1672,86 @@ let print_c_entry
         List.Tot.filter (fun x -> x <> "" && not (List.Tot.mem x accu)) probe_modules `List.Tot.append` accu
       | _ -> accu
   in
-  let include_external_api_from_module (accu: string) (modu: string) : Tot string =
-    Printf.sprintf "%s#include \"%s_ExternalAPI.h\"\n" accu modu
+  let include_external_api_from_module (accu: list string) (modu: string) : Tot (list string) =
+    accu `List.Tot.append` [Printf.sprintf "#include \"%s_ExternalAPI.h\"" modu]
   in
   let include_external_api =
     ds
     |> List.Tot.fold_left external_api_from_decl []
-    |> List.Tot.fold_left include_external_api_from_module ""
+    |> List.Tot.fold_left include_external_api_from_module []
+    |> String.concat "\n"
   in
   (* The generated wrappers keep their uint32_t/uint64_t argument types, but
-     the Pulse validators are indexed by size_t. Check the casts are lossless. *)
+     the Pulse validators are indexed by size_t, so both conversion directions
+     have to be lossless.
+
+     Widening: every `uint32_t -> size_t` cast (the wrapper's `len`, and the
+     `n` of `validate_nlist`/`validate_t_at_most`/`validate_t_exact`) is
+     justified in F* by `EverParse3d.Actions.Base.size_t_fits_u32`, an
+     `assume val` of `FStar.SizeT.fits_u32`. C only guarantees
+     `SIZE_MAX >= 65535`, so the first assertion is what backs that
+     assumption.
+
+     Narrowing: `size_t -> uint64_t` (the `field_pos_64` action, the
+     `field_ptr_after` bounds check, and the position reported to the error
+     callback) uses `FStar.SizeT.sizet_to_uint64`, which is specified modulo
+     `pow2 64`. The second assertion is what rules the modulo out. It is also
+     what makes the extern wrapper's `size_t -> uint64_t -> size_t` round trip
+     of the validation origin lossless.
+
+     Note the second assertion is an upper bound, not a lower one: nothing
+     converts a uint64_t to a size_t (probe offsets and sizes stay uint64_t
+     end to end, exactly as in Low*, and any narrowing there is the client's
+     to do), so requiring size_t to be at least 64 bits would reject 32-bit
+     targets for no reason. In particular the extern round trip above starts
+     from a size_t, so widening it and narrowing it back recovers it exactly.
+
+     Both assertions are emitted for every backend. For the first that is
+     plainly right, since `size_t_fits_u32` is backend-independent. The second
+     looks at first sight as though it could be restricted to extern/static,
+     because those are the ones whose position is an unbounded cumulative
+     stream offset, whereas a buffer validator is entered from the wrapper
+     with a `uint32_t len` and so never sees a position above 2^32. That
+     reasoning is incomplete: `probe_then_validate` re-enters the inner
+     validator over the copy buffer, passing it the *same* error handler
+     together with `CP.len_of dest`, and for the buffer backend `len_t` is an
+     unrefined `FStar.SizeT.t` -- the client's EVERPARSE_COPY_BUFFER_T
+     capacity, not the wrapper's uint32_t. So inside a probe the buffer
+     backend is exactly as unbounded as extern/static, and since probes are
+     buffer-only under --pulse it is the backend that would be exempted.
+     Keep the assertion unconditional. *)
+  (* No trailing newline, so that this joins the include block the same way
+     `include_external_api` does: these assertions are about the types used by
+     the includes around them, so they belong in that block rather than as a
+     section of their own. *)
   let pulse_static_asserts =
     if Options.get_pulse ()
     then
       "#include \"EverParsePulse.h\"\n\
        #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
        _Static_assert(sizeof(size_t) >= sizeof(uint32_t), \"EverParse: size_t must be at least as wide as uint32_t\");\n\
-       _Static_assert(sizeof(size_t) >= sizeof(uint64_t), \"EverParse: size_t must be at least as wide as uint64_t\");\n\
-       #endif\n"
+       _Static_assert(sizeof(size_t) <= sizeof(uint64_t), \"EverParse: size_t must be no wider than uint64_t\");\n\
+       #endif"
     else ""
   in
   let impl =
-    Printf.sprintf
-      "#include \"%sWrapper.h\"\n\
-       #include \"EverParse.h\"\n\
-       #include \"%s.h\"\n\
-       %s\
-       %s\n\
-       %s\n\n\
-       %s\n\n\
-       %s\n"
-      modul
-      modul
-      pulse_static_asserts
-      include_external_api
-      error_callback_proto
-      default_error_handler
-      (impls |> String.concat "\n\n")
+    let includes =
+      Printf.sprintf
+        "#include \"%sWrapper.h\"\n\
+         #include \"EverParse.h\"\n\
+         #include \"%s.h\"%s%s"
+        modul
+        modul
+        (if pulse_static_asserts = "" then "" else "\n" ^ pulse_static_asserts)
+        (if include_external_api = "" then "" else "\n" ^ include_external_api)
+    in
+    [ includes;
+      error_callback_proto;
+      default_error_handler;
+      impls |> String.concat "\n\n" ]
+    |> List.filter (fun s -> s <> "")
+    |> String.concat "\n\n"
+    |> (fun s -> s ^ "\n")
   in
   let impl =
     if input_stream_include = ""
@@ -2116,7 +2168,7 @@ let rec print_output_types_fields (flds:list A.out_field) : ML string =
 let print_out_typ (ot:A.out_typ) : ML string =
   let open A in
   Printf.sprintf
-    "\ntypedef %s %s {\n%s\n} %s;\n"
+    "\ntypedef %s %s {\n%s} %s;\n"
     (if ot.out_typ_is_union then "union" else "struct")
     (uppercase (A.ident_name ot.out_typ_names.typedef_name))
     (print_output_types_fields ot.out_typ_fields)
@@ -2124,18 +2176,18 @@ let print_out_typ (ot:A.out_typ) : ML string =
 
 let print_output_types_defs (modul:string) (ds:decls) : ML string =
   let defs =
-    String.concat "\n\n" (List.map (fun (d, _) ->
+    String.concat "" (List.collect (fun (d, _) ->
       match d with
-      | Output_type ot -> print_out_typ ot
-      | _ -> "") ds) in
+      | Output_type ot -> [print_out_typ ot]
+      | _ -> []) ds) in
 
   Printf.sprintf
     "#ifndef __%s_OutputTypesDefs_H\n\
      #define __%s_OutputTypesDefs_H\n\n\
      #if defined(__cplusplus)\n\
      extern \"C\" {\n\
-     #endif\n\n\n\
-     %s%s\n\n\n\
+     #endif\n\
+     %s%s\n\
      #if defined(__cplusplus)\n\
      }\n\
      #endif\n\n\

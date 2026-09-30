@@ -2150,12 +2150,10 @@ static void TestErrorHandler (
 "
 
 (* The Pulse backend passes the input as a (base, len, pos) triple rather
-   than an EVERPARSE_INPUT_BUFFER, and its error codes are uint8_t.  Pulse
-   does not thread a per-field start position to the error handler, so the
-   reported position is the current one, read back from the position pointer
-   and cast to uint64_t.  This mirrors what the generated *Wrapper.c does,
-   and is why positions reported here can differ from the Low* ones even
-   though the verdicts agree. *)
+   than an EVERPARSE_INPUT_BUFFER, and its error codes are uint8_t.  It
+   passes the start position of the failing field as a separate trailing
+   argument, since `pos` is the live position and has already moved past
+   whatever the field consumed. *)
 let test_error_handler_fn_pulse = "
 static void TestErrorHandler (
   const char *typename_s,
@@ -2165,15 +2163,17 @@ static void TestErrorHandler (
   uint8_t *context,
   uint8_t *base,
   size_t len,
-  size_t *pos
+  size_t *pos,
+  uint64_t start_pos
 ) {
   (void) error_code;
   (void) base;
   (void) len;
+  (void) pos;
   if (*context) {
-    printf(\"// Reached from position %\" PRIu64 \": type name %s, field name %s\\n\", (uint64_t) *pos, typename_s, fieldname);
+    printf(\"// Reached from position %\" PRIu64 \": type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
   } else {
-    printf(\"// Parsing failed at position %\" PRIu64 \": type name %s, field name %s. Reason: %s\\n\", (uint64_t) *pos, typename_s, fieldname, reason);
+    printf(\"// Parsing failed at position %\" PRIu64 \": type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
     *context = 1;
   }
 }

@@ -41,6 +41,12 @@ inline_for_extraction
 noextract
 let pos_t = E.pos_t
 
+(* The client context, re-exported so that generated code can name it as
+   `B.extra_t` under either backend. *)
+inline_for_extraction
+noextract
+let extra_t = E.extra_t
+
 noextract
 inline_for_extraction
 instance input_stream_static : I.input_stream_inst base_t len_t pos_t =

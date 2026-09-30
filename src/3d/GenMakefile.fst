@@ -533,6 +533,29 @@ let produce_everparse_h_rule
       to = mk_filename "EverParseEndianness" "h";
       args = "--__micro_step copy_everparse_h";
     };
+  ] `List.Tot.append`
+  (* In --pulse mode the copy_everparse_h micro-step also copies
+     EverParsePulseEndianness.h (included by EverParse.h) and EverParsePulse.h
+     (included by every <Mod>Wrapper.c). They need their own rules, otherwise
+     make cannot repair them. The rules are chained so that a parallel make
+     never runs the micro-step twice at once. *)
+  begin if Options.get_pulse ()
+  then [
+    {
+      ty = EverParse;
+      from = [mk_filename "EverParseEndianness" "h"];
+      to = mk_filename "EverParsePulseEndianness" "h";
+      args = "--__micro_step copy_everparse_h";
+    };
+    {
+      ty = EverParse;
+      from = [mk_filename "EverParsePulseEndianness" "h"];
+      to = mk_filename "EverParsePulse" "h";
+      args = "--__micro_step copy_everparse_h";
+    };
+  ] else []
+  end `List.Tot.append`
+  [
     {
       ty = Nop;
       (* In --pulse mode EverParse.h is not copied from the prelude: KaRaMeL
@@ -540,7 +563,9 @@ let produce_everparse_h_rule
          files. So it is those, not EverParseEndianness.h, that it follows. *)
       from =
         if Options.get_pulse ()
-        then mk_filename "EverParseEndianness" "h" ::
+        then mk_filename "EverParsePulse" "h" ::
+             mk_filename "EverParsePulseEndianness" "h" ::
+             mk_filename "EverParseEndianness" "h" ::
              List.Tot.map (fun m -> mk_filename m "c") all_modules
         else [mk_filename "EverParseEndianness" "h"];
       to = mk_filename "EverParse" "h";
@@ -642,7 +667,12 @@ let write_makefile
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext = "h" && everparse_h
-      then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"]
+      then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"] `List.Tot.append`
+           (* --pulse additionally copies these two, and the generated C
+              includes them, so they belong to the installable header set. *)
+           (if Options.get_pulse ()
+            then [mk_filename "EverParsePulse" "h"; mk_filename "EverParsePulseEndianness" "h"]
+            else [])
       else []
       end `List.Tot.append`
       begin if ext <> "h"

@@ -4,6 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+void EverParseCheckExtra(EVERPARSE_EXTRA_T const extra) {
+  if (extra != EVERPARSE_EXTRA_COOKIE) {
+    fprintf(stderr, "EverParseCheckExtra: context not threaded to the stream "
+                    "primitives (expected %d, got %d)\n",
+            EVERPARSE_EXTRA_COOKIE, extra);
+    exit(1);
+  }
+}
+
 /* Number of bytes still available, capped at `limit` so that a long chain is
    not walked further than the caller cares about. */
 static size_t es_avail(EVERPARSE_INPUT_STREAM_BASE const x, size_t const limit) {
@@ -16,19 +25,23 @@ static size_t es_avail(EVERPARSE_INPUT_STREAM_BASE const x, size_t const limit) 
   return got;
 }
 
-BOOLEAN EverParseStreamHas(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+BOOLEAN _EverParseStreamHas(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  EverParseCheckExtra(extra);
   return es_avail(x, n) >= n ? TRUE : FALSE;
 }
 
-BOOLEAN EverParseStreamHasAt(EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
-  /** assumes off bytes are available */
+BOOLEAN _EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t off, size_t n) {
+  EverParseCheckExtra(extra);
+  /* `off` is relative to the current position. The validators never ask about
+     an off beyond the end of the stream, so that case is unspecified; we just
+     answer FALSE rather than special-case it. */
   size_t total = off + n;
   if (total < off)
     return FALSE; /* overflow */
   return es_avail(x, total) >= total ? TRUE : FALSE;
 }
 
-size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
+size_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
   return x->consumed;
 }
 
@@ -57,17 +70,20 @@ static void es_consume(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t *d
   }
 }
 
-void EverParseStreamReadBytes(EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+void _EverParseStreamReadBytes(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n, uint8_t * const dst) {
+  EverParseCheckExtra(extra);
   /** assumes EverParseStreamHas(x, n) */
   es_consume(x, n, dst);
 }
 
-void EverParseStreamSkip(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+void _EverParseStreamSkip(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
+  EverParseCheckExtra(extra);
   /** assumes EverParseStreamHas(x, n) */
   es_consume(x, n, NULL);
 }
 
-size_t EverParseStreamEmpty(EVERPARSE_INPUT_STREAM_BASE const x) {
+size_t _EverParseStreamEmpty(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE const x) {
+  EverParseCheckExtra(extra);
   size_t res = 0;
   struct es_cell *head = x->head;
   while (head != NULL) {
@@ -114,12 +130,22 @@ uint8_t *EverParseStreamPeep(EVERPARSE_INPUT_STREAM_BASE const x, size_t n) {
   return head->buf;
 }
 
-/* field_ptr_after: the address just past the next sz bytes, or failure when
-   they are not contiguous. Provided by `static` and `extern` alike. */
-BOOLEAN EverParseFieldPtrAfterImpl(uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {  uint8_t *p = EverParseStreamPeep(x, (size_t)sz);
+/* field_ptr_after: the address of the next sz bytes -- that is, of the field
+   that comes after the one carrying the action -- or failure when they are not
+   contiguous. Provided by `static` and `extern` alike.
+
+   The pointer is the *start* of those sz bytes, not the address past them:
+   this must agree with the Low* backend, whose action writes the Peep result
+   unchanged (src/3d/prelude/extern/EverParse3d.Actions.All.fst,
+   action_field_ptr_after). Note that the F* signature of
+   field_ptr_after_impl leaves the written pointer unconstrained, so nothing
+   but this agreement pins it down; see the value checks in main.c. */
+BOOLEAN _EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
+  EverParseCheckExtra(extra);
+  uint8_t *p = EverParseStreamPeep(x, (size_t)sz);
   if (p == NULL)
     return FALSE;
-  *out = p + (size_t)sz;
+  *out = p;
   return TRUE;
 }
 

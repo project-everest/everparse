@@ -1,0 +1,18 @@
+// Positive half: `field_pos_64` is allowed on every backend, in Pulse exactly
+// as in Low*. In Low* it is the identity on the position, which is already a
+// `uint64_t`; in Pulse it is `SZ.sizet_to_uint64`, made lossless by the
+// `sizeof(size_t) <= sizeof(uint64_t)` static assertion the backend emits.
+//
+// This is the guard against over-restricting: gating `field_pos_64` the way
+// `field_pos_32` is gated would be a regression against Low*, and would break
+// the extern FIELDPOS test.
+
+entrypoint typedef struct _fieldPos64 (mutable UINT64 *out_pos)
+{
+   UINT32 x
+    {:on-success
+       var i = field_pos_64;
+       *out_pos = i;
+       return true;
+     };
+} fieldPos64;

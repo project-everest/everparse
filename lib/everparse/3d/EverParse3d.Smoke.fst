@@ -30,6 +30,9 @@ module E = EverParse3d.InputStream.Extern
 
 inline_for_extraction noextract
 let smoke_extern
+  (* The client context is now a real parameter of the extern backend, exactly
+     as in Low*: a validator cannot be built without one. *)
+  (_extra: E.extra_t)
 : A.validate_with_action_read
     #E.base_t #E.len_t #E.pos_t #E.input_stream_extern
     (parse____UINT8 `parse_pair` parse____UINT16)
@@ -45,6 +48,7 @@ module St = EverParse3d.InputStream.Static
 
 inline_for_extraction noextract
 let smoke_static
+  (_extra: E.extra_t)
 : A.validate_with_action_read
     #St.base_t #St.len_t #St.pos_t #St.input_stream_static
     parse____UINT32

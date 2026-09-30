@@ -47,9 +47,20 @@ ITERS ?= 20000
 # Where each backend's generated C lives. Both are produced by the regular test
 # targets, so a normal build has them already; the rules below build them on
 # demand otherwise.
+#
+# We deliberately read the batch-interpret outputs rather than the batch ones.
+# The two targets drive the very same pipeline today and differ only in which
+# files they feed it: batch-test uses `positive_tests`, which excludes
+# ActAndCheck.3d and FieldDependence0.3d, whereas batch-interpret-test uses
+# `INTERPRETABLE_FILES`, i.e. every non-FAIL .3d. That exclusion is a leftover
+# from when 3D had two translation backends and `--interpret` chose between
+# them (commit 7b2764b70): those two files were only supported by the
+# interpreter one. Translate.fst and --interpret are both long gone, so the
+# exclusion now only costs coverage -- and ActAndCheck.3d is the sole test
+# exercising :act/:check, as well as one of only three using field_pos.
 PULSE_TESTS := $(EVERPARSE_HOME)/share/everparse/tests/3d
-LO_DIR ?= $(EVERPARSE_HOME)/src/3d/tests/out.batch
-PU_DIR ?= $(PULSE_TESTS)/out.pulse
+LO_DIR ?= $(EVERPARSE_HOME)/src/3d/tests/out.batch-interpret
+PU_DIR ?= $(PULSE_TESTS)/out.batch-interpret.pulse
 
 LO_INC = -I $(LO_DIR) -I $(EVERPARSE_HOME)/src/3d \
          -I $(EVERPARSE_HOME)/src/3d/prelude/buffer \
@@ -87,17 +98,30 @@ all:
 
 else
 
-all: pulse-diff-test pulse-diff-subdirs
+all: pulse-diff-test pulse-diff-abi pulse-diff-subdirs
+
+.PHONY: all pulse-diff-test pulse-diff-abi pulse-diff-subdirs pulse-diff-seeds clean
 
 endif
 
-.PHONY: all pulse-diff-test pulse-diff-subdirs clean
+
+# Compile-only ABI check: both backends must expose EVERPARSE_ERROR_HANDLER,
+# and it must match the error-handler binder of the generated validators. See
+# the comment at the top of abi_check.c.
+pulse-diff-abi: abi_check.c | $(LO_DIR) $(PU_DIR)
+	$(CC) $(CFLAGS_COMMON) -Werror=incompatible-pointer-types \
+	  -Werror=implicit-function-declaration -Werror=int-conversion \
+	  $(LO_INC) -c abi_check.c -o abi_check_lo.o
+	$(CC) $(CFLAGS_COMMON) -Werror=incompatible-pointer-types \
+	  -Werror=implicit-function-declaration -Werror=int-conversion \
+	  $(PU_INC) -I $(EVERPARSE_HOME)/src/3d -c abi_check.c -o abi_check_pu.o
+	@echo "pulse-diff: EVERPARSE_ERROR_HANDLER present and compatible in both backends"
 
 $(LO_DIR):
-	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d/tests batch-test
+	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d/tests batch-interpret-test
 
 $(PU_DIR):
-	+$(MAKE) -C $(PULSE_TESTS) pulse-batch
+	+$(MAKE) -C $(PULSE_TESTS) pulse-batch-interpret-test
 
 # The dispatch table is derived from the generated *Wrapper.h. The same driver
 # has to be valid against both backends, so gen_diff.py is also handed the
@@ -106,10 +130,17 @@ $(PU_DIR):
 driver.c: gen_diff.py | $(LO_DIR) $(PU_DIR)
 	$(PYTHON) gen_diff.py $(LO_DIR) $@ $(PU_DIR)
 
-diff_lo: driver.c harness.c harness.h | $(LO_DIR)
+# seeds.inc is checked in, so that building and running this test needs
+# neither Z3 nor the witness generator -- the generator takes minutes and is
+# not available in every configuration. Regenerate it by hand, and only when
+# one of the grammars it covers changes.
+pulse-diff-seeds:
+	$(PYTHON) gen_seeds.py seeds.inc
+
+diff_lo: driver.c harness.c harness.h seeds.inc | $(LO_DIR)
 	$(CC) $(CFLAGS_COMMON) $(LO_INC) -o $@ harness.c driver.c $(LO_DIR)/*.c
 
-diff_pu: driver.c harness.c harness.h | $(PU_DIR)
+diff_pu: driver.c harness.c harness.h seeds.inc | $(PU_DIR)
 	$(CC) $(CFLAGS_COMMON) $(PU_INC) -o $@ harness.c driver.c $(PU_DIR)/*.c
 
 corpus_lo.bin: diff_lo
@@ -202,5 +233,5 @@ pulse-diff-subdirs:
 
 clean:
 	rm -f diff_lo diff_pu driver.c corpus_*.bin trace_*.txt fuzzlog_*.txt \
-	      semantics_lo.txt semantics_pu.txt
+	      semantics_lo.txt semantics_pu.txt abi_check_lo.o abi_check_pu.o
 	rm -rf sub
