@@ -14,18 +14,18 @@ EnumConstraintValidateEnumConstraint(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForCol = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterCol0;
   uint64_t positionAfterCol;
   uint32_t col;
   BOOLEAN colConstraintIsOk;
   uint64_t positionAfterCheckedCol;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForX_refinement;
   uint64_t positionAfterX_refinement;
   uint64_t positionAfterX_refinement0;
   uint32_t x_refinement;
   BOOLEAN x_refinementConstraintIsOk;
-  if (hasBytes0)
+  if (hasBytesForCol)
   {
     positionAfterCol0 = StartPosition + 4ULL;
   }
@@ -53,8 +53,8 @@ EnumConstraintValidateEnumConstraint(
     {
       /* Validating field x */
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      hasBytes = (InputLength - positionAfterCheckedCol) >= 4ULL;
-      if (hasBytes)
+      hasBytesForX_refinement = (InputLength - positionAfterCheckedCol) >= 4ULL;
+      if (hasBytesForX_refinement)
       {
         positionAfterX_refinement = positionAfterCheckedCol + 4ULL;
       }

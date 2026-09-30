@@ -15,18 +15,18 @@ GetFieldPtrValidateT(
 )
 {
   /* Validating field f1 */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
+  BOOLEAN hasBytesForF1 = (InputLength - StartPosition) >= (uint64_t)10U;
   uint64_t res0;
   uint64_t positionAfterF10;
   uint64_t positionAfterF1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForF2_base;
   uint64_t res;
   uint64_t positionAfterF2_base;
   uint64_t positionAfterF20;
   uint64_t positionAfterF2;
   uint8_t *hd;
   BOOLEAN actionSuccessF2;
-  if (hasBytes0)
+  if (hasBytesForF1)
   {
     res0 = StartPosition + (uint64_t)10U;
   }
@@ -55,8 +55,8 @@ GetFieldPtrValidateT(
     return positionAfterF1;
   }
   /* Validating field f2 */
-  hasBytes = (InputLength - positionAfterF1) >= (uint64_t)20U;
-  if (hasBytes)
+  hasBytesForF2_base = (InputLength - positionAfterF1) >= (uint64_t)20U;
+  if (hasBytesForF2_base)
   {
     res = positionAfterF1 + (uint64_t)20U;
   }
@@ -117,18 +117,18 @@ GetFieldPtrValidateTact(
 )
 {
   /* Validating field f1 */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
+  BOOLEAN hasBytesForF1 = (InputLength - StartPosition) >= (uint64_t)10U;
   uint64_t res0;
   uint64_t positionAfterF10;
   uint64_t positionAfterF1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForF2_base;
   uint64_t res;
   uint64_t positionAfterF2_base;
   uint64_t positionAfterF20;
   uint64_t positionAfterF2;
   uint8_t *hd;
   BOOLEAN actionSuccessF2;
-  if (hasBytes0)
+  if (hasBytesForF1)
   {
     res0 = StartPosition + (uint64_t)10U;
   }
@@ -157,8 +157,8 @@ GetFieldPtrValidateTact(
     return positionAfterF1;
   }
   /* Validating field f2 */
-  hasBytes = (InputLength - positionAfterF1) >= (uint64_t)20U;
-  if (hasBytes)
+  hasBytesForF2_base = (InputLength - positionAfterF1) >= (uint64_t)20U;
+  if (hasBytesForF2_base)
   {
     res = positionAfterF1 + (uint64_t)20U;
   }

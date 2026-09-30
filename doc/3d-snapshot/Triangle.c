@@ -13,10 +13,10 @@ TriangleValidateTriangle(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 12ULL;
+  BOOLEAN hasBytesForABC = (InputLength - StartPosition) >= 12ULL;
   uint64_t res;
   uint64_t positionAfterA;
-  if (hasBytes)
+  if (hasBytesForABC)
   {
     res = StartPosition + 12ULL;
   }

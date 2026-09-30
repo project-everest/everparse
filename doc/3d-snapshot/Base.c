@@ -14,9 +14,9 @@ BaseValidateUlong(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForMissing = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterMissing;
-  if (hasBytes)
+  if (hasBytesForMissing)
   {
     positionAfterMissing = StartPosition + 4ULL;
   }
@@ -49,10 +49,10 @@ BaseValidatePair(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytesForFirstSecond = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
   uint64_t positionAfterFirst;
-  if (hasBytes)
+  if (hasBytesForFirstSecond)
   {
     res = StartPosition + 8ULL;
   }

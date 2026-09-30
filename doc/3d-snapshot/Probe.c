@@ -16,18 +16,18 @@ ValidateT(
 )
 {
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
+  BOOLEAN hasBytesForX = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterX0;
   uint64_t positionAfterX;
   uint16_t x;
   BOOLEAN xConstraintIsOk;
   uint64_t positionAfterCheckedX;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForY_refinement;
   uint64_t positionAfterY_refinement;
   uint64_t positionAfterY_refinement0;
   uint16_t y_refinement;
   BOOLEAN y_refinementConstraintIsOk;
-  if (hasBytes0)
+  if (hasBytesForX)
   {
     positionAfterX0 = StartPosition + 2ULL;
   }
@@ -54,8 +54,8 @@ ValidateT(
     {
       /* Validating field y */
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      hasBytes = (InputLength - positionAfterCheckedX) >= 2ULL;
-      if (hasBytes)
+      hasBytesForY_refinement = (InputLength - positionAfterCheckedX) >= 2ULL;
+      if (hasBytesForY_refinement)
       {
         positionAfterY_refinement = positionAfterCheckedX + 2ULL;
       }
@@ -122,11 +122,11 @@ ProbeValidateS(
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
+  BOOLEAN hasBytesForBound = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterBound0;
   uint64_t positionAfterBound;
   uint8_t bound;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForTpointer;
   uint64_t positionAfterTpointer0;
   uint64_t positionAfterTpointer;
   uint64_t tpointer;
@@ -143,7 +143,7 @@ ProbeValidateS(
   uint64_t b;
   BOOLEAN actionResult;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForBound)
   {
     positionAfterBound0 = StartPosition + 1ULL;
   }
@@ -174,8 +174,8 @@ ProbeValidateS(
   }
   bound = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterBound) >= 8ULL;
-  if (hasBytes)
+  hasBytesForTpointer = (InputLength - positionAfterBound) >= 8ULL;
+  if (hasBytesForTpointer)
   {
     positionAfterTpointer0 = positionAfterBound + 8ULL;
   }
@@ -287,11 +287,11 @@ ProbeValidateU(
 {
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
+  BOOLEAN hasBytesForTag = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterTag0;
   uint64_t res;
   uint64_t positionAfterTag;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForSpointer;
   uint64_t positionAfterSpointer0;
   uint64_t positionAfterSpointer;
   uint64_t spointer;
@@ -308,7 +308,7 @@ ProbeValidateU(
   uint64_t b;
   BOOLEAN actionResult;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForTag)
   {
     positionAfterTag0 = StartPosition + 1ULL;
   }
@@ -339,8 +339,8 @@ ProbeValidateU(
     return positionAfterTag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterTag) >= 8ULL;
-  if (hasBytes)
+  hasBytesForSpointer = (InputLength - positionAfterTag) >= 8ULL;
+  if (hasBytesForSpointer)
   {
     positionAfterSpointer0 = positionAfterTag + 8ULL;
   }
@@ -451,11 +451,11 @@ ProbeValidateV(
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
+  BOOLEAN hasBytesForTag = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterTag0;
   uint64_t positionAfterTag;
   uint8_t tag;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForSptr;
   uint64_t positionAfterSptr0;
   uint64_t positionAfterSptr1;
   uint64_t sptr;
@@ -473,7 +473,7 @@ ProbeValidateV(
   BOOLEAN actionResult;
   uint64_t result0;
   uint64_t positionAfterSptr;
-  BOOLEAN hasBytes2;
+  BOOLEAN hasBytesForTptr;
   uint64_t positionAfterTptr0;
   uint64_t positionAfterTptr1;
   uint64_t tptr;
@@ -491,7 +491,7 @@ ProbeValidateV(
   BOOLEAN actionResult0;
   uint64_t result1;
   uint64_t positionAfterTptr;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForT2ptr;
   uint64_t positionAfterT2ptr0;
   uint64_t positionAfterT2ptr;
   uint64_t t2ptr;
@@ -508,7 +508,7 @@ ProbeValidateV(
   uint64_t b;
   BOOLEAN actionResult1;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForTag)
   {
     positionAfterTag0 = StartPosition + 1ULL;
   }
@@ -539,8 +539,8 @@ ProbeValidateV(
   }
   tag = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes1 = (InputLength - positionAfterTag) >= 8ULL;
-  if (hasBytes1)
+  hasBytesForSptr = (InputLength - positionAfterTag) >= 8ULL;
+  if (hasBytesForSptr)
   {
     positionAfterSptr0 = positionAfterTag + 8ULL;
   }
@@ -645,8 +645,8 @@ ProbeValidateV(
     return positionAfterSptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes2 = (InputLength - positionAfterSptr) >= 8ULL;
-  if (hasBytes2)
+  hasBytesForTptr = (InputLength - positionAfterSptr) >= 8ULL;
+  if (hasBytesForTptr)
   {
     positionAfterTptr0 = positionAfterSptr + 8ULL;
   }
@@ -751,8 +751,8 @@ ProbeValidateV(
     return positionAfterTptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterTptr) >= 8ULL;
-  if (hasBytes)
+  hasBytesForT2ptr = (InputLength - positionAfterTptr) >= 8ULL;
+  if (hasBytesForT2ptr)
   {
     positionAfterT2ptr0 = positionAfterTptr + 8ULL;
   }
@@ -860,10 +860,10 @@ ProbeValidateIndirect(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 9ULL;
+  BOOLEAN hasBytesForFstSndTag = (InputLength - StartPosition) >= 9ULL;
   uint64_t res;
   uint64_t positionAfterFst;
-  if (hasBytes)
+  if (hasBytesForFstSndTag)
   {
     res = StartPosition + 9ULL;
   }
@@ -895,10 +895,10 @@ ValidateTt(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 9ULL;
+  BOOLEAN hasBytesForFstSndTag = (InputLength - StartPosition) >= 9ULL;
   uint64_t res;
   uint64_t positionAfterFst;
-  if (hasBytes)
+  if (hasBytesForFstSndTag)
   {
     res = StartPosition + 9ULL;
   }
@@ -932,7 +932,7 @@ ProbeValidateI(
 )
 {
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytesForTtptr = (InputLength - StartPosition) >= 8ULL;
   uint64_t positionAfterTtptr0;
   uint64_t positionAfterTtptr;
   uint64_t ttptr;
@@ -949,7 +949,7 @@ ProbeValidateI(
   uint64_t b;
   BOOLEAN actionResult;
   uint64_t result;
-  if (hasBytes)
+  if (hasBytesForTtptr)
   {
     positionAfterTtptr0 = StartPosition + 8ULL;
   }
@@ -1060,19 +1060,19 @@ ProbeValidateMultiProbe(
 {
   /* Validating field fst */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForFst = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterFst0;
   uint64_t res0;
   uint64_t positionAfterFst;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForSnd;
   uint64_t positionAfterSnd0;
   uint64_t res1;
   uint64_t positionAfterSnd;
-  BOOLEAN hasBytes2;
+  BOOLEAN hasBytesForTag;
   uint64_t positionAfterTag0;
   uint64_t res;
   uint64_t positionAfterTag;
-  BOOLEAN hasBytes3;
+  BOOLEAN hasBytesForTptr1;
   uint64_t positionAfterTptr10;
   uint64_t positionAfterTptr11;
   uint64_t tptr1;
@@ -1090,7 +1090,7 @@ ProbeValidateMultiProbe(
   BOOLEAN actionResult;
   uint64_t result0;
   uint64_t positionAfterTptr1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForTptr2;
   uint64_t positionAfterTptr20;
   uint64_t positionAfterTptr2;
   uint64_t tptr2;
@@ -1107,7 +1107,7 @@ ProbeValidateMultiProbe(
   uint64_t b;
   BOOLEAN actionResult0;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForFst)
   {
     positionAfterFst0 = StartPosition + 4ULL;
   }
@@ -1139,8 +1139,8 @@ ProbeValidateMultiProbe(
   }
   /* Validating field snd */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes1 = (InputLength - positionAfterFst) >= 4ULL;
-  if (hasBytes1)
+  hasBytesForSnd = (InputLength - positionAfterFst) >= 4ULL;
+  if (hasBytesForSnd)
   {
     positionAfterSnd0 = positionAfterFst + 4ULL;
   }
@@ -1172,8 +1172,8 @@ ProbeValidateMultiProbe(
   }
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  hasBytes2 = (InputLength - positionAfterSnd) >= 1ULL;
-  if (hasBytes2)
+  hasBytesForTag = (InputLength - positionAfterSnd) >= 1ULL;
+  if (hasBytesForTag)
   {
     positionAfterTag0 = positionAfterSnd + 1ULL;
   }
@@ -1204,8 +1204,8 @@ ProbeValidateMultiProbe(
     return positionAfterTag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes3 = (InputLength - positionAfterTag) >= 8ULL;
-  if (hasBytes3)
+  hasBytesForTptr1 = (InputLength - positionAfterTag) >= 8ULL;
+  if (hasBytesForTptr1)
   {
     positionAfterTptr10 = positionAfterTag + 8ULL;
   }
@@ -1310,8 +1310,8 @@ ProbeValidateMultiProbe(
     return positionAfterTptr1;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterTptr1) >= 8ULL;
-  if (hasBytes)
+  hasBytesForTptr2 = (InputLength - positionAfterTptr1) >= 8ULL;
+  if (hasBytesForTptr2)
   {
     positionAfterTptr20 = positionAfterTptr1 + 8ULL;
   }
@@ -1421,11 +1421,11 @@ ProbeValidateMaybeT(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForBound = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterBound0;
   uint64_t positionAfterBound;
   uint32_t bound;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForPtr;
   uint64_t positionAfterPtr0;
   uint64_t positionAfterPtr;
   uint64_t ptr;
@@ -1442,7 +1442,7 @@ ProbeValidateMaybeT(
   BOOLEAN hasFailed;
   uint64_t b;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForBound)
   {
     positionAfterBound0 = StartPosition + 4ULL;
   }
@@ -1473,8 +1473,8 @@ ProbeValidateMaybeT(
   }
   bound = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterBound) >= 8ULL;
-  if (hasBytes)
+  hasBytesForPtr = (InputLength - positionAfterBound) >= 8ULL;
+  if (hasBytesForPtr)
   {
     positionAfterPtr0 = positionAfterBound + 8ULL;
   }
@@ -1591,11 +1591,11 @@ ProbeValidateCoercePtr(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForBound = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterBound0;
   uint64_t positionAfterBound;
   uint32_t bound;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForPtr;
   uint64_t positionAfterPtr0;
   uint64_t positionAfterPtr;
   uint32_t ptr;
@@ -1612,7 +1612,7 @@ ProbeValidateCoercePtr(
   uint64_t b;
   BOOLEAN actionResult;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForBound)
   {
     positionAfterBound0 = StartPosition + 4ULL;
   }
@@ -1643,8 +1643,8 @@ ProbeValidateCoercePtr(
   }
   bound = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterBound) >= 4ULL;
-  if (hasBytes)
+  hasBytesForPtr = (InputLength - positionAfterBound) >= 4ULL;
+  if (hasBytesForPtr)
   {
     positionAfterPtr0 = positionAfterBound + 4ULL;
   }
@@ -1752,10 +1752,10 @@ ProbeValidateProbeOnly(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
   uint64_t positionAfterX;
-  if (hasBytes)
+  if (hasBytesForXY)
   {
     res = StartPosition + 8ULL;
   }
@@ -1787,10 +1787,10 @@ ProbeValidateBothEntrypoints(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
   uint64_t positionAfterX;
-  if (hasBytes)
+  if (hasBytesForXY)
   {
     res = StartPosition + 8ULL;
   }
@@ -1822,10 +1822,10 @@ ProbeValidateNamedPlainEp(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
   uint64_t positionAfterX;
-  if (hasBytes)
+  if (hasBytesForXY)
   {
     res = StartPosition + 8ULL;
   }
@@ -1857,10 +1857,10 @@ ProbeValidateNamedProbeEp(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
   uint64_t positionAfterX;
-  if (hasBytes)
+  if (hasBytesForXY)
   {
     res = StartPosition + 8ULL;
   }
@@ -1892,10 +1892,10 @@ ProbeValidateNamedBothEp(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 8ULL;
   uint64_t res;
   uint64_t positionAfterX;
-  if (hasBytes)
+  if (hasBytesForXY)
   {
     res = StartPosition + 8ULL;
   }

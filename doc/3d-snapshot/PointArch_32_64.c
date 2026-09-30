@@ -13,18 +13,18 @@ ValidateInt(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes0;
+  BOOLEAN hasBytesForX0;
   uint64_t positionAfterX0;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForX;
   uint64_t positionAfterX;
   #if ARCH64
   {
     KRML_MAYBE_UNUSED_VAR(positionAfterX);
-    KRML_MAYBE_UNUSED_VAR(hasBytes);
+    KRML_MAYBE_UNUSED_VAR(hasBytesForX);
     /* Validating field x */
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    hasBytes0 = (InputLen - StartPosition) >= 8ULL;
-    if (hasBytes0)
+    hasBytesForX0 = (InputLen - StartPosition) >= 8ULL;
+    if (hasBytesForX0)
     {
       positionAfterX0 = StartPosition + 8ULL;
     }
@@ -50,11 +50,11 @@ ValidateInt(
   #else
   {
     KRML_MAYBE_UNUSED_VAR(positionAfterX0);
-    KRML_MAYBE_UNUSED_VAR(hasBytes0);
+    KRML_MAYBE_UNUSED_VAR(hasBytesForX0);
     /* Validating field x */
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    hasBytes = (InputLen - StartPosition) >= 4ULL;
-    if (hasBytes)
+    hasBytesForX = (InputLen - StartPosition) >= 4ULL;
+    if (hasBytesForX)
     {
       positionAfterX = StartPosition + 4ULL;
     }

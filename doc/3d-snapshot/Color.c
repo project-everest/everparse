@@ -15,16 +15,16 @@ ColorValidateColoredPoint(
 {
   /* Validating field col */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForCol_refinement = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterCol_refinement;
   uint64_t positionAfterCol_refinement0;
   uint32_t col_refinement;
   BOOLEAN col_refinementConstraintIsOk;
   uint64_t positionAfterCol_refinement1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForXY;
   uint64_t res;
   uint64_t positionAfterX;
-  if (hasBytes0)
+  if (hasBytesForCol_refinement)
   {
     positionAfterCol_refinement = StartPosition + 4ULL;
   }
@@ -69,8 +69,8 @@ ColorValidateColoredPoint(
   {
     return positionAfterCol_refinement1;
   }
-  hasBytes = (InputLength - positionAfterCol_refinement1) >= 8ULL;
-  if (hasBytes)
+  hasBytesForXY = (InputLength - positionAfterCol_refinement1) >= 8ULL;
+  if (hasBytesForXY)
   {
     res = positionAfterCol_refinement1 + 8ULL;
   }

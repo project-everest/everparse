@@ -14,19 +14,19 @@ ValidateIntPayload(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes0;
+  BOOLEAN hasBytesForValue8;
   uint64_t positionAfterValue8;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForValue16;
   uint64_t positionAfterValue16;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForValue32;
   uint64_t positionAfterValue32;
   uint64_t positionAfterX17;
   if (Size == (uint32_t)TAGGEDUNION_SIZE8)
   {
     /* Validating field value8 */
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    hasBytes0 = (InputLen - StartPosition) >= 1ULL;
-    if (hasBytes0)
+    hasBytesForValue8 = (InputLen - StartPosition) >= 1ULL;
+    if (hasBytesForValue8)
     {
       positionAfterValue8 = StartPosition + 1ULL;
     }
@@ -53,8 +53,8 @@ ValidateIntPayload(
   {
     /* Validating field value16 */
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-    hasBytes1 = (InputLen - StartPosition) >= 2ULL;
-    if (hasBytes1)
+    hasBytesForValue16 = (InputLen - StartPosition) >= 2ULL;
+    if (hasBytesForValue16)
     {
       positionAfterValue16 = StartPosition + 2ULL;
     }
@@ -81,8 +81,8 @@ ValidateIntPayload(
   {
     /* Validating field value32 */
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    hasBytes = (InputLen - StartPosition) >= 4ULL;
-    if (hasBytes)
+    hasBytesForValue32 = (InputLen - StartPosition) >= 4ULL;
+    if (hasBytesForValue32)
     {
       positionAfterValue32 = StartPosition + 4ULL;
     }
@@ -132,12 +132,12 @@ TaggedUnionValidateInteger(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForSize = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterSize0;
   uint64_t positionAfterSize;
   uint32_t size;
   uint64_t positionAfterPayload;
-  if (hasBytes)
+  if (hasBytesForSize)
   {
     positionAfterSize0 = StartPosition + 4ULL;
   }

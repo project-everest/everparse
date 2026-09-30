@@ -13,10 +13,10 @@ ColoredPointValidateColoredPoint1(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 5ULL;
+  BOOLEAN hasBytesForColorPt = (InputLength - StartPosition) >= 5ULL;
   uint64_t res;
   uint64_t positionAfterColor;
-  if (hasBytes)
+  if (hasBytesForColorPt)
   {
     res = StartPosition + 5ULL;
   }
@@ -48,10 +48,10 @@ ColoredPointValidateColoredPoint2(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 5ULL;
+  BOOLEAN hasBytesForPtColor = (InputLength - StartPosition) >= 5ULL;
   uint64_t res;
   uint64_t positionAfterPt;
-  if (hasBytes)
+  if (hasBytesForPtColor)
   {
     res = StartPosition + 5ULL;
   }

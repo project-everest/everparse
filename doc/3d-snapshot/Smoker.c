@@ -14,16 +14,16 @@ SmokerValidateSmoker(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForAge = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterAge0;
   uint64_t positionAfterAge;
   uint32_t age;
   BOOLEAN ageConstraintIsOk;
   uint64_t positionAfterCheckedAge;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForCigarettesConsumed;
   uint64_t positionAfterCigarettesConsumed;
   uint64_t res;
-  if (hasBytes0)
+  if (hasBytesForAge)
   {
     positionAfterAge0 = StartPosition + 4ULL;
   }
@@ -50,8 +50,8 @@ SmokerValidateSmoker(
     {
       /* Validating field cigarettesConsumed */
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      hasBytes = (InputLength - positionAfterCheckedAge) >= 1ULL;
-      if (hasBytes)
+      hasBytesForCigarettesConsumed = (InputLength - positionAfterCheckedAge) >= 1ULL;
+      if (hasBytesForCigarettesConsumed)
       {
         positionAfterCigarettesConsumed = positionAfterCheckedAge + 1ULL;
       }

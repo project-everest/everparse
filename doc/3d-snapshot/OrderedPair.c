@@ -14,16 +14,16 @@ OrderedPairValidateOrderedPair(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForLesser = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterLesser0;
   uint64_t positionAfterLesser;
   uint32_t lesser;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForGreater_refinement;
   uint64_t positionAfterGreater_refinement;
   uint64_t positionAfterGreater_refinement0;
   uint32_t greater_refinement;
   BOOLEAN greater_refinementConstraintIsOk;
-  if (hasBytes0)
+  if (hasBytesForLesser)
   {
     positionAfterLesser0 = StartPosition + 4ULL;
   }
@@ -55,8 +55,8 @@ OrderedPairValidateOrderedPair(
   lesser = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field greater */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterLesser) >= 4ULL;
-  if (hasBytes)
+  hasBytesForGreater_refinement = (InputLength - positionAfterLesser) >= 4ULL;
+  if (hasBytesForGreater_refinement)
   {
     positionAfterGreater_refinement = positionAfterLesser + 4ULL;
   }

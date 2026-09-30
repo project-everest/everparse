@@ -13,10 +13,10 @@ AlignValidateColoredPoint1(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 6ULL;
+  BOOLEAN hasBytesForColorAlignmentPadding0pt = (InputLength - StartPosition) >= 6ULL;
   uint64_t res;
   uint64_t positionAfterColor;
-  if (hasBytes)
+  if (hasBytesForColorAlignmentPadding0pt)
   {
     res = StartPosition + 6ULL;
   }

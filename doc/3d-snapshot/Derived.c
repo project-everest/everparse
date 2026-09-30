@@ -13,10 +13,10 @@ DerivedValidateTriple(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 12ULL;
+  BOOLEAN hasBytesForPairThird = (InputLength - StartPosition) >= 12ULL;
   uint64_t res;
   uint64_t positionAfterPair;
-  if (hasBytes)
+  if (hasBytesForPairThird)
   {
     res = StartPosition + 12ULL;
   }
@@ -48,10 +48,10 @@ DerivedValidateQuad(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 16ULL;
+  BOOLEAN hasBytesFor1234 = (InputLength - StartPosition) >= 16ULL;
   uint64_t res;
   uint64_t positionAfter12;
-  if (hasBytes)
+  if (hasBytesFor1234)
   {
     res = StartPosition + 16ULL;
   }

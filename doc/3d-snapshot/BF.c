@@ -14,20 +14,20 @@ ValidateBf2bis(
 )
 {
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
+  BOOLEAN hasBytesForBitfield0 = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterBitfield0;
   uint64_t positionAfterBitfield00;
   uint16_t bitfield0;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForBitfield1;
   uint64_t positionAfterBitfield1;
   uint64_t positionAfterBitfield10;
   uint16_t bitfield1;
   BOOLEAN bitfield1constraintIsOk;
   uint64_t positionAfterCheckedBitfield1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForZ;
   uint64_t positionAfterZ;
   uint64_t res;
-  if (hasBytes0)
+  if (hasBytesForBitfield0)
   {
     positionAfterBitfield0 = StartPosition + 2ULL;
   }
@@ -58,8 +58,8 @@ ValidateBf2bis(
   }
   bitfield0 = Load16Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  hasBytes1 = (InputLength - positionAfterBitfield00) >= 2ULL;
-  if (hasBytes1)
+  hasBytesForBitfield1 = (InputLength - positionAfterBitfield00) >= 2ULL;
+  if (hasBytesForBitfield1)
   {
     positionAfterBitfield1 = positionAfterBitfield00 + 2ULL;
   }
@@ -89,8 +89,8 @@ ValidateBf2bis(
     {
       /* Validating field z */
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      hasBytes = (InputLength - positionAfterCheckedBitfield1) >= 1ULL;
-      if (hasBytes)
+      hasBytesForZ = (InputLength - positionAfterCheckedBitfield1) >= 1ULL;
+      if (hasBytesForZ)
       {
         positionAfterZ = positionAfterCheckedBitfield1 + 1ULL;
       }
@@ -142,20 +142,20 @@ ValidateBf3(
 )
 {
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
+  BOOLEAN hasBytesForBitfield0 = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterBitfield0;
   uint64_t positionAfterBitfield00;
   uint16_t bitfield0;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForBitfield1;
   uint64_t positionAfterBitfield1;
   uint64_t positionAfterBitfield10;
   uint16_t bitfield1;
   BOOLEAN bitfield1constraintIsOk;
   uint64_t positionAfterCheckedBitfield1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForZ;
   uint64_t positionAfterZ;
   uint64_t res;
-  if (hasBytes0)
+  if (hasBytesForBitfield0)
   {
     positionAfterBitfield0 = StartPosition + 2ULL;
   }
@@ -186,8 +186,8 @@ ValidateBf3(
   }
   bitfield0 = Load16Be(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-  hasBytes1 = (InputLength - positionAfterBitfield00) >= 2ULL;
-  if (hasBytes1)
+  hasBytesForBitfield1 = (InputLength - positionAfterBitfield00) >= 2ULL;
+  if (hasBytesForBitfield1)
   {
     positionAfterBitfield1 = positionAfterBitfield00 + 2ULL;
   }
@@ -220,8 +220,8 @@ ValidateBf3(
     {
       /* Validating field z */
       /* Checking that we have enough space for a UINT8BE, i.e., 1 byte */
-      hasBytes = (InputLength - positionAfterCheckedBitfield1) >= 1ULL;
-      if (hasBytes)
+      hasBytesForZ = (InputLength - positionAfterCheckedBitfield1) >= 1ULL;
+      if (hasBytesForZ)
       {
         positionAfterZ = positionAfterCheckedBitfield1 + 1ULL;
       }

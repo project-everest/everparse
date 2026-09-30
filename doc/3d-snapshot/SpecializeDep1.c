@@ -15,18 +15,18 @@ ValidateUnion(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes0;
+  BOOLEAN hasBytesForCase0;
   uint64_t positionAfterCase0;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForCase1;
   uint64_t positionAfterCase1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForOther;
   uint64_t positionAfterOther;
   if (Tag == 0U)
   {
     /* Validating field case0 */
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    hasBytes0 = (InputLen - StartPosition) >= 1ULL;
-    if (hasBytes0)
+    hasBytesForCase0 = (InputLen - StartPosition) >= 1ULL;
+    if (hasBytesForCase0)
     {
       positionAfterCase0 = StartPosition + 1ULL;
     }
@@ -53,8 +53,8 @@ ValidateUnion(
   {
     /* Validating field case1 */
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-    hasBytes1 = (InputLen - StartPosition) >= 2ULL;
-    if (hasBytes1)
+    hasBytesForCase1 = (InputLen - StartPosition) >= 2ULL;
+    if (hasBytesForCase1)
     {
       positionAfterCase1 = StartPosition + 2ULL;
     }
@@ -79,8 +79,8 @@ ValidateUnion(
   }
   /* Validating field other */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLen - StartPosition) >= 4ULL;
-  if (hasBytes)
+  hasBytesForOther = (InputLen - StartPosition) >= 4ULL;
+  if (hasBytesForOther)
   {
     positionAfterOther = StartPosition + 4ULL;
   }
@@ -190,11 +190,11 @@ ValidateTlv(
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
+  BOOLEAN hasBytesForTag = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterTag0;
   uint64_t positionAfterTag;
   uint8_t tag;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForLength;
   uint64_t positionAfterLength0;
   uint64_t positionAfterLength;
   uint32_t length;
@@ -210,7 +210,7 @@ ValidateTlv(
   uint64_t positionAfterPayload_element;
   uint64_t result1;
   uint64_t res;
-  if (hasBytes0)
+  if (hasBytesForTag)
   {
     positionAfterTag0 = StartPosition + 1ULL;
   }
@@ -241,8 +241,8 @@ ValidateTlv(
   }
   tag = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterTag) >= 4ULL;
-  if (hasBytes)
+  hasBytesForLength = (InputLength - positionAfterTag) >= 4ULL;
+  if (hasBytesForLength)
   {
     positionAfterLength0 = positionAfterTag + 4ULL;
   }
@@ -492,7 +492,7 @@ ValidateWrapper(
   uint64_t positionAfterPrecondition0;
   BOOLEAN preconditionConstraintIsOk;
   uint64_t positionAfterCheckedPrecondition;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForTlv;
   uint64_t positionAfterTlv0;
   uint64_t positionAfterTlv;
   uint64_t tlv;
@@ -523,8 +523,8 @@ ValidateWrapper(
     else
     {
       /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-      hasBytes = (InputLength - positionAfterCheckedPrecondition) >= 8ULL;
-      if (hasBytes)
+      hasBytesForTlv = (InputLength - positionAfterCheckedPrecondition) >= 8ULL;
+      if (hasBytesForTlv)
       {
         positionAfterTlv0 = positionAfterCheckedPrecondition + 8ULL;
       }
@@ -655,7 +655,7 @@ ValidateSpecializedWrapper32(
   uint64_t positionAfterPrecondition0;
   BOOLEAN preconditionConstraintIsOk;
   uint64_t positionAfterCheckedPrecondition;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForTlv;
   uint64_t positionAfterTlv0;
   uint64_t positionAfterTlv;
   uint32_t tlv;
@@ -686,8 +686,8 @@ ValidateSpecializedWrapper32(
     else
     {
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      hasBytes = (InputLength - positionAfterCheckedPrecondition) >= 4ULL;
-      if (hasBytes)
+      hasBytesForTlv = (InputLength - positionAfterCheckedPrecondition) >= 4ULL;
+      if (hasBytesForTlv)
       {
         positionAfterTlv0 = positionAfterCheckedPrecondition + 4ULL;
       }

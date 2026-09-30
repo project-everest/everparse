@@ -13,10 +13,10 @@ HelloWorldValidatePoint(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 4ULL;
   uint64_t res;
   uint64_t positionAfterX;
-  if (hasBytes)
+  if (hasBytesForXY)
   {
     res = StartPosition + 4ULL;
   }

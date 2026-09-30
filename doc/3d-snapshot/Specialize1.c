@@ -17,16 +17,16 @@ ValidateT(
 {
   /* Validating field t1 */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForT1 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterT10;
   uint64_t res;
   uint64_t positionAfterT1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForT2_refinement;
   uint64_t positionAfterT2_refinement;
   uint64_t positionAfterT2_refinement0;
   uint32_t t2_refinement;
   BOOLEAN t2_refinementConstraintIsOk;
-  if (hasBytes0)
+  if (hasBytesForT1)
   {
     positionAfterT10 = StartPosition + 4ULL;
   }
@@ -58,8 +58,8 @@ ValidateT(
   }
   /* Validating field t2 */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterT1) >= 4ULL;
-  if (hasBytes)
+  hasBytesForT2_refinement = (InputLength - positionAfterT1) >= 4ULL;
+  if (hasBytesForT2_refinement)
   {
     positionAfterT2_refinement = positionAfterT1 + 4ULL;
   }
@@ -244,17 +244,17 @@ ValidateS64(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForS1 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterS10;
   uint64_t positionAfterS1;
   uint32_t s1;
   BOOLEAN s1ConstraintIsOk;
   uint64_t positionAfterCheckedS1;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForAlignmentPadding4;
   uint64_t res0;
   uint64_t positionAfterAlignmentPadding4;
   uint64_t positionAfterAlignmentPadding40;
-  BOOLEAN hasBytes2;
+  BOOLEAN hasBytesForPtrT;
   uint64_t positionAfterPtrT0;
   uint64_t positionAfterPtrT1;
   uint64_t ptrT;
@@ -269,10 +269,10 @@ ValidateS64(
   BOOLEAN actionResult;
   uint64_t result;
   uint64_t positionAfterPtrT;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForS2;
   uint64_t res;
   uint64_t positionAfterS2;
-  if (hasBytes0)
+  if (hasBytesForS1)
   {
     positionAfterS10 = StartPosition + 4ULL;
   }
@@ -298,8 +298,8 @@ ValidateS64(
     else
     {
       /* Validating field ___alignment_padding_4 */
-      hasBytes1 = (InputLength - positionAfterCheckedS1) >= (uint64_t)4U;
-      if (hasBytes1)
+      hasBytesForAlignmentPadding4 = (InputLength - positionAfterCheckedS1) >= (uint64_t)4U;
+      if (hasBytesForAlignmentPadding4)
       {
         res0 = positionAfterCheckedS1 + (uint64_t)4U;
       }
@@ -332,8 +332,8 @@ ValidateS64(
       else
       {
         /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-        hasBytes2 = (InputLength - positionAfterAlignmentPadding40) >= 8ULL;
-        if (hasBytes2)
+        hasBytesForPtrT = (InputLength - positionAfterAlignmentPadding40) >= 8ULL;
+        if (hasBytesForPtrT)
         {
           positionAfterPtrT0 = positionAfterAlignmentPadding40 + 8ULL;
         }
@@ -439,8 +439,8 @@ ValidateS64(
         }
         else
         {
-          hasBytes = (InputLength - positionAfterPtrT) >= 8ULL;
-          if (hasBytes)
+          hasBytesForS2 = (InputLength - positionAfterPtrT) >= 8ULL;
+          if (hasBytesForS2)
           {
             res = positionAfterPtrT + 8ULL;
           }
@@ -592,15 +592,15 @@ ValidateR64(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForR1 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterR10;
   uint64_t positionAfterR1;
   uint32_t r1;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForAlignmentPadding6;
   uint64_t res;
   uint64_t positionAfterAlignmentPadding6;
   uint64_t positionAfterAlignmentPadding60;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForPtrS;
   uint64_t positionAfterPtrS0;
   uint64_t positionAfterPtrS;
   uint64_t ptrS;
@@ -614,7 +614,7 @@ ValidateR64(
   uint64_t b;
   BOOLEAN actionResult;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForR1)
   {
     positionAfterR10 = StartPosition + 4ULL;
   }
@@ -645,8 +645,8 @@ ValidateR64(
   }
   r1 = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field ___alignment_padding_6 */
-  hasBytes1 = (InputLength - positionAfterR1) >= (uint64_t)4U;
-  if (hasBytes1)
+  hasBytesForAlignmentPadding6 = (InputLength - positionAfterR1) >= (uint64_t)4U;
+  if (hasBytesForAlignmentPadding6)
   {
     res = positionAfterR1 + (uint64_t)4U;
   }
@@ -675,8 +675,8 @@ ValidateR64(
     return positionAfterAlignmentPadding60;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterAlignmentPadding60) >= 8ULL;
-  if (hasBytes)
+  hasBytesForPtrS = (InputLength - positionAfterAlignmentPadding60) >= 8ULL;
+  if (hasBytesForPtrS)
   {
     positionAfterPtrS0 = positionAfterAlignmentPadding60 + 8ULL;
   }
@@ -789,11 +789,11 @@ ValidateSpecializedR32(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForR1 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterR10;
   uint64_t positionAfterR1;
   uint32_t r1;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForPtrS;
   uint64_t positionAfterPtrS0;
   uint64_t positionAfterPtrS;
   uint32_t ptrS;
@@ -807,7 +807,7 @@ ValidateSpecializedR32(
   uint64_t b;
   BOOLEAN actionResult;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForR1)
   {
     positionAfterR10 = StartPosition + 4ULL;
   }
@@ -838,8 +838,8 @@ ValidateSpecializedR32(
   }
   r1 = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterR1) >= 4ULL;
-  if (hasBytes)
+  hasBytesForPtrS = (InputLength - positionAfterR1) >= 4ULL;
+  if (hasBytesForPtrS)
   {
     positionAfterPtrS0 = positionAfterR1 + 4ULL;
   }
@@ -1139,13 +1139,13 @@ ValidateS32Attempt(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForF = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterF0;
   uint64_t positionAfterF;
   uint32_t f;
   BOOLEAN fConstraintIsOk;
   uint64_t positionAfterCheckedF;
-  BOOLEAN hasBytes1;
+  BOOLEAN hasBytesForPtrT;
   uint64_t positionAfterPtrT0;
   uint64_t positionAfterPtrT1;
   uint32_t ptrT;
@@ -1160,10 +1160,10 @@ ValidateS32Attempt(
   BOOLEAN actionResult;
   uint64_t result;
   uint64_t positionAfterPtrT;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForG;
   uint64_t positionAfterG;
   uint64_t res;
-  if (hasBytes0)
+  if (hasBytesForF)
   {
     positionAfterF0 = StartPosition + 4ULL;
   }
@@ -1189,8 +1189,8 @@ ValidateS32Attempt(
     else
     {
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      hasBytes1 = (InputLength - positionAfterCheckedF) >= 4ULL;
-      if (hasBytes1)
+      hasBytesForPtrT = (InputLength - positionAfterCheckedF) >= 4ULL;
+      if (hasBytesForPtrT)
       {
         positionAfterPtrT0 = positionAfterCheckedF + 4ULL;
       }
@@ -1302,8 +1302,8 @@ ValidateS32Attempt(
       {
         /* Validating field g */
         /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-        hasBytes = (InputLength - positionAfterPtrT) >= 4ULL;
-        if (hasBytes)
+        hasBytesForG = (InputLength - positionAfterPtrT) >= 4ULL;
+        if (hasBytesForG)
         {
           positionAfterG = positionAfterPtrT + 4ULL;
         }
@@ -1394,11 +1394,11 @@ ValidateR32Attempt(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForF = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterF0;
   uint64_t positionAfterF;
   uint32_t f;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForPtrS;
   uint64_t positionAfterPtrS0;
   uint64_t positionAfterPtrS;
   uint32_t ptrS;
@@ -1412,7 +1412,7 @@ ValidateR32Attempt(
   uint64_t b;
   BOOLEAN actionResult;
   uint64_t result;
-  if (hasBytes0)
+  if (hasBytesForF)
   {
     positionAfterF0 = StartPosition + 4ULL;
   }
@@ -1443,8 +1443,8 @@ ValidateR32Attempt(
   }
   f = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterF) >= 4ULL;
-  if (hasBytes)
+  hasBytesForPtrS = (InputLength - positionAfterF) >= 4ULL;
+  if (hasBytesForPtrS)
   {
     positionAfterPtrS0 = positionAfterF + 4ULL;
   }

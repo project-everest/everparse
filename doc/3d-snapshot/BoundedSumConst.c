@@ -14,16 +14,16 @@ BoundedSumConstValidateBoundedSum(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForLeft = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterLeft0;
   uint64_t positionAfterLeft;
   uint32_t left;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForRight_refinement;
   uint64_t positionAfterRight_refinement;
   uint64_t positionAfterRight_refinement0;
   uint32_t right_refinement;
   BOOLEAN right_refinementConstraintIsOk;
-  if (hasBytes0)
+  if (hasBytesForLeft)
   {
     positionAfterLeft0 = StartPosition + 4ULL;
   }
@@ -55,8 +55,8 @@ BoundedSumConstValidateBoundedSum(
   left = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field right */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterLeft) >= 4ULL;
-  if (hasBytes)
+  hasBytesForRight_refinement = (InputLength - positionAfterLeft) >= 4ULL;
+  if (hasBytesForRight_refinement)
   {
     positionAfterRight_refinement = positionAfterLeft + 4ULL;
   }

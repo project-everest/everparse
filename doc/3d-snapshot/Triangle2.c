@@ -14,10 +14,10 @@ Triangle2ValidateTriangle(
 )
 {
   /* Validating field corners */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= (uint64_t)12U;
+  BOOLEAN hasBytesForCorners = (InputLength - StartPosition) >= (uint64_t)12U;
   uint64_t res;
   uint64_t positionAfterCorners;
-  if (hasBytes)
+  if (hasBytesForCorners)
   {
     res = StartPosition + (uint64_t)12U;
   }

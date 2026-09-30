@@ -17,18 +17,18 @@ ReadPairValidatePair(
 {
   /* Validating field first */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytesForFirst = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterFirst0;
   uint64_t positionAfterFirst1;
   uint32_t first;
   BOOLEAN actionResult;
   uint64_t positionAfterFirst;
-  BOOLEAN hasBytes;
+  BOOLEAN hasBytesForSecond;
   uint64_t positionAfterSecond0;
   uint64_t positionAfterSecond;
   uint32_t second;
   BOOLEAN actionResult0;
-  if (hasBytes0)
+  if (hasBytesForFirst)
   {
     positionAfterFirst0 = StartPosition + 4ULL;
   }
@@ -71,8 +71,8 @@ ReadPairValidatePair(
   }
   /* Validating field second */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterFirst) >= 4ULL;
-  if (hasBytes)
+  hasBytesForSecond = (InputLength - positionAfterFirst) >= 4ULL;
+  if (hasBytesForSecond)
   {
     positionAfterSecond0 = positionAfterFirst + 4ULL;
   }
