@@ -778,6 +778,15 @@ let collect_files
     then
       let accu = collect_file accu (filename_concat out_dir "EverParse.h") in
       let accu = collect_file accu (filename_concat out_dir "EverParseEndianness.h") in
+      (* --pulse copies two more headers into out_dir; treat them like the
+         others (clang-format, cleanup, ...). *)
+      let accu =
+        if Options.get_pulse ()
+        then
+          let accu = collect_file accu (filename_concat out_dir "EverParsePulse.h") in
+          collect_file accu (filename_concat out_dir "EverParsePulseEndianness.h")
+        else accu
+      in
       accu
     else
       accu
@@ -876,6 +885,14 @@ let copy_everparse_h_raw
       if file_exists everparse_endianness_source
       then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
 
+let everparse_pulse_headers out_dir =
+  if Options.get_pulse ()
+  then [
+      filename_concat out_dir "EverParsePulse.h";
+      filename_concat out_dir "EverParsePulseEndianness.h";
+    ]
+  else []
+
 let copy_everparse_h
       (clang_format: bool)
       (clang_format_executable: string)
@@ -883,7 +900,7 @@ let copy_everparse_h
       out_dir =
   copy_everparse_h_raw input_stream_binding out_dir;
   if clang_format
-  then call_clang_format_on clang_format_executable [filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"]
+  then call_clang_format_on clang_format_executable ([filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"] @ everparse_pulse_headers out_dir)
 
 (* Postprocess C files, assuming that they have already been processed *)
 
