@@ -283,6 +283,7 @@ inline_for_extraction noextract
 val validate_pair
        (typename: string)
        (name1: string)
+       (coalesced_names: string)
        (#nz1:_)
        (#k1:parser_kind nz1 WeakKindStrongPrefix)
        (#[@@@erasable] t1:Type)
@@ -630,6 +631,7 @@ val validate_nlist
 
 noextract inline_for_extraction
 val validate_nlist_constant_size_without_actions
+       (name: string)
        (n:U32.t)
        (n_is_const: option nat { memoizes_n_as_const n_is_const n })
        (payload_is_constant_size:bool)
@@ -647,6 +649,7 @@ val validate_nlist_constant_size_without_actions
 
 noextract inline_for_extraction
 val validate_t_at_most
+       (name: string)
        (n:U32.t)
        (#nz: _)
        (#wk: _)
@@ -663,6 +666,7 @@ val validate_t_at_most
 
 noextract inline_for_extraction
 val validate_t_exact
+       (name: string)
        (n:U32.t)
        (#nz:bool)
        (#wk: _)
@@ -734,7 +738,7 @@ let validator_maybe_action #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k 
   = validate_with_action_t p true_inv disjointness_trivial eloc_none has_action true use_error_handler
 
 inline_for_extraction noextract
-val validate____UINT8 (#use_error_handler:bool)
+val validate____UINT8 (name: string) (#use_error_handler:bool)
   : validator parse____UINT8 #use_error_handler
 
 inline_for_extraction noextract
@@ -742,7 +746,7 @@ val read____UINT8
   : leaf_reader parse____UINT8
 
 inline_for_extraction noextract
-val validate____UINT8BE (#use_error_handler:bool)
+val validate____UINT8BE (name: string) (#use_error_handler:bool)
   : validator parse____UINT8BE #use_error_handler
 
 inline_for_extraction noextract
@@ -750,7 +754,7 @@ val read____UINT8BE
   : leaf_reader parse____UINT8BE
 
 inline_for_extraction noextract
-val validate____UINT16BE (#use_error_handler:bool)
+val validate____UINT16BE (name: string) (#use_error_handler:bool)
   : validator parse____UINT16BE #use_error_handler
 
 inline_for_extraction noextract
@@ -758,7 +762,7 @@ val read____UINT16BE
   : leaf_reader parse____UINT16BE
 
 inline_for_extraction noextract
-val validate____UINT32BE (#use_error_handler:bool)
+val validate____UINT32BE (name: string) (#use_error_handler:bool)
   : validator parse____UINT32BE #use_error_handler
 
 inline_for_extraction noextract
@@ -766,7 +770,7 @@ val read____UINT32BE
   : leaf_reader parse____UINT32BE
 
 inline_for_extraction noextract
-val validate____UINT64BE (#use_error_handler:bool)
+val validate____UINT64BE (name: string) (#use_error_handler:bool)
   : validator parse____UINT64BE #use_error_handler
 
 inline_for_extraction noextract
@@ -774,7 +778,7 @@ val read____UINT64BE
   : leaf_reader parse____UINT64BE
 
 inline_for_extraction noextract
-val validate____UINT16 (#use_error_handler:bool)
+val validate____UINT16 (name: string) (#use_error_handler:bool)
   : validator parse____UINT16 #use_error_handler
 
 inline_for_extraction noextract
@@ -782,7 +786,7 @@ val read____UINT16
   : leaf_reader parse____UINT16
 
 inline_for_extraction noextract
-val validate____UINT32 (#use_error_handler:bool)
+val validate____UINT32 (name: string) (#use_error_handler:bool)
   : validator parse____UINT32 #use_error_handler
 
 inline_for_extraction noextract
@@ -790,7 +794,7 @@ val read____UINT32
   : leaf_reader parse____UINT32
 
 inline_for_extraction noextract
-val validate____UINT64 (#use_error_handler:bool)
+val validate____UINT64 (name: string) (#use_error_handler:bool)
   : validator parse____UINT64 #use_error_handler
 
 inline_for_extraction noextract

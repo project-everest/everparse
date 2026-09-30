@@ -419,6 +419,7 @@ module LPC = LowParse.Spec.Combinators
 inline_for_extraction
 noextract
 let validate_total_constant_size_no_read'
+  (name: string)
   (#k: LP.parser_kind)
   (#t: Type)
   (p: LP.parser k t)
@@ -435,6 +436,7 @@ let validate_total_constant_size_no_read'
   [@inline_let] let pos = start_position in
   let h = HST.get () in
   LP.parser_kind_prop_equiv k p; 
+  [@(rename_let ("hasBytesFor" ^ (capitalize name)))]
   let hasBytes = I.has input input_length pos sz in
   let h2 = HST.get () in
   modifies_address_liveness_insensitive_unused_in h h2;
@@ -445,6 +447,7 @@ let validate_total_constant_size_no_read'
 inline_for_extraction
 noextract
 let validate_total_constant_size_no_read
+  (name: string)
   #nz #wk
   (#k: parser_kind nz wk)
   (#t: Type)
@@ -458,12 +461,13 @@ let validate_total_constant_size_no_read
   inv disj l
   (#use_error_handler:bool)
 : Tot (validate_with_action_t p inv disj l false true use_error_handler)
-= validate_total_constant_size_no_read' p sz u inv disj l
+= validate_total_constant_size_no_read' name p sz u inv disj l
 
 inline_for_extraction noextract
 let validate_pair
        (typename: string)
        (name1: string)
+       (coalesced_names: string)
        #nz1 (#k1:parser_kind nz1 WeakKindStrongPrefix) #t1 (#p1:parser k1 t1)
        (k1_const: bool)
        (#inv1 #disj1:_) (#l1:eloc) (#ha1 #ar1:_)
@@ -497,7 +501,7 @@ let validate_pair
       // is still reported. For nested constant-size structs the outer fast path
       // discards the inner validators, so only the outermost wrapper survives.
       validate_with_error_handler typename name1
-        (validate_drop (validate_total_constant_size_no_read (p1 `parse_pair` p2) (U64.uint_to_t (k1.parser_kind_low + k2.parser_kind_low)) () (conj_inv inv1 inv2) (conj_disjointness disj1 disj2) (l1 `eloc_union` l2)))
+        (validate_drop (validate_total_constant_size_no_read coalesced_names (p1 `parse_pair` p2) (U64.uint_to_t (k1.parser_kind_low + k2.parser_kind_low)) () (conj_inv inv1 inv2) (conj_disjointness disj1 disj2) (l1 `eloc_union` l2)))
     else
     fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
@@ -1291,6 +1295,7 @@ let validate_nlist
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size_mod_ok
+      (name: string)
       (n:U32.t)
       (n_is_const:option nat { memoizes_n_as_const n_is_const n})
       #wk 
@@ -1316,6 +1321,7 @@ let validate_nlist_total_constant_size_mod_ok
     parse_nlist_total_fixed_size_kind_correct n n_is_const p
   in
   validate_total_constant_size_no_read'
+    name
     (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p))
     (Cast.uint32_to_uint64 n)
     () inv disj l
@@ -1361,6 +1367,7 @@ let validate_nlist_constant_size_mod_ko
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size'
+      (name: string)
       (n:U32.t)
       (n_is_const:option nat { memoizes_n_as_const n_is_const n })
       #wk
@@ -1380,11 +1387,12 @@ let validate_nlist_total_constant_size'
   (ensures (fun _ -> True))
 = fun ctxt error_handler_fn input start_position -> // n is not an integer constant, so we need to eta-expand and swap fun and if
   if n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul
-  then validate_nlist_total_constant_size_mod_ok n n_is_const p inv disj l ctxt error_handler_fn input start_position
+  then validate_nlist_total_constant_size_mod_ok name n n_is_const p inv disj l ctxt error_handler_fn input start_position
   else validate_nlist_constant_size_mod_ko n n_is_const p inv disj l ctxt error_handler_fn input start_position
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size
+      (name: string)
       (n:U32.t)
       (n_is_const: option nat { memoizes_n_as_const n_is_const n })
       #wk
@@ -1410,7 +1418,7 @@ let validate_nlist_total_constant_size
          | Some n -> n % k.LP.parser_kind_low = 0
          | _ -> false
   then
-    validate_nlist_total_constant_size_mod_ok n n_is_const p inv disj l #use_error_handler
+    validate_nlist_total_constant_size_mod_ok name n n_is_const p inv disj l #use_error_handler
   else if
     match n_is_const with
     | Some n -> n % k.LP.parser_kind_low <> 0
@@ -1418,11 +1426,12 @@ let validate_nlist_total_constant_size
   then
     validate_nlist_constant_size_mod_ko n n_is_const p inv disj l #use_error_handler
   else
-    validate_nlist_total_constant_size' n n_is_const p inv disj l #use_error_handler
+    validate_nlist_total_constant_size' name n n_is_const p inv disj l #use_error_handler
 
 noextract
 inline_for_extraction
 let validate_nlist_constant_size_without_actions
+    (name: string)
     (n:U32.t)
     (n_is_const:option nat { memoizes_n_as_const n_is_const n })
     (payload_is_constant_size: bool)
@@ -1442,7 +1451,7 @@ let validate_nlist_constant_size_without_actions
       k.parser_kind_metadata = Some ParserKindMetadataTotal &&
       k.parser_kind_low < 4294967296
     then
-      validate_drop (validate_nlist_total_constant_size n n_is_const p inv disj l #use_error_handler)
+      validate_drop (validate_nlist_total_constant_size name n n_is_const p inv disj l #use_error_handler)
     else
       validate_nlist n n_is_const v
   )
@@ -1454,6 +1463,7 @@ let validate_nlist_constant_size_without_actions
 
 noextract inline_for_extraction
 let validate_t_at_most
+      (name: string)
       (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
       #inv #disj #l #ha #ar
       (#use_error_handler:bool)
@@ -1462,6 +1472,7 @@ let validate_t_at_most
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
     let h = HST.get () in
+    [@(rename_let ("hasBytesFor" ^ (capitalize name)))]
     let hasBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h1;
@@ -1496,6 +1507,7 @@ let validate_t_at_most
 
 noextract inline_for_extraction
 let validate_t_exact
+      (name: string)
       (n:U32.t) #nz #wk (#k:parser_kind nz wk) (#t:_) (#p:parser k t)
       #inv #disj #l #ha #ar
       (#use_error_handler:bool)
@@ -1504,6 +1516,7 @@ let validate_t_exact
 = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
     let h = HST.get () in
+    [@(rename_let ("hasBytesFor" ^ (capitalize name)))]
     let hasBytes = I.has input input_length pos (Cast.uint32_to_uint64 n) in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h h1;
@@ -1524,6 +1537,7 @@ let validate_t_exact
       if LPE.is_error result
       then result
       else begin
+        [@(rename_let ("stillHasBytesFor" ^ (capitalize name)))]
         let stillHasBytes = I.has truncatedInput truncatedInputLength result 1uL in
         let h4 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h h4;
@@ -1585,11 +1599,11 @@ let read_impos
       false_elim ()
 
 inline_for_extraction noextract
-let validate____UINT8 #use_error_handler
+let validate____UINT8 (name: string) #use_error_handler
   : validator parse____UINT8 #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT8, i.e., 1 byte"
-      (validate_total_constant_size_no_read parse____UINT8 1uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT8 1uL () _ _ _)
 
 inline_for_extraction noextract
 let lift_reader
@@ -1619,11 +1633,11 @@ let read____UINT8
 = lift_reader _ LowParse.Low.Int.read_u8 1ul 1uL
 
 inline_for_extraction noextract
-let validate____UINT8BE #use_error_handler
+let validate____UINT8BE (name: string) #use_error_handler
   : validator parse____UINT8BE #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT8BE, i.e., 1 byte"
-      (validate_total_constant_size_no_read parse____UINT8BE 1uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT8BE 1uL () _ _ _)
 
 inline_for_extraction noextract
 let read____UINT8BE
@@ -1631,11 +1645,11 @@ let read____UINT8BE
 = lift_reader _ LowParse.Low.Int.read_u8 1ul 1uL
 
 inline_for_extraction noextract
-let validate____UINT16BE #use_error_handler
+let validate____UINT16BE (name: string) #use_error_handler
   : validator parse____UINT16BE #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT16BE, i.e., 2 bytes"
-      (validate_total_constant_size_no_read parse____UINT16BE 2uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT16BE 2uL () _ _ _)
 
 inline_for_extraction noextract
 let read____UINT16BE
@@ -1643,11 +1657,11 @@ let read____UINT16BE
 = lift_reader _ LowParse.Low.Int.read_u16 2ul 2uL
 
 inline_for_extraction noextract
-let validate____UINT32BE #use_error_handler
+let validate____UINT32BE (name: string) #use_error_handler
   : validator parse____UINT32BE #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT32BE, i.e., 4 bytes"
-      (validate_total_constant_size_no_read parse____UINT32BE 4uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT32BE 4uL () _ _ _)
 
 inline_for_extraction noextract
 let read____UINT32BE
@@ -1655,11 +1669,11 @@ let read____UINT32BE
 = lift_reader _ LowParse.Low.Int.read_u32 4ul 4uL
 
 inline_for_extraction noextract
-let validate____UINT64BE #use_error_handler
+let validate____UINT64BE (name: string) #use_error_handler
   : validator parse____UINT64BE #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT64BE, i.e., 8 bytes"
-      (validate_total_constant_size_no_read parse____UINT64BE 8uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT64BE 8uL () _ _ _)
 
 inline_for_extraction noextract
 let read____UINT64BE
@@ -1667,11 +1681,11 @@ let read____UINT64BE
 = lift_reader _ LowParse.Low.Int.read_u64 8ul 8uL
 
 inline_for_extraction noextract
-let validate____UINT16 #use_error_handler
+let validate____UINT16 (name: string) #use_error_handler
   : validator parse____UINT16 #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT16, i.e., 2 bytes"
-      (validate_total_constant_size_no_read parse____UINT16 2uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT16 2uL () _ _ _)
 
 inline_for_extraction noextract
 let read____UINT16
@@ -1679,11 +1693,11 @@ let read____UINT16
 = lift_reader _ LowParse.Low.BoundedInt.read_u16_le 2ul 2uL
 
 inline_for_extraction noextract
-let validate____UINT32 #use_error_handler
+let validate____UINT32 (name: string) #use_error_handler
   : validator parse____UINT32 #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT32, i.e., 4 bytes"
-      (validate_total_constant_size_no_read parse____UINT32 4uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT32 4uL () _ _ _)
 
 inline_for_extraction noextract
 let read____UINT32
@@ -1691,11 +1705,11 @@ let read____UINT32
 = lift_reader _ LowParse.Low.BoundedInt.read_u32_le 4ul 4uL
 
 inline_for_extraction noextract
-let validate____UINT64 #use_error_handler
+let validate____UINT64 (name: string) #use_error_handler
   : validator parse____UINT64 #use_error_handler
   = validate_with_comment
       "Checking that we have enough space for a UINT64, i.e., 8 bytes"
-      (validate_total_constant_size_no_read parse____UINT64 8uL () _ _ _)
+      (validate_total_constant_size_no_read name parse____UINT64 8uL () _ _ _)
 
 inline_for_extraction noextract
 let read____UINT64
@@ -1861,7 +1875,7 @@ let validate_all_bytes #use_error_handler = fun _ _ input input_length start_pos
   I.empty input input_length start_position
 
 let validate_all_zeros #use_error_handler =
-  validate_list (validate_filter "parse_zeros" validate____UINT8 read____UINT8 is_zero "check if zero" "")
+  validate_list (validate_filter "parse_zeros" (validate____UINT8 "zeroByte") read____UINT8 is_zero "check if zero" "")
 
 
 ////////////////////////////////////////////////////////////////////////////////
