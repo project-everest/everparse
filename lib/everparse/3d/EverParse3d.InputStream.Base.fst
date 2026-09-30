@@ -186,7 +186,30 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
      and a precondition here would be an unchecked proof obligation on
      hand-written code. The out-of-range case is instead left underspecified
      -- callers always have [off] in range, so nothing is lost, and an
-     existing client stays correct whatever it answers there. *)
+     existing client stays correct whatever it answers there.
+
+     Making [off] absolute (so that the non-consuming validators could keep an
+     absolute [pos], and the error handler's [start_pos] could be an [SZ.t])
+     was considered and rejected. On the extern backend there are three
+     distinct positions: the C primitive's own cumulative stream position, the
+     [origin] at which the wrapper entered this top-level validation, and
+     their difference, which is what [get_position] returns and what the
+     field-position actions report. Neither reading of "absolute" works:
+
+       - relative to [origin], the client cannot interpret [off] at all, since
+         [stream_has_at] takes the origin as a [Ghost.erased] precisely so the
+         C signatures stay free of it (EverParse3d.InputStream.Extern.fst);
+
+       - relative to the stream, the prelude must compute [origin + off] on
+         *every* call, and that sum decides whether bytes are in bounds, so it
+         needs a real [SZ.add] with a discharged `fits` -- a wrapping
+         [add_mod] would be a memory-safety bug, not a cosmetic one.
+
+     The one place a sum of two positions is unavoidable, the error handler's
+     [start_pos], is also the one place where it is merely *reported*, so
+     [U64.add_mod] is sound there. Keeping [off] relative also keeps the
+     client's reasoning purely local, and matches [has], whose [n] is relative
+     too. *)
   has_at:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
     (base: base_t) ->
