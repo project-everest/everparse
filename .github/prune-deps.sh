@@ -46,4 +46,11 @@ rm -rf "$opt"/opam/*/.opam-switch/sources
 rm -rf "$opt"/opam/download-cache
 rm -rf "$opt"/opam/repo
 
+# All those rm -rf bumped the mtime of opt/ and of its subdirectories, which
+# makes the dependency stamps look out of date.  That matters immediately: the
+# image's ENTRYPOINT sources env.sh, which runs `make -f deps.Makefile`, so a
+# plain `docker run` would try to rebuild the dependencies -- and fail, since
+# the scaffolding it needs is exactly what we just deleted.
+./.github/mark-deps-up-to-date.sh > /dev/null
+
 du -sh "$opt"
