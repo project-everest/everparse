@@ -19,6 +19,7 @@ module EverParse3d.Interpreter
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module A = EverParse3d.Actions.All
+module AC = EverParse3d.Actions.Common
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module CP = EverParse3d.CopyBuffer
@@ -1103,8 +1104,8 @@ let rec typ_fieldnames
     | T_pair _ _ t1 _ t2 -> typ_fieldnames t1 ^ typ_fieldnames t2
     | T_drop t -> typ_fieldnames t
     | T_with_comment _ t _ -> typ_fieldnames t
-    | T_denoted fn _ -> A.capitalize fn
-    | T_false fn -> A.capitalize fn
+    | T_denoted fn _ -> AC.capitalize fn
+    | T_false fn -> AC.capitalize fn
     | _ -> ""
 
 [@@specialize]
@@ -1383,7 +1384,7 @@ let rec as_validator
     | T_pair fn k1_const t1 k2_const t2 ->
       assert_norm (as_type #use_error_handler (T_pair fn k1_const t1 k2_const t2) == as_type #use_error_handler t1 & as_type #use_error_handler t2);
       assert_norm (as_parser #use_error_handler (T_pair fn k1_const t1 k2_const t2) == P.parse_pair (as_parser #use_error_handler t1) (as_parser #use_error_handler t2));
-      A.validate_pair typename fn (typ_fieldnames t1 ^ typ_fieldnames t2)
+      A.validate_pair typename fn (typ_fieldnames t2) (typ_fieldnames t1 ^ typ_fieldnames t2)
           k1_const
           (as_validator typename #use_error_handler t1)
           k2_const
@@ -1440,6 +1441,7 @@ let rec as_validator
       A.validate_with_error_handler typename fn                              
         (A.validate_weaken_inv_loc _ _ _ (
           A.validate_dep_pair_with_action 
+            fn
             (dtyp_as_validator #use_error_handler fn base)
             (dtyp_as_leaf_reader #use_error_handler base)
             (fun x -> action_as_action #use_error_handler (act x))
@@ -1507,7 +1509,7 @@ let rec as_validator
     | T_drop t ->
       assert_norm (as_type #use_error_handler (T_drop t) == as_type #use_error_handler t);
       assert_norm (as_parser #use_error_handler (T_drop t) == as_parser #use_error_handler t);
-      A.validate_without_reading (as_validator typename #use_error_handler t)
+      A.validate_without_reading (typ_fieldnames t) (as_validator typename #use_error_handler t)
 
     | T_with_comment fn t c ->
       assert_norm (as_type #use_error_handler (T_with_comment fn t c) == as_type #use_error_handler t);
@@ -1520,7 +1522,7 @@ let rec as_validator
       if ha
       then (
         A.validate_with_error_handler typename fn 
-          (A.validate_nlist n n_is_const (as_validator typename #use_error_handler t))
+          (A.validate_nlist fn n n_is_const (as_validator typename #use_error_handler t))
       )
       else (
         A.validate_with_error_handler typename fn 
@@ -1543,7 +1545,7 @@ let rec as_validator
       assert_norm (as_type #use_error_handler (T_string fn elt_t terminator) == P.cstring (dtyp_as_type #use_error_handler elt_t) terminator);
       assert_norm (as_parser #use_error_handler (T_string fn elt_t terminator) == P.parse_string (dtyp_as_parser #use_error_handler elt_t) terminator);
       A.validate_with_error_handler typename fn 
-        (A.validate_string (dtyp_as_validator #use_error_handler fn elt_t)
+        (A.validate_string fn (dtyp_as_validator #use_error_handler fn elt_t)
                            (dtyp_as_leaf_reader #use_error_handler elt_t)
                            terminator)
 #pop-options 
@@ -1580,7 +1582,7 @@ let specialization_steps =
    delta_attr [`%specialize];
    delta_only ([`%Some?;
                 `%Some?.v;
-                `%A.capitalize;
+                `%AC.capitalize;
                 `%as_validator;
                 `%nz_of_binding;
                 `%wk_of_binding;
