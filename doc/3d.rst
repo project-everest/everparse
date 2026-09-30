@@ -49,6 +49,10 @@ Then, EverParse/3d produces:
   helpers for the implementation of verified validators, common to
   ``MyFile1.3d`` and ``MyFile2.3d``
 
+* with ``--pulse``, two additional headers, ``EverParsePulse.h`` and
+  ``EverParsePulseEndianness.h``, which play the same role for the Pulse
+  backend
+
 3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
    compilation units that need to call a validator from
    ``MyFile1.3d``, and similarly for ``MyFile2.3d``.
@@ -227,6 +231,17 @@ Options are treated from left to right:
   the package. Otherwise, the default is to use the ``fstar.exe``
   found from the ``PATH``.
   
+* ``--pulse``
+
+  Generates the verified validators with the Pulse backend instead of the
+  default Low\* backend. The entrypoint API in ``<Mod>Wrapper.h`` is
+  unchanged, so client code that only calls the entrypoints ports over
+  unchanged; but the error-code constants, the error-handler signature,
+  the copy-buffer projections and the ``--input_stream`` client primitives
+  all differ. See the *Pulse backend primitives* part of
+  ``--input_stream`` below, and, in the :ref:`3d language reference
+  <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
+
 * ``--input_stream buffer|extern|static``
 
   Specifies the format of validator input buffers:
