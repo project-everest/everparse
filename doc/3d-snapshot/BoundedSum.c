@@ -15,85 +15,85 @@ BoundedSumValidateBoundedSum(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterBoundedSum;
-  uint64_t positionAfterleft;
+  BOOLEAN hasBytesForLeft = (InputLength - StartPosition) >= 4ULL;
+  uint64_t positionAfterLeftOrError;
+  uint64_t positionAfterLeft;
   uint32_t left;
-  BOOLEAN hasBytes;
-  uint64_t positionAfterright_refinement;
-  uint64_t positionAfterBoundedSum0;
+  BOOLEAN hasBytesForRight_refinement;
+  uint64_t positionAfterRight_refinement;
+  uint64_t positionAfterRight_refinementOrError;
   uint32_t right_refinement;
   BOOLEAN right_refinementConstraintIsOk;
-  if (hasBytes0)
+  if (hasBytesForLeft)
   {
-    positionAfterBoundedSum = StartPosition + 4ULL;
+    positionAfterLeftOrError = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterBoundedSum =
+    positionAfterLeftOrError =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterBoundedSum))
+  if (EverParseIsSuccess(positionAfterLeftOrError))
   {
-    positionAfterleft = positionAfterBoundedSum;
+    positionAfterLeft = positionAfterLeftOrError;
   }
   else
   {
     ErrorHandlerFn("_boundedSum",
       "left",
-      EverParseErrorReasonOfResult(positionAfterBoundedSum),
-      EverParseGetValidatorErrorKind(positionAfterBoundedSum),
+      EverParseErrorReasonOfResult(positionAfterLeftOrError),
+      EverParseGetValidatorErrorKind(positionAfterLeftOrError),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterleft = positionAfterBoundedSum;
+    positionAfterLeft = positionAfterLeftOrError;
   }
-  if (EverParseIsError(positionAfterleft))
+  if (EverParseIsError(positionAfterLeft))
   {
-    return positionAfterleft;
+    return positionAfterLeft;
   }
   left = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field right */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterleft) >= 4ULL;
-  if (hasBytes)
+  hasBytesForRight_refinement = (InputLength - positionAfterLeft) >= 4ULL;
+  if (hasBytesForRight_refinement)
   {
-    positionAfterright_refinement = positionAfterleft + 4ULL;
+    positionAfterRight_refinement = positionAfterLeft + 4ULL;
   }
   else
   {
-    positionAfterright_refinement =
+    positionAfterRight_refinement =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterleft);
+        positionAfterLeft);
   }
-  if (EverParseIsError(positionAfterright_refinement))
+  if (EverParseIsError(positionAfterRight_refinement))
   {
-    positionAfterBoundedSum0 = positionAfterright_refinement;
+    positionAfterRight_refinementOrError = positionAfterRight_refinement;
   }
   else
   {
     /* reading field_value */
-    right_refinement = Load32Le(Input + (uint32_t)positionAfterleft);
+    right_refinement = Load32Le(Input + (uint32_t)positionAfterLeft);
     /* start: checking constraint */
     right_refinementConstraintIsOk = left <= Bound && right_refinement <= (Bound - left);
     /* end: checking constraint */
-    positionAfterBoundedSum0 =
+    positionAfterRight_refinementOrError =
       EverParseCheckConstraintOk(right_refinementConstraintIsOk,
-        positionAfterright_refinement);
+        positionAfterRight_refinement);
   }
-  if (EverParseIsSuccess(positionAfterBoundedSum0))
+  if (EverParseIsSuccess(positionAfterRight_refinementOrError))
   {
-    return positionAfterBoundedSum0;
+    return positionAfterRight_refinementOrError;
   }
   ErrorHandlerFn("_boundedSum",
     "right.refinement",
-    EverParseErrorReasonOfResult(positionAfterBoundedSum0),
-    EverParseGetValidatorErrorKind(positionAfterBoundedSum0),
+    EverParseErrorReasonOfResult(positionAfterRight_refinementOrError),
+    EverParseGetValidatorErrorKind(positionAfterRight_refinementOrError),
     Ctxt,
     Input,
-    positionAfterleft);
-  return positionAfterBoundedSum0;
+    positionAfterLeft);
+  return positionAfterRight_refinementOrError;
 }
 
 uint64_t
@@ -106,60 +106,60 @@ BoundedSumValidateMySum(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAftermySum0;
-  uint64_t positionAfterbound;
+  BOOLEAN hasBytesForBound = (InputLength - StartPosition) >= 4ULL;
+  uint64_t positionAfterBoundOrError;
+  uint64_t positionAfterBound;
   uint32_t bound;
-  uint64_t positionAftermySum;
-  if (hasBytes)
+  uint64_t positionAfterSumOrError;
+  if (hasBytesForBound)
   {
-    positionAftermySum0 = StartPosition + 4ULL;
+    positionAfterBoundOrError = StartPosition + 4ULL;
   }
   else
   {
-    positionAftermySum0 =
+    positionAfterBoundOrError =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAftermySum0))
+  if (EverParseIsSuccess(positionAfterBoundOrError))
   {
-    positionAfterbound = positionAftermySum0;
+    positionAfterBound = positionAfterBoundOrError;
   }
   else
   {
     ErrorHandlerFn("mySum",
       "bound",
-      EverParseErrorReasonOfResult(positionAftermySum0),
-      EverParseGetValidatorErrorKind(positionAftermySum0),
+      EverParseErrorReasonOfResult(positionAfterBoundOrError),
+      EverParseGetValidatorErrorKind(positionAfterBoundOrError),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterbound = positionAftermySum0;
+    positionAfterBound = positionAfterBoundOrError;
   }
-  if (EverParseIsError(positionAfterbound))
+  if (EverParseIsError(positionAfterBound))
   {
-    return positionAfterbound;
+    return positionAfterBound;
   }
   bound = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field sum */
-  positionAftermySum =
+  positionAfterSumOrError =
     BoundedSumValidateBoundedSum(bound,
       Ctxt,
       ErrorHandlerFn,
       Input,
       InputLength,
-      positionAfterbound);
-  if (EverParseIsSuccess(positionAftermySum))
+      positionAfterBound);
+  if (EverParseIsSuccess(positionAfterSumOrError))
   {
-    return positionAftermySum;
+    return positionAfterSumOrError;
   }
   ErrorHandlerFn("mySum",
     "sum",
-    EverParseErrorReasonOfResult(positionAftermySum),
-    EverParseGetValidatorErrorKind(positionAftermySum),
+    EverParseErrorReasonOfResult(positionAfterSumOrError),
+    EverParseGetValidatorErrorKind(positionAfterSumOrError),
     Ctxt,
     Input,
-    positionAfterbound);
-  return positionAftermySum;
+    positionAfterBound);
+  return positionAfterSumOrError;
 }
 

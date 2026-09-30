@@ -15,28 +15,28 @@ ColorValidateColoredPoint(
 {
   /* Validating field col */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAftercol_refinement;
-  uint64_t positionAfterColoredPoint;
+  BOOLEAN hasBytesForCol_refinement = (InputLength - StartPosition) >= 4ULL;
+  uint64_t positionAfterCol_refinement;
+  uint64_t positionAfterCol_refinementOrError;
   uint32_t col_refinement;
   BOOLEAN col_refinementConstraintIsOk;
-  uint64_t positionAftercol_refinement0;
-  BOOLEAN hasBytes;
-  uint64_t res;
-  uint64_t positionAfterColoredPoint0;
-  if (hasBytes0)
+  uint64_t positionAfterCol_refinement0;
+  BOOLEAN hasBytesForXY;
+  uint64_t resForXY;
+  uint64_t positionAfterXOrError;
+  if (hasBytesForCol_refinement)
   {
-    positionAftercol_refinement = StartPosition + 4ULL;
+    positionAfterCol_refinement = StartPosition + 4ULL;
   }
   else
   {
-    positionAftercol_refinement =
+    positionAfterCol_refinement =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsError(positionAftercol_refinement))
+  if (EverParseIsError(positionAfterCol_refinement))
   {
-    positionAfterColoredPoint = positionAftercol_refinement;
+    positionAfterCol_refinementOrError = positionAfterCol_refinement;
   }
   else
   {
@@ -46,52 +46,52 @@ ColorValidateColoredPoint(
     col_refinementConstraintIsOk =
       COLOR_RED == col_refinement || COLOR_GREEN == col_refinement || COLOR_BLUE == col_refinement;
     /* end: checking constraint */
-    positionAfterColoredPoint =
+    positionAfterCol_refinementOrError =
       EverParseCheckConstraintOk(col_refinementConstraintIsOk,
-        positionAftercol_refinement);
+        positionAfterCol_refinement);
   }
-  if (EverParseIsSuccess(positionAfterColoredPoint))
+  if (EverParseIsSuccess(positionAfterCol_refinementOrError))
   {
-    positionAftercol_refinement0 = positionAfterColoredPoint;
+    positionAfterCol_refinement0 = positionAfterCol_refinementOrError;
   }
   else
   {
     ErrorHandlerFn("_coloredPoint",
       "col.refinement",
-      EverParseErrorReasonOfResult(positionAfterColoredPoint),
-      EverParseGetValidatorErrorKind(positionAfterColoredPoint),
+      EverParseErrorReasonOfResult(positionAfterCol_refinementOrError),
+      EverParseGetValidatorErrorKind(positionAfterCol_refinementOrError),
       Ctxt,
       Input,
       StartPosition);
-    positionAftercol_refinement0 = positionAfterColoredPoint;
+    positionAfterCol_refinement0 = positionAfterCol_refinementOrError;
   }
-  if (EverParseIsError(positionAftercol_refinement0))
+  if (EverParseIsError(positionAfterCol_refinement0))
   {
-    return positionAftercol_refinement0;
+    return positionAfterCol_refinement0;
   }
-  hasBytes = (InputLength - positionAftercol_refinement0) >= 8ULL;
-  if (hasBytes)
+  hasBytesForXY = (InputLength - positionAfterCol_refinement0) >= 8ULL;
+  if (hasBytesForXY)
   {
-    res = positionAftercol_refinement0 + 8ULL;
+    resForXY = positionAfterCol_refinement0 + 8ULL;
   }
   else
   {
-    res =
+    resForXY =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftercol_refinement0);
+        positionAfterCol_refinement0);
   }
-  positionAfterColoredPoint0 = res;
-  if (EverParseIsSuccess(positionAfterColoredPoint0))
+  positionAfterXOrError = resForXY;
+  if (EverParseIsSuccess(positionAfterXOrError))
   {
-    return positionAfterColoredPoint0;
+    return positionAfterXOrError;
   }
   ErrorHandlerFn("_coloredPoint",
     "x",
-    EverParseErrorReasonOfResult(positionAfterColoredPoint0),
-    EverParseGetValidatorErrorKind(positionAfterColoredPoint0),
+    EverParseErrorReasonOfResult(positionAfterXOrError),
+    EverParseGetValidatorErrorKind(positionAfterXOrError),
     Ctxt,
     Input,
-    positionAftercol_refinement0);
-  return positionAfterColoredPoint0;
+    positionAfterCol_refinement0);
+  return positionAfterXOrError;
 }
 

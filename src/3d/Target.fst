@@ -1596,19 +1596,17 @@ let print_c_entry
   let external_defs_includes =
     if not (Options.get_emit_output_types_defs ()) then "" else
     let deps =
-      if List.length signatures_output_typ_deps = 0
-      then ""
-      else
         String.concat
           ""
           (List.map
-             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
+             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" dep)
              signatures_output_typ_deps) in
     let self =
       if has_output_types ds || has_extern_types ds
       then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
       else "" in
-    Printf.sprintf "%s\n%s\n\n" deps self in
+    let includes = deps ^ self in
+    if includes = "" then "" else includes ^ "\n" in
 
   let header =
     Printf.sprintf
@@ -1658,13 +1656,14 @@ let print_c_entry
         List.Tot.filter (fun x -> x <> "" && not (List.Tot.mem x accu)) probe_modules `List.Tot.append` accu
       | _ -> accu
   in
-  let include_external_api_from_module (accu: string) (modu: string) : Tot string =
-    Printf.sprintf "%s#include \"%s_ExternalAPI.h\"\n" accu modu
+  let include_external_api_from_module (accu: list string) (modu: string) : Tot (list string) =
+    accu `List.Tot.append` [Printf.sprintf "#include \"%s_ExternalAPI.h\"" modu]
   in
   let include_external_api =
     ds
     |> List.Tot.fold_left external_api_from_decl []
-    |> List.Tot.fold_left include_external_api_from_module ""
+    |> List.Tot.fold_left include_external_api_from_module []
+    |> String.concat "\n"
   in
   (* The generated wrappers keep their uint32_t/uint64_t argument types, but
      the Pulse validators are indexed by size_t, so both conversion directions
@@ -1705,6 +1704,10 @@ let print_c_entry
      backend is exactly as unbounded as extern/static, and since probes are
      buffer-only under --pulse it is the backend that would be exempted.
      Keep the assertion unconditional. *)
+  (* No trailing newline, so that this joins the include block the same way
+     `include_external_api` does: these assertions are about the types used by
+     the includes around them, so they belong in that block rather than as a
+     section of their own. *)
   let pulse_static_asserts =
     if Options.get_pulse ()
     then
@@ -1712,26 +1715,27 @@ let print_c_entry
        #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
        _Static_assert(sizeof(size_t) >= sizeof(uint32_t), \"EverParse: size_t must be at least as wide as uint32_t\");\n\
        _Static_assert(sizeof(size_t) <= sizeof(uint64_t), \"EverParse: size_t must be no wider than uint64_t\");\n\
-       #endif\n"
+       #endif"
     else ""
   in
   let impl =
-    Printf.sprintf
-      "#include \"%sWrapper.h\"\n\
-       #include \"EverParse.h\"\n\
-       #include \"%s.h\"\n\
-       %s\
-       %s\n\
-       %s\n\n\
-       %s\n\n\
-       %s\n"
-      modul
-      modul
-      pulse_static_asserts
-      include_external_api
-      error_callback_proto
-      default_error_handler
-      (impls |> String.concat "\n\n")
+    let includes =
+      Printf.sprintf
+        "#include \"%sWrapper.h\"\n\
+         #include \"EverParse.h\"\n\
+         #include \"%s.h\"%s%s"
+        modul
+        modul
+        (if pulse_static_asserts = "" then "" else "\n" ^ pulse_static_asserts)
+        (if include_external_api = "" then "" else "\n" ^ include_external_api)
+    in
+    [ includes;
+      error_callback_proto;
+      default_error_handler;
+      impls |> String.concat "\n\n" ]
+    |> List.filter (fun s -> s <> "")
+    |> String.concat "\n\n"
+    |> (fun s -> s ^ "\n")
   in
   let impl =
     if input_stream_include = ""
@@ -2148,7 +2152,7 @@ let rec print_output_types_fields (flds:list A.out_field) : ML string =
 let print_out_typ (ot:A.out_typ) : ML string =
   let open A in
   Printf.sprintf
-    "\ntypedef %s %s {\n%s\n} %s;\n"
+    "\ntypedef %s %s {\n%s} %s;\n"
     (if ot.out_typ_is_union then "union" else "struct")
     (uppercase (A.ident_name ot.out_typ_names.typedef_name))
     (print_output_types_fields ot.out_typ_fields)
@@ -2156,18 +2160,18 @@ let print_out_typ (ot:A.out_typ) : ML string =
 
 let print_output_types_defs (modul:string) (ds:decls) : ML string =
   let defs =
-    String.concat "\n\n" (List.map (fun (d, _) ->
+    String.concat "" (List.collect (fun (d, _) ->
       match d with
-      | Output_type ot -> print_out_typ ot
-      | _ -> "") ds) in
+      | Output_type ot -> [print_out_typ ot]
+      | _ -> []) ds) in
 
   Printf.sprintf
     "#ifndef __%s_OutputTypesDefs_H\n\
      #define __%s_OutputTypesDefs_H\n\n\
      #if defined(__cplusplus)\n\
      extern \"C\" {\n\
-     #endif\n\n\n\
-     %s%s\n\n\n\
+     #endif\n\
+     %s%s\n\
      #if defined(__cplusplus)\n\
      }\n\
      #endif\n\n\

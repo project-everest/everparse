@@ -297,7 +297,6 @@ let emit_static_assertions
           (Options.output_dir())
           modul
           filename_suffix) in
-    FStar.IO.write_string c_static_asserts_file "\n\n";
     FStar.IO.write_string c_static_asserts_file 
     (StaticAssertions.print_static_asserts 
        (RefineCStruct.print_ctypes ctypes)
@@ -376,10 +375,10 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
       FStar.IO.write_string extern_typedefs_file
         (Printf.sprintf
           "#ifndef __%s_ExternalTypedefs_H\n\
-           #define __%s_ExternalTypedefs_H\n
+           #define __%s_ExternalTypedefs_H\n\n\
            #if defined(__cplusplus)\n\
            extern \"C\" {\n\
-           #endif\n\n\n\
+           #endif\n\n\
            %s#include \"%s_OutputTypesDefs.h\"\n\n\
            #if defined(__cplusplus)\n\
            }\n\
