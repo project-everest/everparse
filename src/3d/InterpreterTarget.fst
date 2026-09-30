@@ -1644,7 +1644,12 @@ let print_binding mname (td:type_decl)
       else "None"
     in
     let coerce_validator =
-      Printf.sprintf "(T.norm [delta_only [`%%parser_%s; `%%type_%s; `%%coerce]]; T.trefl())"
+      (* `validator_of` must be unfolded here: for an entrypoint, `validate_X`
+         is declared in the generated interface with type `validator_of ...`,
+         so without it `T.trefl` falls back to unification with full delta,
+         which unfolds the whole nest of `def'_X` and blows up exponentially
+         with the nesting depth. *)
+      Printf.sprintf "(T.norm [delta_only [`%%parser_%s; `%%type_%s; `%%coerce; `%%validator_of]]; T.trefl())"
         root_name
         root_name
     in
@@ -1665,7 +1670,7 @@ let print_binding mname (td:type_decl)
                                     %s\n\
                                     %b\n\
                                     %b\n\
-                                    (A.validate_weaken_gen \"%s\" %b ((coerce (_ by %s) (validate_%s %s)) <: A.validate_with_action_t #B.base_t #B.len_t #B.pos_t #%s (parser_%s %s) %s %b %b %b) ___d ___sq)\n\
+                                    (A.validate_weaken_gen \"%s\" %b (coerce (_ by %s) (validate_%s %s)) ___d ___sq)\n\
                                     (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
                       root_name binders sd
                       (pulse_inst_args ())
@@ -1683,12 +1688,6 @@ let print_binding mname (td:type_decl)
                       root_name
                       td.allow_reading
                       coerce_validator root_name args
-                      (pulse_inst ())
-                      root_name args
-                      sd
-                      td.has_action
-                      td.allow_reading
-                      (use_error_handler ())
     else
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\
