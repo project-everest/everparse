@@ -15,39 +15,39 @@ EnumConstraintValidateEnumConstraint(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytesForCol = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterCol0;
   uint64_t positionAfterCol;
+  uint64_t positionAfterColOrError;
   uint32_t col;
   BOOLEAN colConstraintIsOk;
   uint64_t positionAfterCheckedCol;
   BOOLEAN hasBytesForX_refinement;
   uint64_t positionAfterX_refinement;
-  uint64_t positionAfterX_refinement0;
+  uint64_t positionAfterX_refinementOrError;
   uint32_t x_refinement;
   BOOLEAN x_refinementConstraintIsOk;
   if (hasBytesForCol)
   {
-    positionAfterCol0 = StartPosition + 4ULL;
+    positionAfterCol = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterCol0 =
+    positionAfterCol =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsError(positionAfterCol0))
+  if (EverParseIsError(positionAfterCol))
   {
-    positionAfterCol = positionAfterCol0;
+    positionAfterColOrError = positionAfterCol;
   }
   else
   {
     col = Load32Le(Input + (uint32_t)StartPosition);
     colConstraintIsOk =
       col == ENUMCONSTRAINT_RED || col == ENUMCONSTRAINT_GREEN || col == ENUMCONSTRAINT_BLUE;
-    positionAfterCheckedCol = EverParseCheckConstraintOk(colConstraintIsOk, positionAfterCol0);
+    positionAfterCheckedCol = EverParseCheckConstraintOk(colConstraintIsOk, positionAfterCol);
     if (EverParseIsError(positionAfterCheckedCol))
     {
-      positionAfterCol = positionAfterCheckedCol;
+      positionAfterColOrError = positionAfterCheckedCol;
     }
     else
     {
@@ -66,7 +66,7 @@ EnumConstraintValidateEnumConstraint(
       }
       if (EverParseIsError(positionAfterX_refinement))
       {
-        positionAfterX_refinement0 = positionAfterX_refinement;
+        positionAfterX_refinementOrError = positionAfterX_refinement;
       }
       else
       {
@@ -75,38 +75,38 @@ EnumConstraintValidateEnumConstraint(
         /* start: checking constraint */
         x_refinementConstraintIsOk = x_refinement == 0U || col == ENUMCONSTRAINT_GREEN;
         /* end: checking constraint */
-        positionAfterX_refinement0 =
+        positionAfterX_refinementOrError =
           EverParseCheckConstraintOk(x_refinementConstraintIsOk,
             positionAfterX_refinement);
       }
-      if (EverParseIsSuccess(positionAfterX_refinement0))
+      if (EverParseIsSuccess(positionAfterX_refinementOrError))
       {
-        positionAfterCol = positionAfterX_refinement0;
+        positionAfterColOrError = positionAfterX_refinementOrError;
       }
       else
       {
         ErrorHandlerFn("_enum_constraint",
           "x.refinement",
-          EverParseErrorReasonOfResult(positionAfterX_refinement0),
-          EverParseGetValidatorErrorKind(positionAfterX_refinement0),
+          EverParseErrorReasonOfResult(positionAfterX_refinementOrError),
+          EverParseGetValidatorErrorKind(positionAfterX_refinementOrError),
           Ctxt,
           Input,
           positionAfterCheckedCol);
-        positionAfterCol = positionAfterX_refinement0;
+        positionAfterColOrError = positionAfterX_refinementOrError;
       }
     }
   }
-  if (EverParseIsSuccess(positionAfterCol))
+  if (EverParseIsSuccess(positionAfterColOrError))
   {
-    return positionAfterCol;
+    return positionAfterColOrError;
   }
   ErrorHandlerFn("_enum_constraint",
     "col",
-    EverParseErrorReasonOfResult(positionAfterCol),
-    EverParseGetValidatorErrorKind(positionAfterCol),
+    EverParseErrorReasonOfResult(positionAfterColOrError),
+    EverParseGetValidatorErrorKind(positionAfterColOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterCol;
+  return positionAfterColOrError;
 }
 

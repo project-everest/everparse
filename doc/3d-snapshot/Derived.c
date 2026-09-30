@@ -15,7 +15,7 @@ DerivedValidateTriple(
 {
   BOOLEAN hasBytesForPairThird = (InputLength - StartPosition) >= 12ULL;
   uint64_t resForPairThird;
-  uint64_t positionAfterPair;
+  uint64_t positionAfterPairOrError;
   if (hasBytesForPairThird)
   {
     resForPairThird = StartPosition + 12ULL;
@@ -26,19 +26,19 @@ DerivedValidateTriple(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  positionAfterPair = resForPairThird;
-  if (EverParseIsSuccess(positionAfterPair))
+  positionAfterPairOrError = resForPairThird;
+  if (EverParseIsSuccess(positionAfterPairOrError))
   {
-    return positionAfterPair;
+    return positionAfterPairOrError;
   }
   ErrorHandlerFn("_Triple",
     "pair",
-    EverParseErrorReasonOfResult(positionAfterPair),
-    EverParseGetValidatorErrorKind(positionAfterPair),
+    EverParseErrorReasonOfResult(positionAfterPairOrError),
+    EverParseGetValidatorErrorKind(positionAfterPairOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterPair;
+  return positionAfterPairOrError;
 }
 
 uint64_t
@@ -52,7 +52,7 @@ DerivedValidateQuad(
 {
   BOOLEAN hasBytesFor1234 = (InputLength - StartPosition) >= 16ULL;
   uint64_t resFor1234;
-  uint64_t positionAfter12;
+  uint64_t positionAfter12orError;
   if (hasBytesFor1234)
   {
     resFor1234 = StartPosition + 16ULL;
@@ -63,18 +63,18 @@ DerivedValidateQuad(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  positionAfter12 = resFor1234;
-  if (EverParseIsSuccess(positionAfter12))
+  positionAfter12orError = resFor1234;
+  if (EverParseIsSuccess(positionAfter12orError))
   {
-    return positionAfter12;
+    return positionAfter12orError;
   }
   ErrorHandlerFn("_Quad",
     "_12",
-    EverParseErrorReasonOfResult(positionAfter12),
-    EverParseGetValidatorErrorKind(positionAfter12),
+    EverParseErrorReasonOfResult(positionAfter12orError),
+    EverParseGetValidatorErrorKind(positionAfter12orError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfter12;
+  return positionAfter12orError;
 }
 

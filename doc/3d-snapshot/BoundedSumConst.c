@@ -15,38 +15,38 @@ BoundedSumConstValidateBoundedSum(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytesForLeft = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterLeft0;
+  uint64_t positionAfterLeftOrError;
   uint64_t positionAfterLeft;
   uint32_t left;
   BOOLEAN hasBytesForRight_refinement;
   uint64_t positionAfterRight_refinement;
-  uint64_t positionAfterRight_refinement0;
+  uint64_t positionAfterRight_refinementOrError;
   uint32_t right_refinement;
   BOOLEAN right_refinementConstraintIsOk;
   if (hasBytesForLeft)
   {
-    positionAfterLeft0 = StartPosition + 4ULL;
+    positionAfterLeftOrError = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterLeft0 =
+    positionAfterLeftOrError =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterLeft0))
+  if (EverParseIsSuccess(positionAfterLeftOrError))
   {
-    positionAfterLeft = positionAfterLeft0;
+    positionAfterLeft = positionAfterLeftOrError;
   }
   else
   {
     ErrorHandlerFn("_boundedSum",
       "left",
-      EverParseErrorReasonOfResult(positionAfterLeft0),
-      EverParseGetValidatorErrorKind(positionAfterLeft0),
+      EverParseErrorReasonOfResult(positionAfterLeftOrError),
+      EverParseGetValidatorErrorKind(positionAfterLeftOrError),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterLeft = positionAfterLeft0;
+    positionAfterLeft = positionAfterLeftOrError;
   }
   if (EverParseIsError(positionAfterLeft))
   {
@@ -68,7 +68,7 @@ BoundedSumConstValidateBoundedSum(
   }
   if (EverParseIsError(positionAfterRight_refinement))
   {
-    positionAfterRight_refinement0 = positionAfterRight_refinement;
+    positionAfterRight_refinementOrError = positionAfterRight_refinement;
   }
   else
   {
@@ -77,21 +77,21 @@ BoundedSumConstValidateBoundedSum(
     /* start: checking constraint */
     right_refinementConstraintIsOk = left <= 42U && right_refinement <= ((uint32_t)42U - left);
     /* end: checking constraint */
-    positionAfterRight_refinement0 =
+    positionAfterRight_refinementOrError =
       EverParseCheckConstraintOk(right_refinementConstraintIsOk,
         positionAfterRight_refinement);
   }
-  if (EverParseIsSuccess(positionAfterRight_refinement0))
+  if (EverParseIsSuccess(positionAfterRight_refinementOrError))
   {
-    return positionAfterRight_refinement0;
+    return positionAfterRight_refinementOrError;
   }
   ErrorHandlerFn("_boundedSum",
     "right.refinement",
-    EverParseErrorReasonOfResult(positionAfterRight_refinement0),
-    EverParseGetValidatorErrorKind(positionAfterRight_refinement0),
+    EverParseErrorReasonOfResult(positionAfterRight_refinementOrError),
+    EverParseGetValidatorErrorKind(positionAfterRight_refinementOrError),
     Ctxt,
     Input,
     positionAfterLeft);
-  return positionAfterRight_refinement0;
+  return positionAfterRight_refinementOrError;
 }
 

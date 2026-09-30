@@ -15,29 +15,29 @@ BaseValidateUlong(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytesForMissing = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterMissing;
+  uint64_t positionAfterMissingOrError;
   if (hasBytesForMissing)
   {
-    positionAfterMissing = StartPosition + 4ULL;
+    positionAfterMissingOrError = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterMissing =
+    positionAfterMissingOrError =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterMissing))
+  if (EverParseIsSuccess(positionAfterMissingOrError))
   {
-    return positionAfterMissing;
+    return positionAfterMissingOrError;
   }
   ErrorHandlerFn("___ULONG",
     "missing",
-    EverParseErrorReasonOfResult(positionAfterMissing),
-    EverParseGetValidatorErrorKind(positionAfterMissing),
+    EverParseErrorReasonOfResult(positionAfterMissingOrError),
+    EverParseGetValidatorErrorKind(positionAfterMissingOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterMissing;
+  return positionAfterMissingOrError;
 }
 
 uint64_t
@@ -51,7 +51,7 @@ BaseValidatePair(
 {
   BOOLEAN hasBytesForFirstSecond = (InputLength - StartPosition) >= 8ULL;
   uint64_t resForFirstSecond;
-  uint64_t positionAfterFirst;
+  uint64_t positionAfterFirstOrError;
   if (hasBytesForFirstSecond)
   {
     resForFirstSecond = StartPosition + 8ULL;
@@ -62,18 +62,18 @@ BaseValidatePair(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  positionAfterFirst = resForFirstSecond;
-  if (EverParseIsSuccess(positionAfterFirst))
+  positionAfterFirstOrError = resForFirstSecond;
+  if (EverParseIsSuccess(positionAfterFirstOrError))
   {
-    return positionAfterFirst;
+    return positionAfterFirstOrError;
   }
   ErrorHandlerFn("_Pair",
     "first",
-    EverParseErrorReasonOfResult(positionAfterFirst),
-    EverParseGetValidatorErrorKind(positionAfterFirst),
+    EverParseErrorReasonOfResult(positionAfterFirstOrError),
+    EverParseGetValidatorErrorKind(positionAfterFirstOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterFirst;
+  return positionAfterFirstOrError;
 }
 

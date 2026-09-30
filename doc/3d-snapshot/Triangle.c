@@ -15,7 +15,7 @@ TriangleValidateTriangle(
 {
   BOOLEAN hasBytesForABC = (InputLength - StartPosition) >= 12ULL;
   uint64_t resForABC;
-  uint64_t positionAfterA;
+  uint64_t positionAfterAOrError;
   if (hasBytesForABC)
   {
     resForABC = StartPosition + 12ULL;
@@ -26,18 +26,18 @@ TriangleValidateTriangle(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  positionAfterA = resForABC;
-  if (EverParseIsSuccess(positionAfterA))
+  positionAfterAOrError = resForABC;
+  if (EverParseIsSuccess(positionAfterAOrError))
   {
-    return positionAfterA;
+    return positionAfterAOrError;
   }
   ErrorHandlerFn("_triangle",
     "a",
-    EverParseErrorReasonOfResult(positionAfterA),
-    EverParseGetValidatorErrorKind(positionAfterA),
+    EverParseErrorReasonOfResult(positionAfterAOrError),
+    EverParseGetValidatorErrorKind(positionAfterAOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterA;
+  return positionAfterAOrError;
 }
 

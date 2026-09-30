@@ -15,7 +15,7 @@ HelloWorldValidatePoint(
 {
   BOOLEAN hasBytesForXY = (InputLength - StartPosition) >= 4ULL;
   uint64_t resForXY;
-  uint64_t positionAfterX;
+  uint64_t positionAfterXOrError;
   if (hasBytesForXY)
   {
     resForXY = StartPosition + 4ULL;
@@ -26,18 +26,18 @@ HelloWorldValidatePoint(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  positionAfterX = resForXY;
-  if (EverParseIsSuccess(positionAfterX))
+  positionAfterXOrError = resForXY;
+  if (EverParseIsSuccess(positionAfterXOrError))
   {
-    return positionAfterX;
+    return positionAfterXOrError;
   }
   ErrorHandlerFn("_point",
     "x",
-    EverParseErrorReasonOfResult(positionAfterX),
-    EverParseGetValidatorErrorKind(positionAfterX),
+    EverParseErrorReasonOfResult(positionAfterXOrError),
+    EverParseGetValidatorErrorKind(positionAfterXOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterX;
+  return positionAfterXOrError;
 }
 

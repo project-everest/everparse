@@ -15,12 +15,12 @@ ValidateIntPayload(
 )
 {
   BOOLEAN hasBytesForValue8;
-  uint64_t positionAfterValue8;
+  uint64_t positionAfterValue8OrError;
   BOOLEAN hasBytesForValue16;
-  uint64_t positionAfterValue16;
+  uint64_t positionAfterValue16OrError;
   BOOLEAN hasBytesForValue32;
-  uint64_t positionAfterValue32;
-  uint64_t positionAfterX17;
+  uint64_t positionAfterValue32OrError;
+  uint64_t positionAfterX17orError;
   if (Size == (uint32_t)TAGGEDUNION_SIZE8)
   {
     /* Validating field value8 */
@@ -28,26 +28,26 @@ ValidateIntPayload(
     hasBytesForValue8 = (InputLen - StartPosition) >= 1ULL;
     if (hasBytesForValue8)
     {
-      positionAfterValue8 = StartPosition + 1ULL;
+      positionAfterValue8OrError = StartPosition + 1ULL;
     }
     else
     {
-      positionAfterValue8 =
+      positionAfterValue8OrError =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
           StartPosition);
     }
-    if (EverParseIsSuccess(positionAfterValue8))
+    if (EverParseIsSuccess(positionAfterValue8OrError))
     {
-      return positionAfterValue8;
+      return positionAfterValue8OrError;
     }
     ErrorHandlerFn("_int_payload",
       "value8",
-      EverParseErrorReasonOfResult(positionAfterValue8),
-      EverParseGetValidatorErrorKind(positionAfterValue8),
+      EverParseErrorReasonOfResult(positionAfterValue8OrError),
+      EverParseGetValidatorErrorKind(positionAfterValue8OrError),
       Ctxt,
       Input,
       StartPosition);
-    return positionAfterValue8;
+    return positionAfterValue8OrError;
   }
   if (Size == (uint32_t)TAGGEDUNION_SIZE16)
   {
@@ -56,26 +56,26 @@ ValidateIntPayload(
     hasBytesForValue16 = (InputLen - StartPosition) >= 2ULL;
     if (hasBytesForValue16)
     {
-      positionAfterValue16 = StartPosition + 2ULL;
+      positionAfterValue16OrError = StartPosition + 2ULL;
     }
     else
     {
-      positionAfterValue16 =
+      positionAfterValue16OrError =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
           StartPosition);
     }
-    if (EverParseIsSuccess(positionAfterValue16))
+    if (EverParseIsSuccess(positionAfterValue16OrError))
     {
-      return positionAfterValue16;
+      return positionAfterValue16OrError;
     }
     ErrorHandlerFn("_int_payload",
       "value16",
-      EverParseErrorReasonOfResult(positionAfterValue16),
-      EverParseGetValidatorErrorKind(positionAfterValue16),
+      EverParseErrorReasonOfResult(positionAfterValue16OrError),
+      EverParseGetValidatorErrorKind(positionAfterValue16OrError),
       Ctxt,
       Input,
       StartPosition);
-    return positionAfterValue16;
+    return positionAfterValue16OrError;
   }
   if (Size == (uint32_t)TAGGEDUNION_SIZE32)
   {
@@ -84,42 +84,42 @@ ValidateIntPayload(
     hasBytesForValue32 = (InputLen - StartPosition) >= 4ULL;
     if (hasBytesForValue32)
     {
-      positionAfterValue32 = StartPosition + 4ULL;
+      positionAfterValue32OrError = StartPosition + 4ULL;
     }
     else
     {
-      positionAfterValue32 =
+      positionAfterValue32OrError =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
           StartPosition);
     }
-    if (EverParseIsSuccess(positionAfterValue32))
+    if (EverParseIsSuccess(positionAfterValue32OrError))
     {
-      return positionAfterValue32;
+      return positionAfterValue32OrError;
     }
     ErrorHandlerFn("_int_payload",
       "value32",
-      EverParseErrorReasonOfResult(positionAfterValue32),
-      EverParseGetValidatorErrorKind(positionAfterValue32),
+      EverParseErrorReasonOfResult(positionAfterValue32OrError),
+      EverParseGetValidatorErrorKind(positionAfterValue32OrError),
       Ctxt,
       Input,
       StartPosition);
-    return positionAfterValue32;
+    return positionAfterValue32OrError;
   }
-  positionAfterX17 =
+  positionAfterX17orError =
     EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE,
       StartPosition);
-  if (EverParseIsSuccess(positionAfterX17))
+  if (EverParseIsSuccess(positionAfterX17orError))
   {
-    return positionAfterX17;
+    return positionAfterX17orError;
   }
   ErrorHandlerFn("_int_payload",
     "_x_17",
-    EverParseErrorReasonOfResult(positionAfterX17),
-    EverParseGetValidatorErrorKind(positionAfterX17),
+    EverParseErrorReasonOfResult(positionAfterX17orError),
+    EverParseGetValidatorErrorKind(positionAfterX17orError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterX17;
+  return positionAfterX17orError;
 }
 
 uint64_t
@@ -133,34 +133,34 @@ TaggedUnionValidateInteger(
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytesForSize = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterSize0;
+  uint64_t positionAfterSizeOrError;
   uint64_t positionAfterSize;
   uint32_t size;
-  uint64_t positionAfterPayload;
+  uint64_t positionAfterPayloadOrError;
   if (hasBytesForSize)
   {
-    positionAfterSize0 = StartPosition + 4ULL;
+    positionAfterSizeOrError = StartPosition + 4ULL;
   }
   else
   {
-    positionAfterSize0 =
+    positionAfterSizeOrError =
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  if (EverParseIsSuccess(positionAfterSize0))
+  if (EverParseIsSuccess(positionAfterSizeOrError))
   {
-    positionAfterSize = positionAfterSize0;
+    positionAfterSize = positionAfterSizeOrError;
   }
   else
   {
     ErrorHandlerFn("_integer",
       "size",
-      EverParseErrorReasonOfResult(positionAfterSize0),
-      EverParseGetValidatorErrorKind(positionAfterSize0),
+      EverParseErrorReasonOfResult(positionAfterSizeOrError),
+      EverParseGetValidatorErrorKind(positionAfterSizeOrError),
       Ctxt,
       Input,
       StartPosition);
-    positionAfterSize = positionAfterSize0;
+    positionAfterSize = positionAfterSizeOrError;
   }
   if (EverParseIsError(positionAfterSize))
   {
@@ -168,24 +168,24 @@ TaggedUnionValidateInteger(
   }
   size = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field payload */
-  positionAfterPayload =
+  positionAfterPayloadOrError =
     ValidateIntPayload(size,
       Ctxt,
       ErrorHandlerFn,
       Input,
       InputLength,
       positionAfterSize);
-  if (EverParseIsSuccess(positionAfterPayload))
+  if (EverParseIsSuccess(positionAfterPayloadOrError))
   {
-    return positionAfterPayload;
+    return positionAfterPayloadOrError;
   }
   ErrorHandlerFn("_integer",
     "payload",
-    EverParseErrorReasonOfResult(positionAfterPayload),
-    EverParseGetValidatorErrorKind(positionAfterPayload),
+    EverParseErrorReasonOfResult(positionAfterPayloadOrError),
+    EverParseGetValidatorErrorKind(positionAfterPayloadOrError),
     Ctxt,
     Input,
     positionAfterSize);
-  return positionAfterPayload;
+  return positionAfterPayloadOrError;
 }
 

@@ -15,7 +15,7 @@ ColoredPointValidateColoredPoint1(
 {
   BOOLEAN hasBytesForColorPt = (InputLength - StartPosition) >= 5ULL;
   uint64_t resForColorPt;
-  uint64_t positionAfterColor;
+  uint64_t positionAfterColorOrError;
   if (hasBytesForColorPt)
   {
     resForColorPt = StartPosition + 5ULL;
@@ -26,19 +26,19 @@ ColoredPointValidateColoredPoint1(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  positionAfterColor = resForColorPt;
-  if (EverParseIsSuccess(positionAfterColor))
+  positionAfterColorOrError = resForColorPt;
+  if (EverParseIsSuccess(positionAfterColorOrError))
   {
-    return positionAfterColor;
+    return positionAfterColorOrError;
   }
   ErrorHandlerFn("_coloredPoint1",
     "color",
-    EverParseErrorReasonOfResult(positionAfterColor),
-    EverParseGetValidatorErrorKind(positionAfterColor),
+    EverParseErrorReasonOfResult(positionAfterColorOrError),
+    EverParseGetValidatorErrorKind(positionAfterColorOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterColor;
+  return positionAfterColorOrError;
 }
 
 uint64_t
@@ -52,7 +52,7 @@ ColoredPointValidateColoredPoint2(
 {
   BOOLEAN hasBytesForPtColor = (InputLength - StartPosition) >= 5ULL;
   uint64_t resForPtColor;
-  uint64_t positionAfterPt;
+  uint64_t positionAfterPtOrError;
   if (hasBytesForPtColor)
   {
     resForPtColor = StartPosition + 5ULL;
@@ -63,18 +63,18 @@ ColoredPointValidateColoredPoint2(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  positionAfterPt = resForPtColor;
-  if (EverParseIsSuccess(positionAfterPt))
+  positionAfterPtOrError = resForPtColor;
+  if (EverParseIsSuccess(positionAfterPtOrError))
   {
-    return positionAfterPt;
+    return positionAfterPtOrError;
   }
   ErrorHandlerFn("_coloredPoint2",
     "pt",
-    EverParseErrorReasonOfResult(positionAfterPt),
-    EverParseGetValidatorErrorKind(positionAfterPt),
+    EverParseErrorReasonOfResult(positionAfterPtOrError),
+    EverParseGetValidatorErrorKind(positionAfterPtOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterPt;
+  return positionAfterPtOrError;
 }
 
