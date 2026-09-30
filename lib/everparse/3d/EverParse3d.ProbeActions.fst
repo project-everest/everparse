@@ -8,12 +8,17 @@ module EverParse3d.ProbeActions
    Declaring them here keeps a 3D module named [I] or [CB] compilable, as it
    already is with the Low* backend, whose prelude declares the abbreviation in
    every file that uses it. *)
+module AppCtxt = EverParse3d.AppCtxt
 module I = EverParse3d.InputStream.Base
 module U8 = FStar.UInt8
+module U16 = FStar.UInt16
+module U32 = FStar.UInt32
 module U64 = FStar.UInt64
+open EverParse3d.CopyBuffer
 module CB = EverParse3d.CopyBuffer
-module U64 = FStar.UInt64
 module SZ = FStar.SizeT
+open Pulse.Lib.Pervasives
+open EverParse3d.Actions.Common
 
 
 let probe_fn_incremental
