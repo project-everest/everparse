@@ -10,6 +10,7 @@ open Pulse.Lib.Pervasives
 module AP = Pulse.Lib.ArrayPtr
 module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
+module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module I = EverParse3d.InputStream.Base
 module Util = EverParse3d.Util
@@ -42,14 +43,15 @@ fn stream_get_position
   (b: base_t) (len: len_t) (pos: pos_t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v
-returns res: SZ.t
+returns res: U64.t
 ensures stream_pts_to b len pos contents v **
-  pure (SZ.v res + Seq.length v == Seq.length contents)
+  pure (U64.v res + Seq.length v == Seq.length contents)
 {
   unfold (stream_pts_to b len pos contents v);
   let p = !pos;
+  I.sizet_to_uint64_exact p;
   fold (stream_pts_to b len pos contents v);
-  p
+  SZ.sizet_to_uint64 p
 }
 
 inline_for_extraction
@@ -355,18 +357,20 @@ inline_for_extraction
 fn field_ptr_impl
   (b: base_t) (len: len_t) (pos: pos_t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
-  (start_pos: SZ.t)
+  (start_pos: U64.t)
 requires stream_pts_to b len pos contents v **
-  pure (SZ.v start_pos + Seq.length v <= Seq.length contents)
+  pure (U64.v start_pos + Seq.length v <= Seq.length contents)
 returns res: AP.ptr U8.t
 ensures stream_pts_to b len pos contents v
 {
   unfold (stream_pts_to b len pos contents v);
-  let s' = AP.split b start_pos;
+  SZ.fits_lte (U64.v start_pos) (SZ.v len);
+  let start_pos_sz = SZ.uint64_to_sizet start_pos;
+  let s' = AP.split b start_pos_sz;
   AP.join b s';
-  Seq.lemma_split contents (SZ.v start_pos);
+  Seq.lemma_split contents (U64.v start_pos);
   Seq.lemma_eq_elim
-    (Seq.append (Seq.slice contents 0 (SZ.v start_pos)) (Seq.slice contents (SZ.v start_pos) (Seq.length contents)))
+    (Seq.append (Seq.slice contents 0 (U64.v start_pos)) (Seq.slice contents (U64.v start_pos) (Seq.length contents)))
     contents;
   fold (stream_pts_to b len pos contents v);
   s'

@@ -10,6 +10,11 @@ module Util = EverParse3d.Util
 module AppCtxt = EverParse3d.AppCtxt
 module PR = Pulse.Lib.Reference
 
+(* Backed by the generated wrapper's
+   `sizeof(size_t) <= sizeof(uint64_t)` static assertion. *)
+assume val sizet_to_uint64_exact (x: SZ.t)
+  : Lemma (ensures U64.v (SZ.sizet_to_uint64 x) == SZ.v x)
+
 let seq_is_suffix_of (#t: Type) (small large: Seq.seq t) : Tot prop =
     Seq.length small <= Seq.length large /\
     Seq.slice large (Seq.length large - Seq.length small) (Seq.length large) `Seq.equal` small
@@ -148,14 +153,14 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     (pos: pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt SZ.t
+    stt U64.t
     (requires (
       pts_to base len pos contents v
     ))
     (ensures fun res ->
       pts_to base len pos contents v **
       pure (
-        SZ.v res + Seq.length v == Seq.length contents
+        U64.v res + Seq.length v == Seq.length contents
       )
     );
 

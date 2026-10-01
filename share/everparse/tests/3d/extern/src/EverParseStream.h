@@ -15,7 +15,7 @@
      void    EverParseStreamReadBytes(extra, base, n, dst)
      void    EverParseStreamSkip(extra, base, n)
      size_t  EverParseStreamEmpty(extra, base)
-     size_t  EverParseStreamGetPosition(base)
+     uint64_t EverParseStreamGetPosition(base)
 
    Two things differ from the Low* extern backend. The stream tracks its own
    position, exposed by the extra Pulse-only primitive
@@ -34,7 +34,7 @@ struct es_cell {
 
 struct EVERPARSE_INPUT_STREAM_BASE_s {
   struct es_cell * head;
-  size_t consumed;
+  uint64_t consumed;
 };
 
 typedef struct EVERPARSE_INPUT_STREAM_BASE_s * EVERPARSE_INPUT_STREAM_BASE;

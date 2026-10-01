@@ -16,7 +16,7 @@
      void     EverParseStreamReadBytes(extra, base, n, dst)
      void     EverParseStreamSkip(extra, base, n)
      size_t   EverParseStreamEmpty(extra, base)
-     size_t   EverParseStreamGetPosition(base)
+     uint64_t EverParseStreamGetPosition(base)
      BOOLEAN  EverParseFieldPtrAfterImpl(extra, sz, out, base)
 
    EverParseFieldPtrAfterImpl backs the field_ptr_after action, which `buffer`
@@ -51,7 +51,7 @@ struct es_cell {
 
 struct EVERPARSE_INPUT_STREAM_BASE_s {
   struct es_cell * head;
-  size_t consumed;
+  uint64_t consumed;
 };
 
 typedef struct EVERPARSE_INPUT_STREAM_BASE_s * EVERPARSE_INPUT_STREAM_BASE;
@@ -79,7 +79,7 @@ void EverParseCheckExtra(EVERPARSE_EXTRA_T extra);
 
 BOOLEAN _EverParseStreamHas(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE x, size_t n);
 BOOLEAN _EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE x, size_t off, size_t n);
-size_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE x);
+uint64_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE x);
 void _EverParseStreamReadBytes(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE x, size_t n, uint8_t *dst);
 void _EverParseStreamSkip(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE x, size_t n);
 size_t _EverParseStreamEmpty(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BASE x);
@@ -93,7 +93,7 @@ static inline BOOLEAN EverParseStreamHasAt(EVERPARSE_EXTRA_T extra, EVERPARSE_IN
   return _EverParseStreamHasAt(extra, x, off, n);
 }
 
-static inline size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE x) {
+static inline uint64_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE x) {
   return _EverParseStreamGetPosition(x);
 }
 
