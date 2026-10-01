@@ -76,7 +76,8 @@ let parse_synth_eq
 
 let tot_parse_synth
   #k #t1 #t2 p1 f2
-= coerce (tot_parser k t2) (tot_and_then p1 (fun v1 -> tot_parse_fret f2 v1))
+= assert_norm (and_then_kind k parse_ret_kind == k);
+  tot_and_then p1 (fun v1 -> tot_parse_fret f2 v1)
 
 let bare_serialize_synth_correct #k #t1 #t2 p1 f2 s1 g1 =
   ()

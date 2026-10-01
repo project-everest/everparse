@@ -8,6 +8,11 @@ open CBOR.Pulse.API.Base
 module Trade = Pulse.Lib.Trade.Util
 module R = Pulse.Lib.Reference
 
+let half_plus_half_eq
+  (p: perm)
+: Lemma (p /. 2.0R +. p /. 2.0R == p)
+= ()
+
 let impl_zero_copy_array_group_precond
   (t: array_group None)
   (l: list cbor)
@@ -746,6 +751,7 @@ fn cddl_array_iterator_next
     rewrite (cbor_array_iterator_match j.pm j.cddl_array_iterator_contents lj')
       as (cbor_array_iterator_match (pmj /. 2.0R) ji lj');
     gather ji #(pmj /. 2.0R) #lj #(pmj /. 2.0R) #lj';
+    half_plus_half_eq pmj;
     rewrite (cbor_array_iterator_match (pmj /. 2.0R +. pmj /. 2.0R) ji lj)
       as (cbor_array_iterator_match pmj ji lj)
   };

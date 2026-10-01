@@ -38,6 +38,7 @@ let deterministically_encoded_cbor_map_key_order_trans x y z =
   F.deterministically_encoded_cbor_map_key_order_trans x y z
 
 let deterministically_encoded_cbor_map_key_order_assoc_ext m1 m2 ext =
+  assert_norm (deterministically_encoded_cbor_map_key_order == F.deterministically_encoded_cbor_map_key_order);
   let sq1 : squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m1) = () in
   let sq2 : squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m2) = () in
  F.deterministically_encoded_cbor_map_key_order_assoc_ext m1 m2 (fun k ->

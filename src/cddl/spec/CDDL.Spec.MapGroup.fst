@@ -161,11 +161,8 @@ let parser_spec_map_group
 let parser_spec_map_group_eq
   source0 #source #source_fp p target_prop' x
 = let f = (source_fp) in
-  assert (
-    (let x' = cbor_map_filter f (CMap?.c (unpack x)) in
-    map_group_parser_spec_arg_prop source source_fp x' /\
-    parser_spec_map_group source0 p target_prop' x == p x'
-  ))
+  let _ = parser_spec_map_group source0 p target_prop' x in
+  ()
 
 #push-options "--z3rlimit 256 --z3rlimit_factor 4 --fuel 8 --ifuel 2"
 
@@ -273,18 +270,31 @@ let map_group_parser_spec_concat
 = fun l -> map_group_parser_spec_concat' p1 p2 target_size target_prop l
 
 #restart-solver
+#push-options "--z3rlimit 10"
 let map_group_parser_spec_concat_eq
   #source1 #source_fp1 #target1 #target_size1 #_ #p1 s1 #source2 #source_fp2 #target2 #target_size2 #_ #p2 s2 target_size target_prop
   l
 = let f1 =  (source_fp1) in
   let f2 =  (source_fp2) in
-  assert (
-    let l1 = cbor_map_filter f1 l in
-    let l2 = cbor_map_filter f2 l in
-    map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
-    map_group_parser_spec_arg_prop source2 source_fp2 l2 /\
-    (map_group_parser_spec_concat s1 s2 target_size target_prop l <: (target1 & target2)) == ((p1 l1 <: target1), (p2 l2 <: target2))
-  )
+  let l1 = cbor_map_filter source_fp1 l in
+  let l2 = cbor_map_filter source_fp2 l in
+  map_group_footprint_is_consumed source1 source_fp1 l;
+  let MapGroupDet c1 r1 = apply_map_group_det source1 l1 in
+  cbor_map_split source_fp1 l;
+  cbor_map_equiv (cbor_map_filter (U.notp source_fp1) l) l2;
+  assert (cbor_map_disjoint l1 l2);
+  assert (cbor_map_disjoint c1 r1);
+  assert (l1 == c1 `cbor_map_union` r1);
+  assert (cbor_map_disjoint r1 l2);
+  cbor_map_disjoint_union_comm r1 l2;
+  let MapGroupDet c1' r1' = apply_map_group_det source1 l in
+  map_group_footprint_consumed source1 source_fp1 l1 l2;
+  cbor_map_union_assoc c1 r1 l2;
+  assert (r1' == r1 `cbor_map_union` l2);
+  map_group_footprint_consumed source2 source_fp2 l2 r1;
+  let _ = map_group_parser_spec_concat s1 s2 target_size target_prop l in
+  ()
+#pop-options
 
 #push-options "--z3rlimit_factor 8"
 let map_group_serializer_spec_concat

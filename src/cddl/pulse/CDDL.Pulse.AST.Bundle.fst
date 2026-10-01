@@ -606,6 +606,8 @@ and impl_bundle_wf_map_group
           nm
         )
   | WfMZeroOrMore t_key t_value except s_key s_value s_except ->
+    bounded_wf_typ_bounded env.be_ast.e_sem_env.se_bound t_key s_key;
+    bounded_wf_typ_bounded env.be_ast.e_sem_env.se_bound t_value s_value;
     let Some (v_key, p_key) = match t_key with
     | TNamed _ (TDef n)
     | TDef n -> 

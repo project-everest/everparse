@@ -454,8 +454,7 @@ fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ s
       let l0 : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (hd_map_payload (SZ.v n) va h);      assert (pure (list_of_pair_list raw_data_item (U64.v nbpairs) l0 == fst v3));
       sorted2_correct deterministically_encoded_cbor_map_key_order (U64.v nbpairs) l0;
       let n' : erased nat = SZ.v n - 1;
-      let k : Ghost.erased parser_kind = Ghost.hide (LowParse.Spec.VCList.parse_nlist_kind n' parse_raw_data_item_kind);
-      let p : parser k (LowParse.Spec.VCList.nlist n' raw_data_item) = coerce_eq () ( LowParse.Spec.VCList.parse_nlist n' (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)));
+      let p = LowParse.Spec.VCList.parse_nlist n' (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param));
       let s : serializer p = LowParse.Spec.VCList.serialize_nlist n' (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param));
       pts_to_serialized_ext_trade_gen
         (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)

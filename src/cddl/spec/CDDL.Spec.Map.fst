@@ -239,7 +239,7 @@ let fold_of_intro_singleton
   fold_of_intro dom l accu (fun op x -> op x elt)
 
 let singleton #key #value k k_eq v =
-  let dom = F.on_dom key (fun k' -> k_eq k') in
+  let dom = F.on_dom key #(fun _ -> bool) (fun k' -> k_eq k') in
   let l : enum_of dom = [k] in
   {
     dom = dom;

@@ -14,6 +14,12 @@ module SZ = FStar.SizeT
 
 open CBOR.Spec.Raw.Format.UTF8
 
+inline_for_extraction
+let utf8_f1 : U8.t = 0xF1uy
+
+inline_for_extraction
+let utf8_f4 : U8.t = 0xF4uy
+
 let impl_fetch_utf8_correct_postcond
   (i: SZ.t)
   (v: Seq.seq U8.t)
@@ -32,6 +38,8 @@ let u8_in_80_BF
   (x: U8.t)
 : Tot bool
 = U8.lte 0x80uy x && U8.lte x 0xBFuy
+
+#push-options "--z3rlimit 20"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_fetch_utf8_correct
@@ -60,6 +68,9 @@ ensures
   } else if (i1 = len) {
     pcont := false;
   } else {
+    assert (pure (SZ.v i1 <= SZ.v len));
+    assert (pure (~ (SZ.v i1 == SZ.v len)));
+    assert (pure (SZ.v i1 < Seq.length v));
     let byte2 = S.op_Dot_Lparen_Rparen s i1;
     let i2 : SZ.t = SZ.add i1 1sz;
     if (U8.lte 0xC2uy byte1 && U8.lte byte1 0xDFuy && u8_in_80_BF byte2) {
@@ -67,6 +78,9 @@ ensures
     } else if (i2 = len) {
       pcont := false
     } else {
+      assert (pure (SZ.v i2 <= SZ.v len));
+      assert (pure (~ (SZ.v i2 == SZ.v len)));
+      assert (pure (SZ.v i2 < Seq.length v));
       let byte3 = S.op_Dot_Lparen_Rparen s i2;
       let i3 : SZ.t = SZ.add i2 1sz;
       if (not (u8_in_80_BF byte3)) {
@@ -88,15 +102,21 @@ ensures
       } else if (i3 = len) {
         pcont := false
       } else {
+        assert (pure (SZ.v i3 <= SZ.v len));
+        assert (pure (~ (SZ.v i3 == SZ.v len)));
+        assert (pure (SZ.v i3 < Seq.length v));
         let byte4 = S.op_Dot_Lparen_Rparen s i3;
         let i4 = SZ.add i3 1sz;
         if (not (u8_in_80_BF byte4)) {
            pcont := false
         } else if (byte1 = 0xF0uy && U8.lte 0x90uy byte2 && U8.lte byte2 0xBFuy) {
+          assert (pure (fetch (Seq.slice v (SZ.v i) (Seq.length v)) == Success 4));
           pi := i4;
-        } else if (U8.lte 0xF1uy byte1 && U8.lte byte1 0xF3uy && u8_in_80_BF byte2) {
+        } else if (U8.lte utf8_f1 byte1 && U8.lt byte1 utf8_f4 && u8_in_80_BF byte2) {
+          assert (pure (fetch (Seq.slice v (SZ.v i) (Seq.length v)) == Success 4));
           pi := i4;
-        } else if (byte1 = 0xF4uy && U8.lte 0x80uy byte2 && U8.lte byte2 0x8Fuy) {
+        } else if (byte1 = utf8_f4 && U8.lte 0x80uy byte2 && U8.lte byte2 0x8Fuy) {
+          assert (pure (fetch (Seq.slice v (SZ.v i) (Seq.length v)) == Success 4));
           pi := i4;
         } else {
           pcont := false
@@ -105,6 +125,8 @@ ensures
     }
   }
 }
+
+#pop-options
 
 #push-options "--z3rlimit 32"
 

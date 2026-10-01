@@ -149,7 +149,8 @@ let mk_state_dict_correct
     let p' = on_g string (fun x -> ID.strong_excluded_middle (p x) <: bool) in
     assert (d.state_p == p');
     let values' = on (refine_bool_t string p') values in
-    assert (d.state_values == values');
+    assert_norm ((mk_state_dict p values state).state_values x == values' x);
+    assert (d.state_values x == values' x);
     let f = mk_state_fun (refine_bool_t string p') values' state in
     (* Materialize the application of the restricted [state] field, then let the
        normalizer reduce the record projection: the SMT encoding provides no

@@ -27,6 +27,22 @@ open ASN1.Spec.Set
 
 module List = FStar.List.Tot
 
+let parse_debugf_and_then_cases_injective
+  (#t #t': Type)
+  (#k: parser_kind)
+  (msg: string)
+  (fp: t' -> parser k t)
+  (fp_injective: unit -> Lemma (ensures (and_then_cases_injective fp)))
+: Lemma
+  (ensures (and_then_cases_injective (parse_debugf msg fp)))
+= fp_injective ();
+  let f = parse_debugf msg fp in
+  and_then_cases_injective_intro f (fun x1 x2 b1 b2 ->
+    assert (parse (f x1) b1 == parse (fp x1) b1);
+    assert (parse (f x2) b2 == parse (fp x2) b2);
+    assert (and_then_cases_injective_precond fp x1 x2 b1 b2)
+  )
+
 let parse_non_empty_list 
   (#k : parser_kind)
   (#t : Type)
@@ -169,15 +185,22 @@ and dasn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1
   | ASN1_ILC id k' -> 
     let p = dasn1_content_as_parser k' in
     let _ = parser_asn1_ILC_twin_case_injective id p in
+    let _ = parse_debugf_and_then_cases_injective "ASN1_ILC_f" (parse_asn1_ILC_twin id p)
+      (fun () -> parser_asn1_ILC_twin_case_injective id p) in
     (parse_debug "ASN1_ILC" (parse_asn1_ILC id p), 
      parse_debugf "ASN1_ILC_f" (parse_asn1_ILC_twin id p))
   | ASN1_CHOICE_ILC lc pf ->
     let lp = dasn1_lc_as_parser lc in
-    let _ = make_asn1_choice_parser_twin_cases_injective lc pf k lp in
+    let fp = make_asn1_choice_parser_twin_cases lc pf k lp in
+    let _ = parse_debugf_and_then_cases_injective "ASN1_CHOICE_f"
+      fp
+      (fun () -> ()) in
     (parse_debug "ASN1_CHOICE" (make_asn1_choice_parser lc pf k lp),
-     parse_debugf "ASN1_CHOICE_f" (make_asn1_choice_parser_twin lc pf k lp))
+     parse_debugf "ASN1_CHOICE_f" fp)
   | ASN1_ANY_ILC -> 
     let _ = parse_asn1_anyILC_twin_and_then_cases_injective () in
+    let _ = parse_debugf_and_then_cases_injective "ASN1_ANY_f" parse_asn1_anyILC_twin
+      parse_asn1_anyILC_twin_and_then_cases_injective in
     (parse_debug "ASN1_ANY" (parse_asn1_anyILC), 
      parse_debugf "ASN1_ANY_f" (parse_asn1_anyILC_twin))
 
@@ -273,13 +296,18 @@ and asn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list 
     let (x, y) = h in
     (x, Mkgenparser (asn1_content_t y) (parse_asn1_LC (asn1_content_as_parser y))) :: (asn1_lc_as_parser t)
 
-and asn1_as_parser (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k)) (decreases k) =
+and asn1_as_parser (#s : _) (k : asn1_k s)
+: Tot (LowParse.Tot.Base.parser asn1_strong_parser_kind (asn1_t k)) (decreases k) =
   match k with
   | ASN1_ILC id k' -> parse_asn1_ILC id (asn1_content_as_parser k')
   | ASN1_CHOICE_ILC lc pf -> make_asn1_choice_parser lc pf k (asn1_lc_as_parser lc)
   | ASN1_ANY_ILC -> parse_asn1_anyILC
 
-and asn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_t k) & (fp : (asn1_id_t -> asn1_strong_parser (asn1_t k)) {and_then_cases_injective fp})) (decreases k) =
+and asn1_as_parser_twin (#s : _) (k : asn1_k s)
+: Tot (LowParse.Tot.Base.parser asn1_strong_parser_kind (asn1_t k) &
+       (fp : (asn1_id_t -> LowParse.Tot.Base.parser asn1_strong_parser_kind (asn1_t k))
+         {and_then_cases_injective fp}))
+      (decreases k) =
   match k with
   | ASN1_ILC id k' -> 
     let p = asn1_content_as_parser k' in
@@ -287,8 +315,9 @@ and asn1_as_parser_twin (#s : _) (k : asn1_k s) : Tot (asn1_strong_parser (asn1_
     (parse_asn1_ILC id p, parse_asn1_ILC_twin id p)
   | ASN1_CHOICE_ILC lc pf ->
     let lp = asn1_lc_as_parser lc in
-    let _ = make_asn1_choice_parser_twin_cases_injective lc pf k lp in
-    (make_asn1_choice_parser lc pf k lp, make_asn1_choice_parser_twin lc pf k lp)
+    let fp = make_asn1_choice_parser_twin_cases lc pf k lp in
+    (make_asn1_choice_parser lc pf k lp,
+     fp)
   | ASN1_ANY_ILC -> 
     let _ = parse_asn1_anyILC_twin_and_then_cases_injective () in
     (parse_asn1_anyILC, parse_asn1_anyILC_twin)

@@ -192,8 +192,10 @@ let _ = assert (Success? (check (Seq.cons 0x4Duy (Seq.cons 0xD0uy (Seq.cons 0xB0
 #pop-options
 let _ = assert (Error? (check (Seq.cons 0xC0uy (Seq.cons 0xAFuy Seq.empty))))
 let _ = assert (Error? (check (Seq.cons 0xE0uy (Seq.cons 0x9Fuy (Seq.cons 0x80uy Seq.empty)))))
+#push-options "--z3rlimit 16"
 let _ = assert (Success? (check (Seq.cons 0xF4uy (Seq.cons 0x80uy (Seq.cons 0x83uy (Seq.cons 0x92uy Seq.empty))))))
 let _ = assert (Success? (check (Seq.cons 0xEFuy (Seq.cons 0xBBuy (Seq.cons 0xBFuy Seq.empty)))))
+#pop-options
 
 let correct s = Success? (check s)
 
@@ -204,6 +206,7 @@ let rec ascii_is_utf8
   (ensures (correct s))
   (decreases (Seq.length s))
 =
-  if Seq.length s = 0
-  then ()
-  else ascii_is_utf8 (Seq.slice s 1 (Seq.length s))
+  if Seq.length s > 0
+  then begin
+    ascii_is_utf8 (Seq.slice s 1 (Seq.length s))
+  end else ()

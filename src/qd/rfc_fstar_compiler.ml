@@ -3103,7 +3103,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       );
       if need_validator then (
         wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_validator' = PPS.validate_dsum_cases_fn %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" n n n n (pulse_validator_name def) tn;
-        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_validator k = LPC.validate_synth (PPC.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k)\n\n" n tn n n n n
+        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_validator k =\n  assert_norm (%s_parser k == %s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k);\n  let w : LPC.validator (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) =\n    LPC.validate_synth (PPC.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k)\n  in\n  LPC.validator_ext (%s_parser k) (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) w ()\n\n" n n n tn n n tn n tn n n n n n n tn n
       );
       if need_jumper then (
         wl o "noextract inline_for_extraction let %s_jumper' = LL.jump_dsum_cases %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (jumper_name def);
@@ -3111,7 +3111,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       );
       if need_jumper then (
         wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_jumper' = PPS.jump_dsum_cases_fn %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" n n n n (pulse_jumper_name def) tn;
-        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_jumper k = LPC.jump_synth (PPC.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k)\n\n" n tn n n n n
+        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_jumper k =\n  assert_norm (%s_parser k == %s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k);\n  let j : LPC.jumper (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) =\n    LPC.jump_synth (PPC.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k)\n  in\n  LPC.jumper_ext (%s_parser k) (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) j ()\n\n" n n n tn n n tn n tn n n n n n n tn n
       )
   ) else (* tag is not erased *)
    begin
