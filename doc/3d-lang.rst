@@ -118,6 +118,23 @@ in ``TriangleWrapper.h``.
 There can be multiple definitions marked ``entrypoint`` in a given
 ``.3d`` file.
 
+.. note::
+
+  The entrypoint API described here is the same under both backends:
+  ``3d --pulse`` generates a ``ModuleWrapper.h`` declaring the very same
+  ``ModuleCheckTyp`` prototypes, so client code that only calls the
+  entrypoints ports over unchanged.
+
+  Three things do differ. ``ModuleWrapper.h`` includes
+  ``EverParsePulseEndianness.h`` instead of ``EverParseEndianness.h``, and
+  its ``EVERPARSE_ERROR_*`` constants are numbered differently (see
+  :ref:`sec-error-handling-pulse`). ``3d --pulse`` accordingly writes two
+  extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
+  into the output directory alongside the ones listed above. Finally, the
+  client primitives that ``--input_stream`` and ``extern`` specifications
+  require are not the same; those are documented in
+  :ref:`the 3d user manual <3d>`.
+
 .. warning::
 
   By default, 3d does not enforce any alignment constraints, and does not
@@ -1004,7 +1021,9 @@ That is, the client code can choose any definition for
 ``EVERPARSE_COPY_BUFFER_T`` (since it is just a ``void*``), so long as it can
 also provide two functions: ``EverParseStreamOf`` to extract a buffer of bytes
 from a ``EVERPARSE_COPY_BUFFER_T``; and ``EverParseStreamLen`` to extract the
-length of the buffer.
+length of the buffer. (Under ``--pulse``, a third function is needed, and
+``EverParseStreamLen`` has a different return type; see
+:ref:`sec-probing-pulse`.)
 
 The second line defines another extern callback for ``extern probe (INIT)
 ProbeInit``. This results in the following extern C declaration in
@@ -1406,6 +1425,69 @@ A small but fully worked out example `is available in the EverParse repository
 It shows the use of multiple probe functions, linked with callbacks implemented
 in C, as well as a main C driver program that validates several example inputs
 containing pointers.
+
+.. _sec-probing-pulse:
+
+Probing under ``--pulse``
+.........................
+
+Everything above carries over to the Pulse backend unchanged: the
+``Probe_ExternalAPI.h`` callbacks (``ProbeAndCopy``, ``ProbeInit``, the
+coercion and specialization variants, and the ``extern`` readers and
+writers), the ``EVERPARSE_COPY_BUFFER_T`` handle, and the generated check
+and probe entrypoints all keep exactly the signatures shown above --- probe
+addresses and sizes remain ``uint64_t`` in particular.
+
+.. note::
+
+  Probing itself is, however, supported only with ``--input_stream buffer``
+  (the default) under ``--pulse``. A ``probe`` declaration combined with
+  ``--input_stream extern`` or ``--input_stream static`` is rejected with
+  *"Probes are only supported by the buffer backend under --pulse"*. The
+  default backend has no such restriction.
+
+  ``EVERPARSE_COPY_BUFFER_T`` on its own --- as a type parameter, or as the
+  parameter of an ``extern`` action --- is *not* restricted, and works with
+  every ``--input_stream`` binding on both backends.
+
+What changes is the small set of projections the client provides on
+``EVERPARSE_COPY_BUFFER_T``. Under ``--pulse``, ``EverParse.h`` declares:
+
+.. code-block:: c
+
+  extern uint8_t *EverParseStreamOf (EVERPARSE_COPY_BUFFER_T buf);
+
+  extern size_t   EverParseStreamLen(EVERPARSE_COPY_BUFFER_T buf);
+
+  extern size_t  *EverParseStreamPos(EVERPARSE_COPY_BUFFER_T buf);
+
+So, relative to the default backend, ``EverParseStreamLen`` returns a
+``size_t`` rather than a ``uint64_t``, and there is a third function to
+implement. ``EverParseStreamPos`` must return a pointer to a ``size_t`` cell
+that belongs to the copy buffer: Pulse validators carry their read position
+*inside* the input stream, whereas Low\* validators take it as an argument.
+The contract is:
+
+  * The cell must remain live and writable for as long as the copy buffer
+    is in use, and it must be disjoint from every other copy buffer's cell,
+    from the buffers returned by ``EverParseStreamOf``, and from the
+    application context. Two distinct ``EVERPARSE_COPY_BUFFER_T`` values
+    must never share a position cell, even if they are only used one at a
+    time.
+
+  * The client does not have to initialize it: EverParse rewinds it to 0
+    just before validating from the copy buffer, so that a buffer reused
+    across several probe sites does not start at the position the previous
+    validation reached.
+
+  * The client should not read or write it concurrently with a validator
+    call; after a validation failure, the error handler receives this same
+    pointer as its ``Position`` argument and must treat it as read-only
+    (see :ref:`sec-error-handling-pulse`).
+
+A reference implementation that satisfies both backends from a single source
+file is in `src/3d/tests/pulse-diff/harness.c
+<https://github.com/project-everest/everparse/tree/master/src/3d/tests/pulse-diff>`_.
 
 .. _Specialization:
 
@@ -1996,7 +2078,15 @@ An error handling callback is a C procedure with the following signature:
     uint64_t StartPosition,
     uint64_t EndPosition
   );
-    
+
+EverParse also emits this type as a public ``EVERPARSE_ERROR_HANDLER``
+typedef in the generated ``EverParse.h``, under both backends, and the
+generated validator prototypes in ``<Mod>.h`` name that typedef.
+
+The signature above, and the error codes listed below, are those of the
+default, Low\* backend. Both differ under ``--pulse``; see
+:ref:`sec-error-handling-pulse` for the details.
+
 Every EverParse validator is parameterized by:
 
 * A function pointer, of type ``ErrorHandler``
@@ -2058,6 +2148,87 @@ caller to reconstruct a stack trace of a failing validation.
 
 EverParse generates a default error handler that records just the
 deepest validation failure that occurred.
+
+.. _sec-error-handling-pulse:
+
+Error handling under ``--pulse``
+................................
+
+The Pulse backend keeps the whole of the design above: the same
+``EVERPARSE_ERROR_HANDLER`` typedef in ``EverParse.h``, the same
+``EVERPARSE_ERROR_FRAME`` structure and ``EverParseDefaultErrorHandler``
+(shipped as plain C in ``EverParsePulse.h`` rather than generated into
+``EverParse.h``), the same per-module ``<Mod>EverParseError`` callback, and
+the same stack trace of enclosing types. What changes is the handler's
+argument list and the numbering of the error codes.
+
+**The handler signature.** Under ``--pulse`` the handler takes nine
+arguments rather than seven, because the input stream is passed as its
+constituent parts rather than as a single ``EVERPARSE_INPUT_BUFFER``. With
+the default ``--input_stream buffer``:
+
+.. code-block:: c
+
+  typedef void (*EVERPARSE_ERROR_HANDLER)(
+    const char *TypeName,
+    const char *FieldName,
+    const char *ErrorReason,
+    uint8_t ErrorCode,
+    uint8_t *Context,
+    uint8_t *Base,
+    size_t Length,
+    size_t *Position,
+    uint64_t StartPosition
+  );
+
+With ``--input_stream extern`` or ``--input_stream static``, the three
+stream arguments are instead the client's stream object, a truncation bound
+and an origin, of the client's own types. Consult the
+``EVERPARSE_ERROR_HANDLER`` typedef in the generated ``EverParse.h`` for the
+exact signature in any given configuration.
+
+Three points deserve attention:
+
+  * ``ErrorCode`` is a ``uint8_t`` here, not a ``uint64_t``. The generated
+    default handler widens it before storing it into the ``error_code``
+    field of ``EVERPARSE_ERROR_FRAME``, which remains ``uint64_t``.
+
+  * There is no ``EndPosition`` argument. ``Position`` is a pointer to the
+    validator's own position cell, which the handler may read but must not
+    write to; the position it holds has already moved past whatever the
+    failing field consumed, and, under ``--input_stream extern`` or
+    ``static``, is relative to the origin rather than to the start of the
+    input.
+
+  * ``StartPosition`` --- the trailing argument, and the one that carries
+    the same meaning as under the default backend --- is the offset from
+    the start of the input of the beginning of the field ``f``. It is what
+    a handler should report.
+
+**The error codes.** ``<Mod>Wrapper.h`` defines a different set of
+``EVERPARSE_ERROR_*`` constants under ``--pulse``. Code ``1uL`` is
+reassigned from "generic error" to "action failed", so that the verified
+validators can use the shortcut ``res > validator_error_action_failed``, and
+the codes above it shift down by one. The ``ErrorReason`` and ``ErrorCode``
+pairs are therefore:
+
+  - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (1uL)
+  - "not enough data", ``EVERPARSE_ERROR_NOT_ENOUGH_DATA`` (2uL)
+  - "impossible", ``EVERPARSE_ERROR_IMPOSSIBLE`` (3uL)
+  - "list size not multiple of element size", ``EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE`` (4uL)
+  - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (5uL)
+  - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (6uL)
+  - "probe failed", ``EVERPARSE_ERROR_PROBE_FAILED`` (7uL)
+  - "unspecified", with the ``ErrorCode > 7uL``
+
+In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
+reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
+``--pulse``. Client code that compares ``ErrorCode`` against these macros
+ports unchanged between the two backends; client code that hardcodes the
+numeric values does not.
+
+The ``EVERPARSE_PROBE_FAILURE_*`` codes returned by the probe wrappers are
+unaffected and keep the same values under both backends.
 
 Fully worked examples: TCP Segment Headers
 -------------------------------------------

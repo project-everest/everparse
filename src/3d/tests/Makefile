@@ -125,6 +125,13 @@ probe_error_handler_macro:
 save_hashes:
 	+$(MAKE) -C $@
 
+# Low*-vs-Pulse differential test. Deliberately not part of `all`: it needs the
+# Pulse backend's generated C too, which does not exist in NO_PULSE builds.
+# See pulse-diff/README.md.
+.PHONY: pulse-diff
+pulse-diff:
+	+$(MAKE) -C $@
+
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 %.3d.negtest: %.3d
@@ -239,6 +246,6 @@ clean-files:
 
 clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean specialize_tagged_union_array.clean save_hashes.clean
 
-clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean
+clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean pulse-diff.clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs
