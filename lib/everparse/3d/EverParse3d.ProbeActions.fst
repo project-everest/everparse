@@ -236,7 +236,7 @@ ensures exists* v_ctxt' .
       (CB.base_of #_ #base_t #len_t #pos_t dest)
       (CB.len_of #_ #base_t #len_t #pos_t dest)
       (CB.pos_of #_ #base_t #len_t #pos_t dest)
-      (SZ.sizet_to_uint64 dest_pos);
+      dest_pos;
   fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
 }
 

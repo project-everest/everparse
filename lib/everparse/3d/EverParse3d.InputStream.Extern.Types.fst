@@ -12,6 +12,7 @@ open Pulse.Lib.Pervasives
    code still refers to these under that module name. *)
 
 module SZ = FStar.SizeT
+module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module I = EverParse3d.InputStream.Base
 
@@ -31,10 +32,10 @@ let base_t = input_stream_base
    [n - 1]. See the header comment. *)
 inline_for_extraction
 noextract
-let len_t = SZ.t
+let len_t = U64.t
 inline_for_extraction
 noextract
-let pos_t = SZ.t
+let pos_t = U64.t
 
 (* The raw, client-side view of the stream. It takes no [len]: the client knows
    nothing of our truncation bounds, and dropping the argument here is what
@@ -53,20 +54,23 @@ assume val stream_is_prefix_of_raw
 
 inline_for_extraction
 noextract
-let bounded (len: len_t) : Tot bool = SZ.gt len 0sz
+let bounded (len: len_t) : Tot bool = U64.gt len 0uL
 
 (* What a [len] asserts about the view it labels. The [fits] conjunct is the
    standing assumption that the whole stream is addressable, without which the
    bound of a truncation could not be computed. *)
 let bound_ok (len: len_t) (pos: pos_t) (contents: Seq.seq U8.t) : prop =
-  SZ.fits (SZ.v pos + Seq.length contents + 1) /\
-  (bounded len ==> SZ.v len == SZ.v pos + Seq.length contents + 1)
+  U64.fits (U64.v pos + Seq.length contents + 1) /\
+  (bounded len ==> U64.v len == U64.v pos + Seq.length contents + 1)
 
 let stream_pts_to
   (base: base_t) (len: len_t) (pos: pos_t)
   (contents: Seq.seq U8.t) (v: Seq.seq U8.t)
 : slprop
-= stream_pts_to_raw base pos contents v ** pure (bound_ok len pos contents)
+= stream_pts_to_raw base pos contents v ** pure (
+    bound_ok len pos contents /\
+    (bounded len ==> SZ.fits (Seq.length v))
+  )
 
 (* [x] is a truncation of [y]. Beyond the raw witness this records what
    [untruncate] needs in order to rebuild [y]'s bound from [x]'s: a truncated
@@ -81,8 +85,8 @@ let stream_is_prefix_of
   pure (
     pos_x == pos_y /\
     bounded len_x /\
-    SZ.fits (SZ.v len_x + Seq.length suffix) /\
-    (bounded len_y ==> SZ.v len_y == SZ.v len_x + Seq.length suffix)
+    U64.fits (U64.v len_x + Seq.length suffix) /\
+    (bounded len_y ==> U64.v len_y == U64.v len_x + Seq.length suffix)
   )
 
 noextract

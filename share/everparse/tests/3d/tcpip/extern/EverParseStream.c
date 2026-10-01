@@ -28,7 +28,7 @@ BOOLEAN EverParseStreamHasAt(EVERPARSE_INPUT_STREAM_BASE const x, size_t off, si
   return es_avail(x, total) >= total ? TRUE : FALSE;
 }
 
-size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
+uint64_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
   return x->consumed;
 }
 

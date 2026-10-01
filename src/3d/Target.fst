@@ -1028,7 +1028,7 @@ let print_c_entry
       what tracks the position, so the wrapper asks it, on both sides of the
       call. *)
    let stream_get_position_decl =
-     "extern size_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);\n"
+     "extern uint64_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);\n"
    in
    let stream_pos_decl =
      (* The position accessor is needed by the wrapper body as well as by the
@@ -1065,8 +1065,8 @@ let print_c_entry
                                uint8_t error_code,\n\t\
                                uint8_t *context,\n\t\
                                EVERPARSE_INPUT_STREAM_BASE base,\n\t\
-                               size_t len,\n\t\
-                               size_t origin,\n\t\
+                               uint64_t len,\n\t\
+                               uint64_t origin,\n\t\
                                uint64_t start_pos)\n\
            {\n\t\
              %s\n\t\
@@ -1408,17 +1408,17 @@ let print_c_entry
        ^ Printf.sprintf "uint64_t parsedSize%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t startPosition%s;\n\n\t" scalar_zero
        ^ frame_init
-       ^ "startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t"
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)0U, (size_t)startPosition);\n\t" name params error_handler_arg
-       ^ "parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t"
+       ^ "startPosition = EverParseStreamGetPosition(base);\n\t"
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t" name params error_handler_arg
+       ^ "parsedSize = EverParseStreamGetPosition(base) - startPosition;\n\n\t"
        ^ tail
      else
        Printf.sprintf
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
          %s\
-         uint64_t startPosition = (uint64_t)EverParseStreamGetPosition(base);\n\t\
-         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)0U, (size_t)startPosition);\n\t\
-         uint64_t parsedSize = (uint64_t)EverParseStreamGetPosition(base) - startPosition;\n\n\t\
+         uint64_t startPosition = EverParseStreamGetPosition(base);\n\t\
+         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t\
+         uint64_t parsedSize = EverParseStreamGetPosition(base) - startPosition;\n\n\t\
          %s"
         struct_zero
         frame_init
@@ -1687,8 +1687,8 @@ let print_c_entry
     |> String.concat "\n"
   in
   (* The generated wrappers keep their uint32_t/uint64_t argument types, but
-     the Pulse validators are indexed by size_t, so both conversion directions
-     have to be lossless.
+     the Pulse validators use size_t for byte counts, so both conversion
+     directions have to be lossless.
 
      Widening: every `uint32_t -> size_t` cast (the wrapper's `len`, and the
      `n` of `validate_nlist`/`validate_t_at_most`/`validate_t_exact`) is
@@ -1697,19 +1697,15 @@ let print_c_entry
      `SIZE_MAX >= 65535`, so the first assertion is what backs that
      assumption.
 
-     Narrowing: `size_t -> uint64_t` (the `field_pos_64` action, the
-     `field_ptr_after` bounds check, and the position reported to the error
-     callback) uses `FStar.SizeT.sizet_to_uint64`, which is specified modulo
-     `pow2 64`. The second assertion is what rules the modulo out. It is also
-     what makes the extern wrapper's `size_t -> uint64_t -> size_t` round trip
-     of the validation origin lossless.
+     Narrowing: `size_t -> uint64_t` (the `field_ptr_after` bounds check and
+     relative offsets in non-consuming validators) uses
+     `FStar.SizeT.sizet_to_uint64`, which is specified modulo `pow2 64`. The
+     second assertion is what rules the modulo out. Extern/static cumulative
+     positions and validation origins are uint64_t directly, so they remain
+     unbounded by size_t on 32-bit targets.
 
-     Note the second assertion is an upper bound, not a lower one: nothing
-     converts a uint64_t to a size_t (probe offsets and sizes stay uint64_t
-     end to end, exactly as in Low*, and any narrowing there is the client's
-     to do), so requiring size_t to be at least 64 bits would reject 32-bit
-     targets for no reason. In particular the extern round trip above starts
-     from a size_t, so widening it and narrowing it back recovers it exactly.
+     Note the second assertion is an upper bound, not a lower one: requiring
+     size_t to be at least 64 bits would reject 32-bit targets for no reason.
 
      Both assertions are emitted for every backend. For the first that is
      plainly right, since `size_t_fits_u32` is backend-independent. The second

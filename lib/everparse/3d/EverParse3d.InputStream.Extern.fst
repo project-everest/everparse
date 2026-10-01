@@ -12,7 +12,7 @@ open Pulse.Lib.Pervasives
    there is nothing for [len_t] to hold. It cannot be [unit] all the same:
    [t_exact], [t_at_most] and variable-size [nlist] truncate the stream to a
    sub-region, and that bound exists only on our side of the boundary. So
-   [len_t] is [SZ.t], encoding an *optional* bound on the absolute stream
+   [len_t] is [U64.t], encoding an *optional* bound on the absolute stream
    position at which the current view ends:
 
      - [0]  -- unbounded: the view ends where the client says it does, and the
@@ -35,7 +35,7 @@ open Pulse.Lib.Pervasives
    `EverParseStreamTruncate` primitive for the client to implement -- and
    [trunc_t = len_t], as in the buffer backend.
 
-   [pos_t] is [SZ.t] too: the *origin* of the current top-level
+   [pos_t] is [U64.t]: the *origin* of the current top-level
    validation, that is, the absolute stream position at which the wrapper
    invoked the validator. The stream's own position is cumulative across
    successive validations of the same stream, whereas the field positions that
@@ -52,6 +52,7 @@ open Pulse.Lib.Pervasives
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
+module U64 = FStar.UInt64
 module I = EverParse3d.InputStream.Base
 module LP = LowParse.Spec.Base
 module API = LowParse.Pulse.ArrayPtr.Int
@@ -103,7 +104,7 @@ assume val stream_get_position :
     (pos: Ghost.erased pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt SZ.t
+    stt U64.t
     (requires (
       stream_pts_to_raw base pos contents v
     ))
@@ -111,7 +112,7 @@ assume val stream_get_position :
       stream_pts_to_raw base pos contents v **
       pure (
         Seq.length v <= Seq.length contents /\
-        SZ.v res == SZ.v pos + Seq.length contents - Seq.length v
+        U64.v res + Seq.length v == U64.v pos + Seq.length contents
       )
     )
 
@@ -124,11 +125,11 @@ fn stream_get_position_bounded
   (contents: Ghost.erased (Seq.seq U8.t))
   (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to base len pos contents v
-returns res: SZ.t
+returns res: U64.t
 ensures stream_pts_to base len pos contents v **
   pure (
     Seq.length v <= Seq.length contents /\
-    SZ.v res == SZ.v pos + Seq.length contents - Seq.length v
+    U64.v res + Seq.length v == U64.v pos + Seq.length contents
   )
 {
   unfold (stream_pts_to base len pos contents v);
@@ -149,12 +150,12 @@ fn stream_get_relative_position
   (contents: Ghost.erased (Seq.seq U8.t))
   (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to base len pos contents v
-returns res: SZ.t
+returns res: U64.t
 ensures stream_pts_to base len pos contents v **
-  pure (SZ.v res + Seq.length v == Seq.length contents)
+  pure (U64.v res + Seq.length v == Seq.length contents)
 {
   let abs = stream_get_position_bounded base len pos contents v;
-  SZ.sub abs pos
+  U64.sub abs pos
 }
 
 (* The number of bytes left in a *bounded* view, computed from its bound alone.
@@ -175,7 +176,7 @@ ensures stream_pts_to base len pos contents v **
   unfold (stream_pts_to base len pos contents v);
   let abs = stream_get_position base pos contents v;
   fold (stream_pts_to base len pos contents v);
-  SZ.sub (SZ.sub len 1sz) abs
+  SZ.uint64_to_sizet (U64.sub (U64.sub len 1uL) abs)
 }
 
 assume val stream_has :
@@ -542,6 +543,7 @@ assume val stream_join :
 (base_x: base_t) ->
     (pos_x: Ghost.erased pos_t) ->
     (base_y: base_t) ->
+    (len_y: Ghost.erased len_t) ->
     (pos_y: Ghost.erased pos_t) ->
     (contents: Seq.seq U8.t) ->
     (v: Seq.seq U8.t) ->
@@ -554,12 +556,13 @@ assume val stream_join :
        pure (contents0 == Seq.append contents suffix)
     ))
     (ensures (fun _ ->
-       stream_pts_to_raw base_y pos_y contents0 (Seq.append v suffix)
+       stream_pts_to_raw base_y pos_y contents0 (Seq.append v suffix) **
+       pure (bounded len_y ==> SZ.fits (Seq.length (Seq.append v suffix)))
     ))
 
 (* The new bound is the absolute position just past the last byte of the
    truncated region, plus the one that keeps [0] meaning "unbounded". It is
-   the only thing this computes: a couple of size_t additions, no call. *)
+   the only thing this computes: a couple of uint64_t additions, no call. *)
 inline_for_extraction
 noextract
 fn stream_truncate
@@ -586,7 +589,7 @@ ensures exists* contents' v1 v2 .
 {
   unfold (stream_pts_to base len pos contents v);
   let abs = stream_get_position base pos contents v;
-  let res = SZ.add (SZ.add abs n) 1sz;
+  let res = U64.add (U64.add abs (SZ.sizet_to_uint64 n)) 1uL;
   stream_split base pos n contents v;
   with contents' v1 . assert (stream_pts_to_raw base pos contents' v1);
   with v2 . assert (stream_is_prefix_of_raw base pos base pos contents v2);
@@ -616,7 +619,7 @@ ensures
 {
   unfold (stream_pts_to base_x len_x pos_x contents v);
   unfold (stream_is_prefix_of base_x len_x pos_x base_y len_y pos_y contents0 suffix);
-  stream_join base_x pos_x base_y pos_y contents v contents0 suffix;
+  stream_join base_x pos_x base_y len_y pos_y contents v contents0 suffix;
   Seq.lemma_len_append contents suffix;
   fold (stream_pts_to base_y len_y pos_y contents0 (Seq.append v suffix));
 }

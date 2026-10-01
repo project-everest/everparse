@@ -36,7 +36,7 @@ size_t _EverParseStreamEmpty(EVERPARSE_EXTRA_T extra, EVERPARSE_INPUT_STREAM_BAS
   return res;
 }
 
-size_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
+uint64_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
   return x->consumed;
 }
 

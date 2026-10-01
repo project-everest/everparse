@@ -44,13 +44,13 @@ let action
   sl_pos: pos_t ->
   contents_sl: Ghost.erased (Seq.seq U8.t) ->
   v_sl: Ghost.erased (Seq.seq U8.t) ->
-  start_pos: SZ.t ->
+  start_pos: U64.t ->
   stt a
     (exists* v_ctxt extra .
       pts_to ctxt v_ctxt **
       I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
       forevery_state extra_state extra **
-      pure (SZ.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
+      pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
     )
     (fun _ -> exists* v_ctxt' extra' .
       pts_to ctxt v_ctxt' **
@@ -319,8 +319,7 @@ fn validate_with_error_handler
   // has already advanced past whatever the field consumed.
   let [@@@rename_let ("fieldStart" ^ typename)] field_start =
     I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let [@@@rename_let ("startPosition" ^ typename)] start_pos =
-    SZ.sizet_to_uint64 field_start;
+  let [@@@rename_let ("startPosition" ^ typename)] start_pos = field_start;
   let [@@@rename_let ("resultAfter" ^ typename)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res = validator_success) { // TODO: turn this `if ... else` into a non-terminal `if (res <> validator_success)` with an `ensures` clause
     res
@@ -2518,7 +2517,7 @@ fn action_field_pos_64
   (v_sl: _)
   (start_pos: _)
 {
-  SZ.sizet_to_uint64 start_pos
+  start_pos
 }
 
 noextract
@@ -2540,7 +2539,7 @@ fn action_field_pos_32
   (v_sl: _)
   (start_pos: _)
 {
-  SZ.sizet_to_uint32 start_pos
+  FStar.Int.Cast.uint64_to_uint32 start_pos
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3276,7 +3275,7 @@ fn probe_then_validate
         typename fieldname
         (error_reason_of_result validator_error_probe_failed)
         validator_error_probe_failed
-        ctxt sl_base sl_len sl_pos (SZ.sizet_to_uint64 start_pos);
+        ctxt sl_base sl_len sl_pos start_pos;
       false
     }
   }
@@ -3377,7 +3376,7 @@ fn validate_with_error_handler_no_read
   // starts at [get_position sl + !pos].
   let view_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let field_off = !pos;
-  let start_pos = U64.add_mod (SZ.sizet_to_uint64 view_start) (SZ.sizet_to_uint64 field_off);
+  let start_pos = U64.add_mod view_start (SZ.sizet_to_uint64 field_off);
   let res = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos;
   if (res = validator_success) {
     res
