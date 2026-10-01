@@ -457,9 +457,14 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
     else
     if (if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T" then Options.get_pulse () else false)
     then
-      (* Under --pulse the copy buffer type is provided by the input-stream
-         backend instance rather than by a linked-in abstract type. *)
-      "B.copy_buffer_t"
+      (* Under --pulse the copy buffer type is an assumed abstract type, just
+         as it is under Low*. Name it by its defining module rather than
+         through the `B` input-stream alias: only the `buffer` backend
+         re-exports it (EverParse3d.InputStream.Buffer re-exports all four
+         `EverParse3d.CopyBuffer.Buffer` names), so going through `B` would
+         make any mention of EVERPARSE_COPY_BUFFER_T fail to resolve under
+         --input_stream extern/static, even when no probe is involved. *)
+      "EverParse3d.CopyBuffer.Buffer.copy_buffer_t"
     else
     let hd' =
       if hd.v = Ast.to_ident' "void"
