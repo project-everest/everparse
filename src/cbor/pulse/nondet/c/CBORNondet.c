@@ -349,7 +349,7 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
             pres = false;
           else if (byte1 == 0xf0U && 0x90U <= byte2 && byte2 <= 0xbfU)
             pi = i4;
-          else if (0xf1U <= byte1 && byte1 <= 0xf3U && 0x80U <= byte2 && byte2 <= 0xbfU)
+          else if (0xf1U <= byte1 && byte1 < 0xf4U && 0x80U <= byte2 && byte2 <= 0xbfU)
             pi = i4;
           else if (byte1 == 0xf4U && 0x80U <= byte2 && byte2 <= 0x8fU)
             pi = i4;
@@ -5071,12 +5071,16 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_basic(
   CBOR_Pulse_Raw_Slice_byte_slice l2
 )
 {
-  return
-    CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(map_bound,
-      (size_t)1U,
-      l1,
-      (size_t)1U,
-      l2);
+  if ((size_t)1U == (size_t)0U)
+    return
+      ((FStar_Pervasives_Native_option__bool){ .tag = FStar_Pervasives_Native_Some, .v = true });
+  else
+    return
+      CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(map_bound,
+        (size_t)1U,
+        l1,
+        (size_t)1U,
+        l2);
 }
 
 static FStar_Pervasives_Native_option__bool

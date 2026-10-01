@@ -250,7 +250,7 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
                     else if byte1 == 0xf0u8 && 0x90u8 <= byte2 && byte2 <= 0xbfu8
                     { (&mut pi)[0] = i4 }
                     else if
-                    0xf1u8 <= byte1 && byte1 <= 0xf3u8 && (0x80u8 <= byte2 && byte2 <= 0xbfu8)
+                    0xf1u8 <= byte1 && byte1 < 0xf4u8 && (0x80u8 <= byte2 && byte2 <= 0xbfu8)
                     { (&mut pi)[0] = i4 }
                     else if byte1 == 0xf4u8 && 0x80u8 <= byte2 && byte2 <= 0x8fu8
                     { (&mut pi)[0] = i4 }
@@ -5639,7 +5639,12 @@ fn impl_check_equiv_list_basic(
 }
 
 fn impl_check_equiv_basic(map_bound: option__size_t, l1: &[u8], l2: &[u8]) -> option__bool
-{ impl_check_equiv_list_basic(map_bound, 1usize, l1, 1usize, l2) }
+{
+    if 1usize == 0usize
+    { option__bool::Some { v: true } }
+    else
+    { impl_check_equiv_list_basic(map_bound, 1usize, l1, 1usize, l2) }
+}
 
 fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_basic(
     nl1: usize,

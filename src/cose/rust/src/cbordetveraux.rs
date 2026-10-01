@@ -466,7 +466,7 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
                     else if byte1 == 0xf0u8 && 0x90u8 <= byte2 && byte2 <= 0xbfu8
                     { (&mut pi)[0] = i4 }
                     else if
-                    0xf1u8 <= byte1 && byte1 <= 0xf3u8 && (0x80u8 <= byte2 && byte2 <= 0xbfu8)
+                    0xf1u8 <= byte1 && byte1 < 0xf4u8 && (0x80u8 <= byte2 && byte2 <= 0xbfu8)
                     { (&mut pi)[0] = i4 }
                     else if byte1 == 0xf4u8 && 0x80u8 <= byte2 && byte2 <= 0x8fu8
                     { (&mut pi)[0] = i4 }
