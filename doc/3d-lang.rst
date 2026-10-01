@@ -1438,6 +1438,18 @@ writers), the ``EVERPARSE_COPY_BUFFER_T`` handle, and the generated check
 and probe entrypoints all keep exactly the signatures shown above --- probe
 addresses and sizes remain ``uint64_t`` in particular.
 
+.. note::
+
+  Probing itself is, however, supported only with ``--input_stream buffer``
+  (the default) under ``--pulse``. A ``probe`` declaration combined with
+  ``--input_stream extern`` or ``--input_stream static`` is rejected with
+  *"Probes are only supported by the buffer backend under --pulse"*. The
+  default backend has no such restriction.
+
+  ``EVERPARSE_COPY_BUFFER_T`` on its own --- as a type parameter, or as the
+  parameter of an ``extern`` action --- is *not* restricted, and works with
+  every ``--input_stream`` binding on both backends.
+
 What changes is the small set of projections the client provides on
 ``EVERPARSE_COPY_BUFFER_T``. Under ``--pulse``, ``EverParse.h`` declares:
 

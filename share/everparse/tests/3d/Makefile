@@ -127,9 +127,14 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 #
 # field_pos_32_backend is generation-only: it pins which input-stream backends
 # accept field_pos_32 (buffer only, as in Low*) and field_pos_64 (all of them).
+#
+# copy_buffer_backend pins that EVERPARSE_COPY_BUFFER_T itself is *not*
+# input-stream-specific -- it must work on all three, as it does in Low* --
+# while probing stays buffer-only. Its positive half is --batch, because the
+# regression it guards against was only visible to F*.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
-  probe field_ptr output_state_name field_pos_32_backend
+  probe field_ptr output_state_name field_pos_32_backend copy_buffer_backend
 
 # Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and
