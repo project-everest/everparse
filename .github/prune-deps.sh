@@ -51,6 +51,12 @@ rm -rf "$opt"/opam/repo
 # image's ENTRYPOINT sources env.sh, which runs `make -f deps.Makefile`, so a
 # plain `docker run` would try to rebuild the dependencies -- and fail, since
 # the scaffolding it needs is exactly what we just deleted.
+#
+# Backdating the stamps is not enough on its own: downstream jobs overwrite
+# /mnt/everparse with a fresh checkout, which gives opt/hashes.Makefile a brand
+# new mtime again.  So also drop a marker that tells deps.Makefile the
+# dependencies are prebuilt and must never be remade.
+touch "$opt"/.prebuilt
 ./.github/mark-deps-up-to-date.sh > /dev/null
 
 du -sh "$opt"

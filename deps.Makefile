@@ -118,6 +118,20 @@ else
 endif
 
 # point to the Makefile because Z3 depends on the F* directory only but when I build F* the directory timestamp changes
+ifneq (,$(wildcard $(EVERPARSE_OPT_PATH)/.prebuilt))
+
+# The dependencies in opt/ are prebuilt and pruned (see .github/prune-deps.sh):
+# the scaffolding that would be needed to rebuild them -- the F* bootstrap
+# chain, the dune build trees, the clones, the opam package sources -- is gone.
+# So the stamps below must be taken at face value, no matter how their mtimes
+# compare: a rebuild could only fail. This cannot mask a stale image, because
+# the image is keyed on the contents of opt/hashes.Makefile and the Dockerfile.
+$(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/karamel/Makefile \
+$(EVERPARSE_OPT_PATH)/opam.done $(EVERPARSE_OPT_PATH)/FStar.done \
+$(EVERPARSE_OPT_PATH)/karamel.done $(EVERPARSE_OPT_PATH)/z3: ;
+
+else
+
 $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/Makefile
 
@@ -154,6 +168,8 @@ ifeq ($(OS),Windows_NT)
 	mv "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe"
 endif
 	touch $@
+
+endif
 
 env:
 ifeq ($(OS),Windows_NT)
