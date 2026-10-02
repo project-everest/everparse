@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 BOOLEAN Specialize1standaloneCheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len);
+
+BOOLEAN Specialize1standaloneCheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len);
 #ifdef __cplusplus
 }
 #endif

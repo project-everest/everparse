@@ -52,6 +52,7 @@ let _json : ref bool = alloc false
 let _no_copy_everparse_h : ref bool = alloc false
 let hoist_locals : ref bool = alloc false
 let goto_for_early_return : ref bool = alloc false
+let complete_wrappers : ref bool = alloc false
 let blank_lines : ref bool = alloc false
 let line_comments : ref bool = alloc false
 let valid_init_locals : string -> Tot bool = function
@@ -389,6 +390,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format_use_custom_config" (OptBool clang_format_use_custom_config) "Skip copying .clang-format from EverParse, use existing one instead" ["batch"; "clang_format"];
     CmdOption "cleanup" (OptBool _cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name _config_file) "The name of a JSON formatted file containing configuration options" [];    
+    CmdOption "complete_wrappers" (OptBool complete_wrappers) "In addition to the usual entrypoint wrappers, generate `Complete' wrappers that also check that the validator consumed the whole input buffer (--input_stream buffer only)" [];
     CmdOption "emit_output_types_defs" (OptBool _emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool _emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];

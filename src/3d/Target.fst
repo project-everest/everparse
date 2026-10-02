@@ -927,6 +927,15 @@ let wrapper_name
     fn
   |> pascal_case
 
+let wrapper_complete_name
+  (modul: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_check_complete_%s"
+    modul
+    fn
+  |> pascal_case
+
 let probe_wrapper_name
   (modul: string)
   (probe_fn: string)
@@ -934,6 +943,20 @@ let probe_wrapper_name
 : ML string
 = Printf.sprintf "%s_%s_check_%s" modul probe_fn fn
     |> pascal_case
+
+let probe_wrapper_complete_name
+  (modul: string)
+  (probe_fn: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_%s_check_complete_%s" modul probe_fn fn
+    |> pascal_case
+
+(* Complete-check counterpart of a user-provided entrypoint name *)
+let complete_name_of_custom_name
+  (n: string)
+: Tot string
+= n ^ "Complete"
 
 let validator_name
   (modul: string)
@@ -1004,6 +1027,12 @@ let print_c_entry
    let use_error_handler_macro = Options.get_use_error_handler_macro () in
    let is_input_stream_buffer =
      HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+   in
+   (* The `Complete' wrappers are opt-in, via --complete_wrappers, and are only
+      available for the buffer input stream binding, where the whole input
+      length is known to the wrapper. *)
+   let gen_complete_wrappers =
+     if is_input_stream_buffer then Options.get_complete_wrappers () else false
    in
    (* Under --pulse with an `extern` (or `static`) input stream, the validator
       is passed the stream object together with a truncation bound of 0 (i.e.
@@ -1139,7 +1168,23 @@ let print_c_entry
       plain `uint8_t` error code (0 = success) rather than a packed uint64_t.
       The public wrapper keeps its uint32_t length, so we cast; the
       accompanying static assertions check that the cast is lossless. *)
-   let wrapped_call_buffer_pulse name params =
+   let wrapped_call_buffer_pulse (check_complete: bool) (typename: string) name params =
+     (* When check_complete is set, additionally check that the validator
+        consumed the whole input buffer, so that no trailing bytes are
+        silently accepted. Under --pulse the validator reports how far it got
+        through its position out-parameter rather than in its result code. *)
+     let complete_check =
+       if not check_complete then "" else
+       Printf.sprintf
+         "if (everparse_pos != (size_t)len)\n\t\
+          {\n\t\t\
+            %sEverParseError(\"%s\", \"\", \"unexpected trailing bytes\");\n\t\t\
+            %s\n\t\
+          }\n\t"
+         modul
+         typename
+         (if goto_return then "goto exit;" else "return FALSE;")
+     in
      let tail =
        if goto_return then
          Printf.sprintf
@@ -1151,10 +1196,11 @@ let print_c_entry
               }\n\t\t\
               goto exit;\n\t\
             }\n\t\
-            result = TRUE;\n\n\
+            %sresult = TRUE;\n\n\
             exit:\n\t\
             return result;"
            modul
+           complete_check
        else
          Printf.sprintf
            "if (ep_status != 0U)\n\t\
@@ -1165,8 +1211,9 @@ let print_c_entry
               }\n\t\t\
               return FALSE;\n\t\
             }\n\t\
-            return TRUE;"
+            %sreturn TRUE;"
            modul
+           complete_check
      in
      (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
      ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
@@ -1177,7 +1224,22 @@ let print_c_entry
      ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)len, &everparse_pos);\n\n\t" name params error_handler_arg
      ^ tail
    in
-   let wrapped_call_buffer name params =
+   let wrapped_call_buffer (check_complete: bool) (typename: string) name params =
+     (* When check_complete is set, additionally check that the validator
+        consumed the whole input buffer, so that no trailing bytes are
+        silently accepted. *)
+     let complete_check =
+       if not check_complete then "" else
+       Printf.sprintf
+         "if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)\n\t\
+          {\n\t\t\
+            %sEverParseError(\"%s\", \"\", \"unexpected trailing bytes\");\n\t\t\
+            %s\n\t\
+          }\n\t"
+         modul
+         typename
+         (if goto_return then "goto exit;" else "return FALSE;")
+     in
      let tail =
        if goto_return then
          Printf.sprintf
@@ -1189,10 +1251,11 @@ let print_c_entry
               }\n\t\t\
               goto exit;\n\t\
             }\n\t\
-            result = TRUE;\n\n\
+            %sresult = TRUE;\n\n\
             exit:\n\t\
             return result;"
            modul
+           complete_check
        else
          Printf.sprintf
            "if (EverParseIsError(ep_status))\n\t\
@@ -1203,8 +1266,9 @@ let print_c_entry
               }\n\t\t\
               return FALSE;\n\t\
             }\n\t\
-            return TRUE;"
+            %sreturn TRUE;"
            modul
+           complete_check
      in
      if hoist then
        (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
@@ -1455,6 +1519,64 @@ let print_c_entry
    let mk_param (name: string) (typ: string) : Tot param =
      (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
    in
+   (* Public entrypoint names generated for one declaration, together with a
+      range to report collisions on *)
+   let public_entrypoint_names (d: type_decl) : ML (list (string & A.range)) =
+     let type_name = d.decl_name.td_name.A.v.A.name in
+     let rng = d.decl_name.td_name.A.range in
+     let plain =
+       if d.decl_name.td_entrypoint_plain
+       then
+         let n =
+           match d.decl_name.td_entrypoint_plain_name with
+           | Some n -> A.ident_name n
+           | None -> wrapper_name modul type_name
+         in
+         let c =
+           match d.decl_name.td_entrypoint_plain_name with
+           | Some n -> complete_name_of_custom_name (A.ident_name n)
+           | None -> wrapper_complete_name modul type_name
+         in
+         if gen_complete_wrappers then [(n, rng); (c, rng)] else [(n, rng)]
+       else []
+     in
+     let probe (p: probe_entrypoint) : ML (list (string & A.range)) =
+       let rng = p.probe_ep_fn.A.range in
+       let n, c =
+         match p.probe_ep_name with
+         | Some n ->
+           let n = A.ident_name n in
+           n, complete_name_of_custom_name n
+         | None ->
+           let probe_fn = probe_fn_to_c p.probe_ep_fn in
+           probe_wrapper_name modul probe_fn type_name,
+           probe_wrapper_complete_name modul probe_fn type_name
+       in
+       if gen_complete_wrappers then [(n, rng); (c, rng)] else [(n, rng)]
+     in
+     plain `List.Tot.append` List.collect probe d.decl_name.td_entrypoint_probes
+   in
+   let check_entrypoint_name_collisions () : ML unit =
+     let all =
+       List.collect
+         (fun d ->
+           match fst d with
+           | Type_decl d -> if d.decl_name.td_entrypoint then public_entrypoint_names d else []
+           | _ -> [])
+         ds
+     in
+     let _ =
+       List.fold_left
+         (fun (seen: list string) (n, rng) ->
+           if List.mem n seen
+           then A.error (Printf.sprintf "Duplicate entrypoint name %s. Note that, under --complete_wrappers, 3d also reserves the name of every entrypoint suffixed with `Complete' for the wrapper that additionally checks that the whole input was consumed." n) rng
+           else n :: seen)
+         []
+         all
+     in
+     ()
+   in
+   check_entrypoint_name_collisions ();
    let print_validators_for_one_decl (d:type_decl) : ML (list (string & string)) =
     let params = 
       d.decl_name.td_params @
@@ -1487,7 +1609,9 @@ let print_c_entry
        | [] -> params
        | _ -> params ^ ", "
     in
-    let wrapper_name = wrapper_name modul d.decl_name.td_name.A.v.A.name in
+    let type_name = d.decl_name.td_name.A.v.A.name in
+    let wrapper_name = wrapper_name modul type_name in
+    let wrapper_complete_name = wrapper_complete_name modul type_name in
     let impl signature body =
       Printf.sprintf "%s {\n\t%s\n}" 
         signature body
@@ -1510,19 +1634,22 @@ let print_c_entry
              pparams
     in
     let signature = mk_main_signature wrapper_name in
-    let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
-    let body = 
+    let complete_signature = mk_main_signature wrapper_complete_name in
+    let validator_name = validator_name modul type_name in
+    let mk_body (check_complete: bool) : ML string =
       if is_input_stream_buffer
       then
         if Options.get_pulse ()
-        then wrapped_call_buffer_pulse validator_name pargs
-        else wrapped_call_buffer validator_name pargs
+        then wrapped_call_buffer_pulse check_complete type_name validator_name pargs
+        else wrapped_call_buffer check_complete type_name validator_name pargs
       else if Options.get_pulse ()
       then wrapped_call_stream_pulse validator_name pargs
       else wrapped_call_stream validator_name pargs
     in
+    let body = mk_body false in
+    let complete_body = mk_body true in
     (* Probe wrapper *)
-    let probe_wrapper_signature (probe: probe_entrypoint) : ML _ =
+    let probe_wrapper_signature (check_complete: bool) (probe: probe_entrypoint) : ML _ =
       if not is_input_stream_buffer
       then ( //fail gracefully with an error message
         Ast.error "Top-level probe wrappers only for input stream buffer"
@@ -1531,10 +1658,14 @@ let print_c_entry
       let return_type = "uint32_t" in
       let public_name =
         match probe.probe_ep_name with
-        | Some n -> A.ident_name n
+        | Some n ->
+          let n = A.ident_name n in
+          if check_complete then complete_name_of_custom_name n else n
         | None ->
           let probe_fn = probe_fn_to_c probe.probe_ep_fn in
-          probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name
+          if check_complete
+          then probe_wrapper_complete_name modul probe_fn type_name
+          else probe_wrapper_name modul probe_fn type_name
       in
       Printf.sprintf
             "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize)"
@@ -1551,15 +1682,27 @@ let print_c_entry
         | None -> wrapper_name
       else wrapper_name
     in
-    let probe_wrapper (probe: probe_entrypoint) : ML _ =
-      constr_wrapper
-        (probe_wrapper_signature probe)
-        (wrapped_call_probe_buffer effective_main_name pargs probe)
+    let effective_main_complete_name =
+      if d.decl_name.td_entrypoint_plain then
+        match d.decl_name.td_entrypoint_plain_name with
+        | Some n -> complete_name_of_custom_name (A.ident_name n)
+        | None -> wrapper_complete_name
+      else wrapper_complete_name
     in
-    let main_wrapper =
+    let probe_wrapper (check_complete: bool) (probe: probe_entrypoint) : ML _ =
+      constr_wrapper
+        (probe_wrapper_signature check_complete probe)
+        (wrapped_call_probe_buffer
+          (if check_complete then effective_main_complete_name else effective_main_name)
+          pargs probe)
+    in
+    let mk_main_wrapper (check_complete: bool) : ML _ =
+      let signature = if check_complete then complete_signature else signature in
+      let body = if check_complete then complete_body else body in
+      let effective_name = if check_complete then effective_main_complete_name else effective_main_name in
       if d.decl_name.td_entrypoint_plain then
         (* Plain entrypoint declared: expose in header with custom name if provided *)
-        let public_signature = mk_main_signature effective_main_name in
+        let public_signature = mk_main_signature effective_name in
         constr_wrapper public_signature body
       else if has_probes then
         (* Only probe entrypoints: main wrapper is internal (static), not in header *)
@@ -1569,7 +1712,13 @@ let print_c_entry
         (* Should not happen since we only get here if td_entrypoint is true *)
         constr_wrapper signature body
     in
-    main_wrapper :: List.map probe_wrapper d.decl_name.td_entrypoint_probes
+    let wrappers (check_complete: bool) : ML _ =
+      mk_main_wrapper check_complete ::
+      List.map (probe_wrapper check_complete) d.decl_name.td_entrypoint_probes
+    in
+    if gen_complete_wrappers
+    then wrappers false `List.Tot.append` wrappers true
+    else wrappers false
   in
 
   let signatures_output_typ_deps =

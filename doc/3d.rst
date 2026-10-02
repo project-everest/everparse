@@ -43,7 +43,11 @@ Then, EverParse/3d produces:
   F\* and Low\* files, and similarly for ``MyFile2.3d``
 
 * ``MyFile1Wrapper.c``, ``MyFile1Wrapper.h``: an entrypoint API to call into the
-  verified C code, and similarly for ``MyFile2.3d``
+  verified C code, and similarly for ``MyFile2.3d``. Note that an entrypoint
+  ``Check`` wrapper accepts an input buffer that holds a valid message
+  *followed by unparsed trailing bytes*; pass ``--complete_wrappers`` to also
+  get, for each entrypoint, a wrapper that rejects those, as described
+  :ref:`below <complete_wrappers_option>`.
 
 * ``EverParse.h``, ``EverParseEndianness.h``: various EverParse
   helpers for the implementation of verified validators, common to
@@ -85,6 +89,21 @@ following properties:
 * *Functionally correct*: The validator accepts all input arrays that
   contain valid representations of the message according to its
   specification, rejecting all others.
+
+.. note::
+
+  These guarantees are those of the validator, in ``MyFile1.c``, which is
+  extracted from verified F\* code. The entrypoint wrappers in
+  ``MyFile1Wrapper.c`` are ordinary generated C glue around it, and are not
+  themselves verified.
+
+  Note also that "a valid representation of a message" is about what the
+  input array *starts with*: a validator accepts an array that holds a
+  valid message followed by trailing bytes, and reports how many bytes it
+  consumed, so that an enclosing format can carry on from there. The
+  ``Check`` wrapper propagates that, returning ``TRUE`` in such a case. See
+  the ``--complete_wrappers`` option :ref:`below <complete_wrappers_option>`
+  for a wrapper that does not.
 
 
 Download and install
@@ -241,6 +260,59 @@ Options are treated from left to right:
   all differ. See the *Pulse backend primitives* part of
   ``--input_stream`` below, and, in the :ref:`3d language reference
   <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
+
+* ``--complete_wrappers``
+
+  .. _complete_wrappers_option:
+
+  For each entrypoint, generate a second wrapper that additionally checks
+  that the validator consumed the *whole* input buffer.
+
+  By default, the ``<Mod>Check<Typ>(base, len)`` wrapper recognizes a
+  *prefix*: it returns ``TRUE`` as soon as ``base`` starts with valid
+  ``<Typ>`` data fitting within ``len`` bytes, and says nothing about the
+  bytes that follow. For instance, the ``point`` entrypoint of the
+  ``HelloWorld.3d`` of the :ref:`3d language reference <3d-lang>` is two
+  ``UINT16``\ s, hence 4 bytes wide, so ``HelloWorldCheckPoint(base, 5)``
+  returns ``TRUE`` on any buffer whose first 4 bytes are a valid
+  ``point``, whatever the fifth byte is. This is deliberate -- a message
+  is routinely read
+  into a fixed-size buffer larger than itself, and the underlying
+  verified validator reports how many bytes it consumed, which is what
+  lets an enclosing format resume parsing after the message -- but it is
+  not what a caller validating a standalone message wants.
+
+  With ``--complete_wrappers``, the usual wrapper keeps that behavior, and
+  3d emits alongside it a second one, with ``Complete`` in its name and
+  the same signature, that returns ``TRUE`` only if validation succeeded
+  *and* consumed exactly ``len`` bytes. On trailing bytes it calls
+  ``<Mod>EverParseError`` with the type name, an empty field name, and
+  ``"unexpected trailing bytes"`` as the reason, then returns ``FALSE``.
+  So, for that ``point`` entrypoint:
+
+  .. code-block:: c
+
+     BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len);
+     BOOLEAN HelloWorldCheckCompletePoint(uint8_t *base, uint32_t len);
+
+  The naming rule, the behavior of probe entrypoints, and the treatment of
+  user-named entrypoints (whose complete-check counterpart is the given
+  name suffixed with ``Complete``) are described in the :ref:`3d language
+  reference <Complete_Wrappers>`.
+
+  This option works with both backends, and in particular is compatible
+  with ``--pulse``. It is, however, only meaningful with ``--input_stream
+  buffer`` (the default): with ``extern`` or ``static`` the wrapper is
+  handed an opaque stream rather than a byte array and a length, so it has
+  no notion of the end of the input, and the option has no effect.
+
+  Both wrappers are unverified glue code, generated into
+  ``<Mod>Wrapper.c``; the formal guarantees listed above are those of the
+  ``<Mod>Validate<Typ>`` validator that they call.
+
+* ``--no_complete_wrappers``
+
+  Generate only the plain entrypoint wrappers. This is toggled by default.
 
 * ``--input_stream buffer|extern|static``
 
