@@ -606,7 +606,9 @@ and impl_bundle_wf_map_group
           nm
         )
   | WfMZeroOrMore t_key t_value except s_key s_value s_except ->
-    let Some (v_key, p_key) : option (impl_typ vmatch (typ_sem env.be_ast.e_sem_env t_key) & bundle vmatch) = match t_key with
+    bounded_wf_typ_bounded env.be_ast.e_sem_env.se_bound t_key s_key;
+    bounded_wf_typ_bounded env.be_ast.e_sem_env.se_bound t_value s_value;
+    let Some (v_key, p_key) = match t_key with
     | TNamed _ (TDef n)
     | TDef n -> 
       [@@inline_let] let _ = env.be_b_correct n in
@@ -614,7 +616,7 @@ and impl_bundle_wf_map_group
     | _ -> ancillary _ s_key
     in
     let Some (v_except) = ancillary_mg except in
-    let Some (v_value, p_value) : option (impl_typ vmatch (typ_sem env.be_ast.e_sem_env t_value) & bundle vmatch) = match t_value with
+    let Some (v_value, p_value) = match t_value with
     | TNamed _ (TDef n)
     | TDef n ->
       [@@inline_let] let _ = env.be_b_correct n in

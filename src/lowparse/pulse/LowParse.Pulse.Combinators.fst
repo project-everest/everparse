@@ -162,6 +162,33 @@ let parse_serialize_strong_prefix
 = let sv = bare_serialize s v in
   parse_strong_prefix #k p sv (sv `Seq.append` suff)
 
+let validator_postcond_parse_synth
+  (#t #t': Type)
+  (#k: parser_kind)
+  (p: parser k t)
+  (f: (t -> GTot t') { synth_injective f })
+  (offset: SZ.t)
+  (v: bytes)
+: Lemma
+  (requires (SZ.v offset <= Seq.length v))
+  (ensures (
+    forall (off: SZ.t) (res: bool).
+      validator_postcond p offset v off res ==
+      validator_postcond (parse_synth p f) offset v off res
+  ))
+= parse_synth_eq p f (Seq.slice v (SZ.v offset) (Seq.length v))
+
+inline_for_extraction
+let validator_ext
+  (#t: Type0)
+  (#k: parser_kind)
+  (p2: parser k t)
+  (p1: parser k t)
+  (w: validator p1)
+  (_: squash (p1 == p2))
+: Tot (validator p2)
+= coerce_eq () w
+
 inline_for_extraction
 fn validate_synth
   (#t #t': Type)
@@ -176,9 +203,20 @@ fn validate_synth
   (#pm: _)
   (#v: _)
 {
-  parse_synth_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
+  validator_postcond_parse_synth p f offset v;
   w input poffset #offset #pm #v
 }
+
+inline_for_extraction
+let jumper_ext
+  (#t: Type0)
+  (#k: parser_kind)
+  (p2: parser k t)
+  (p1: parser k t)
+  (j: jumper p1)
+  (_: squash (p1 == p2))
+: Tot (jumper p2)
+= coerce_eq () j
 
 inline_for_extraction
 fn jump_synth
@@ -648,6 +686,20 @@ let nondep_then_eq_dtuple2
   parse_dtuple2_eq p1 #k2 #(const_fun t2) (const_fun p2) input;
   nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 input
 
+let nondep_then_eq_dtuple2_all
+  (#t1 #t2: Type)
+  (#k1 #k2: parser_kind)
+  (p1: parser k1 t1)
+  (p2: parser k2 t2)
+: Lemma
+  (forall input.
+    parse (nondep_then p1 p2) input ==
+    parse (parse_synth
+      (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2))
+      pair_of_dtuple2) input)
+= Classical.forall_intro (fun input ->
+    nondep_then_eq_dtuple2 p1 p2 input)
+
 inline_for_extraction
 fn validate_nondep_then
   (#t1 #t2: Type0)
@@ -1021,6 +1073,83 @@ fn pts_to_serialized_ext_trade'
   pts_to_serialized_ext_trade s1 s2 input
 }
 
+ghost
+fn pts_to_serialized_ext_trade_proof
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (input: slice byte)
+  (pf: squash (forall x. parse p1 x == parse p2 x))
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_serialized s1 input #pm v
+  ensures pts_to_serialized s2 input #pm v ** trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v)
+{
+  intro_pure (forall x. parse p1 x == parse p2 x) pf;
+  pts_to_serialized_ext_trade s1 s2 input
+}
+
+ghost
+fn pts_to_serialized_nondep_dtuple2_trade
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t1 & t2)
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v
+  ensures
+    pts_to_serialized
+      (serialize_synth
+        (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2))
+        pair_of_dtuple2
+        (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
+        dtuple2_of_pair
+        ())
+      input #pm v **
+    trade
+      (pts_to_serialized
+        (serialize_synth
+          (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2))
+          pair_of_dtuple2
+          (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
+          dtuple2_of_pair
+          ())
+        input #pm v)
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
+{
+  let pf : squash (forall x.
+      parse (nondep_then p1 p2) x ==
+      parse (parse_synth
+        (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2))
+        pair_of_dtuple2) x)
+    = nondep_then_eq_dtuple2_all #t1 #t2 #k1 #k2 p1 p2;
+  intro_pure
+    (forall x.
+      parse (nondep_then p1 p2) x ==
+      parse (parse_synth
+        (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2))
+        pair_of_dtuple2) x)
+    pf;
+  pts_to_serialized_ext_trade
+    (serialize_nondep_then s1 s2)
+    (serialize_synth
+      (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2))
+      pair_of_dtuple2
+      (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
+      dtuple2_of_pair
+      ())
+    input
+}
+
 inline_for_extraction
 fn split_nondep_then
   (#t1 #t2: Type0)
@@ -1038,17 +1167,10 @@ fn split_nondep_then
   returns res: (slice byte & slice byte)
   ensures split_nondep_then_post s1 s2 input pm v res
 {
-  pts_to_serialized_ext_trade'
-    (serialize_nondep_then s1 s2)
-    (serialize_synth #(and_then_kind k1 k2) #(dtuple2 t1 (const_fun #t1 #Type0 t2)) #(t1 & t2)
-      (parse_dtuple2 #k1 #t1 p1 #k2 #(const_fun t2) (const_fun p2))
-      (pair_of_dtuple2 #t1 #t2)
-      (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
-      dtuple2_of_pair
-      ()
-    )
-    input
-    (nondep_then_eq_dtuple2 #t1 #t2 #k1 #k2 p1 p2);
+  pts_to_serialized_nondep_dtuple2_trade
+    s1
+    s2
+    input;
   pts_to_serialized_synth_l2r_trade
     (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
     pair_of_dtuple2
@@ -1192,23 +1314,16 @@ ghost fn ghost_split_nondep_then
     pts_to_serialized s2 (snd res) #pm (snd v) **
     is_split input (fst res) (snd res)
 {
-  pts_to_serialized_ext'
-    (serialize_nondep_then s1 s2)
-    (serialize_synth #(and_then_kind k1 k2) #(dtuple2 t1 (const_fun #t1 #Type0 t2)) #(t1 & t2)
-      (parse_dtuple2 #k1 #t1 p1 #k2 #(const_fun t2) (const_fun p2))
-      (pair_of_dtuple2 #t1 #t2)
-      (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
-      dtuple2_of_pair
-      ()
-    )
-    input
-    (nondep_then_eq_dtuple2 #t1 #t2 #k1 #k2 p1 p2);
+  pts_to_serialized_nondep_dtuple2_trade s1 s2 input;
   pts_to_serialized_synth_l2r
     (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
     pair_of_dtuple2
     dtuple2_of_pair
     input;
-  ghost_split_dtuple2 #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input;
+  let res =
+    ghost_split_dtuple2 #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input;
+  drop_ (trade _ _);
+  res
 }
 
 ghost fn join_nondep_then

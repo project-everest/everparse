@@ -4,10 +4,11 @@
 
 #include "COSE_Format.h"
 #include "CBORDetAPI.h"
-#include "internal/fstar.h"
 #include "internal/COSE_Format.h"
 
 extern void EverCrypt_Ed25519_sign(uint8_t *x0, uint8_t *x1, uint32_t x2, uint8_t *x3);
+
+extern bool EverCrypt_Ed25519_verify(uint8_t *x0, uint32_t x1, uint8_t *x2, uint8_t *x3);
 
 extern void abort(void);
 

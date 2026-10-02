@@ -1,0 +1,36 @@
+// Regression test for the position reported by field_ptr, field_pos_64 and
+// field_pos_32.
+//
+// All three must report where the *annotated field starts*, not where it ends.
+// Each field below is preceded by some payload, so a validator that sampled the
+// stream position after running the field validator would report the end offset
+// instead, and every assertion in src/main.c would fail.
+
+entrypoint
+typedef struct _T(mutable PUINT8 *outPtr,
+                  mutable UINT64 *outPos64,
+                  mutable UINT32 *outPos32)
+{
+  UINT8 f1[10];
+
+  UINT32 f2
+  {:on-success
+     var i = field_pos_64;
+     *outPos64 = i;
+     return true;
+  };
+
+  UINT16 f3
+  {:on-success
+     var j = field_pos_32;
+     *outPos32 = j;
+     return true;
+  };
+
+  UINT8 f4[4]
+  {:on-success
+     var x = field_ptr;
+     *outPtr = x;
+     return true;
+  };
+} T;

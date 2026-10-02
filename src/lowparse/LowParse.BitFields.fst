@@ -881,7 +881,7 @@ module U8 = FStar.UInt8
 
 (* Instantiate to UInt64 *)
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let bitfield_mask64 (lo: nat) (hi: nat { lo <= hi /\ hi <= 64 }) : Tot (x: U64.t { U64.v x == bitfield_mask 64 lo hi }) =
@@ -889,9 +889,13 @@ let bitfield_mask64 (lo: nat) (hi: nat { lo <= hi /\ hi <= 64 }) : Tot (x: U64.t
   then 0uL
   else begin    
     bitfield_mask_eq_2 64 lo hi;
-    let ones = U64.lognot 0uL in
-    let shifted = ones `U64.shift_right` (64ul `U32.sub` (U32.uint_to_t (hi - lo))) in
-    shifted `U64.shift_left` U32.uint_to_t lo
+    assert (U32.v (64ul `U32.sub` (U32.uint_to_t (hi - lo))) == 64 - (hi - lo));
+    assert (U32.v (U32.uint_to_t lo) == lo);
+    let r = U64.lognot 0uL `U64.shift_right` (64ul `U32.sub` (U32.uint_to_t (hi - lo))) in
+    assert (U64.v r == U.shift_right #64 (U.lognot #64 0) (64 - (hi - lo)));
+    let res = r `U64.shift_left` U32.uint_to_t lo in
+    assert (U64.v res == U.shift_left #64 (U.lognot 0 `U.shift_right` (64 - (hi - lo))) lo);
+    res
   end
 
 inline_for_extraction
@@ -958,11 +962,15 @@ let set_bitfield_gen64
   (v: U64.t { U64.v v < pow2 (U32.v hi - U32.v lo) })
 : Tot (y: U64.t { U64.v y == set_bitfield (U64.v x) (U32.v lo) (U32.v hi) (U64.v v) })
 = bitfield_mask_eq_2 64 (U32.v lo) (U32.v hi);
-  let ones = U64.lognot 0uL in
-  let shifted = ones `U64.shift_right` (64ul `U32.sub` (hi `U32.sub` lo)) in
-  let mask = shifted `U64.shift_left` lo in
-  let cleared = x `U64.logand` U64.lognot mask in
-  cleared `U64.logor` (v `U64.shift_left` lo)
+  assert (U32.v (hi `U32.sub` lo) == U32.v hi - U32.v lo);
+  assert (U32.v (64ul `U32.sub` (hi `U32.sub` lo)) == 64 - (U32.v hi - U32.v lo));
+  let r = (U64.lognot 0uL) `U64.shift_right` (64ul `U32.sub` (hi `U32.sub` lo)) in
+  assert (U64.v r == U.shift_right #64 (U.lognot #64 0) (64 - (U32.v hi - U32.v lo)));
+  let mask = r `U64.shift_left` lo in
+  assert (U64.v mask == U.shift_left #64 (U.lognot 0 `U.shift_right` (64 - (U32.v hi - U32.v lo))) (U32.v lo));
+  assert (U64.v (((U64.lognot 0uL) `U64.shift_right` (64ul `U32.sub` (hi `U32.sub` lo))) `U64.shift_left` lo) ==
+    bitfield_mask 64 (U32.v lo) (U32.v hi));
+  (x `U64.logand` U64.lognot (((U64.lognot 0uL) `U64.shift_right` (64ul `U32.sub` (hi `U32.sub` lo))) `U64.shift_left` lo)) `U64.logor` (v `U64.shift_left` lo)
 
 (* Instantiate to UInt32 *)
 
@@ -972,9 +980,13 @@ let bitfield_mask32 (lo: nat) (hi: nat { lo <= hi /\ hi <= 32 }) : Tot (x: U32.t
   then 0ul
   else begin    
     bitfield_mask_eq_2 32 lo hi;
-    let ones = U32.lognot 0ul in
-    let shifted = ones `U32.shift_right` (32ul `U32.sub` (U32.uint_to_t (hi - lo))) in
-    shifted `U32.shift_left` U32.uint_to_t lo
+    assert (U32.v (32ul `U32.sub` (U32.uint_to_t (hi - lo))) == 32 - (hi - lo));
+    assert (U32.v (U32.uint_to_t lo) == lo);
+    let r = U32.lognot 0ul `U32.shift_right` (32ul `U32.sub` (U32.uint_to_t (hi - lo))) in
+    assert (U32.v r == U.shift_right #32 (U.lognot #32 0) (32 - (hi - lo)));
+    let res = r `U32.shift_left` U32.uint_to_t lo in
+    assert (U32.v res == U.shift_left #32 (U.lognot 0 `U.shift_right` (32 - (hi - lo))) lo);
+    res
   end
 
 inline_for_extraction
@@ -1039,11 +1051,13 @@ let set_bitfield_gen32
   (v: U32.t { U32.v v < pow2 (U32.v hi - U32.v lo) })
 : Tot (y: U32.t { U32.v y == set_bitfield (U32.v x) (U32.v lo) (U32.v hi) (U32.v v) })
 = bitfield_mask_eq_2 32 (U32.v lo) (U32.v hi);
-  let ones = U32.lognot 0ul in
-  let shifted = ones `U32.shift_right` (32ul `U32.sub` (hi `U32.sub` lo)) in
-  let mask = shifted `U32.shift_left` lo in
-  let cleared = x `U32.logand` U32.lognot mask in
-  cleared `U32.logor` (v `U32.shift_left` lo)
+  assert (U32.v (hi `U32.sub` lo) == U32.v hi - U32.v lo);
+  assert (U32.v (32ul `U32.sub` (hi `U32.sub` lo)) == 32 - (U32.v hi - U32.v lo));
+  let r = (U32.lognot 0ul) `U32.shift_right` (32ul `U32.sub` (hi `U32.sub` lo)) in
+  assert (U32.v r == U.shift_right #32 (U.lognot #32 0) (32 - (U32.v hi - U32.v lo)));
+  let mask = r `U32.shift_left` lo in
+  assert (U32.v mask == U.shift_left #32 (U.lognot 0 `U.shift_right` (32 - (U32.v hi - U32.v lo))) (U32.v lo));
+  (x `U32.logand` U32.lognot (((U32.lognot 0ul) `U32.shift_right` (32ul `U32.sub` (hi `U32.sub` lo))) `U32.shift_left` lo)) `U32.logor` (v `U32.shift_left` lo)
 
 #pop-options
 
@@ -1055,9 +1069,13 @@ let bitfield_mask16 (lo: nat) (hi: nat { lo <= hi /\ hi <= 16 }) : Tot (x: U16.t
   then 0us
   else begin    
     bitfield_mask_eq_2 16 lo hi;
-    let ones = U16.lognot 0us in
-    let shifted = ones `U16.shift_right` (16ul `U32.sub` (U32.uint_to_t (hi - lo))) in
-    shifted `U16.shift_left` U32.uint_to_t lo
+    assert (U32.v (16ul `U32.sub` (U32.uint_to_t (hi - lo))) == 16 - (hi - lo));
+    assert (U32.v (U32.uint_to_t lo) == lo);
+    let r = U16.lognot 0us `U16.shift_right` (16ul `U32.sub` (U32.uint_to_t (hi - lo))) in
+    assert (U16.v r == U.shift_right #16 (U.lognot #16 0) (16 - (hi - lo)));
+    let res = r `U16.shift_left` U32.uint_to_t lo in
+    assert (U16.v res == U.shift_left #16 (U.lognot 0 `U.shift_right` (16 - (hi - lo))) lo);
+    res
   end
 
 inline_for_extraction
@@ -1122,11 +1140,13 @@ let set_bitfield_gen16
   (v: U16.t { U16.v v < pow2 (U32.v hi - U32.v lo) })
 : Tot (y: U16.t { U16.v y == set_bitfield (U16.v x) (U32.v lo) (U32.v hi) (U16.v v) })
 = bitfield_mask_eq_2 16 (U32.v lo) (U32.v hi);
-  let ones = U16.lognot 0us in
-  let shifted = ones `U16.shift_right` (16ul `U32.sub` (hi `U32.sub` lo)) in
-  let mask = shifted `U16.shift_left` lo in
-  let cleared = x `U16.logand` U16.lognot mask in
-  cleared `U16.logor` (v `U16.shift_left` lo)
+  assert (U32.v (hi `U32.sub` lo) == U32.v hi - U32.v lo);
+  assert (U32.v (16ul `U32.sub` (hi `U32.sub` lo)) == 16 - (U32.v hi - U32.v lo));
+  let r = (U16.lognot 0us) `U16.shift_right` (16ul `U32.sub` (hi `U32.sub` lo)) in
+  assert (U16.v r == U.shift_right #16 (U.lognot #16 0) (16 - (U32.v hi - U32.v lo)));
+  let mask = r `U16.shift_left` lo in
+  assert (U16.v mask == U.shift_left #16 (U.lognot 0 `U.shift_right` (16 - (U32.v hi - U32.v lo))) (U32.v lo));
+  (x `U16.logand` U16.lognot (((U16.lognot 0us) `U16.shift_right` (16ul `U32.sub` (hi `U32.sub` lo))) `U16.shift_left` lo)) `U16.logor` (v `U16.shift_left` lo)
 
 inline_for_extraction
 let bitfield_mask8 (lo: nat) (hi: nat { lo <= hi /\ hi <= 8 }) : Tot (x: U8.t { U8.v x == bitfield_mask 8 lo hi }) =
@@ -1134,9 +1154,13 @@ let bitfield_mask8 (lo: nat) (hi: nat { lo <= hi /\ hi <= 8 }) : Tot (x: U8.t { 
   then 0uy
   else begin
     bitfield_mask_eq_2 8 lo hi;
-    let ones = U8.lognot 0uy in
-    let shifted = ones `U8.shift_right` (8ul `U32.sub` (U32.uint_to_t (hi - lo))) in
-    shifted `U8.shift_left` U32.uint_to_t lo
+    assert (U32.v (8ul `U32.sub` (U32.uint_to_t (hi - lo))) == 8 - (hi - lo));
+    assert (U32.v (U32.uint_to_t lo) == lo);
+    let r = U8.lognot 0uy `U8.shift_right` (8ul `U32.sub` (U32.uint_to_t (hi - lo))) in
+    assert (U8.v r == U.shift_right #8 (U.lognot #8 0) (8 - (hi - lo)));
+    let res = r `U8.shift_left` U32.uint_to_t lo in
+    assert (U8.v res == U.shift_left #8 (U.lognot 0 `U.shift_right` (8 - (hi - lo))) lo);
+    res
   end
 
 inline_for_extraction
@@ -1165,10 +1189,14 @@ let set_bitfield_gen8
   (v: U8.t { U8.v v < pow2 (U32.v hi - U32.v lo) })
 : Tot (y: U8.t { U8.v y == set_bitfield (U8.v x) (U32.v lo) (U32.v hi) (U8.v v) })
 = bitfield_mask_eq_2 8 (U32.v lo) (U32.v hi);
+  assert (U32.v (hi `U32.sub` lo) == U32.v hi - U32.v lo);
+  assert (U32.v (8ul `U32.sub` (hi `U32.sub` lo)) == 8 - (U32.v hi - U32.v lo));
   (* NOTE: due to https://github.com/FStarLang/karamel/issues/102 I need to introduce explicit let-bindings here *)
   let op0 = (U8.lognot 0uy) in
   let op1 = op0 `U8.shift_right` (8ul `U32.sub` (hi `U32.sub` lo)) in
+  assert (U8.v op1 == U.shift_right #8 (U.lognot #8 0) (8 - (U32.v hi - U32.v lo)));
   let op2 = op1 `U8.shift_left` lo in
+  assert (U8.v op2 == U.shift_left #8 (U.lognot 0 `U.shift_right` (8 - (U32.v hi - U32.v lo))) (U32.v lo));
   let op3 = U8.lognot op2 in
   let op4 = x `U8.logand` op3 in
   let op5 = v `U8.shift_left` lo in

@@ -482,7 +482,7 @@ let synth_be_int_inverse
 
 let synth_der_length_greater_recip
   (x: U8.t { U8.v x > 129 /\ U8.v x < 255 } )
-  (len: nat { len == U8.v x % 128 } )
+  (len: nat { len == U8.v x - 128 } )
   (y: refine_with_tag tag_of_der_length x)
 : Tot (y: lint len { y >= pow2 (8 * (len - 1)) } )
 = assert_norm (der_length_max == pow2 (8 * 126) - 1);
@@ -491,7 +491,7 @@ let synth_der_length_greater_recip
 
 let synth_der_length_greater_inverse
   (x: U8.t { U8.v x > 129 /\ U8.v x < 255 } )
-  (len: nat { len == U8.v x % 128 } )
+  (len: nat { len == U8.v x - 128 } )
 : Lemma
   (synth_inverse (synth_der_length_greater x len) (synth_der_length_greater_recip x len))
 = ()
@@ -634,13 +634,15 @@ let serialize_der_length_weak_unfold
        serialize_u8_spec (U8.uint_to_t y);
        ()
    end else begin
-    let len : (len: nat { len >= 1 /\ len == U8.v x - 128 }) = U8.v x - 128 in
+    let len : nat = U8.v x - 128 in
     assert (U8.v x > 129 /\ U8.v x < 255);
-    assert (tag_of_der_length y == x);
+    assert (len > 0);
     synth_be_int_injective len; // FIXME: WHY WHY WHY does the pattern not trigger, even with higher rlimit?
     assert (
       serialize (serialize_der_length_payload x) y == serialize (serialize_der_length_payload_greater x len) y
     );
+    assert (len == U8.v x - 128);
+    assert (tag_of_der_length y == x);
       serialize_synth_eq'
         #_
         #(parse_filter_refine #(lint len) (fun (y: lint len) -> y >= pow2 (8 * (len - 1))))

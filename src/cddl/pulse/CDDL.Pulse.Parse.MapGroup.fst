@@ -649,6 +649,31 @@ let mk_map_iterator_eq_postcond
     res.ps2 === ps2 /\
     True
 
+let mk_map_iterator_eq_postcond_ser2
+  (#ty #ty2: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (cddl_map_iterator_contents: cbor_map_iterator_t)
+  (pm: perm)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#src_elt1: Type0)
+  (#r1: rel impl_elt1 src_elt1)
+  (#t1: Ghost.erased typ)
+  (sp1: Ghost.erased (spec t1 src_elt1 true))
+  (eq1: Ghost.erased (EqTest.eq_test src_elt1))
+  (tex: Ghost.erased map_constraint)
+  (#src_elt2: Type0)
+  (#r2: rel impl_elt2 src_elt2)
+  (#t2: Ghost.erased typ)
+  (#ser2: Ghost.erased (src_elt2 -> bool))
+  (ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (res: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch vmatch2 (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+: Lemma
+  (requires (mk_map_iterator_eq_postcond cddl_map_iterator_contents pm sp1 eq1 tex ps2 res))
+  (ensures (res.ser2 == ser2))
+= ()
+
 let mk_map_iterator_eq
   (#ty #ty2: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -1378,8 +1403,13 @@ let impl_zero_copy_map_zero_or_more_aux
   assert (sp1 == i.sp1);
   assert (except == i.tex);
   assert (i.t2 == value);
-  assert (Ghost.reveal i.ser2 == coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable)
-    by (FStar.Tactics.norm [delta_only [`%coerce_eq; `%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec]; iota; primops]; FStar.Tactics.smt ());
+  mk_map_iterator_eq_postcond_ser2 contents pm sp1 key_eq except sp2.parser i;
+  assert_norm (
+    (coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable
+      <: (dfst (Iterator.mk_spec r2) -> bool))
+    === (sp2.serializable <: (tvalue -> bool))
+  );
+  assert (Ghost.reveal i.ser2 == coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable);
   assert (i.ps2 === Ghost.hide sp2.parser);
   assert (sp2.parser == coerce_eq () (Ghost.reveal i.ps2));
   assert (parse_table_entries sp1.parser except sp2.parser li == parse_table_entries i.sp1.parser i.tex i.ps2 li);

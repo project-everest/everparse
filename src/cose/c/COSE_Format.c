@@ -3,7 +3,6 @@
 #include "internal/COSE_Format.h"
 
 #include "CBORDetAPI.h"
-#include "internal/fstar.h"
 
 #define CDDL_SIMPLE_VALUE_FALSE (20U)
 

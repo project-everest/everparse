@@ -53,14 +53,15 @@ jobs:
         with:
           sparse-checkout: |
             src/3d/tests
+            share/everparse/tests/3d
             src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}/everparse
-      # - name: Test EverParse
-      #   run: |
-      #     bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d
-      # - name: Test EverParse test case generation
-      #   run: |
-      #     bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverParse
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh --pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/FieldDependence0.3d && bash ${{ github.workspace }}/test/everparse.sh --pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --pulse --check_hashes inplace ${{ github.workspace }}/everparse/share/everparse/tests/3d/Comments.3d
+      - name: Test EverParse test case generation
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh --pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
           ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl

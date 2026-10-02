@@ -421,6 +421,8 @@ val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string
+
+val kind_modules (mname:string) (k:parser_kind) : Tot (list string)
 val print_params (mname:string) (ps:list param) : ML string
 val print_action (mname:string) (a:action) : ML string
 val print_probe_action  (mname:string) (a:probe_action) : ML string

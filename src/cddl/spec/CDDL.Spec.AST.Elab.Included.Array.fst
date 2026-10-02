@@ -78,7 +78,9 @@ let array_group_included_gdef_snd
   let GDef n = g0 in
   let en : group = match e.e_sem_env.se_bound n with
     | Some NGroup -> (e.e_env n)
-    | Some NType -> GElem false (TElem EAny) (e.e_env n)
+    | Some NType ->
+      assert (Some?.v (e.e_sem_env.se_bound n) == NType);
+      GElem false (TElem EAny) (e.e_env n)
   in
   let a1' = GConcat en a1r in
   gdef_snd_equiv e n a1r a2 en;
@@ -172,7 +174,9 @@ let array_group_included
   | (_, (GDef n, a1r)), (a2, _) ->
     let en = match e.e_sem_env.se_bound n with
     | Some NGroup -> (e.e_env n)
-    | Some NType -> GElem false (TElem EAny) (e.e_env n)
+    | Some NType ->
+      assert (Some?.v (e.e_sem_env.se_bound n) == NType);
+      GElem false (TElem EAny) (e.e_env n)
     in
     let a1' = GConcat en a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';

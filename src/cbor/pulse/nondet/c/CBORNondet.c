@@ -76,7 +76,7 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
             pres = false;
           else if (byte1 == 0xf0U && 0x90U <= byte2 && byte2 <= 0xbfU)
             pi = i4;
-          else if (0xf1U <= byte1 && byte1 <= 0xf3U && 0x80U <= byte2 && byte2 <= 0xbfU)
+          else if (0xf1U <= byte1 && byte1 < 0xf4U && 0x80U <= byte2 && byte2 <= 0xbfU)
             pi = i4;
           else if (byte1 == 0xf4U && 0x80U <= byte2 && byte2 <= 0x8fU)
             pi = i4;

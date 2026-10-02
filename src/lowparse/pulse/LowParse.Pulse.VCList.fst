@@ -334,7 +334,12 @@ ensures
 {
   nlist_cons_as_nondep_then s n input;
   with v' . assert (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm v');
-  let res = split_nondep_then #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p <: parser (parse_nlist_kind (n - 1) k) (nlist (n - 1) t))) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
+  let res =
+    split_nondep_then #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   let s1, s2 = res;
   unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' (s1, s2));
   unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
@@ -536,7 +541,12 @@ ensures exists* v' .
   )
 {
   nlist_cons_as_nondep_then s n input;
-  let res = nondep_then_fst #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p <: parser (parse_nlist_kind (n - 1) k) (nlist (n - 1) t))) (coerce_eq () (serialize_nlist (n - 1) s <: serializer #(parse_nlist_kind (n - 1) k) (parse_nlist (n - 1) p))) input; // FIXME: WHY WHY WHY are those reveal (hide (...)) NOT reduced?
+  let res =
+    nondep_then_fst #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
@@ -565,7 +575,12 @@ ensures exists* v' .
   )
 {
   nlist_cons_as_nondep_then s n input;
-  let res = nondep_then_fst #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p <: parser (parse_nlist_kind (n - 1) k) (nlist (n - 1) t))) (coerce_eq () (serialize_nlist (n - 1) s <: serializer #(parse_nlist_kind (n - 1) k) (parse_nlist (n - 1) p))) input; // FIXME: WHY WHY WHY are those reveal (hide (...)) NOT reduced?
+  let res =
+    nondep_then_fst #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
@@ -594,7 +609,12 @@ ensures exists* v' .
   )
 {
   nlist_cons_as_nondep_then s n input;
-  let res = nondep_then_snd #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p <: parser (parse_nlist_kind (n - 1) k) (nlist (n - 1) t))) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
+  let res =
+    nondep_then_snd #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   Trade.trans (pts_to_serialized (serialize_nlist (n - 1) s) res #pm _) _ _;
   res
 }

@@ -13,30 +13,32 @@ ColoredPointValidateColoredPoint1(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 5ULL;
-  uint64_t res;
-  uint64_t positionAfterColoredPoint1;
-  if (hasBytes)
+  BOOLEAN hasBytesForColorPt = (InputLength - StartPosition) >= 5ULL;
+  uint64_t resForColorPt;
+  uint64_t positionAfterColorOrError;
+  if (hasBytesForColorPt)
   {
-    res = StartPosition + 5ULL;
+    resForColorPt = StartPosition + 5ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForColorPt =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterColoredPoint1 = res;
-  if (EverParseIsSuccess(positionAfterColoredPoint1))
+  positionAfterColorOrError = resForColorPt;
+  if (EverParseIsSuccess(positionAfterColorOrError))
   {
-    return positionAfterColoredPoint1;
+    return positionAfterColorOrError;
   }
   ErrorHandlerFn("_coloredPoint1",
     "color",
-    EverParseErrorReasonOfResult(positionAfterColoredPoint1),
-    EverParseGetValidatorErrorKind(positionAfterColoredPoint1),
+    EverParseErrorReasonOfResult(positionAfterColorOrError),
+    EverParseGetValidatorErrorKind(positionAfterColorOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterColoredPoint1;
+  return positionAfterColorOrError;
 }
 
 uint64_t
@@ -48,29 +50,31 @@ ColoredPointValidateColoredPoint2(
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 5ULL;
-  uint64_t res;
-  uint64_t positionAfterColoredPoint2;
-  if (hasBytes)
+  BOOLEAN hasBytesForPtColor = (InputLength - StartPosition) >= 5ULL;
+  uint64_t resForPtColor;
+  uint64_t positionAfterPtOrError;
+  if (hasBytesForPtColor)
   {
-    res = StartPosition + 5ULL;
+    resForPtColor = StartPosition + 5ULL;
   }
   else
   {
-    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+    resForPtColor =
+      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+        StartPosition);
   }
-  positionAfterColoredPoint2 = res;
-  if (EverParseIsSuccess(positionAfterColoredPoint2))
+  positionAfterPtOrError = resForPtColor;
+  if (EverParseIsSuccess(positionAfterPtOrError))
   {
-    return positionAfterColoredPoint2;
+    return positionAfterPtOrError;
   }
   ErrorHandlerFn("_coloredPoint2",
     "pt",
-    EverParseErrorReasonOfResult(positionAfterColoredPoint2),
-    EverParseGetValidatorErrorKind(positionAfterColoredPoint2),
+    EverParseErrorReasonOfResult(positionAfterPtOrError),
+    EverParseGetValidatorErrorKind(positionAfterPtOrError),
     Ctxt,
     Input,
     StartPosition);
-  return positionAfterColoredPoint2;
+  return positionAfterPtOrError;
 }
 
