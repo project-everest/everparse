@@ -132,9 +132,15 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 # input-stream-specific -- it must work on all three, as it does in Low* --
 # while probing stays buffer-only. Its positive half is --batch, because the
 # regression it guards against was only visible to F*.
+#
+# check_complete runs the --complete_wrappers `Complete' wrappers. The Pulse
+# validators report how far they got through a `size_t *pos' out-parameter
+# rather than in their result code, so the generated trailing-bytes check is
+# not the Low* one, and only running it pins that it agrees.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
-  probe field_ptr output_state_name field_pos_32_backend copy_buffer_backend
+  probe field_ptr output_state_name field_pos_32_backend copy_buffer_backend \
+  check_complete
 
 # Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and
