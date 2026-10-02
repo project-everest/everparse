@@ -1,0 +1,25 @@
+out.inplace-hash
+out.batch
+out.batch-interpret
+out.elf
+out.fail.batch
+out.cleanup
+out.z3-testgen
+test-cpp.exe
+*.out
+*.err
+out.pulse
+out.fail.pulse
+out.pulse.verify
+out.elf.pulse
+out.cleanup.pulse
+out.inplace-hash.pulse
+out.z3-testgen.pulse
+out.batch-interpret.pulse
+test-cpp.pulse.exe
+test-cpp-interpret.pulse.exe
+
+# Build directories of the subdirectory tests.
+obj/
+output/
+batch_obj/

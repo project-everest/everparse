@@ -1,0 +1,5 @@
+# Pre-generated per-backend runtime headers, produced by header.Makefile.
+# Mirrors src/3d/prelude/.gitignore, which does the same for the Low* backend.
+buffer/
+extern/
+static/

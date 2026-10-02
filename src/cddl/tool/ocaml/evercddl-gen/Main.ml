@@ -407,9 +407,7 @@ let _ =
           "-Wno-unused-variable";
         ] in
         let cfiles =
-          Array.to_list (Sys.readdir !odir)
-          |> List.filter (fun f -> Filename.check_suffix f ".c")
-          |> List.sort compare
+	  [mname_subst ^ ".c"]
         in
         List.fold_left (fun acc cf ->
           if acc <> 0 then acc

@@ -173,3 +173,12 @@ val parse_u64_le_spec
   )))
 
 val serialize_u64_le : serializer parse_u64_le
+
+let serialize_u64_le_spec_le
+  (x: U64.t)
+: Lemma
+  (serialize serialize_u64_le x == E.n_to_le 8 (U64.v x))
+= let s = E.n_to_le 8 (U64.v x) in
+  Seq.slice_length s;
+  parse_u64_le_spec s;
+  parse_injective parse_u64_le (serialize serialize_u64_le x) s

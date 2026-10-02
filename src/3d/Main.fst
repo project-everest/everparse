@@ -230,7 +230,28 @@ let emit_fstar_code_for_interpreter (en:env)
       else ""
     in
  
-    let module_prefix = 
+    (* Each abbreviation here shadows a 3D module of the same name inside
+       every generated file, so keep the list to the abbreviations the
+       generated code actually uses. [I] was not one of them: nothing emitted
+       refers to [EverParse3d.InputStream.Base]. *)
+    let module_prefix =
+      if Options.get_pulse ()
+      then
+       FStar.Printf.sprintf "module %s\n\
+                             open Pulse.Lib.Pervasives\n\
+                             open EverParse3d.Prelude\n\
+                             open EverParse3d.State\n\
+                             open EverParse3d.Actions.Base\n\
+                             open EverParse3d.Interpreter\n\
+                             %s\n\
+                             module T = FStar.Tactics\n\
+                             module A = EverParse3d.Actions.Base\n\
+                             module P = EverParse3d.Prelude\n\
+                             module B = %s\n\
+                             #set-options \"--fuel 0 --ifuel 0 --z3rlimit 32 --ext optimize_let_vc\"\n"
+                             modul maybe_open_external_api
+                             (Options.pulse_backend_module ())
+      else
        FStar.Printf.sprintf "module %s\n\
                              open EverParse3d.Prelude\n\
                              open EverParse3d.Actions.All\n\
@@ -276,7 +297,6 @@ let emit_static_assertions
           (Options.output_dir())
           modul
           filename_suffix) in
-    FStar.IO.write_string c_static_asserts_file "\n\n";
     FStar.IO.write_string c_static_asserts_file 
     (StaticAssertions.print_static_asserts 
        (RefineCStruct.print_ctypes ctypes)
@@ -355,10 +375,10 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
       FStar.IO.write_string extern_typedefs_file
         (Printf.sprintf
           "#ifndef __%s_ExternalTypedefs_H\n\
-           #define __%s_ExternalTypedefs_H\n
+           #define __%s_ExternalTypedefs_H\n\n\
            #if defined(__cplusplus)\n\
            extern \"C\" {\n\
-           #endif\n\n\n\
+           #endif\n\n\
            %s#include \"%s_OutputTypesDefs.h\"\n\n\
            #if defined(__cplusplus)\n\
            }\n\
@@ -556,7 +576,13 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
+    if Options.get_pulse ()
+    then
+      (* KaRaMeL emits no makefiles under --pulse; use EverParse's own, which
+         needs neither krmllib's headers nor libkrmllib.a. *)
+      OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
+    else
+      OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
   end
 
 let build_and_run_test_exe
@@ -618,11 +644,12 @@ let produce_z3_and_test
   (out_dir: string)
   (name: string)
 : Tot process_files_t
-= produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+= produce_z3_and_test_gen batch produce_testcases_c out_dir
+    (fun out_file nbwitnesses prog z3 ->
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_test out_dir out_file z3 print_c_initializers use_ptr flight prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
+    Z3TestGen.do_test out_dir out_file z3 use_ptr print_c_initializers flight prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
@@ -632,11 +659,12 @@ let produce_z3_and_diff_test
   (names: (string & string))
 : Tot process_files_t
 = let (name1, name2) = names in
-  produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+  produce_z3_and_test_gen batch produce_testcases_c out_dir
+    (fun out_file nbwitnesses prog z3 ->
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_diff_test out_dir out_file z3 print_c_initializers use_ptr flight prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
+    Z3TestGen.do_diff_test out_dir out_file z3 use_ptr print_c_initializers flight prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
   )
 
 let produce_test_checker_exe
@@ -680,9 +708,29 @@ let produce_and_postprocess_c
     modul
     dep_files_and_modules
 
+(* TEMPORARY. In --pulse mode, Pulse's extraction encodes every reference
+   dereference as an access at the distinguished index C._zero_for_deref, which
+   KaRaMeL rewrites back into `*r`. KaRaMeL provides that marker as a builtin,
+   but only if no input file is named C (karamel/lib/Builtin.ml, `prepare`). So
+   a 3d module named C makes KaRaMeL skip the builtin and then fail on the
+   dangling reference, with a fatal Warning 2 mentioning C._zero_for_deref,
+   which gives the user no clue as to the actual cause. Reject the name up
+   front instead. To be removed once the marker is fixed upstream. *)
+let check_no_reserved_module_name (files: list string) : ML unit =
+  if Options.get_pulse ()
+  then
+    List.iter
+      (fun file ->
+        if OS.extension (OS.basename file) = ".3d" &&
+           OS.remove_extension (OS.basename file) = "C"
+        then raise (Error "A 3d module cannot be named C in --pulse mode, because the name collides with KaRaMeL's builtin C module. Please rename it.\n")
+      )
+      files
+
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let cmd_line_files = Options.parse_cmd_line() in
+  let _ = check_no_reserved_module_name cmd_line_files in
   let cfg_opt = Deps.get_config () in
   (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.check_inplace_hashes () in
@@ -773,6 +821,7 @@ let go () : ML unit =
     then List.Tot.rev cmd_line_files (* files are accumulated in reverse on the command line *)
     else Deps.collect_and_sort_dependencies cmd_line_files
   in
+  let _ = check_no_reserved_module_name all_files in
   let all_files_and_modules = List.map (fun file -> (file, Options.module_name file)) all_files in
   (* Special mode: --emit_smt_encoding *)
   if Options.get_emit_smt_encoding ()

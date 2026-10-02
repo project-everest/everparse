@@ -236,10 +236,11 @@ inline_for_extraction
 noextract
 let probe_fn_incremental_as_probe_m (#use_error_handler:bool) (f:probe_fn_incremental) (bytes_to_read:U64.t)
 : probe_m unit true false use_error_handler
-= fun _ _ _ ctxt err read_offset write_offset failed src _sz dest ->
+= fun _ fn _ ctxt err read_offset write_offset failed src _sz dest ->
     let h0  = get () in
     let rd = !*read_offset in
     let wr = !*write_offset in
+    [@(rename_let ("okFor" ^ (capitalize fn)))]
     let ok = f bytes_to_read rd wr src dest in
     let h1 = get () in
     if ok
@@ -255,7 +256,8 @@ inline_for_extraction
 noextract
 let init_probe_m (#use_error_handler:bool) struct_name (f:init_probe_dest_t)
 : probe_m unit false false use_error_handler
-= fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
+= fun _ fn _ ctxt err read_offset write_offset failed src sz dest ->
+    [@(rename_let ("okFor" ^ (capitalize fn)))]
     let ok = f struct_name sz dest in
     if ok
     then ()
@@ -274,8 +276,9 @@ inline_for_extraction
 noextract
 let write_at_offset_m (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
 : probe_m unit true false use_error_handler
-= fun _ _ _ ctxt err read_offset write_offset failed src _sz dest ->
+= fun _ fn _ ctxt err read_offset write_offset failed src _sz dest ->
     let wr = !*write_offset in
+    [@(rename_let ("okFor" ^ (capitalize fn)))]
     let ok = f v wr dest in
     if ok
     then (
@@ -293,6 +296,7 @@ let probe_and_read_at_offset_m (#use_error_handler:bool) (#t:Type0) (#s:U64.t { 
 = fun tn fn det ctxt err read_offset write_offset failed src _sz dest ->
     let rd = !*read_offset in
     let v = reader failed rd src dest in
+    [@(rename_let ("hasFailedFor" ^ (capitalize fn)))]
     let has_failed = !*failed in
     if has_failed
     then (
@@ -310,6 +314,7 @@ let seq_probe_m (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1
 : probe_m a true false use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
     let res1 = m1 tn fn det ctxt err read_offset write_offset failed src sz dest in
+    [@(rename_let ("hasFailedFor" ^ (capitalize fn)))]
     let has_failed = !*failed in
     if has_failed
     then (
@@ -324,6 +329,7 @@ let bind_probe_m (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b)
 : probe_m b true false use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
     let res1 = m1 tn fn det ctxt err read_offset write_offset failed src sz dest in
+    [@(rename_let ("hasFailedFor" ^ (capitalize fn)))]
     let has_failed = !*failed in
     if has_failed 
     then (
@@ -494,6 +500,7 @@ let probe_array_aux (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe
     let test ()
       : Stack bool (fun h -> test_pre false h) (fun h0 x h1 -> test_post x h1)
       = let c = !*ctr in
+        [@(rename_let ("hasFailedFor" ^ (capitalize fn)))]
         let has_failed = !*failed in
         let ww = !*write_offset in
         let rr = !*read_offset in
@@ -506,6 +513,7 @@ let probe_array_aux (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe
         (fun h0 _ h1 -> test_pre false h1)
       = let r0 = !*read_offset in
         probe_elem tn fn det ctxt err read_offset write_offset failed src sz dest;
+        [@(rename_let ("elementHasFailedFor" ^ (capitalize fn)))]
         let has_failed = !*failed in
         let r1 = !*read_offset in
         assert (U64.v r1 >= U64.v r0);
@@ -563,6 +571,7 @@ let init_and_probe
       (probe:probe_m unit true mz use_error_handler)
 : probe_m unit false mz use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
+    [@(rename_let ("okFor" ^ (capitalize fn)))]
     let ok = init struct_name sz dest in
     if ok
     then (
@@ -604,6 +613,7 @@ let run_probe_m (#use_error_handler:bool) (#any:bool)
     let failed = alloca false 1ul in
     m tn fn det ctxt err read_offset write_offset failed src sz dest;
     let wr = !*write_offset in
+    [@(rename_let ("hasFailedFor" ^ (capitalize fn)))]
     let has_failed = !*failed in
   pop_frame();
   if has_failed

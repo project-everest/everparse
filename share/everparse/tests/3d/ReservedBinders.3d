@@ -1,0 +1,42 @@
+// Regression test: user parameters must neither collide with, nor shadow
+// anything used by, the binders the Pulse backend generates around them.
+//
+//   - the ambient state dictionary and its weakening proof used to be printed
+//     as `d` and `sq`, so a 3D parameter called `d` or `sq` -- mutable or not
+//     -- produced ill-formed F* ("Non-linear patterns are not permitted", or
+//     an unsolvable `has_pts_to` constraint). They are now `___d` and `___sq`;
+//
+//   - the key-distinctness binder was `(sq_keys_: squash True)`, with `squash`
+//     and `True` unqualified. A parameter called `squash` or `True` shadowed
+//     them, and one called `sq_keys_` collided with the binder itself. It is
+//     now `(___sq_keys: Prims.squash Prims.l_True)`;
+//
+//   - each parameter also gets a ghost key binder, which used to be named
+//     `k__<param>`. A parameter literally called `k__x`, next to one called
+//     `x`, therefore bound the same name twice. It is now `___k_<param>`.
+//
+// `Ast.check_reserved_identifier` rejects any 3D identifier beginning with
+// `___`, so none of these names is reachable from 3D source any more.
+//
+// The Low* backend has none of these binders; the test is kept in both
+// corpora so that the two stay diffable.
+
+typedef struct _ReservedBindersInner(mutable UINT32 *d, UINT32 sq,
+                                     mutable UINT32 *squash, UINT32 sq_keys_,
+                                     UINT32 True,
+                                     mutable UINT32 *x, mutable UINT32 *k__x)
+{
+  UINT8 a;
+  UINT8 b { b < sq && b < sq_keys_ && b < True }
+         {:on-success *d = a; *squash = a; *x = a; *k__x = a; return true; };
+} ReservedBindersInner;
+
+entrypoint
+typedef struct _ReservedBinders(mutable UINT32 *d, UINT32 sq,
+                                mutable UINT32 *squash, UINT32 sq_keys_,
+                                UINT32 True,
+                                mutable UINT32 *x, mutable UINT32 *k__x)
+{
+  ReservedBindersInner(d, sq, squash, sq_keys_, True, x, k__x) inner;
+  UINT8 c { c < sq };
+} ReservedBinders;

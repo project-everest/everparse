@@ -1,0 +1,16 @@
+// Regression test: a 3D module may be named after one of the module
+// abbreviations the generated Pulse code and the Pulse prelude use.
+//
+// EverParse3d.ProbeActions.fst refers to `I.input_stream_inst` while taking
+// the `I` abbreviation from its own .fsti. An abbreviation that only leaks
+// from the interface is invisible to F*'s dependency analysis, which then
+// resolved `I.` against this module and reported a recursive dependency
+// (Error 308) -- so `I.3d` compiled with the Low* backend but not with
+// --pulse.
+
+entrypoint
+typedef struct _I
+{
+  UINT32 a;
+  UINT8 b { b <= 8 };
+} I;
