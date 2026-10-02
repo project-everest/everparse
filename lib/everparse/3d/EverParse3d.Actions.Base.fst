@@ -95,7 +95,7 @@ let validate_with_action_read
     pure (
       (res == validator_error_action_failed ==> has_action) /\
       (not has_action ==> extra' == extra) /\
-      (U8.v res > U8.v validator_error_action_failed ==> None? (LP.parse p v_sl)) /\
+      (is_validation_error res ==> None? (LP.parse p v_sl)) /\
       I.seq_is_suffix_of v_sl' v_sl /\
       (res == validator_success ==> (Some? (LP.parse p v_sl) /\ v_sl' == Seq.slice v_sl (snd (Some?.v (LP.parse p v_sl))) (Seq.length v_sl)))
   ))
@@ -141,7 +141,7 @@ let validate_with_action_no_read
       let pp = LP.parse p (Seq.slice v_sl (SZ.v v_pos) (Seq.length v_sl)) in
       (res == validator_error_action_failed ==> has_action) /\
       (not has_action ==> extra' == extra) /\
-      (U8.v res > U8.v validator_error_action_failed ==> None? pp) /\
+      (is_validation_error res ==> None? pp) /\
       (res == validator_success ==> (Some? pp /\ SZ.v v_pos' == SZ.v v_pos + snd (Some?.v pp)))
   )))
 
@@ -1082,7 +1082,7 @@ fn validate_nlist
         vcur `I.seq_is_suffix_of` v1 /\
         (vres == validator_error_action_failed ==> ha) /\
         (not ha ==> extra' == extra) /\
-        (U8.v vres > U8.v validator_error_action_failed ==> None? (LP.parse (LPL.parse_list p) v1)) /\
+        (is_validation_error vres ==> None? (LP.parse (LPL.parse_list p) v1)) /\
         (vres =!= validator_success ==> vstop == true) /\
         (vres == validator_success ==>
           (Some? (LP.parse (LPL.parse_list p) v1) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
@@ -2655,7 +2655,7 @@ fn validate_list
       vcur `I.seq_is_suffix_of` v_sl /\
       (vres == validator_error_action_failed ==> ha) /\
       (not ha ==> extra' == extra) /\
-      (U8.v vres > U8.v validator_error_action_failed ==> None? (LP.parse (LPL.parse_list p) v_sl)) /\
+      (is_validation_error vres ==> None? (LP.parse (LPL.parse_list p) v_sl)) /\
       (vres =!= validator_success ==> vstop == true) /\
       (vres == validator_success ==>
         (Some? (LP.parse (LPL.parse_list p) v_sl) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
@@ -2768,7 +2768,7 @@ fn validate_list_up_to
       vcur `I.seq_is_suffix_of` v_sl /\
       (vres == validator_error_action_failed ==> ha) /\
       (not ha ==> extra' == extra) /\
-      (U8.v vres > U8.v validator_error_action_failed ==>
+      (is_validation_error vres ==>
         None? (LP.parse (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl)) /\
       (vres =!= validator_success ==> vstop == true) /\
       (vres == validator_success ==>

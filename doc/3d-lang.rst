@@ -2212,7 +2212,7 @@ The Pulse backend keeps the whole of the design above: the same
 (shipped as plain C in ``EverParsePulse.h`` rather than generated into
 ``EverParse.h``), the same per-module ``<Mod>EverParseError`` callback, and
 the same stack trace of enclosing types. What changes is the handler's
-argument list and the numbering of the error codes.
+argument list and the width of the error code, not its kind number.
 
 **The handler signature.** Under ``--pulse`` the handler takes nine
 arguments rather than seven, because the input stream is passed as its
@@ -2257,27 +2257,27 @@ Three points deserve attention:
     the start of the input of the beginning of the field ``f``. It is what
     a handler should report.
 
-**The error codes.** ``<Mod>Wrapper.h`` defines a different set of
-``EVERPARSE_ERROR_*`` constants under ``--pulse``. Code ``1uL`` is
-reassigned from "generic error" to "action failed", so that the verified
-validators can use the shortcut ``res > validator_error_action_failed``, and
-the codes above it shift down by one. The ``ErrorReason`` and ``ErrorCode``
-pairs are therefore:
+**The error codes.** ``<Mod>Wrapper.h`` defines ``EVERPARSE_ERROR_*``
+constants under ``--pulse`` with the same kind numbers as Low*.
+The validator still returns a byte, not a packed position/error value.
+The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
-  - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (1uL)
+  - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)
   - "not enough data", ``EVERPARSE_ERROR_NOT_ENOUGH_DATA`` (2uL)
   - "impossible", ``EVERPARSE_ERROR_IMPOSSIBLE`` (3uL)
   - "list size not multiple of element size", ``EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE`` (4uL)
-  - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (5uL)
-  - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (6uL)
-  - "probe failed", ``EVERPARSE_ERROR_PROBE_FAILED`` (7uL)
-  - "unspecified", with the ``ErrorCode > 7uL``
+  - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
+  - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
+  - "probe failed", ``EVERPARSE_ERROR_PROBE_FAILED`` (8uL)
+  - "unspecified", with ``ErrorCode == 1uL`` or ``ErrorCode > 8uL``
 
 In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
 ``--pulse``. Client code that compares ``ErrorCode`` against these macros
-ports unchanged between the two backends; client code that hardcodes the
-numeric values does not.
+ports unchanged between the two backends. Earlier Pulse releases used 1
+for action failure and 5, 6, 7 for constraint, padding, and probe failures.
+Clients that hardcoded those Pulse-specific numbers must update them;
+the callback signatures and byte return type are unchanged.
 
 The ``EVERPARSE_PROBE_FAILURE_*`` codes returned by the probe wrappers are
 unaffected and keep the same values under both backends.
@@ -2915,5 +2915,4 @@ The actual validator implementation is generated in ``ELF.c``. To
 integrate these validators into existing C code, drop in these
 generated ``.c`` and ``.h`` files
 in the development and invoke ```ElfCheckElf`` as necessary.
-
 
