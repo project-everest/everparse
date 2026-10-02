@@ -1028,6 +1028,12 @@ let print_c_entry
    let is_input_stream_buffer =
      HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
    in
+   (* The `Complete' wrappers are opt-in, via --complete_wrappers, and are only
+      available for the buffer input stream binding, where the whole input
+      length is known to the wrapper. *)
+   let gen_complete_wrappers =
+     if is_input_stream_buffer then Options.get_complete_wrappers () else false
+   in
    (* Under --pulse with an `extern` (or `static`) input stream, the validator
       is passed the stream object together with a truncation bound of 0 (i.e.
       none) and, as its origin, the stream's current position. It does not
@@ -1531,7 +1537,7 @@ let print_c_entry
            | Some n -> complete_name_of_custom_name (A.ident_name n)
            | None -> wrapper_complete_name modul type_name
          in
-         if is_input_stream_buffer then [(n, rng); (c, rng)] else [(n, rng)]
+         if gen_complete_wrappers then [(n, rng); (c, rng)] else [(n, rng)]
        else []
      in
      let probe (p: probe_entrypoint) : ML (list (string & A.range)) =
@@ -1546,7 +1552,7 @@ let print_c_entry
            probe_wrapper_name modul probe_fn type_name,
            probe_wrapper_complete_name modul probe_fn type_name
        in
-       if is_input_stream_buffer then [(n, rng); (c, rng)] else [(n, rng)]
+       if gen_complete_wrappers then [(n, rng); (c, rng)] else [(n, rng)]
      in
      plain `List.Tot.append` List.collect probe d.decl_name.td_entrypoint_probes
    in
@@ -1563,7 +1569,7 @@ let print_c_entry
        List.fold_left
          (fun (seen: list string) (n, rng) ->
            if List.mem n seen
-           then A.error (Printf.sprintf "Duplicate entrypoint name %s. Note that 3d reserves the name of every entrypoint suffixed with `Complete' for the wrapper that additionally checks that the whole input was consumed." n) rng
+           then A.error (Printf.sprintf "Duplicate entrypoint name %s. Note that, under --complete_wrappers, 3d also reserves the name of every entrypoint suffixed with `Complete' for the wrapper that additionally checks that the whole input was consumed." n) rng
            else n :: seen)
          []
          all
@@ -1710,9 +1716,7 @@ let print_c_entry
       mk_main_wrapper check_complete ::
       List.map (probe_wrapper check_complete) d.decl_name.td_entrypoint_probes
     in
-    (* The complete-check wrappers are only available for the buffer input
-       stream binding, where the whole input length is known to the wrapper. *)
-    if is_input_stream_buffer
+    if gen_complete_wrappers
     then wrappers false `List.Tot.append` wrappers true
     else wrappers false
   in

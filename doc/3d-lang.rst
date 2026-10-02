@@ -108,8 +108,9 @@ marked with ``entrypoint`` tells 3d to expose its validator in
 
 .. _Complete_Wrappers:
 
-Next to ``ModuleCheckTyp``, 3d also exposes ``ModuleCheckCompleteTyp``,
-with the same signature. It behaves like ``ModuleCheckTyp``, except
+If 3d is called with ``--complete_wrappers``, then, next to
+``ModuleCheckTyp``, it also exposes ``ModuleCheckCompleteTyp``, with
+the same signature. It behaves like ``ModuleCheckTyp``, except
 that it additionally checks that the validator consumed the *whole*
 input buffer: it returns 0 if ``base`` starts with valid ``typ`` data
 but some bytes remain unparsed at the end of the ``len`` bytes. In that
@@ -125,7 +126,8 @@ meant to contain exactly one message and nothing else.
 
   The ``Complete`` wrappers are generated only for the default
   (``buffer``) input stream binding, since only there does the wrapper
-  know the length of the whole input.
+  know the length of the whole input. Thus ``--complete_wrappers`` has
+  no effect with ``--input_stream extern`` or ``--input_stream static``.
 
 Structs can be nested, such as in the following instance:
 
@@ -1215,9 +1217,9 @@ probe and validate a pointer to the type ``Indirect``:
 
   uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
 
-As for plain entry points, a ``Complete`` counterpart is also exposed,
-which additionally checks that the whole probed region was consumed by
-the validator:
+As for plain entry points, with ``--complete_wrappers`` a ``Complete``
+counterpart is also exposed, which additionally checks that the whole
+probed region was consumed by the validator:
 
 .. code-block:: c
 
@@ -1400,7 +1402,8 @@ but is not exposed publicly:
   :end-before: SNIPPET_END: selective entrypoint$
 
 For ``ProbeOnly``, since only ``entrypoint probe`` is specified, only the probe
-entry point is public:
+entry point is public (here and below, the ``Complete`` wrappers are
+those produced by ``--complete_wrappers``):
 
 .. code-block:: c
 
@@ -1443,8 +1446,9 @@ This produces the following public entry points:
   BOOLEAN CheckAll(uint8_t *base, uint32_t len);
   uint32_t ProbeAll(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
 
-together with their complete-check counterparts, whose names are
-obtained by suffixing the user-provided name with ``Complete``:
+together with, under ``--complete_wrappers``, their complete-check
+counterparts, whose names are obtained by suffixing the user-provided
+name with ``Complete``:
 
 .. code-block:: c
 
@@ -1456,8 +1460,8 @@ obtained by suffixing the user-provided name with ``Complete``:
   uint32_t ProbeAllComplete(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
 
 Consequently, 3d rejects a ``.3d`` file in which two entry point names
-collide, including when one is the ``Complete`` counterpart of the
-other.
+collide, including, under ``--complete_wrappers``, when one is the
+``Complete`` counterpart of the other.
 
 The name argument is optional: ``entrypoint`` without parentheses continues to
 use the auto-generated name. Named and unnamed entry points can be freely mixed

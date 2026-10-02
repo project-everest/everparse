@@ -44,6 +44,9 @@ let get_hoist_locals () =
 let get_goto_for_early_return () =
   !goto_for_early_return
 
+let get_complete_wrappers () =
+  !complete_wrappers
+
 let get_blank_lines () =
   !blank_lines
 
