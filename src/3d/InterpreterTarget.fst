@@ -28,9 +28,9 @@ module H = Hashtable
 let use_error_handler () : ML bool =
   not (Options.get_use_error_handler_macro ())
 
-(* --pulse: generate code against the Pulse combinator backend
+(* --api pulse: generate code against the Pulse combinator backend
    (lib/everparse/3d) instead of the Low* one (src/3d/prelude). *)
-let pulse () : ML bool = Options.get_pulse ()
+let pulse () : ML bool = Options.uses_pulse_backend ()
 
 (* The Pulse input-stream backend module selected by --input_stream. It is
    emitted as `module B = ...` in the generated module prefix. *)
@@ -82,7 +82,7 @@ type inv =
   | Inv_conj : inv -> inv -> inv
   | Inv_ptr  : expr -> inv
   | Inv_copy_buf: expr -> inv
-  (* --pulse only: the ambient state of the external actions generated for
+  (* --api pulse only: the ambient state of the external actions generated for
      output types. In Low* this is carried by the Eloc_output location alone,
      but a Pulse state_dict fuses invariant and footprint. *)
   | Inv_output : inv
@@ -766,7 +766,7 @@ let print_derived_name (mname:string) (tag:string) (i:A.ident) =
     tag
     (T.print_ident i)
 
-(* --pulse: the parameters of the type declaration currently being printed.
+(* --api pulse: the parameters of the type declaration currently being printed.
 
    A copy buffer, or an output pointer, that a type receives as a parameter
    cannot be keyed in the `state_dict` by a literal derived from the name of
@@ -853,7 +853,7 @@ let pulse_key_arg_of (e:string) : ML string =
   then pulse_key_binder_of e
   else Printf.sprintf "(FStar.Ghost.hide \"%s\")" (pulse_sanitize_key e)
 
-(* --pulse: the `state_dict` of a type declaration.
+(* --api pulse: the `state_dict` of a type declaration.
 
    The Low* `inv` describes exactly the set of extra resources a type needs:
    the user-provided pointers it dereferences or assigns, and the copy buffers
@@ -1247,7 +1247,7 @@ let rec print_typ (mname:string) (t:typ)
       if pulse ()
       then begin
         if not (pulse_is_buffer ())
-        then A.error "Probes are only supported by the buffer backend under --pulse" A.dummy_range;
+        then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
         Printf.sprintf "(t_probe_then_validate_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
@@ -1280,7 +1280,7 @@ let rec print_typ (mname:string) (t:typ)
       if pulse ()
       then begin
         if not (pulse_is_buffer ())
-        then A.error "Probes are only supported by the buffer backend under --pulse" A.dummy_range;
+        then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
         Printf.sprintf "(t_probe_then_validate_alt_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
@@ -1319,7 +1319,7 @@ let print_typedef_name mname (n:T.typedef_name) =
     (print_ident mname n.td_name)
     (List.map (print_param mname) n.td_params |> String.concat " ")
 
-(* --pulse: one erased key per parameter, in parameter order. *)
+(* --api pulse: one erased key per parameter, in parameter order. *)
 let pulse_key_binders mname (ps:list T.param) : ML string =
   List.map
     (fun p ->

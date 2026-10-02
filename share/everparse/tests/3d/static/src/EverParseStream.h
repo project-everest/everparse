@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "EverParseEndianness.h"
 
-/* A client-provided input stream for `3d --pulse --input_stream static`.
+/* A client-provided input stream for `3d --api pulse --input_stream static`.
 
    `static` and `extern` are one F* development, so they ask the client for the
    same primitives. As in Low*, each one receives the client context
@@ -24,7 +24,7 @@
    context, because it is also called from the generated DefaultErrorHandler,
    whose signature has none.
 
-   Note on `static` under --pulse, and why this file defines the primitives.
+   Note on `static` under --api pulse, and why this file defines the primitives.
    The two backends differ in the C linkage of these primitives: under
    `static` the generated EverParse.h declares each one `static inline`, so the
    compiler sees the stream operation at every validator call site instead of

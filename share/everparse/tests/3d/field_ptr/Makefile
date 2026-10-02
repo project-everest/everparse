@@ -14,7 +14,7 @@ EVERPARSE_HOME ?= $(realpath ../../../..)
 export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
 
 EVERPARSE_OUTPUT_DIR=obj
 EVERPARSE_INPUT_DIR=src
@@ -41,7 +41,7 @@ endif
 
 all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o
 
-# Under --pulse, EverParse.h is not copied from the prelude at the start of
+# Under --api pulse, EverParse.h is not copied from the prelude at the start of
 # the pipeline: KaRaMeL emits it, carrying the bundled runtime, at the same
 # time as the generated .c files. The wrapper headers include it, so it has
 # to be an explicit prerequisite here, or a parallel build races.

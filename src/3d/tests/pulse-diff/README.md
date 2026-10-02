@@ -1,7 +1,7 @@
 # Low\* vs. Pulse differential test
 
 3D has two code-generation backends: the original Low\* one (`src/3d/prelude/`)
-and the Pulse one (`lib/everparse/3d/`, selected with `3d --pulse`). They share
+and the Pulse one (`lib/everparse/3d/`, selected with `3d --api pulse`). They share
 only the frontend; the validators they emit are produced by entirely separate
 verified preludes. They are nevertheless supposed to be *behaviourally
 identical*.

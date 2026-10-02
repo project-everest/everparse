@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-/* Under --pulse a copy buffer is the buffer backend's input buffer itself,
+/* Under --api pulse a copy buffer is the buffer backend's input buffer itself,
    passed by value: a base pointer, a length and a position cell. */
 
 void SpecializeVLArrayEverParseError(char *StructName, char *FieldName, char *Reason) {

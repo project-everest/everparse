@@ -1,7 +1,7 @@
 # Pulse variant of src/3d/tests.
 #
 # Same .3d inputs, but generated against the Pulse combinator backend
-# (lib/everparse/3d) with --pulse, and verified with F*.
+# (lib/everparse/3d) with --api pulse, and verified with F*.
 #
 # --batch runs the whole pipeline: generation, F* verification, F* extraction
 # to .krml and KaRaMeL extraction to C. The generated C is then compiled with
@@ -18,8 +18,9 @@ endif
 export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
+PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
 
 CC ?= cc
 CXX ?= c++
@@ -69,7 +70,7 @@ negative_tests := $(wildcard FAIL*.3d)
 interpretable_tests := $(filter-out $(wildcard FAIL*.3d) $(addsuffix .3d,$(exclude_modules)),$(wildcard *.3d))
 
 # Tests whose generated code does not yet survive KaRaMeL extraction under
-# --pulse. They still go through generation and F* verification, but not the C
+# --api pulse. They still go through generation and F* verification, but not the C
 # stages. (Currently empty: all tests extract.)
 no_extract_tests :=
 
@@ -101,7 +102,14 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 	pulse-batch-interpret-test pulse-subdirs \
 	pulse-reserved-module-name-test
 
-# Subdirectories with their own build. Only those already ported to --pulse are
+all: api-option-test
+
+api-option-test:
+	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/3d.exe" "$(FSTAR_EXE)"
+
+.PHONY: api-option-test
+
+# Subdirectories with their own build. Only those already ported to --api pulse are
 # listed; the rest were copied from src/3d/tests and still drive the Low*
 # backend, so building them here would prove nothing.
 #
@@ -212,7 +220,7 @@ pulse-batch-interpret-test:
 	$(CXX) -o test-cpp-interpret.pulse.exe -I $(INTERPRET_DIR) test.cpp $(addprefix $(INTERPRET_DIR)/, ArithmeticWrapper.o Arithmetic.o)
 	./test-cpp-interpret.pulse.exe
 
-# Build and link the C++ ELF test driver against the --pulse-generated ELF
+# Build and link the C++ ELF test driver against the --api pulse-generated ELF
 # parser. As in src/3d/tests, it is not run: it needs an ELF file to read.
 elf-test: ELF.3d
 	mkdir -p $(ELF_DIR)
@@ -234,7 +242,7 @@ echo-out-files:
 
 .PHONY: echo-clean-out-files echo-out-files
 
-# Compile-time comments must survive extraction. Under --pulse they go through
+# Compile-time comments must survive extraction. Under --api pulse they go through
 # Pulse.Lib.Comment, which KaRaMeL renders as EComment/EStandaloneComment; while
 # Pulse had no comment support they were silently dropped, and nothing here
 # noticed, because every other Comments.3d test only compares hashes of the .3d
@@ -284,7 +292,7 @@ pulse-inplace-hash-test:
 	$(3D) --odir $(INPLACE_DIR) --batch --check_hashes inplace Comments.3d
 	$(3D) --check_inplace_hash Comments.3d=$(INPLACE_DIR)/Comments.h
 
-# Z3-based test-case generation against the --pulse backend. The SMT half is
+# Z3-based test-case generation against the --api pulse backend. The SMT half is
 # backend-independent -- it runs on the InterpreterTarget AST -- so this
 # exercises the generated C harness: the Pulse validators return a uint8_t
 # status and report the consumed length through a size_t* position, and their
@@ -316,7 +324,7 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
 # TEMPORARY, to be removed together with the frontend check it exercises: see
 # the comment on check_no_reserved_module_name in src/3d/Main.fst. A module
-# named C must be rejected up front under --pulse, rather than reaching KaRaMeL
+# named C must be rejected up front under --api pulse, rather than reaching KaRaMeL
 # and failing there with an unintelligible message about C._zero_for_deref.
 # This cannot be expressed as a FAIL*.3d negative test, because the whole point
 # is the module name. It is also deliberately absent from src/3d/tests: the

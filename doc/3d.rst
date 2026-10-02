@@ -53,7 +53,7 @@ Then, EverParse/3d produces:
   helpers for the implementation of verified validators, common to
   ``MyFile1.3d`` and ``MyFile2.3d``
 
-* with ``--pulse``, two additional headers, ``EverParsePulse.h`` and
+* with ``--api pulse``, two additional headers, ``EverParsePulse.h`` and
   ``EverParsePulseEndianness.h``, which play the same role for the Pulse
   backend
 
@@ -250,16 +250,27 @@ Options are treated from left to right:
   the package. Otherwise, the default is to use the ``fstar.exe``
   found from the ``PATH``.
   
-* ``--pulse``
+* ``--api legacy_lowstar|pulse``
 
-  Generates the verified validators with the Pulse backend instead of the
-  default Low\* backend. The entrypoint API in ``<Mod>Wrapper.h`` is
+  Selects the implementation and public C API. ``legacy_lowstar`` is the
+  default and uses the original Low\* implementation; explicitly selecting
+  it is equivalent to omitting ``--api``. ``pulse`` generates the verified
+  validators with the Pulse backend. The entrypoint API in ``<Mod>Wrapper.h`` is
   unchanged, so client code that only calls the entrypoints ports over
-  unchanged; but the error-code constants, the error-handler signature,
-  the copy-buffer projections and the ``--input_stream`` client primitives
-  all differ. See the *Pulse backend primitives* part of
+  unchanged; but the validator result representation, the error-handler
+  signature, the copy-buffer projections and the ``--input_stream`` client
+  primitives differ. Named error kinds use the same numbers in both APIs.
+  See the *Pulse backend primitives* part of
   ``--input_stream`` below, and, in the :ref:`3d language reference
   <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
+
+  This replaces the former ``--pulse`` switch, which is no longer accepted.
+  ``--no_api`` resets the selection to ``legacy_lowstar``. Other API names,
+  including the proposed ``lowstar`` mode, are not yet supported.
+
+  Generated Makefile commands retain the selected API. Hash checks also
+  distinguish the two APIs: existing Low\* hashes remain valid, but Pulse
+  outputs generated with the former switch must be regenerated.
 
 * ``--complete_wrappers``
 
@@ -301,7 +312,7 @@ Options are treated from left to right:
   reference <Complete_Wrappers>`.
 
   This option works with both backends, and in particular is compatible
-  with ``--pulse``. It is, however, only meaningful with ``--input_stream
+  with ``--api pulse``. It is, however, only meaningful with ``--input_stream
   buffer`` (the default): with ``extern`` or ``static`` the wrapper is
   handed an opaque stream rather than a byte array and a length, so it has
   no notion of the end of the input, and the option has no effect.
@@ -398,9 +409,9 @@ Options are treated from left to right:
     type for the context used for error handling (see "Error handling"
     in the 3d language reference.)
 
-    **Pulse backend primitives** (with ``--pulse``)
+    **Pulse backend primitives** (with ``--api pulse``)
 
-    With ``--pulse``, none of the primitives above are used. The
+    With ``--api pulse``, none of the primitives above are used. The
     ``extern`` and ``static`` input streams instead require the
     following set. As in Low\*, each one receives the
     ``EVERPARSE_EXTRA_T`` context that was passed to the validator, but
@@ -424,7 +435,7 @@ Options are treated from left to right:
     ``static inline`` rather than ``extern``, except
     ``EverParseNullPtr``; see the ``static`` bullet below.
     ``share/everparse/tests/3d/static`` is a worked example, and the
-    ``EverParse.h`` that ``--pulse`` copies into the output directory is
+    ``EverParse.h`` that ``--api pulse`` copies into the output directory is
     the authoritative declaration of this set.
 
     ``EverParseStreamGetPosition(base)`` returns the *absolute*
@@ -485,7 +496,7 @@ Options are treated from left to right:
 
     Finally, and exactly as in Low\*, the client supplies the two
     wrapper-level callbacks below. These are common to both backends,
-    and their signatures are unchanged by ``--pulse``:
+    and their signatures are unchanged by ``--api pulse``:
 
     .. code-block:: c
 
@@ -543,7 +554,7 @@ Options are treated from left to right:
   ``src/3d/prelude/<input_stream_format>`` of the EverParse binary
   package or repository; this directory contains the ``EverParse.h``
   corresponding to the input stream format given by ``--input_stream``
-  (with ``--pulse``, ``EverParse.h`` is copied into the output
+  (with ``--api pulse``, ``EverParse.h`` is copied into the output
   directory instead, and ``src/3d/prelude`` is not used at all).
 
 * ``--input_stream_include myinclude.h``

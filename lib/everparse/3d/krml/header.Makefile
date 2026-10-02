@@ -1,7 +1,7 @@
 # Pre-generation of the Pulse runtime header, EverParse.h, one per input stream
 # backend.
 #
-# `3d.exe --pulse` used to rebuild this header on every invocation, bundling the
+# `3d.exe --api pulse` used to rebuild this header on every invocation, bundling the
 # whole runtime into the client's output directory with -static-header. That is
 # wasteful, because the result does not depend on the .3d input at all: it is
 # the fixed prelude (error codes, EverParseIsRangeOkay, the bitfield accessors)

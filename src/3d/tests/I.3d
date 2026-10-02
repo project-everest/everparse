@@ -6,7 +6,7 @@
 // from the interface is invisible to F*'s dependency analysis, which then
 // resolved `I.` against this module and reported a recursive dependency
 // (Error 308) -- so `I.3d` compiled with the Low* backend but not with
-// --pulse.
+// --api pulse.
 
 entrypoint
 typedef struct _I

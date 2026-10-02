@@ -144,14 +144,14 @@ There can be multiple definitions marked ``entrypoint`` in a given
 .. note::
 
   The entrypoint API described here is the same under both backends:
-  ``3d --pulse`` generates a ``ModuleWrapper.h`` declaring the very same
+  ``3d --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
 
-  Three things do differ. ``ModuleWrapper.h`` includes
-  ``EverParsePulseEndianness.h`` instead of ``EverParseEndianness.h``, and
-  its ``EVERPARSE_ERROR_*`` constants are numbered differently (see
-  :ref:`sec-error-handling-pulse`). ``3d --pulse`` accordingly writes two
+  ``ModuleWrapper.h`` includes ``EverParsePulseEndianness.h`` instead of
+  ``EverParseEndianness.h``; its named ``EVERPARSE_ERROR_*`` kinds use the
+  same numbers (see :ref:`sec-error-handling-pulse`).
+  ``3d --api pulse`` accordingly writes two
   extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
   into the output directory alongside the ones listed above. Finally, the
   client primitives that ``--input_stream`` and ``extern`` specifications
@@ -1044,7 +1044,7 @@ That is, the client code can choose any definition for
 ``EVERPARSE_COPY_BUFFER_T`` (since it is just a ``void*``), so long as it can
 also provide two functions: ``EverParseStreamOf`` to extract a buffer of bytes
 from a ``EVERPARSE_COPY_BUFFER_T``; and ``EverParseStreamLen`` to extract the
-length of the buffer. (Under ``--pulse``, a third function is needed, and
+length of the buffer. (Under ``--api pulse``, a third function is needed, and
 ``EverParseStreamLen`` has a different return type; see
 :ref:`sec-probing-pulse`.)
 
@@ -1480,8 +1480,8 @@ containing pointers.
 
 .. _sec-probing-pulse:
 
-Probing under ``--pulse``
-.........................
+Probing under ``--api pulse``
+.............................
 
 Everything above carries over to the Pulse backend unchanged: the
 ``Probe_ExternalAPI.h`` callbacks (``ProbeAndCopy``, ``ProbeInit``, the
@@ -1493,9 +1493,9 @@ addresses and sizes remain ``uint64_t`` in particular.
 .. note::
 
   Probing itself is, however, supported only with ``--input_stream buffer``
-  (the default) under ``--pulse``. A ``probe`` declaration combined with
+  (the default) under ``--api pulse``. A ``probe`` declaration combined with
   ``--input_stream extern`` or ``--input_stream static`` is rejected with
-  *"Probes are only supported by the buffer backend under --pulse"*. The
+  *"Probes are only supported by the buffer backend under --api pulse"*. The
   default backend has no such restriction.
 
   ``EVERPARSE_COPY_BUFFER_T`` on its own --- as a type parameter, or as the
@@ -1503,7 +1503,7 @@ addresses and sizes remain ``uint64_t`` in particular.
   every ``--input_stream`` binding on both backends.
 
 What changes is the small set of projections the client provides on
-``EVERPARSE_COPY_BUFFER_T``. Under ``--pulse``, ``EverParse.h`` declares:
+``EVERPARSE_COPY_BUFFER_T``. Under ``--api pulse``, ``EverParse.h`` declares:
 
 .. code-block:: c
 
@@ -2135,9 +2135,9 @@ EverParse also emits this type as a public ``EVERPARSE_ERROR_HANDLER``
 typedef in the generated ``EverParse.h``, under both backends, and the
 generated validator prototypes in ``<Mod>.h`` name that typedef.
 
-The signature above, and the error codes listed below, are those of the
-default, Low\* backend. Both differ under ``--pulse``; see
-:ref:`sec-error-handling-pulse` for the details.
+The signature above, and the error codes listed below, describe the
+default, Low\* backend. Under ``--api pulse`` the signature differs but the
+named error kinds retain the same numbers; see :ref:`sec-error-handling-pulse`.
 
 Every EverParse validator is parameterized by:
 
@@ -2203,8 +2203,8 @@ deepest validation failure that occurred.
 
 .. _sec-error-handling-pulse:
 
-Error handling under ``--pulse``
-................................
+Error handling under ``--api pulse``
+....................................
 
 The Pulse backend keeps the whole of the design above: the same
 ``EVERPARSE_ERROR_HANDLER`` typedef in ``EverParse.h``, the same
@@ -2214,7 +2214,7 @@ The Pulse backend keeps the whole of the design above: the same
 the same stack trace of enclosing types. What changes is the handler's
 argument list and the width of the error code, not its kind number.
 
-**The handler signature.** Under ``--pulse`` the handler takes nine
+**The handler signature.** Under ``--api pulse`` the handler takes nine
 arguments rather than seven, because the input stream is passed as its
 constituent parts rather than as a single ``EVERPARSE_INPUT_BUFFER``. With
 the default ``--input_stream buffer``:
@@ -2258,7 +2258,7 @@ Three points deserve attention:
     a handler should report.
 
 **The error codes.** ``<Mod>Wrapper.h`` defines ``EVERPARSE_ERROR_*``
-constants under ``--pulse`` with the same kind numbers as Low*.
+constants under ``--api pulse`` with the same kind numbers as Low*.
 The validator still returns a byte, not a packed position/error value.
 The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
@@ -2273,7 +2273,7 @@ The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
 In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
-``--pulse``. Client code that compares ``ErrorCode`` against these macros
+``--api pulse``. Client code that compares ``ErrorCode`` against these macros
 ports unchanged between the two backends. Earlier Pulse releases used 1
 for action failure and 5, 6, 7 for constraint, padding, and probe failures.
 Clients that hardcoded those Pulse-specific numbers must update them;
@@ -2915,4 +2915,3 @@ The actual validator implementation is generated in ``ELF.c``. To
 integrate these validators into existing C code, drop in these
 generated ``.c`` and ``.h`` files
 in the development and invoke ```ElfCheckElf`` as necessary.
-

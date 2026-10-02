@@ -1,5 +1,13 @@
 module HashingOptions
 
+type api_t =
+  | ApiLegacyLowstar
+  | ApiPulse
+
+let string_of_api = function
+  | ApiLegacyLowstar -> "legacy_lowstar"
+  | ApiPulse -> "pulse"
+
 type check_hashes_t = | WeakHashes | StrongHashes | InplaceHashes
 
 let is_weak = function

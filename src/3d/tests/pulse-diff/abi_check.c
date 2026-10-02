@@ -7,7 +7,7 @@
    `-no-inline-type-abbrev EverParse3d.Actions.Common.error_handler` preserves
    it and `-fmicrosoft` uppercases it.
 
-   Under `--pulse` the abbreviation is parameterized by the input stream types
+   Under `--api pulse` the abbreviation is parameterized by the input stream types
    (the Pulse prelude is built once and instantiated through a typeclass) and
    KaRaMeL has no parameterized typedefs, so it is inlined at every use site
    and the generated prototypes spell the function-pointer type out in full.
