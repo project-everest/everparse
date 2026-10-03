@@ -52,10 +52,12 @@ KRML_OPTS += -warn-error @4@6
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 # internal/COSE_Format.h is unavoidable because Pulse.Lib.Slice.len is used in both COSE.Format and COSE.EverCrypt
-# internal/fstar.h carries the externs (EverCrypt, the CBOR serializer helpers)
-# that the [fstar] bundle collects.
+# The [fstar] bundle used to collect the externs (EverCrypt, the CBOR
+# serializer helpers) into internal/fstar.h.  Custard emits each of them in
+# the file of the module that declares it, so the bundle is empty now and
+# karamel writes no such header: the externs are declared where they are used.
 BASE_C_FILES=COSE_EverCrypt.c COSE_EverCrypt.h COSE_Format.c COSE_Format.h CBORDetAPI.h
-INTERNAL_C_FILES=COSE_Format.h fstar.h
+INTERNAL_C_FILES=COSE_Format.h
 C_FILES=$(BASE_C_FILES) $(addprefix internal/,$(INTERNAL_C_FILES))
 
 .PHONY: extract-krml
