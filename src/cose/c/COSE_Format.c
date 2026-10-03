@@ -12294,15 +12294,6 @@ COSE_Format_empty_or_serialized_map_left(COSE_Format_empty_or_serialized_map x8)
   }
 }
 
-static cbor_det_t
-fst__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t(
-  FStar_Pervasives_Native_tuple2__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice__uint8_t
-  x
-)
-{
-  return x._1;
-}
-
 /**
 Parser for empty_or_serialized_map
 */
@@ -12397,8 +12388,7 @@ COSE_Format_empty_or_serialized_map COSE_Format_parse_empty_or_serialized_map(cb
     }
     COSE_Format_header_map ite;
     if (scrut0.tag == FStar_Pervasives_Native_Some)
-      ite =
-        COSE_Format_parse_header_map(fst__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t(scrut0.v));
+      ite = COSE_Format_parse_header_map(scrut0.v._1);
     else
       ite =
         KRML_EABORT(COSE_Format_header_map,
