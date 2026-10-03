@@ -450,7 +450,8 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
         (* Probes are supported for the `buffer` backend only, so the probe
            monad's type class instances are always the buffer ones. *)
         Printf.sprintf
-          "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer unit true false %s)"
+          "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer unit true false %s)"
+          (Options.pulse_inst ())
           ueh
       else
         Printf.sprintf "(probe_m_unit %s)" ueh
@@ -464,7 +465,12 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
          `EverParse3d.CopyBuffer.Buffer` names), so going through `B` would
          make any mention of EVERPARSE_COPY_BUFFER_T fail to resolve under
          --input_stream extern/static, even when no probe is involved. *)
-      "EverParse3d.CopyBuffer.Buffer.copy_buffer_t"
+      (if Options.get_api () = HashingOptions.ApiLowstar
+       then
+         if HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+         then "EverParse3d.CopyBuffer.LowstarBuffer.copy_buffer_t"
+         else "EverParse3d.CopyBuffer.LowstarExtern.copy_buffer_t"
+       else "EverParse3d.CopyBuffer.Buffer.copy_buffer_t")
     else
     let hd' =
       if hd.v = Ast.to_ident' "void"
@@ -2114,7 +2120,8 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      `val`; spell them out. Probes are supported for the `buffer` backend only. *)
   let probe_inst_args =
     if Options.uses_pulse_backend ()
-    then " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer"
+    then Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
+      (Options.pulse_inst ())
     else ""
   in
   let s = String.concat "" (ds |> List.map (fun d ->

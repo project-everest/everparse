@@ -3,10 +3,12 @@ module HashingOptions
 type api_t =
   | ApiLegacyLowstar
   | ApiPulse
+  | ApiLowstar
 
 let string_of_api = function
   | ApiLegacyLowstar -> "legacy_lowstar"
   | ApiPulse -> "pulse"
+  | ApiLowstar -> "lowstar"
 
 type check_hashes_t = | WeakHashes | StrongHashes | InplaceHashes
 
@@ -20,6 +22,7 @@ type micro_step_t =
   | MicroStepExtract
   | MicroStepCopyClangFormat
   | MicroStepCopyEverParseH
+  | MicroStepCopyPulseInternalH
   | MicroStepEmitConfig
   | MicroStepSaveHashes
   

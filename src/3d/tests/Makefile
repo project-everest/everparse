@@ -42,6 +42,7 @@ clean_out_files=\
 	$(modules_auto_static_assertions) \
 	$(addsuffix .h,$(modules_or_wrappers)) \
 	$(module_extern_apis)
+clean_out_files += $(EXTRA_CLEAN_OUT_FILES)
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
@@ -252,6 +253,11 @@ clean-files:
 clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean specialize_tagged_union_array.clean save_hashes.clean
 
 clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean pulse-diff.clean
-clean: check_complete.clean
+clean: check_complete.clean pulse-lowstar-diff-tests.clean
+
+pulse-lowstar-diff-tests.clean:
+	+$(MAKE) -C pulse-lowstar-diff-tests clean
+
+.PHONY: pulse-lowstar-diff-tests.clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs

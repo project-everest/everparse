@@ -15,6 +15,13 @@ module PR = Pulse.Lib.Reference
 assume val sizet_to_uint64_exact (x: SZ.t)
   : Lemma (ensures U64.v (SZ.sizet_to_uint64 x) == SZ.v x)
 
+inline_for_extraction
+let native_scan_to_u64 (x: SZ.t)
+  : Pure U64.t
+    (requires True)
+    (ensures fun y -> U64.v y == SZ.v x)
+  = sizet_to_uint64_exact x; SZ.sizet_to_uint64 x
+
 let seq_is_suffix_of (#t: Type) (small large: Seq.seq t) : Tot prop =
     Seq.length small <= Seq.length large /\
     Seq.slice large (Seq.length large - Seq.length small) (Seq.length large) `Seq.equal` small
@@ -137,6 +144,31 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   [@@@FStar.Tactics.Typeclasses.no_method]
   extra_t: Type0;
 
+  (* Only non-consuming lookahead and its committing skip use this policy.
+     Leaf widths, has, and truncation remain SizeT. Native backends use SizeT;
+     a stream whose lookahead can exceed SIZE_MAX can instead use UInt64. *)
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  scan_t: Type0;
+
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  scan_v: scan_t -> GTot nat;
+
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  scan_fits: nat -> Tot prop;
+
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  scan_zero: x:scan_t{scan_v x == 0};
+
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  scan_add: x:scan_t -> n:SZ.t -> Pure scan_t
+    (requires scan_fits (scan_v x + SZ.v n))
+    (ensures fun y -> scan_v y == scan_v x + SZ.v n);
+
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  scan_to_u64: x:scan_t -> Pure U64.t
+    (requires True)
+    (ensures fun y -> U64.v y == scan_v x);
+
   pts_to_is_suffix_of:
     (base: base_t) ->
     (len: len_t) ->
@@ -184,7 +216,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   (* [has_at base len pos off n] tests whether [n] bytes are available
      starting [off] bytes after the current position, without consuming
      anything. This is what the "no read" (non-consuming) validators need,
-     since they track their position in a separate [SZ.t] reference.
+     since they track their position in a separate [scan_t] reference.
 
      [off] is *relative* to the current position. It carries no precondition:
      on the extern/static backends [has_at] is a client-provided C primitive,
@@ -220,7 +252,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
-    (off: SZ.t) ->
+    (off: scan_t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
@@ -230,9 +262,9 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     ))
     (ensures (fun res ->
       pts_to base len pos contents v ** pure (
-      SZ.v off <= Seq.length v ==> (
-        (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-        (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+      scan_v off <= Seq.length v ==> (
+        (res == true <==> scan_v off + SZ.v n <= Seq.length v) /\
+        (res == true ==> scan_fits (scan_v off + SZ.v n))
       )
     )));
 
@@ -269,18 +301,18 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
-    (n: SZ.t) ->
+    (n: scan_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt unit
     (requires (
       pts_to base len pos contents v ** pure (
-      Seq.length v >= SZ.v n
+      Seq.length v >= scan_v n
     )))
     (ensures (fun _ -> exists* v' .
       pts_to base len pos contents v' ** pure (
-      Seq.length v >= SZ.v n /\
-      v' `Seq.equal` Seq.slice v (SZ.v n) (Seq.length v)
+      Seq.length v >= scan_v n /\
+      v' `Seq.equal` Seq.slice v (scan_v n) (Seq.length v)
     )));
   
   empty:
@@ -290,14 +322,12 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     (pos: pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt SZ.t
+    stt unit
     (requires (
       pts_to base len pos contents v
     ))
-    (ensures (fun res ->
-      pts_to base len pos contents Seq.empty ** pure (
-      SZ.v res == Seq.length v
-    )));
+    (ensures (fun _ ->
+      pts_to base len pos contents Seq.empty));
 
   (* [truncate] conceptually returns a whole (base, len, pos) triple, but
      returning one would extract to a C struct that KaRaMeL monomorphizes into

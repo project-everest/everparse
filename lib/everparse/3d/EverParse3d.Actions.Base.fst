@@ -118,18 +118,18 @@ let validate_with_action_no_read
   (sl_base: base_t) ->
   (sl_len: len_t) ->
   (sl_pos: pos_t) ->
-  (pos: ref SZ.t) ->
+  (pos: ref inst.scan_t) ->
   (extra: forevery_values extra_state) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
-  (v_pos: Ghost.erased SZ.t) ->
+  (v_pos: Ghost.erased inst.scan_t) ->
   stt U8.t
   (requires exists* v_ctxt .
     pts_to ctxt v_ctxt **
     I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** // necessary for actions and the error handler
     pts_to pos v_pos **
     forevery_state extra_state extra **
-    pure (SZ.v v_pos <= Seq.length v_sl)
+    pure (inst.scan_v v_pos <= Seq.length v_sl)
   )
   (ensures fun res -> exists* v_ctxt' extra' v_pos' .
     pts_to ctxt v_ctxt' **
@@ -137,12 +137,12 @@ let validate_with_action_no_read
     pts_to pos v_pos' **
     forevery_state extra_state extra' **
     pure (
-      SZ.v v_pos <= Seq.length v_sl /\ (
-      let pp = LP.parse p (Seq.slice v_sl (SZ.v v_pos) (Seq.length v_sl)) in
+      inst.scan_v v_pos <= Seq.length v_sl /\ (
+      let pp = LP.parse p (Seq.slice v_sl (inst.scan_v v_pos) (Seq.length v_sl)) in
       (res == validator_error_action_failed ==> has_action) /\
       (not has_action ==> extra' == extra) /\
       (is_validation_error res ==> None? pp) /\
-      (res == validator_success ==> (Some? pp /\ SZ.v v_pos' == SZ.v v_pos + snd (Some?.v pp)))
+      (res == validator_success ==> (Some? pp /\ inst.scan_v v_pos' == inst.scan_v v_pos + snd (Some?.v pp)))
   )))
 
 inline_for_extraction noextract
@@ -449,7 +449,7 @@ fn validate_dep_pair_with_refinement_and_action'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   let [@@@rename_let ("fieldStart" ^ name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
@@ -603,7 +603,7 @@ fn validate_filter
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
@@ -658,7 +658,7 @@ fn validate_filter_with_action
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
   let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
@@ -1175,7 +1175,7 @@ fn validate_t_at_most
     let res = v ctxt error_handler_fn tb tl tp extra _ _;
     if (res = validator_success) {
       with v1'. assert (I.pts_to tb tl tp contents1 v1');
-      let unused = I.empty tb tl tp contents1 v1';
+      I.empty tb tl tp contents1 v1';
       seq_empty_is_suffix_of v1;
       seq_is_suffix_of_append (Seq.empty #LP.byte) v1 v2;
       I.untruncate tb tl tp sl_base sl_len sl_pos contents1 (Seq.empty #LP.byte) contents_sl v2;
@@ -1803,7 +1803,7 @@ fn validate_dep_pair
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
@@ -1853,7 +1853,7 @@ fn validate_dep_pair_with_action
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
   let field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let val_key = r1 sl_base sl_len sl_pos _ _;
@@ -1908,7 +1908,7 @@ fn validate_dep_pair_with_refinement'
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
@@ -2044,7 +2044,7 @@ fn validate_with_dep_action
   (v_sl: _)
 {
   let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res = validator_success) {
     let [@@@rename_let name] field_value = r sl_base sl_len sl_pos _ _;
@@ -2102,7 +2102,7 @@ fn validate_total_constant_size_no_read
   let p0 = !pos;
   let hasBytes = I.has_at sl_base sl_len sl_pos p0 sz contents_sl v_sl;
   if (hasBytes) {
-    pos := SZ.add p0 sz;
+    pos := inst.scan_add p0 sz;
     validator_success
   } else {
     validator_error_not_enough_data
@@ -2330,7 +2330,7 @@ fn validate_all_bytes
   (contents_sl: _)
   (v_sl: _)
 {
-  let ignored = I.empty sl_base sl_len sl_pos contents_sl v_sl;
+  I.empty sl_base sl_len sl_pos contents_sl v_sl;
   seq_empty_is_suffix_of v_sl;
   Seq.lemma_eq_elim (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl) (Seq.length v_sl)) (Seq.empty #LP.byte);
   validator_success
@@ -2374,12 +2374,12 @@ fn validate_drop
   (contents_sl: _)
   (v_sl: _)
 {
-  let mut pos = 0sz;
-  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl 0sz;
+  let mut pos = inst.scan_zero;
+  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl inst.scan_zero;
   if (res = validator_success) {
     let consumed = !pos;
     I.skip sl_base sl_len sl_pos consumed contents_sl v_sl;
-    seq_slice_is_suffix_of v_sl (SZ.v consumed);
+    seq_slice_is_suffix_of v_sl (inst.scan_v consumed);
     validator_success
   } else {
     seq_is_suffix_of_refl (Ghost.reveal v_sl);
@@ -2755,7 +2755,7 @@ fn validate_list_up_to
   seq_is_suffix_of_refl (Ghost.reveal v_sl);
   let mut res = validator_success;
   let mut stop = false;
-  let mut pos = 0sz;
+  let mut pos = inst.scan_zero;
   while (not !stop)
   invariant exists* vres vstop vpos vcur v_ctxt' extra' .
     pts_to res vres **
@@ -2780,8 +2780,8 @@ fn validate_list_up_to
     with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
     with extra'. assert (forevery_state extra_state extra');
     LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf vcur;
-    pos := 0sz;
-    let r0 = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra' contents_sl vcur 0sz;
+    pos := inst.scan_zero;
+    let r0 = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra' contents_sl vcur inst.scan_zero;
     if (r0 = validator_success) {
       let x = r sl_base sl_len sl_pos contents_sl vcur;
       with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
@@ -2959,7 +2959,7 @@ fn validate_nlist_constant_size_mod_ko
   (v_sl: _)
   (v_pos: _)
 {
-  parse_nlist_size_not_multiple n n_is_const p (Seq.slice v_sl (SZ.v v_pos) (Seq.length v_sl));
+  parse_nlist_size_not_multiple n n_is_const p (Seq.slice v_sl (inst.scan_v v_pos) (Seq.length v_sl));
   validator_error_list_size_not_multiple
 }
 
@@ -3147,6 +3147,10 @@ fn action_field_ptr_after_with_setter
 
 #push-options "--z3rlimit 32"
 
+noextract
+let probe_validation_frame (d: state_dict) (ctxt: app_ctxt) =
+  exists* vc extra. pts_to ctxt vc ** forevery_state d extra
+
 inline_for_extraction noextract
 fn probe_then_validate
   (#base_t #len_t #pos_t: Type0)
@@ -3216,21 +3220,25 @@ fn probe_then_validate
     let b = PA.run_probe_m error_handler_macro m typename fieldname "probe" ctxt error_handler_fn src64 prep_dest_sz dest;
     with cd vd . assert (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
     if (b <> 0uL) {
-      (* Validate the probed bytes from the beginning of the copy buffer, as
-         the Low* interpreter does by passing the validator the position
-         `0uL`. Here the position belongs to the buffer, which is reused
-         across probe sites, so it has to be rewound explicitly. *)
       unfold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
-      CP.reset #_ #base_t #len_t #pos_t dest cd vd;
-      let res = v ctxt error_handler_fn
-        (CP.base_of #_ #base_t #len_t #pos_t dest)
-        (CP.len_of #_ #base_t #len_t #pos_t dest)
-        (CP.pos_of #_ #base_t #len_t #pos_t dest)
-        _ cd cd;
-      with vd' . assert (I.pts_to #base_t #len_t #pos_t
-              (CP.base_of #_ #base_t #len_t #pos_t dest)
-              (CP.len_of #_ #base_t #len_t #pos_t dest)
-              (CP.pos_of #_ #base_t #len_t #pos_t dest) cd vd');
+      rewrite (cb_inst.storage dest cd vd) as (cb_inst.storage dest cd cd);
+      fn body (base: base_t) (len: len_t) (pos: pos_t)
+      requires I.pts_to base len pos cd cd ** probe_validation_frame extra_state ctxt
+      returns res: U8.t
+      ensures exists* vd'. I.pts_to base len pos cd vd' ** probe_validation_frame extra_state ctxt
+      {
+        unfold (probe_validation_frame extra_state ctxt);
+        with extra. assert (forevery_state extra_state extra);
+        let res = v ctxt error_handler_fn base len pos extra cd cd;
+        fold (probe_validation_frame extra_state ctxt);
+        res
+      };
+      fold (probe_validation_frame extra_state ctxt);
+      // Apply the class method directly so extraction eliminates the callback.
+      let res = CP.with_view U8.t dest cd (probe_validation_frame extra_state ctxt)
+        (fun _ _ -> probe_validation_frame extra_state ctxt) body;
+      with vd' . assert (cb_inst.storage dest cd vd');
+      unfold (probe_validation_frame extra_state ctxt);
       fold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd');
       rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd')
         as (copy_buffer_state #_ #base_t #len_t #pos_t dest
@@ -3359,7 +3367,7 @@ fn validate_with_error_handler_no_read
   // starts at [get_position sl + !pos].
   let view_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let field_off = !pos;
-  let start_pos = U64.add_mod view_start (SZ.sizet_to_uint64 field_off);
+  let start_pos = U64.add_mod view_start (inst.scan_to_u64 field_off);
   let res = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos;
   if (res = validator_success) {
     res

@@ -52,6 +52,9 @@ inline_for_extraction
 instance input_stream_static : I.input_stream_inst base_t len_t pos_t =
   E.input_stream_extern
 
+(* Inherit the native SizeT scan policy and unit-returning high-level empty
+   adapter as well; the underlying client primitive signatures are unchanged. *)
+
 (* The error handler used when 3d is invoked with `--use_error_handler_macro`.
    Each backend provides its own; the 3D frontend passes the one matching the
    selected `--input_stream` to `validate_with_error_handler`. *)

@@ -250,7 +250,7 @@ Options are treated from left to right:
   the package. Otherwise, the default is to use the ``fstar.exe``
   found from the ``PATH``.
   
-* ``--api legacy_lowstar|pulse``
+* ``--api legacy_lowstar|pulse|lowstar``
 
   Selects the implementation and public C API. ``legacy_lowstar`` is the
   default and uses the original Low\* implementation; explicitly selecting
@@ -264,12 +264,22 @@ Options are treated from left to right:
   ``--input_stream`` below, and, in the :ref:`3d language reference
   <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
 
+  ``lowstar`` uses Pulse validators behind verified compatibility adapters,
+  preserving the original Low\* public C API: scalar buffer positions,
+  packed 64-bit validator results, error callbacks, copy-buffer projections,
+  and ``buffer``, ``extern`` and ``static`` input primitives. Existing Low\*
+  C clients need no signature changes. Private workers still use byte-sized
+  statuses and mutable cursors; they are not part of the public API.
+  ``EverParsePulseInternal.h`` supplies their separately named status helpers
+  without changing the packed constants in the public ``EverParse.h``.
+  This internal support header is emitted even with
+  ``--no_copy_everparse_h`` and must accompany the generated code.
+
   This replaces the former ``--pulse`` switch, which is no longer accepted.
-  ``--no_api`` resets the selection to ``legacy_lowstar``. Other API names,
-  including the proposed ``lowstar`` mode, are not yet supported.
+  ``--no_api`` resets the selection to ``legacy_lowstar``.
 
   Generated Makefile commands retain the selected API. Hash checks also
-  distinguish the two APIs: existing Low\* hashes remain valid, but Pulse
+  distinguish all three APIs: existing Low\* hashes remain valid, but Pulse
   outputs generated with the former switch must be regenerated.
 
 * ``--complete_wrappers``

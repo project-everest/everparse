@@ -143,7 +143,12 @@ There can be multiple definitions marked ``entrypoint`` in a given
 
 .. note::
 
-  The entrypoint API described here is the same under both backends:
+  ``3d --api lowstar`` uses verified Pulse adapters while preserving the
+  Low\* C API described here, including direct validator calls, packed
+  results, error callbacks, and copy-buffer projections. The original
+  implementation remains the default, ``--api legacy_lowstar``.
+
+  The entrypoint API is also the same under the native Pulse API:
   ``3d --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
@@ -1495,8 +1500,9 @@ addresses and sizes remain ``uint64_t`` in particular.
   Probing itself is, however, supported only with ``--input_stream buffer``
   (the default) under ``--api pulse``. A ``probe`` declaration combined with
   ``--input_stream extern`` or ``--input_stream static`` is rejected with
-  *"Probes are only supported by the buffer backend under --api pulse"*. The
-  default backend has no such restriction.
+  *"Probes are only supported by the buffer backend under --api pulse"*.
+  ``--api legacy_lowstar`` and ``--api lowstar`` have no such restriction
+  for field probes.
 
   ``EVERPARSE_COPY_BUFFER_T`` on its own --- as a type parameter, or as the
   parameter of an ``extern`` action --- is *not* restricted, and works with
@@ -2135,8 +2141,9 @@ EverParse also emits this type as a public ``EVERPARSE_ERROR_HANDLER``
 typedef in the generated ``EverParse.h``, under both backends, and the
 generated validator prototypes in ``<Mod>.h`` name that typedef.
 
-The signature above, and the error codes listed below, describe the
-default, Low\* backend. Under ``--api pulse`` the signature differs but the
+The signature above, and the error codes listed below, describe
+``--api legacy_lowstar`` and ``--api lowstar``. Under ``--api pulse`` the
+signature differs but the
 named error kinds retain the same numbers; see :ref:`sec-error-handling-pulse`.
 
 Every EverParse validator is parameterized by:

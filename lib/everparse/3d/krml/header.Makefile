@@ -127,9 +127,23 @@ endef
 
 $(foreach b,$(BACKENDS),$(eval $(call header_rule,$(b))))
 
-headers: $(foreach b,$(BACKENDS),$(b)/EverParse.h)
+lowstar/EverParsePulseInternal.h: $(KRML_FILES)
+	mkdir -p lowstar
+	$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir lowstar \
+	  -minimal -header $(DDD_HOME)/noheader.txt \
+	  -add-include '"EverParseEndianness.h"' \
+	  -static-header 'EverParse3d.ErrorCode' \
+	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -fno-shadow -fextern-c \
+	  -bundle 'EverParse3d.ErrorCode=EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]' \
+	  -bundle 'Prims,FStar.\*,LowStar.\*,LowParse.\*,EverParse3d.\*,Pulse.\*[rename=SHOULDNOTBETHERE]' \
+	  $(KRML_FILES)
+	test '!' -e lowstar/EverParsePulseInternal.c
+	test '!' -e lowstar/SHOULDNOTBETHERE.h
+	test '!' -d lowstar/internal
+
+headers: $(foreach b,$(BACKENDS),$(b)/EverParse.h) lowstar/EverParsePulseInternal.h
 
 .PHONY: all headers clean-headers
 
 clean-headers:
-	rm -rf $(BACKENDS)
+	rm -rf $(BACKENDS) lowstar

@@ -75,6 +75,7 @@ let get_micro_step _ =
   | Some "extract" -> Some MicroStepExtract
   | Some "copy_clang_format" -> Some MicroStepCopyClangFormat
   | Some "copy_everparse_h" -> Some MicroStepCopyEverParseH
+  | Some "copy_pulse_internal_h" -> Some MicroStepCopyPulseInternalH
   | Some "emit_config" -> Some MicroStepEmitConfig
   | Some "save_hashes" -> Some MicroStepSaveHashes
 
@@ -223,18 +224,21 @@ let get_use_error_handler_macro () : ML bool =
 let uses_pulse_backend () : ML bool =
   match get_api () with
   | ApiLegacyLowstar -> false
-  | ApiPulse -> true
+  | ApiPulse | ApiLowstar -> true
 
 let uses_pulse_api () : ML bool =
   match get_api () with
-  | ApiLegacyLowstar -> false
+  | ApiLegacyLowstar | ApiLowstar -> false
   | ApiPulse -> true
 
 let pulse_backend_module () : ML string =
-  match get_input_stream_binding () with
-  | HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.Buffer"
-  | HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.Extern"
-  | HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.Static"
+  match get_api (), get_input_stream_binding () with
+  | ApiLowstar, HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.LowstarBuffer"
+  | ApiLowstar, HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.LowstarExtern"
+  | ApiLowstar, HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.LowstarExtern"
+  | _, HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.Buffer"
+  | _, HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.Extern"
+  | _, HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.Static"
 
 let pulse_inst () : ML string =
   match get_input_stream_binding () with

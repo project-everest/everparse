@@ -19,6 +19,7 @@ let hash f opt_c =
   begin match Options.Base.get_api () with
   | ApiLegacyLowstar -> ()
   | ApiPulse -> hash_string h "--api pulse"
+  | ApiLowstar -> hash_string h "--api lowstar"
   end;
   hash_file h f;
   begin match opt_c with

@@ -37,6 +37,10 @@ let print_make_rule
   let pulse = api = HashingOptions.ApiPulse in
   let deps = match r.ty with
     | EverParse -> r.from @ [makefile]
+    | CC ->
+        if api = HashingOptions.ApiLowstar
+        then r.from @ [output_dir `OS.concat` "EverParsePulseInternal.h"]
+        else r.from
     | _ -> r.from
   in
   let rule = Printf.sprintf "%s : %s\n" (mk_rule_operand mtype r.to) (String.concat " " (List.Tot.map (mk_rule_operand mtype) deps)) in
@@ -545,7 +549,7 @@ let produce_everparse_h_rule
      (included by every <Mod>Wrapper.c). They need their own rules, otherwise
      make cannot repair them. The rules are chained so that a parallel make
      never runs the micro-step twice at once. *)
-  begin if Options.uses_pulse_backend ()
+  begin if Options.uses_pulse_api ()
   then [
     {
       ty = EverParse;
@@ -568,7 +572,7 @@ let produce_everparse_h_rule
          emits it, carrying the bundled runtime, at the same time as the .c
          files. So it is those, not EverParseEndianness.h, that it follows. *)
       from =
-        if Options.uses_pulse_backend ()
+        if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::
              mk_filename "EverParsePulseEndianness" "h" ::
              mk_filename "EverParseEndianness" "h" ::
@@ -628,6 +632,12 @@ let produce_makefile
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.module_name all_files in
   let rules =
+    (if Options.get_api () = HashingOptions.ApiLowstar then [{
+      ty = EverParse;
+      from = [];
+      to = mk_filename "EverParsePulseInternal" "h";
+      args = "--__micro_step copy_pulse_internal_h";
+    }] else []) `List.Tot.append`
     produce_everparse_h_rule everparse_h all_modules `List.Tot.append`
     produce_clang_format_rule clang_format copy_clang_format_opt `List.Tot.append`
     (if skip_o_rules then [] else
@@ -671,12 +681,15 @@ let write_makefile
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding (Options.get_api ()) makefile_final) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
+    let lowstar = Options.get_api () = HashingOptions.ApiLowstar in
     let ln =
+      (if ext = "h" && lowstar
+       then [mk_filename "EverParsePulseInternal" "h"] else []) `List.Tot.append`
       begin if ext = "h" && everparse_h
       then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"] `List.Tot.append`
            (* --api pulse additionally copies these two, and the generated C
               includes them, so they belong to the installable header set. *)
-           (if Options.uses_pulse_backend ()
+           (if Options.uses_pulse_api ()
             then [mk_filename "EverParsePulse" "h"; mk_filename "EverParsePulseEndianness" "h"]
             else [])
       else []
