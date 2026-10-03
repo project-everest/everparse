@@ -55,15 +55,7 @@ open ASN1.Spec.Interpreter
 let crl_parser = asn1_as_parser cRLCertificateList
 
 
-[@@normalize_for_extraction [delta;
-                             zeta;
-                             iota;
-                             primops]]
 let parse_crl (b:bytes) = crl_parser b
 
-[@@normalize_for_extraction [delta;
-                             zeta;
-                             iota;
-                             primops]]
 let dparse_crl (b:bytes) = dasn1_as_parser cRLCertificateList b
 

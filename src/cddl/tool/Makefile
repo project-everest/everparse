@@ -1,4 +1,4 @@
-all: build extraction-all
+all: build
 
 EVERPARSE_SRC_PATH := $(realpath ../..)
 include $(EVERPARSE_SRC_PATH)/windows.Makefile
@@ -7,7 +7,7 @@ INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec
 
 ALREADY_CACHED := *,-CDDL.Tool,
 
-clean_rules += c.clean rust.clean clean-ocaml clean-done
+clean_rules += clean-ocaml clean-done
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
@@ -29,21 +29,6 @@ $(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && dune install --prefix=$(EVERPARSE_SRC_PATH)/..
 
 .PHONY: all
-
-extraction-c: $(ALL_CHECKED_FILES)
-	$(MAKE) -f $@.Makefile
-
-extraction-rust: $(ALL_CHECKED_FILES)
-	$(MAKE) -f $@.Makefile
-
-extraction-all: extraction-c extraction-rust
-
-.PHONY: extraction extraction-c extraction-rust extraction-all
-
-%.clean:
-	rm -rf extraction-$(basename $@)
-
-.PHONY: %.clean
 
 clean-ocaml:
 	if which dune ; then cd ocaml && dune clean ; fi

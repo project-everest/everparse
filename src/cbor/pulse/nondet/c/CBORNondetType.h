@@ -9,13 +9,6 @@ extern "C" {
 
 #include "krmllib.h"
 
-typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
-{
-  uint8_t size;
-  uint64_t value;
-}
-CBOR_Spec_Raw_Base_raw_uint64;
-
 typedef struct CBOR_Pulse_Raw_Slice_byte_slice_s
 {
   uint8_t *elt;
@@ -30,12 +23,12 @@ typedef struct CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator_s
 }
 CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator;
 
-typedef struct cbor_serialized_s
+typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
 {
-  CBOR_Spec_Raw_Base_raw_uint64 cbor_serialized_header;
-  CBOR_Pulse_Raw_Slice_byte_slice cbor_serialized_payload;
+  uint8_t size;
+  uint64_t value;
 }
-cbor_serialized;
+CBOR_Spec_Raw_Base_raw_uint64;
 
 typedef struct cbor_int_s
 {
@@ -52,6 +45,13 @@ typedef struct cbor_string_s
   CBOR_Pulse_Raw_Slice_byte_slice cbor_string_ptr;
 }
 cbor_string;
+
+typedef struct cbor_serialized_s
+{
+  CBOR_Spec_Raw_Base_raw_uint64 cbor_serialized_header;
+  CBOR_Pulse_Raw_Slice_byte_slice cbor_serialized_payload;
+}
+cbor_serialized;
 
 typedef struct cbor_raw_s cbor_raw;
 
@@ -129,38 +129,34 @@ typedef struct cbor_map_entry_s
 }
 cbor_map_entry;
 
+typedef cbor_raw cbor_nondet_t;
+
 #define CBOR_Raw_Iterator_Slice 0
 #define CBOR_Raw_Iterator_Serialized 1
 
-typedef uint8_t cbor_array_iterator_tags;
+typedef uint8_t cbor_nondet_array_iterator_t_tags;
 
-typedef struct cbor_array_iterator_s
+typedef struct cbor_nondet_array_iterator_t_s
 {
-  cbor_array_iterator_tags tag;
+  cbor_nondet_array_iterator_t_tags tag;
   union {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw case_CBOR_Raw_Iterator_Slice;
     CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator case_CBOR_Raw_Iterator_Serialized;
   }
   ;
 }
-cbor_array_iterator;
+cbor_nondet_array_iterator_t;
 
-typedef struct cbor_map_iterator_s
+typedef struct cbor_nondet_map_iterator_t_s
 {
-  cbor_array_iterator_tags tag;
+  cbor_nondet_array_iterator_t_tags tag;
   union {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry case_CBOR_Raw_Iterator_Slice;
     CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator case_CBOR_Raw_Iterator_Serialized;
   }
   ;
 }
-cbor_map_iterator;
-
-typedef cbor_raw cbor_nondet_t;
-
-typedef cbor_array_iterator cbor_nondet_array_iterator_t;
-
-typedef cbor_map_iterator cbor_nondet_map_iterator_t;
+cbor_nondet_map_iterator_t;
 
 typedef cbor_map_entry cbor_nondet_map_entry_t;
 

@@ -10,3 +10,4 @@ opam.done
 FStar.done
 karamel.done
 hashes.lock
+.prebuilt

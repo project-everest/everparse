@@ -22,8 +22,24 @@ $(OUTPUT): ../cose-sign.cddl $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
 ALREADY_CACHED := *,-COSE,-Abort,-EverCrypt
 FSTAR_OPTIONS += --warn_error -342 # noextract
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 FSTAR_FILES := $(OUTPUT) $(wildcard *.fst *.fsti)
+
+# Whole-program extraction.  Every module a -bundle below names has to be a
+# root: a bundle is packaging, not reachability.  [Prims] and Custard's own
+# support modules join the [fstar] bundle, and the two abstract CBOR types are
+# declared external because the -add-include'd CBORDetType.h defines them.
+CUSTARD_BACKEND := KrmlC
+CUSTARD_ENTRY_MODULES := COSE.EverCrypt
+CUSTARD_ENTRY_MODULES += COSE.Format
+CUSTARD_ENTRY_MODULES += Abort
+CUSTARD_ENTRY_MODULES += EverCrypt.Ed25519
+CUSTARD_ENTRY_MODULES += CBOR.Spec.Constants
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Type
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.C
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Dummy
+CUSTARD_ROOTS := COSE.EverCrypt.fst
+CUSTARD_EXTERN_TYPES := CBOR.Pulse.API.Det.Type.cbor_det_t
+CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
 clean_rules += clean-output
 
@@ -36,23 +52,25 @@ KRML_OPTS += -warn-error @4@6
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 # internal/COSE_Format.h is unavoidable because Pulse.Lib.Slice.len is used in both COSE.Format and COSE.EverCrypt
+# internal/fstar.h carries the externs (EverCrypt, the CBOR serializer helpers)
+# that the [fstar] bundle collects.
 BASE_C_FILES=COSE_EverCrypt.c COSE_EverCrypt.h COSE_Format.c COSE_Format.h CBORDetAPI.h
-INTERNAL_C_FILES=COSE_Format.h
+INTERNAL_C_FILES=COSE_Format.h fstar.h
 C_FILES=$(BASE_C_FILES) $(addprefix internal/,$(INTERNAL_C_FILES))
 
 .PHONY: extract-krml
-extract-krml: $(ALL_KRML_FILES)
+extract-krml: $(CUSTARD_KRML)
 
 .PHONY: extract
-extract: extract-krml
-	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
+extract: $(CUSTARD_KRML)
+	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*,Prims,Custard.\*[rename=fstar]' \
 		-skip-makefiles \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+CBOR.Pulse.API.Det.Dummy=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
-		-skip-linking $(ALL_KRML_FILES) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
+		-skip-linking $(CUSTARD_KRML) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
 %.diff: extract
 	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)

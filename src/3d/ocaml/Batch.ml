@@ -131,10 +131,49 @@ let fstar_modul_of_filename fst =
   let basename = remove_extension (basename fst) in
   String.concat "." (List.map String.capitalize_ascii (String.split_on_char '.' basename))
 
+(* Custard is a whole-program extractor: it starts from the roots and follows
+   reachability, so each generated module's .krml holds not only that module
+   but everything it uses -- the EverParse3d runtime, LowParse, the Pulse
+   library. KaRaMeL then drops all of that again, because call_krml passes
+   `-library Prims,LowParse.\*,EverParse3d.\*,Pulse.\*`, leaving the `extern`
+   declarations that the shipped EverParse.h satisfies.
+
+   That detour is not waste, it is the point: the arity KaRaMeL sees for a
+   runtime primitive now comes from the same extractor that produced
+   EverParse.h. Mixing the two -- a Custard-extracted runtime with
+   old-extraction clients -- does not work, because they disagree about erased
+   arguments: `assume val stream_has_at (base: base_t) (pos: Ghost.erased
+   pos_t) ...` is a four-argument C function to Custard, which drops erased
+   arguments outright, and a seven-argument one to the old extractor, which
+   turns them into units for KaRaMeL to remove later.
+
+   `-o` restricts F* to a single file on the command line, which is exactly
+   what this per-module step passes.
+
+   The config module is rooted in every extraction, not just its own. Its
+   compile-time flags are `assume val`s, so a client only ever pulls in the
+   flags it happens to mention. KaRaMeL keeps a single copy of each file when
+   several .krml files describe it, so a client that uses no flag at all would
+   otherwise be free to shadow the complete version with an empty one. Rooting
+   the module everywhere makes all the copies identical. *)
 let fstar_extract_args krmllib input_stream_binding out_dir fst =
-  "--extract_module" :: fstar_modul_of_filename fst ::
-    "--codegen" :: "krml" ::
-      (list_snoc (fstar_args krmllib input_stream_binding out_dir) fst)
+  let modul = fstar_modul_of_filename fst in
+  let krml_file =
+    filename_concat out_dir
+      (Printf.sprintf "%s.krml" (String.concat "_" (String.split_on_char '.' modul)))
+  in
+  let config_entry_module =
+    match Options.config_module_name () with
+    | Some m when m <> modul -> ["--custard_entry_module"; m]
+    | _ -> []
+  in
+  "--codegen" :: "Custard" ::
+    "--custard_backend" :: "KrmlC" ::
+      "--custard_split" ::
+        "--custard_entry_module" :: modul ::
+          config_entry_module @
+          (list_snoc (list_snoc (fstar_args krmllib input_stream_binding out_dir) fst) "-o")
+          @ [krml_file]
 
 let extract_fst_file
   fstar_exe
@@ -282,6 +321,19 @@ let everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*"
    the bundle's pattern list and the -library list, which must agree: the
    pre-generated EverParse.h holds exactly what the bundle emits. *)
 let pulse_everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*"
+
+(* The same, plus Custard's bucket for monomorphized instances of polymorphic
+   definitions, which the Pulse runtime's whole-program extraction produces
+   (see lib/everparse/3d/krml/extract.Makefile). Those instances are private to
+   the bundle, so adding the pattern here keeps the reachable ones inlined into
+   the output and drops the rest; without it they are emitted as a file of
+   their own, holding spec-only declarations that do not compile.
+
+   It is deliberately not in pulse_everparse_only_bundle, because that list is
+   also the -library list: a library module is assumed rather than emitted, and
+   these instances have to be emitted. *)
+let pulse_everparse_only_bundle_sources =
+  pulse_everparse_only_bundle ^ ",Custard.\\*"
 
 let fstar_krmllib_bundle = "FStar.\\*,LowStar.\\*,C.\\*"
 
@@ -502,7 +554,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
     match Deps.get_config () with
     | None -> krml_args
     | Some (cfg, module_name) ->
-      let include_file = Printf.sprintf "\"%s\"" cfg.compile_time_flags.include_file in
+      let include_file = Printf.sprintf "\"%s\"" (Config.config_compile_time_flags cfg).include_file in
       "-no-prefix" :: module_name :: "-add-include" :: include_file  :: krml_args
   in
   krml_args
@@ -545,7 +597,7 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
         "-bundle" ;
         "Prims,FStar.\\*,LowStar.\\*[rename=SHOULDNOTBETHERE]";
         "-bundle" ;
-        Printf.sprintf "%s=%s[rename=EverParse,rename-prefix]" api pulse_everparse_only_bundle;
+        Printf.sprintf "%s=%s[rename=EverParse,rename-prefix]" api pulse_everparse_only_bundle_sources;
       ]
     else [
         "-bundle" ;

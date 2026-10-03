@@ -33,10 +33,6 @@ endif
   INCLUDE_PATHS+=$(CACHE_DIRECTORY)
 endif
 
-# Used only for OCaml extraction, not krml extraction
-# OCaml or Plugin
-FSTAR_ML_CODEGEN ?= OCaml
-
 # Uncomment the definition of PROFILE below, if you want some basic
 # profiling of F* runs It will report the time spent
 # on typechecking your file And the time spent in SMT, which is
@@ -107,14 +103,80 @@ verify: $(ALL_CHECKED_FILES)
 	@echo $(FSTAR_OPTIONS)
 
 # Extraction
+#
+# All code generation goes through Custard, F*'s whole-program extractor
+# (doc/ref/custard.md in the F* tree). Custard reads the checked files of the
+# entire program in one run, so there is one rule rather than one rule per
+# generated file, and its prerequisite is every .checked file: --dep describes
+# what the old per-module backends read, which does not pin down what a
+# whole-program extractor reads.
+#
+# The caller sets:
+#   CUSTARD_BACKEND       -- OCaml (default), FSharp, KrmlC or KrmlRust
+#   CUSTARD_ENTRY_MODULES -- modules every top-level definition of which is a
+#                            root of the extraction (what --extract_module was)
+#   CUSTARD_ENTRIES       -- individual roots, as dotted names
+#   CUSTARD_ROOTS         -- the F* files named on the command line
+#                            (default: $(FSTAR_FILES))
+#   CUSTARD_REALIZED_MODULES -- OCaml only: modules realized by a hand-written
+#                            .ml file of the same name
+# and may add flags through CUSTARD_FLAGS.
+#
+# Dead code elimination is by reachability from the roots, so a module that
+# nothing names and nothing reaches is not emitted at all; this is why every
+# backend below has to say what its public surface is.
 
-$(ALL_ML_FILES): %.ml:
-	$(FSTAR) $(subst .checked,,$(notdir $<)) --codegen $(FSTAR_ML_CODEGEN) --extract_module $(basename $(notdir $(subst .checked,,$<)))
+CUSTARD_BACKEND ?= OCaml
+CUSTARD_ROOTS ?= $(FSTAR_FILES)
 
-$(ALL_KRML_FILES): %.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
-	  --extract_module $(basename $(notdir $(subst .checked,,$<)))
-	touch -c $@
+CUSTARD_FLAGS += --codegen Custard --custard_backend $(CUSTARD_BACKEND)
+# One output file per F* source module. On the karamel backends that grouping
+# is what -bundle and -no-prefix select on; on OCaml it is what lets
+# hand-written .ml files sit beside the generated ones. The F# backend emits
+# one whole program and has no split.
+ifneq (FSharp,$(CUSTARD_BACKEND))
+CUSTARD_FLAGS += --custard_split
+endif
+CUSTARD_FLAGS += $(addprefix --custard_entry_module ,$(CUSTARD_ENTRY_MODULES))
+CUSTARD_FLAGS += $(addprefix --custard_entry ,$(CUSTARD_ENTRIES))
+CUSTARD_FLAGS += $(addprefix --custard_extern_type ,$(CUSTARD_EXTERN_TYPES))
+
+CUSTARD_OUTPUT_PREFIX := $(if $(OUTPUT_DIRECTORY),$(OUTPUT_DIRECTORY)/,)
+
+CUSTARD = $(RUNLIM) $(FSTAR_EXE) $(SIL) $(FSTAR_OPTIONS) $(CUSTARD_FLAGS)
+
+# The karamel backends write a single .krml holding one karamel file per F*
+# module; the others write into $(OUTPUT_DIRECTORY) and are tracked by a stamp.
+CUSTARD_KRML := $(CUSTARD_OUTPUT_PREFIX)Custard.krml
+CUSTARD_STAMP := $(CUSTARD_OUTPUT_PREFIX).custard.stamp
+
+# The makefiles are a prerequisite because the roots, the backend and the
+# extern types are given there: changing any of them changes the output.
+CUSTARD_MAKEFILES := $(filter-out $(FSTAR_DEP_FILE),$(MAKEFILE_LIST))
+
+$(CUSTARD_KRML): $(ALL_CHECKED_FILES) $(CUSTARD_MAKEFILES)
+	$(call msg, "CUSTARD", $(CUSTARD_BACKEND))
+	$(Q)$(CUSTARD) $(CUSTARD_ROOTS) -o $@
+
+$(CUSTARD_STAMP): $(ALL_CHECKED_FILES) $(CUSTARD_MAKEFILES)
+	$(call msg, "CUSTARD", $(CUSTARD_BACKEND))
+	rm -f $(CUSTARD_OUTPUT_PREFIX)*.ml
+	$(Q)$(CUSTARD) $(CUSTARD_ROOTS)
+# Custard's notion of a realized module (section 8.2) is a hard-coded list of
+# FStar.* modules, so an interface-only module of ours gets a file declaring
+# its abstract types, which the hand-written realization also declares. Every
+# value of such a module is an external, printed at its use sites and not
+# declared, so the file holds nothing but those types: dropping it leaves the
+# realization as the whole module. The check keeps that assumption honest.
+	$(Q)for m in $(CUSTARD_REALIZED_MODULES) ; do \
+	  f=$(CUSTARD_OUTPUT_PREFIX)$$m.ml ; \
+	  if grep -q '^\(let\|exception\)' $$f ; then \
+	    echo "$$f is not only type declarations: $$m cannot be realized by hand" ; \
+	    exit 1 ; \
+	  fi ; \
+	  rm -f $$f ; \
+	done
+	touch $@
 
 .PHONY: all verify %.fst-in %.fsti-in
 
@@ -138,7 +200,7 @@ clean-ml:
 ifneq (,$(OUTPUT_DIRECTORY))
 	rm -f $(OUTPUT_DIRECTORY)/*.ml
 endif
-	rm -f *.ml
+	rm -f *.ml $(CUSTARD_STAMP)
 
 .PHONY: clean-ml
 

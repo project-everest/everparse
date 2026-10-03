@@ -10,12 +10,9 @@
     fstar.lib
     process
     sha
-    yojson
-    ppx_deriving_yojson.runtime
     re
     sexplib
   )
-  (preprocess (pps ppx_deriving_yojson))
   (flags (:standard -w -8-9-11-26-27-33-39))
 )
 
