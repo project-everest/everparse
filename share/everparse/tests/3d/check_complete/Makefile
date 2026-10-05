@@ -1,4 +1,4 @@
-# Pulse counterpart of src/3d/tests/check_complete.
+# Pulse counterpart of share/everparse/tests/3d/lowstar/check_complete.
 #
 # 3D is invoked with --complete_wrappers, so that, next to the usual
 # `TestCheck<T>' wrappers, it also generates `TestCheckComplete<T>'

@@ -242,7 +242,7 @@ def cross_check(adir, aentries, bdir):
                             % (fn, a[fn], b[fn]))
     if problems:
         sys.exit('pulse-diff: the two test trees have drifted apart:\n%s\n'
-                 'The .3d sources under src/3d/tests and '
+                 'The .3d sources under share/everparse/tests/3d/lowstar and '
                  'share/everparse/tests/3d are meant to match; update the one '
                  'that is behind and regenerate.' % '\n'.join(problems))
 

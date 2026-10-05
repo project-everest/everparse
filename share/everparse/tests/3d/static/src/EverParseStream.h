@@ -31,7 +31,7 @@
    linking against it. That makes it the *client's* job to provide a definition
    in every translation unit, which is what `--input_stream_include` is for:
    this header is included into each generated .c file. As in the Low* static
-   test (src/3d/tests/static/src/EverParseStream.h), the real bodies stay in
+   test (share/everparse/tests/3d/lowstar/static/src/EverParseStream.h), the real bodies stay in
    EverParseStream.c under `_`-prefixed names and this header only adds thin
    `static inline` forwarders.
 

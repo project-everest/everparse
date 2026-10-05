@@ -1477,7 +1477,7 @@ An End-to-end Executable Example
 ................................
 
 A small but fully worked out example `is available in the EverParse repository
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/probe>`_.
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/probe>`_.
 
 It shows the use of multiple probe functions, linked with callbacks implemented
 in C, as well as a main C driver program that validates several example inputs
@@ -1814,7 +1814,7 @@ An End-to-end Executable Example
 
 A small but fully worked out example `of specialization is available in the
 EverParse repository
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test>`_.
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/specialize_test>`_.
 
 It shows an example similar to the one developed above, but linked with a main C
 program and test driver. It also illustrates the use of nullable pointers in
@@ -2015,11 +2015,11 @@ variable-length structures fit well with 3d's support for auto-specialization.
 
 A small but fully worked out example `of specialization with variable-length
 structures is available in the EverParse repository
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test2>`_, 
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/specialize_test2>`_,
 including a main file driving the generated code with test input.
 
 Another example, `with data dependent tagged unions
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_tagged_union_array>`_, 
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/specialize_tagged_union_array>`_,
 is also available.
 
 
@@ -2113,7 +2113,7 @@ using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
    :end-before: SNIPPET_END: Quad
 
 A commented example is available `in the EverParse repository
-<https://github.com/project-everest/everparse/blob/master/src/3d/tests/modules/>`_.
+<https://github.com/project-everest/everparse/blob/master/share/everparse/tests/3d/lowstar/modules/>`_.
 
 Error handling
 --------------
@@ -2301,7 +2301,7 @@ provides a good summary.
 
 Reproduced below is an ASCII depiction of the format of TCP
 headers. In this section, we show how to specify this format in
-3d. The full specification can be found `here <https://github.com/project-everest/everparse/tree/master/src/3d/tests/tcpip/TCP.3d>`_.
+3d. The full specification can be found `here <https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/tcpip/TCP.3d>`_.
 
 
 .. code-block:: text
@@ -2649,7 +2649,7 @@ In this section we develop (parts of) a 3d specification for 64-bits
 ELF files and describe how it can be integrated in existing projects
 for validating potentially untrusted ELF files. A complete ELF
 specification can be found in the `3d test suite
-<https://github.com/project-everest/everparse/blob/master/src/3d/tests/ELF.3d>`_.
+<https://github.com/project-everest/everparse/blob/master/share/everparse/tests/3d/lowstar/ELF.3d>`_.
 
 An ELF file consists of an ELF header, followed by a program header
 table and a section header table. Both the tables are optional and
@@ -2694,7 +2694,7 @@ be able to constrain the individual bytes of this array, we specify in
   } E_IDENT;
 
 (The omitted definitions can be found in the `full development
-<https://github.com/project-everest/everparse/blob/master/src/3d/tests/ELF.3d>`_.)
+<https://github.com/project-everest/everparse/blob/master/share/everparse/tests/3d/lowstar/ELF.3d>`_.)
 
 
 Following this 16 byte array, the ELF header specifies the file type,

@@ -18,7 +18,7 @@ EVERPARSE_3D_MAIN=ocaml/_build/default/Main.exe
 test: demo
 
 demo: all
-	+$(MAKE) -C tests
+	+$(MAKE) -C $(EVERPARSE_HOME) 3d-unit-test
 
 .PHONY: all prelude test clean clean-3d clean-prelude 3d
 

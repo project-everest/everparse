@@ -113,7 +113,12 @@ lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse
 
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
-	+$(MAKE) -C src/3d test
+ifeq (,$(NO_PULSE))
+	+$(MAKE) -C share/everparse/tests/3d/lowstar
+else
+	@echo "3d-unit-test requires the Pulse implementation (--api lowstar)" >&2
+	@exit 1
+endif
 
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
@@ -143,10 +148,10 @@ lowparse-unit-test: lowparse
 
 .PHONY: 3d-lowstar-diff-test
 
-3d-test: 3d-unit-test 3d-doc-test
+3d-test: 3d-doc-test
 
 ifeq (,$(NO_PULSE))
-3d-test: 3d-pulse-test
+3d-test: 3d-unit-test 3d-pulse-test
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
@@ -408,13 +413,15 @@ clean-tests:
 .PHONY: clean-tests
 
 clean-3d-tests:
-	+$(MAKE) -C src/3d/tests clean
+	+$(MAKE) -C share/everparse/tests/3d/lowstar clean
+	+$(MAKE) -C src/3d/tests/pulse-diff clean
+	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests clean
 
 .PHONY: clean-3d-tests
 
 # The Pulse prelude and its test corpus. Neither is reachable from clean-3d or
 # clean-3d-tests: src/3d/Makefile cleans the Low* prelude in src/3d/prelude,
-# and src/3d/tests is the Low* corpus.
+# and the Low*-API corpus is in share/everparse/tests/3d/lowstar.
 clean-3d-pulse-prelude:
 	+$(MAKE) -C lib/everparse/3d clean
 

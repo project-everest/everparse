@@ -1,7 +1,6 @@
-# Differential test: 3D's Low* backend vs its Pulse backend.
+# Differential test: 3D's Low*-compatible API vs its native Pulse API.
 #
-# The two backends compile the very same .3d grammars into C through completely
-# different toolchains (src/3d/prelude, in Low*, vs lib/everparse/3d, in Pulse).
+# Both API modes compile the same .3d grammars through lib/everparse/3d.
 # They are supposed to produce parsers that behave identically. This test
 # asserts exactly that, without golden files: it compiles ONE generated driver
 # against BOTH backends and checks that the two executables agree, case by case,
@@ -27,7 +26,7 @@
 # Not wired into `all` on purpose: it needs BOTH backends, and the Pulse one is
 # absent from NO_PULSE builds. Run it explicitly:
 #
-#     make -C src/3d/tests pulse-diff
+#     make -C src/3d/tests/pulse-diff
 #
 # Requires mmap (see harness.c), hence POSIX only.
 
@@ -58,12 +57,12 @@ ITERS ?= 20000
 # exclusion now only costs coverage -- and ActAndCheck.3d is the sole test
 # exercising :act/:check, as well as one of only three using field_pos.
 PULSE_TESTS := $(EVERPARSE_HOME)/share/everparse/tests/3d
-LO_DIR ?= $(EVERPARSE_HOME)/src/3d/tests/out.batch-interpret
+LO_DIR ?= $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar/out.batch-interpret
 PU_DIR ?= $(PULSE_TESTS)/out.batch-interpret.pulse
 
 LO_INC = -I $(LO_DIR) -I $(EVERPARSE_HOME)/src/3d \
          -I $(EVERPARSE_HOME)/src/3d/prelude/buffer \
-         -I $(EVERPARSE_HOME)/src/3d/tests
+         -I $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar
 PU_INC = -I $(PU_DIR) -I $(PULSE_TESTS)
 
 # -O1 keeps the build quick while still exercising the optimizer. -fwrapv and
@@ -90,7 +89,7 @@ pulse-diff-abi: abi_check.c | $(LO_DIR) $(PU_DIR)
 	@echo "pulse-diff: EVERPARSE_ERROR_HANDLER present and compatible in both backends"
 
 $(LO_DIR):
-	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d/tests batch-interpret-test
+	+$(MAKE) -C $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar batch-interpret-test
 
 $(PU_DIR):
 	+$(MAKE) -C $(PULSE_TESTS) pulse-batch-interpret-test
@@ -99,7 +98,7 @@ $(PU_DIR):
 # has to be valid against both backends, so gen_diff.py is also handed the
 # Pulse directory and checks that the two agree on every entrypoint signature
 # before emitting anything.
-driver.c: gen_diff.py | $(LO_DIR) $(PU_DIR)
+driver.c: gen_diff.py Makefile $(wildcard $(LO_DIR)/*Wrapper.h $(PU_DIR)/*Wrapper.h) | $(LO_DIR) $(PU_DIR)
 	$(PYTHON) gen_diff.py $(LO_DIR) $@ $(PU_DIR)
 
 # seeds.inc is checked in, so that building and running this test needs
@@ -109,10 +108,10 @@ driver.c: gen_diff.py | $(LO_DIR) $(PU_DIR)
 pulse-diff-seeds:
 	$(PYTHON) gen_seeds.py seeds.inc
 
-diff_lo: driver.c harness.c harness.h seeds.inc | $(LO_DIR)
+diff_lo: driver.c harness.c harness.h seeds.inc $(wildcard $(LO_DIR)/*.c $(LO_DIR)/*.h $(LO_DIR)/internal/*.h) | $(LO_DIR)
 	$(CC) $(CFLAGS_COMMON) $(LO_INC) -o $@ harness.c driver.c $(LO_DIR)/*.c
 
-diff_pu: driver.c harness.c harness.h seeds.inc | $(PU_DIR)
+diff_pu: driver.c harness.c harness.h seeds.inc $(wildcard $(PU_DIR)/*.c $(PU_DIR)/*.h $(PU_DIR)/internal/*.h) | $(PU_DIR)
 	$(CC) $(CFLAGS_COMMON) $(PU_INC) -o $@ harness.c driver.c $(PU_DIR)/*.c
 
 corpus_lo.bin: diff_lo
@@ -150,7 +149,7 @@ pulse-diff-test: trace_lo.txt trace_pu.txt
 # ------------------------------------------------------------------------
 # The sub-directory tests.
 #
-# The .3d files under src/3d/tests/*/ exercise things the top-level batch
+# The .3d files under share/everparse/tests/3d/lowstar/*/ exercise things the top-level batch
 # does not: multi-module compilation, output types, external typedefs and
 # iterators, conditional compilation, specialization, probes, and the
 # error-handler macro. share/everparse/tests/3d mirrors the whole tree, so

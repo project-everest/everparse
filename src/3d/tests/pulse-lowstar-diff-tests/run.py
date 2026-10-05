@@ -96,7 +96,7 @@ def stage(home, work, api, listing):
     (proxy / "bin/3d.exe").chmod(0o755)
     write_json(proxy / "bin/proxy.json",
                {"api": api, "home": str(home), "log": str(root / "invocations")})
-    env = dict(os.environ, EVERPARSE_HOME=str(proxy))
+    env = dict(os.environ, EVERPARSE_HOME=str(proxy), EVERPARSE_API=api)
     # Inherited make command-line overrides must not bypass the API proxy.
     for key in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "EVERPARSE_CMD", "EVERPARSE_EXE", "3D",
                 "EXTRA_CLEAN_OUT_FILES"):
@@ -235,7 +235,7 @@ def differential(suite, home, stages, work, iterations, timeout, cc, clang):
             driver = target / "driver.c"
             driver.write_text(source)
             write_json(target / "required.json", required)
-            seed_inputs = seeds(home / CORPUS / "pulse-diff/seeds.inc")
+            seed_inputs = seeds(HERE.parent / "pulse-diff/seeds.inc")
             data = generate_cases(required, seed_inputs, iterations)
             (target / "inputs.txt").write_text(data)
             traces = {}

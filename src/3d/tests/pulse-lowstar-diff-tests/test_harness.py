@@ -12,13 +12,47 @@ from unittest.mock import patch
 
 from cases import generate as cases
 from compare import check_executed, compare, coverage, read_trace
-from corpus import HERE, SUITES, HarnessError, classify, excluded, inventory, source_path, write_json
+from corpus import CORPUS, HERE, SUITES, HarnessError, classify, digest, excluded, inventory, source_path, write_json
 from driver import ast_fields, check_signatures, generate, observations, parameters, signatures
 from proxy import selected_args
-from run import build_suite, c_sources, command, main
+from run import build_suite, c_sources, command, main, stage
 
 
 class CommandTests(unittest.TestCase):
+    def test_staging_selects_each_api_without_changing_shared_sources(self):
+        with tempfile.TemporaryDirectory(dir=HERE) as tmp:
+            root = Path(tmp)
+            home, work = root / "home", root / "work"
+            source = home / CORPUS / "A.3d"
+            source.parent.mkdir(parents=True)
+            source.write_text("unchanged grammar")
+            (home / "bin").mkdir()
+            work.mkdir()
+            listing = {"files": [{"path": "A.3d", "sha256": digest(source)}]}
+            for api in ("legacy_lowstar", "lowstar"):
+                with patch.dict(os.environ, EVERPARSE_API="pulse",
+                                MAKEFLAGS="EVERPARSE_API=pulse"):
+                    tree, env = stage(home, work, api, listing)
+                self.assertEqual(env["EVERPARSE_API"], api)
+                self.assertNotIn("MAKEFLAGS", env)
+                self.assertEqual((tree / "A.3d").read_bytes(), source.read_bytes())
+                config = json.loads((Path(env["EVERPARSE_HOME"]) / "bin/proxy.json").read_text())
+                self.assertEqual(config["api"], api)
+
+    def test_shared_cleanup_defaults_to_lowstar_and_keeps_legacy_inventory(self):
+        env = dict(os.environ)
+        for key in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "EVERPARSE_API",
+                    "EVERPARSE_HOME", "EXTRA_CLEAN_OUT_FILES"):
+            env.pop(key, None)
+        for args, lowstar in (([], True), (["EVERPARSE_API=legacy_lowstar"], False)):
+            result = subprocess.run(
+                ["make", "--no-print-directory", "-s", "-C", str(HERE.parents[3] / CORPUS),
+                 "echo-clean-out-files", *args],
+                env=env, check=True, capture_output=True, text=True)
+            files = result.stdout.splitlines()
+            self.assertEqual("EverParsePulseInternal.h" in files, lowstar)
+            self.assertEqual("internal" in files, lowstar)
+
     def test_clean_removes_both_build_trees_but_preserves_sources_and_rejects_symlinks(self):
         with tempfile.TemporaryDirectory(dir=HERE) as tmp:
             root = Path(tmp)
@@ -187,12 +221,12 @@ class InventoryTests(unittest.TestCase):
     def test_git_inventory_ignores_untracked_generated_files(self):
         with tempfile.TemporaryDirectory(dir=HERE) as tmp:
             root = Path(tmp)
-            corpus = root / "src/3d/tests"
+            corpus = root / CORPUS
             corpus.mkdir(parents=True)
             (corpus / "A.3d").write_text("entrypoint")
             (corpus / "unexpected.3d").write_text("generated")
             subprocess.run(["git", "init", "-q", tmp], check=True)
-            subprocess.run(["git", "-C", tmp, "add", "src/3d/tests/A.3d"], check=True)
+            subprocess.run(["git", "-C", tmp, "add", str(CORPUS / "A.3d")], check=True)
             data = inventory(root)
             self.assertEqual([r["path"] for r in data["files"]], ["A.3d"])
             manifest = root / "manifest.json"

@@ -11,7 +11,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[4]
-TESTS = ROOT / "src/3d/tests"
+TESTS = ROOT / "share/everparse/tests/3d/lowstar"
 BUILD = HERE / "_build"
 FSTAR = os.environ.get("FSTAR_EXE", str(ROOT / "opt/FStar/out/bin/fstar.exe"))
 PULSE = Path(os.environ.get("PULSE_HOME", ROOT / "opt/pulse/out"))

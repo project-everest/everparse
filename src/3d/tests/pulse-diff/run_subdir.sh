@@ -7,7 +7,7 @@
 #      ./run_subdir.sh output_types/interpret.out=output_types/TPoint.out
 #
 # The two test trees mirror each other, so one relative path usually names
-# both the Low* output under src/3d/tests and the Pulse output under
+# both the Low* output under share/everparse/tests/3d/lowstar and the Pulse output under
 # share/everparse/tests/3d; the `=` form is for the few that diverge. The set
 # of entrypoints is read from the Pulse side, so pairing a narrow Pulse
 # directory against a wider Low* one tests just that subset.
@@ -24,7 +24,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 : "${CC:=cc}"
 : "${PYTHON:=python3}"
 
-LO_ROOT="$EVERPARSE_HOME/src/3d/tests"
+LO_ROOT="$EVERPARSE_HOME/share/everparse/tests/3d/lowstar"
 PU_ROOT="$EVERPARSE_HOME/share/everparse/tests/3d"
 LO="$LO_ROOT/$LO_REL"
 PU="$PU_ROOT/$PU_REL"

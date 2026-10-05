@@ -7,7 +7,7 @@ import subprocess
 
 
 HERE = Path(__file__).resolve().parent
-CORPUS = Path("src/3d/tests")
+CORPUS = Path("share/everparse/tests/3d/lowstar")
 APIS = ("legacy_lowstar", "lowstar")
 
 # These are build recipes, not an allowlist of grammars. Every tracked grammar
@@ -149,7 +149,7 @@ def inventory(home, manifest=None):
     if not any(r["category"] == "runtime-grammar" for r in records):
         raise HarnessError("empty runtime corpus")
     return {"version": 1, "files": records,
-            "scope": "tracked src/3d/tests sources; hashchk implementation is outside this corpus"}
+            "scope": f"tracked {CORPUS} sources; hashchk implementation is outside this corpus"}
 
 
 def write_json(path, value):

@@ -25,12 +25,16 @@ random inputs, not the boundary cases or existing solver seeds.
 
 ## Corpus and isolation
 
-`git ls-files src/3d/tests` is the source of truth, excluding generated output
+`git ls-files share/everparse/tests/3d/lowstar` is the source of truth, excluding generated output
 directories and differential-harness sources. Every remaining file has a
 category, SHA-256 digest, and owning build recipe in `inventory.json`. Unknown
 directories and new negative cases fail closed. Sources are copied byte-for-byte
 into two fresh staging trees; no original Makefile, grammar, client, callback,
 stream, or copy-buffer implementation is edited.
+
+Ordinary builds of that shared corpus default to `--api lowstar`. This harness
+stays in `src/3d/tests` and sets `EVERPARSE_API` separately in each isolated
+staging tree; no second source corpus is maintained for `legacy_lowstar`.
 
 Each staging tree has a proxy `EVERPARSE_HOME/bin/3d.exe`. It preserves all
 arguments, appends the selected API, rejects attempts to select another API,
@@ -45,7 +49,7 @@ generation directories. Every run gets a new `_build/run-*` directory.
 For source tarballs, run `make inventory` in a Git checkout and package its
 reported `inventory.json`. Pass `--manifest /path/to/inventory.json` in the
 tarball. Checksums and the absence of unlisted source grammars are checked.
-Package `pulse-diff/seeds.inc` too: the deterministic witness bytes are reused
+Package `src/3d/tests/pulse-diff/seeds.inc` too: the deterministic witness bytes are reused
 unchanged, though the old harness is not part of this suite's corpus inventory.
 
 `goto_return` is explicitly **snapshot-only**: its original wrapper snapshot
@@ -54,7 +58,7 @@ test. Probe witness/differential/checker targets retain their original
 generation/compilation expectations. All ten negative grammars have explicit
 frontend or verification failure expectations; an option error, missing tool,
 crash, or unrelated verification failure cannot satisfy a negative case.
-The separate hash-checker implementation/rebuild is outside `src/3d/tests`;
+The separate hash-checker implementation/rebuild is outside the shared corpus;
 the corpus's generation and hash checks remain included.
 
 Only lowstar's root `batch-cleanup-test` receives

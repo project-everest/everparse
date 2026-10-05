@@ -1,10 +1,9 @@
 # Low\* vs. Pulse differential test
 
-3D has two code-generation backends: the original Low\* one (`src/3d/prelude/`)
-and the Pulse one (`lib/everparse/3d/`, selected with `3d --api pulse`). They share
-only the frontend; the validators they emit are produced by entirely separate
-verified preludes. They are nevertheless supposed to be *behaviourally
-identical*.
+This suite compares `3d --api lowstar` with `3d --api pulse`: the
+Low\*-compatible and native Pulse public APIs of `lib/everparse/3d/`.
+The original Low\* implementation is compared separately in
+`../pulse-lowstar-diff-tests`, using the same shared Low\*-API corpus.
 
 This directory asserts that, empirically, on the 3D test grammars.
 
@@ -36,7 +35,7 @@ corpus. The test is fully reproducible and has no golden files.
 
 ## Running it
 
-    make -C src/3d/tests pulse-diff
+    make -C src/3d/tests/pulse-diff
 
 That runs two things: the top-level batch comparison, and the sub-directory
 tests (`make -C src/3d/tests/pulse-diff pulse-diff-subdirs` on its own).
@@ -46,7 +45,7 @@ Knobs:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `ITERS` | `20000` | fuzzer iterations per entrypoint, per backend |
-| `LO_DIR` | `src/3d/tests/out.batch-interpret` | Low\* generated C |
+| `LO_DIR` | `share/everparse/tests/3d/lowstar/out.batch-interpret` | Low\* generated C |
 | `PU_DIR` | `share/everparse/tests/3d/out.batch-interpret.pulse` | Pulse generated C |
 | `SUBDIR_TESTS` | see Makefile | which sub-directory tests to compare |
 
@@ -62,12 +61,14 @@ latter are built from `positive_tests`, which excludes `ActAndCheck.3d` and
 differ only in their file list, so taking the wider one costs nothing and buys
 coverage of the only test that exercises `:act`/`:check`.
 
-`pulse-diff` is **not** part of `src/3d/tests`' `all` target, because it needs
-both backends and the Pulse one is absent from `NO_PULSE` builds.
+`pulse-diff` is **not** part of the shared Low\*-API corpus's `all` target:
+it also needs the native Pulse outputs. The root `make 3d-test` builds both
+trees before running this suite on Pulse-enabled Linux builds. This harness
+remains here until its separate relocation to the shared test tree.
 
 ## The sub-directory tests
 
-The top-level batch covers the 25 `.3d` files in `src/3d/tests` itself. The
+The top-level batch covers the 25 `.3d` files in `share/everparse/tests/3d/lowstar` itself. The
 sub-directories exercise things it does not: multi-module compilation, output
 types, external typedefs and iterators, conditional compilation,
 specialization, probes, and the error-handler macro. `share/everparse/tests/3d`
