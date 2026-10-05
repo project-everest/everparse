@@ -19,6 +19,21 @@ from run import build_suite, c_sources, command, main, stage
 
 
 class CommandTests(unittest.TestCase):
+    def test_32bit_adapters_require_explicit_opt_in(self):
+        for value in (None, "", "0", "1"):
+            with self.subTest(value=value):
+                env = dict(os.environ)
+                for key in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "EVERPARSE_TEST_32BIT"):
+                    env.pop(key, None)
+                if value is not None:
+                    env["EVERPARSE_TEST_32BIT"] = value
+                result = subprocess.run(
+                    ["make", "--no-print-directory", "-s", "-n", "-C", str(HERE), "adapters"],
+                    env=env, check=True, capture_output=True, text=True)
+                tests = [line.split()[-1] for line in result.stdout.splitlines()
+                         if "adapter-tests/run.py" in line]
+                self.assertEqual(tests, ["all", "large32"] if value == "1" else ["all"])
+
     def test_staging_selects_each_api_without_changing_shared_sources(self):
         with tempfile.TemporaryDirectory(dir=HERE) as tmp:
             root = Path(tmp)

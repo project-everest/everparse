@@ -6,12 +6,17 @@ reference-versus-reference fallback. It needs the existing EverParse toolchain,
 Python 3, a C compiler with GNU-compatible `--wrap` linker support, and clang
 for inspecting structured output declarations. No Python packages are needed.
 
-The default gate first runs `adapter-tests/run.py all` and then `large32`,
-including native Pulse regression clients and requiring real `-m32` support.
-These run sequentially because host and 32-bit cases share generated fixtures.
+The default gate runs `adapter-tests/run.py all`, including native Pulse
+regression clients. Set `EVERPARSE_TEST_32BIT=1` to additionally run `large32`
+(for example, `EVERPARSE_TEST_32BIT=1 make -j16 3d-test`). The 32-bit tests are
+disabled by default; enabling them requires real `-m32` support, provided on
+Ubuntu by `gcc-multilib`. The GitHub Actions `ci.yml` workflow installs that
+package in the test container and enables the tests.
+Host and enabled 32-bit tests run sequentially because they share generated fixtures.
 They do not rebuild the runtime: the root target's `3d-pulse-krml` prerequisite
 provides it without racing concurrent native tests. `SANITIZE=1` enables the
-adapter host-width ASan/UBSan checks. Missing 32-bit support is a hard failure.
+adapter host-width ASan/UBSan checks. Missing 32-bit support is a hard failure
+when the tests are enabled or `adapter-tests/run.py large32` is invoked directly.
 Adapter fixtures are separate regressions, not part of the old-corpus inventory.
 
 `make runtime` compares the legacy and Pulse-generated runtime headers for
@@ -47,7 +52,7 @@ direct ABI regressions share that same budget. Each Make invocation stays at
 `-j1`, and each module's two compilations/runs remain sequential, avoiding nested
 worker pools. Jobs only read shared source/toolchain files: build targets write
 separate output directories, and comparisons have per-module package directories.
-Host and 32-bit adapter checks still run sequentially before the corpus phase
+Host and enabled 32-bit adapter checks still run sequentially before the corpus phase
 because they reuse fixture outputs.
 
 Build logs are named `<api>.<target>.build.log` in each suite's results directory.
