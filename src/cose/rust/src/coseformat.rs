@@ -14575,17 +14575,6 @@ fn empty_or_serialized_map_left <'a>(x7: empty_or_serialized_map <'a>) ->
     }
 }
 
-fn fst__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·uint8_t <'a>(
-    x: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8])
-) ->
-    crate::cbordetveraux::cbor_raw
-    <'a>
-{
-    let _1: crate::cbordetveraux::cbor_raw = x.0;
-    let __2: &[u8] = x.1;
-    _1
-}
-
 /**
 Parser for empty_or_serialized_map
 */
@@ -14655,7 +14644,11 @@ parse_empty_or_serialized_map
                     =>
                       {
                           let cp1: crate::cbordetveraux::cbor_raw =
-                              fst__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·uint8_t(cp_);
+                              {
+                                  let _1: crate::cbordetveraux::cbor_raw = cp_.0;
+                                  let __2: &[u8] = cp_.1;
+                                  _1
+                              };
                           parse_header_map(cp1)
                       },
                     _ => panic!("Incomplete pattern matching")
