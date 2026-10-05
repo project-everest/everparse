@@ -4,3 +4,4 @@ diff_pu
 *.bin
 *.txt
 sub/
+__pycache__/

@@ -288,6 +288,10 @@ Options are treated from left to right:
   sources in isolated ``lowstar`` and ``legacy_lowstar`` trees and compares
   returns and outparameters. On Pulse-enabled Linux builds, ``make 3d-test``
   runs both the ordinary corpus and this differential gate.
+  ``share/everparse/tests/3d/pulse-lowstar-diff`` separately compares the
+  Low\*-compatible and native Pulse APIs, including wrapper returns,
+  outparameters, copy buffers, and callback diagnostics. It is also part of
+  ``make 3d-test`` on Pulse-enabled Linux builds.
 
 * ``--complete_wrappers``
 

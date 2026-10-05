@@ -1,11 +1,9 @@
 /* Compile-only check that the public `EVERPARSE_ERROR_HANDLER` typedef is
    present, and correct, in *both* backends' generated headers.
 
-   The Low* backend gets the typedef from KaRaMeL: `error_handler` is a
-   monomorphic F* type abbreviation there (the input stream type is fixed when
-   the Low* prelude is built, once per `--input_stream` binding), so
-   `-no-inline-type-abbrev EverParse3d.Actions.Common.error_handler` preserves
-   it and `-fmicrosoft` uppercases it.
+   The Low*-compatible API uses the packed-result callback from
+   EverParse3d.Lowstar.ErrorHandler.Buffer; the native Pulse API uses the
+   byte-status callback from EverParse3d.Actions.ErrorHandler.Buffer.
 
    Under `--api pulse` the abbreviation is parameterized by the input stream types
    (the Pulse prelude is built once and instantiated through a typeclass) and

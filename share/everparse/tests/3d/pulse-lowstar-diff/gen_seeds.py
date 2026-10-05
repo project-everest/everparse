@@ -35,7 +35,7 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TESTS = os.path.dirname(HERE)
+TESTS = os.path.join(os.path.dirname(HERE), 'lowstar')
 
 # (.3d file, the type to solve for, the driver entrypoint it seeds)
 TARGETS = [
@@ -59,6 +59,7 @@ def witnesses(home, src, ty):
     with tempfile.TemporaryDirectory() as d:
         p = subprocess.run(
             [os.path.join(home, 'bin', '3d.exe'),
+             '--api', 'lowstar',
              '--z3_executable', os.environ.get('Z3', 'z3'),
              '--batch', '--odir', d, os.path.join(TESTS, src),
              '--z3_test', ty,

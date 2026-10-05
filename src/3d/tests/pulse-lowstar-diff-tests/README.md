@@ -76,7 +76,7 @@ generation directories. Every run gets a new `_build/run-*` directory.
 For source tarballs, run `make inventory` in a Git checkout and package its
 reported `inventory.json`. Pass `--manifest /path/to/inventory.json` in the
 tarball. Checksums and the absence of unlisted source grammars are checked.
-Package `src/3d/tests/pulse-diff/seeds.inc` too: the deterministic witness bytes are reused
+Package `share/everparse/tests/3d/pulse-lowstar-diff/seeds.inc` too: the deterministic witness bytes are reused
 unchanged, though the old harness is not part of this suite's corpus inventory.
 
 `goto_return` is explicitly **snapshot-only**: its original wrapper snapshot

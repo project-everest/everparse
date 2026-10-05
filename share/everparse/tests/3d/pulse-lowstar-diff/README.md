@@ -1,9 +1,9 @@
-# Low\* vs. Pulse differential test
+# Low\*-compatible vs. native Pulse API differential test
 
 This suite compares `3d --api lowstar` with `3d --api pulse`: the
 Low\*-compatible and native Pulse public APIs of `lib/everparse/3d/`.
 The original Low\* implementation is compared separately in
-`../pulse-lowstar-diff-tests`, using the same shared Low\*-API corpus.
+`src/3d/tests/pulse-lowstar-diff-tests`, using the same shared Low\*-API corpus.
 
 This directory asserts that, empirically, on the 3D test grammars.
 
@@ -35,25 +35,40 @@ corpus. The test is fully reproducible and has no golden files.
 
 ## Running it
 
-    make -C src/3d/tests/pulse-diff
+    make -j16 -C share/everparse/tests/3d/pulse-lowstar-diff
 
 That runs two things: the top-level batch comparison, and the sub-directory
-tests (`make -C src/3d/tests/pulse-diff pulse-diff-subdirs` on its own).
+tests (`make -C share/everparse/tests/3d/pulse-lowstar-diff pulse-diff-subdirs`
+on its own), plus the compile-only callback ABI check.
 
 Knobs:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `ITERS` | `20000` | fuzzer iterations per entrypoint, per backend |
-| `LO_DIR` | `share/everparse/tests/3d/lowstar/out.batch-interpret` | Low\* generated C |
-| `PU_DIR` | `share/everparse/tests/3d/out.batch-interpret.pulse` | Pulse generated C |
+| `LO_DIR` | `share/everparse/tests/3d/lowstar/out.batch-interpret` | `--api lowstar` generated C |
+| `PU_DIR` | `share/everparse/tests/3d/out.batch-interpret.pulse` | `--api pulse` generated C |
 | `SUBDIR_TESTS` | see Makefile | which sub-directory tests to compare |
+| `DIFF_PREBUILT` | `0` | set to `1` only when both ordinary corpora have already been built |
 
 The two input directories are produced by the ordinary `batch-interpret-test`
-and `pulse-batch-interpret-test` targets, so a normal build already has them;
-the Makefile builds them on demand otherwise. Regenerating them is slow
-(several minutes per backend), which is why they are reused rather than rebuilt
-here.
+and `pulse-batch-interpret-test` targets. By default, this Makefile invokes
+the root `3d-unit-test` and `3d-pulse-test` targets first, building both complete
+corpora, including subdirectory outputs. The first target explicitly selects
+`--api lowstar`; the second explicitly selects `--api pulse`.
+No generated test code from `legacy_lowstar` is required.
+
+The enclosing `make 3d-test` already builds both corpora and passes
+`DIFF_PREBUILT=1` to avoid duplicate builds. Even in prebuilt mode, every compared
+directory is checked for the expected validator result type and Low\*-adapter
+support-header reference. Missing, mixed, or original-Low\* outputs fail rather
+than silently comparing the wrong implementations. Clean and rebuild a corpus
+if it contains stale output from another API.
+
+The top-level driver, binaries, and fuzz corpora are regenerated on each run
+so changed input directories or `ITERS` cannot reuse an old passing trace.
+`make selftest` exercises the build wiring and wrong/missing-API rejection
+without running the verifier.
 
 We read those rather than the `batch-test`/`pulse-batch` outputs because the
 latter are built from `positive_tests`, which excludes `ActAndCheck.3d` and
@@ -63,8 +78,7 @@ coverage of the only test that exercises `:act`/`:check`.
 
 `pulse-diff` is **not** part of the shared Low\*-API corpus's `all` target:
 it also needs the native Pulse outputs. The root `make 3d-test` builds both
-trees before running this suite on Pulse-enabled Linux builds. This harness
-remains here until its separate relocation to the shared test tree.
+trees before running this suite on Pulse-enabled Linux builds.
 
 ## The sub-directory tests
 
@@ -91,9 +105,9 @@ its own directory:
     ./run_subdir.sh output_types/interpret.out=output_types/TPoint.out
 
 Entrypoints are read from the Pulse side, so pairing a narrow Pulse directory
-against a wider Low\* one compares exactly that subset. A directory that is
-not built in both trees is skipped with a message rather than failing, so a
-partial build still works.
+against a wider Low\* one compares exactly that subset. A missing directory
+is a failure, not a skip. For a deliberate subset, set `SUBDIR_TESTS`;
+the default retains all 21 output-directory pairs.
 
 ### What is left out, and why
 
@@ -138,7 +152,7 @@ mutator satisfies very few grammars. Four things get the corpus past that:
 - **A solver-derived seed corpus.** Some grammars cannot be hit by search at
   all: `Arithmetic`'s `_Check` is thirteen consecutive `UINT32`s each pinned
   to an exact value computed from earlier fields. `gen_seeds.py` runs
-  EverParse's own `3d --z3_test` over those and checks the accepted witnesses
+  EverParse's own `3d --api lowstar --z3_test` over those and checks the accepted witnesses
   in as `seeds.inc`, so neither Z3 nor the generator is needed to build or run
   this test. See `gen_seeds.py` for how to regenerate it.
 - **Seeds in several content families.** All zeroes above all: an empty
@@ -180,6 +194,8 @@ length-only fast path. It showed up as a different reported field name on
 | --- | --- |
 | `gen_diff.py` | parses `*Wrapper.h`, emits `driver.c` (thunk + dispatch table per entrypoint, plus the per-module constant dictionary) |
 | `gen_seeds.py` | regenerates `seeds.inc` from `3d --z3_test`; run by hand, not by the build |
+| `check_api.py` | rejects absent, mixed, or wrong-API generated validator headers |
+| `test_harness.py` | regression tests for API checks and on-demand build wiring |
 | `seeds.inc` | checked-in inputs a solver proved are accepted, for entrypoints fuzzing cannot reach |
 | `run_subdir.sh` | compares one sub-directory test: works out the sources, builds both, fuzzes, replays, diffs |
 | `harness.h` | shared case/entry/callback types |

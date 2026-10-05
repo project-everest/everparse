@@ -20,7 +20,7 @@ ITERS="${2:-20000}"
 LO_REL="${REL%%=*}"
 PU_REL="${REL#*=}"
 HERE=$(cd "$(dirname "$0")" && pwd)
-: "${EVERPARSE_HOME:=$(cd "$HERE/../../../.." && pwd)}"
+: "${EVERPARSE_HOME:=$(cd "$HERE/../../../../.." && pwd)}"
 : "${CC:=cc}"
 : "${PYTHON:=python3}"
 
@@ -32,9 +32,11 @@ TAG=$(echo "$PU_REL" | tr '/.' '__')
 WORK="$HERE/sub/$TAG"
 
 if [ ! -d "$LO" ] || [ ! -d "$PU" ]; then
-  echo "pulse-diff: $PU_REL: not built in both trees, skipping" >&2
-  exit 0
+  echo "pulse-diff: $PU_REL: missing output in one or both API trees; run make first" >&2
+  exit 1
 fi
+"$PYTHON" "$HERE/check_api.py" lowstar "$LO"
+"$PYTHON" "$HERE/check_api.py" pulse "$PU"
 
 # The test's own sources: a hand-written main, and the error callbacks that
 # main installs. The generated driver supplies both itself, so those files

@@ -1544,8 +1544,8 @@ The contract is:
     (see :ref:`sec-error-handling-pulse`).
 
 A reference implementation that satisfies both backends from a single source
-file is in `src/3d/tests/pulse-diff/harness.c
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/pulse-diff>`_.
+file is in `share/everparse/tests/3d/pulse-lowstar-diff/harness.c
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/pulse-lowstar-diff>`_.
 
 .. _Specialization:
 

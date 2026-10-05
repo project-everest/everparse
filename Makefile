@@ -114,7 +114,7 @@ lowparse-unit-test: lowparse
 
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
 ifeq (,$(NO_PULSE))
-	+$(MAKE) -C share/everparse/tests/3d/lowstar
+	+$(MAKE) -C share/everparse/tests/3d/lowstar EVERPARSE_API=lowstar
 else
 	@echo "3d-unit-test requires the Pulse implementation (--api lowstar)" >&2
 	@exit 1
@@ -139,7 +139,7 @@ endif
 .PHONY: 3d-pulse-test
 
 3d-pulse-diff-test: 3d-pulse-test 3d-unit-test
-	+$(MAKE) -C src/3d/tests/pulse-diff
+	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff DIFF_PREBUILT=1
 
 .PHONY: 3d-pulse-diff-test
 
@@ -414,7 +414,7 @@ clean-tests:
 
 clean-3d-tests:
 	+$(MAKE) -C share/everparse/tests/3d/lowstar clean
-	+$(MAKE) -C src/3d/tests/pulse-diff clean
+	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff clean
 	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests clean
 
 .PHONY: clean-3d-tests

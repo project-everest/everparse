@@ -246,7 +246,7 @@ def differential(suite, home, stages, work, iterations, timeout, cc, clang, *, m
         driver = target / "driver.c"
         driver.write_text(source)
         write_json(target / "required.json", required)
-        seed_inputs = seeds(HERE.parent / "pulse-diff/seeds.inc")
+        seed_inputs = seeds(home / "share/everparse/tests/3d/pulse-lowstar-diff/seeds.inc")
         data = generate_cases(required, seed_inputs, iterations)
         (target / "inputs.txt").write_text(data)
         traces = {}

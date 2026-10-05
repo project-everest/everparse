@@ -23,15 +23,15 @@
 # was the sole behavioural difference between the backends, showing up as a
 # different field name (and error position) on "not enough data".
 #
-# Not wired into `all` on purpose: it needs BOTH backends, and the Pulse one is
-# absent from NO_PULSE builds. Run it explicitly:
+# Not part of either corpus's `all` target: this compares BOTH APIs.
+# The root 3d-test target includes it on Pulse-enabled Linux builds:
 #
-#     make -C src/3d/tests/pulse-diff
+#     make -C share/everparse/tests/3d/pulse-lowstar-diff
 #
 # Requires mmap (see harness.c), hence POSIX only.
 
 ifeq (,$(EVERPARSE_HOME))
-  EVERPARSE_HOME := $(realpath ../../../..)
+  EVERPARSE_HOME := $(realpath ../../../../..)
 endif
 export EVERPARSE_HOME
 
@@ -41,6 +41,7 @@ PYTHON ?= python3
 # Number of fuzzer iterations per entrypoint, per backend. The default is a
 # compromise for CI; raise it for a deeper run.
 ITERS ?= 20000
+DIFF_PREBUILT ?= 0
 
 # Where each backend's generated C lives. Both are produced by the regular test
 # targets, so a normal build has them already; the rules below build them on
@@ -75,11 +76,26 @@ CFLAGS_COMMON = -O1 -g -std=c11 -fwrapv -D_BSD_SOURCE -D_DEFAULT_SOURCE \
 all: pulse-diff-test pulse-diff-abi pulse-diff-subdirs
 
 .PHONY: all pulse-diff-test pulse-diff-abi pulse-diff-subdirs pulse-diff-seeds clean
+.PHONY: prepare check-inputs force selftest
+
+# The root gate has already built both complete corpora. Direct invocation
+# builds them here too, so missing subdirectory outputs cannot become skips.
+prepare:
+ifneq ($(DIFF_PREBUILT),1)
+	+$(MAKE) -C $(EVERPARSE_HOME) 3d-unit-test 3d-pulse-test
+endif
+
+check-inputs: prepare
+	$(PYTHON) check_api.py lowstar "$(LO_DIR)"
+	$(PYTHON) check_api.py pulse "$(PU_DIR)"
+
+selftest:
+	$(PYTHON) -m unittest discover -s . -p 'test_*.py' -v
 
 # Compile-only ABI check: both backends must expose EVERPARSE_ERROR_HANDLER,
 # and it must match the error-handler binder of the generated validators. See
 # the comment at the top of abi_check.c.
-pulse-diff-abi: abi_check.c | $(LO_DIR) $(PU_DIR)
+pulse-diff-abi: abi_check.c | check-inputs
 	$(CC) $(CFLAGS_COMMON) -Werror=incompatible-pointer-types \
 	  -Werror=implicit-function-declaration -Werror=int-conversion \
 	  $(LO_INC) -c abi_check.c -o abi_check_lo.o
@@ -88,17 +104,11 @@ pulse-diff-abi: abi_check.c | $(LO_DIR) $(PU_DIR)
 	  $(PU_INC) -I $(EVERPARSE_HOME)/src/3d -c abi_check.c -o abi_check_pu.o
 	@echo "pulse-diff: EVERPARSE_ERROR_HANDLER present and compatible in both backends"
 
-$(LO_DIR):
-	+$(MAKE) -C $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar batch-interpret-test
-
-$(PU_DIR):
-	+$(MAKE) -C $(PULSE_TESTS) pulse-batch-interpret-test
-
 # The dispatch table is derived from the generated *Wrapper.h. The same driver
 # has to be valid against both backends, so gen_diff.py is also handed the
 # Pulse directory and checks that the two agree on every entrypoint signature
 # before emitting anything.
-driver.c: gen_diff.py Makefile $(wildcard $(LO_DIR)/*Wrapper.h $(PU_DIR)/*Wrapper.h) | $(LO_DIR) $(PU_DIR)
+driver.c: force gen_diff.py Makefile | check-inputs
 	$(PYTHON) gen_diff.py $(LO_DIR) $@ $(PU_DIR)
 
 # seeds.inc is checked in, so that building and running this test needs
@@ -108,10 +118,10 @@ driver.c: gen_diff.py Makefile $(wildcard $(LO_DIR)/*Wrapper.h $(PU_DIR)/*Wrappe
 pulse-diff-seeds:
 	$(PYTHON) gen_seeds.py seeds.inc
 
-diff_lo: driver.c harness.c harness.h seeds.inc $(wildcard $(LO_DIR)/*.c $(LO_DIR)/*.h $(LO_DIR)/internal/*.h) | $(LO_DIR)
+diff_lo: driver.c harness.c harness.h seeds.inc
 	$(CC) $(CFLAGS_COMMON) $(LO_INC) -o $@ harness.c driver.c $(LO_DIR)/*.c
 
-diff_pu: driver.c harness.c harness.h seeds.inc $(wildcard $(PU_DIR)/*.c $(PU_DIR)/*.h $(PU_DIR)/internal/*.h) | $(PU_DIR)
+diff_pu: driver.c harness.c harness.h seeds.inc
 	$(CC) $(CFLAGS_COMMON) $(PU_INC) -o $@ harness.c driver.c $(PU_DIR)/*.c
 
 corpus_lo.bin: diff_lo
@@ -196,9 +206,7 @@ SUBDIR_TESTS ?= \
   tcpip/interpret.out \
   use_error_handler_macro/obj
 
-# Directories that are not built in both trees are skipped with a message
-# rather than failing, so that this works in a partial build.
-pulse-diff-subdirs:
+pulse-diff-subdirs: | prepare
 	set -e ; for t in $(SUBDIR_TESTS) ; do \
 	  CC='$(CC)' PYTHON='$(PYTHON)' ./run_subdir.sh $$t $(ITERS) ; \
 	done
