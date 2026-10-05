@@ -1,21 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <OtherFlags>--nowarn:0086 --nowarn:0025 --nowarn:0044 --langversion:5.0 --mlcompatibility</OtherFlags>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
     <WarnOn>3390;$(WarnOn)</WarnOn>
     <Name>everparse</Name>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>
     <UseVSHostingProcess>true</UseVSHostingProcess>
   </PropertyGroup>
+  <!-- The downloader needs the version string and nothing else of the
+       verified code, so 3d/EverParseVersion.fs is a Custard run of its own. -->
   <ItemGroup>
-    <Compile Include="prims.fs" />
-    <Compile Include="3d\Version.fs" />
-    <Compile Include="FStar_Pervasives_Native.fs" />
+    <Compile Include="3d\FStarCustard.fs" />
+    <Compile Include="3d\EverParseVersion.fs" />
     <Compile Include="Hashing_Op.fs" />
     <Compile Include="PackageHashes.fs" />
     <Compile Include="Wrapper.fs" />

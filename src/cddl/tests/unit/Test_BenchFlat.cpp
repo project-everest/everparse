@@ -13,7 +13,7 @@
 
 extern "C" {
 #include "BenchFlat.h"
-#include "CBORDetAPI.h"
+#include "CBORDet.h"
 }
 
 #define EXPECTED_SIZE 97
@@ -55,7 +55,7 @@ void bench_evercddl () {
 
     printf(" >>> EVERCDDL SERIALIZATION OF RECORD TAKES: %f us\n", f * 1e6 / LAPS);
 
-    FStar_Pervasives_Native_option___BenchFlat_record___Pulse_Lib_Slice_slice__uint8_t_
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__BenchFlat_record_Pulse_Lib_Slice_slice__uint8_t
       rc;
     TIME_void(({
         for (int i = 0; i < LAPS; i++) {
@@ -68,7 +68,7 @@ void bench_evercddl () {
 
     BenchFlat_record_s r2;
  
-    r2 = rc.v.fst;
+    r2 = rc.v._1;
 
     printf(" >>> EVERCDDL PARSING OF RECORD TAKES: %f us\n", f * 1e6 / LAPS);
     assert (r.f1 == r2.f1);

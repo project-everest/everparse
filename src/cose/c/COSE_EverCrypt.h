@@ -19,10 +19,18 @@ COSE_EverCrypt_create_sig(
   uint8_t *sigbuf
 );
 
-K___COSE_Format_evercddl_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void);
+typedef FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+COSE_EverCrypt_dummy_map_type;
+
+FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+COSE_EverCrypt_dummy_map_val(void);
 
 COSE_Format_empty_or_serialized_map
-COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_evercddl_label_COSE_Format_values *rest);
+COSE_EverCrypt_mk_phdrs(
+  int32_t alg,
+  FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
+  *rest
+);
 
 Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_sign1(
@@ -48,13 +56,6 @@ COSE_EverCrypt_verify_sig(
   Pulse_Lib_Slice_slice__uint8_t payload,
   uint8_t *sigbuf
 );
-
-typedef struct FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t_s
-{
-  FStar_Pervasives_Native_option__size_t_tags tag;
-  Pulse_Lib_Slice_slice__uint8_t v;
-}
-FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t;
 
 FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_verify1(

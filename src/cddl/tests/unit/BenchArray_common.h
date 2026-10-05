@@ -40,13 +40,13 @@ BenchArray_arr build() {
 bool parse_evercddl(BenchArray_arr m)
 {
     assert (m.tag == BenchArray_Mkarr1);
-    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_subarr
       it = m.case_Mkarr1;
 
     for (int i = 0; i < N; i++) {
         BenchArray_subarr subarr = BenchArray_next_iterate_array_aux_env4_type_1(&it);
         assert (subarr.tag == BenchArray_Mksubarr1);
-        CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env3_type_1
+        CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_uint64_t
           it2 = subarr.case_Mksubarr1;
         for (int j = 0; j < N; j++) {
             BenchArray_evercddl_uint t = BenchArray_next_iterate_array_aux_env3_type_1(&it2);

@@ -1,6 +1,7 @@
 use cose::keys::CoseKey;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use evercosign::commonpulse;
+use evercosign::coseformat;
 use rand::{RngCore, SeedableRng};
 
 fn generate_key() -> ed25519_dalek::SigningKey {
@@ -56,7 +57,7 @@ fn sign_and_verify() {
     let signed = commonpulse::sign1_simple(key.as_bytes(), payload, &mut outbuf);
     assert!(
         commonpulse::verify1_simple(&key.verifying_key().to_bytes(), &signed)
-            == commonpulse::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
+            == coseformat::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
     );
 }
 
@@ -68,7 +69,7 @@ fn verify() {
     let signed = cose_rust_sign1(&cosekey, payload.to_vec());
     assert!(
         commonpulse::verify1_simple(&key.verifying_key().to_bytes(), &signed)
-            == commonpulse::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
+            == coseformat::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
     );
 }
 

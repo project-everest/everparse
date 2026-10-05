@@ -16,6 +16,7 @@ out.cleanup.pulse
 out.inplace-hash.pulse
 out.z3-testgen.pulse
 out.batch-interpret.pulse
+out.reserved.pulse
 test-cpp.pulse.exe
 test-cpp-interpret.pulse.exe
 

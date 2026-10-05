@@ -20,7 +20,21 @@ INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/spec
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)
 
 FSTAR_OPTIONS += --warn_error -342
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,-CBOR.Spec,+CBOR.Spec.Constants,+CBOR.Spec.Raw.EverParse,+CBOR.Spec.Raw.Base,+CBOR.Spec.Raw.Optimal'
+
+# Whole-program extraction, one Custard run per (slice backend, API) pair. A
+# karamel -bundle clause is a packaging directive, not reachability: Custard
+# has no notion of it, and a module named only inside one is reachable from
+# nothing. So every module named on the left of a bundle's `=' -- both the
+# bundle's own name and each element of a `+' list -- has to be rooted here by
+# hand. The caller sets CUSTARD_ENTRY_MODULES and CUSTARD_ROOTS accordingly.
+CUSTARD_BACKEND := $(if $(filter rust,$(CBOR_SLICE_BACKEND)),KrmlRust,KrmlC)
+
+# The `byte_slice' abbrev of slice-c exists precisely so that its *name*, and
+# not `slice uint8_t', is what reaches karamel; Custard unfolds abbreviations
+# by default, so it has to be told. slice-rust has no such abbrev.
+ifeq ($(CBOR_SLICE_BACKEND),c)
+CUSTARD_FLAGS += --custard_no_unfold CBOR.Pulse.Raw.Slice.byte_slice
+endif
 
 # The slice backend impl (CBOR.Pulse.Raw.Slice in slice-$(CBOR_SLICE_BACKEND)) is
 # selected per pass by include path and is not part of the committed checked-file
@@ -34,7 +48,7 @@ FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-Pulse
 # '*,-CBOR,CBOR.Pulse.Raw.Slice,', which likewise re-caches the slice while keeping
 # the rest of CBOR uncached); this default applies when krml is built directly.
 ALREADY_CACHED := '*,'
-OUTPUT_DIRECTORY:=extracted-$(CBOR_SLICE_BACKEND)
+OUTPUT_DIRECTORY:=extracted-$(CBOR_SLICE_BACKEND)-$(CBOR_API)
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
 clean_rules += clean-extracted
@@ -54,6 +68,6 @@ CBOR_SLICE_DIR := $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEN
 $(CBOR_SLICE_DIR)/CBOR.Pulse.Raw.Slice.fst.checked: $(CBOR_SLICE_DIR)/CBOR.Pulse.Raw.Slice.fst
 	+$(MAKE) -C $(CBOR_SLICE_DIR)
 
-extract-krml: $(ALL_KRML_FILES)
+extract-krml: $(CUSTARD_KRML)
 
 .PHONY: extract-krml

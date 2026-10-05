@@ -12,7 +12,7 @@
 
 extern "C" {
 #include "BenchMap.h"
-#include "CBORDetAPI.h"
+#include "CBORDet.h"
 }
 
 #define N 8000 /* number of elements in map */
@@ -30,21 +30,21 @@ uint64_t bigrand() {
 
 bool lookup1(BenchMap_map m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_uint64_t_uint64_t
     it = m.case_Mkmap1;
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
-    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
+    FStar_Pervasives_Native_tuple2__uint64_t_uint64_t k =
         BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
-    // printf("EVERCDDL read key %llu\n", k.fst);
-    if (k.fst == key) {
+    // printf("EVERCDDL read key %llu\n", k._1);
+    if (k._1 == key) {
       if (val) {
-          *val = k.snd;
+          *val = k._2;
       }
       return true;
     }
 
-    if (k.fst > key) {
+    if (k._1 > key) {
       return false;
     }
   }
@@ -53,15 +53,15 @@ bool lookup1(BenchMap_map m, uint64_t key, uint64_t *val) {
 
 bool lookup1_no_short(BenchMap_map m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_uint64_t_uint64_t
   it = m.case_Mkmap1;
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
-    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
+    FStar_Pervasives_Native_tuple2__uint64_t_uint64_t k =
         BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
-    if (k.fst == key) {
+    if (k._1 == key) {
       if (val) {
-          *val = k.snd;
+          *val = k._2;
       }
       return true;
     }
@@ -191,12 +191,12 @@ int main()
         .len = len
     };
 
-    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint *elems =
-      (K___BenchMap_evercddl_uint_BenchMap_evercddl_uint*)
+    FStar_Pervasives_Native_tuple2__uint64_t_uint64_t *elems =
+      (FStar_Pervasives_Native_tuple2__uint64_t_uint64_t*)
       malloc(2 * N * 8);
     for (int i = 0; i < N; i++) {
-        elems[i].fst = bigrand ();
-        elems[i].snd = bigrand ();
+        elems[i]._1 = bigrand ();
+        elems[i]._2 = bigrand ();
     }
 
     BenchMap_map m = {
@@ -221,15 +221,15 @@ int main()
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchMap_map___Pulse_Lib_Slice_slice__uint8_t_
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__BenchMap_map_Pulse_Lib_Slice_slice__uint8_t
       m_opt = TIME(BenchMap_validate_and_parse_map(slice), &f);
 
     printf(" >>> EVERCDDL VALIDATION TOOK %f us\n", f * 1e6);
 
 
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
-    assert (m_opt.v.snd.len == BSIZE - size); /* len is whatever remains */
-    BenchMap_map m2 = m_opt.v.fst;
+    assert (m_opt.v._2.len == BSIZE - size); /* len is whatever remains */
+    BenchMap_map m2 = m_opt.v._1;
     assert (m2.tag == BenchMap_Mkmap1);
 
     uint64_t keys[K];

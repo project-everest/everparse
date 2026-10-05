@@ -24,14 +24,12 @@ let _and_ b1 b2 = b1 && b2
 
 let reserved_prefix = "___"
 
-//redefining either because we need to serialize to Json
-[@@ PpxDerivingYoJson ]
+//redefining either because we need to serialize it to JSON (see JSON.fst)
 type either a b =
   | Inl of a
   | Inr of b
 
 /// pos: Source locations
-[@@ PpxDerivingYoJson ]
 type pos = {
   filename: string;
   line:int;
@@ -89,7 +87,6 @@ let string_of_pos p =
   Printf.sprintf "%s:(%d,%d)" p.filename p.line p.col
 
 /// range: A source extent
-[@@ PpxDerivingYoJson ]
 let range = pos & pos
 
 /// comment: A list of line comments, i.e., a list of strings
@@ -116,14 +113,6 @@ type with_meta_t 'a = {
   range:range;
   comments: comments
 }
-(* Override the json serializers for with_meta_t to
-   avoid polluting the generated JSON with ranges everywhere *)
-let with_meta_t_of_yojson (#a #b #c:Type) (f:(a -> b)) (x:a)
-  : ML c
-  = failwith "No reading yojson"
-let with_meta_t_to_yojson (f:('a -> 'b)) (x:with_meta_t 'a)
-  : 'b
-  = f x.v
 let with_range_and_comments (x:'a) r c : with_meta_t 'a = {
   v = x;
   range = r;
@@ -131,12 +120,10 @@ let with_range_and_comments (x:'a) r c : with_meta_t 'a = {
 }
 let with_range (x:'a) (r:range) : with_meta_t 'a = with_range_and_comments x r []
 
-[@@ PpxDerivingYoJson ]
 type ident' = {
   modul_name : option string;
   name : string
 }
-[@@ PpxDerivingYoJson ]
 let ident = with_meta_t ident'
 
 let ident_to_string i = Printf.sprintf "%s%s"
@@ -163,14 +150,12 @@ let check_reserved_identifier (i:ident) =
   && sub s 0 3 = reserved_prefix
   then error "Identifiers cannot begin with \"___\"" i.range
 
-[@@ PpxDerivingYoJson ]
 type integer_type =
   | UInt8
   | UInt16
   | UInt32
   | UInt64
 
-[@@ PpxDerivingYoJson ]
 let pointer_size_t = i:integer_type { i == UInt32 \/ i == UInt64 }
 
 let parse_int_suffix (i:string) : string & option integer_type =
@@ -230,7 +215,6 @@ let as_integer_typ (i:ident) : ML integer_type =
   | Some t -> t
 
 /// Bit order for bitfields
-[@@ PpxDerivingYoJson ]
 type bitfield_bit_order =
   | LSBFirst (* Least-significant bit first (MSVC default) *)
   | MSBFirst (* Most-significant bit first (necessary for many IETF protocols) *)
@@ -260,7 +244,6 @@ let bit_order_of (i:ident) : ML bitfield_bit_order =
   | Some t -> t
 
 /// Integer, hex, boolean, and string constants
-[@@ PpxDerivingYoJson ]
 type constant =
   | Unit
   | Int : integer_type -> int -> constant
@@ -269,7 +252,6 @@ type constant =
   | String of string
 
 /// Operators supported in refinement expressions
-[@@ PpxDerivingYoJson ]
 noeq
 type op =
   | Eq
@@ -304,7 +286,6 @@ type op =
 ///   Expressions have no binding structure
 ///   Names are represented using concrete identifiers, i.e., strings
 ///   We enforce that all names are unique in a scope, i.e., no shadowing allowed
-[@@ PpxDerivingYoJson ]
 noeq
 type expr' =
   | Constant of constant
@@ -321,7 +302,6 @@ and expr = with_meta_t expr'
 ///     This includes structs and unions, and actions support assignment to fields of output types
 ///   - An extern type, an abstract, uninterpreted type
 
-[@@ PpxDerivingYoJson ]
 type t_kind =
   | KindSpec
   | KindOutput
@@ -331,7 +311,6 @@ type t_kind =
 ///
 /// Output expressions may appear as type parameters or as lhs of assignment actions
 
-[@@ PpxDerivingYoJson ]
 noeq
 type out_expr' =
   | OE_id     : ident -> out_expr'
@@ -398,7 +377,6 @@ and typ = with_meta_t typ'
 
 let field_typ = t:typ { Type_app? t.v }
 
-[@@ PpxDerivingYoJson ]
 noeq
 type atomic_action =
   | Action_return of expr
@@ -412,7 +390,6 @@ type atomic_action =
   | Action_call : f:ident -> args:list expr -> atomic_action
 
 noeq
-[@@ PpxDerivingYoJson ]
 type action' =
   | Atomic_action of atomic_action
   | Action_seq : hd:atomic_action -> tl:action -> action'
@@ -459,17 +436,14 @@ let sequence_non_failing_actions (a0:action{Action_act? a0.v}) (a1:action {Actio
       res.comments
             
 
-[@@ PpxDerivingYoJson ]
 type qualifier =
   | Immutable
   | Mutable
 
 /// Parameters: Type definitions can be parameterized by values
 ///   Parameters have a name and are always annoted with their type
-[@@ PpxDerivingYoJson ]
 type param =  typ & ident & qualifier
 
-[@@ PpxDerivingYoJson ]
 noeq
 type bitfield_attr' = {
   bitfield_width : int;
@@ -480,17 +454,14 @@ type bitfield_attr' = {
 }
 and bitfield_attr = with_meta_t bitfield_attr'
 
-[@@ PpxDerivingYoJson ]
 let field_bitwidth_t = either (with_meta_t int) bitfield_attr
 
-[@@ PpxDerivingYoJson ]
 type array_qualifier =
   | ByteArrayByteSize  //[
   | ArrayByteSize      //[:byte-size
   | ArrayByteSizeAtMost //[:byte-size-single-element-array-at-most
   | ArrayByteSizeSingleElementArray //[:byte-size-single-element-array
 
-[@@ PpxDerivingYoJson ]
 noeq
 type field_array_t =
   | FieldScalar
@@ -498,13 +469,11 @@ type field_array_t =
   | FieldString of (option expr)
   | FieldConsumeAll // [:consume-all]
 
-[@@ PpxDerivingYoJson ]
 noeq
 type probe_field =
   | ProbeLength of expr
   | ProbeDest of expr
 
-[@@ PpxDerivingYoJson ]
 noeq
 type probe_atomic_action =
   | Probe_action_return of expr
@@ -517,7 +486,6 @@ type probe_atomic_action =
   | Probe_action_skip_write : len:expr -> probe_atomic_action
   | Probe_action_fail : probe_atomic_action
 noeq
-[@@ PpxDerivingYoJson ]
 type probe_action' =
   | Probe_atomic_action of probe_atomic_action
   | Probe_action_var of expr
@@ -551,7 +519,6 @@ let probe_action_simple (f:ident) (len:expr) =
 
 open FStar.List.Tot
 
-[@@ PpxDerivingYoJson ]
 noeq
 type probe_call = {
   probe_dest:ident;
@@ -561,7 +528,6 @@ type probe_call = {
   probe_init: option ident
 }
 
-[@@ PpxDerivingYoJson ]
 noeq
 type atomic_field' = {
   field_dependence:bool;   //computed; whether or not the rest of the struct depends on this field
@@ -592,7 +558,6 @@ and case =
 and switch_case = expr & list case
 
 
-[@@ PpxDerivingYoJson ]
 noeq
 type probe_entrypoint = {
   probe_ep_init: option ident;
@@ -600,7 +565,6 @@ type probe_entrypoint = {
   probe_ep_length:expr;
 }
 
-[@@ PpxDerivingYoJson ]
 noeq
 type attribute =
   | Entrypoint: (ep_name: option ident) -> (probe: option probe_entrypoint) -> attribute
@@ -612,7 +576,6 @@ type attribute =
 ///
 ///   E.g.,
 ///    typedef [entrypoint] struct _T { ... } T, *PTR_T;
-[@@ PpxDerivingYoJson ]
 noeq
 type typedef_names = {
   typedef_name: ident;
@@ -621,7 +584,6 @@ type typedef_names = {
   typedef_attributes: list attribute
 }
 
-[@@ PpxDerivingYoJson ]
 let enum_case = ident & option (either int ident)
 
 /// Specification of output types
@@ -629,13 +591,11 @@ let enum_case = ident & option (either int ident)
 /// Output types contain atomic fields with optional bitwidths for bitfield types,
 ///   but they may also contain anonymous structs and unions
 
-[@@ PpxDerivingYoJson ]
 noeq
 type out_field =
   | Out_field_named: ident -> typ -> bit_width:option int -> out_field
   | Out_field_anon : list out_field -> is_union:bool -> out_field
 
-[@@ PpxDerivingYoJson ]
 noeq
 type out_typ = {
   out_typ_names    : typedef_names;
@@ -643,20 +603,17 @@ type out_typ = {
   out_typ_is_union : bool;  //TODO: unclear if this field is needed
 }
 
-[@@ PpxDerivingYoJson ]
 type probe_qualifier =
   | PQWithOffsets
   | PQInit
   | PQRead of integer_type
   | PQWrite of integer_type
 
-[@@ PpxDerivingYoJson ]
 noeq
 type generic_param =
   | GenericProbeFunction :
     param_name:ident -> k:typ -> probe_for_type:ident ->  generic_param
 
-[@@ PpxDerivingYoJson ]
 noeq
 type probe_function_type =
   | SimpleProbeFunction of ident
@@ -676,7 +633,6 @@ type probe_function_type =
 ///   - ExternType: An abstract type declaration
 ///   - ExternFn: An abstract function declaration, may be used in the actions
 
-[@@ PpxDerivingYoJson ]
 noeq
 type decl' =
   | ModuleAbbrev:
@@ -756,7 +712,6 @@ type decl' =
       probe_qualifier ->
       decl'
 
-[@@ PpxDerivingYoJson ]
 noeq
 type decl = {
   d_decl : with_meta_t decl';
@@ -770,7 +725,6 @@ let mk_decl (d:decl') r c (is_exported:bool) : decl =
 let decl_with_v (d:decl) (v:decl') : decl =
   { d with d_decl = { d.d_decl with v = v } }
 
-[@@ PpxDerivingYoJson ]
 noeq
 type type_refinement = {
   includes:list string;
@@ -778,7 +732,6 @@ type type_refinement = {
   auto_type_map: list (ident & option ident); //map from type to its auto-generated type
 }
 
-[@@ PpxDerivingYoJson ]
 let prog = list decl & option type_refinement
 
 let mk_arrow (xs:list typ) (ty:typ) : typ =
@@ -944,6 +897,17 @@ let rec print_typ t : ML string =
     Printf.sprintf "%s -> %s"
       (String.concat " -> " (List.map print_typ ts))
       (print_typ t)
+
+(* The parser (ocaml/parser.mly) builds pointer qualifiers, and has to go
+   through this rather than through [PQ] itself: extraction is free to give a
+   single-constructor type a representation of its own, and a hand-written
+   .ml is not regenerated when it changes. *)
+let mk_pointer_qualifier
+  (pq:pointer_size_t)
+  (explicit:bool { not explicit ==> pq == UInt64 })
+  (nullable:bool)
+  : pointer_qualifier
+  = PQ pq explicit nullable
 
 let pq_as_integer_type (pq:pointer_qualifier) : integer_type =
   match pq with

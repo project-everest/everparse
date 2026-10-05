@@ -16,14 +16,16 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
   libssl-dev \
   time \
   opam \
-  sudo
+  sudo \
+  && rm -rf /var/lib/apt/lists/*
 
 # For the `test` layer
 RUN apt-get update && sudo apt-get install --yes --no-install-recommends \
     cmake \
     clang \
     python3-pip \
-    python3-venv
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create a new user and give them sudo rights
 RUN useradd -d /home/test test
@@ -35,18 +37,12 @@ ENV HOME=/home/test
 WORKDIR $HOME
 
 # install rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# `--profile minimal` skips rust-docs, rustfmt and clippy, none of which the
+# build uses; `cargo doc` only needs rustdoc, which ships with rustc.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 
 # Automatically set up Rust environment
 SHELL ["/usr/bin/env", "BASH_ENV=/home/test/.cargo/env", "/bin/bash", "-c"]
-
-# Set up code-server
-RUN curl -L --output code-server.deb https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
- && sudo dpkg -i code-server.deb \
- && rm code-server.deb
-RUN curl -L --output fstar-vscode-assistant.vsix https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v0.19.2/fstar-vscode-assistant-0.19.2.vsix \
- && code-server --install-extension fstar-vscode-assistant.vsix \
- && rm fstar-vscode-assistant.vsix
 
 # Install the .NET SDK, to build and run the standalone hash checker
 # (src/3d/hashchk). The version must satisfy src/3d/hashchk/global.json,
@@ -70,7 +66,10 @@ RUN { git submodule init && git submodule update && git submodule foreach --recu
 FROM base AS deps
 
 ARG CI_THREADS
-RUN make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -f deps.Makefile
+# The prune must happen in the same RUN as the build: `--target deps` keeps
+# every layer, so anything deleted in a later layer is still shipped.
+RUN make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -f deps.Makefile \
+ && ./.github/prune-deps.sh
 RUN cp src/package/start-code-server.sh .
 
 # Automatically set up Rust environment
@@ -85,3 +84,13 @@ RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; t
 FROM build AS test
 
 RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" test
+
+# Set up code-server. This lives in the last stage on purpose: it is only for
+# interactive use of the developer image, and CI (which builds `--target deps`)
+# would otherwise pay for it in every cached image.
+RUN curl -L --output code-server.deb https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
+ && sudo dpkg -i code-server.deb \
+ && rm code-server.deb
+RUN curl -L --output fstar-vscode-assistant.vsix https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v0.19.2/fstar-vscode-assistant-0.19.2.vsix \
+ && code-server --install-extension fstar-vscode-assistant.vsix \
+ && rm fstar-vscode-assistant.vsix

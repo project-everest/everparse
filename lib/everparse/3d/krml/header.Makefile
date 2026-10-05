@@ -100,6 +100,14 @@ HANDLER_buffer := EverParse3d.Actions.ErrorHandler.Buffer.error_handler
 HANDLER_extern := EverParse3d.Actions.ErrorHandler.Extern.error_handler
 HANDLER_static := $(HANDLER_extern)
 
+# `Custard.\*` is Custard's bucket for monomorphized instances of polymorphic
+# definitions. It is named on the right of the `=` only, so those instances are
+# private to the bundle: the reachable ones are inlined into EverParse.h, the
+# rest are dropped. It is deliberately absent from pulse_everparse_only_bundle
+# in src/3d/ocaml/Batch.ml, because that pattern list is also the client's
+# `-library` and the client's own Custard run produces its own `Custard.\*`
+# modules, which must be emitted rather than assumed. The two still agree in
+# the sense that matters: no Custard.\* declaration survives into EverParse.h.
 define header_rule
 $(1)/EverParse.h: $$(KRML_FILES)
 	mkdir -p $(1)
@@ -117,7 +125,7 @@ $(1)/EverParse.h: $$(KRML_FILES)
 	  -fextern-c \
 	  -finitialize-locals no \
 	  -bundle 'Prims,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle '$$(API_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*[rename=EverParse,rename-prefix]' \
+	  -bundle '$$(API_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*,Custard.\*[rename=EverParse,rename-prefix]' \
 	  $$(KRML_FILES)
 	test '!' -e $(1)/EverParse.c
 	test '!' -e $(1)/SHOULDNOTBETHERE.h

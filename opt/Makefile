@@ -104,6 +104,7 @@ $(clean_rules): %.clean:
 .PHONY: %.clean
 
 clean: FStar.clean $(clean_rules) clean-opam
+	rm -f .prebuilt
 
 .PHONY: clean
 

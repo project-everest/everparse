@@ -54,31 +54,17 @@ INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec
 ALREADY_CACHED := ,*
 FSTAR_OPTIONS += --warn_error -342
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
-FSTAR_DEP_OPTIONS := --extract '*,-FStar,-Pulse,-CBOR,-CDDL'
 FSTAR_FILES := $(ALL_FSTS)
 
-CBOR_KRML_MODULES += CBOR.Spec.Constants
-CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Type
-CBOR_KRML_MODULES += CBOR.Pulse.API.Det.C
-CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Dummy
-
-CBOR_KRML_MODULES += CDDL.Pulse.Misc
-CBOR_KRML_MODULES += CDDL.Spec.Misc
-CBOR_KRML_MODULES += CDDL.Pulse.MapGroup
-CBOR_KRML_MODULES += CDDL.Pulse.Parse.MapGroup
-CBOR_KRML_MODULES += CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore
-# CBOR_KRML_MODULES += CDDL.Pulse.ArrayGroup
-CBOR_KRML_MODULES += CDDL.Pulse.Parse.ArrayGroup
-# CBOR_KRML_MODULES += CDDL.Pulse.Serialize.ArrayGroup
-CBOR_KRML_MODULES += CDDL.Pulse.Types
-
-CBOR_KRML_MODULES += Pulse.Lib.Pervasives
-CBOR_KRML_MODULES += Pulse.Lib.Slice
-
-CBOR_KRML_MODULES += FStar.Pervasives
-CBOR_KRML_MODULES += FStar.Pervasives.Native
-
-FSTAR_DEP_OPTIONS += $(addprefix --extract +,$(CBOR_KRML_MODULES))
+# One whole-program extraction per .cddl: each generated module is its own
+# program, so the Custard run below is driven by the pattern rule rather than
+# by common.Makefile's single $(CUSTARD_KRML) rule.  The module under
+# extraction is added as an entry per target.  The two abstract CBOR types
+# come from the -add-include'd CBORDetType.h, so Custard must not typedef them
+# itself.
+CUSTARD_BACKEND := KrmlC
+CUSTARD_EXTERN_TYPES := CBOR.Pulse.API.Det.Type.cbor_det_t
+CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
 clean_rules += clean-tinycbor clean-QCBOR clean-c clean-output
 
@@ -90,11 +76,19 @@ KRML_OPTS += -warn-error @4@6
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
-CBOR_KRML_FILES = $(patsubst %,%.krml,$(subst .,_,$(CBOR_KRML_MODULES)))
+$(OUTPUT_DIRECTORY)/%.krml: $(OUTPUT_DIRECTORY)/%.fst.checked $(ALL_CHECKED_FILES)
+	$(call msg, "CUSTARD", $*)
+	$(Q)$(CUSTARD) --custard_entry_module $* $(OUTPUT_DIRECTORY)/$*.fst -o $@
 
-$(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTORY)/,$(CBOR_KRML_FILES))
+# A single bundle, so that every module gets one self-contained header.  The
+# CBOR API is nothing but external declarations here -- its definitions come
+# from the CBORDet.o these tests link against -- so there is no reason to
+# package it separately, and a separate generated CBORDetAPI.h would be
+# written once per .cddl into the shared output directory, each run keeping
+# only the subset its own module happened to reach.  Drivers that call the
+# CBOR API directly include the library's own CBORDet.h instead.
+$(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml
 	$(KRML) -fnoshort-enums \
-	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+FStar.Pervasives.Native=CBOR.\*[rename=CBORDetAPI]' \
 	 -bundle '$*=*' \
 	 -skip-makefiles \
 	 -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \

@@ -594,15 +594,7 @@ open ASN1.Spec.Interpreter
 let x509_certificate_parser = asn1_as_parser x509_certificate
 
 
-[@@normalize_for_extraction [delta;
-                             zeta;
-                             iota;
-                             primops]]
 let parse_cert (b:bytes) = x509_certificate_parser b
 
-[@@normalize_for_extraction [delta;
-                             zeta;
-                             iota;
-                             primops]]
 let dparse_cert (b:bytes) = dasn1_as_parser x509_certificate b
 #show-options

@@ -183,6 +183,16 @@ let print_ident (i:A.ident) =
 let print_maybe_qualified_ident (mname:string) (i:A.ident) =
   Printf.sprintf "%s%s" (maybe_mname_prefix mname i) (print_ident i)
 
+(* 3D's assumed types -- `extern type` and the output types -- are defined in C,
+   either by the client or by the FILE_OutputTypesDefs.h that 3D emits itself.
+   Custard would otherwise give each one a definition of its own (`typedef
+   struct OPTR_s OPTR;`), which conflicts with the real one. The attribute says
+   "the target declares this", and names it as C already spells it: print_ident
+   prefixes uppercase identifiers with `___` to keep them out of F*'s
+   constructor namespace, and that prefix is an F* artifact. *)
+let print_custard_extern_attr (i:A.ident) =
+  Printf.sprintf "[@@FStar.Attributes.custard_extern \"%s\"]\n" i.A.v.A.name
+
 let print_field_id_name (i:A.ident) =
   let open A in
   match i.v.modul_name with
@@ -1815,7 +1825,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
             assert (is_output_type t);
             match t with
             | T_app id KindOutput [] ->
-              Printf.sprintf "\n\nval %s : Type0\n\n" s
+              Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr id) s
             | T_pointer bt A.UInt64 ->
               let bs = print_output_type_val tbl bt in
               let ptr =
@@ -1961,7 +1971,7 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
         (print_output_type_val tbl t)
         (print_output_type_val tbl (T_pointer t A.UInt64))
     | Extern_type i ->
-      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
     | _ -> "")) in
    let prefix =
      if Options.get_pulse ()
@@ -2002,7 +2012,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
-      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
     | Extern_fn f ret params false ->
       (if Options.get_pulse ()
        then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"

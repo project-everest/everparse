@@ -23,7 +23,13 @@ let conclude ()
 [@@ noextract_to "krml"]
 let solve_vc ()
 : Tac unit
-= exact_guard (quote ()); conclude ()
+= exact_guard (quote ());
+  // [exact_guard] may discharge the refinement outright, leaving nothing for
+  // [conclude] to work on -- and every tactic it runs would then fail with
+  // "No more goals".
+  match goals () with
+  | [] -> ()
+  | _ -> conclude ()
 
 [@@ noextract_to "krml"]
 let app_head_tail (t: term) :

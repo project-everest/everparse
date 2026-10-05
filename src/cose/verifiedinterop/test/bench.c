@@ -80,8 +80,8 @@ void bench_ed25519_sign(uint8_t *privkey) {
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
-                .fst = { .len = 0, .elt = (uint8_t[]) {} },
-                .snd = payload,
+                ._1 = { .len = 0, .elt = (uint8_t[]) {} },
+                ._2 = payload,
             },
         },
     };
@@ -110,8 +110,8 @@ void bench_ed25519_verify(uint8_t *privkey, uint8_t *pubkey) {
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
-                .fst = { .len = 0, .elt = (uint8_t[]) {} },
-                .snd = payload,
+                ._1 = { .len = 0, .elt = (uint8_t[]) {} },
+                ._2 = payload,
             },
         },
     };
