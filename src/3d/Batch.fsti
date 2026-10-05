@@ -52,7 +52,6 @@ val copy_everparse_h
   (out_dir: string)
 : ML unit
 
-val copy_pulse_internal_header (out_dir: string) : ML unit
 
 val produce_and_postprocess_one_c
   (_: input_stream_binding_t)

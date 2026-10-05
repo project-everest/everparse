@@ -17,10 +17,11 @@ class ApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
             header = directory / "Example.h"
-            for api, result, include in (
-                    ("lowstar", "uint64_t", '#include "EverParsePulseInternal.h"\n'),
+            for api, result, body in (
+                    ("lowstar", "uint64_t", "EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS"),
                     ("pulse", "uint8_t", "")):
-                header.write_text(include + f"{result}\nExampleValidateT(void);\n")
+                header.write_text(f"{result}\nExampleValidateT(void);\n")
+                (directory / "Example.c").write_text(body)
                 check_api(api, directory)
                 other = "pulse" if api == "lowstar" else "lowstar"
                 with self.assertRaisesRegex(ValueError, "validator results"):
@@ -44,6 +45,20 @@ class ApiTests(unittest.TestCase):
             (directory / "Other.h").write_text("uint64_t OtherValidateT(void);")
             with self.assertRaisesRegex(ValueError, "validator results"):
                 check_api("pulse", directory)
+
+    def test_mixed_legacy_and_lowstar_implementations_fail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            for name in ("Example", "Other"):
+                (directory / f"{name}.h").write_text(f"uint64_t {name}ValidateT(void);")
+            (directory / "Example.c").write_text("EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS")
+            other = directory / "Other.c"
+            other.write_text("EVERPARSE_VALIDATOR_ERROR_GENERIC")
+            with self.assertRaisesRegex(ValueError, "Other.h: not generated"):
+                check_api("lowstar", directory)
+            other.write_text('#include "EverParsePulseInternal.h"\nEVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS')
+            with self.assertRaisesRegex(ValueError, "obsolete separate"):
+                check_api("lowstar", directory)
 
     def test_seed_generation_uses_relocated_lowstar_sources_and_explicit_api(self):
         output = "uint8_t witness0_0[1] = {42};\n// witness0[0].buf // ACCEPTED"

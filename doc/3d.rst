@@ -270,10 +270,14 @@ Options are treated from left to right:
   and ``buffer``, ``extern`` and ``static`` input primitives. Existing Low\*
   C clients need no signature changes. Private workers still use byte-sized
   statuses and mutable cursors; they are not part of the public API.
-  ``EverParsePulseInternal.h`` supplies their separately named status helpers
-  without changing the packed constants in the public ``EverParse.h``.
-  This internal support header is emitted even with
-  ``--no_copy_everparse_h`` and must accompany the generated code.
+  Its self-contained ``EverParse.h`` is generated from the Pulse library in
+  ``lib/everparse/3d/krml/lowstar/<backend>/``. It includes both the public
+  packed-result helpers and separately named internal byte-status helpers;
+  no separate ``EverParsePulseInternal.h`` is needed. During
+  per-parser extraction, KaRaMeL uses the shipped runtime without emitting
+  another ``EverParse.h``. With
+  ``--no_copy_everparse_h``, supply this header rather than the original
+  Low\* header. The ``legacy_lowstar`` and native ``pulse`` headers are unchanged.
 
   This replaces the former ``--pulse`` switch, which is no longer accepted.
   ``--no_api`` resets the selection to ``legacy_lowstar``.

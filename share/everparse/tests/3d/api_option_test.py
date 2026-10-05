@@ -28,7 +28,7 @@ def main():
     assert "--api" in help_text and "legacy_lowstar|pulse|lowstar" in help_text
     assert "--pulse" not in help_text
     for args in [("--pulse",), ("--no_pulse",), ("--api",),
-                 ("--api", "invalid")]:
+                 ("--api", "invalid"), ("--__micro_step", "copy_pulse_internal_h")]:
         run(*args, succeeds=False)
 
     with tempfile.TemporaryDirectory(prefix="everparse-api-") as directory:
@@ -91,7 +91,7 @@ def main():
             assert f"--api {options[1]}" in makefile
             assert "--pulse" not in makefile and "--no_pulse" not in makefile
             if name == "lowstar":
-                assert "EverParsePulseInternal.h" in makefile
+                assert "EverParsePulseInternal.h" not in makefile
                 assert "EverParsePulseEndianness.h" not in makefile
             lines = makefile.splitlines()
             recipes = [
@@ -102,6 +102,24 @@ def main():
             for index in recipes:
                 assert f"--api {options[1]}" in lines[index]
                 assert str(output / "EverParse.Makefile") in lines[index - 1]
+
+        home = pathlib.Path(executable).parent.parent
+        for backend in ["buffer", "extern", "static"]:
+            output = root / f"lowstar-{backend}"
+            output.mkdir()
+            options = ["--api", "lowstar", "--input_stream", backend, "--odir", output]
+            run(*options, "--makefile", "gmake", "--no_copy_everparse_h", source)
+            makefile = (output / "EverParse.Makefile").read_text()
+            assert f"lib/everparse/3d/krml/lowstar/{backend}" in makefile
+            assert "src/3d/prelude/" not in makefile
+            assert "EverParsePulseInternal.h" not in makefile
+            assert not (output / "EverParse.h").exists()
+            run(*options, "--__micro_step", "copy_everparse_h", "--no_clang_format")
+            expected = home / f"lib/everparse/3d/krml/lowstar/{backend}/EverParse.h"
+            assert (output / "EverParse.h").read_bytes() == expected.read_bytes()
+            assert (output / "EverParseEndianness.h").is_file()
+            assert not (output / "EverParsePulseInternal.h").exists()
+            assert not (output / "EverParsePulse.h").exists()
 
         # Weak hashes require no extraction, and must reject another API
         # even when its grammar and tool versions are identical.

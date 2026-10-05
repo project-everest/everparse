@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -40,13 +41,23 @@ def output(name):
     return out
 
 
+def check_no_runtime_header(log):
+    headers = re.findall(r"KaRaMeL: wrote out \.h files for (.*)", log)
+    if not headers or any("EverParse" in line.split(", ") for line in headers):
+        raise AssertionError("lowstar extraction must not emit EverParse.h")
+    if "EverParsePulseInternal.h" in log:
+        raise AssertionError("lowstar extraction emitted an obsolete support header")
+
+
 def generate(name, grammar, api="lowstar", stream="buffer", extra_grammars=()):
     out = output(name)
     args = [ROOT / "bin/3d.exe", "--api", api, "--input_stream", stream,
             "--fstar", FSTAR, "--batch", "--odir", out]
     if stream != "buffer":
         args += ["--input_stream_include", "EverParseStream.h"]
-    run(args + [grammar] + list(extra_grammars), out)
+    log = run(args + [grammar] + list(extra_grammars), out)
+    if api == "lowstar":
+        check_no_runtime_header(log)
     return out
 
 
@@ -78,16 +89,18 @@ def large(bits32=False):
     run([FSTAR] + flags + ["--codegen", "krml", "--extract", "LargeExtern",
                           "--odir", out, HERE / "LargeExtern.fst"], out)
     api = ["EverParse3d.Actions.Common", "EverParse3d.Prelude.StaticHeader",
+           "EverParse3d.ErrorCode", "EverParse3d.Lowstar.Public",
+           "EverParse3d.Lowstar.SupportExtern",
            "EverParse3d.Actions.ErrorHandler.LowstarExtern",
            "EverParse3d.InputStream.LowstarExtern",
            "EverParse3d.InputStream.LowstarExtern.Types",
            "EverParse3d.InputStream.LowstarExtern.Raw",
            "EverParse3d.CopyBuffer.LowstarExtern"]
-    run([KRML, "-skip-makefiles", "-skip-compilation", "-tmpdir", out,
+    log = run([KRML, "-skip-makefiles", "-skip-compilation", "-tmpdir", out,
          "-add-include", '"EverParseStream.h"',
-         "-add-include", '"EverParsePulseInternal.h"',
          "-add-include", '"EverParse.h"',
          "-library", "Prims,LowParse.*,EverParse3d.*,Pulse.*",
+         "-static-header", "Prims,LowParse.*,EverParse3d.*,Pulse.*",
          "-warn-error", "-9@4-20-26-2", "-fnoreturn-else", "-fparentheses",
          "-fcurly-braces", "-fmicrosoft", "-fno-shadow",
          "-header", ROOT / "src/3d/noheader.txt", "-minimal", "-fextern-c",
@@ -95,15 +108,15 @@ def large(bits32=False):
          "EverParse3d.Actions.ErrorHandler.LowstarExtern.error_handler"]
         + sorted((ROOT / "lib/everparse/3d/krml/extracted").glob("*.krml"))
         + [out / "LargeExtern.krml",
-           "-bundle", "EverParse3d.ErrorCode=EverParse3d.ErrorCode"
-           "[rename=EverParsePulseInternal,rename-prefix]",
            "-bundle", "Prims,FStar.*,LowStar.*[rename=SHOULDNOTBETHERE]",
            "-bundle", "+".join(api) + "=" + ",".join(api)
            + "[rename=EverParse,rename-prefix]",
+           "-bundle", "EverParse3d.ErrorCode"
+           "[rename=EverParsePulseInternal,rename-prefix]",
            "-bundle", "Prims,LowParse.*,EverParse3d.*,Pulse.*"
            "[rename=EverParsePrivate]"], out)
-    for header in [ROOT / "src/3d/prelude/extern/EverParse.h",
-                   ROOT / "lib/everparse/3d/krml/lowstar/EverParsePulseInternal.h",
+    check_no_runtime_header(log)
+    for header in [ROOT / "lib/everparse/3d/krml/lowstar/extern/EverParse.h",
                    ROOT / "src/3d/EverParseEndianness.h"]:
         shutil.copy2(header, out)
     compile_run(out, [out / "LargeExtern.c", HERE / "large.c"],

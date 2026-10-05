@@ -61,7 +61,7 @@ No generated test code from `legacy_lowstar` is required.
 The enclosing `make 3d-test` already builds both corpora and passes
 `DIFF_PREBUILT=1` to avoid duplicate builds. Even in prebuilt mode, every compared
 directory is checked for the expected validator result type and Low\*-adapter
-support-header reference. Missing, mixed, or original-Low\* outputs fail rather
+worker references. Missing, mixed, or original-Low\* outputs fail rather
 than silently comparing the wrong implementations. Clean and rebuild a corpus
 if it contains stale output from another API.
 

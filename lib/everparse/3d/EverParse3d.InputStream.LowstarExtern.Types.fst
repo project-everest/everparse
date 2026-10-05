@@ -27,6 +27,7 @@ inline_for_extraction noextract let base_t = input_buffer
 inline_for_extraction noextract let len_t = unit
 inline_for_extraction noextract let pos_t = R.ref U64.t
 
+noextract
 let view_ok (b: base_t) (c: Seq.seq U8.t) : prop =
   Seq.length c <= Seq.length (get_all b.base) /\
   Seq.equal c (Seq.slice (get_all b.base) 0 (Seq.length c)) /\

@@ -58,7 +58,7 @@ def build_suite(suite, home, tree, env, log, timeout, *, api, target=None):
         targets = [target]
     for index, target in enumerate(targets):
         lowstar_cleanup = api == "lowstar" and suite == "root" and target == "batch-cleanup-test"
-        extras = (["EXTRA_CLEAN_OUT_FILES=EverParsePulseInternal.h internal"]
+        extras = (["EXTRA_CLEAN_OUT_FILES=internal"]
                   if lowstar_cleanup else [])
         command(["make", "--no-print-directory", "-j1", "-C", tree / directory, target, *extras],
                 home, env, log, timeout, append=index > 0)
@@ -73,8 +73,8 @@ def build_suite(suite, home, tree, env, log, timeout, *, api, target=None):
                 raise HarnessError("unexpected lowstar cleanup internal inventory: "
                                    f"expected regular internal/ELF.h only, found {found}")
             header = out / "EverParsePulseInternal.h"
-            if header.is_symlink() or not header.is_file():
-                raise HarnessError(f"missing or non-regular lowstar cleanup runtime header: {header}")
+            if header.exists() or header.is_symlink():
+                raise HarnessError(f"obsolete lowstar cleanup runtime header: {header}")
 
 
 def stage(home, work, api, listing):
@@ -178,6 +178,11 @@ def macro_trace(stderr, trace):
                                                    field=f"macro.{n}", value=line)) + "\n")
 
 
+def runtime_headers(home, api, stream="buffer"):
+    return home / ("lib/everparse/3d/krml/lowstar" if api == "lowstar"
+                   else "src/3d/prelude") / stream
+
+
 def abi_regression(suite, home, stages, work, cc, timeout):
     if suite not in {"root", "modules"}:
         return None
@@ -191,7 +196,7 @@ def abi_regression(suite, home, stages, work, cc, timeout):
                  "-Werror=incompatible-pointer-types", "-Werror=implicit-function-declaration",
                  *(["-DDF_READ"] if suite == "root" else []),
                  f"-I{generated}", f"-I{home / 'src/3d'}",
-                 f"-I{home / 'src/3d/prelude/buffer'}", f"-I{HERE}",
+                 f"-I{runtime_headers(home, api)}", f"-I{HERE}",
                  HERE / "abi_regression.c",
                  *[p for p in c_sources(generated, module) if not p.stem.endswith("Wrapper")],
                  "-o", executable],
@@ -266,7 +271,8 @@ def differential(suite, home, stages, work, iterations, timeout, cc, clang, *, m
             # The driver is literally the same source for both compilations.
             # Included client files come from the reference staging tree and
             # have verified byte equality with the candidate staging tree.
-            inc = [root, *includes[1:], HERE]
+            inc = [root, *includes[1:-1],
+                   runtime_headers(home, api, "extern" if stream else "buffer"), HERE]
             executable = target / api
             sources = c_sources(root, module)
             if not sources:

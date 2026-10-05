@@ -761,12 +761,6 @@ let go () : ML unit =
     in
     exit 0
   else
-  if micro_step = Some HashingOptions.MicroStepCopyPulseInternalH
-  then (
-    Batch.copy_pulse_internal_header (Options.output_dir ());
-    exit 0
-  )
-  else
   if micro_step = Some HashingOptions.MicroStepSaveHashes
   then
   (* Special mode: --__micro_step save_hashes *)

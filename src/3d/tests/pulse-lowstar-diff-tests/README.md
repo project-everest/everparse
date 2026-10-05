@@ -14,6 +14,12 @@ provides it without racing concurrent native tests. `SANITIZE=1` enables the
 adapter host-width ASan/UBSan checks. Missing 32-bit support is a hard failure.
 Adapter fixtures are separate regressions, not part of the old-corpus inventory.
 
+`make runtime` compares the legacy and Pulse-generated runtime headers for
+all three stream backends in C and C++: packed helpers, error reasons, range
+checks, bitfields, first-error recording, callback signatures, and record
+layouts. It also checks the internal byte-status helpers independently.
+This runs as part of the differential gate.
+
 `make selftest` runs independent Python and compiled C fixtures. Fixture success
 is **not** backend compatibility evidence. `ARGS='--suite check_complete'`
 restricts an integration investigation; a restricted run always reports
@@ -89,11 +95,15 @@ The separate hash-checker implementation/rebuild is outside the shared corpus;
 the corpus's generation and hash checks remain included.
 
 Only lowstar's root `batch-cleanup-test` receives
-`EXTRA_CLEAN_OUT_FILES='EverParsePulseInternal.h internal'`. The original Make
+`EXTRA_CLEAN_OUT_FILES=internal`. The original Make
 recipe still checks the exact top-level file set; the runner additionally
 requires the recursive internal inventory to be exactly the regular file
 `internal/ELF.h`. Missing files, extra/nested entries, and symlinks fail.
-Legacy receives no extras, and inherited cleanup overrides are removed.
+The obsolete separate `EverParsePulseInternal.h` is rejected. Each API uses
+its matching prebuilt `EverParse.h` for no-copy builds: `legacy_lowstar` uses
+`src/3d/prelude/<backend>`, and `lowstar` uses
+`lib/everparse/3d/krml/lowstar/<backend>`. Legacy receives no extras, and
+inherited cleanup overrides are removed.
 
 ## Observations
 

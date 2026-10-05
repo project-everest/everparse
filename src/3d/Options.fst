@@ -75,7 +75,6 @@ let get_micro_step _ =
   | Some "extract" -> Some MicroStepExtract
   | Some "copy_clang_format" -> Some MicroStepCopyClangFormat
   | Some "copy_everparse_h" -> Some MicroStepCopyEverParseH
-  | Some "copy_pulse_internal_h" -> Some MicroStepCopyPulseInternalH
   | Some "emit_config" -> Some MicroStepEmitConfig
   | Some "save_hashes" -> Some MicroStepSaveHashes
 

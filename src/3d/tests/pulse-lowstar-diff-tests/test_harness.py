@@ -50,7 +50,7 @@ class CommandTests(unittest.TestCase):
                  "echo-clean-out-files", *args],
                 env=env, check=True, capture_output=True, text=True)
             files = result.stdout.splitlines()
-            self.assertEqual("EverParsePulseInternal.h" in files, lowstar)
+            self.assertNotIn("EverParsePulseInternal.h", files)
             self.assertEqual("internal" in files, lowstar)
 
     def test_clean_removes_both_build_trees_but_preserves_sources_and_rejects_symlinks(self):
@@ -97,7 +97,6 @@ class CommandTests(unittest.TestCase):
             out = root / "out.cleanup"
             (out / "internal").mkdir(parents=True)
             (out / "internal/ELF.h").write_text("worker")
-            (out / "EverParsePulseInternal.h").write_text("runtime")
             for api in ("legacy_lowstar", "lowstar"):
                 with patch("run.command") as execute:
                     build_suite("root", root, root, {}, root / "build.log", 7, api=api)
@@ -105,7 +104,7 @@ class CommandTests(unittest.TestCase):
                 for call, target in zip(execute.call_args_list, SUITES["root"][1]):
                     expected = ["make", "--no-print-directory", "-j1", "-C", root, target]
                     if api == "lowstar" and target == "batch-cleanup-test":
-                        expected += ["EXTRA_CLEAN_OUT_FILES=EverParsePulseInternal.h internal"]
+                        expected += ["EXTRA_CLEAN_OUT_FILES=internal"]
                     self.assertEqual(call.args[0], expected)
             with patch("run.command") as execute:
                 build_suite("modules", root, root, {}, root / "build.log", 7, api="lowstar")
@@ -115,7 +114,7 @@ class CommandTests(unittest.TestCase):
     def test_cleanup_inventory_rejects_missing_extra_nested_and_symlinked_outputs(self):
         layouts = ("missing-internal", "empty-internal", "extra-header", "nested-header",
                    "empty-directory", "symlink-header", "symlink-directory",
-                   "missing-runtime", "symlink-runtime")
+                   "obsolete-runtime", "symlink-runtime")
         for layout in layouts:
             with self.subTest(layout=layout), tempfile.TemporaryDirectory(dir=HERE) as tmp:
                 root = Path(tmp)
@@ -125,8 +124,9 @@ class CommandTests(unittest.TestCase):
                 worker = internal / "ELF.h"
                 worker.write_text("worker")
                 runtime = out / "EverParsePulseInternal.h"
-                runtime.write_text("runtime")
-                if layout in {"missing-internal", "empty-internal"}:
+                if layout == "obsolete-runtime":
+                    runtime.write_text("obsolete")
+                elif layout in {"missing-internal", "empty-internal"}:
                     worker.unlink()
                     if layout == "missing-internal":
                         internal.rmdir()
@@ -138,14 +138,11 @@ class CommandTests(unittest.TestCase):
                         (internal / "nested/Other.h").write_text("unexpected")
                 elif layout == "symlink-header":
                     worker.unlink()
-                    worker.symlink_to(runtime)
+                    worker.symlink_to(out / "nonexistent")
                 elif layout == "symlink-directory":
                     internal.rename(out / "elsewhere")
                     internal.symlink_to(out / "elsewhere", target_is_directory=True)
-                elif layout == "missing-runtime":
-                    runtime.unlink()
                 elif layout == "symlink-runtime":
-                    runtime.unlink()
                     runtime.symlink_to(worker)
                 with patch("run.command") as execute, self.assertRaisesRegex(
                         HarnessError, "lowstar cleanup"):
@@ -163,7 +160,6 @@ class CommandTests(unittest.TestCase):
                 if api == "lowstar":
                     (out / "internal").mkdir()
                     (out / "internal/ELF.h").write_text("worker")
-                    (out / "EverParsePulseInternal.h").write_text("runtime")
                 (root / "Makefile").write_text(
                     "clean_out_files = Unit.c\n"
                     "clean_out_files += $(EXTRA_CLEAN_OUT_FILES)\n"

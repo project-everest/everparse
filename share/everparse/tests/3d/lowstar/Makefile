@@ -10,6 +10,7 @@ FSTAR_EXE ?= fstar.exe
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
+EVERPARSE_C_RUNTIME = $(if $(filter lowstar,$(EVERPARSE_API)),$(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar,$(EVERPARSE_HOME)/src/3d/prelude)
 3D=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
 3D_Z3_EXECUTABLE ?= z3-4.13.3
@@ -46,7 +47,7 @@ clean_out_files=\
 	$(module_extern_apis)
 clean_out_files += $(EXTRA_CLEAN_OUT_FILES)
 ifeq ($(EVERPARSE_API),lowstar)
-EXTRA_CLEAN_OUT_FILES ?= EverParsePulseInternal.h internal
+EXTRA_CLEAN_OUT_FILES ?= internal
 endif
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
@@ -152,8 +153,8 @@ batch-interpret-test:
 	$(3D) --odir out.batch-interpret --batch --no_copy_everparse_h --save_hashes $(INTERPRETABLE_FILES)
 	$(3D) --odir out.batch-interpret --batch --check_hashes strong $(INTERPRETABLE_FILES)
 	cp $(OTHER_HEADERS) out.batch-interpret
-	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/buffer'
-	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
+	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_C_RUNTIME)/buffer'
+	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_C_RUNTIME)/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
 	./test-cpp.exe
 
 elf-test: ELF.3d

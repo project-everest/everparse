@@ -62,7 +62,7 @@ LO_DIR ?= $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar/out.batch-interpret
 PU_DIR ?= $(PULSE_TESTS)/out.batch-interpret.pulse
 
 LO_INC = -I $(LO_DIR) -I $(EVERPARSE_HOME)/src/3d \
-         -I $(EVERPARSE_HOME)/src/3d/prelude/buffer \
+         -I $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar/buffer \
          -I $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar
 PU_INC = -I $(PU_DIR) -I $(PULSE_TESTS)
 

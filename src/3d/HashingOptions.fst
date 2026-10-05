@@ -22,7 +22,6 @@ type micro_step_t =
   | MicroStepExtract
   | MicroStepCopyClangFormat
   | MicroStepCopyEverParseH
-  | MicroStepCopyPulseInternalH
   | MicroStepEmitConfig
   | MicroStepSaveHashes
   

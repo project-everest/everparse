@@ -76,7 +76,6 @@ let valid_micro_step (str: string) : Tot bool = match str with
   | "extract"
   | "copy_clang_format"
   | "copy_everparse_h"
-  | "copy_pulse_internal_h"
   | "emit_config"
   | "save_hashes"
     -> true
@@ -444,7 +443,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_use_ptr" (OptBool use_ptr_for_probe) "use pointers rather than array indices for probes" [];
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid _z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid _arg0) "executable name to use for the help message" [];
-    CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|copy_pulse_internal_h|emit_config|save_hashes" valid_micro_step _micro_step) "micro step" [];
+    CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config|save_hashes" valid_micro_step _micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool _produce_c_from_existing_krml) "produce C from .krml files" [];
     CmdOption "__skip_deps" (OptBool _skip_deps) "skip dependency analysis, assume all dependencies are specified on the command line" [];
   ];

@@ -81,18 +81,15 @@ let pulse_actions_c_home input_stream_binding =
     (filename_concat pulse_3d_home "krml")
     (string_of_input_stream_binding input_stream_binding)
 
-let everparse_h_home input_stream_binding =
-  if Options.uses_pulse_api ()
-  then pulse_actions_c_home input_stream_binding
-  else ddd_actions_c_home input_stream_binding
-
 let lowstar_api () = Options_Base.get_api () = HashingOptions.ApiLowstar
 
-let copy_pulse_internal_header out_dir =
+let everparse_h_home input_stream_binding =
   if lowstar_api () then
-    copy
-      (filename_concat (filename_concat pulse_3d_home "krml/lowstar") "EverParsePulseInternal.h")
-      (filename_concat out_dir "EverParsePulseInternal.h")
+    filename_concat (filename_concat pulse_3d_home "krml/lowstar")
+      (string_of_input_stream_binding input_stream_binding)
+  else if Options.uses_pulse_api ()
+  then pulse_actions_c_home input_stream_binding
+  else ddd_actions_c_home input_stream_binding
 
 let pulse_error_handler_module input_stream_binding =
   let backend =
@@ -436,6 +433,9 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
      because everything the runtime contributes to them is inline_for_extraction
      and has already been inlined by F* itself.
 
+     For --api lowstar, combining -static-header with -library also suppresses
+     runtime declarations, so per-parser extraction emits no EverParse.h.
+
      Warning 26 (Top-type casts) is expected for the Pulse ref-dereference
      idiom, which survives in the inlined code. *)
   let backend_args =
@@ -450,10 +450,11 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
         | "extern" | "static" -> "-2"
         | _ -> ""
       in
-      "-add-include" :: (if lowstar_api () then "\"EverParsePulseInternal.h\""
+      (if lowstar_api () then ["-static-header"; pulse_everparse_only_bundle] else []) @
+      ("-add-include" :: (if lowstar_api () then "EverParse:\"EverParseEndianness.h\""
         else "EverParse:\"EverParsePulseEndianness.h\"") ::
         "-library" :: pulse_everparse_only_bundle ::
-        "-warn-error" :: Printf.sprintf "-9@4-20-26%s" extern_warns :: []
+        "-warn-error" :: Printf.sprintf "-9@4-20-26%s" extern_warns :: [])
     else
       "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
         "-no-prefix" :: "LowParse.Slice" ::
@@ -575,13 +576,16 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
         [
             "EverParse3d.Actions.Common";
             "EverParse3d.Prelude.StaticHeader";
-          ] @ (if lowstar_api () then [pulse_error_handler_module input_stream_binding]
+          ] @ (if lowstar_api () then [
+                 "EverParse3d.ErrorCode";
+                 "EverParse3d.Lowstar.Public";
+                 (match string_of_input_stream_binding input_stream_binding with
+                  | "extern" | "static" -> "EverParse3d.Lowstar.SupportExtern"
+                  | _ -> "EverParse3d.Lowstar.SupportBuffer");
+                 pulse_error_handler_module input_stream_binding]
                else ["EverParse3d.ErrorCode"]) @ backend_api
       in
-      (if lowstar_api () then [
-        "-bundle";
-        "EverParse3d.ErrorCode=EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]"
-      ] else []) @ [
+      [
         "-bundle" ;
         "Prims,FStar.\\*,LowStar.\\*[rename=SHOULDNOTBETHERE]";
         "-bundle" ;
@@ -589,6 +593,7 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
           (String.concat "+" api_modules)
           (if lowstar_api () then String.concat "," api_modules else pulse_everparse_only_bundle);
       ] @ (if lowstar_api () then [
+        "-bundle"; "EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]";
         "-bundle"; pulse_everparse_only_bundle ^ "[rename=EverParsePrivate]"
       ] else [])
     else [
@@ -611,7 +616,6 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
   close_out h;
   print_endline (Printf.sprintf "KaRaMeL found at: %s" krml);
   run_cmd krml [Printf.sprintf "@%s" argfile];
-  copy_pulse_internal_header out_dir;
   begin match files_and_modules_cleanup with
   | Some files_and_modules ->
       Sys.remove argfile;
@@ -808,11 +812,7 @@ let collect_files
       out_dir
       files_and_modules
   =
-  let accu =
-    if lowstar_api () then
-      collect_file [] (filename_concat out_dir "EverParsePulseInternal.h")
-    else []
-  in
+  let accu = [] in
   let accu =
     if not no_everparse_h
     then
@@ -904,14 +904,14 @@ let copy_everparse_h_raw
       input_stream_binding
       out_dir =
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      (* Both backends ship a pre-generated, backend-specific EverParse.h: the
-         Low* one from src/3d/prelude/<backend>, the Pulse one from
-         lib/everparse/3d/krml/<backend>. Either way it overwrites the stub of
+      (* Each API ships a pre-generated, backend-specific EverParse.h:
+         legacy_lowstar from src/3d/prelude/<backend>, pulse from
+         lib/everparse/3d/krml/<backend>, and lowstar from
+         lib/everparse/3d/krml/lowstar/<backend>. It overwrites the stub of
          `extern` declarations that KaRaMeL emits for the -library'd runtime. *)
       let everparse_h_source = filename_concat (everparse_h_home input_stream_binding) "EverParse.h" in
-      if file_exists everparse_h_source
+      if lowstar_api () || file_exists everparse_h_source
       then copy everparse_h_source dest_everparse_h;
-      copy_pulse_internal_header out_dir;
       if Options.uses_pulse_api ()
       then begin
         let everparse_pulse_h_source = filename_concat ddd_home "EverParsePulse.h" in
@@ -927,9 +927,7 @@ let copy_everparse_h_raw
       then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
 
 let everparse_pulse_headers out_dir =
-  if lowstar_api ()
-  then [filename_concat out_dir "EverParsePulseInternal.h"]
-  else if Options.uses_pulse_api ()
+  if Options.uses_pulse_api ()
   then [
       filename_concat out_dir "EverParsePulse.h";
       filename_concat out_dir "EverParsePulseEndianness.h";
