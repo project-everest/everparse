@@ -147,6 +147,11 @@ There can be multiple definitions marked ``entrypoint`` in a given
   Low\* C API described here, including direct validator calls, packed
   results, error callbacks, and copy-buffer projections. The original
   implementation remains the default, ``--api legacy_lowstar``.
+  ``--no_api`` restores that default; the former ``--pulse`` option is no
+  longer accepted. ``--api`` selects the implementation and C API, while
+  ``--input_stream`` independently selects ``buffer``, ``extern`` or ``static``.
+  See :ref:`the --api option <3d-api-option>` for the runtime headers required
+  by each selection, including when using ``--no_copy_everparse_h``.
 
   The entrypoint API is also the same under the native Pulse API:
   ``3d --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
@@ -158,7 +163,8 @@ There can be multiple definitions marked ``entrypoint`` in a given
   same numbers (see :ref:`sec-error-handling-pulse`).
   ``3d --api pulse`` accordingly writes two
   extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
-  into the output directory alongside the ones listed above. Finally, the
+  into the output directory alongside the ones listed above, unless
+  ``--no_copy_everparse_h`` is specified. Finally, the
   client primitives that ``--input_stream`` and ``extern`` specifications
   require are not the same; those are documented in
   :ref:`the 3d user manual <3d>`.
@@ -2121,25 +2127,26 @@ Error handling
 When a validator fails, EverParse supports invoking a user-provided
 callback with contextual information about the failure.
 
-An error handling callback is a C procedure with the following signature:
+With ``--api legacy_lowstar`` or ``--api lowstar``, an error handling callback
+is a C procedure with the following seven-argument signature:
 
 .. code-block:: c
 
-  typedef void (*ErrorHandler)(
+  typedef void (*EVERPARSE_ERROR_HANDLER)(
     const char *TypeName,
     const char *FieldName,
     const char *ErrorReason,
     uint64_t ErrorCode,
     uint8_t *Context,
-    uint32_t Length,
-    uint8_t *Base,
-    uint64_t StartPosition,
-    uint64_t EndPosition
+    EVERPARSE_INPUT_BUFFER Input,
+    uint64_t StartPosition
   );
 
-EverParse also emits this type as a public ``EVERPARSE_ERROR_HANDLER``
-typedef in the generated ``EverParse.h``, under both backends, and the
-generated validator prototypes in ``<Mod>.h`` name that typedef.
+``EverParse.h`` supplies this typedef, and the generated validator prototypes
+in ``<Mod>.h`` name it. ``EVERPARSE_INPUT_BUFFER`` is ``uint8_t *`` for
+``--input_stream buffer``. For ``extern`` and ``static``, it is a record
+containing the client's stream ``base``, a ``has_length`` flag and a
+``uint64_t length``.
 
 The signature above, and the error codes listed below, describe
 ``--api legacy_lowstar`` and ``--api lowstar``. Under ``--api pulse`` the
@@ -2148,7 +2155,8 @@ named error kinds retain the same numbers; see :ref:`sec-error-handling-pulse`.
 
 Every EverParse validator is parameterized by:
 
-* A function pointer, of type ``ErrorHandler``
+* A function pointer, of type ``EVERPARSE_ERROR_HANDLER`` (unless
+  ``--use_error_handler_macro`` selects a macro instead)
 * A context parameter, ``uint8_t* Context``
 
 At the top-level, when calling into EverParse from an application, one
@@ -2156,13 +2164,13 @@ can instantiate both the ``ErrorHandler`` with a function of one's
 choosing and the ``Context`` argument with a pointer to some
 application-specific context.
 
-The ``ErrorHandler`` expects
+For the buffer input stream, the handler expects
 
-  * The ``Base`` and ``Context`` pointers to refer to live and
+  * The ``Input`` and ``Context`` pointers to refer to live and
     disjoint pieces of memory.
 
-  * For ``Length`` to be the length in bytes of valid memory pointed
-    to by ``Base`` and for ``StartPosition <= EndPosition <= Length``.
+  * ``StartPosition`` to be within the input buffer. The callback does
+    not receive the buffer length or the position at which validation failed.
 
 The ``ErrorHandler`` can
 
@@ -2187,19 +2195,22 @@ the following arguments:
     - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)
     - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
     - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
-    - "unspecified", with the ``ErrorCode > 7uL``
+    - "probe failed", ``8uL`` (no ``EVERPARSE_ERROR_PROBE_FAILED`` wrapper
+      macro in these two APIs)
+    - "unspecified", for other unrecognized kinds
 
   * The ``Context`` argument is the user-provided ``Context`` pointer
     
-  * The ``Length`` argument is the length in bytes of the input buffer
+  * The ``Input`` argument is the input buffer or stream view
 
-  * The ``Base`` argument is a pointer to the base of the input buffer
-
-  * The ``StartPosition`` argument is the offset from ``Base`` of the
+  * The ``StartPosition`` argument is the offset from the input's origin of the
     start of the field ``f``
-  
-  * The ``EndPosition`` argument is the offset from ``Base`` of the
-    end of the field ``f`` at which the validation failure occurred.
+
+The callback receives the unshifted error kind, not the packed validator
+result. Direct validators return a ``uint64_t`` containing the error kind in
+the high four bits and the position in the low 60 bits; use
+``EverParseGetValidatorErrorKind`` and ``EverParseGetValidatorErrorPos`` to
+extract them. A successful result has kind zero.
                 
 Following a validation failure at a given field, EverParse will invoke
 the ``ErrorHandler`` at each enclosing type as well. This allows a
@@ -2241,8 +2252,8 @@ the default ``--input_stream buffer``:
   );
 
 With ``--input_stream extern`` or ``--input_stream static``, the three
-stream arguments are instead the client's stream object, a truncation bound
-and an origin, of the client's own types. Consult the
+stream arguments are instead the client's ``EVERPARSE_INPUT_STREAM_BASE``
+object, a ``uint64_t`` truncation bound and a ``uint64_t`` origin. Consult the
 ``EVERPARSE_ERROR_HANDLER`` typedef in the generated ``EverParse.h`` for the
 exact signature in any given configuration.
 
@@ -2255,9 +2266,10 @@ Three points deserve attention:
   * There is no ``EndPosition`` argument. ``Position`` is a pointer to the
     validator's own position cell, which the handler may read but must not
     write to; the position it holds has already moved past whatever the
-    failing field consumed, and, under ``--input_stream extern`` or
-    ``static``, is relative to the origin rather than to the start of the
-    input.
+    failing field consumed. Under ``--input_stream extern`` or ``static``,
+    there is no position-cell argument: the stream maintains its own
+    absolute position, read with ``EverParseStreamGetPosition``; subtract
+    the supplied origin to obtain the position relative to this validation.
 
   * ``StartPosition`` --- the trailing argument, and the one that carries
     the same meaning as under the default backend --- is the offset from
@@ -2280,8 +2292,10 @@ The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
 In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
-``--api pulse``. Client code that compares ``ErrorCode`` against these macros
-ports unchanged between the two backends. Earlier Pulse releases used 1
+``--api pulse`` (the packed ``EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED``
+constant also exists in the Low\*-compatible runtime headers).
+Comparisons against the error-kind macros common to all three APIs keep
+the same meaning. Earlier Pulse releases used 1
 for action failure and 5, 6, 7 for constraint, padding, and probe failures.
 Clients that hardcoded those Pulse-specific numbers must update them;
 the callback signatures and byte return type are unchanged.
