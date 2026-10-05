@@ -47,6 +47,31 @@ exit:
 	return result;
 }
 
+BOOLEAN GotoReturnCheckCompletePoint(uint8_t *base, uint32_t len) {
+	BOOLEAN result = FALSE;
+	EVERPARSE_ERROR_FRAME frame;
+	frame.filled = FALSE;
+	uint64_t ep_status = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			GotoReturnEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		goto exit;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		GotoReturnEverParseError("_point", "", "unexpected trailing bytes");
+		goto exit;
+	}
+	result = TRUE;
+
+exit:
+	return result;
+}
+
 static BOOLEAN GotoReturnCheckTagged(uint64_t bound, uint8_t *base, uint32_t len) {
 	BOOLEAN result = FALSE;
 	EVERPARSE_ERROR_FRAME frame;
@@ -102,6 +127,76 @@ uint32_t GotoReturnProbeInPlaceCheckTagged(uint64_t bound, EVERPARSE_COPY_BUFFER
 	}
 	uint8_t *base = EverParseStreamOf(probeDest);
 	if (!GotoReturnCheckTagged(bound,  base, 42U))
+	{
+		result = EVERPARSE_PROBE_FAILURE_VALIDATION;
+		goto exit;
+	}
+	result = EVERPARSE_SUCCESS;
+
+exit:
+	return result;
+}
+
+static BOOLEAN GotoReturnCheckCompleteTagged(uint64_t bound, uint8_t *base, uint32_t len) {
+	BOOLEAN result = FALSE;
+	EVERPARSE_ERROR_FRAME frame;
+	frame.filled = FALSE;
+	uint64_t ep_status = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			GotoReturnEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		goto exit;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		GotoReturnEverParseError("_tagged", "", "unexpected trailing bytes");
+		goto exit;
+	}
+	result = TRUE;
+
+exit:
+	return result;
+}
+
+uint32_t GotoReturnProbeInPlaceCheckCompleteTagged(uint64_t bound, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;
+
+	if(providedSize < 42U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		result = EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+		goto exit;
+	}
+	if(!ProbeInit("GotoReturnCheckCompleteTagged", 42U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		result = EVERPARSE_PROBE_FAILURE_INIT;
+		goto exit;
+	}
+	if (!ProbeInPlace(42U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		result = EVERPARSE_PROBE_FAILURE_PROBE;
+		goto exit;
+	}
+	uint8_t *base = EverParseStreamOf(probeDest);
+	if (!GotoReturnCheckCompleteTagged(bound,  base, 42U))
 	{
 		result = EVERPARSE_PROBE_FAILURE_VALIDATION;
 		goto exit;

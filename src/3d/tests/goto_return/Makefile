@@ -12,7 +12,7 @@ $(OUTPUT_DIR):
 	mkdir -p $@
 
 $(OUTPUT_DIR)/GotoReturnWrapper.c $(OUTPUT_DIR)/GotoReturnWrapper.h: GotoReturn.3d | $(OUTPUT_DIR)
-	$(EVERPARSE_EXE) --odir $(OUTPUT_DIR) --goto_for_early_return GotoReturn.3d
+	$(EVERPARSE_EXE) --odir $(OUTPUT_DIR) --goto_for_early_return --complete_wrappers GotoReturn.3d
 
 test: $(OUTPUT_DIR)/GotoReturnWrapper.c $(OUTPUT_DIR)/GotoReturnWrapper.h
 	diff -u snapshot/GotoReturnWrapper.c $(OUTPUT_DIR)/GotoReturnWrapper.c

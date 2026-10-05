@@ -44,6 +44,29 @@ BOOLEAN GetFieldPtrCheckT(uint8_t** out, uint8_t *base, uint32_t len) {
 	return TRUE;
 }
 
+BOOLEAN GetFieldPtrCheckCompleteT(uint8_t** out, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = GetFieldPtrValidateT(out,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			GetFieldPtrEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		GetFieldPtrEverParseError("_T", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOLEAN GetFieldPtrCheckTact(uint8_t** out, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -57,6 +80,29 @@ BOOLEAN GetFieldPtrCheckTact(uint8_t** out, uint8_t *base, uint32_t len) {
 		{
 			GetFieldPtrEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN GetFieldPtrCheckCompleteTact(uint8_t** out, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = GetFieldPtrValidateTact(out,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			GetFieldPtrEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		GetFieldPtrEverParseError("_TAct", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;

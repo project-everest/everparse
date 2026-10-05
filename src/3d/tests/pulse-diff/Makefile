@@ -203,6 +203,7 @@ pulse-diff-test: trace_lo.txt trace_pu.txt
 #                           main and its own error callback, so it cannot be
 #                           linked against the generated driver.
 SUBDIR_TESTS ?= \
+  check_complete/obj \
   ifdefs/obj \
   ifdefs/batch_obj \
   iter/coarse/obj \
