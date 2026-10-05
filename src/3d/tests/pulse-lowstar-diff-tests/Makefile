@@ -6,7 +6,7 @@ export FSTAR_EXE 3D_Z3_EXECUTABLE KRML_HOME CC CXX CFLAGS CXXFLAGS LDFLAGS
 .PHONY: all test adapters selftest inventory clean
 all: test
 test: adapters
-	$(PYTHON) run.py --home "$(EVERPARSE_HOME)" $(ARGS)
+	+$(PYTHON) run.py --home "$(EVERPARSE_HOME)" $(ARGS)
 adapters:
 	$(PYTHON) adapter-tests/run.py all
 	$(PYTHON) adapter-tests/run.py large32

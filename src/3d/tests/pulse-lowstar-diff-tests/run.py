@@ -2,6 +2,7 @@
 """Full-corpus Low* ABI differential gate. Partial runs never certify compatibility."""
 
 import argparse
+from functools import partial
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,7 @@ from compare import check_executed, compare, coverage, read_trace
 from corpus import (APIS, CORPUS, HERE, NEGATIVES, SUITES, HarnessError, digest,
                     inventory, write_json)
 from driver import generate, signatures
+from parallel import JobBudget, run_jobs
 
 
 def run_process(argv, *, timeout, **kwargs):
@@ -50,8 +52,10 @@ def command(argv, cwd, env, log, timeout, *, append=False):
         raise HarnessError(f"command failed ({process.returncode}): {log}")
 
 
-def build_suite(suite, home, tree, env, log, timeout, *, api):
+def build_suite(suite, home, tree, env, log, timeout, *, api, target=None):
     directory, targets, _ = SUITES[suite]
+    if target is not None:
+        targets = [target]
     for index, target in enumerate(targets):
         lowstar_cleanup = api == "lowstar" and suite == "root" and target == "batch-cleanup-test"
         extras = (["EXTRA_CLEAN_OUT_FILES=EverParsePulseInternal.h internal"]
@@ -203,9 +207,8 @@ def abi_regression(suite, home, stages, work, cc, timeout):
     return {"status": "passed", "observations": len(traces[APIS[0]])}
 
 
-def differential(suite, home, stages, work, iterations, timeout, cc, clang):
+def comparison_modules(suite, stages):
     directory, _, outputs = SUITES[suite]
-    reports = []
     for output in outputs:
         roots = {api: stages[api][0] / directory / output for api in APIS}
         for api, root in roots.items():
@@ -220,74 +223,178 @@ def differential(suite, home, stages, work, iterations, timeout, cc, clang):
         if modules[APIS[0]] != modules[APIS[1]] or not modules[APIS[0]]:
             raise HarnessError(f"{suite}/{output}: missing or unequal public module sets: {modules}")
         for module in sorted(modules[APIS[0]]):
-            target = work / output / module
-            target.mkdir(parents=True)
-            src = stages[APIS[0]][0] / directory
-            stream = suite in {"extern", "static", "funptr"} or output == "extern.out"
-            support, extra, setup = support_for(suite, module, src, roots[APIS[0]])
-            if suite == "tcpip" and not stream:
-                extra = []
-            includes = [roots[APIS[0]], src, src / "src", src / "extern",
-                        home / "src/3d", home / "src/3d/prelude" / ("extern" if stream else "buffer")]
-            source, required = generate(module, roots[APIS[0]], roots[APIS[1]], includes,
-                                        support=support, extern=stream, funptr=suite == "funptr",
-                                        copy_setup=setup, clang=clang)
-            driver = target / "driver.c"
-            driver.write_text(source)
-            write_json(target / "required.json", required)
-            seed_inputs = seeds(HERE.parent / "pulse-diff/seeds.inc")
-            data = generate_cases(required, seed_inputs, iterations)
-            (target / "inputs.txt").write_text(data)
-            traces = {}
-            for api in APIS:
-                original = roots[api]
-                root = target / (api + "-package")
-                root.mkdir()
-                for path in original.rglob("*"):
-                    if path.is_file() and path.suffix in {".c", ".h"}:
-                        absolute = [name for name in re.findall(
-                            r'#include\s+"([^"]+)"', path.read_text()) if Path(name).is_absolute()]
-                        if absolute:
-                            raise HarnessError(f"non-relocatable generated includes in {path}: {absolute}")
-                        dest = root / path.relative_to(original)
-                        dest.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(path, dest)
-                # The driver is literally the same source for both compilations.
-                # Included client files come from the reference staging tree and
-                # have verified byte equality with the candidate staging tree.
-                inc = [root, *includes[1:], HERE]
-                executable = target / api
-                sources = c_sources(root, module)
-                if not sources:
-                    raise HarnessError(f"{suite}/{output}/{module}: no generated C")
-                wraps = ["-Wl,--wrap=" + fn for fn, info in required.items()
-                         if info["return"] == "uint64_t" and info["direct"]]
-                command([*shlex.split(cc), "-O1", "-g", "-std=c11", "-D_DEFAULT_SOURCE",
-                         "-Werror=incompatible-pointer-types", "-Werror=implicit-function-declaration",
-                         "-Werror=int-conversion", *[f"-I{p}" for p in inc],
-                         str(driver), *sources, *extra, *wraps, "-o", executable],
-                        home, stages[api][1], target / (api + ".compile.log"), timeout)
-                trace = target / (api + ".trace")
-                stdout, stderr = target / (api + ".stdout"), target / (api + ".stderr")
-                with (target / "inputs.txt").open() as inp, stdout.open("w") as out, stderr.open("w") as err:
-                    process = run_process([str(executable)], stdin=inp, stdout=out, stderr=err,
-                                          env=dict(stages[api][1], DIFF_TRACE=str(trace)),
-                                          timeout=timeout)
-                if process.returncode:
-                    raise HarnessError(f"{suite}/{output}/{module}: {api} driver failed "
-                                       f"({process.returncode}); see {stderr}")
-                macro_trace(stderr, trace)
-                traces[api] = read_trace(trace)
-                check_executed(traces[api], data, required)
-            differences = compare(traces[APIS[0]], traces[APIS[1]])
-            accounting = coverage(traces[APIS[0]], required)
-            write_json(target / "comparison.json", {"differences": differences, "coverage": accounting})
-            missing = {fn: item for fn, item in accounting.items()
-                       if item["missing_fields"] or not item["failure"] or
-                       (item["success"] != 0 if item.get("negative_only") else not item["success"])}
-            reports.append({"output": output, "module": module, "coverage": accounting,
-                            "differences": differences, "missing_coverage": missing})
+            yield output, module
+
+
+def differential(suite, home, stages, work, iterations, timeout, cc, clang, *, modules=None):
+    directory = SUITES[suite][0]
+    reports = []
+    for output, module in (comparison_modules(suite, stages) if modules is None else modules):
+        roots = {api: stages[api][0] / directory / output for api in APIS}
+        target = work / output / module
+        target.mkdir(parents=True)
+        src = stages[APIS[0]][0] / directory
+        stream = suite in {"extern", "static", "funptr"} or output == "extern.out"
+        support, extra, setup = support_for(suite, module, src, roots[APIS[0]])
+        if suite == "tcpip" and not stream:
+            extra = []
+        includes = [roots[APIS[0]], src, src / "src", src / "extern",
+                    home / "src/3d", home / "src/3d/prelude" / ("extern" if stream else "buffer")]
+        source, required = generate(module, roots[APIS[0]], roots[APIS[1]], includes,
+                                    support=support, extern=stream, funptr=suite == "funptr",
+                                    copy_setup=setup, clang=clang)
+        driver = target / "driver.c"
+        driver.write_text(source)
+        write_json(target / "required.json", required)
+        seed_inputs = seeds(HERE.parent / "pulse-diff/seeds.inc")
+        data = generate_cases(required, seed_inputs, iterations)
+        (target / "inputs.txt").write_text(data)
+        traces = {}
+        for api in APIS:
+            original = roots[api]
+            root = target / (api + "-package")
+            root.mkdir()
+            for path in original.rglob("*"):
+                if path.is_file() and path.suffix in {".c", ".h"}:
+                    absolute = [name for name in re.findall(
+                        r'#include\s+"([^"]+)"', path.read_text()) if Path(name).is_absolute()]
+                    if absolute:
+                        raise HarnessError(f"non-relocatable generated includes in {path}: {absolute}")
+                    dest = root / path.relative_to(original)
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, dest)
+            # The driver is literally the same source for both compilations.
+            # Included client files come from the reference staging tree and
+            # have verified byte equality with the candidate staging tree.
+            inc = [root, *includes[1:], HERE]
+            executable = target / api
+            sources = c_sources(root, module)
+            if not sources:
+                raise HarnessError(f"{suite}/{output}/{module}: no generated C")
+            wraps = ["-Wl,--wrap=" + fn for fn, info in required.items()
+                     if info["return"] == "uint64_t" and info["direct"]]
+            command([*shlex.split(cc), "-O1", "-g", "-std=c11", "-D_DEFAULT_SOURCE",
+                     "-Werror=incompatible-pointer-types", "-Werror=implicit-function-declaration",
+                     "-Werror=int-conversion", *[f"-I{p}" for p in inc],
+                     str(driver), *sources, *extra, *wraps, "-o", executable],
+                    home, stages[api][1], target / (api + ".compile.log"), timeout)
+            trace = target / (api + ".trace")
+            stdout, stderr = target / (api + ".stdout"), target / (api + ".stderr")
+            with (target / "inputs.txt").open() as inp, stdout.open("w") as out, stderr.open("w") as err:
+                process = run_process([str(executable)], stdin=inp, stdout=out, stderr=err,
+                                      env=dict(stages[api][1], DIFF_TRACE=str(trace)),
+                                      timeout=timeout)
+            if process.returncode:
+                raise HarnessError(f"{suite}/{output}/{module}: {api} driver failed "
+                                   f"({process.returncode}); see {stderr}")
+            macro_trace(stderr, trace)
+            traces[api] = read_trace(trace)
+            check_executed(traces[api], data, required)
+        differences = compare(traces[APIS[0]], traces[APIS[1]])
+        accounting = coverage(traces[APIS[0]], required)
+        write_json(target / "comparison.json", {"differences": differences, "coverage": accounting})
+        missing = {fn: item for fn, item in accounting.items()
+                   if item["missing_fields"] or not item["failure"] or
+                   (item["success"] != 0 if item.get("negative_only") else not item["success"])}
+        reports.append({"output": output, "module": module, "coverage": accounting,
+                        "differences": differences, "missing_coverage": missing})
     return reports
+
+
+def job_result(action):
+    try:
+        return {"status": "passed", "value": action()}
+    except (HarnessError, subprocess.TimeoutExpired, OSError) as error:
+        return {"status": "blocked", "error": str(error)}
+
+
+def build_target(suite, target, api, home, tree, env, work, timeout):
+    build_suite(suite, home, tree, env, work / f"{api}.{target}.build.log",
+                timeout, api=api, target=target)
+    if suite == "root" and target == "elf-test":
+        command([tree / "out.elf/elf-test", sys.executable], home, env,
+                work / (api + ".elf-client.log"), timeout)
+
+
+def run_suites(selected, home, stages, work, args, report, budget):
+    jobs = []
+    for suite in selected:
+        result = {"status": "running", "builds": {}, "build_jobs": {}}
+        report["suites"][suite] = result
+        suite_work = work / "results" / suite
+        suite_work.mkdir(parents=True)
+        for api, (tree, env) in stages.items():
+            targets = NEGATIVES if suite == "negative" else SUITES[suite][1]
+            result["build_jobs"][api] = {target: {"status": "pending"} for target in targets}
+            if suite == "negative":
+                (suite_work / api).mkdir()
+            for target in targets:
+                action = (partial(negative, target, home, tree, env, suite_work / api, args.timeout)
+                          if suite == "negative" else
+                          partial(build_target, suite, target, api, home, tree, env,
+                                  suite_work, args.timeout))
+                jobs.append(((suite, api, target), partial(job_result, action)))
+    write_json(work / "report.json", report)
+    for (suite, api, target), result in run_jobs(jobs, budget):
+        report["suites"][suite]["build_jobs"][api][target] = result
+        print(f"{suite}/{api}/{target}: {result['status']}", flush=True)
+        write_json(work / "report.json", report)
+
+    comparisons = []
+    for suite in selected:
+        result = report["suites"][suite]
+        errors = []
+        for api in APIS:
+            builds = result["build_jobs"][api]
+            blocked = [item["error"] for item in builds.values() if item["status"] != "passed"]
+            result["builds"][api] = (
+                {"status": "blocked", "error": "; ".join(blocked)} if blocked else
+                {name: item["value"] for name, item in builds.items()} if suite == "negative" else
+                "passed")
+            errors.extend(blocked)
+        if errors:
+            result.update(status="blocked", error="; ".join(errors))
+            continue
+        if suite == "negative":
+            result["status"] = "passed"
+            continue
+        suite_work = work / "results" / suite
+        try:
+            modules = list(comparison_modules(suite, stages))
+        except (HarnessError, OSError) as error:
+            result.update(status="blocked", error=str(error))
+            continue
+        result.update(abi=None, comparisons=[])
+        if suite in {"root", "modules"}:
+            action = partial(abi_regression, suite, home, stages, suite_work, args.cc, args.timeout)
+            comparisons.append(((suite, "abi"), partial(job_result, action)))
+        for output, module in modules:
+            action = partial(differential, suite, home, stages, suite_work,
+                             args.iterations, args.timeout, args.cc, args.clang,
+                             modules=[(output, module)])
+            comparisons.append(((suite, f"{output}/{module}"), partial(job_result, action)))
+    for (suite, name), outcome in run_jobs(comparisons, budget):
+        result = report["suites"][suite]
+        if outcome["status"] != "passed":
+            result["status"] = "blocked"
+            result.setdefault("comparison_errors", {})[name] = outcome["error"]
+            result["error"] = "; ".join(
+                result["comparison_errors"][key] for key in sorted(result["comparison_errors"]))
+        elif name == "abi":
+            result["abi"] = outcome["value"]
+        else:
+            result["comparisons"].extend(outcome["value"])
+            result["comparisons"].sort(key=lambda item: (item["output"], item["module"]))
+        write_json(work / "report.json", report)
+    for suite in selected:
+        result = report["suites"][suite]
+        if result["status"] == "running":
+            result["status"] = "failed" if any(
+                item["differences"] or item["missing_coverage"]
+                for item in result["comparisons"]) else "passed"
+        print(f"{suite}: {result['status']}" + (": " + result["error"] if "error" in result else ""),
+              flush=True)
+    write_json(work / "report.json", report)
 
 
 def main(argv=None):
@@ -298,6 +405,8 @@ def main(argv=None):
     parser.add_argument("--suite", action="append", choices=[*SUITES, "negative"])
     parser.add_argument("--iterations", type=int, default=256)
     parser.add_argument("--timeout", type=int, default=1800)
+    parser.add_argument("--jobs", type=int,
+                        help="maximum concurrent jobs (default: make jobserver/CPU limit, else 1)")
     parser.add_argument("--cc", default=os.environ.get("CC", "cc"))
     parser.add_argument("--clang", default="clang")
     parser.add_argument("--clean", action="store_true")
@@ -312,8 +421,8 @@ def main(argv=None):
             if output.exists():
                 shutil.rmtree(output)
         return 0
-    if args.iterations < 0 or args.timeout <= 0:
-        parser.error("iterations must be nonnegative and timeout must be positive")
+    if args.iterations < 0 or args.timeout <= 0 or (args.jobs is not None and args.jobs <= 0):
+        parser.error("iterations must be nonnegative; timeout and jobs must be positive")
     home = args.home.resolve()
     listing = inventory(home, args.manifest)
     build.mkdir(exist_ok=True)
@@ -323,50 +432,17 @@ def main(argv=None):
     if args.inventory_only:
         print(f"{len(listing['files'])} corpus files")
         return 0
-    selected = args.suite or [*SUITES, "negative"]
+    selected = list(dict.fromkeys(args.suite)) if args.suite else [*SUITES, "negative"]
     report = {"status": "running", "partial": args.suite is not None, "suites": {},
               "inventory": str(work / "inventory.json"),
               "generator_sha256": digest(home / "bin/3d.exe")}
     stages = {api: stage(home, work, api, listing) for api in APIS}
-    for suite in selected:
-        result = {"status": "running", "builds": {}}
-        report["suites"][suite] = result
-        suite_work = work / "results" / suite
-        suite_work.mkdir(parents=True)
-        try:
-            if suite == "negative":
-                for api, (tree, env) in stages.items():
-                    dest = suite_work / api
-                    dest.mkdir()
-                    result["builds"][api] = {
-                        name: negative(name, home, tree, env, dest, args.timeout) for name in NEGATIVES}
-                result["status"] = "passed"
-            else:
-                build_errors = []
-                for api, (tree, env) in stages.items():
-                    try:
-                        build_suite(suite, home, tree, env,
-                                    suite_work / (api + ".build.log"), args.timeout, api=api)
-                        if suite == "root":
-                            command([tree / "out.elf/elf-test", sys.executable], home, env,
-                                    suite_work / (api + ".elf-client.log"), args.timeout)
-                        result["builds"][api] = "passed"
-                    except (HarnessError, subprocess.TimeoutExpired, OSError) as error:
-                        result["builds"][api] = {"status": "blocked", "error": str(error)}
-                        build_errors.append(str(error))
-                if build_errors:
-                    raise HarnessError("; ".join(build_errors))
-                result["abi"] = abi_regression(suite, home, stages, suite_work,
-                                              args.cc, args.timeout)
-                result["comparisons"] = differential(suite, home, stages, suite_work,
-                                                      args.iterations, args.timeout, args.cc, args.clang)
-                result["status"] = "failed" if any(
-                    r["differences"] or r["missing_coverage"] for r in result["comparisons"]) else "passed"
-        except (HarnessError, subprocess.TimeoutExpired, OSError) as error:
-            result.update(status="blocked", error=str(error))
-        print(f"{suite}: {result['status']}" + (": " + result["error"] if "error" in result else ""),
-              flush=True)
-        write_json(work / "report.json", report)
+    with JobBudget(args.jobs) as budget:
+        report["jobs"] = budget.jobs
+        report["jobserver"] = budget.reader is not None
+        print(f"Concurrency: at most {budget.jobs} jobs"
+              + (" using GNU Make jobserver" if report["jobserver"] else ""), flush=True)
+        run_suites(selected, home, stages, work, args, report, budget)
     # Every original source is rechecked after the run, including support files.
     changed = [r["path"] for r in listing["files"]
                if digest(home / CORPUS / r["path"]) != r["sha256"]]

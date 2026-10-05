@@ -23,6 +23,33 @@ all root build targets. Timeouts terminate the command's process group, includin
 generator/compiler descendants. `--iterations` controls additional deterministic
 random inputs, not the boundary cases or existing solver seeds.
 
+## Parallel execution
+
+`make -j16 3d-lowstar-diff-test` (or the enclosing `make -j16 3d-test`)
+shares GNU Make's jobserver budget with the rest of the build. The runner
+holds one implicit slot and borrows a token for each additional active job,
+returning tokens even after failures. Linux pipe jobservers and GNU Make FIFO
+jobservers are supported; inaccessible or unsupported jobservers fail explicitly.
+
+For a standalone invocation, use `python3 run.py --jobs 8`. Without a jobserver,
+the default remains one job. `--jobs N` also caps concurrency under Make without
+overriding its token budget; the default cap there is the CPU count.
+
+Both API builds, independent suites, the six root build targets, and individual
+negative cases run concurrently. After the build phase, module comparisons and
+direct ABI regressions share that same budget. Each Make invocation stays at
+`-j1`, and each module's two compilations/runs remain sequential, avoiding nested
+worker pools. Jobs only read shared source/toolchain files: build targets write
+separate output directories, and comparisons have per-module package directories.
+Host and 32-bit adapter checks still run sequentially before the corpus phase
+because they reuse fixture outputs.
+
+Build logs are named `<api>.<target>.build.log` in each suite's results directory.
+A single coordinator writes the report, including individual `build_jobs`
+outcomes; comparison entries are sorted independently of completion order.
+All runnable jobs finish even when another fails. Failed builds block their
+suite's comparisons, never turn into skips or reduce required corpus coverage.
+
 ## Corpus and isolation
 
 `git ls-files share/everparse/tests/3d/lowstar` is the source of truth, excluding generated output
