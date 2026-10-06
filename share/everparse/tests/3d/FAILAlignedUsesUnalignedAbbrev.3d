@@ -1,0 +1,19 @@
+// Same as FAILAlignedUsesUnaligned.3d, but reaching the non-'aligned' struct
+// through a chain of type abbreviations: the check must see through those.
+
+typedef struct _NotAligned
+{
+   UINT8  n1;
+   UINT16 n2;
+} NotAligned;
+
+typedef NotAligned NA1;
+typedef NA1 NA2;
+
+aligned
+entrypoint
+typedef struct _AlignedAbbrev
+{
+   UINT8 a1;
+   NA2   a2;
+} AlignedAbbrev;
