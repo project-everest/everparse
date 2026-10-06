@@ -159,13 +159,14 @@ lowstar/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -fno-shadow -fextern-c \
 	  -finitialize-locals no \
 	  -bundle 'Prims,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle '$$(LOWSTAR_$(1))=LowParse.\*,EverParse3d.\*,Pulse.\*[rename=EverParse,rename-prefix]' \
+	  -bundle '$$(LOWSTAR_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*,Custard.\*[rename=EverParse,rename-prefix]' \
 	  -bundle 'EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]' \
 	  $$(KRML_FILES)
 	test '!' -e lowstar/$(1)/EverParse.c
 	test '!' -e lowstar/$(1)/EverParsePulseInternal.h
 	test '!' -e lowstar/$(1)/SHOULDNOTBETHERE.h
 	test '!' -d lowstar/$(1)/internal
+	test "$$$$(ls lowstar/$(1))" = EverParse.h
 endef
 
 $(foreach b,$(BACKENDS),$(eval $(call lowstar_header_rule,$(b))))

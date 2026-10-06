@@ -32,5 +32,22 @@ module PreludeStaticHeader = EverParse3d.Prelude.StaticHeader
 module ProbeActions = EverParse3d.ProbeActions
 module State = EverParse3d.State
 
+(* The `--api lowstar` runtime; see CUSTARD_ENTRY_MODULES in extract.Makefile. *)
+module ErrorHandlerLowstarBuffer = EverParse3d.Actions.ErrorHandler.LowstarBuffer
+module ErrorHandlerLowstarExtern = EverParse3d.Actions.ErrorHandler.LowstarExtern
+module CopyBufferLowstarBuffer = EverParse3d.CopyBuffer.LowstarBuffer
+module CopyBufferLowstarExtern = EverParse3d.CopyBuffer.LowstarExtern
+module InputStreamLowstarBuffer = EverParse3d.InputStream.LowstarBuffer
+module InputStreamLowstarExtern = EverParse3d.InputStream.LowstarExtern
+module InputStreamLowstarExternRaw = EverParse3d.InputStream.LowstarExtern.Raw
+module InputStreamLowstarExternTypes = EverParse3d.InputStream.LowstarExtern.Types
+module LowstarBufferAdapter = EverParse3d.Lowstar.BufferAdapter
+module LowstarErrorCode = EverParse3d.Lowstar.ErrorCode
+module LowstarExternAdapter = EverParse3d.Lowstar.ExternAdapter
+module LowstarExternAdapterSpec = EverParse3d.Lowstar.ExternAdapter.Spec
+module LowstarPublic = EverParse3d.Lowstar.Public
+module LowstarSupportBuffer = EverParse3d.Lowstar.SupportBuffer
+module LowstarSupportExtern = EverParse3d.Lowstar.SupportExtern
+
 (* For CUSTARD_ENTRIES; see extract.Makefile. *)
 module PulsePervasives = Pulse.Lib.Pervasives

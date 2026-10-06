@@ -56,6 +56,35 @@ CUSTARD_ENTRY_MODULES := \
   EverParse3d.ProbeActions \
   EverParse3d.State
 
+# The `--api lowstar` runtime: a second, independent family of backends that
+# re-exports the same validators behind the historical Low* C API (packed
+# U64 results, EVERPARSE_INPUT_BUFFER, the EverParseStream* primitives). It is
+# rooted here for the same reason as the Pulse-API runtime above: header.Makefile
+# turns these very modules into the API modules of the `lowstar/<backend>`
+# bundles, and 3d.exe passes `-library EverParse3d.\*` for the client's own
+# KaRaMeL run, so every declaration has to have been *seen* here.
+#
+# The three adapter modules are what generated `--api lowstar` validators call
+# (see InterpreterTarget.fst's `lowstar_adapter_module`), and
+# EverParse3d.Lowstar.ErrorCode holds the shared position/error arithmetic they
+# and the Types modules are specified against.
+CUSTARD_ENTRY_MODULES += \
+  EverParse3d.Actions.ErrorHandler.LowstarBuffer \
+  EverParse3d.Actions.ErrorHandler.LowstarExtern \
+  EverParse3d.CopyBuffer.LowstarBuffer \
+  EverParse3d.CopyBuffer.LowstarExtern \
+  EverParse3d.InputStream.LowstarBuffer \
+  EverParse3d.InputStream.LowstarExtern \
+  EverParse3d.InputStream.LowstarExtern.Raw \
+  EverParse3d.InputStream.LowstarExtern.Types \
+  EverParse3d.Lowstar.BufferAdapter \
+  EverParse3d.Lowstar.ErrorCode \
+  EverParse3d.Lowstar.ExternAdapter \
+  EverParse3d.Lowstar.ExternAdapter.Spec \
+  EverParse3d.Lowstar.Public \
+  EverParse3d.Lowstar.SupportBuffer \
+  EverParse3d.Lowstar.SupportExtern
+
 # header.Makefile applies -static-header to Pulse.\*, so what the Pulse runtime
 # contributes to EverParse.h is emitted there as `static inline`, and 3d.exe
 # then passes -library Pulse.\* for the client's own KaRaMeL run, which assumes
@@ -75,6 +104,8 @@ CUSTARD_ENTRIES := Pulse.Lib.Pervasives._zero_for_deref
 CUSTARD_ENTRIES += EverParse3d.InputStream.Buffer.error_handler_macro
 CUSTARD_ENTRIES += EverParse3d.InputStream.Extern.error_handler_macro
 CUSTARD_ENTRIES += EverParse3d.InputStream.Static.error_handler_macro
+CUSTARD_ENTRIES += EverParse3d.InputStream.LowstarBuffer.error_handler_macro
+CUSTARD_ENTRIES += EverParse3d.InputStream.LowstarExtern.error_handler_macro
 
 # The C primitives the client implements by hand (EverParseStreamOf,
 # EverParseStreamHasAt, ...). Every one of them is an `assume val`, and
@@ -106,6 +137,20 @@ CUSTARD_ENTRIES += EverParse3d.InputStream.Extern.stream_skip
 CUSTARD_ENTRIES += EverParse3d.InputStream.Extern.stream_empty
 CUSTARD_ENTRIES += EverParse3d.InputStream.Extern.field_ptr_after_impl
 
+# The same C primitives for the `--api lowstar` backends. The extern backend
+# routes them through EverParse3d.InputStream.LowstarExtern.Raw, whose .fsti has
+# no implementation, so *nothing* in it is a definition and the module being an
+# entry module does not root any of it. Ghost declarations are again left out:
+# read_loan/peep_loan are slprops and restore_read/restore_peep are stt_ghost.
+CUSTARD_ENTRIES += EverParse3d.CopyBuffer.LowstarBuffer.stream_of
+CUSTARD_ENTRIES += EverParse3d.CopyBuffer.LowstarBuffer.stream_len
+CUSTARD_ENTRIES += EverParse3d.CopyBuffer.LowstarExtern.stream_of
+CUSTARD_ENTRIES += EverParse3d.InputStream.LowstarExtern.Raw.has
+CUSTARD_ENTRIES += EverParse3d.InputStream.LowstarExtern.Raw.skip
+CUSTARD_ENTRIES += EverParse3d.InputStream.LowstarExtern.Raw.empty
+CUSTARD_ENTRIES += EverParse3d.InputStream.LowstarExtern.Raw.read
+CUSTARD_ENTRIES += EverParse3d.InputStream.LowstarExtern.Raw.peep
+
 # Abstract types the client realizes in C, so Custard must declare rather than
 # define them: EVERPARSE_COPY_BUFFER_T is `void*` from EverParseEndianness.h
 # (reached through the EverParse bundle's -add-include of
@@ -116,6 +161,14 @@ CUSTARD_ENTRIES += EverParse3d.InputStream.Extern.field_ptr_after_impl
 CUSTARD_EXTERN_TYPES := EverParse3d.CopyBuffer.Buffer.copy_buffer_t
 CUSTARD_EXTERN_TYPES += EverParse3d.InputStream.Extern.Types.input_stream_base
 CUSTARD_EXTERN_TYPES += EverParse3d.InputStream.Extern.Types.extra_t
+
+# Likewise for `--api lowstar`. EVERPARSE_INPUT_BUFFER itself is *not* here:
+# EverParse3d.InputStream.LowstarExtern.Types.input_buffer is a real record that
+# Custard must define, since the Low* C API exposes its fields.
+CUSTARD_EXTERN_TYPES += EverParse3d.CopyBuffer.LowstarBuffer.copy_buffer_t
+CUSTARD_EXTERN_TYPES += EverParse3d.CopyBuffer.LowstarExtern.copy_buffer_t
+CUSTARD_EXTERN_TYPES += EverParse3d.InputStream.LowstarExtern.Types.input_stream_base
+CUSTARD_EXTERN_TYPES += EverParse3d.InputStream.LowstarExtern.Types.extra_t
 
 CUSTARD_ROOTS := EverParse3d.Krml.Roots.fst
 
