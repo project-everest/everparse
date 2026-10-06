@@ -22,7 +22,7 @@ RUN apt-get update \
       libffi-dev \
       tmux \
       rustup \
-      dotnet-sdk-8.0 \
+      dotnet-sdk-10.0 \
       python3-venv \
       clang \
       cmake \

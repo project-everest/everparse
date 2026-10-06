@@ -46,9 +46,8 @@ SHELL ["/usr/bin/env", "BASH_ENV=/home/test/.cargo/env", "/bin/bash", "-c"]
 
 # Install the .NET SDK, to build and run the standalone hash checker
 # (src/3d/hashchk). The version must satisfy src/3d/hashchk/global.json,
-# which requires the 8.0.4xx feature band or higher. The dotnet-sdk-8.0
-# Ubuntu package is in the 8.0.1xx feature band, so it will not do.
-ARG DOTNET_SDK_VERSION=8.0.420
+# which requires .NET 10.0.100 or higher.
+ARG DOTNET_SDK_VERSION=10.0.401
 RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh \
  && bash dotnet-install.sh --version $DOTNET_SDK_VERSION --install-dir $HOME/.dotnet \
  && rm dotnet-install.sh

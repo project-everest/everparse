@@ -104,7 +104,7 @@ jobs:
         # This will install Cygwin as well
 
       - name: Set-up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: src/3d/hashchk/global.json
 
