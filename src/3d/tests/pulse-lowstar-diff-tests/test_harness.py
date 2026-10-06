@@ -209,6 +209,70 @@ class CommandTests(unittest.TestCase):
 
 
 class InventoryTests(unittest.TestCase):
+    def test_filesystem_inventory_without_git_and_manifest_roundtrip(self):
+        with tempfile.TemporaryDirectory(dir=HERE) as tmp:
+            root = Path(tmp)
+            corpus = root / CORPUS
+            sources = ["New.3d", "Makefile", ".gitignore", "Comments.3d.copyright.txt",
+                       "ifdefs/src/Flags.3d.config", "probe/helper.NMakefile",
+                       "probe/build.cmd", "extern/src/main.c",
+                       "goto_return/snapshot/GotoReturnWrapper.c"]
+            outputs = ["out.batch/New.3d", "extern/obj/Test.c", "exttype/tmp/Test.c",
+                       "tcpip/interpret.out/Test.3d", "__pycache__/bad.py",
+                       "test-cpp.exe", "FAILNew.3d.negtest.err", "Test.o"]
+            for name in sources + outputs:
+                path = corpus / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(name)
+            with patch("corpus.subprocess.run", side_effect=AssertionError("Git invoked")):
+                data = inventory(root, source="filesystem")
+                self.assertEqual([r["path"] for r in data["files"]], sorted(sources))
+                self.assertIn("filesystem", data["scope"])
+                self.assertEqual(inventory(root, source="filesystem"), data)
+                for record in data["files"]:
+                    self.assertEqual(record["sha256"], digest(corpus / record["path"]))
+                manifest = root / "manifest.json"
+                write_json(manifest, data)
+                self.assertEqual(inventory(root, manifest)["files"], data["files"])
+                (corpus / "New.3d").write_text("changed")
+                with self.assertRaisesRegex(HarnessError, "checksum mismatch"):
+                    inventory(root, manifest)
+
+    def test_filesystem_inventory_rejects_unsafe_or_unknown_sources(self):
+        for name, kind, message in [
+                ("new_suite/Test.3d", "file", "unassigned"),
+                ("FAILNew.3d", "file", "expected failure"),
+                ("unknown.dat", "file", "unexpected corpus file"),
+                ("Alias.3d", "symlink", "symlinked"),
+                ("extern", "symlink", "symlinked")]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory(dir=HERE) as tmp:
+                root = Path(tmp)
+                corpus = root / CORPUS
+                corpus.mkdir(parents=True)
+                (corpus / "A.3d").write_text("entrypoint")
+                path = corpus / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if kind == "symlink":
+                    path.symlink_to(corpus if name == "extern" else corpus / "A.3d")
+                else:
+                    path.write_text("unknown")
+                with self.assertRaisesRegex(HarnessError, message):
+                    inventory(root, source="filesystem")
+
+    def test_filesystem_inventory_cli_exports_without_git(self):
+        with tempfile.TemporaryDirectory(dir=HERE) as tmp:
+            root = Path(tmp)
+            corpus = root / CORPUS
+            corpus.mkdir(parents=True)
+            (corpus / "A.3d").write_text("entrypoint")
+            with patch("run.HERE", root), patch(
+                    "corpus.subprocess.run", side_effect=AssertionError("Git invoked")):
+                self.assertEqual(main(["--home", str(root), "--inventory-source", "filesystem",
+                                       "--inventory-only"]), 0)
+            manifests = list((root / "_build").glob("run-*/inventory.json"))
+            self.assertEqual(len(manifests), 1)
+            self.assertEqual(json.loads(manifests[0].read_text())["files"][0]["path"], "A.3d")
+
     def test_generated_and_harness_files_are_not_corpus(self):
         for name in ("out.batch/Test.3d", "foo/obj/Test.c", "foo/interpret.out/Test.3d",
                      "pulse-diff/seeds.inc", "pulse-lowstar-diff-tests/run.py"):

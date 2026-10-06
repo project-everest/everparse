@@ -406,7 +406,11 @@ def run_suites(selected, home, stages, work, args, report, budget):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--home", type=Path, default=HERE.parents[3])
-    parser.add_argument("--manifest", type=Path)
+    inventory_options = parser.add_mutually_exclusive_group()
+    inventory_options.add_argument("--manifest", type=Path)
+    inventory_options.add_argument("--inventory-source", choices=("git", "filesystem"),
+                                   default="git",
+                                   help="discover sources using Git (default) or the filesystem")
     parser.add_argument("--inventory-only", action="store_true")
     parser.add_argument("--suite", action="append", choices=[*SUITES, "negative"])
     parser.add_argument("--iterations", type=int, default=256)
@@ -430,7 +434,7 @@ def main(argv=None):
     if args.iterations < 0 or args.timeout <= 0 or (args.jobs is not None and args.jobs <= 0):
         parser.error("iterations must be nonnegative; timeout and jobs must be positive")
     home = args.home.resolve()
-    listing = inventory(home, args.manifest)
+    listing = inventory(home, args.manifest, source=args.inventory_source)
     build.mkdir(exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="run-", dir=build))
     write_json(work / "inventory.json", listing)

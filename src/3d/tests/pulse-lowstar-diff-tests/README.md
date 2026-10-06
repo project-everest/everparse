@@ -63,7 +63,7 @@ suite's comparisons, never turn into skips or reduce required corpus coverage.
 
 ## Corpus and isolation
 
-`git ls-files share/everparse/tests/3d/lowstar` is the source of truth, excluding generated output
+By default, `git ls-files share/everparse/tests/3d/lowstar` is the source of truth, excluding generated output
 directories and differential-harness sources. Every remaining file has a
 category, SHA-256 digest, and owning build recipe in `inventory.json`. Unknown
 directories and new negative cases fail closed. Sources are copied byte-for-byte
@@ -84,7 +84,25 @@ Generated C and headers, including `internal/`, are copied to separate
 compilation packages; differential compilation does not include the original
 generation directories. Every run gets a new `_build/run-*` directory.
 
-For source tarballs, run `make inventory` in a Git checkout and package its
+To run without Git or a pre-existing manifest:
+
+```sh
+make -C src/3d/tests/pulse-lowstar-diff-tests ARGS='--inventory-source filesystem'
+```
+
+The same `ARGS` can be passed to `make 3d-test`; CI uses this mode because its
+test container has no Git metadata. `make inventory ARGS='--inventory-source filesystem'`
+only generates the inventory. No manifest needs to be checked in.
+
+Filesystem mode includes untracked sources and scans known source/support file
+types, excluding generated output directories (including `exttype/tmp`), object
+files, executables, and `.out`/`.err` logs. It rejects symlinks, unexpected file
+types, unassigned sources, and negative grammars without failure expectations.
+The sorted inventory still records checksums and feeds the same staging and
+coverage checks. Unlike Git or a previously exported manifest, a filesystem
+scan cannot detect sources omitted from an archive before the scan.
+
+Alternatively, for source tarballs, run `make inventory` in a Git checkout and package its
 reported `inventory.json`. Pass `--manifest /path/to/inventory.json` in the
 tarball. Checksums and the absence of unlisted source grammars are checked.
 Package `share/everparse/tests/3d/pulse-lowstar-diff/seeds.inc` too: the deterministic witness bytes are reused

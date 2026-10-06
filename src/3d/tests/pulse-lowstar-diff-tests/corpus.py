@@ -1,4 +1,4 @@
-"""Canonical tracked-source inventory and the existing corpus's build matrix."""
+"""Source inventory and the existing corpus's build matrix."""
 
 import hashlib
 import json
@@ -100,7 +100,7 @@ def classify(name):
     elif p.parts[0] == "iter" and p.name == "Makefile":
         owners = ["iter/coarse", "iter/fine"]
     else:
-        raise HarnessError(f"unassigned tracked corpus source: {name}")
+        raise HarnessError(f"unassigned corpus source: {name}")
     if p.suffix == ".3d":
         if owners == ["goto_return"]:
             return "snapshot-only-grammar", owners
@@ -112,13 +112,44 @@ def classify(name):
     return "support", owners
 
 
-def inventory(home, manifest=None):
+def filesystem_sources(root):
+    source_names = {".gitignore", "Makefile", "GNUmakefile", "README"}
+    source_suffixes = {".3d", ".c", ".cpp", ".h", ".config", ".txt", ".md",
+                       ".cmd", ".Makefile", ".NMakefile"}
+    artifact_suffixes = {".o", ".obj", ".exe", ".out", ".err", ".pyc"}
+
+    def walk(directory):
+        for path in sorted(directory.iterdir()):
+            name = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                raise HarnessError(f"symlinked corpus source: {name}")
+            if path.is_dir():
+                if name != "exttype/tmp" and not excluded(name + "/_"):
+                    yield from walk(path)
+            elif not path.is_file():
+                raise HarnessError(f"non-regular corpus source: {name}")
+            elif path.suffix in artifact_suffixes:
+                continue
+            elif path.name in source_names or path.suffix in source_suffixes:
+                yield name
+            else:
+                raise HarnessError(f"unexpected corpus file: {name}")
+
+    if root.is_symlink() or not root.is_dir():
+        raise HarnessError(f"missing or symlinked corpus directory: {root}")
+    return list(walk(root))
+
+
+def inventory(home, manifest=None, source="git"):
     root = home / CORPUS
-    if manifest is None:
+    if manifest is None and source == "filesystem":
+        names = filesystem_sources(root)
+    elif manifest is None:
         git = subprocess.run(["git", "-C", str(home), "ls-files", "-z", "--", str(CORPUS)],
                              capture_output=True)
         if git.returncode or not git.stdout:
-            raise HarnessError("git inventory unavailable; supply --manifest exported by --inventory-only")
+            raise HarnessError("git inventory unavailable; use --inventory-source filesystem "
+                               "or supply --manifest exported by --inventory-only")
         names = [str(PurePosixPath(p).relative_to(CORPUS))
                  for p in git.stdout.decode().split("\0") if p]
     else:
@@ -148,8 +179,9 @@ def inventory(home, manifest=None):
         records.append(dict(path=name, category=kind, suites=suites, sha256=digest(path)))
     if not any(r["category"] == "runtime-grammar" for r in records):
         raise HarnessError("empty runtime corpus")
+    scope = "filesystem" if source == "filesystem" else "tracked"
     return {"version": 1, "files": records,
-            "scope": f"tracked {CORPUS} sources; hashchk implementation is outside this corpus"}
+            "scope": f"{scope} {CORPUS} sources; hashchk implementation is outside this corpus"}
 
 
 def write_json(path, value):
