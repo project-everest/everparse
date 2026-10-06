@@ -155,7 +155,20 @@ let z3_skip_c_initializers: ref bool = alloc false
 
 let use_error_handler_macro : ref bool = alloc false
 
-let pulse : ref bool = alloc false
+let valid_api : string -> Tot bool = function
+  | "legacy_lowstar"
+  | "lowstar"
+  | "pulse" -> true
+  | _ -> false
+
+let _api : ref (option (valid_string valid_api)) = alloc None
+
+let get_api () : ML api_t =
+  match !_api with
+  | None
+  | Some "legacy_lowstar" -> ApiLegacyLowstar
+  | Some "pulse" -> ApiPulse
+  | Some "lowstar" -> ApiLowstar
 
 let char_le (c1 c2: FStar.Char.char) : Tot bool =
   FStar.Char.int_of_char c1 <= FStar.Char.int_of_char c2
@@ -424,7 +437,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_skip_testcases_c" (OptBool no_produce_testcases_c) "skip generating test cases to <output directory>/testcases.c" [];
     CmdOption "z3_skip_c_initializers" (OptBool z3_skip_c_initializers) "Do not use C field initializers for test cases" [];
     CmdOption "use_error_handler_macro" (OptBool use_error_handler_macro) "Use the C macro `EverParse3dErrorHandlerMacro` instead of the dynamic error handler" [];
-    CmdOption "pulse" (OptBool pulse) "Use the Pulse combinator backend (lib/everparse/3d) for code generation" [];
+    CmdOption "api" (OptStringOption "legacy_lowstar|pulse|lowstar" valid_api _api) "Select the implementation and C API (default legacy_lowstar)" [];
     CmdOption "z3_test" (OptStringOption "parser name" always_valid _z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode _z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
     CmdOption "z3_use_ptr" (OptBool use_ptr_for_probe) "use pointers rather than array indices for probes" [];

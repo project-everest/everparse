@@ -3,7 +3,7 @@
 // parameter of an `extern` action -- must work with every `--input_stream`
 // binding.
 //
-// Under `--pulse` it used to be printed as `B.copy_buffer_t`, where `B` is the
+// Under `--api pulse` it used to be printed as `B.copy_buffer_t`, where `B` is the
 // input-stream module alias. Only `EverParse3d.InputStream.Buffer` re-exports
 // that name (from `EverParse3d.CopyBuffer.Buffer`), so on `extern` and
 // `static` the frontend accepted this file and F* then failed on the generated
@@ -14,7 +14,7 @@
 // That is why this test is `--batch` rather than generation-only: the
 // regression is invisible to the frontend.
 //
-// Note there is no `probe` here. Probing *is* buffer-only under `--pulse`;
+// Note there is no `probe` here. Probing *is* buffer-only under `--api pulse`;
 // that restriction is pinned by the negative half of this test.
 
 extern void Save(EVERPARSE_COPY_BUFFER_T dest, UINT32 x)

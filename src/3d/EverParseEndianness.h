@@ -39,7 +39,7 @@ extern "C" {
 
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;
-/* Under --pulse the copy buffer is a concrete struct emitted by KaRaMeL
+/* Under --api pulse the copy buffer is a concrete struct emitted by KaRaMeL
    into EverParse.h; EverParsePulseEndianness.h defines the guard below to
    suppress this legacy definition. */
 #ifndef EVERPARSE_COPY_BUFFER_T_DEFINED

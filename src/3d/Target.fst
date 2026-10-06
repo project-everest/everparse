@@ -445,26 +445,32 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       //exactly like the validators, so we must apply it to the same
       //compile-time boolean the rest of the generated code uses.
       let ueh = if Options.get_use_error_handler_macro () then "false" else "true" in
-      if Options.get_pulse ()
+      if Options.uses_pulse_backend ()
       then
         (* Probes are supported for the `buffer` backend only, so the probe
            monad's type class instances are always the buffer ones. *)
         Printf.sprintf
-          "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer unit true false %s)"
+          "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer unit true false %s)"
+          (Options.pulse_inst ())
           ueh
       else
         Printf.sprintf "(probe_m_unit %s)" ueh
     else
-    if (if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T" then Options.get_pulse () else false)
+    if (if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T" then Options.uses_pulse_backend () else false)
     then
-      (* Under --pulse the copy buffer type is an assumed abstract type, just
+      (* Under --api pulse the copy buffer type is an assumed abstract type, just
          as it is under Low*. Name it by its defining module rather than
          through the `B` input-stream alias: only the `buffer` backend
          re-exports it (EverParse3d.InputStream.Buffer re-exports all four
          `EverParse3d.CopyBuffer.Buffer` names), so going through `B` would
          make any mention of EVERPARSE_COPY_BUFFER_T fail to resolve under
          --input_stream extern/static, even when no probe is involved. *)
-      "EverParse3d.CopyBuffer.Buffer.copy_buffer_t"
+      (if Options.get_api () = HashingOptions.ApiLowstar
+       then
+         if HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+         then "EverParse3d.CopyBuffer.LowstarBuffer.copy_buffer_t"
+         else "EverParse3d.CopyBuffer.LowstarExtern.copy_buffer_t"
+       else "EverParse3d.CopyBuffer.Buffer.copy_buffer_t")
     else
     let hd' =
       if hd.v = Ast.to_ident' "void"
@@ -497,7 +503,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_typ mname t1)
       (print_typ mname t2)
   | T_pointer t i ->
-    if Options.get_pulse ()
+    if Options.uses_pulse_backend ()
     then Printf.sprintf "(Pulse.Lib.Reference.ref (%s))" (print_typ mname t)
     else Printf.sprintf "bpointer (%s)" (print_typ mname t)
   | T_with_action t _
@@ -882,21 +888,17 @@ let error_code_macros_lowstar =
     #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL\n\
     "
 
-(* The Pulse backend deliberately numbers its error codes differently: code 1
-   is reassigned to "action failed" so that validator postconditions can use
-   the shortcut `res > validator_error_action_failed`. These constants are the
-   values actually delivered to the error callback and returned by the
-   wrappers, so they must follow the Pulse numbering rather than the Low* one.
-   To be kept consistent with lib/everparse/3d/EverParse3d.ErrorCode.fst. *)
+(* Pulse returns byte-sized kinds, with the same numbering as Low*.
+   Keep these consistent with lib/everparse/3d/EverParse3d.ErrorCode.fst. *)
 let error_code_macros_pulse =
    "#define EVERPARSE_SUCCESS 0ul\n\
-    #define EVERPARSE_ERROR_ACTION_FAILED 1uL\n\
+    #define EVERPARSE_ERROR_ACTION_FAILED 5uL\n\
     #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL\n\
     #define EVERPARSE_ERROR_IMPOSSIBLE 3uL\n\
     #define EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE 4uL\n\
-    #define EVERPARSE_ERROR_CONSTRAINT_FAILED 5uL\n\
-    #define EVERPARSE_ERROR_UNEXPECTED_PADDING 6uL\n\
-    #define EVERPARSE_ERROR_PROBE_FAILED 7uL\n\
+    #define EVERPARSE_ERROR_CONSTRAINT_FAILED 6uL\n\
+    #define EVERPARSE_ERROR_UNEXPECTED_PADDING 7uL\n\
+    #define EVERPARSE_ERROR_PROBE_FAILED 8uL\n\
     // Probe wrapper error codes\n\
     #define EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE 256uL\n\
     #define EVERPARSE_PROBE_FAILURE_INIT 257uL\n\
@@ -905,7 +907,7 @@ let error_code_macros_pulse =
     "
 
 let error_code_macros () : ML string =
-  if Options.get_pulse ()
+  if Options.uses_pulse_api ()
   then error_code_macros_pulse
   else error_code_macros_lowstar
 
@@ -1034,7 +1036,7 @@ let print_c_entry
    let gen_complete_wrappers =
      if is_input_stream_buffer then Options.get_complete_wrappers () else false
    in
-   (* Under --pulse with an `extern` (or `static`) input stream, the validator
+   (* Under --api pulse with an `extern` (or `static`) input stream, the validator
       is passed the stream object together with a truncation bound of 0 (i.e.
       none) and, as its origin, the stream's current position. It does not
       report how far it got: its result is a plain error code. The stream is
@@ -1048,7 +1050,7 @@ let print_c_entry
         default handler, so declare it whenever the Pulse extern/static
         validators are in use, including under --use_error_handler_macro. *)
      if is_input_stream_buffer then ""
-     else if Options.get_pulse ()
+     else if Options.uses_pulse_api ()
      then stream_get_position_decl
      else ""
    in
@@ -1059,7 +1061,7 @@ let print_c_entry
      let frame_decl =
          "EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;"
      in
-     if Options.get_pulse ()
+     if Options.uses_pulse_api ()
      then
        if not is_input_stream_buffer
        then
@@ -1161,7 +1163,7 @@ let print_c_entry
      if use_error_handler_macro then "" else " &DefaultErrorHandler,"
    in
    let input_stream_binding = Options.get_input_stream_binding () in
-   (* Under --pulse the extracted validator has a different C prototype: it
+   (* Under --api pulse the extracted validator has a different C prototype: it
       takes the three components of the input stream (`uint8_t *base`,
       `size_t len`, `size_t *pos`) instead of a single `EVERPARSE_INPUT_BUFFER`,
       its `extra_state` argument is ghost and hence erased, and it returns a
@@ -1171,7 +1173,7 @@ let print_c_entry
    let wrapped_call_buffer_pulse (check_complete: bool) (typename: string) name params =
      (* When check_complete is set, additionally check that the validator
         consumed the whole input buffer, so that no trailing bytes are
-        silently accepted. Under --pulse the validator reports how far it got
+        silently accepted. Under --api pulse the validator reports how far it got
         through its position out-parameter rather than in its result code. *)
      let complete_check =
        if not check_complete then "" else
@@ -1639,10 +1641,10 @@ let print_c_entry
     let mk_body (check_complete: bool) : ML string =
       if is_input_stream_buffer
       then
-        if Options.get_pulse ()
+        if Options.uses_pulse_api ()
         then wrapped_call_buffer_pulse check_complete type_name validator_name pargs
         else wrapped_call_buffer check_complete type_name validator_name pargs
-      else if Options.get_pulse ()
+      else if Options.uses_pulse_api ()
       then wrapped_call_stream_pulse validator_name pargs
       else wrapped_call_stream validator_name pargs
     in
@@ -1774,7 +1776,7 @@ let print_c_entry
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
-      (if Options.get_pulse ()
+      (if Options.uses_pulse_api ()
        then "EverParsePulseEndianness.h\"\n#include \"EverParse.h"
        else "EverParseEndianness.h")
       (error_code_macros ())
@@ -1852,14 +1854,14 @@ let print_c_entry
      unrefined `FStar.SizeT.t` -- the client's EVERPARSE_COPY_BUFFER_T
      capacity, not the wrapper's uint32_t. So inside a probe the buffer
      backend is exactly as unbounded as extern/static, and since probes are
-     buffer-only under --pulse it is the backend that would be exempted.
+     buffer-only under --api pulse it is the backend that would be exempted.
      Keep the assertion unconditional. *)
   (* No trailing newline, so that this joins the include block the same way
      `include_external_api` does: these assertions are about the types used by
      the includes around them, so they belong in that block rather than as a
      section of their own. *)
   let pulse_static_asserts =
-    if Options.get_pulse ()
+    if Options.uses_pulse_api ()
     then
       "#include \"EverParsePulse.h\"\n\
        #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
@@ -1952,7 +1954,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
             | T_pointer bt A.UInt64 ->
               let bs = print_output_type_val tbl bt in
               let ptr =
-                if Options.get_pulse ()
+                if Options.uses_pulse_backend ()
                 then "Pulse.Lib.Reference.ref"
                 else "bpointer"
               in
@@ -1994,7 +1996,7 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (print_typ mname oe.oe_t)
           (Some?.v oe.oe_bitwidth)
       end in
-    if Options.get_pulse ()
+    if Options.uses_pulse_backend ()
     then
       Printf.sprintf
         "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
@@ -2097,7 +2099,7 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | _ -> "")) in
    let prefix =
-     if Options.get_pulse ()
+     if Options.uses_pulse_backend ()
      then "open Pulse.Lib.Pervasives\n\
            open EverParse3d.Prelude\n\
            open EverParse3d.State\n\
@@ -2113,12 +2115,13 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
 
 let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
-  (* Under --pulse the probe types are indexed by the input-stream and
+  (* Under --api pulse the probe types are indexed by the input-stream and
      copy-buffer type class instances, which cannot be inferred from a bare
      `val`; spell them out. Probes are supported for the `buffer` backend only. *)
   let probe_inst_args =
-    if Options.get_pulse ()
-    then " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer"
+    if Options.uses_pulse_backend ()
+    then Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
+      (Options.pulse_inst ())
     else ""
   in
   let s = String.concat "" (ds |> List.map (fun d ->
@@ -2137,7 +2140,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params false ->
-      (if Options.get_pulse ()
+      (if Options.uses_pulse_backend ()
        then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
@@ -2181,7 +2184,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      then Printf.sprintf "include %s.ExternalTypes\n\n" modul
      else "" in
 
-   if Options.get_pulse ()
+   if Options.uses_pulse_backend ()
    then
    Printf.sprintf
     "module %s.ExternalAPI\n\n\

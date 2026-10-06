@@ -6,7 +6,7 @@
 // Low* enforces this by giving `action_field_pos_32` a
 // `squash (backend_flag == BackendFlagBuffer)` argument, so a spec like this
 // one is rejected by F* with Error 19 on `extern` and `static`. This test
-// pins the same restriction for `--pulse`, where the frontend rejects it.
+// pins the same restriction for `--api pulse`, where the frontend rejects it.
 //
 // `field_pos_64` is deliberately *not* restricted, in either backend: see the
 // positive half of this test.

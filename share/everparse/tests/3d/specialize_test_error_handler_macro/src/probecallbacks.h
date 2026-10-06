@@ -1,4 +1,4 @@
-/* Under --pulse, as under the Low* backend, a copy buffer is an opaque
+/* Under --api pulse, as under the Low* backend, a copy buffer is an opaque
    EVERPARSE_COPY_BUFFER_T handle, and the client defines both its
    representation and the projections the generated code uses to reach the
    underlying input stream. The only difference from Low* is that a Pulse

@@ -1,7 +1,7 @@
-# Pulse variant of src/3d/tests.
+# Pulse variant of share/everparse/tests/3d/lowstar.
 #
 # Same .3d inputs, but generated against the Pulse combinator backend
-# (lib/everparse/3d) with --pulse, and verified with F*.
+# (lib/everparse/3d) with --api pulse, and verified with F*.
 #
 # --batch runs the whole pipeline: generation, F* verification, F* extraction
 # to .krml and KaRaMeL extraction to C. The generated C is then compiled with
@@ -18,8 +18,9 @@ endif
 export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
+PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
 
 CC ?= cc
 CXX ?= c++
@@ -35,7 +36,7 @@ INTERPRET_DIR=out.batch-interpret.pulse
 
 3D_Z3_EXECUTABLE ?= z3-4.13.3
 
-# Same exclusions as src/3d/tests.
+# Same exclusions as share/everparse/tests/3d/lowstar.
 excluded_tests := FieldDependence0.3d ActAndCheck.3d
 
 exclude_modules :=
@@ -51,7 +52,7 @@ negative_tests := $(wildcard FAIL*.3d)
 
 # The two tests that positive_tests excludes are not untestable: they are
 # covered by pulse-batch-interpret-test, over the wider set below, exactly as
-# src/3d/tests covers them with batch-interpret-test over INTERPRETABLE_FILES.
+# share/everparse/tests/3d/lowstar covers them with batch-interpret-test over INTERPRETABLE_FILES.
 #
 # The split is historical. 3D used to have two translation backends,
 # Translate.fst (specialized) and TranslateForInterpreter.fst, and :act/:check
@@ -59,17 +60,17 @@ negative_tests := $(wildcard FAIL*.3d)
 # positive_tests when it was added (commit 7b2764b70). Only
 # TranslateForInterpreter survives today, so both targets now drive the very
 # same pipeline and differ only in which files they feed it. We keep the two
-# apart anyway, so that this Makefile stays diffable against src/3d/tests, and
+# apart anyway, so that this Makefile stays diffable against share/everparse/tests/3d/lowstar, and
 # so that pulse-cleanup-test keeps asserting an exact output file list over the
 # narrower set.
 #
-# Unlike src/3d/tests, we also drop exclude_modules here: INTERPRETABLE_FILES
+# Unlike share/everparse/tests/3d/lowstar, we also drop exclude_modules here: INTERPRETABLE_FILES
 # does not, which looks like an oversight, since those modules do not build on
 # Windows for a reason unrelated to which files a target selects.
 interpretable_tests := $(filter-out $(wildcard FAIL*.3d) $(addsuffix .3d,$(exclude_modules)),$(wildcard *.3d))
 
 # Tests whose generated code does not yet survive KaRaMeL extraction under
-# --pulse. They still go through generation and F* verification, but not the C
+# --api pulse. They still go through generation and F* verification, but not the C
 # stages. (Currently empty: all tests extract.)
 no_extract_tests :=
 
@@ -79,7 +80,7 @@ verify_only_tests := $(filter $(no_extract_tests),$(positive_tests))
 VERIFY_DIR=out.pulse.verify
 
 # The exact set of files --cleanup is expected to leave behind. This is now
-# literally the Low* set from src/3d/tests: as there, the runtime is a shipped
+# literally the Low* set from share/everparse/tests/3d/lowstar: as there, the runtime is a shipped
 # library (lib/everparse/3d/krml/<backend>/EverParse.h), so --no_copy_everparse_h
 # leaves no EverParse.h behind -- and there is no EverParse.c and no internal/
 # directory either.
@@ -101,8 +102,15 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 	pulse-batch-interpret-test pulse-subdirs \
 	pulse-reserved-module-name-test
 
-# Subdirectories with their own build. Only those already ported to --pulse are
-# listed; the rest were copied from src/3d/tests and still drive the Low*
+all: api-option-test
+
+api-option-test:
+	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/3d.exe" "$(FSTAR_EXE)"
+
+.PHONY: api-option-test
+
+# Subdirectories with their own build. Only those already ported to --api pulse are
+# listed; the rest were copied from share/everparse/tests/3d/lowstar and still drive the Low*
 # backend, so building them here would prove nothing.
 #
 # extern, static and funptr are the only tests that select an --input_stream
@@ -142,7 +150,7 @@ pulse_subdirs := extern static modules output_types exttype save_hashes \
   probe field_ptr output_state_name field_pos_32_backend copy_buffer_backend \
   check_complete
 
-# Mirrors the guard in src/3d/tests/Makefile. The specialize_* tests do not
+# Mirrors the guard in share/everparse/tests/3d/lowstar/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and
 # probe_error_handler_macro runs a Z3TestGen-generated checker that includes
 # <sys/mman.h>, which native Windows does not provide.
@@ -174,7 +182,7 @@ pulse-batch:
 # Compile everything KaRaMeL produced, to check the generated C is well-formed
 # and that the wrappers agree with the validators' ABI. We go through the
 # share/everparse/3d/Makefile.basic, so that the generated code is held to the
-# same -Wall -Wextra -Werror standard as in src/3d/tests. USER_TARGET=test has
+# same -Wall -Wextra -Werror standard as in share/everparse/tests/3d/lowstar. USER_TARGET=test has
 # no recipe: it just forces every object to be built.
 pulse-cc: pulse-batch
 	+$(MAKE) -C $(OUT_DIR) -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
@@ -199,7 +207,7 @@ pulse-verify:
 
 pulse-test: pulse-cc pulse-verify
 
-# The counterpart of src/3d/tests' batch-interpret-test: the same pipeline as
+# The counterpart of share/everparse/tests/3d/lowstar' batch-interpret-test: the same pipeline as
 # pulse-batch/pulse-cc, but over interpretable_tests, which additionally covers
 # FieldDependence0.3d and ActAndCheck.3d. Its own output directory, because
 # EverParse.h is generated per batch and carries that batch's external
@@ -212,8 +220,8 @@ pulse-batch-interpret-test:
 	$(CXX) -o test-cpp-interpret.pulse.exe -I $(INTERPRET_DIR) test.cpp $(addprefix $(INTERPRET_DIR)/, ArithmeticWrapper.o Arithmetic.o)
 	./test-cpp-interpret.pulse.exe
 
-# Build and link the C++ ELF test driver against the --pulse-generated ELF
-# parser. As in src/3d/tests, it is not run: it needs an ELF file to read.
+# Build and link the C++ ELF test driver against the --api pulse-generated ELF
+# parser. As in share/everparse/tests/3d/lowstar, it is not run: it needs an ELF file to read.
 elf-test: ELF.3d
 	mkdir -p $(ELF_DIR)
 	$(3D) --odir $(ELF_DIR) --batch ELF.3d
@@ -234,7 +242,7 @@ echo-out-files:
 
 .PHONY: echo-clean-out-files echo-out-files
 
-# Compile-time comments must survive extraction. Under --pulse they go through
+# Compile-time comments must survive extraction. Under --api pulse they go through
 # Pulse.Lib.Comment, which KaRaMeL renders as EComment/EStandaloneComment; while
 # Pulse had no comment support they were silently dropped, and nothing here
 # noticed, because every other Comments.3d test only compares hashes of the .3d
@@ -284,7 +292,7 @@ pulse-inplace-hash-test:
 	$(3D) --odir $(INPLACE_DIR) --batch --check_hashes inplace Comments.3d
 	$(3D) --check_inplace_hash Comments.3d=$(INPLACE_DIR)/Comments.h
 
-# Z3-based test-case generation against the --pulse backend. The SMT half is
+# Z3-based test-case generation against the --api pulse backend. The SMT half is
 # backend-independent -- it runs on the InterpreterTarget AST -- so this
 # exercises the generated C harness: the Pulse validators return a uint8_t
 # status and report the consumed length through a size_t* position, and their
@@ -316,10 +324,10 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 
 # TEMPORARY, to be removed together with the frontend check it exercises: see
 # the comment on check_no_reserved_module_name in src/3d/Main.fst. A module
-# named C must be rejected up front under --pulse, rather than reaching KaRaMeL
+# named C must be rejected up front under --api pulse, rather than reaching KaRaMeL
 # and failing there with an unintelligible message about C._zero_for_deref.
 # This cannot be expressed as a FAIL*.3d negative test, because the whole point
-# is the module name. It is also deliberately absent from src/3d/tests: the
+# is the module name. It is also deliberately absent from share/everparse/tests/3d/lowstar: the
 # Low* backend accepts a module named C, and must keep accepting it.
 .PHONY: pulse-reserved-module-name-test
 pulse-reserved-module-name-test:

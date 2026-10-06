@@ -203,6 +203,7 @@ fn handle_probe_error
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
       (#use_error_handler:bool)
+      (report_error:bool)
       (error_handler_macro: error_handler #base_t #len_t #pos_t)
       (err : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit))
       (tn fn_ det:string)
@@ -216,21 +217,14 @@ ensures exists* v_ctxt' .
       pts_to ctxt v_ctxt' **
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
 {
-  unfold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
-  // The error is reported against the probe destination, so the position to
-  // report is the one reached in that copy buffer.
-  let dest_pos = I.get_position
-      (CB.base_of #_ #base_t #len_t #pos_t dest)
-      (CB.len_of #_ #base_t #len_t #pos_t dest)
-      (CB.pos_of #_ #base_t #len_t #pos_t dest)
-      contents_dest v_dest;
-  (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst))
-    tn fn_ det 0uy ctxt
-      (CB.base_of #_ #base_t #len_t #pos_t dest)
-      (CB.len_of #_ #base_t #len_t #pos_t dest)
-      (CB.pos_of #_ #base_t #len_t #pos_t dest)
-      dest_pos;
-  fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
+  if (report_error) {
+    unfold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
+    let report = cb_inst.report_error;
+    report
+      ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)
+      tn fn_ det ctxt dest contents_dest v_dest;
+    fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
+  }
 }
 
 inline_for_extraction
@@ -391,7 +385,7 @@ fn probe_and_read_at_offset_m
   let v = reader failed rd src dest _ _;
   let has_failed = !failed;
   if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t error_handler_macro err tn fn_ fd ctxt dest _ _;
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ fd ctxt dest _ _;
     v
   } else {
     read_offset := U64.(rd +^ s);
@@ -430,7 +424,7 @@ fn seq_probe_m
   m1 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _;
   let has_failed = !failed;
   if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t error_handler_macro err tn fn_ detail ctxt dest _ _;
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ detail ctxt dest _ _;
     dflt
   } else {
     m2 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _
@@ -468,7 +462,7 @@ fn bind_probe_m
   let res1 = m1 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _;
   let has_failed = !failed;
   if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t error_handler_macro err tn fn_ detail ctxt dest _ _;
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ detail ctxt dest _ _;
     dflt
   } else {
     let m2' = m2 res1;
@@ -709,16 +703,18 @@ fn probe_array
         let hf1 = !failed;
         let r1 = !read_offset;
         if (hf1) {
+          handle_probe_error #_ #base_t #len_t #pos_t
+            cb_inst.report_failed_array_element error_handler_macro err tn fn_ fd ctxt dest _ _;
           stop := true
         } else {
           if (r1 = r0) {
-            handle_probe_error #_ #base_t #len_t #pos_t error_handler_macro err tn fn_ fd ctxt dest _ _;
+            handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ fd ctxt dest _ _;
             failed := true;
             stop := true
           } else {
             let bytes_read = U64.(r1 -^ r0);
             if (U64.lt c0 bytes_read) {
-              handle_probe_error #_ #base_t #len_t #pos_t error_handler_macro err tn fn_ fd ctxt dest _ _;
+              handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ fd ctxt dest _ _;
               failed := true;
               stop := true
             } else {
@@ -835,7 +831,7 @@ ensures
   let wr = !write_offset;
   let has_failed = !failed;
   if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t error_handler_macro err tn fn_ det ctxt dest _ _;
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ det ctxt dest _ _;
     0uL
   } else {
     wr

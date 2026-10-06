@@ -143,17 +143,28 @@ There can be multiple definitions marked ``entrypoint`` in a given
 
 .. note::
 
-  The entrypoint API described here is the same under both backends:
-  ``3d --pulse`` generates a ``ModuleWrapper.h`` declaring the very same
+  ``3d --api lowstar`` uses verified Pulse adapters while preserving the
+  Low\* C API described here, including direct validator calls, packed
+  results, error callbacks, and copy-buffer projections. The original
+  implementation remains the default, ``--api legacy_lowstar``.
+  ``--no_api`` restores that default; the former ``--pulse`` option is no
+  longer accepted. ``--api`` selects the implementation and C API, while
+  ``--input_stream`` independently selects ``buffer``, ``extern`` or ``static``.
+  See :ref:`the --api option <3d-api-option>` for the runtime headers required
+  by each selection, including when using ``--no_copy_everparse_h``.
+
+  The entrypoint API is also the same under the native Pulse API:
+  ``3d --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
 
-  Three things do differ. ``ModuleWrapper.h`` includes
-  ``EverParsePulseEndianness.h`` instead of ``EverParseEndianness.h``, and
-  its ``EVERPARSE_ERROR_*`` constants are numbered differently (see
-  :ref:`sec-error-handling-pulse`). ``3d --pulse`` accordingly writes two
+  ``ModuleWrapper.h`` includes ``EverParsePulseEndianness.h`` instead of
+  ``EverParseEndianness.h``; its named ``EVERPARSE_ERROR_*`` kinds use the
+  same numbers (see :ref:`sec-error-handling-pulse`).
+  ``3d --api pulse`` accordingly writes two
   extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
-  into the output directory alongside the ones listed above. Finally, the
+  into the output directory alongside the ones listed above, unless
+  ``--no_copy_everparse_h`` is specified. Finally, the
   client primitives that ``--input_stream`` and ``extern`` specifications
   require are not the same; those are documented in
   :ref:`the 3d user manual <3d>`.
@@ -1044,7 +1055,7 @@ That is, the client code can choose any definition for
 ``EVERPARSE_COPY_BUFFER_T`` (since it is just a ``void*``), so long as it can
 also provide two functions: ``EverParseStreamOf`` to extract a buffer of bytes
 from a ``EVERPARSE_COPY_BUFFER_T``; and ``EverParseStreamLen`` to extract the
-length of the buffer. (Under ``--pulse``, a third function is needed, and
+length of the buffer. (Under ``--api pulse``, a third function is needed, and
 ``EverParseStreamLen`` has a different return type; see
 :ref:`sec-probing-pulse`.)
 
@@ -1472,7 +1483,7 @@ An End-to-end Executable Example
 ................................
 
 A small but fully worked out example `is available in the EverParse repository
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/probe>`_.
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/probe>`_.
 
 It shows the use of multiple probe functions, linked with callbacks implemented
 in C, as well as a main C driver program that validates several example inputs
@@ -1480,8 +1491,8 @@ containing pointers.
 
 .. _sec-probing-pulse:
 
-Probing under ``--pulse``
-.........................
+Probing under ``--api pulse``
+.............................
 
 Everything above carries over to the Pulse backend unchanged: the
 ``Probe_ExternalAPI.h`` callbacks (``ProbeAndCopy``, ``ProbeInit``, the
@@ -1493,17 +1504,18 @@ addresses and sizes remain ``uint64_t`` in particular.
 .. note::
 
   Probing itself is, however, supported only with ``--input_stream buffer``
-  (the default) under ``--pulse``. A ``probe`` declaration combined with
+  (the default) under ``--api pulse``. A ``probe`` declaration combined with
   ``--input_stream extern`` or ``--input_stream static`` is rejected with
-  *"Probes are only supported by the buffer backend under --pulse"*. The
-  default backend has no such restriction.
+  *"Probes are only supported by the buffer backend under --api pulse"*.
+  ``--api legacy_lowstar`` and ``--api lowstar`` have no such restriction
+  for field probes.
 
   ``EVERPARSE_COPY_BUFFER_T`` on its own --- as a type parameter, or as the
   parameter of an ``extern`` action --- is *not* restricted, and works with
   every ``--input_stream`` binding on both backends.
 
 What changes is the small set of projections the client provides on
-``EVERPARSE_COPY_BUFFER_T``. Under ``--pulse``, ``EverParse.h`` declares:
+``EVERPARSE_COPY_BUFFER_T``. Under ``--api pulse``, ``EverParse.h`` declares:
 
 .. code-block:: c
 
@@ -1538,8 +1550,8 @@ The contract is:
     (see :ref:`sec-error-handling-pulse`).
 
 A reference implementation that satisfies both backends from a single source
-file is in `src/3d/tests/pulse-diff/harness.c
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/pulse-diff>`_.
+file is in `share/everparse/tests/3d/pulse-lowstar-diff/harness.c
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/pulse-lowstar-diff>`_.
 
 .. _Specialization:
 
@@ -1808,7 +1820,7 @@ An End-to-end Executable Example
 
 A small but fully worked out example `of specialization is available in the
 EverParse repository
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test>`_.
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/specialize_test>`_.
 
 It shows an example similar to the one developed above, but linked with a main C
 program and test driver. It also illustrates the use of nullable pointers in
@@ -2009,11 +2021,11 @@ variable-length structures fit well with 3d's support for auto-specialization.
 
 A small but fully worked out example `of specialization with variable-length
 structures is available in the EverParse repository
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test2>`_, 
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/specialize_test2>`_,
 including a main file driving the generated code with test input.
 
 Another example, `with data dependent tagged unions
-<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_tagged_union_array>`_, 
+<https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/specialize_tagged_union_array>`_,
 is also available.
 
 
@@ -2107,7 +2119,7 @@ using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
    :end-before: SNIPPET_END: Quad
 
 A commented example is available `in the EverParse repository
-<https://github.com/project-everest/everparse/blob/master/src/3d/tests/modules/>`_.
+<https://github.com/project-everest/everparse/blob/master/share/everparse/tests/3d/lowstar/modules/>`_.
 
 Error handling
 --------------
@@ -2115,33 +2127,36 @@ Error handling
 When a validator fails, EverParse supports invoking a user-provided
 callback with contextual information about the failure.
 
-An error handling callback is a C procedure with the following signature:
+With ``--api legacy_lowstar`` or ``--api lowstar``, an error handling callback
+is a C procedure with the following seven-argument signature:
 
 .. code-block:: c
 
-  typedef void (*ErrorHandler)(
+  typedef void (*EVERPARSE_ERROR_HANDLER)(
     const char *TypeName,
     const char *FieldName,
     const char *ErrorReason,
     uint64_t ErrorCode,
     uint8_t *Context,
-    uint32_t Length,
-    uint8_t *Base,
-    uint64_t StartPosition,
-    uint64_t EndPosition
+    EVERPARSE_INPUT_BUFFER Input,
+    uint64_t StartPosition
   );
 
-EverParse also emits this type as a public ``EVERPARSE_ERROR_HANDLER``
-typedef in the generated ``EverParse.h``, under both backends, and the
-generated validator prototypes in ``<Mod>.h`` name that typedef.
+``EverParse.h`` supplies this typedef, and the generated validator prototypes
+in ``<Mod>.h`` name it. ``EVERPARSE_INPUT_BUFFER`` is ``uint8_t *`` for
+``--input_stream buffer``. For ``extern`` and ``static``, it is a record
+containing the client's stream ``base``, a ``has_length`` flag and a
+``uint64_t length``.
 
-The signature above, and the error codes listed below, are those of the
-default, Low\* backend. Both differ under ``--pulse``; see
-:ref:`sec-error-handling-pulse` for the details.
+The signature above, and the error codes listed below, describe
+``--api legacy_lowstar`` and ``--api lowstar``. Under ``--api pulse`` the
+signature differs but the
+named error kinds retain the same numbers; see :ref:`sec-error-handling-pulse`.
 
 Every EverParse validator is parameterized by:
 
-* A function pointer, of type ``ErrorHandler``
+* A function pointer, of type ``EVERPARSE_ERROR_HANDLER`` (unless
+  ``--use_error_handler_macro`` selects a macro instead)
 * A context parameter, ``uint8_t* Context``
 
 At the top-level, when calling into EverParse from an application, one
@@ -2149,13 +2164,13 @@ can instantiate both the ``ErrorHandler`` with a function of one's
 choosing and the ``Context`` argument with a pointer to some
 application-specific context.
 
-The ``ErrorHandler`` expects
+For the buffer input stream, the handler expects
 
-  * The ``Base`` and ``Context`` pointers to refer to live and
+  * The ``Input`` and ``Context`` pointers to refer to live and
     disjoint pieces of memory.
 
-  * For ``Length`` to be the length in bytes of valid memory pointed
-    to by ``Base`` and for ``StartPosition <= EndPosition <= Length``.
+  * ``StartPosition`` to be within the input buffer. The callback does
+    not receive the buffer length or the position at which validation failed.
 
 The ``ErrorHandler`` can
 
@@ -2180,19 +2195,22 @@ the following arguments:
     - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)
     - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
     - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
-    - "unspecified", with the ``ErrorCode > 7uL``
+    - "probe failed", ``8uL`` (no ``EVERPARSE_ERROR_PROBE_FAILED`` wrapper
+      macro in these two APIs)
+    - "unspecified", for other unrecognized kinds
 
   * The ``Context`` argument is the user-provided ``Context`` pointer
     
-  * The ``Length`` argument is the length in bytes of the input buffer
+  * The ``Input`` argument is the input buffer or stream view
 
-  * The ``Base`` argument is a pointer to the base of the input buffer
-
-  * The ``StartPosition`` argument is the offset from ``Base`` of the
+  * The ``StartPosition`` argument is the offset from the input's origin of the
     start of the field ``f``
-  
-  * The ``EndPosition`` argument is the offset from ``Base`` of the
-    end of the field ``f`` at which the validation failure occurred.
+
+The callback receives the unshifted error kind, not the packed validator
+result. Direct validators return a ``uint64_t`` containing the error kind in
+the high four bits and the position in the low 60 bits; use
+``EverParseGetValidatorErrorKind`` and ``EverParseGetValidatorErrorPos`` to
+extract them. A successful result has kind zero.
                 
 Following a validation failure at a given field, EverParse will invoke
 the ``ErrorHandler`` at each enclosing type as well. This allows a
@@ -2203,8 +2221,8 @@ deepest validation failure that occurred.
 
 .. _sec-error-handling-pulse:
 
-Error handling under ``--pulse``
-................................
+Error handling under ``--api pulse``
+....................................
 
 The Pulse backend keeps the whole of the design above: the same
 ``EVERPARSE_ERROR_HANDLER`` typedef in ``EverParse.h``, the same
@@ -2212,9 +2230,9 @@ The Pulse backend keeps the whole of the design above: the same
 (shipped as plain C in ``EverParsePulse.h`` rather than generated into
 ``EverParse.h``), the same per-module ``<Mod>EverParseError`` callback, and
 the same stack trace of enclosing types. What changes is the handler's
-argument list and the numbering of the error codes.
+argument list and the width of the error code, not its kind number.
 
-**The handler signature.** Under ``--pulse`` the handler takes nine
+**The handler signature.** Under ``--api pulse`` the handler takes nine
 arguments rather than seven, because the input stream is passed as its
 constituent parts rather than as a single ``EVERPARSE_INPUT_BUFFER``. With
 the default ``--input_stream buffer``:
@@ -2234,8 +2252,8 @@ the default ``--input_stream buffer``:
   );
 
 With ``--input_stream extern`` or ``--input_stream static``, the three
-stream arguments are instead the client's stream object, a truncation bound
-and an origin, of the client's own types. Consult the
+stream arguments are instead the client's ``EVERPARSE_INPUT_STREAM_BASE``
+object, a ``uint64_t`` truncation bound and a ``uint64_t`` origin. Consult the
 ``EVERPARSE_ERROR_HANDLER`` typedef in the generated ``EverParse.h`` for the
 exact signature in any given configuration.
 
@@ -2248,36 +2266,39 @@ Three points deserve attention:
   * There is no ``EndPosition`` argument. ``Position`` is a pointer to the
     validator's own position cell, which the handler may read but must not
     write to; the position it holds has already moved past whatever the
-    failing field consumed, and, under ``--input_stream extern`` or
-    ``static``, is relative to the origin rather than to the start of the
-    input.
+    failing field consumed. Under ``--input_stream extern`` or ``static``,
+    there is no position-cell argument: the stream maintains its own
+    absolute position, read with ``EverParseStreamGetPosition``; subtract
+    the supplied origin to obtain the position relative to this validation.
 
   * ``StartPosition`` --- the trailing argument, and the one that carries
     the same meaning as under the default backend --- is the offset from
     the start of the input of the beginning of the field ``f``. It is what
     a handler should report.
 
-**The error codes.** ``<Mod>Wrapper.h`` defines a different set of
-``EVERPARSE_ERROR_*`` constants under ``--pulse``. Code ``1uL`` is
-reassigned from "generic error" to "action failed", so that the verified
-validators can use the shortcut ``res > validator_error_action_failed``, and
-the codes above it shift down by one. The ``ErrorReason`` and ``ErrorCode``
-pairs are therefore:
+**The error codes.** ``<Mod>Wrapper.h`` defines ``EVERPARSE_ERROR_*``
+constants under ``--api pulse`` with the same kind numbers as Low*.
+The validator still returns a byte, not a packed position/error value.
+The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
-  - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (1uL)
+  - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)
   - "not enough data", ``EVERPARSE_ERROR_NOT_ENOUGH_DATA`` (2uL)
   - "impossible", ``EVERPARSE_ERROR_IMPOSSIBLE`` (3uL)
   - "list size not multiple of element size", ``EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE`` (4uL)
-  - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (5uL)
-  - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (6uL)
-  - "probe failed", ``EVERPARSE_ERROR_PROBE_FAILED`` (7uL)
-  - "unspecified", with the ``ErrorCode > 7uL``
+  - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
+  - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
+  - "probe failed", ``EVERPARSE_ERROR_PROBE_FAILED`` (8uL)
+  - "unspecified", with ``ErrorCode == 1uL`` or ``ErrorCode > 8uL``
 
 In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
-``--pulse``. Client code that compares ``ErrorCode`` against these macros
-ports unchanged between the two backends; client code that hardcodes the
-numeric values does not.
+``--api pulse`` (the packed ``EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED``
+constant also exists in the Low\*-compatible runtime headers).
+Comparisons against the error-kind macros common to all three APIs keep
+the same meaning. Earlier Pulse releases used 1
+for action failure and 5, 6, 7 for constraint, padding, and probe failures.
+Clients that hardcoded those Pulse-specific numbers must update them;
+the callback signatures and byte return type are unchanged.
 
 The ``EVERPARSE_PROBE_FAILURE_*`` codes returned by the probe wrappers are
 unaffected and keep the same values under both backends.
@@ -2294,7 +2315,7 @@ provides a good summary.
 
 Reproduced below is an ASCII depiction of the format of TCP
 headers. In this section, we show how to specify this format in
-3d. The full specification can be found `here <https://github.com/project-everest/everparse/tree/master/src/3d/tests/tcpip/TCP.3d>`_.
+3d. The full specification can be found `here <https://github.com/project-everest/everparse/tree/master/share/everparse/tests/3d/lowstar/tcpip/TCP.3d>`_.
 
 
 .. code-block:: text
@@ -2642,7 +2663,7 @@ In this section we develop (parts of) a 3d specification for 64-bits
 ELF files and describe how it can be integrated in existing projects
 for validating potentially untrusted ELF files. A complete ELF
 specification can be found in the `3d test suite
-<https://github.com/project-everest/everparse/blob/master/src/3d/tests/ELF.3d>`_.
+<https://github.com/project-everest/everparse/blob/master/share/everparse/tests/3d/lowstar/ELF.3d>`_.
 
 An ELF file consists of an ELF header, followed by a program header
 table and a section header table. Both the tables are optional and
@@ -2687,7 +2708,7 @@ be able to constrain the individual bytes of this array, we specify in
   } E_IDENT;
 
 (The omitted definitions can be found in the `full development
-<https://github.com/project-everest/everparse/blob/master/src/3d/tests/ELF.3d>`_.)
+<https://github.com/project-everest/everparse/blob/master/share/everparse/tests/3d/lowstar/ELF.3d>`_.)
 
 
 Following this 16 byte array, the ELF header specifies the file type,
@@ -2915,5 +2936,3 @@ The actual validator implementation is generated in ``ELF.c``. To
 integrate these validators into existing C code, drop in these
 generated ``.c`` and ``.h`` files
 in the development and invoke ```ElfCheckElf`` as necessary.
-
-

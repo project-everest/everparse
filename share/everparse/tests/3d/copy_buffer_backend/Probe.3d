@@ -1,4 +1,4 @@
-// Negative half: probing really is buffer-only under `--pulse`, and the
+// Negative half: probing really is buffer-only under `--api pulse`, and the
 // frontend says so. This guards against "fixing" the copy-buffer type by
 // lifting the probe restriction, which would need the probe monad's
 // `input_stream_buffer`/`copy_buffer_buffer` instances to be pinned to the

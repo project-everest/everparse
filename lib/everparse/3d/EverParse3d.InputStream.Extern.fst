@@ -491,6 +491,20 @@ ensures stream_pts_to base len pos contents Seq.empty **
   }
 }
 
+(* Adapt only the high-level result, not the client's native primitive. *)
+inline_for_extraction
+noextract
+fn stream_empty_unit
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (base: base_t) (len: len_t) (pos: pos_t)
+  (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
+requires stream_pts_to base len pos contents v
+ensures stream_pts_to base len pos contents Seq.empty
+{
+  let _count = stream_empty_bounded base len pos contents v;
+  ()
+}
+
 (* Truncation only rewrites the bound, so [trunc_t = len_t] and the base and
    origin are carried over unchanged. Together with the buffer backend's
    [trunc_t = len_t] this keeps the (base, len, pos) triple from ever being
@@ -627,6 +641,12 @@ ensures
 noextract
 inline_for_extraction
 instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
+  scan_t = SZ.t;
+  scan_v = SZ.v;
+  scan_fits = SZ.fits;
+  scan_zero = 0sz;
+  scan_add = SZ.add;
+  scan_to_u64 = I.native_scan_to_u64;
   pts_to_inst = pts_to_inst;
   error_handler_t = EH.error_handler;
   error_handler_arrow_of_t = EH.error_handler_arrow_of;
@@ -637,7 +657,7 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
   has_at = (fun b l (p: pos_t) off n c v -> stream_has_at_bounded b l p off n c v);
   read = stream_read;
   skip = (fun b l (p: pos_t) n c v -> stream_skip_bounded b l p n c v);
-  empty = (fun b l (p: pos_t) c v -> stream_empty_bounded b l p c v);
+  empty = (fun b l (p: pos_t) c v -> stream_empty_unit b l p c v);
   trunc_t = len_t;
   trunc_base = stream_trunc_base;
   trunc_len = stream_trunc_len;

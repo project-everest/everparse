@@ -14,7 +14,7 @@
      pos        : size_t *   (current position)
      start_pos  : uint64_t   (position at which the failing field started)
 
-   Under --pulse the input buffer is passed as the three arguments
+   Under --api pulse the input buffer is passed as the three arguments
    base/len/pos rather than as the single pointer/position pair used by
    the Low* backend, so the macro takes nine arguments here.
 
