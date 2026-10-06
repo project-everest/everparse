@@ -29,9 +29,19 @@ module H = Hashtable
 let use_error_handler () : ML bool =
   not (Options.get_use_error_handler_macro ())
 
-(* --pulse: generate code against the Pulse combinator backend
+(* --api pulse: generate code against the Pulse combinator backend
    (lib/everparse/3d) instead of the Low* one (src/3d/prelude). *)
-let pulse () : ML bool = Options.get_pulse ()
+let pulse () : ML bool = Options.uses_pulse_backend ()
+
+let lowstar_api () : ML bool = Options.get_api () = HashingOptions.ApiLowstar
+
+let pulse_worker_name root_name : ML string =
+  if lowstar_api () then A.reserved_prefix ^ "core_" ^ root_name else root_name
+
+let pulse_adapter_module () : ML string =
+  if HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+  then "EverParse3d.Lowstar.BufferAdapter"
+  else "EverParse3d.Lowstar.ExternAdapter"
 
 (* The Pulse input-stream backend module selected by --input_stream. It is
    emitted as `module B = ...` in the generated module prefix. *)
@@ -52,7 +62,8 @@ let pulse_ehm () : ML string = "B.error_handler_macro"
    These arguments must be given explicitly: nothing else in a `state_dict`
    determines the input stream types. *)
 let pulse_cb_inst_args () : ML string =
-  " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer"
+  Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
+    (pulse_inst ())
 
 (* The client context (`EVERPARSE_EXTRA_T`) that the extern/static backends
    thread down to the stream primitives. The generated validator binds it so
@@ -83,7 +94,7 @@ type inv =
   | Inv_conj : inv -> inv -> inv
   | Inv_ptr  : expr -> inv
   | Inv_copy_buf: expr -> inv
-  (* --pulse only: the ambient state of the external actions generated for
+  (* --api pulse only: the ambient state of the external actions generated for
      output types. In Low* this is carried by the Eloc_output location alone,
      but a Pulse state_dict fuses invariant and footprint. *)
   | Inv_output : inv
@@ -767,7 +778,7 @@ let print_derived_name (mname:string) (tag:string) (i:A.ident) =
     tag
     (T.print_ident i)
 
-(* --pulse: the parameters of the type declaration currently being printed.
+(* --api pulse: the parameters of the type declaration currently being printed.
 
    A copy buffer, or an output pointer, that a type receives as a parameter
    cannot be keyed in the `state_dict` by a literal derived from the name of
@@ -852,7 +863,7 @@ let pulse_key_arg_of (e:string) : ML string =
   then pulse_key_binder_of e
   else Printf.sprintf "(FStar.Ghost.hide \"%s\")" (pulse_sanitize_key e)
 
-(* --pulse: the `state_dict` of a type declaration.
+(* --api pulse: the `state_dict` of a type declaration.
 
    The Low* `inv` describes exactly the set of extra resources a type needs:
    the user-provided pointers it dereferences or assigns, and the copy buffers
@@ -1245,8 +1256,8 @@ let rec print_typ (mname:string) (t:typ)
     | T_probe_then_validate fn dt sz nullable (T.Probe_action_var probe_fn) dest as_u64 init dest_sz probed_indexes ->
       if pulse ()
       then begin
-        if not (pulse_is_buffer ())
-        then A.error "Probes are only supported by the buffer backend under --pulse" A.dummy_range;
+        if (if lowstar_api () then false else not (pulse_is_buffer ()))
+        then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
         Printf.sprintf "(t_probe_then_validate_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
@@ -1278,8 +1289,8 @@ let rec print_typ (mname:string) (t:typ)
     | T_probe_then_validate fn dt sz nullable probe_fn dest as_u64 init dest_sz probed_indexes ->
       if pulse ()
       then begin
-        if not (pulse_is_buffer ())
-        then A.error "Probes are only supported by the buffer backend under --pulse" A.dummy_range;
+        if (if lowstar_api () then false else not (pulse_is_buffer ()))
+        then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
         Printf.sprintf "(t_probe_then_validate_alt_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
@@ -1318,7 +1329,7 @@ let print_typedef_name mname (n:T.typedef_name) =
     (print_ident mname n.td_name)
     (List.map (print_param mname) n.td_params |> String.concat " ")
 
-(* --pulse: one erased key per parameter, in parameter order. *)
+(* --api pulse: one erased key per parameter, in parameter order. *)
 let pulse_key_binders mname (ps:list T.param) : ML string =
   List.map
     (fun p ->
@@ -1412,12 +1423,19 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args
       ar
   in
   let validator_t =
-    Printf.sprintf "val validate_%s %s : validator_of %s %b (def'_%s %s)"
-      root_name
+    Printf.sprintf "%sval validate_%s %s : validator_of %s %b (def'_%s %s)"
+      (if lowstar_api () then "[@@ \"KrmlPrivate\"]\n" else "")
+      (pulse_worker_name root_name)
       binders
       sd
       (use_error_handler ())
       root_name args
+  in
+  let public_t =
+    if lowstar_api ()
+    then Printf.sprintf "val validate_%s %s : %s.validator_of %s %b (def'_%s %s)"
+      root_name binders (pulse_adapter_module ()) sd (use_error_handler ()) root_name args
+    else ""
   in
   let dtyp_t =
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
@@ -1434,7 +1452,7 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args
       ha
       ar
   in
-  String.concat "\n\n" [kind_t; def'_t; validator_t; dtyp_t]
+  String.concat "\n\n" [kind_t; def'_t; validator_t; public_t; dtyp_t]
 
 let print_td_iface is_entrypoint mname root_name binders args
                    inv eloc disj ha ar pk_wk pk_nz =
@@ -1486,6 +1504,18 @@ let print_binders_as_args mname binders =
     List.map (fun (i, _) -> print_ident mname i) binders |>
     String.concat " "
 
+let pulse_validator_attributes (is_entrypoint exported compatible: bool) : ML string =
+  let cinline = if is_entrypoint || exported then "" else "; CInline" in
+  let private_attr = if compatible then "; \"KrmlPrivate\"" else "" in
+  Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s]" cinline private_attr
+
+let print_public_adapter_binding compatible root_name binders allow_reading worker_name args : ML string =
+  if compatible
+  then Printf.sprintf "[@@normalize_for_extraction specialization_steps]\n\
+    let validate_%s %s = %s.adapt %b (validate_%s %s)\n"
+    root_name binders (pulse_adapter_module ()) allow_reading worker_name args
+  else ""
+
 // This large ML pretty-printer builds its result through ~20 chained
 // `let` bindings, so its (trivial) verification condition is a deep
 // continuation-passing term. The whole query verifies using ~8 rlimit,
@@ -1500,6 +1530,8 @@ let print_binding mname (td:type_decl)
   let k = td.kind in
   let typ = td.typ in
   let root_name = print_ident mname tdn.td_name in
+  let compatible = lowstar_api () in
+  let worker_name = pulse_worker_name root_name in
   let print_binders = print_binders mname in
   let print_args = print_binders_as_args mname in
   (* Record the parameters in scope before printing anything that mentions a
@@ -1629,26 +1661,13 @@ let print_binding mname (td:type_decl)
         args
   in
   let validate_binding =
-    let attribs =
-      // if tdn.td_noextract
-      // then "[@@ specialize; noextract_to \"krml\"]\nnoextract\ninline_for_extraction"
-      // else 
-      (
-        let cinline =
-          if td.name.td_entrypoint
-          || td.attrs.is_exported
-          then ""
-          else "; CInline"
-        in
-        Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]" cinline
-      )
-    in
+    let attribs = pulse_validator_attributes td.name.td_entrypoint td.attrs.is_exported compatible in
     if pulse ()
     then
       Printf.sprintf "%s\n\
                       let validate_%s %s = as_validator %s \"%s\" (def'_%s %s)\n"
                       attribs
-                      root_name
+                      worker_name
                       binders
                       (pulse_ehm ())
                       root_name
@@ -1663,6 +1682,9 @@ let print_binding mname (td:type_decl)
                     root_name
                     root_name
                     args
+  in
+  let public_binding =
+    print_public_adapter_binding compatible root_name binders td.allow_reading worker_name args
   in
   let dtyp : string =
     let reader =
@@ -1716,7 +1738,7 @@ let print_binding mname (td:type_decl)
                       td.allow_reading
                       root_name
                       td.allow_reading
-                      coerce_validator root_name args
+                      coerce_validator worker_name args
     else
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\
@@ -1766,6 +1788,7 @@ let print_binding mname (td:type_decl)
       (as_type_or_parser "type");
       (as_type_or_parser "parser");
       validate_binding;
+      public_binding;
       dtyp;
       enum_typ_of_binding]
   in
@@ -1802,6 +1825,8 @@ let print_binding mname (td:type_decl)
     in
     impl, iface
   else impl, ""
+#pop-options
+
 #pop-options
 
 let print_decl mname (d:decl)

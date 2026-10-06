@@ -134,9 +134,13 @@ jobs:
       - name: Upload lowparse proofs into the container
         run: |
           { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+      - name: Install 32-bit C toolchain
+        run: |
+          docker exec --user root "$container" /bin/bash -c \
+            "apt-get update && apt-get install --yes --no-install-recommends gcc-multilib"
       - name: Test 3D/QD
         run: |
-          docker exec $container bash .github/ci-make.sh -kj$(nproc) 3d-test quackyducky-test lowparse-test asn1-test ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1
+          docker exec -e EVERPARSE_TEST_32BIT=1 "$container" bash .github/ci-make.sh -kj"$(nproc)" 3d-test quackyducky-test lowparse-test asn1-test ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1 ARGS='--inventory-source filesystem'
       - name: Remove container
         run: |
           docker stop $container && docker rm $container

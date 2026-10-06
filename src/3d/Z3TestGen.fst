@@ -1440,7 +1440,7 @@ let print_witness_call_as_c_aux
   out flight;
   out (string_of_int num);
   out "[0].buf, ";
-  if Options.get_pulse ()
+  if Options.uses_pulse_api ()
   then begin
     (* Pulse validators take the input as (base, len, pos), where pos is an
        in/out pointer rather than a by-value start position. *)
@@ -1561,7 +1561,7 @@ let alloc_ptr_copy_buffer
   arg_var
   arg_var
 
-(* The --pulse counterparts: same as the Low* ones plus the position cell that
+(* The --api pulse counterparts: same as the Low* ones plus the position cell that
    EverParseStreamPos hands to the validator. *)
 let alloc_default_copy_buffer_pulse
   (flight: string)
@@ -1607,7 +1607,7 @@ let alloc_copy_buffer
   (arg_var: string)
 : ML string
 =
-  if Options.get_pulse ()
+  if Options.uses_pulse_api ()
   then
     if use_ptr
     then alloc_ptr_copy_buffer_pulse flight wid arg_var
@@ -1642,7 +1642,7 @@ let print_witness_call_as_c
       | (_, ArgSimple _) -> ()
     )
     arg_types;
-  let pulse = Options.get_pulse () in
+  let pulse = Options.uses_pulse_api () in
   if pulse
   then out "
     size_t everparse_pos = (size_t) 0U;
@@ -2180,7 +2180,7 @@ static void TestErrorHandler (
 "
 
 let test_error_handler_fn () : ML string =
-  if Options.get_pulse ()
+  if Options.uses_pulse_api ()
   then test_error_handler_fn_pulse
   else test_error_handler_fn_lowstar
 
@@ -2235,7 +2235,7 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 }
 "
 
-(* The --pulse counterparts.  The copy buffer is the same opaque void* handle
+(* The --api pulse counterparts.  The copy buffer is the same opaque void* handle
    as in Low*, so the harness still defines its own copy_buffer_t and the
    EverParseStreamOf/EverParseStreamLen hooks.  Two differences: Pulse input
    stream lengths are size_t rather than uint64_t, and the read position lives
@@ -2288,7 +2288,7 @@ size_t * EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x) {
 "
 
 let test_probe_functions (use_ptr: bool) : ML string =
-  if Options.get_pulse ()
+  if Options.uses_pulse_api ()
   then (if use_ptr then test_ptr_probe_functions_pulse else test_default_probe_functions_pulse)
   else (if use_ptr then test_ptr_probe_functions else test_default_probe_functions)
 
@@ -2337,8 +2337,8 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 }
 "
 
-(* The --pulse counterparts of the probe callbacks.  They differ from the Low*
-   ones only in also rewinding the harness-owned position cell: under --pulse
+(* The --api pulse counterparts of the probe callbacks.  They differ from the Low*
+   ones only in also rewinding the harness-owned position cell: under --api pulse
    the position belongs to the stream, so a copy buffer reused across probe
    sites has to be rewound.  (The interpreter calls `reset` too; doing it here
    as well is harmless and keeps the harness self-contained.) *)
@@ -2381,7 +2381,7 @@ BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE
 "
 
 let generate_probe_function (use_ptr: bool) (name: string) : ML string =
-  if Options.get_pulse ()
+  if Options.uses_pulse_api ()
   then (if use_ptr then generate_ptr_probe_function_pulse name else generate_default_probe_function_pulse name)
   else (if use_ptr then generate_ptr_probe_function name else generate_default_probe_function name)
 
@@ -2565,7 +2565,7 @@ let test_checker_c
   let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
   let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
   let nb_args_s = string_of_int (nb_cmd_and_args - 1) in
-  let pulse = Options.get_pulse () in
+  let pulse = Options.uses_pulse_api () in
   (* Pulse validators return a uint8_t status (0 on success) and report the
      number of consumed bytes through their position pointer, whereas Low*
      validators return the consumed length or an error code. *)

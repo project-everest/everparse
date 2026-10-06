@@ -220,14 +220,24 @@ let get_z3_skip_c_initializers () : ML bool =
 let get_use_error_handler_macro () : ML bool =
   !use_error_handler_macro
 
-let get_pulse () : ML bool =
-  true
+let uses_pulse_backend () : ML bool =
+  match get_api () with
+  | ApiLegacyLowstar -> false
+  | ApiPulse | ApiLowstar -> true
+
+let uses_pulse_api () : ML bool =
+  match get_api () with
+  | ApiLegacyLowstar | ApiLowstar -> false
+  | ApiPulse -> true
 
 let pulse_backend_module () : ML string =
-  match get_input_stream_binding () with
-  | HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.Buffer"
-  | HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.Extern"
-  | HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.Static"
+  match get_api (), get_input_stream_binding () with
+  | ApiLowstar, HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.LowstarBuffer"
+  | ApiLowstar, HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.LowstarExtern"
+  | ApiLowstar, HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.LowstarExtern"
+  | _, HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.Buffer"
+  | _, HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.Extern"
+  | _, HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.Static"
 
 let pulse_inst () : ML string =
   match get_input_stream_binding () with

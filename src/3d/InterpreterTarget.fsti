@@ -200,7 +200,7 @@ type typ : Type =
       probe_init:A.ident ->
       dest_sz:expr ->
       // the indexes (in particular the invariant) of the probed type `t`,
-      // needed to name its `state_dict` under --pulse
+      // needed to name its `state_dict` under --api pulse
       probed_indexes:typ_indexes ->
       typ
 

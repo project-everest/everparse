@@ -16,7 +16,7 @@ typedef struct _OPTR {
 // Regression test: field_ptr_after must write the address *of* the next `sz`
 // bytes -- the start of the field that follows the one carrying the action --
 // and not the address past them. Low* writes the Peep result unchanged, so
-// --pulse must too; the F* signature of the client primitive leaves the
+// --api pulse must too; the F* signature of the client primitive leaves the
 // written pointer unconstrained, so only main.c's value check pins it down.
 // With `a` and `b` consuming 6 bytes, the action below must yield base + 6.
 entrypoint
@@ -33,7 +33,7 @@ typedef struct _PTRVAL(mutable PUINT8 *out) {
 // setter runs at that output type's own state, while the assignment to
 // `seen` runs at the enclosing one. Both actions sit in the same sequence,
 // which is what previously pinned the whole sequence to the output state and
-// made the assignment impossible to typecheck under --pulse.
+// made the assignment impossible to typecheck under --api pulse.
 entrypoint
 typedef struct _MIXED(mutable UINT32 *seen, mutable OPTR *out) {
   UINT32  a;

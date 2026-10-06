@@ -191,9 +191,9 @@ make_everparse() {
     $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
     $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
 
-    # Copy the Pulse 3d runtime (--pulse), unless Pulse is disabled altogether.
+    # Copy the Pulse 3d runtime (--api pulse), unless Pulse is disabled altogether.
     #
-    # `3d.exe --pulse` needs three things at run time, all located relative to
+    # `3d.exe --api pulse` needs three things at run time, all located relative to
     # EVERPARSE_HOME by src/3d/ocaml/Batch.ml:
     #   - lib/everparse/3d: the combinator library itself, on the F* --include
     #     path, hence sources *and* .checked files;
@@ -203,13 +203,15 @@ make_everparse() {
     #   - lib/everparse/3d/krml/<backend>/EverParse.h: the pre-generated
     #     runtime header, one per input stream backend, copied into the output
     #     directory just as src/3d/prelude/<backend>/EverParse.h is for Low*;
+    #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
+    #     self-contained Low*-compatible runtime generated from Pulse;
     # src/lowparse/pulse is already covered by the src/lowparse copy above, and
     # EverParsePulse{,Endianness}.h are copied out to the output directory by
     # the copy_everparse_h micro-step.
     if [[ -z "$NO_PULSE" ]] ; then
         $cp -r $EVERPARSE_HOME/src/3d/EverParsePulse.h everparse/src/3d/
         $cp -r $EVERPARSE_HOME/src/3d/EverParsePulseEndianness.h everparse/src/3d/
-        # EverParse's own Makefile.basic: under --pulse, KaRaMeL is invoked with
+        # EverParse's own Makefile.basic: under --api pulse, KaRaMeL is invoked with
         # -skip-makefiles, so this is what the generated C is compiled with.
         mkdir -p everparse/share/everparse/3d
         $cp -r $EVERPARSE_HOME/share/everparse/3d/Makefile.basic everparse/share/everparse/3d/

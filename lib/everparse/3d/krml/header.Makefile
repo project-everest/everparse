@@ -1,7 +1,7 @@
 # Pre-generation of the Pulse runtime header, EverParse.h, one per input stream
 # backend.
 #
-# `3d.exe --pulse` used to rebuild this header on every invocation, bundling the
+# `3d.exe --api pulse` used to rebuild this header on every invocation, bundling the
 # whole runtime into the client's output directory with -static-header. That is
 # wasteful, because the result does not depend on the .3d input at all: it is
 # the fixed prelude (error codes, EverParseIsRangeOkay, the bitfield accessors)
@@ -109,7 +109,7 @@ HANDLER_static := $(HANDLER_extern)
 # modules, which must be emitted rather than assumed. The two still agree in
 # the sense that matters: no Custard.\* declaration survives into EverParse.h.
 define header_rule
-$(1)/EverParse.h: $$(KRML_FILES)
+$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	mkdir -p $(1)
 	$$(KRML_EXE) \
 	  -skip-compilation \
@@ -135,9 +135,45 @@ endef
 
 $(foreach b,$(BACKENDS),$(eval $(call header_rule,$(b))))
 
-headers: $(foreach b,$(BACKENDS),$(b)/EverParse.h)
+LOWSTAR_COMMON := EverParse3d.Actions.Common+EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.Lowstar.Public
+LOWSTAR_buffer := $(LOWSTAR_COMMON)+EverParse3d.Lowstar.SupportBuffer+EverParse3d.InputStream.LowstarBuffer+EverParse3d.CopyBuffer.LowstarBuffer+EverParse3d.Actions.ErrorHandler.LowstarBuffer
+LOWSTAR_extern := $(LOWSTAR_COMMON)+EverParse3d.Lowstar.SupportExtern+EverParse3d.InputStream.LowstarExtern+EverParse3d.InputStream.LowstarExtern.Types+EverParse3d.InputStream.LowstarExtern.Raw+EverParse3d.CopyBuffer.LowstarExtern+EverParse3d.Actions.ErrorHandler.LowstarExtern
+LOWSTAR_static := $(LOWSTAR_extern)
+LOWSTAR_HANDLER_buffer := EverParse3d.Actions.ErrorHandler.LowstarBuffer.error_handler
+LOWSTAR_HANDLER_extern := EverParse3d.Actions.ErrorHandler.LowstarExtern.error_handler
+LOWSTAR_HANDLER_static := $(LOWSTAR_HANDLER_extern)
+LOWSTAR_STATIC := EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.Lowstar.Public,EverParse3d.Lowstar.SupportBuffer,EverParse3d.Lowstar.SupportExtern,EverParse3d.InputStream.LowstarExtern.Types
+LOWSTAR_STATIC_static := ,EverParse3d.InputStream.LowstarExtern.Raw
+
+# The final, already-consumed bundle only overrides ErrorCode's C prefix.
+# Its declarations live in EverParse.h, not in a second support header.
+define lowstar_header_rule
+lowstar/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
+	mkdir -p lowstar/$(1)
+	$$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir lowstar/$(1) \
+	  -minimal -header $$(DDD_HOME)/noheader.txt \
+	  -add-include 'EverParse:"EverParseEndianness.h"' \
+	  -static-header '$$(LOWSTAR_STATIC)$$(LOWSTAR_STATIC_$(1))' \
+	  -no-inline-type-abbrev '$$(LOWSTAR_HANDLER_$(1)),EverParse3d.Lowstar.SupportBuffer.input_buffer' \
+	  -warn-error '$$(WARN_$(1))' \
+	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -fno-shadow -fextern-c \
+	  -finitialize-locals no \
+	  -bundle 'Prims,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
+	  -bundle '$$(LOWSTAR_$(1))=LowParse.\*,EverParse3d.\*,Pulse.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]' \
+	  $$(KRML_FILES)
+	test '!' -e lowstar/$(1)/EverParse.c
+	test '!' -e lowstar/$(1)/EverParsePulseInternal.h
+	test '!' -e lowstar/$(1)/SHOULDNOTBETHERE.h
+	test '!' -d lowstar/$(1)/internal
+endef
+
+$(foreach b,$(BACKENDS),$(eval $(call lowstar_header_rule,$(b))))
+
+headers: $(foreach b,$(BACKENDS),$(b)/EverParse.h lowstar/$(b)/EverParse.h)
+	rm -f lowstar/EverParsePulseInternal.h
 
 .PHONY: all headers clean-headers
 
 clean-headers:
-	rm -rf $(BACKENDS)
+	rm -rf $(BACKENDS) lowstar

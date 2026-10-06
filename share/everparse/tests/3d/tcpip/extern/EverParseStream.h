@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* A client-provided input stream for `3d --pulse --input_stream extern`.
+/* A client-provided input stream for `3d --api pulse --input_stream extern`.
 
    The Pulse extern backend asks the client for these primitives, all taking
    the stream object alone and using size_t for byte counts:

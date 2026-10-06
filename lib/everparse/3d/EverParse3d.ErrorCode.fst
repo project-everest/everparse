@@ -5,7 +5,7 @@ module U8 = FStar.UInt8
 let validator_success = 0uy
 
 [@@CMacro]
-let validator_error_action_failed = 1uy
+let validator_error_action_failed = 5uy
 
 [@ CMacro ]
 let validator_error_not_enough_data = 2uy
@@ -17,24 +17,28 @@ let validator_error_impossible = 3uy
 let validator_error_list_size_not_multiple = 4uy
 
 [@ CMacro ]
-let validator_error_constraint_failed = 5uy
+let validator_error_constraint_failed = 6uy
 
 [@ CMacro ]
-let validator_error_unexpected_padding = 6uy
+let validator_error_unexpected_padding = 7uy
 
 [@ CMacro ]
-let validator_error_probe_failed = 7uy
+let validator_error_probe_failed = 8uy
+
+noextract
+let is_validation_error (code:U8.t) : bool =
+  code <> validator_success && code <> validator_error_action_failed
 
 let error_reason_of_result (code:U8.t) : string =
   match code with
   | 0uy -> "success"
-  | 1uy -> "action failed"
   | 2uy -> "not enough data"
   | 3uy -> "impossible"
   | 4uy -> "list size not multiple of element size"
-  | 5uy -> "constraint failed"
-  | 6uy -> "unexpected padding"
-  | 7uy -> "probe failed"
+  | 5uy -> "action failed"
+  | 6uy -> "constraint failed"
+  | 7uy -> "unexpected padding"
+  | 8uy -> "probe failed"
   | _ -> "unspecified"
 
 // Some generic helpers

@@ -1,5 +1,5 @@
 # Regression test for `EVERPARSE_COPY_BUFFER_T` across the three input-stream
-# backends under `--pulse`.
+# backends under `--api pulse`.
 #
 # Two halves:
 #   - Test.3d mentions EVERPARSE_COPY_BUFFER_T without probing. It must be
@@ -19,7 +19,7 @@ EVERPARSE_HOME ?= $(realpath ../../../..)
 export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --pulse \
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse \
   --input_stream_include EverParseStream.h
 
 EVERPARSE_OUTPUT_DIR=obj

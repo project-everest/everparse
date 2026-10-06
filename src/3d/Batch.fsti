@@ -5,7 +5,7 @@ open FStar.All
 val krmllib: string -> ML string
 val krmlinclude: string -> ML string
 
-(* EverParse's own Makefile.basic, used instead of KaRaMeL's under --pulse *)
+(* EverParse's own Makefile.basic, used instead of KaRaMeL's under --api pulse *)
 val pulse_makefile_basic: string
 
 val cl_wrapper: unit -> ML string
@@ -51,6 +51,7 @@ val copy_everparse_h
   (_: input_stream_binding_t)
   (out_dir: string)
 : ML unit
+
 
 val produce_and_postprocess_one_c
   (_: input_stream_binding_t)

@@ -41,7 +41,7 @@ uint64_t _EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE const x) {
 }
 
 /* The pointer is the start of the next sz bytes, not the address past them, so
-   that --pulse agrees with the Low* backend. See the longer note in
+   that --api pulse agrees with the Low* backend. See the longer note in
    ../../static/src/EverParseStream.c. */
 BOOLEAN _EverParseFieldPtrAfterImpl(EVERPARSE_EXTRA_T extra, uint64_t sz, uint8_t **out, EVERPARSE_INPUT_STREAM_BASE x) {
   (void) extra;

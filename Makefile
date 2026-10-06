@@ -85,7 +85,7 @@ endif
 3d: 3d-pulse-prelude
 
 # The binary package ships the Pulse 3d runtime already extracted to .krml, so
-# that `3d.exe --pulse` has nothing left to build. Hence the krml extraction is
+# that `3d.exe --api pulse` has nothing left to build. Hence the krml extraction is
 # part of the packaged subset, not just of the test targets.
 ifeq (,$(NO_PULSE))
 3d: 3d-pulse-krml
@@ -108,20 +108,25 @@ lowparse-unit-test: lowparse
 #	+$(MAKE) -C tests/lowparse
 
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
-#	+$(MAKE) -C src/3d test
+ifeq (,$(NO_PULSE))
+	+$(MAKE) -C share/everparse/tests/3d/lowstar EVERPARSE_API=lowstar
+else
+	@echo "3d-unit-test requires the Pulse implementation (--api lowstar)" >&2
+	@exit 1
+endif
 
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 #	+$(MAKE) -C doc 3d-test
 
 # KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
-# what 3d.exe --pulse feeds to KaRaMeL alongside the generated modules, and the
+# what 3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
 # per-backend EverParse.h it copies into the output directory.
 3d-pulse-krml: 3d-pulse-prelude
 	+$(MAKE) -C lib/everparse/3d/krml all
 
 .PHONY: 3d-pulse-krml
 
-# The Pulse combinator backend (--pulse): generation, F* verification,
+# The Pulse combinator backend (--api pulse): generation, F* verification,
 # KaRaMeL extraction to C, then compiling and running the C tests.
 3d-pulse-test: 3d-exe 3d-pulse-krml
 	+$(MAKE) -C share/everparse/tests/3d
@@ -129,18 +134,23 @@ lowparse-unit-test: lowparse
 .PHONY: 3d-pulse-test
 
 3d-pulse-diff-test: 3d-pulse-test 3d-unit-test
-	+$(MAKE) -C src/3d/tests/pulse-diff
+	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff DIFF_PREBUILT=1
 
 .PHONY: 3d-pulse-diff-test
 
-3d-test: 3d-unit-test 3d-doc-test
+3d-lowstar-diff-test: 3d 3d-pulse-krml
+	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests
+
+.PHONY: 3d-lowstar-diff-test
+
+3d-test: 3d-doc-test
 
 ifeq (,$(NO_PULSE))
-3d-test: 3d-pulse-test
+3d-test: 3d-unit-test 3d-pulse-test
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
-3d-test: 3d-pulse-diff-test
+3d-test: 3d-pulse-diff-test 3d-lowstar-diff-test
 endif
 endif
 
@@ -398,13 +408,15 @@ clean-tests:
 .PHONY: clean-tests
 
 clean-3d-tests:
-	+$(MAKE) -C src/3d/tests clean
+	+$(MAKE) -C share/everparse/tests/3d/lowstar clean
+	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff clean
+	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests clean
 
 .PHONY: clean-3d-tests
 
 # The Pulse prelude and its test corpus. Neither is reachable from clean-3d or
 # clean-3d-tests: src/3d/Makefile cleans the Low* prelude in src/3d/prelude,
-# and src/3d/tests is the Low* corpus.
+# and the Low*-API corpus is in share/everparse/tests/3d/lowstar.
 clean-3d-pulse-prelude:
 	+$(MAKE) -C lib/everparse/3d clean
 

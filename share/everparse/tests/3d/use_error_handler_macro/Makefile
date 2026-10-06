@@ -20,7 +20,7 @@ EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 
 # The option under test plus an --add_include so the user-provided
 # macro definition is visible from all generated .c/.h files.
-EVERPARSE_OPTIONS=--pulse --use_error_handler_macro --add_include '"MyErrorHandlerMacro.h"'
+EVERPARSE_OPTIONS=--api pulse --use_error_handler_macro --add_include '"MyErrorHandlerMacro.h"'
 
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)
 
@@ -50,7 +50,7 @@ endif
 
 all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o
 
-# Under --pulse, EverParse.h is not copied from the prelude at the start of
+# Under --api pulse, EverParse.h is not copied from the prelude at the start of
 # the pipeline: KaRaMeL emits it, carrying the bundled runtime, at the same
 # time as the generated .c files. The wrapper headers include it, so it has
 # to be an explicit prerequisite here, or a parallel build races.

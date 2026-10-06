@@ -1,4 +1,4 @@
-# Pulse counterpart of src/3d/tests/check_complete.
+# Pulse counterpart of share/everparse/tests/3d/lowstar/check_complete.
 #
 # 3D is invoked with --complete_wrappers, so that, next to the usual
 # `TestCheck<T>' wrappers, it also generates `TestCheckComplete<T>'
@@ -23,7 +23,7 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 
-EVERPARSE_OPTIONS=--pulse --complete_wrappers
+EVERPARSE_OPTIONS=--api pulse --complete_wrappers
 
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)
 
@@ -52,7 +52,7 @@ endif
 
 all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o
 
-# Under --pulse, EverParse.h is not copied from the prelude at the start of
+# Under --api pulse, EverParse.h is not copied from the prelude at the start of
 # the pipeline: KaRaMeL emits it, carrying the bundled runtime, at the same
 # time as the generated .c files. The wrapper headers include it, so it has
 # to be an explicit prerequisite here, or a parallel build races.

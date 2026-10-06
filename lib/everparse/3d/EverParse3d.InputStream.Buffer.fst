@@ -138,6 +138,21 @@ ensures stream_pts_to b len pos contents Seq.empty **
   SZ.sub len p
 }
 
+(* Keep the native count-returning helper unchanged; the high-level operation
+   needs only the guarantee that the stream has been drained. *)
+inline_for_extraction
+noextract
+fn stream_empty_unit
+    (#[Util.solve_from_ctx ()] _extra: unit)
+  (b: base_t) (len: len_t) (pos: pos_t)
+  (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
+requires stream_pts_to b len pos contents v
+ensures stream_pts_to b len pos contents Seq.empty
+{
+  let _count = stream_empty b len pos contents v;
+  ()
+}
+
 (* Truncating a byte-array stream leaves the base pointer and the position cell
    alone and only shortens the length, so [trunc_t] is just [len_t] and
    [stream_truncate] extracts to a plain `size_t`-returning function. See the
@@ -278,13 +293,19 @@ instance input_stream_buffer : I.input_stream_inst base_t len_t pos_t = {
   error_handler_arrow_of_t = EH.error_handler_arrow_of;
   (* The buffer backend has no client context, so it erases. *)
   extra_t = unit;
+  scan_t = SZ.t;
+  scan_v = SZ.v;
+  scan_fits = SZ.fits;
+  scan_zero = 0sz;
+  scan_add = SZ.add;
+  scan_to_u64 = I.native_scan_to_u64;
   pts_to_is_suffix_of = stream_pts_to_is_suffix_of;
   get_position = stream_get_position;
   has = stream_has;
   has_at = stream_has_at;
   read = stream_read;
   skip = stream_skip;
-  empty = stream_empty;
+  empty = stream_empty_unit;
   trunc_t = len_t;
   trunc_base = stream_trunc_base;
   trunc_len = stream_trunc_len;
@@ -347,13 +368,58 @@ ensures I.pts_to (stream_of c) (stream_len c) (stream_pos c) contents contents
     as (I.pts_to (stream_of c) (stream_len c) (stream_pos c) contents contents);
 }
 
-noextract
-inline_for_extraction
+noextract inline_for_extraction
+let copy_buffer_storage c contents v =
+  I.pts_to (stream_of c) (stream_len c) (stream_pos c) contents v
+
+inline_for_extraction noextract
+fn copy_buffer_with_view
+  (a: Type0) (c: copy_buffer_t)
+  (contents: Ghost.erased (Seq.seq U8.t))
+  (pre: slprop) (post: (a -> Seq.seq U8.t -> Tot slprop))
+  (body: (base:base_t -> len:len_t -> pos:pos_t ->
+    stt a
+      (I.pts_to base len pos contents contents ** pre)
+      (fun result -> exists* v. I.pts_to base len pos contents v ** post result v)))
+requires copy_buffer_storage c contents contents ** pre
+returns result: a
+ensures exists* v. copy_buffer_storage c contents v ** post result v
+{
+  unfold (copy_buffer_storage c contents contents);
+  copy_buffer_reset c contents contents;
+  let result = body (stream_of c) (stream_len c) (stream_pos c);
+  with v . assert (I.pts_to (stream_of c) (stream_len c) (stream_pos c) contents v);
+  fold (copy_buffer_storage c contents v);
+  result
+}
+
+inline_for_extraction noextract
+let copy_buffer_report_error_t =
+  typename:string -> fieldname:string -> reason:string ->
+  ctxt:EverParse3d.AppCtxt.app_ctxt -> c:copy_buffer_t ->
+  contents:Ghost.erased (Seq.seq U8.t) -> v:Ghost.erased (Seq.seq U8.t) ->
+  stt unit
+    (exists* vc. R.pts_to ctxt vc ** copy_buffer_storage c contents v)
+    (fun _ -> exists* vc'. R.pts_to ctxt vc' ** copy_buffer_storage c contents v)
+
+inline_for_extraction noextract
+fn copy_buffer_report_error (handler: EH.error_handler) : copy_buffer_report_error_t
+  = (typename: _) (fieldname: _) (reason: _)
+    (ctxt: _) (c: _) (contents: _) (v: _)
+{
+  unfold (copy_buffer_storage c contents v);
+  let position = I.get_position (stream_of c) (stream_len c) (stream_pos c) contents v;
+  handler typename fieldname reason 0uy ctxt
+    (stream_of c) (stream_len c) (stream_pos c) position;
+  fold (copy_buffer_storage c contents v);
+}
+
+noextract inline_for_extraction
 instance copy_buffer_buffer : CB.copy_buffer copy_buffer_t base_t len_t pos_t = {
-  base_of = stream_of;
-  len_of = stream_len;
-  pos_of = stream_pos;
-  reset = copy_buffer_reset;
+  storage = copy_buffer_storage;
+  report_failed_array_element = false;
+  with_view = copy_buffer_with_view;
+  report_error = copy_buffer_report_error;
 }
 
 (* `field_ptr`: the address of the current position in the input stream.

@@ -235,7 +235,7 @@ let emit_fstar_code_for_interpreter (en:env)
        generated code actually uses. [I] was not one of them: nothing emitted
        refers to [EverParse3d.InputStream.Base]. *)
     let module_prefix =
-      if Options.get_pulse ()
+      if Options.uses_pulse_backend ()
       then
        FStar.Printf.sprintf "module %s\n\
                              open Pulse.Lib.Pervasives\n\
@@ -576,9 +576,9 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    if Options.get_pulse ()
+    if Options.uses_pulse_backend ()
     then
-      (* KaRaMeL emits no makefiles under --pulse; use EverParse's own, which
+      (* KaRaMeL emits no makefiles under --api pulse; use EverParse's own, which
          needs neither krmllib's headers nor libkrmllib.a. *)
       OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
     else
@@ -708,7 +708,7 @@ let produce_and_postprocess_c
     modul
     dep_files_and_modules
 
-(* TEMPORARY. In --pulse mode, Pulse's extraction encodes every reference
+(* TEMPORARY. In --api pulse mode, Pulse's extraction encodes every reference
    dereference as an access at the distinguished index C._zero_for_deref, which
    KaRaMeL rewrites back into `*r`. KaRaMeL provides that marker as a builtin,
    but only if no input file is named C (karamel/lib/Builtin.ml, `prepare`). So
@@ -717,13 +717,13 @@ let produce_and_postprocess_c
    which gives the user no clue as to the actual cause. Reject the name up
    front instead. To be removed once the marker is fixed upstream. *)
 let check_no_reserved_module_name (files: list string) : ML unit =
-  if Options.get_pulse ()
+  if Options.uses_pulse_backend ()
   then
     List.iter
       (fun file ->
         if OS.extension (OS.basename file) = ".3d" &&
            OS.remove_extension (OS.basename file) = "C"
-        then raise (Error "A 3d module cannot be named C in --pulse mode, because the name collides with KaRaMeL's builtin C module. Please rename it.\n")
+        then raise (Error "A 3d module cannot be named C in --api pulse mode, because the name collides with KaRaMeL's builtin C module. Please rename it.\n")
       )
       files
 
