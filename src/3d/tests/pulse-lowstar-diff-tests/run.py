@@ -58,20 +58,16 @@ def build_suite(suite, home, tree, env, log, timeout, *, api, target=None):
         targets = [target]
     for index, target in enumerate(targets):
         lowstar_cleanup = api == "lowstar" and suite == "root" and target == "batch-cleanup-test"
-        extras = (["EXTRA_CLEAN_OUT_FILES=internal"]
-                  if lowstar_cleanup else [])
-        command(["make", "--no-print-directory", "-j1", "-C", tree / directory, target, *extras],
+        command(["make", "--no-print-directory", "-j1", "-C", tree / directory, target],
                 home, env, log, timeout, append=index > 0)
         if lowstar_cleanup:
             out = tree / directory / "out.cleanup"
+            # Custard never marks an extracted definition KaRaMeL-private, so
+            # no declaration is raised to Internal visibility and no internal/
+            # directory is produced -- exactly as for --api pulse.
             internal = out / "internal"
-            if internal.is_symlink() or not internal.is_dir():
-                raise HarnessError(f"missing or non-directory lowstar cleanup internal inventory: {internal}")
-            entries = list(internal.rglob("*"))
-            found = sorted(p.relative_to(out).as_posix() for p in entries)
-            if found != ["internal/ELF.h"] or any(p.is_symlink() or not p.is_file() for p in entries):
-                raise HarnessError("unexpected lowstar cleanup internal inventory: "
-                                   f"expected regular internal/ELF.h only, found {found}")
+            if internal.exists() or internal.is_symlink():
+                raise HarnessError(f"unexpected lowstar cleanup internal inventory: {internal}")
             header = out / "EverParsePulseInternal.h"
             if header.exists() or header.is_symlink():
                 raise HarnessError(f"obsolete lowstar cleanup runtime header: {header}")

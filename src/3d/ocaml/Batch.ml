@@ -631,10 +631,10 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
         "-bundle" ;
         Printf.sprintf "%s=%s[rename=EverParse,rename-prefix]"
           (String.concat "+" api_modules)
-          (if lowstar_api () then String.concat "," api_modules else pulse_everparse_only_bundle);
+          (if lowstar_api () then String.concat "," api_modules else pulse_everparse_only_bundle_sources);
       ] @ (if lowstar_api () then [
         "-bundle"; "EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]";
-        "-bundle"; pulse_everparse_only_bundle ^ "[rename=EverParsePrivate]"
+        "-bundle"; pulse_everparse_only_bundle_sources ^ "[rename=EverParsePrivate]"
       ] else [])
     else [
         "-bundle" ;

@@ -267,17 +267,18 @@ Options are treated from left to right:
   
 .. _3d-api-option:
 
-* ``--api legacy_lowstar|pulse|lowstar``
+* ``--api pulse|lowstar``
 
-  Selects the implementation and public C API. ``legacy_lowstar`` is the
-  default and uses the original Low\* implementation; explicitly selecting
-  it is equivalent to omitting ``--api``. ``pulse`` generates the verified
-  validators with the Pulse backend. The entrypoint API in ``<Mod>Wrapper.h`` is
+  Selects the implementation and public C API. ``pulse`` is the default
+  and generates the verified validators with the Pulse backend; explicitly
+  selecting it is equivalent to omitting ``--api``. The legacy Low\*
+  implementation is no longer selectable. The entrypoint API in
+  ``<Mod>Wrapper.h`` is
   unchanged, so client code that only calls the entrypoints ports over
   unchanged; but the validator result representation, the error-handler
   signature, the copy-buffer projections and the ``--input_stream`` client
-  primitives differ. Shared named error kinds use the same numbers in all
-  three APIs.
+  primitives differ. Shared named error kinds use the same numbers in both
+  APIs.
   See the *Pulse backend primitives* part of
   ``--input_stream`` below, and, in the :ref:`3d language reference
   <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
@@ -295,11 +296,11 @@ Options are treated from left to right:
   per-parser extraction, KaRaMeL uses the shipped runtime without emitting
   another ``EverParse.h``. With
   ``--no_copy_everparse_h``, supply this header rather than the original
-  Low\* header. The ``legacy_lowstar`` and native ``pulse`` headers are unchanged.
+  Low\* header. The native ``pulse`` header is unchanged.
 
   This replaces the former ``--pulse`` switch, which is no longer accepted.
-  ``--no_api`` resets the selection to ``legacy_lowstar``.
-  API selection is independent of ``--input_stream``: all three APIs support
+  ``--no_api`` resets the selection to the default, ``pulse``.
+  API selection is independent of ``--input_stream``: both APIs support
   ``buffer``, ``extern`` and ``static``, subject to the native Pulse
   :ref:`probe restriction <sec-probing-pulse>`.
 

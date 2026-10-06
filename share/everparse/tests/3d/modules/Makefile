@@ -107,7 +107,7 @@ ci: $(EVERPARSE_ALL_O_FILES) $(EVERPARSE_ALL_H_FILES)
 # Same inplace hash checks, but with the standalone F# hash checker.
 # This rule is for continuous integration only, and is called by the
 # hashchk-modules rule of the parent Makefile.
-HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net8.0/win-x64/everparse-hashchk.dll
+HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
 
 hashchk-check: $(EVERPARSE_ALL_H_FILES)
 	$(HASHCHK) --api pulse --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.h

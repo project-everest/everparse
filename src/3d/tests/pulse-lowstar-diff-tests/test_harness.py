@@ -59,14 +59,14 @@ class CommandTests(unittest.TestCase):
         for key in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "EVERPARSE_API",
                     "EVERPARSE_HOME", "EXTRA_CLEAN_OUT_FILES"):
             env.pop(key, None)
-        for args, lowstar in (([], True), (["EVERPARSE_API=legacy_lowstar"], False)):
+        for args in ([], ["EVERPARSE_API=legacy_lowstar"]):
             result = subprocess.run(
                 ["make", "--no-print-directory", "-s", "-C", str(HERE.parents[3] / CORPUS),
                  "echo-clean-out-files", *args],
                 env=env, check=True, capture_output=True, text=True)
             files = result.stdout.splitlines()
             self.assertNotIn("EverParsePulseInternal.h", files)
-            self.assertEqual("internal" in files, lowstar)
+            self.assertNotIn("internal", files)
 
     def test_clean_removes_both_build_trees_but_preserves_sources_and_rejects_symlinks(self):
         with tempfile.TemporaryDirectory(dir=HERE) as tmp:
@@ -109,56 +109,41 @@ class CommandTests(unittest.TestCase):
     def test_cleanup_extras_are_scoped_to_lowstar_root_cleanup(self):
         with tempfile.TemporaryDirectory(dir=HERE) as tmp:
             root = Path(tmp)
-            out = root / "out.cleanup"
-            (out / "internal").mkdir(parents=True)
-            (out / "internal/ELF.h").write_text("worker")
+            (root / "out.cleanup").mkdir(parents=True)
             for api in ("legacy_lowstar", "lowstar"):
                 with patch("run.command") as execute:
                     build_suite("root", root, root, {}, root / "build.log", 7, api=api)
                 self.assertEqual(execute.call_count, len(SUITES["root"][1]))
                 for call, target in zip(execute.call_args_list, SUITES["root"][1]):
-                    expected = ["make", "--no-print-directory", "-j1", "-C", root, target]
-                    if api == "lowstar" and target == "batch-cleanup-test":
-                        expected += ["EXTRA_CLEAN_OUT_FILES=internal"]
-                    self.assertEqual(call.args[0], expected)
+                    self.assertEqual(call.args[0],
+                                     ["make", "--no-print-directory", "-j1", "-C", root, target])
             with patch("run.command") as execute:
                 build_suite("modules", root, root, {}, root / "build.log", 7, api="lowstar")
             self.assertEqual(execute.call_args.args[0],
                              ["make", "--no-print-directory", "-j1", "-C", root / "modules", "all"])
 
-    def test_cleanup_inventory_rejects_missing_extra_nested_and_symlinked_outputs(self):
-        layouts = ("missing-internal", "empty-internal", "extra-header", "nested-header",
-                   "empty-directory", "symlink-header", "symlink-directory",
+    def test_cleanup_inventory_rejects_internal_and_obsolete_runtime_outputs(self):
+        layouts = ("internal-header", "empty-internal", "symlink-internal",
                    "obsolete-runtime", "symlink-runtime")
         for layout in layouts:
             with self.subTest(layout=layout), tempfile.TemporaryDirectory(dir=HERE) as tmp:
                 root = Path(tmp)
                 out = root / "out.cleanup"
+                out.mkdir(parents=True)
                 internal = out / "internal"
-                internal.mkdir(parents=True)
-                worker = internal / "ELF.h"
-                worker.write_text("worker")
                 runtime = out / "EverParsePulseInternal.h"
-                if layout == "obsolete-runtime":
-                    runtime.write_text("obsolete")
-                elif layout in {"missing-internal", "empty-internal"}:
-                    worker.unlink()
-                    if layout == "missing-internal":
-                        internal.rmdir()
-                elif layout == "extra-header":
-                    (internal / "Other.h").write_text("unexpected")
-                elif layout in {"nested-header", "empty-directory"}:
-                    (internal / "nested").mkdir()
-                    if layout == "nested-header":
-                        (internal / "nested/Other.h").write_text("unexpected")
-                elif layout == "symlink-header":
-                    worker.unlink()
-                    worker.symlink_to(out / "nonexistent")
-                elif layout == "symlink-directory":
-                    internal.rename(out / "elsewhere")
+                if layout == "internal-header":
+                    internal.mkdir()
+                    (internal / "ELF.h").write_text("worker")
+                elif layout == "empty-internal":
+                    internal.mkdir()
+                elif layout == "symlink-internal":
+                    (out / "elsewhere").mkdir()
                     internal.symlink_to(out / "elsewhere", target_is_directory=True)
+                elif layout == "obsolete-runtime":
+                    runtime.write_text("obsolete")
                 elif layout == "symlink-runtime":
-                    runtime.symlink_to(worker)
+                    runtime.symlink_to(out / "nonexistent")
                 with patch("run.command") as execute, self.assertRaisesRegex(
                         HarnessError, "lowstar cleanup"):
                     build_suite("root", root, root, {}, root / "build.log", 7, api="lowstar")
@@ -172,9 +157,6 @@ class CommandTests(unittest.TestCase):
                 out = root / "out.cleanup"
                 out.mkdir()
                 (out / "Unit.c").write_text("generated")
-                if api == "lowstar":
-                    (out / "internal").mkdir()
-                    (out / "internal/ELF.h").write_text("worker")
                 (root / "Makefile").write_text(
                     "clean_out_files = Unit.c\n"
                     "clean_out_files += $(EXTRA_CLEAN_OUT_FILES)\n"

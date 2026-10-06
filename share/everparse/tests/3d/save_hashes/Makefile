@@ -34,7 +34,7 @@ check: build
 	$(EVERPARSE_CMD) --odir $(EVERPARSE_OUTPUT_DIR) --check_hashes strong src/Test.3d src/Test2.3d
 
 # Same, but with the standalone F# hash checker
-HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net8.0/win-x64/everparse-hashchk.dll
+HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
 
 hashchk-check: build
 	$(HASHCHK) --api pulse --odir $(EVERPARSE_OUTPUT_DIR) --check_hashes strong src/Test.3d src/Test2.3d

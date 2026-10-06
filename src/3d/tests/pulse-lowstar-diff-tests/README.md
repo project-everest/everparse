@@ -117,16 +117,18 @@ crash, or unrelated verification failure cannot satisfy a negative case.
 The separate hash-checker implementation/rebuild is outside the shared corpus;
 the corpus's generation and hash checks remain included.
 
-Only lowstar's root `batch-cleanup-test` receives
-`EXTRA_CLEAN_OUT_FILES=internal`. The original Make
-recipe still checks the exact top-level file set; the runner additionally
-requires the recursive internal inventory to be exactly the regular file
-`internal/ELF.h`. Missing files, extra/nested entries, and symlinks fail.
-The obsolete separate `EverParsePulseInternal.h` is rejected. Each API uses
+The root `batch-cleanup-test` receives no cleanup extras for any API: the
+original Make recipe checks the exact top-level file set, and the runner
+additionally requires that no `internal/` directory be produced. Extraction
+goes through Custard, which never marks an extracted definition
+KaRaMeL-private, so nothing is raised to Internal visibility and KaRaMeL emits
+no internal header -- the `lowstar` inventory is now exactly the `pulse` one.
+A present, empty, or symlinked `internal` fails, and the obsolete separate
+`EverParsePulseInternal.h` is rejected. Each API uses
 its matching prebuilt `EverParse.h` for no-copy builds: `legacy_lowstar` uses
 `src/3d/prelude/<backend>`, and `lowstar` uses
-`lib/everparse/3d/krml/lowstar/<backend>`. Legacy receives no extras, and
-inherited cleanup overrides are removed.
+`lib/everparse/3d/krml/lowstar/<backend>`. Inherited cleanup overrides are
+removed.
 
 ## Observations
 

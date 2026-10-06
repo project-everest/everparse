@@ -21,7 +21,7 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 # The standalone F# hash checker. Overridable, e.g. to test a Release
 # build or a different runtime identifier.
 HASHCHK_DIR=$(EVERPARSE_HOME)/src/3d/hashchk
-HASHCHK ?= dotnet $(HASHCHK_DIR)/bin/Debug/net8.0/win-x64/everparse-hashchk.dll
+HASHCHK ?= dotnet $(HASHCHK_DIR)/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
 export HASHCHK
 
 INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
@@ -46,9 +46,11 @@ clean_out_files=\
 	$(addsuffix .h,$(modules_or_wrappers)) \
 	$(module_extern_apis)
 clean_out_files += $(EXTRA_CLEAN_OUT_FILES)
-ifeq ($(EVERPARSE_API),lowstar)
-EXTRA_CLEAN_OUT_FILES ?= internal
-endif
+# No internal/ directory: extraction now goes through Custard, which never
+# marks an extracted definition KaRaMeL-private (FStarC.Custard.Extract.fst
+# reads the KrmlPrivate attribute only to decide what to root), so nothing is
+# ever raised to Internal visibility and KaRaMeL emits no internal header.
+# This is the same set as the --api pulse corpus in ../Makefile.
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
