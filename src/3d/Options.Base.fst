@@ -156,7 +156,6 @@ let z3_skip_c_initializers: ref bool = alloc false
 let use_error_handler_macro : ref bool = alloc false
 
 let valid_api : string -> Tot bool = function
-  | "legacy_lowstar"
   | "lowstar"
   | "pulse" -> true
   | _ -> false
@@ -166,7 +165,6 @@ let _api : ref (option (valid_string valid_api)) = alloc None
 let get_api () : ML api_t =
   match !_api with
   | None
-  | Some "legacy_lowstar" -> ApiLegacyLowstar
   | Some "pulse" -> ApiPulse
   | Some "lowstar" -> ApiLowstar
 

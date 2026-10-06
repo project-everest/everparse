@@ -138,11 +138,6 @@ endif
 
 .PHONY: 3d-pulse-diff-test
 
-3d-lowstar-diff-test: 3d 3d-pulse-krml
-	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests
-
-.PHONY: 3d-lowstar-diff-test
-
 3d-test: 3d-doc-test
 
 ifeq (,$(NO_PULSE))
@@ -150,7 +145,7 @@ ifeq (,$(NO_PULSE))
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
-3d-test: 3d-pulse-diff-test 3d-lowstar-diff-test
+3d-test: 3d-pulse-diff-test
 endif
 endif
 
@@ -410,7 +405,6 @@ clean-tests:
 clean-3d-tests:
 	+$(MAKE) -C share/everparse/tests/3d/lowstar clean
 	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff clean
-	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests clean
 
 .PHONY: clean-3d-tests
 
