@@ -217,23 +217,47 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            src/3d/tests
+            share/everparse/tests/3d
             src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}/everparse
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         run: |
-          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/src/3d/tests/ && bash ${{ github.workspace }}/test/everparse.sh Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
+      # Same tests against the native Pulse API. Use separate inputs from
+      # the Low*-compatible API step above:
+      #  - the inputs come from share/everparse/tests/3d rather than
+      #    share/everparse/tests/3d/lowstar, so that --check_hashes inplace, which rewrites the .3d
+      #    file, does not clobber the hashes the Low* run just wrote.
+      - name: Test EverParse (--api pulse)
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
       - name: Test EverParse test case generation
         run: |
-          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      # The --api pulse counterpart. The generated C harness differs between the
+      # two backends -- Pulse validators return a uint8_t status and report the
+      # consumed length through a size_t* position -- so this compiles and runs
+      # code the Low* step above never exercises. Its own --odir, so the two do
+      # not clobber each other.
+      - name: Test EverParse test case generation (--api pulse)
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
           ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
       - name: Upload test artifact
         uses: actions/upload-artifact@v4
         with:
-          path: everparse/src/3d/tests/Comments*
+          path: everparse/share/everparse/tests/3d/lowstar/Comments*
           name: everparse-test-macos
+      # The --api pulse counterpart, kept in its own artifact: both files are
+      # called Comments.3d, so putting them in one artifact would change the
+      # archive root and break the existing interop steps.
+      - name: Upload test artifact (--api pulse)
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/share/everparse/tests/3d/Comments*
+          name: everparse-test-pulse-macos
 
   build-linux:
     if: ${{ !inputs.only_build_3d }}
@@ -293,23 +317,47 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            src/3d/tests
+            share/everparse/tests/3d
             src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}/everparse
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         run: |
-          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/src/3d/tests/ && bash ${{ github.workspace }}/test/everparse.sh Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
+      # Same tests against the native Pulse API. Use separate inputs from
+      # the Low*-compatible API step above:
+      #  - the inputs come from share/everparse/tests/3d rather than
+      #    share/everparse/tests/3d/lowstar, so that --check_hashes inplace, which rewrites the .3d
+      #    file, does not clobber the hashes the Low* run just wrote.
+      - name: Test EverParse (--api pulse)
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
       - name: Test EverParse test case generation
         run: |
-          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      # The --api pulse counterpart. The generated C harness differs between the
+      # two backends -- Pulse validators return a uint8_t status and report the
+      # consumed length through a size_t* position -- so this compiles and runs
+      # code the Low* step above never exercises. Its own --odir, so the two do
+      # not clobber each other.
+      - name: Test EverParse test case generation (--api pulse)
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
           ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
       - name: Upload test artifact
         uses: actions/upload-artifact@v4
         with:
-          path: everparse/src/3d/tests/Comments*
+          path: everparse/share/everparse/tests/3d/lowstar/Comments*
           name: everparse-test-linux
+      # The --api pulse counterpart, kept in its own artifact: both files are
+      # called Comments.3d, so putting them in one artifact would change the
+      # archive root and break the existing interop steps.
+      - name: Upload test artifact (--api pulse)
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/share/everparse/tests/3d/Comments*
+          name: everparse-test-pulse-linux
 
   build-windows:
     runs-on: windows-2025
@@ -382,26 +430,62 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            src/3d/tests
+            share/everparse/tests/3d
             src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}\everparse
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         shell: cmd
         run: |
-          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Arithmetic.3d ${{ github.workspace }}\everparse\src\3d\tests\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\src\3d\tests && ${{ github.workspace }}\test\everparse.cmd Comments.3d && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+          ${{ github.workspace }}\test\everparse.cmd --api lowstar ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\Arithmetic.3d ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar && ${{ github.workspace }}\test\everparse.cmd --api lowstar Comments.3d && ${{ github.workspace }}\test\everparse.cmd --api lowstar --check_hashes inplace Comments.3d
+      # Same tests against the native Pulse API. Use separate inputs from
+      # the Low*-compatible API step above:
+      #  - the inputs come from share\everparse\tests\3d rather than
+      #    share\everparse\tests\3d\lowstar, so that --check_hashes inplace, which rewrites the .3d
+      #    file, does not clobber the hashes the Low* run just wrote.
+      # Unlike test-macos / test-linux, this job has no job-level
+      - name: Test EverParse (--api pulse)
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd --api pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\Arithmetic.3d ${{ github.workspace }}\everparse\share\everparse\tests\3d\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\share\everparse\tests\3d && ${{ github.workspace }}\test\everparse.cmd --api pulse Comments.3d && ${{ github.workspace }}\test\everparse.cmd --api pulse --check_hashes inplace Comments.3d
       - name: Test EverParse test case generation
         shell: cmd
         run: |
-          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+          ${{ github.workspace }}\test\everparse.cmd --api lowstar ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      # The --api pulse counterpart. The generated C harness differs between the
+      # two backends -- Pulse validators return a uint8_t status and report the
+      # consumed length through a size_t* position -- so this compiles and runs
+      # code the Low* step above never exercises. Its own --odir, so the two do
+      # not clobber each other.
+      - name: Test EverParse test case generation (--api pulse)
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd --api pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverParse test case generation with probe
         shell: cmd
         run: |
-          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+          ${{ github.workspace }}\test\everparse.cmd --api lowstar ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+      # The --api pulse counterpart. Beyond the harness differences above, this is
+      # the only packaged test that exercises copy buffers under --api pulse, where
+      # a client must supply EverParseStreamPos in addition to the Low*
+      # EverParseStreamOf/Len, and EverParseStreamLen returns size_t. Z3TestGen
+      # emits all three into the harness, so the test is self-contained.
+      - name: Test EverParse test case generation with probe (--api pulse)
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd --api pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe-pulse --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
       - name: Upload test artifact
         uses: actions/upload-artifact@v4
         with:
-          path: everparse\src\3d\tests\Comments*
+          path: everparse\share\everparse\tests\3d\lowstar\Comments*
           name: everparse-test-windows
+      # The --api pulse counterpart, kept in its own artifact: both files are
+      # called Comments.3d, so putting them in one artifact would change the
+      # archive root and break the existing interop steps.
+      - name: Upload test artifact (--api pulse)
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse\share\everparse\tests\3d\Comments*
+          name: everparse-test-pulse-windows
 
   test-interop-macos:
     if: ${{ !inputs.only_build_3d }}
@@ -424,17 +508,33 @@ jobs:
         with:
           name: everparse-test-linux
           path: linux
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         run: |
-          cd ${{ github.workspace }}/linux/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+          cd ${{ github.workspace }}/linux/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
+      - name: Download Linux test (--api pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-linux
+          path: linux-pulse
+      - name: Test EverParse (--api pulse)
+        run: |
+          cd ${{ github.workspace }}/linux-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
       - name: Download Windows test
         uses: actions/download-artifact@v4
         with:
           name: everparse-test-windows
           path: windows
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         run: |
-          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
+      - name: Download Windows test (--api pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-windows
+          path: windows-pulse
+      - name: Test EverParse (--api pulse)
+        run: |
+          cd ${{ github.workspace }}/windows-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
 
   test-interop-linux:
     if: ${{ !inputs.only_build_3d }}
@@ -457,17 +557,33 @@ jobs:
         with:
           name: everparse-test-macos
           path: macos
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         run: |
-          cd ${{ github.workspace }}/macos/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+          cd ${{ github.workspace }}/macos/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
+      - name: Download Macos test (--api pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-macos
+          path: macos-pulse
+      - name: Test EverParse (--api pulse)
+        run: |
+          cd ${{ github.workspace }}/macos-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
       - name: Download Windows test
         uses: actions/download-artifact@v4
         with:
           name: everparse-test-windows
           path: windows
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         run: |
-          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
+      - name: Download Windows test (--api pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-windows
+          path: windows-pulse
+      - name: Test EverParse (--api pulse)
+        run: |
+          cd ${{ github.workspace }}/windows-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
 
   test-interop-windows:
     if: ${{ !inputs.only_build_3d }}
@@ -489,19 +605,37 @@ jobs:
         with:
           name: everparse-test-linux
           path: linux
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         shell: cmd
         run: |
-          cd ${{ github.workspace }}\linux && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+          cd ${{ github.workspace }}\linux && ${{ github.workspace }}\test\everparse.cmd --api lowstar --check_hashes inplace Comments.3d
+      - name: Download Linux test (--api pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-linux
+          path: linux-pulse
+      - name: Test EverParse (--api pulse)
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\linux-pulse && ${{ github.workspace }}\test\everparse.cmd --api pulse --check_hashes inplace Comments.3d
       - name: Download Macos test
         uses: actions/download-artifact@v4
         with:
           name: everparse-test-macos
           path: macos
-      - name: Test EverParse
+      - name: Test EverParse (--api lowstar)
         shell: cmd
         run: |
-          cd ${{ github.workspace }}\macos && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+          cd ${{ github.workspace }}\macos && ${{ github.workspace }}\test\everparse.cmd --api lowstar --check_hashes inplace Comments.3d
+      - name: Download Macos test (--api pulse)
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-pulse-macos
+          path: macos-pulse
+      - name: Test EverParse (--api pulse)
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\macos-pulse && ${{ github.workspace }}\test\everparse.cmd --api pulse --check_hashes inplace Comments.3d
 
   build-docker:
     if: ${{ !inputs.only_build_3d }}

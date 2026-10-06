@@ -25,6 +25,8 @@ val get_hoist_locals : unit -> ML bool
 
 val get_goto_for_early_return : unit -> ML bool
 
+val get_complete_wrappers : unit -> ML bool
+
 val get_blank_lines : unit -> ML bool
 
 val get_line_comments : unit -> ML bool
@@ -88,6 +90,14 @@ val get_produce_testcases_c: unit -> ML bool
 val get_z3_skip_c_initializers: unit -> ML bool
 
 val get_use_error_handler_macro: unit -> ML bool
+
+val uses_pulse_backend: unit -> ML bool
+
+val uses_pulse_api: unit -> ML bool
+
+val pulse_backend_module: unit -> ML string
+
+val pulse_inst: unit -> ML string
 
 val get_z3_use_ptr: unit -> ML bool
 

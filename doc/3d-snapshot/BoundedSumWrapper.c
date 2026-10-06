@@ -44,6 +44,29 @@ BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 	return TRUE;
 }
 
+BOOLEAN BoundedSumCheckCompleteBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = BoundedSumValidateBoundedSum(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			BoundedSumEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		BoundedSumEverParseError("_boundedSum", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -57,6 +80,29 @@ BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
 		{
 			BoundedSumEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN BoundedSumCheckCompleteMySum(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = BoundedSumValidateMySum( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			BoundedSumEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		BoundedSumEverParseError("mySum", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;

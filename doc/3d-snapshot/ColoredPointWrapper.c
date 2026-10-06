@@ -44,6 +44,29 @@ BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 	return TRUE;
 }
 
+BOOLEAN ColoredPointCheckCompleteColoredPoint1(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ColoredPointValidateColoredPoint1( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ColoredPointEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ColoredPointEverParseError("_coloredPoint1", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOLEAN ColoredPointCheckColoredPoint2(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -57,6 +80,29 @@ BOOLEAN ColoredPointCheckColoredPoint2(uint8_t *base, uint32_t len) {
 		{
 			ColoredPointEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ColoredPointCheckCompleteColoredPoint2(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ColoredPointValidateColoredPoint2( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ColoredPointEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ColoredPointEverParseError("_coloredPoint2", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;

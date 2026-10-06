@@ -44,6 +44,9 @@ let get_hoist_locals () =
 let get_goto_for_early_return () =
   !goto_for_early_return
 
+let get_complete_wrappers () =
+  !complete_wrappers
+
 let get_blank_lines () =
   !blank_lines
 
@@ -216,6 +219,31 @@ let get_z3_skip_c_initializers () : ML bool =
 
 let get_use_error_handler_macro () : ML bool =
   !use_error_handler_macro
+
+let uses_pulse_backend () : ML bool =
+  match get_api () with
+  | ApiLegacyLowstar -> false
+  | ApiPulse | ApiLowstar -> true
+
+let uses_pulse_api () : ML bool =
+  match get_api () with
+  | ApiLegacyLowstar | ApiLowstar -> false
+  | ApiPulse -> true
+
+let pulse_backend_module () : ML string =
+  match get_api (), get_input_stream_binding () with
+  | ApiLowstar, HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.LowstarBuffer"
+  | ApiLowstar, HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.LowstarExtern"
+  | ApiLowstar, HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.LowstarExtern"
+  | _, HashingOptions.InputStreamBuffer -> "EverParse3d.InputStream.Buffer"
+  | _, HashingOptions.InputStreamExtern _ -> "EverParse3d.InputStream.Extern"
+  | _, HashingOptions.InputStreamStatic _ -> "EverParse3d.InputStream.Static"
+
+let pulse_inst () : ML string =
+  match get_input_stream_binding () with
+  | HashingOptions.InputStreamBuffer -> "B.input_stream_buffer"
+  | HashingOptions.InputStreamExtern _ -> "B.input_stream_extern"
+  | HashingOptions.InputStreamStatic _ -> "B.input_stream_static"
 
 let get_z3_use_ptr () : ML bool =
   !use_ptr_for_probe

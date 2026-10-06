@@ -1,0 +1,33 @@
+// Regression test: a mutable output parameter may be named `output_state`
+// without colliding with the definition that the Pulse backend emits into
+// the generated *_ExternalAPI.fsti, nor with the key of the state-dictionary
+// entry that stands for the output state.
+//
+// Before the fix, the generated interpreter module bound a parameter named
+// `output_state`, shadowing the generated `output_state : state_dict`, and
+// the state-dictionary key derived from that parameter was the string
+// "output_state", which was exactly the key reserved for the output state.
+// Either one made the generated F* fail to typecheck.
+//
+// This is a generation + verification + extraction test only: it builds no
+// executable, since the point is that the generated F* typechecks at all.
+
+output
+typedef struct _OSTATE {
+    UINT32 x;
+    UINT32 y;
+} OSTATE;
+
+entrypoint
+typedef struct _T (mutable OSTATE* output_state) {
+    UINT32 x
+    {:on-success
+        output_state->x = x;
+        return true;
+    };
+    UINT32 y
+    {:on-success
+        output_state->y = y;
+        return true;
+    };
+} T;

@@ -29,16 +29,23 @@ let print_make_rule
   mtype
   everparse_h
   input_stream_binding
+  (api: HashingOptions.api_t)
+  (makefile: string)
   (r: rule_t)
 : Tot string
-= 
-  let rule = Printf.sprintf "%s : %s\n" (mk_rule_operand mtype r.to) (String.concat " " (List.Tot.map (mk_rule_operand mtype) r.from)) in
+=
+  let pulse = api = HashingOptions.ApiPulse in
+  let deps = match r.ty with
+    | EverParse -> r.from @ [makefile]
+    | _ -> r.from
+  in
+  let rule = Printf.sprintf "%s : %s\n" (mk_rule_operand mtype r.to) (String.concat " " (List.Tot.map (mk_rule_operand mtype) deps)) in
   match r.ty with
   | Nop -> Printf.sprintf "%s\n" rule
   | _ ->
     let cmd =
       match r.ty with
-      | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
+      | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --api %s --odir %s" (HashingOptions.string_of_api api) output_dir
       | CC ->
         let iopt = match mtype with
           | HashingOptions.MakefileGMake -> "-I"
@@ -49,7 +56,21 @@ let print_make_rule
           then ""
           else
             let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
-            let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
+            (* With --no_copy_everparse_h the client compiles against a prebuilt
+               EverParse.h rather than a copy in the output directory, so the
+               include path has to name the runtime matching the API and backend. The
+               Low* one declares the same EVERPARSE_ERROR_FRAME as the Pulse
+               EverParsePulse.h that --api pulse wrappers include, so picking it
+               here makes the two headers conflict. ddd_home still supplies
+               EverParsePulse{,Endianness}.h and EverParseEndianness.h. *)
+            let ddd_actions_home =
+              if api <> HashingOptions.ApiLegacyLowstar
+              then
+                let krml = "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" `OS.concat` "krml" in
+                let runtime = if pulse then krml else krml `OS.concat` "lowstar" in
+                runtime `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
+              else ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
+            in
             Printf.sprintf "%s %s %s %s" iopt ddd_home iopt ddd_actions_home
         in
         let copt = match mtype with
@@ -510,7 +531,8 @@ let produce_clang_format_rule
 
 let produce_everparse_h_rule
   (everparse_h: bool)
-: Tot (list rule_t)
+  (all_modules: list string)
+: FStar.All.ML (list rule_t)
 =
   if everparse_h
   then [
@@ -520,9 +542,41 @@ let produce_everparse_h_rule
       to = mk_filename "EverParseEndianness" "h";
       args = "--__micro_step copy_everparse_h";
     };
+  ] `List.Tot.append`
+  (* In --api pulse mode the copy_everparse_h micro-step also copies
+     EverParsePulseEndianness.h (included by EverParse.h) and EverParsePulse.h
+     (included by every <Mod>Wrapper.c). They need their own rules, otherwise
+     make cannot repair them. The rules are chained so that a parallel make
+     never runs the micro-step twice at once. *)
+  begin if Options.uses_pulse_api ()
+  then [
+    {
+      ty = EverParse;
+      from = [mk_filename "EverParseEndianness" "h"];
+      to = mk_filename "EverParsePulseEndianness" "h";
+      args = "--__micro_step copy_everparse_h";
+    };
+    {
+      ty = EverParse;
+      from = [mk_filename "EverParsePulseEndianness" "h"];
+      to = mk_filename "EverParsePulse" "h";
+      args = "--__micro_step copy_everparse_h";
+    };
+  ] else []
+  end `List.Tot.append`
+  [
     {
       ty = Nop;
-      from = [mk_filename "EverParseEndianness" "h"];
+      (* In --api pulse mode EverParse.h is not copied from the prelude: KaRaMeL
+         emits it, carrying the bundled runtime, at the same time as the .c
+         files. So it is those, not EverParseEndianness.h, that it follows. *)
+      from =
+        if Options.uses_pulse_api ()
+        then mk_filename "EverParsePulse" "h" ::
+             mk_filename "EverParsePulseEndianness" "h" ::
+             mk_filename "EverParseEndianness" "h" ::
+             List.Tot.map (fun m -> mk_filename m "c") all_modules
+        else [mk_filename "EverParseEndianness" "h"];
       to = mk_filename "EverParse" "h";
       args = "";
     }
@@ -577,7 +631,7 @@ let produce_makefile
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.module_name all_files in
   let rules =
-    produce_everparse_h_rule everparse_h `List.Tot.append`
+    produce_everparse_h_rule everparse_h all_modules `List.Tot.append`
     produce_clang_format_rule clang_format copy_clang_format_opt `List.Tot.append`
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule mtype everparse_h g) all_modules `List.Tot.append`
@@ -618,11 +672,16 @@ let write_makefile
   let makefile_tmp = makefile_final ^ ".tmp" in
   let file = FStar.IO.open_write_file makefile_tmp in
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding (Options.get_api ()) makefile_final) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext = "h" && everparse_h
-      then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"]
+      then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"] `List.Tot.append`
+           (* --api pulse additionally copies these two, and the generated C
+              includes them, so they belong to the installable header set. *)
+           (if Options.uses_pulse_api ()
+            then [mk_filename "EverParsePulse" "h"; mk_filename "EverParsePulseEndianness" "h"]
+            else [])
       else []
       end `List.Tot.append`
       begin if ext <> "h"

@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 BOOLEAN BfCheckDummy(uint8_t *base, uint32_t len);
+
+BOOLEAN BfCheckCompleteDummy(uint8_t *base, uint32_t len);
 #ifdef __cplusplus
 }
 #endif

@@ -1,0 +1,17 @@
+// Negative half: probing really is buffer-only under `--api pulse`, and the
+// frontend says so. This guards against "fixing" the copy-buffer type by
+// lifting the probe restriction, which would need the probe monad's
+// `input_stream_buffer`/`copy_buffer_buffer` instances to be pinned to the
+// buffer backend explicitly (they are currently reached through `B`).
+
+extern probe ProbeAndCopy
+extern probe (INIT) ProbeInit
+
+aligned typedef struct _leaf { UINT16 a; UINT16 b; } leaf;
+
+entrypoint
+typedef struct _withProbe (EVERPARSE_COPY_BUFFER_T dest)
+{
+  UINT64 base;
+  leaf *p probe ProbeAndCopy(length = sizeof(leaf), destination = dest);
+} withProbe;

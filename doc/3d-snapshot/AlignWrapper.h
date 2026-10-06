@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 BOOLEAN AlignCheckColoredPoint1(uint8_t *base, uint32_t len);
+
+BOOLEAN AlignCheckCompleteColoredPoint1(uint8_t *base, uint32_t len);
 #ifdef __cplusplus
 }
 #endif

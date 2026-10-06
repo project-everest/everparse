@@ -1,0 +1,5 @@
+export
+typedef struct _THREE_D_POINT {
+  Point::TWO_D_POINT  p;
+  UINT32             z;
+} THREE_D_POINT;

@@ -445,7 +445,32 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       //exactly like the validators, so we must apply it to the same
       //compile-time boolean the rest of the generated code uses.
       let ueh = if Options.get_use_error_handler_macro () then "false" else "true" in
-      Printf.sprintf "(probe_m_unit %s)" ueh
+      if Options.uses_pulse_backend ()
+      then
+        (* Probes are supported for the `buffer` backend only, so the probe
+           monad's type class instances are always the buffer ones. *)
+        Printf.sprintf
+          "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer unit true false %s)"
+          (Options.pulse_inst ())
+          ueh
+      else
+        Printf.sprintf "(probe_m_unit %s)" ueh
+    else
+    if (if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T" then Options.uses_pulse_backend () else false)
+    then
+      (* Under --api pulse the copy buffer type is an assumed abstract type, just
+         as it is under Low*. Name it by its defining module rather than
+         through the `B` input-stream alias: only the `buffer` backend
+         re-exports it (EverParse3d.InputStream.Buffer re-exports all four
+         `EverParse3d.CopyBuffer.Buffer` names), so going through `B` would
+         make any mention of EVERPARSE_COPY_BUFFER_T fail to resolve under
+         --input_stream extern/static, even when no probe is involved. *)
+      (if Options.get_api () = HashingOptions.ApiLowstar
+       then
+         if HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+         then "EverParse3d.CopyBuffer.LowstarBuffer.copy_buffer_t"
+         else "EverParse3d.CopyBuffer.LowstarExtern.copy_buffer_t"
+       else "EverParse3d.CopyBuffer.Buffer.copy_buffer_t")
     else
     let hd' =
       if hd.v = Ast.to_ident' "void"
@@ -477,7 +502,10 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_pointer t i -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
+  | T_pointer t i ->
+    if Options.uses_pulse_backend ()
+    then Printf.sprintf "(Pulse.Lib.Reference.ref (%s))" (print_typ mname t)
+    else Printf.sprintf "bpointer (%s)" (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
@@ -843,7 +871,7 @@ let rec print_as_c_type (t:typ) : ML string =
     | _ ->
          "__UNKNOWN__"
 
-let error_code_macros = 
+let error_code_macros_lowstar =
    //To be kept consistent with EverParse3d.ErrorCode.error_reason_of_result
    "#define EVERPARSE_SUCCESS 0ul\n\
     #define EVERPARSE_ERROR_GENERIC 1uL\n\
@@ -859,6 +887,29 @@ let error_code_macros =
     #define EVERPARSE_PROBE_FAILURE_PROBE 258uL\n\
     #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL\n\
     "
+
+(* Pulse returns byte-sized kinds, with the same numbering as Low*.
+   Keep these consistent with lib/everparse/3d/EverParse3d.ErrorCode.fst. *)
+let error_code_macros_pulse =
+   "#define EVERPARSE_SUCCESS 0ul\n\
+    #define EVERPARSE_ERROR_ACTION_FAILED 5uL\n\
+    #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL\n\
+    #define EVERPARSE_ERROR_IMPOSSIBLE 3uL\n\
+    #define EVERPARSE_ERROR_LIST_SIZE_NOT_MULTIPLE 4uL\n\
+    #define EVERPARSE_ERROR_CONSTRAINT_FAILED 6uL\n\
+    #define EVERPARSE_ERROR_UNEXPECTED_PADDING 7uL\n\
+    #define EVERPARSE_ERROR_PROBE_FAILED 8uL\n\
+    // Probe wrapper error codes\n\
+    #define EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE 256uL\n\
+    #define EVERPARSE_PROBE_FAILURE_INIT 257uL\n\
+    #define EVERPARSE_PROBE_FAILURE_PROBE 258uL\n\
+    #define EVERPARSE_PROBE_FAILURE_VALIDATION 259uL\n\
+    "
+
+let error_code_macros () : ML string =
+  if Options.uses_pulse_api ()
+  then error_code_macros_pulse
+  else error_code_macros_lowstar
 
 let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
   match t with
@@ -878,6 +929,15 @@ let wrapper_name
     fn
   |> pascal_case
 
+let wrapper_complete_name
+  (modul: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_check_complete_%s"
+    modul
+    fn
+  |> pascal_case
+
 let probe_wrapper_name
   (modul: string)
   (probe_fn: string)
@@ -885,6 +945,20 @@ let probe_wrapper_name
 : ML string
 = Printf.sprintf "%s_%s_check_%s" modul probe_fn fn
     |> pascal_case
+
+let probe_wrapper_complete_name
+  (modul: string)
+  (probe_fn: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_%s_check_complete_%s" modul probe_fn fn
+    |> pascal_case
+
+(* Complete-check counterpart of a user-provided entrypoint name *)
+let complete_name_of_custom_name
+  (n: string)
+: Tot string
+= n ^ "Complete"
 
 let validator_name
   (modul: string)
@@ -953,13 +1027,114 @@ let print_c_entry
      | None -> ""
    in
    let use_error_handler_macro = Options.get_use_error_handler_macro () in
+   let is_input_stream_buffer =
+     HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
+   in
+   (* The `Complete' wrappers are opt-in, via --complete_wrappers, and are only
+      available for the buffer input stream binding, where the whole input
+      length is known to the wrapper. *)
+   let gen_complete_wrappers =
+     if is_input_stream_buffer then Options.get_complete_wrappers () else false
+   in
+   (* Under --api pulse with an `extern` (or `static`) input stream, the validator
+      is passed the stream object together with a truncation bound of 0 (i.e.
+      none) and, as its origin, the stream's current position. It does not
+      report how far it got: its result is a plain error code. The stream is
+      what tracks the position, so the wrapper asks it, on both sides of the
+      call. *)
+   let stream_get_position_decl =
+     "extern uint64_t EverParseStreamGetPosition(EVERPARSE_INPUT_STREAM_BASE base);\n"
+   in
+   let stream_pos_decl =
+     (* The position accessor is needed by the wrapper body as well as by the
+        default handler, so declare it whenever the Pulse extern/static
+        validators are in use, including under --use_error_handler_macro. *)
+     if is_input_stream_buffer then ""
+     else if Options.uses_pulse_api ()
+     then stream_get_position_decl
+     else ""
+   in
    let default_error_handler =
      if use_error_handler_macro
-     then ""
+     then stream_pos_decl
      else
      let frame_decl =
          "EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;"
      in
+     if Options.uses_pulse_api ()
+     then
+       if not is_input_stream_buffer
+       then
+       (* The `extern`/`static` Pulse validators pass the stream object, the
+          truncation bound of the current view (0 at top level, i.e. the whole
+          stream), the origin of the current validation, and the position at
+          which the failing field started. That start position is already
+          relative to the origin, as in Low*, where the wrapper always passes
+          a start position of 0. *)
+       Printf.sprintf
+          "%sstatic\n\
+           void DefaultErrorHandler(\n\t\
+                               const char *typename_s,\n\t\
+                               const char *fieldname,\n\t\
+                               const char *reason,\n\t\
+                               uint8_t error_code,\n\t\
+                               uint8_t *context,\n\t\
+                               EVERPARSE_INPUT_STREAM_BASE base,\n\t\
+                               uint64_t len,\n\t\
+                               uint64_t origin,\n\t\
+                               uint64_t start_pos)\n\
+           {\n\t\
+             %s\n\t\
+             (void) len;\n\t\
+             (void) base;\n\t\
+             (void) origin;\n\t\
+             EverParseDefaultErrorHandler(\n\t\t\
+               typename_s,\n\t\t\
+               fieldname,\n\t\t\
+               reason,\n\t\t\
+               (uint64_t)error_code,\n\t\t\
+               frame,\n\t\t\
+               NULL,\n\t\t\
+               start_pos\n\t\
+             );\n\
+           }"
+          stream_pos_decl
+          frame_decl
+       else
+       (* The Pulse `error_handler` takes a uint8_t error code and the three
+          components of the input stream, rather than a uint64_t code and an
+          EVERPARSE_INPUT_BUFFER, plus the start position of the failing field.
+          `pos` is the *live* position and has already moved past the field by
+          the time we are called, so the reported offset comes from
+          `start_pos`, matching the Low* backend and doc/3d-lang.rst. *)
+       Printf.sprintf
+          "static\n\
+           void DefaultErrorHandler(\n\t\
+                               const char *typename_s,\n\t\
+                               const char *fieldname,\n\t\
+                               const char *reason,\n\t\
+                               uint8_t error_code,\n\t\
+                               uint8_t *context,\n\t\
+                               uint8_t *base,\n\t\
+                               size_t len,\n\t\
+                               size_t *pos,\n\t\
+                               uint64_t start_pos)\n\
+           {\n\t\
+             %s\n\t\
+             (void) len;\n\t\
+             (void) pos;\n\t\
+             EverParseDefaultErrorHandler(\n\t\t\
+               typename_s,\n\t\t\
+               fieldname,\n\t\t\
+               reason,\n\t\t\
+               (uint64_t)error_code,\n\t\t\
+               frame,\n\t\t\
+               base,\n\t\t\
+               start_pos\n\t\
+             );\n\
+           }"
+          frame_decl
+     else
      Printf.sprintf
           "static\n\
            void DefaultErrorHandler(\n\t\
@@ -988,8 +1163,85 @@ let print_c_entry
      if use_error_handler_macro then "" else " &DefaultErrorHandler,"
    in
    let input_stream_binding = Options.get_input_stream_binding () in
-   let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
-   let wrapped_call_buffer name params =
+   (* Under --api pulse the extracted validator has a different C prototype: it
+      takes the three components of the input stream (`uint8_t *base`,
+      `size_t len`, `size_t *pos`) instead of a single `EVERPARSE_INPUT_BUFFER`,
+      its `extra_state` argument is ghost and hence erased, and it returns a
+      plain `uint8_t` error code (0 = success) rather than a packed uint64_t.
+      The public wrapper keeps its uint32_t length, so we cast; the
+      accompanying static assertions check that the cast is lossless. *)
+   let wrapped_call_buffer_pulse (check_complete: bool) (typename: string) name params =
+     (* When check_complete is set, additionally check that the validator
+        consumed the whole input buffer, so that no trailing bytes are
+        silently accepted. Under --api pulse the validator reports how far it got
+        through its position out-parameter rather than in its result code. *)
+     let complete_check =
+       if not check_complete then "" else
+       Printf.sprintf
+         "if (everparse_pos != (size_t)len)\n\t\
+          {\n\t\t\
+            %sEverParseError(\"%s\", \"\", \"unexpected trailing bytes\");\n\t\t\
+            %s\n\t\
+          }\n\t"
+         modul
+         typename
+         (if goto_return then "goto exit;" else "return FALSE;")
+     in
+     let tail =
+       if goto_return then
+         Printf.sprintf
+           "if (ep_status != 0U)\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              goto exit;\n\t\
+            }\n\t\
+            %sresult = TRUE;\n\n\
+            exit:\n\t\
+            return result;"
+           modul
+           complete_check
+       else
+         Printf.sprintf
+           "if (ep_status != 0U)\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              return FALSE;\n\t\
+            }\n\t\
+            %sreturn TRUE;"
+           modul
+           complete_check
+     in
+     (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
+     ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
+     ^ Printf.sprintf "size_t everparse_pos%s;\n\t" scalar_zero
+     ^ Printf.sprintf "uint8_t ep_status%s;\n\n\t" scalar_zero
+     ^ "frame.filled = FALSE;\n\t\
+        everparse_pos = (size_t)0U;\n\t"
+     ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)len, &everparse_pos);\n\n\t" name params error_handler_arg
+     ^ tail
+   in
+   let wrapped_call_buffer (check_complete: bool) (typename: string) name params =
+     (* When check_complete is set, additionally check that the validator
+        consumed the whole input buffer, so that no trailing bytes are
+        silently accepted. *)
+     let complete_check =
+       if not check_complete then "" else
+       Printf.sprintf
+         "if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)\n\t\
+          {\n\t\t\
+            %sEverParseError(\"%s\", \"\", \"unexpected trailing bytes\");\n\t\t\
+            %s\n\t\
+          }\n\t"
+         modul
+         typename
+         (if goto_return then "goto exit;" else "return FALSE;")
+     in
      let tail =
        if goto_return then
          Printf.sprintf
@@ -1001,10 +1253,11 @@ let print_c_entry
               }\n\t\t\
               goto exit;\n\t\
             }\n\t\
-            result = TRUE;\n\n\
+            %sresult = TRUE;\n\n\
             exit:\n\t\
             return result;"
            modul
+           complete_check
        else
          Printf.sprintf
            "if (EverParseIsError(ep_status))\n\t\
@@ -1015,8 +1268,9 @@ let print_c_entry
               }\n\t\t\
               return FALSE;\n\t\
             }\n\t\
-            return TRUE;"
+            %sreturn TRUE;"
            modul
+           complete_check
      in
      if hoist then
        (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
@@ -1170,6 +1424,59 @@ let print_c_entry
               len
               tail)
    in
+   (* The Pulse `extern`/`static` validator returns a plain uint8_t error code
+      (0 = success) and takes the stream object alone, its length and position
+      being erased. The parsed size therefore comes from the stream rather than
+      from the result code, but the wrapper's own signature is unchanged.
+      EverParseStreamGetPosition is cumulative over the life of the stream --
+      the shipped EverParseRetreat is a no-op -- so it has to be sampled on
+      both sides of the call and subtracted. Reporting the raw position would
+      make a second call on the same stream return the total consumed so far,
+      and pass that inflated value to EverParseHandleError and
+      EverParseRetreat. Low* gets the same quantity from
+      EverParseGetValidatorErrorPos, its validator being called with an
+      explicit start position of 0 each time. *)
+   let wrapped_call_stream_pulse name params =
+     let tail =
+       "if (ep_status != 0U)\n\t\
+        {\n\t\t\
+            EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
+        }\n\t\
+        EverParseRetreat(_extra, base, parsedSize);\n\
+        return parsedSize;"
+     in
+     let frame_init =
+       "frame.filled = FALSE;\n\t\
+        frame.typename_s = \"UNKNOWN\";\n\t\
+        frame.fieldname = \"UNKNOWN\";\n\t\
+        frame.reason = \"UNKNOWN\";\n\t\
+        frame.error_code = 0uL;\n\t"
+     in
+     (if hoist then
+       Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
+       ^ Printf.sprintf "uint8_t ep_status%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t parsedSize%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t startPosition%s;\n\n\t" scalar_zero
+       ^ frame_init
+       ^ "startPosition = EverParseStreamGetPosition(base);\n\t"
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t" name params error_handler_arg
+       ^ "parsedSize = EverParseStreamGetPosition(base) - startPosition;\n\n\t"
+       ^ tail
+     else
+       Printf.sprintf
+        "EVERPARSE_ERROR_FRAME frame%s;\n\t\
+         %s\
+         uint64_t startPosition = EverParseStreamGetPosition(base);\n\t\
+         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t\
+         uint64_t parsedSize = EverParseStreamGetPosition(base) - startPosition;\n\n\t\
+         %s"
+        struct_zero
+        frame_init
+        name
+        params
+        error_handler_arg
+        tail)
+   in
    let wrapped_call_stream name params =
      let tail =
        "if (EverParseIsError(ep_status))\n\t\
@@ -1214,6 +1521,64 @@ let print_c_entry
    let mk_param (name: string) (typ: string) : Tot param =
      (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
    in
+   (* Public entrypoint names generated for one declaration, together with a
+      range to report collisions on *)
+   let public_entrypoint_names (d: type_decl) : ML (list (string & A.range)) =
+     let type_name = d.decl_name.td_name.A.v.A.name in
+     let rng = d.decl_name.td_name.A.range in
+     let plain =
+       if d.decl_name.td_entrypoint_plain
+       then
+         let n =
+           match d.decl_name.td_entrypoint_plain_name with
+           | Some n -> A.ident_name n
+           | None -> wrapper_name modul type_name
+         in
+         let c =
+           match d.decl_name.td_entrypoint_plain_name with
+           | Some n -> complete_name_of_custom_name (A.ident_name n)
+           | None -> wrapper_complete_name modul type_name
+         in
+         if gen_complete_wrappers then [(n, rng); (c, rng)] else [(n, rng)]
+       else []
+     in
+     let probe (p: probe_entrypoint) : ML (list (string & A.range)) =
+       let rng = p.probe_ep_fn.A.range in
+       let n, c =
+         match p.probe_ep_name with
+         | Some n ->
+           let n = A.ident_name n in
+           n, complete_name_of_custom_name n
+         | None ->
+           let probe_fn = probe_fn_to_c p.probe_ep_fn in
+           probe_wrapper_name modul probe_fn type_name,
+           probe_wrapper_complete_name modul probe_fn type_name
+       in
+       if gen_complete_wrappers then [(n, rng); (c, rng)] else [(n, rng)]
+     in
+     plain `List.Tot.append` List.collect probe d.decl_name.td_entrypoint_probes
+   in
+   let check_entrypoint_name_collisions () : ML unit =
+     let all =
+       List.collect
+         (fun d ->
+           match fst d with
+           | Type_decl d -> if d.decl_name.td_entrypoint then public_entrypoint_names d else []
+           | _ -> [])
+         ds
+     in
+     let _ =
+       List.fold_left
+         (fun (seen: list string) (n, rng) ->
+           if List.mem n seen
+           then A.error (Printf.sprintf "Duplicate entrypoint name %s. Note that, under --complete_wrappers, 3d also reserves the name of every entrypoint suffixed with `Complete' for the wrapper that additionally checks that the whole input was consumed." n) rng
+           else n :: seen)
+         []
+         all
+     in
+     ()
+   in
+   check_entrypoint_name_collisions ();
    let print_validators_for_one_decl (d:type_decl) : ML (list (string & string)) =
     let params = 
       d.decl_name.td_params @
@@ -1246,7 +1611,9 @@ let print_c_entry
        | [] -> params
        | _ -> params ^ ", "
     in
-    let wrapper_name = wrapper_name modul d.decl_name.td_name.A.v.A.name in
+    let type_name = d.decl_name.td_name.A.v.A.name in
+    let wrapper_name = wrapper_name modul type_name in
+    let wrapper_complete_name = wrapper_complete_name modul type_name in
     let impl signature body =
       Printf.sprintf "%s {\n\t%s\n}" 
         signature body
@@ -1269,14 +1636,22 @@ let print_c_entry
              pparams
     in
     let signature = mk_main_signature wrapper_name in
-    let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
-    let body = 
+    let complete_signature = mk_main_signature wrapper_complete_name in
+    let validator_name = validator_name modul type_name in
+    let mk_body (check_complete: bool) : ML string =
       if is_input_stream_buffer
-      then wrapped_call_buffer validator_name pargs
+      then
+        if Options.uses_pulse_api ()
+        then wrapped_call_buffer_pulse check_complete type_name validator_name pargs
+        else wrapped_call_buffer check_complete type_name validator_name pargs
+      else if Options.uses_pulse_api ()
+      then wrapped_call_stream_pulse validator_name pargs
       else wrapped_call_stream validator_name pargs
     in
+    let body = mk_body false in
+    let complete_body = mk_body true in
     (* Probe wrapper *)
-    let probe_wrapper_signature (probe: probe_entrypoint) : ML _ =
+    let probe_wrapper_signature (check_complete: bool) (probe: probe_entrypoint) : ML _ =
       if not is_input_stream_buffer
       then ( //fail gracefully with an error message
         Ast.error "Top-level probe wrappers only for input stream buffer"
@@ -1285,10 +1660,14 @@ let print_c_entry
       let return_type = "uint32_t" in
       let public_name =
         match probe.probe_ep_name with
-        | Some n -> A.ident_name n
+        | Some n ->
+          let n = A.ident_name n in
+          if check_complete then complete_name_of_custom_name n else n
         | None ->
           let probe_fn = probe_fn_to_c probe.probe_ep_fn in
-          probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name
+          if check_complete
+          then probe_wrapper_complete_name modul probe_fn type_name
+          else probe_wrapper_name modul probe_fn type_name
       in
       Printf.sprintf
             "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize)"
@@ -1305,15 +1684,27 @@ let print_c_entry
         | None -> wrapper_name
       else wrapper_name
     in
-    let probe_wrapper (probe: probe_entrypoint) : ML _ =
-      constr_wrapper
-        (probe_wrapper_signature probe)
-        (wrapped_call_probe_buffer effective_main_name pargs probe)
+    let effective_main_complete_name =
+      if d.decl_name.td_entrypoint_plain then
+        match d.decl_name.td_entrypoint_plain_name with
+        | Some n -> complete_name_of_custom_name (A.ident_name n)
+        | None -> wrapper_complete_name
+      else wrapper_complete_name
     in
-    let main_wrapper =
+    let probe_wrapper (check_complete: bool) (probe: probe_entrypoint) : ML _ =
+      constr_wrapper
+        (probe_wrapper_signature check_complete probe)
+        (wrapped_call_probe_buffer
+          (if check_complete then effective_main_complete_name else effective_main_name)
+          pargs probe)
+    in
+    let mk_main_wrapper (check_complete: bool) : ML _ =
+      let signature = if check_complete then complete_signature else signature in
+      let body = if check_complete then complete_body else body in
+      let effective_name = if check_complete then effective_main_complete_name else effective_main_name in
       if d.decl_name.td_entrypoint_plain then
         (* Plain entrypoint declared: expose in header with custom name if provided *)
-        let public_signature = mk_main_signature effective_main_name in
+        let public_signature = mk_main_signature effective_name in
         constr_wrapper public_signature body
       else if has_probes then
         (* Only probe entrypoints: main wrapper is internal (static), not in header *)
@@ -1323,7 +1714,13 @@ let print_c_entry
         (* Should not happen since we only get here if td_entrypoint is true *)
         constr_wrapper signature body
     in
-    main_wrapper :: List.map probe_wrapper d.decl_name.td_entrypoint_probes
+    let wrappers (check_complete: bool) : ML _ =
+      mk_main_wrapper check_complete ::
+      List.map (probe_wrapper check_complete) d.decl_name.td_entrypoint_probes
+    in
+    if gen_complete_wrappers
+    then wrappers false `List.Tot.append` wrappers true
+    else wrappers false
   in
 
   let signatures_output_typ_deps =
@@ -1355,23 +1752,21 @@ let print_c_entry
   let external_defs_includes =
     if not (Options.get_emit_output_types_defs ()) then "" else
     let deps =
-      if List.length signatures_output_typ_deps = 0
-      then ""
-      else
         String.concat
           ""
           (List.map
-             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
+             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" dep)
              signatures_output_typ_deps) in
     let self =
       if has_output_types ds || has_extern_types ds
       then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
       else "" in
-    Printf.sprintf "%s\n%s\n\n" deps self in
+    let includes = deps ^ self in
+    if includes = "" then "" else includes ^ "\n" in
 
   let header =
     Printf.sprintf
-      "#include \"EverParseEndianness.h\"\n\
+      "#include \"%s\"\n\
        %s\n\
        %s\
        #ifdef __cplusplus\n\
@@ -1381,7 +1776,10 @@ let print_c_entry
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
-      error_code_macros
+      (if Options.uses_pulse_api ()
+       then "EverParsePulseEndianness.h\"\n#include \"EverParse.h"
+       else "EverParseEndianness.h")
+      (error_code_macros ())
       external_defs_includes
       (signatures |> List.filter (fun s -> s <> "") |> String.concat "\n\n")
   in
@@ -1414,29 +1812,82 @@ let print_c_entry
         List.Tot.filter (fun x -> x <> "" && not (List.Tot.mem x accu)) probe_modules `List.Tot.append` accu
       | _ -> accu
   in
-  let include_external_api_from_module (accu: string) (modu: string) : Tot string =
-    Printf.sprintf "%s#include \"%s_ExternalAPI.h\"\n" accu modu
+  let include_external_api_from_module (accu: list string) (modu: string) : Tot (list string) =
+    accu `List.Tot.append` [Printf.sprintf "#include \"%s_ExternalAPI.h\"" modu]
   in
   let include_external_api =
     ds
     |> List.Tot.fold_left external_api_from_decl []
-    |> List.Tot.fold_left include_external_api_from_module ""
+    |> List.Tot.fold_left include_external_api_from_module []
+    |> String.concat "\n"
+  in
+  (* The generated wrappers keep their uint32_t/uint64_t argument types, but
+     the Pulse validators use size_t for byte counts, so both conversion
+     directions have to be lossless.
+
+     Widening: every `uint32_t -> size_t` cast (the wrapper's `len`, and the
+     `n` of `validate_nlist`/`validate_t_at_most`/`validate_t_exact`) is
+     justified in F* by `EverParse3d.Actions.Base.size_t_fits_u32`, an
+     `assume val` of `FStar.SizeT.fits_u32`. C only guarantees
+     `SIZE_MAX >= 65535`, so the first assertion is what backs that
+     assumption.
+
+     Narrowing: `size_t -> uint64_t` (the `field_ptr_after` bounds check and
+     relative offsets in non-consuming validators) uses
+     `FStar.SizeT.sizet_to_uint64`, which is specified modulo `pow2 64`. The
+     second assertion is what rules the modulo out. Extern/static cumulative
+     positions and validation origins are uint64_t directly, so they remain
+     unbounded by size_t on 32-bit targets.
+
+     Note the second assertion is an upper bound, not a lower one: requiring
+     size_t to be at least 64 bits would reject 32-bit targets for no reason.
+
+     Both assertions are emitted for every backend. For the first that is
+     plainly right, since `size_t_fits_u32` is backend-independent. The second
+     looks at first sight as though it could be restricted to extern/static,
+     because those are the ones whose position is an unbounded cumulative
+     stream offset, whereas a buffer validator is entered from the wrapper
+     with a `uint32_t len` and so never sees a position above 2^32. That
+     reasoning is incomplete: `probe_then_validate` re-enters the inner
+     validator over the copy buffer, passing it the *same* error handler
+     together with `CP.len_of dest`, and for the buffer backend `len_t` is an
+     unrefined `FStar.SizeT.t` -- the client's EVERPARSE_COPY_BUFFER_T
+     capacity, not the wrapper's uint32_t. So inside a probe the buffer
+     backend is exactly as unbounded as extern/static, and since probes are
+     buffer-only under --api pulse it is the backend that would be exempted.
+     Keep the assertion unconditional. *)
+  (* No trailing newline, so that this joins the include block the same way
+     `include_external_api` does: these assertions are about the types used by
+     the includes around them, so they belong in that block rather than as a
+     section of their own. *)
+  let pulse_static_asserts =
+    if Options.uses_pulse_api ()
+    then
+      "#include \"EverParsePulse.h\"\n\
+       #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L\n\
+       _Static_assert(sizeof(size_t) >= sizeof(uint32_t), \"EverParse: size_t must be at least as wide as uint32_t\");\n\
+       _Static_assert(sizeof(size_t) <= sizeof(uint64_t), \"EverParse: size_t must be no wider than uint64_t\");\n\
+       #endif"
+    else ""
   in
   let impl =
-    Printf.sprintf
-      "#include \"%sWrapper.h\"\n\
-       #include \"EverParse.h\"\n\
-       #include \"%s.h\"\n\
-       %s\n\
-       %s\n\n\
-       %s\n\n\
-       %s\n"
-      modul
-      modul
-      include_external_api
-      error_callback_proto
-      default_error_handler
-      (impls |> String.concat "\n\n")
+    let includes =
+      Printf.sprintf
+        "#include \"%sWrapper.h\"\n\
+         #include \"EverParse.h\"\n\
+         #include \"%s.h\"%s%s"
+        modul
+        modul
+        (if pulse_static_asserts = "" then "" else "\n" ^ pulse_static_asserts)
+        (if include_external_api = "" then "" else "\n" ^ include_external_api)
+    in
+    [ includes;
+      error_callback_proto;
+      default_error_handler;
+      impls |> String.concat "\n\n" ]
+    |> List.filter (fun s -> s <> "")
+    |> String.concat "\n\n"
+    |> (fun s -> s ^ "\n")
   in
   let impl =
     if input_stream_include = ""
@@ -1502,7 +1953,12 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               Printf.sprintf "\n\nval %s : Type0\n\n" s
             | T_pointer bt A.UInt64 ->
               let bs = print_output_type_val tbl bt in
-              bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = bpointer %s\n\n" s (print_output_type false bt))
+              let ptr =
+                if Options.uses_pulse_backend ()
+                then "Pulse.Lib.Reference.ref"
+                else "bpointer"
+              in
+              bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = %s %s\n\n" s ptr (print_output_type false bt))
   else ""
 #pop-options
 
@@ -1540,6 +1996,14 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (print_typ mname oe.oe_t)
           (Some?.v oe.oe_bitwidth)
       end in
+    if Options.uses_pulse_backend ()
+    then
+      Printf.sprintf
+        "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
+        fn_name
+        fn_arg1_t
+        fn_arg2_t
+    else
     Printf.sprintf
         "\n\nval %s (_:%s) (_:%s) : extern_action unit (NonTrivial output_loc)\n\n"
         fn_name
@@ -1634,15 +2098,32 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | _ -> "")) in
+   let prefix =
+     if Options.uses_pulse_backend ()
+     then "open Pulse.Lib.Pervasives\n\
+           open EverParse3d.Prelude\n\
+           open EverParse3d.State\n\
+           open EverParse3d.Actions.Base\n"
+     else "open EverParse3d.Prelude\n\
+           open EverParse3d.Actions.All\n"
+   in
    Printf.sprintf
-    "module %s.ExternalTypes\n\n\
-     open EverParse3d.Prelude\n\
-     open EverParse3d.Actions.All\n\n%s"
+    "module %s.ExternalTypes\n\n%s\n%s"
      modul
-    s
+     prefix
+     s
 
 let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
+  (* Under --api pulse the probe types are indexed by the input-stream and
+     copy-buffer type class instances, which cannot be inferred from a bare
+     `val`; spell them out. Probes are supported for the `buffer` backend only. *)
+  let probe_inst_args =
+    if Options.uses_pulse_backend ()
+    then Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
+      (Options.pulse_inst ())
+    else ""
+  in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
     // | Output_type ot ->
@@ -1659,12 +2140,20 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params false ->
-      Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
+      (if Options.uses_pulse_backend ()
+       then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
+       else
+      Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
+        (print_ident f)
+        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
+          (print_ident i)
+          (print_typ modul t))))
+        (print_typ modul ret))
     | Extern_fn f ret params true ->
       Printf.sprintf "\n\nval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
         (print_ident f)
@@ -1673,18 +2162,21 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
           (print_typ modul t))))
         (print_typ modul ret)
     | Extern_probe f PQWithOffsets ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental\n\n" (print_ident f)
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental%s\n\n" (print_ident f) probe_inst_args
     | Extern_probe f (PQRead t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s \n\n" 
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s%s \n\n" 
               (print_ident f)
               (print_integer_type t)
+              probe_inst_args
     | Extern_probe f (PQWrite t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s \n\n" 
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s%s \n\n" 
               (print_ident f)
               (print_integer_type t)
+              probe_inst_args
     | Extern_probe f PQInit ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.init_probe_dest_t \n\n" 
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.init_probe_dest_t%s \n\n" 
               (print_ident f)
+              probe_inst_args
     | _ -> "")) in
 
    let external_types_include =
@@ -1692,6 +2184,24 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      then Printf.sprintf "include %s.ExternalTypes\n\n" modul
      else "" in
 
+   if Options.uses_pulse_backend ()
+   then
+   Printf.sprintf
+    "module %s.ExternalAPI\n\n\
+     open Pulse.Lib.Pervasives\n\
+     open EverParse3d.Prelude\n\
+     open EverParse3d.State\n\
+     open EverParse3d.Actions.Base\n\
+     open EverParse3d.Interpreter\n\
+     module B = %s\n\
+     %s\n\
+     noextract val ___output_state_slprop : unit -> Pulse.Lib.Core.slprop\n\n\
+     noextract let ___output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"#output\" ___output_state_slprop\n\n%s"
+    modul
+    (Options.pulse_backend_module ())
+    external_types_include
+    s
+   else
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
      open EverParse3d.Prelude\n\
@@ -1795,7 +2305,7 @@ let rec print_output_types_fields (flds:list A.out_field) : ML string =
 let print_out_typ (ot:A.out_typ) : ML string =
   let open A in
   Printf.sprintf
-    "\ntypedef %s %s {\n%s\n} %s;\n"
+    "\ntypedef %s %s {\n%s} %s;\n"
     (if ot.out_typ_is_union then "union" else "struct")
     (uppercase (A.ident_name ot.out_typ_names.typedef_name))
     (print_output_types_fields ot.out_typ_fields)
@@ -1803,18 +2313,18 @@ let print_out_typ (ot:A.out_typ) : ML string =
 
 let print_output_types_defs (modul:string) (ds:decls) : ML string =
   let defs =
-    String.concat "\n\n" (List.map (fun (d, _) ->
+    String.concat "" (List.collect (fun (d, _) ->
       match d with
-      | Output_type ot -> print_out_typ ot
-      | _ -> "") ds) in
+      | Output_type ot -> [print_out_typ ot]
+      | _ -> []) ds) in
 
   Printf.sprintf
     "#ifndef __%s_OutputTypesDefs_H\n\
      #define __%s_OutputTypesDefs_H\n\n\
      #if defined(__cplusplus)\n\
      extern \"C\" {\n\
-     #endif\n\n\n\
-     %s%s\n\n\n\
+     #endif\n\
+     %s%s\n\
      #if defined(__cplusplus)\n\
      }\n\
      #endif\n\n\

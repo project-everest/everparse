@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 BOOLEAN OrderedPairCheckOrderedPair(uint8_t *base, uint32_t len);
+
+BOOLEAN OrderedPairCheckCompleteOrderedPair(uint8_t *base, uint32_t len);
 #ifdef __cplusplus
 }
 #endif

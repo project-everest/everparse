@@ -43,3 +43,26 @@ BOOLEAN TaggedUnionCheckInteger(uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
+
+BOOLEAN TaggedUnionCheckCompleteInteger(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = TaggedUnionValidateInteger( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			TaggedUnionEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		TaggedUnionEverParseError("_integer", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}

@@ -1,0 +1,11 @@
+out.inplace-hash
+out.batch
+out.batch-interpret
+out.elf
+out.fail.batch
+out.cleanup
+out.z3-testgen
+test-cpp.exe
+*.out
+*.err
+**/obj/
