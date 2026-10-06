@@ -1827,8 +1827,6 @@ let print_binding mname (td:type_decl)
   else impl, ""
 #pop-options
 
-#pop-options
-
 let print_decl mname (d:decl)
   : ML (string & string) =
   match d with

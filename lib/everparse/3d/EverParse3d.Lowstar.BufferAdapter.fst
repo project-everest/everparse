@@ -1,10 +1,8 @@
 module EverParse3d.Lowstar.BufferAdapter
-friend EverParse3d.Kinds
 friend EverParse3d.Prelude
 friend EverParse3d.Actions.Base
 open Pulse.Lib.Pervasives
 open EverParse3d.State
-open FStar.Mul
 #lang-pulse
 
 module A = EverParse3d.Actions.Base
