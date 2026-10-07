@@ -245,6 +245,52 @@ let should_align (td:typedef_names)
   : bool
   = List.Tot.Base.existsb Aligned? td.typedef_attributes
 
+/// Returns [Some b] if [i] is a user-defined struct or case type, where [b]
+/// records whether that type carries the 'aligned' attribute; [None] for base
+/// types, enums, and other types for which alignment is not a user-level choice.
+let rec alignment_attribute_of_typename (ge:GlobalEnv.global_env) (i:ident) (fuel:nat)
+  : ML (option bool)
+  = if fuel = 0 then None
+    else
+      match H.try_find ge.ge_h i.v with
+      | Some ({ d_decl = { v = Record names _ _ _ _ } }, Inl attrs)
+      | Some ({ d_decl = { v = CaseType names _ _ _ } }, Inl attrs) ->
+        //base types are registered as nullary records; they are not user-defined layouts
+        if attrs.primitive then None else Some (should_align names)
+      | Some ({ d_decl = { v = TypeAbbrev _ t _ _ _ } }, _) -> (
+        match t.v with
+        | Type_app j _ _ _ -> alignment_attribute_of_typename ge j (fuel - 1)
+        | _ -> None
+      )
+      | _ -> None
+
+/// A type marked 'aligned' is laid out by 3D following the C struct layout
+/// rules, and its layout is checked against the C compiler's layout by the
+/// generated static assertions. This is only sound if every type it embeds by
+/// value is itself laid out that way, i.e. is also marked 'aligned'.
+let check_aligned_field_type (env:env_t)
+                             (diag_enclosing_type_name:ident)
+                             (af:atomic_field)
+  : ML unit
+  = match af.v.field_type.v with
+    | Type_app i _ _ _ ->
+      let ge = Binding.global_env_of_env (fst env) in
+      begin
+      match alignment_attribute_of_typename ge i 100 with
+      | Some false ->
+        error
+          (Printf.sprintf
+            "Type %s has an 'aligned' qualifier, but its field %s has type %s, \
+             which does not have an 'aligned' qualifier.\n\
+             All types used in the fields of an 'aligned' type must themselves be 'aligned'."
+            (ident_to_string diag_enclosing_type_name)
+            (ident_to_string af.v.field_ident)
+            (ident_to_string i))
+          af.range
+      | _ -> ()
+      end
+    | _ -> ()
+
 let alignment_padding env (should_align:bool) 
                           (diag_enclosing_type_name:ident (* for diagnostics only *))
                           (msg:string)
@@ -334,6 +380,7 @@ let rec size_and_alignment_of_field (env:env_t)
   : ML (res:(field & size & alignment) { let f', _, _ = res in field_tag_equal f f' })
   = match f.v with
     | AtomicField af ->
+      if should_align then check_aligned_field_type env diag_enclosing_type_name af;
       let s, a = size_and_alignment_of_atomic_field env af in
       f, s, a
 
