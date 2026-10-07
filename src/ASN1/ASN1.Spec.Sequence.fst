@@ -11,7 +11,6 @@ open ASN1.Spec.IdentifierU32
 
 module List = FStar.List.Tot
 module Seq = FStar.Seq
-module Bytes = FStar.Bytes
 module Set = FStar.Set
 
 let generate_defaultable_item (item : gen_decorated_parser_twin) :

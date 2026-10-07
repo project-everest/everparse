@@ -100,7 +100,7 @@ endif
 3d: 3d-prelude 3d-exe
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
-asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
 
 quackyducky: qd-exe lowparse
 
