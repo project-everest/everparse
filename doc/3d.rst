@@ -293,12 +293,8 @@ Options are treated from left to right:
   outputs generated with the former switch must be regenerated.
 
   The Low\*-API test corpus lives in ``share/everparse/tests/3d/lowstar``.
-  Its ordinary builds explicitly select ``--api lowstar``; the CLI default
-  remains unchanged. ``src/3d/tests/pulse-lowstar-diff-tests`` builds the same
-  sources in isolated ``lowstar`` and ``legacy_lowstar`` trees and compares
-  returns and outparameters. On Pulse-enabled Linux builds, ``make 3d-test``
-  runs both the ordinary corpus and this differential gate.
-  ``share/everparse/tests/3d/pulse-lowstar-diff`` separately compares the
+  Its ordinary builds explicitly select ``--api lowstar``.
+  ``share/everparse/tests/3d/pulse-lowstar-diff`` compares the
   Low\*-compatible and native Pulse APIs, including wrapper returns,
   outparameters, copy buffers, and callback diagnostics. It is also part of
   ``make 3d-test`` on Pulse-enabled Linux builds.

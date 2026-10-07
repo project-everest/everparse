@@ -25,10 +25,13 @@ def main():
         return result.stdout
 
     help_text = run("--help")
-    assert "--api" in help_text and "legacy_lowstar|pulse|lowstar" in help_text
+    assert "--api" in help_text
     assert "--pulse" not in help_text
+    # legacy_lowstar is rejected like any other unknown backend now that the
+    # Low* implementation is gone.
     for args in [("--pulse",), ("--no_pulse",), ("--api",),
-                 ("--api", "invalid"), ("--__micro_step", "copy_pulse_internal_h")]:
+                 ("--api", "invalid"), ("--api", "legacy_lowstar"),
+                 ("--__micro_step", "copy_pulse_internal_h")]:
         run(*args, succeeds=False)
 
     with tempfile.TemporaryDirectory(prefix="everparse-api-") as directory:
@@ -41,7 +44,6 @@ def main():
         )
         modes = {
             "default": [],
-            "legacy": ["--api", "legacy_lowstar"],
             "pulse": ["--api", "pulse"],
             "lowstar": ["--api", "lowstar"],
             "reset": ["--api", "pulse", "--no_api"],
@@ -51,27 +53,25 @@ def main():
             output.mkdir()
             run(*options, "--odir", output, "--no_copy_everparse_h", source)
 
+        # Omitting --api now selects pulse, and --no_api resets an earlier
+        # --api back to that default, so all three must agree byte for byte.
         for extension in [".fst", ".fsti", "Wrapper.c", "Wrapper.h"]:
             expected = (root / "default" / f"ApiChoice{extension}").read_bytes()
-            for name in ["legacy", "reset"]:
+            for name in ["pulse", "reset"]:
                 assert (root / name / f"ApiChoice{extension}").read_bytes() == expected
         assert "Pulse.Lib.Pervasives" in (
             root / "pulse" / "ApiChoice.fst"
         ).read_text()
-        assert "Pulse.Lib.Pervasives" not in (
-            root / "default" / "ApiChoice.fst"
-        ).read_text()
         assert "EverParsePulse.h" in (
             root / "pulse" / "ApiChoiceWrapper.c"
         ).read_text()
+        # --api lowstar is Pulse-implemented too, but exposes the Low*-compatible
+        # C ABI rather than the native Pulse one.
         assert "EverParsePulse.h" not in (
-            root / "default" / "ApiChoiceWrapper.c"
+            root / "lowstar" / "ApiChoiceWrapper.c"
         ).read_text()
         assert "Pulse.Lib.Pervasives" in (
             root / "lowstar" / "ApiChoice.fst"
-        ).read_text()
-        assert "EverParsePulse.h" not in (
-            root / "lowstar" / "ApiChoiceWrapper.c"
         ).read_text()
         assert "EverParse3d.Lowstar.BufferAdapter" in (
             root / "lowstar" / "ApiChoice.fst"
@@ -83,7 +83,7 @@ def main():
         )
         assert validators and len(validators) == len(set(validators))
 
-        for name in ["legacy", "pulse", "lowstar"]:
+        for name in ["pulse", "lowstar"]:
             options = modes[name]
             output = root / name
             run(*options, "--odir", output, "--makefile", "gmake", source)
@@ -132,11 +132,12 @@ def main():
                 )
             run(*options, "--odir", output, "--__micro_step", "save_hashes", source)
             run(*options, "--odir", output, "--check_hashes", "weak", source)
-        run("--api", "legacy_lowstar", "--odir", root / "default",
+        # Omitting --api now selects pulse, so the two must agree both ways.
+        run("--api", "pulse", "--odir", root / "default",
             "--check_hashes", "weak", source)
-        run("--odir", root / "legacy", "--check_hashes", "weak", source)
-        for name in ["legacy", "pulse", "lowstar"]:
-            for other in ["legacy", "pulse", "lowstar"]:
+        run("--odir", root / "pulse", "--check_hashes", "weak", source)
+        for name in ["pulse", "lowstar"]:
+            for other in ["pulse", "lowstar"]:
                 if name != other:
                     run(*modes[name], "--odir", root / other,
                         "--check_hashes", "weak", source, succeeds=False)

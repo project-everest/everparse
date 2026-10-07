@@ -1,9 +1,9 @@
 # Low\*-compatible vs. native Pulse API differential test
 
 This suite compares `3d --api lowstar` with `3d --api pulse`: the
-Low\*-compatible and native Pulse public APIs of `lib/everparse/3d/`.
-The original Low\* implementation is compared separately in
-`src/3d/tests/pulse-lowstar-diff-tests`, using the same shared Low\*-API corpus.
+Low\*-compatible and native Pulse public APIs of `lib/everparse/3d/`. Both are
+Pulse implementations — `lowstar` is the one that exposes the Low\*-compatible
+C ABI — so this suite is unaffected by the removal of the Low\* backend.
 
 This directory asserts that, empirically, on the 3D test grammars.
 
@@ -56,7 +56,6 @@ and `pulse-batch-interpret-test` targets. By default, this Makefile invokes
 the root `3d-unit-test` and `3d-pulse-test` targets first, building both complete
 corpora, including subdirectory outputs. The first target explicitly selects
 `--api lowstar`; the second explicitly selects `--api pulse`.
-No generated test code from `legacy_lowstar` is required.
 
 The enclosing `make 3d-test` already builds both corpora and passes
 `DIFF_PREBUILT=1` to avoid duplicate builds. Even in prebuilt mode, every compared

@@ -113,9 +113,6 @@ qd-exe: $(NEED_OPAM)
 
 .PHONY: qd-exe
 
-lowparse-unit-test: lowparse
-	+$(MAKE) -C tests/lowparse
-
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
 ifeq (,$(NO_PULSE))
 	+$(MAKE) -C share/everparse/tests/3d/lowstar EVERPARSE_API=lowstar
@@ -147,6 +144,20 @@ endif
 
 .PHONY: 3d-pulse-diff-test
 
+# Extern/static adapter, scoped probe-view and O(1) >2^32 counter regressions,
+# exercised against both Pulse backends (--api lowstar and --api pulse). These
+# were salvaged from the deleted legacy differential gate, which was the only
+# thing that ever ran them. EVERPARSE_TEST_32BIT=1 adds the -m32 fixtures; they
+# need real multilib support (gcc-multilib on Ubuntu) and fail hard without it,
+# which is why they are opt-in.
+3d-adapter-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check-prebuilt
+ifeq (1,$(EVERPARSE_TEST_32BIT))
+	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check32-prebuilt
+endif
+
+.PHONY: 3d-adapter-test
+
 3d-test: 3d-doc-test
 
 ifeq (,$(NO_PULSE))
@@ -154,7 +165,7 @@ ifeq (,$(NO_PULSE))
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
-3d-test: 3d-pulse-diff-test
+3d-test: 3d-pulse-diff-test 3d-adapter-test
 endif
 endif
 
@@ -162,9 +173,6 @@ endif
 
 asn1-test: asn1
 	+$(MAKE) -C src/ASN1 test
-
-lowparse-bitfields-test: lowparse
-	+$(MAKE) -C tests/bitfields
 
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test: lowparse
@@ -176,19 +184,12 @@ endif
 
 .PHONY: lowparse-pulse-test
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
+lowparse-test: lowparse-pulse-test
 
-quackyducky-lowstar-test: quackyducky
-	+$(MAKE) -C tests
-
-.PHONY: quackyducky-lowstar-test
-
-quackyducky-pulse-test: quackyducky
+quackyducky-test: quackyducky
 	+$(MAKE) -C share/everparse/tests/qd
 
-.PHONY: quackyducky-pulse-test
-
-quackyducky-test: quackyducky-lowstar-test quackyducky-pulse-test
+.PHONY: quackyducky-test
 
 test: all lowparse-test quackyducky-test asn1-test cbor-test cddl-test
 
@@ -437,7 +438,7 @@ clean-doc:
 
 clean: $(clean_rules)
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 
 release package package-noversion nuget-noversion everparse:
 	+$(MAKE) -f package.Makefile $@

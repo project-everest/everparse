@@ -1,6 +1,6 @@
 # Run from a built source tree:
-#   make -C src/3d/tests/pulse-lowstar-diff-tests/adapter-tests check
-#   make -C src/3d/tests/pulse-lowstar-diff-tests/adapter-tests check32
+#   make -C share/everparse/tests/3d/adapter-tests check
+#   make -C share/everparse/tests/3d/adapter-tests check32
 # Add SANITIZE=1 for ASan/UBSan on the host-width C tests.
 #
 # check verifies/extracts the O(1) >2^32 counter fixture, reuses the original
@@ -32,3 +32,14 @@ native-probe: runtime
 
 large large32 extern static probes:
 	$(PYTHON) run.py $@
+
+# Entry points for the root `3d-adapter-test` target. That target already
+# provides the runtime through its own 3d-pulse-krml prerequisite, so these skip
+# the `runtime` rule above; re-entering the root Makefile from here would
+# recurse into the very target that invoked us.
+.PHONY: check-prebuilt check32-prebuilt
+check-prebuilt:
+	$(PYTHON) run.py all
+
+check32-prebuilt:
+	$(PYTHON) run.py large32

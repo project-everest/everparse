@@ -4,9 +4,6 @@ open FStar.HyperStack.ST
 open FStar.HyperStack.IO
 open C
 open C.String
-open FStar.Bytes
-module LB = LowStar.Buffer
-module LPL = LowParse.Low.Base
 
 (*
 val discard: bool -> ST unit
