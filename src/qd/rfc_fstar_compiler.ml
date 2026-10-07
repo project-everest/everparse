@@ -606,40 +606,12 @@ let emit_copyful_safe_leaf_writer_vl o i n =
   w o "let size_%s = PPB.l2r_safe_size_leaf_vl %s_serializer %s_leaf_size\n\n" n n n;
   register_size n
 
-(* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a
-   byte-array type. The result is a freshly allocated, freeable sized byte
-   vector (PPBY.lvec, carrying a runtime length alongside the Pulse.Lib.Vec)
-   related to the high-level value by PPBY.vmatch_copy_bytes. [combinator] is
-   the copyful_parse_* expression producing the lvec. *)
-let emit_copyful_bytes ?writer ?size o i n combinator conv =
-  w i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
-  w i "noextract let %s_mid = BY.bytes\n\n" n;
-  w i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n n;
-  w i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = %s\n\n" n n n conv;
-  w i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
-  w i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  w o "let read_%s = %s\n\n" n combinator;
-  w o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPBY.free_copy_bytes x #(Ghost.hide (Ghost.reveal v <: BY.bytes))\n\n" n n;
-  (match writer with
-   | Some wr ->
-     w i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-     w o "let write_%s = %s\n\n" n wr;
-     register_writer n
-   | _ -> ());
-  (match size with
-   | Some s ->
-     w i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-     w o "let size_%s = %s\n\n" n s;
-     register_size n
-   | _ -> ())
-
-(* Seq-native analog of [emit_copyful_bytes]: emits the copyful tag block for an
-  if-then-else discriminant whose high-level value is a plain [Seq.lseq byte
-  clen] (NO FStar.Bytes), using the LowParse.Pulse.SeqBytes combinators. The
-  freeable low representation [PPBY.lvec FStar.UInt8.t] is shared with the
-  FStar.Bytes version; only the vmatch/conv and the read/free/write/size
-  combinators are Seq-native. This is what lets the discriminant constant be
-  built by a total [Seq.seq_of_list] (no [assume]). *)
+(* Emit the copyful tag block (read_<n>/free_<n>/write_<n>/size_<n>) for an
+   if-then-else discriminant whose high-level value is a plain [Seq.lseq byte
+   clen], using the LowParse.Pulse.SeqBytes combinators. The freeable low
+   representation is [PPBY.lvec FStar.UInt8.t]: a Pulse.Lib.Vec carrying a
+   runtime length. This is what lets the discriminant constant be built by a
+   total [Seq.seq_of_list] (no [assume]). *)
 let emit_copyful_seqbytes o i n clen =
   w i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
   w i "noextract let %s_mid = Seq.seq FStar.UInt8.t\n\n" n;
@@ -656,12 +628,11 @@ let emit_copyful_seqbytes o i n clen =
   w o "let size_%s = LSeqB.l2r_safe_size_seq_flbytes %d %dsz\n\n" n clen clen;
   register_size n
 
-(* Seq-native analog of [emit_copyful_bytes] for VARIABLE-length byte types
-   (bounded vlbytes). The high-level value is a plain [Seq.seq FStar.UInt8.t]
-   refinement (NO FStar.Bytes); the freeable low representation [PPBY.lvec
-   FStar.UInt8.t] is shared with the FStar.Bytes version. [combinator] is the
-   copyful_parse_* expression and [conv] the option-conv, both from
-   LowParse.Pulse.SeqBytes. *)
+(* As [emit_copyful_seqbytes], but for VARIABLE-length byte types (bounded
+   vlbytes). The high-level value is a plain [Seq.seq FStar.UInt8.t]
+   refinement; the freeable low representation is again [PPBY.lvec
+   FStar.UInt8.t]. [combinator] is the copyful_parse_* expression and [conv]
+   the option-conv, both from LowParse.Pulse.SeqBytes. *)
 let emit_copyful_seqbytes_vl ?writer ?size o i n combinator conv =
   w i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
   w i "noextract let %s_mid = Seq.seq FStar.UInt8.t\n\n" n;
@@ -3262,23 +3233,6 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Fixed-length bytes *)
-    | VectorFixed k when (compile_type ty = "U8.t") ->
-      w i "type %s = lbytes %d\n\n" n k;
-      write_api o i false is_private li.meta n li.min_len li.max_len;
-      w o "noextract let %s_parser = LP.parse_flbytes %d\n\n" n k;
-      w o "noextract let %s_serializer = LP.serialize_flbytes %d\n\n" n k;
-      write_bytesize o is_private n;
-      (* validator and jumper not needed unless private, we are total constant size *)
-      (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_flbytes %d" k) (sprintf "PPBY.flbytes_conv %d" k)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_flbytes %d %dsz" k k)
-        ~size:(sprintf "PPBY.l2r_safe_size_flbytes %d %dsz" k k);
-      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
-      w o "let %s_bytesize_eqn x = ()\n\n" n;
-      (* intro *)
-      (* elim *)
-      ()
-
     (* Fixed length list *)
     | VectorFixed k when elem_li.min_len = elem_li.max_len ->
       w i "unfold let %s_pred (l:list %s) (n:nat) : GTot prop = L.length l == n\n" n (compile_type ty);
@@ -3368,32 +3322,6 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Variable length bytes *)
-    | VectorRange (low, high, repr)
-      when compile_type ty = "U8.t" &&
-        (match repr with None -> true
-        | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high) ->
-      w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
-      w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
-      write_api o i false is_private li.meta n li.min_len li.max_len;
-      w o "noextract let %s_parser = LP.parse_bounded_vlbytes %d %d\n\n" n low high;
-      w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes %d %d\n\n" n low high;
-      write_bytesize o is_private n;
-      if need_validator then
-        w o "let %s_validator = PPBY.validate_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ())\n\n" n low high (log256 high);
-      if need_jumper then begin
-        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" n jumper_annot low high high (log256 high)
-      end;
-      (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ())" low high (log256 high)) (sprintf "PPBY.vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes %d %dsz %d %dsz %dsz" low low high high (log256 high))
-        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes %d %dsz %d %dsz %dsz" low low high high (log256 high));
-      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
-      w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
-      (* length *)
-      (* finalizer *)
-      ()
-
     (* Variable length bytes where the size of the length is explicit
        (Pulse, Seq-native: no FStar.Bytes). This is the explicit-oversized-header
        analog of the tight Seq-native branch above: the fixed-width header [repr]
@@ -3426,31 +3354,6 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Variable length bytes where the size of the length is explicit *)
-    | VectorRange (low, high, repr) when (compile_type ty = "U8.t") ->
-      let trepr = match repr with Some t -> t | None -> failwith "Missing vlbytes size repr (QD bug?)" in
-      let (_, repr, _) = basic_bounds trepr in
-      w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
-      w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n low high;
-      write_api o i false is_private li.meta n li.min_len li.max_len;
-      w o "noextract let %s_parser = LP.parse_bounded_vlbytes' %d %d %d\n\n" n low high repr;
-      w o "noextract let %s_serializer = LP.serialize_bounded_vlbytes' %d %d %d\n\n" n low high repr;
-      write_bytesize o is_private n;
-      if need_validator then
-        w o "let %s_validator = PPBY.validate_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ())\n\n" n low high repr repr;
-      if need_jumper then begin
-        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        w o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" n jumper_annot low high repr repr repr
-      end;
-      (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ())" low high repr repr) (sprintf "PPBY.vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes' %d %dsz %d %dsz %d %dsz" low low high high repr repr)
-        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes' %d %dsz %d %dsz %d %dsz" low low high high repr repr);
-      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
-      w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
-      (* length *)
-      (* finalizer *)
-      ()
-
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high, _) when elem_li.min_len = elem_li.max_len ->
       w i "inline_for_extraction noextract let min_count = %d\ninline_for_extraction noextract let max_count = %d\n" li.min_count li.max_count;
