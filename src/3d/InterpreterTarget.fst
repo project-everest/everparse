@@ -28,9 +28,9 @@ module H = Hashtable
 let use_error_handler () : ML bool =
   not (Options.get_use_error_handler_macro ())
 
-(* --api pulse: generate code against the Pulse combinator backend
-   (lib/everparse/3d) instead of the Low* one (src/3d/prelude). *)
-let pulse () : ML bool = Options.uses_pulse_backend ()
+(* Both surviving APIs generate code against the Pulse combinator backend in
+   lib/everparse/3d; only the exposed C API differs. *)
+let pulse () : ML bool = true
 
 let lowstar_api () : ML bool = Options.get_api () = HashingOptions.ApiLowstar
 

@@ -68,16 +68,6 @@ ifeq (,$(NO_PULSE))
 lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
-# lowparse needed because of .fst behind .fsti for extraction
-3d-prelude-verify: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-
-.PHONY: 3d-prelude-verify
-
-3d-prelude: 3d-prelude-verify
-	+$(MAKE) -C src/3d/prelude
-
-.PHONY: 3d-prelude
-
 3d-exe: $(NEED_Z3)
 	+$(MAKE) -C src/3d 3d
 
@@ -97,7 +87,7 @@ ifeq (,$(NO_PULSE))
 3d: 3d-pulse-krml
 endif
 
-3d: 3d-prelude 3d-exe
+3d: 3d-exe
 
 asn1: asn1-base lowparse
 
@@ -418,9 +408,9 @@ clean-3d-tests:
 
 .PHONY: clean-3d-tests
 
-# The Pulse prelude and its test corpus. Neither is reachable from clean-3d or
-# clean-3d-tests: src/3d/Makefile cleans the Low* prelude in src/3d/prelude,
-# and the Low*-API corpus is in share/everparse/tests/3d/lowstar.
+# The 3d prelude and its test corpus. Neither is reachable from clean-3d,
+# which only cleans src/3d itself, nor from clean-3d-tests, which covers the
+# Low*-API corpus in share/everparse/tests/3d/lowstar.
 clean-3d-pulse-prelude:
 	+$(MAKE) -C lib/everparse/3d clean
 

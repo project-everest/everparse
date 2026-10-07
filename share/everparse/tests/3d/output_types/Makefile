@@ -33,7 +33,7 @@ interpret: $(SOURCE_FILES) TPoint.out AnonUnion.out AnonStruct.out ExternVector.
 EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
+INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
 
 FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 

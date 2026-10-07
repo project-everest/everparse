@@ -235,8 +235,6 @@ let emit_fstar_code_for_interpreter (en:env)
        generated code actually uses. [I] was not one of them: nothing emitted
        refers to [EverParse3d.InputStream.Base]. *)
     let module_prefix =
-      if Options.uses_pulse_backend ()
-      then
        FStar.Printf.sprintf "module %s\n\
                              open Pulse.Lib.Pervasives\n\
                              open EverParse3d.Prelude\n\
@@ -251,17 +249,6 @@ let emit_fstar_code_for_interpreter (en:env)
                              #set-options \"--fuel 0 --ifuel 0 --z3rlimit 32 --ext optimize_let_vc\"\n"
                              modul maybe_open_external_api
                              (Options.pulse_backend_module ())
-      else
-       FStar.Printf.sprintf "module %s\n\
-                             open EverParse3d.Prelude\n\
-                             open EverParse3d.Actions.All\n\
-                             open EverParse3d.Interpreter\n\
-                             %s\n\
-                             module T = FStar.Tactics\n\
-                             module A = EverParse3d.Actions.All\n\
-                             module P = EverParse3d.Prelude\n\
-                             #set-options \"--fuel 0 --ifuel 0 --ext optimize_let_vc\"\n"
-                             modul maybe_open_external_api
     in
 
     let fst_file =
@@ -576,13 +563,9 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    if Options.uses_pulse_backend ()
-    then
-      (* KaRaMeL emits no makefiles under --api pulse; use EverParse's own, which
-         needs neither krmllib's headers nor libkrmllib.a. *)
-      OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
-    else
-      OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
+    (* KaRaMeL emits no makefiles under the Pulse backend; use EverParse's own,
+       which needs neither krmllib's headers nor libkrmllib.a. *)
+    OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
   end
 
 let build_and_run_test_exe
@@ -717,15 +700,13 @@ let produce_and_postprocess_c
    which gives the user no clue as to the actual cause. Reject the name up
    front instead. To be removed once the marker is fixed upstream. *)
 let check_no_reserved_module_name (files: list string) : ML unit =
-  if Options.uses_pulse_backend ()
-  then
-    List.iter
-      (fun file ->
-        if OS.extension (OS.basename file) = ".3d" &&
-           OS.remove_extension (OS.basename file) = "C"
-        then raise (Error "A 3d module cannot be named C in --api pulse mode, because the name collides with KaRaMeL's builtin C module. Please rename it.\n")
-      )
-      files
+  List.iter
+    (fun file ->
+      if OS.extension (OS.basename file) = ".3d" &&
+         OS.remove_extension (OS.basename file) = "C"
+      then raise (Error "A 3d module cannot be named C, because the name collides with KaRaMeL's builtin C module. Please rename it.\n")
+    )
+    files
 
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)

@@ -145,8 +145,8 @@ There can be multiple definitions marked ``entrypoint`` in a given
 
   ``3d --api lowstar`` uses verified Pulse adapters while preserving the
   Low\* C API described here, including direct validator calls, packed
-  results, error callbacks, and copy-buffer projections. The original
-  implementation remains the default, ``--api legacy_lowstar``.
+  results, error callbacks, and copy-buffer projections. The native Pulse
+  API, ``--api pulse``, is the default.
   ``--no_api`` restores that default; the former ``--pulse`` option is no
   longer accepted. ``--api`` selects the implementation and C API, while
   ``--input_stream`` independently selects ``buffer``, ``extern`` or ``static``.
@@ -1507,8 +1507,7 @@ addresses and sizes remain ``uint64_t`` in particular.
   (the default) under ``--api pulse``. A ``probe`` declaration combined with
   ``--input_stream extern`` or ``--input_stream static`` is rejected with
   *"Probes are only supported by the buffer backend under --api pulse"*.
-  ``--api legacy_lowstar`` and ``--api lowstar`` have no such restriction
-  for field probes.
+  ``--api lowstar`` has no such restriction for field probes.
 
   ``EVERPARSE_COPY_BUFFER_T`` on its own --- as a type parameter, or as the
   parameter of an ``extern`` action --- is *not* restricted, and works with
@@ -2127,7 +2126,7 @@ Error handling
 When a validator fails, EverParse supports invoking a user-provided
 callback with contextual information about the failure.
 
-With ``--api legacy_lowstar`` or ``--api lowstar``, an error handling callback
+With ``--api lowstar``, an error handling callback
 is a C procedure with the following seven-argument signature:
 
 .. code-block:: c
@@ -2149,7 +2148,7 @@ containing the client's stream ``base``, a ``has_length`` flag and a
 ``uint64_t length``.
 
 The signature above, and the error codes listed below, describe
-``--api legacy_lowstar`` and ``--api lowstar``. Under ``--api pulse`` the
+``--api lowstar``. Under ``--api pulse`` the
 signature differs but the
 named error kinds retain the same numbers; see :ref:`sec-error-handling-pulse`.
 

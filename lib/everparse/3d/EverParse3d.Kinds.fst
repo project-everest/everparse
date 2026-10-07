@@ -115,13 +115,7 @@ let kind_nlist #b #w kelt nopt
 
 let kind_all_bytes
   : parser_kind false WeakKindConsumesAll
-  = {
-      parser_kind_low = 0;
-      parser_kind_high = None;
-      parser_kind_metadata = None;
-      parser_kind_subkind = Some ParserConsumesAll;
-      parser_kind_injective = true;
-    }
+  = LowParse.Spec.SeqBytes.parse_seq_all_bytes_kind
 
 let kind_t_at_most
   : parser_kind false WeakKindStrongPrefix

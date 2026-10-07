@@ -10,7 +10,7 @@ FSTAR_EXE ?= fstar.exe
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_C_RUNTIME = $(if $(filter lowstar,$(EVERPARSE_API)),$(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar,$(EVERPARSE_HOME)/src/3d/prelude)
+EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar
 3D=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
 3D_Z3_EXECUTABLE ?= z3-4.13.3
@@ -24,7 +24,7 @@ HASHCHK_DIR=$(EVERPARSE_HOME)/src/3d/hashchk
 HASHCHK ?= dotnet $(HASHCHK_DIR)/bin/Debug/net8.0/win-x64/everparse-hashchk.dll
 export HASHCHK
 
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
+INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
 
 FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 
