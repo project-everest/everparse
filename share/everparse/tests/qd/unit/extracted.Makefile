@@ -43,7 +43,13 @@ KRML = $(KRML_EXE) \
 	 -tmpdir out -I .. \
 	 -bundle 'FStar.\*,Prims,Pulse.\*,PulseCore.\*,LowParse.\*,C,C.\*' \
 	 $(KRML_OPTS) \
-	 -warn-error '@2@15-26'
+	 -warn-error '-2@15-26'
+# Warning 2 (unbound reference) is demoted rather than fatal, as in every other
+# Pulse build in this repository (e.g. tests/pulse/Makefile). Pulse's extraction
+# plugin emits C._zero_for_deref for a reference dereference, but KaRaMeL omits
+# its builtin declaration of that symbol whenever Pulse_Lib_Pervasives is among
+# the inputs. The reference is harmless: b[C._zero_for_deref] is printed as *b,
+# so no such C symbol is ever emitted or needed at link time.
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
@@ -81,10 +87,14 @@ endif
 
 ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
 
+# Link and run, rather than just compiling: ../Test.fst is a real client of the
+# generated API, and its main returns non-zero if the validator/jumper/accessor
+# chain does not round-trip the field it plants.
 test: $(ALL_KRML_FILES) krml/Test.krml
 	-@mkdir out
 	$(KRML) -no-prefix Test $^
-	$(CC) -c -I out -I .. $$f out/*.c
+	$(CC) -I out -I .. -o out/test.exe out/*.c
+	./out/test.exe
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
