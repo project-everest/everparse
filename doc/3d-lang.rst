@@ -712,6 +712,11 @@ on a ``casetype`` allows one to model the layout of a C union.
 Note, the ``aligned`` attribute is not allowed on typedefs, enums, or other kinds
 of 3d declarations.
 
+Note also that every struct or casetype embedded by value in the fields of an
+``aligned`` type must itself be ``aligned``. Otherwise, 3d would lay the embedded
+type out without padding while a C compiler would pad it, and the generated
+static assertions would not compile. 3d rejects such specifications.
+
 Variable-length Types
 ......................
 
