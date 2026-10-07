@@ -359,84 +359,14 @@ Options are treated from left to right:
     user-defined ``EVERPARSE_INPUT_STREAM_BASE`` type, representing an
     input byte stream. The client must define that type, and a set of
     functions over it that **depends on the selected API**:
-    ``--api lowstar`` and ``--api pulse`` (the default) use different names
+    ``--api pulse`` (the default) and ``--api lowstar`` use different names
     and argument types. Both sets are given below.
 
-    **Low\*-compatible primitives** (``--api lowstar``)
+    **Pulse backend primitives** (``--api pulse``, the default)
 
-    .. code-block:: c
-
-       extern BOOLEAN EverParseHas(
-         EVERPARSE_EXTRA_T _extra_t,
-         EVERPARSE_INPUT_STREAM_BASE x,
-         uint64_t n
-       );
-
-    ``EverParseHas`` returns ``1`` if the input stream ``x`` has ``n``
-    bytes available to read, ``0`` otherwise.
-
-    .. code-block:: c
-
-       extern uint8_t* EverParseRead(
-         EVERPARSE_EXTRA_T _extra_t,
-         EVERPARSE_INPUT_STREAM_BASE x,
-         uint64_t n,
-         uint8_t *dst
-       );
-
-    ``EverParseRead`` takes and reads ``n`` bytes from the input
-    stream ``x``, possibly copying them into ``dst``, and returns a
-    byte array containing the bytes read. There is no requirement that
-    the function returns ``dst``, or even that a copy to ``dst`` is
-    made.
-
-    .. code-block:: c
-
-       extern void EverParseSkip(
-         EVERPARSE_EXTRA_T _extra_t,
-         EVERPARSE_INPUT_STREAM_BASE x,
-         uint64_t n
-       );
-
-    ``EverParseSkip`` advances the input stream ``x`` by ``n`` bytes
-    without reading them.
-
-    .. code-block:: c
-
-       extern uint8_t* EverParsePeep(
-         EVERPARSE_EXTRA_T _extra_t,
-         EVERPARSE_INPUT_STREAM_BASE x,
-         uint64_t n
-       );
-
-    ``EverParsePeep`` returns a pointer to a byte array that is part
-    of the input stream ``x`` and points to its next ``n`` bytes, then
-    advances the input stream by ``n``. If such operation is
-    impossible, then returns ``NULL``. Such a pointer is returned by
-    the ``field_ptr_after`` action (see "Atomic actions" in the 3d language
-    reference), so it is the responsibility of the application to
-    ensure double-fetch freedom on the contents of the returned field
-    is preserved.
-
-    .. code-block:: c
-
-       extern uint64_t EverParseEmpty(
-         EVERPARSE_EXTRA_T _extra_t,
-         EVERPARSE_INPUT_STREAM_BASE x
-       );
-
-    ``EverParseEmpty`` skips to the end of the input stream ``x`` and
-    returns the number of bytes so skipped, without reading them.
-
-    In all such functions, ``EVERPARSE_EXTRA_T`` is a user-defined
-    type for the context used for error handling (see "Error handling"
-    in the 3d language reference.)
-
-    **Pulse backend primitives** (with ``--api pulse``)
-
-    With ``--api pulse``, none of the primitives above are used. The
-    ``extern`` and ``static`` input streams instead require the
-    following set. Except for ``EverParseStreamGetPosition``, each receives the
+    The ``extern`` and ``static`` input streams require the following
+    set; none of the Low\*-compatible primitives listed afterwards are
+    used. Except for ``EverParseStreamGetPosition``, each receives the
     ``EVERPARSE_EXTRA_T`` context that was passed to the validator, but
     byte counts are ``size_t`` rather than ``uint64_t``:
 
@@ -518,8 +448,9 @@ Options are treated from left to right:
     ``EverParseNullPtr`` is the value the generated code stores into
     ``*w`` before the call.
 
-    Finally, and exactly as in the Low\*-compatible API, the client supplies the two
-    wrapper-level callbacks below. These are common to both APIs:
+    Finally, and exactly as in the Low\*-compatible API below, the client
+    supplies the two wrapper-level callbacks that follow. These are common
+    to both APIs:
 
     .. code-block:: c
 
@@ -560,6 +491,76 @@ Options are treated from left to right:
       backed by the explicit ``EverParseFieldPtrAfterImpl`` primitive
       above rather than by ``EverParsePeep``, and it needs
       ``EverParseNullPtr`` as well.
+
+    **Low\*-compatible primitives** (``--api lowstar``)
+
+    .. code-block:: c
+
+       extern BOOLEAN EverParseHas(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParseHas`` returns ``1`` if the input stream ``x`` has ``n``
+    bytes available to read, ``0`` otherwise.
+
+    .. code-block:: c
+
+       extern uint8_t* EverParseRead(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n,
+         uint8_t *dst
+       );
+
+    ``EverParseRead`` takes and reads ``n`` bytes from the input
+    stream ``x``, possibly copying them into ``dst``, and returns a
+    byte array containing the bytes read. There is no requirement that
+    the function returns ``dst``, or even that a copy to ``dst`` is
+    made.
+
+    .. code-block:: c
+
+       extern void EverParseSkip(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParseSkip`` advances the input stream ``x`` by ``n`` bytes
+    without reading them.
+
+    .. code-block:: c
+
+       extern uint8_t* EverParsePeep(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParsePeep`` returns a pointer to a byte array that is part
+    of the input stream ``x`` and points to its next ``n`` bytes, then
+    advances the input stream by ``n``. If such operation is
+    impossible, then returns ``NULL``. Such a pointer is returned by
+    the ``field_ptr_after`` action (see "Atomic actions" in the 3d language
+    reference), so it is the responsibility of the application to
+    ensure double-fetch freedom on the contents of the returned field
+    is preserved.
+
+    .. code-block:: c
+
+       extern uint64_t EverParseEmpty(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x
+       );
+
+    ``EverParseEmpty`` skips to the end of the input stream ``x`` and
+    returns the number of bytes so skipped, without reading them.
+
+    In all such functions, ``EVERPARSE_EXTRA_T`` is a user-defined
+    type for the context used for error handling (see "Error handling"
+    in the 3d language reference.)
 
   + ``static`` is like ``extern`` except that the functions on
     ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static inline``
