@@ -1,5 +1,29 @@
 # Recovering the Low* C API with the 3D-Pulse backend
 
+> **Historical design record — superseded by the implementation.**
+>
+> This document was written as a forward-looking proposal, and its text is
+> left in the future tense as originally drafted. The migration it describes
+> has since been carried out: `--api pulse` and `--api lowstar` both ship,
+> the adapters of step 3 are implemented and verified, and the test moves of
+> steps 4 and 5 are done.
+>
+> Two things to keep in mind when reading it:
+>
+> * **`--api legacy_lowstar` no longer exists.** Step 2 proposed retaining the
+>   original Low\* implementation under that name as the default. It was
+>   retained for a time, then disabled, and the Low\* backend and its prelude
+>   have since been deleted outright. Every mention of `legacy_lowstar` below
+>   therefore describes a transitional state, not a current option. The two
+>   surviving APIs are `pulse` (the default) and `lowstar`, the latter being a
+>   Pulse implementation behind a Low\*-compatible C ABI.
+> * **The disclaimer below is out of date.** Where the introduction says no
+>   implementation or proof has been performed, that was true at drafting time
+>   only.
+>
+> For the behaviour EverParse actually has today, see `doc/3d.rst` and
+> `doc/3d-lang.rst`, which are maintained; this file is not.
+
 The Low* C API can be recovered while sharing most of the Pulse
 implementation, but not merely by adding instances of the current typeclasses.
 The plan is organized in execution order:
