@@ -50,6 +50,12 @@ KRML = $(KRML_EXE) \
 # its builtin declaration of that symbol whenever Pulse_Lib_Pervasives is among
 # the inputs. The reference is harmless: b[C._zero_for_deref] is printed as *b,
 # so no such C symbol is ever emitted or needed at link time.
+#
+# TEMPORARY. This goes away once this branch is merged with fstar2, which is
+# based on F* master, whose up-to-date copy of Pulse extracts
+# Pulse.Lib.Pervasives._zero_for_deref instead of C._zero_for_deref. That symbol
+# does have an implementation among the inputs, so warning 2 will no longer be
+# raised and this can be restored to '@2@15-26'.
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
