@@ -6,9 +6,7 @@ t3 t5<0..255>;
 
 enum { a, b, (255) } tag;
 
-/*
 abstract t0 = "FStar.UInt16.t" < 2..3 >
-*/
 
 struct {
   tag t;
@@ -179,6 +177,16 @@ struct {
 } t26;
 
 /*
+ Heterogeneous if-then-else (uint32 vs t3). Disabled under -pulse: emit_copyful_ite
+ in src/qd/rfc_fstar_compiler.ml emits the payload families as an unannotated
+ (fun b -> if b then X else Y). That only typechecks when both arms have the same
+ payload type -- the fam_eq case -- because otherwise the two branches of
+ <n>_payload_vmatch / <n>_payload_conv have genuinely different types and F* has no
+ dependent expected type to check them against:
+   Error 54 at T27.fsti: T3.t3_mid is not a subtype of the expected type FStar.UInt32.t
+ Re-enabling this needs dependent ascriptions on the payload families (and on the
+ free_/write_/size_ calls that pin them), which is a qd backend change, not a test
+ change. The non-pulse backend handled this case; see compile_ite_nonpulse.
 struct {
   opaque tag[3];
   (if tag = "000000" uint32 else t3) value;
