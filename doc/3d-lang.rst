@@ -143,12 +143,12 @@ There can be multiple definitions marked ``entrypoint`` in a given
 
 .. note::
 
-  ``3d --api lowstar`` uses verified Pulse adapters while preserving the
-  Low\* C API described here, including direct validator calls, packed
-  results, error callbacks, and copy-buffer projections. The native Pulse
-  API, ``--api pulse``, is the default.
-  ``--no_api`` restores that default; the former ``--pulse`` option is no
-  longer accepted. ``--api`` selects the implementation and C API, while
+  ``--api pulse``, the native Pulse API, is the default, and ``--no_api``
+  restores it; the former ``--pulse`` option is no longer accepted.
+  ``3d --api lowstar`` instead uses verified Pulse adapters to preserve the
+  Low\*-compatible C API described here, including direct validator calls,
+  packed results, error callbacks, and copy-buffer projections.
+  ``--api`` selects the implementation and C API, while
   ``--input_stream`` independently selects ``buffer``, ``extern`` or ``static``.
   See :ref:`the --api option <3d-api-option>` for the runtime headers required
   by each selection, including when using ``--no_copy_everparse_h``.
@@ -1524,11 +1524,12 @@ What changes is the small set of projections the client provides on
 
   extern size_t  *EverParseStreamPos(EVERPARSE_COPY_BUFFER_T buf);
 
-So, relative to the default backend, ``EverParseStreamLen`` returns a
+So, relative to ``--api lowstar``, ``EverParseStreamLen`` returns a
 ``size_t`` rather than a ``uint64_t``, and there is a third function to
 implement. ``EverParseStreamPos`` must return a pointer to a ``size_t`` cell
 that belongs to the copy buffer: Pulse validators carry their read position
-*inside* the input stream, whereas Low\* validators take it as an argument.
+*inside* the input stream, whereas the Low\*-compatible validators of
+``--api lowstar`` take it as an argument.
 The contract is:
 
   * The cell must remain live and writable for as long as the copy buffer
@@ -2271,12 +2272,13 @@ Three points deserve attention:
     the supplied origin to obtain the position relative to this validation.
 
   * ``StartPosition`` --- the trailing argument, and the one that carries
-    the same meaning as under the default backend --- is the offset from
+    the same meaning as under ``--api lowstar`` --- is the offset from
     the start of the input of the beginning of the field ``f``. It is what
     a handler should report.
 
 **The error codes.** ``<Mod>Wrapper.h`` defines ``EVERPARSE_ERROR_*``
-constants under ``--api pulse`` with the same kind numbers as Low*.
+constants under ``--api pulse`` with the same kind numbers as
+``--api lowstar``.
 The validator still returns a byte, not a packed position/error value.
 The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
@@ -2293,7 +2295,7 @@ In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
 ``--api pulse`` (the packed ``EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED``
 constant also exists in the Low\*-compatible runtime headers).
-Comparisons against the error-kind macros common to all three APIs keep
+Comparisons against the error-kind macros common to both APIs keep
 the same meaning. Earlier Pulse releases used 1
 for action failure and 5, 6, 7 for constraint, padding, and probe failures.
 Clients that hardcoded those Pulse-specific numbers must update them;

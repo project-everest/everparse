@@ -36,11 +36,11 @@ Summary
 Then, EverParse/3d produces:
 
 * ``MyFile1.fsti``, ``MyFile1.fst``: the verified F\* specification
-  and Low\* implementation of parsers and validators for your data
+  and Pulse implementation of parsers and validators for your data
   format from ``MyFile1.3d``, and similarly for ``MyFile2.3d``
 
 * ``MyFile1.c``, ``MyFile1.h``: the verified C code generated from the verified
-  F\* and Low\* files, and similarly for ``MyFile2.3d``
+  F\* and Pulse files, and similarly for ``MyFile2.3d``
 
 * ``MyFile1Wrapper.c``, ``MyFile1Wrapper.h``: an entrypoint API to call into the
   verified C code, and similarly for ``MyFile2.3d``. Note that an entrypoint
@@ -53,9 +53,10 @@ Then, EverParse/3d produces:
   helpers for the implementation of verified validators, common to
   ``MyFile1.3d`` and ``MyFile2.3d``
 
-* with ``--api pulse``, two additional headers, ``EverParsePulse.h`` and
-  ``EverParsePulseEndianness.h``, which play the same role for the Pulse
-  backend
+* ``EverParsePulse.h``, ``EverParsePulseEndianness.h``: two further headers
+  playing the same role for the Pulse backend. They are written under
+  ``--api pulse``, which is the default; ``--api lowstar`` does not emit
+  them, as its ``EverParse.h`` is self-contained
 
 3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
    compilation units that need to call a validator from
@@ -274,8 +275,9 @@ Options are treated from left to right:
   no separate ``EverParsePulseInternal.h`` is needed. During
   per-parser extraction, KaRaMeL uses the shipped runtime without emitting
   another ``EverParse.h``. With
-  ``--no_copy_everparse_h``, supply this header rather than the original
-  Low\* header. The native ``pulse`` header is unchanged.
+  ``--no_copy_everparse_h``, supply this header, not the one used by
+  ``--api pulse``; see ``--no_copy_everparse_h`` below for the runtime
+  directory matching each selection.
 
   This replaces the former ``--pulse`` switch, which is no longer accepted.
   ``--no_api`` resets the selection to ``pulse``.
@@ -283,9 +285,8 @@ Options are treated from left to right:
   ``buffer``, ``extern`` and ``static``, subject to the native Pulse
   :ref:`probe restriction <sec-probing-pulse>`.
 
-  Generated Makefile commands retain the selected API. Hash checks also
-  distinguish all three APIs: existing Low\* hashes remain valid, but Pulse
-  outputs generated with the former switch must be regenerated.
+  Generated Makefile commands retain the selected API, and hash checks
+  distinguish the two APIs.
 
   The Low\*-API test corpus lives in ``share/everparse/tests/3d/lowstar``.
   Its ordinary builds explicitly select ``--api lowstar``.
@@ -333,7 +334,7 @@ Options are treated from left to right:
   name suffixed with ``Complete``) are described in the :ref:`3d language
   reference <Complete_Wrappers>`.
 
-  This option works with all three ``--api`` selections. It is, however,
+  This option works with both ``--api`` selections. It is, however,
   only meaningful with ``--input_stream
   buffer`` (the default): with ``extern`` or ``static`` the wrapper is
   handed an opaque stream rather than a byte array and a length, so it has
@@ -358,8 +359,8 @@ Options are treated from left to right:
     user-defined ``EVERPARSE_INPUT_STREAM_BASE`` type, representing an
     input byte stream. The client must define that type, and a set of
     functions over it that **depends on the selected API**:
-    ``--api lowstar`` and ``--api pulse`` use different names and argument
-    types. Both sets are given below.
+    ``--api lowstar`` and ``--api pulse`` (the default) use different names
+    and argument types. Both sets are given below.
 
     **Low\*-compatible primitives** (``--api lowstar``)
 
@@ -510,15 +511,15 @@ Options are treated from left to right:
     ``TRUE``; if it cannot, it must return ``FALSE`` and leave ``*w``
     alone, in which case the generated code reports a failure. Its F\*
     specification constrains neither the pointer written nor the
-    stream, so -- exactly as for ``EverParsePeep`` in Low\* -- it is the
+    stream, so -- exactly as for ``EverParsePeep`` under ``--api
+    lowstar`` -- it is the
     responsibility of the application to ensure double-fetch freedom on
     the contents of the returned field is preserved.
     ``EverParseNullPtr`` is the value the generated code stores into
     ``*w`` before the call.
 
-    Finally, and exactly as in the Low\*-compatible APIs, the client supplies the two
-    wrapper-level callbacks below. These are common to all three APIs,
-    and their signatures are unchanged by ``--api pulse``:
+    Finally, and exactly as in the Low\*-compatible API, the client supplies the two
+    wrapper-level callbacks below. These are common to both APIs:
 
     .. code-block:: c
 
@@ -536,11 +537,12 @@ Options are treated from left to right:
     ``EverParseStreamGetPosition``, on which the wrapper's arithmetic
     depends.
 
-    Three differences from the Low\* contract are worth calling out
-    when porting a client:
+    Three differences from the Low\*-compatible contract of ``--api
+    lowstar`` are worth calling out when porting a client:
 
     * **The stream tracks its own position.** The generated
-      ``<Mod>Check<Type>`` wrapper has the same signature as in Low\*,
+      ``<Mod>Check<Type>`` wrapper has the same signature as under
+      ``--api lowstar``,
       but the Pulse validator it calls returns a plain ``uint8_t``
       error code rather than a packed ``uint64_t``, so the wrapper
       cannot read the parsed size out of the result. It recovers that
@@ -553,8 +555,8 @@ Options are treated from left to right:
       pointer into the client's own storage.
 
     * **There is no** ``EverParsePeep``. The ``field_ptr`` action is
-      restricted to the ``buffer`` input stream on both Low\* and
-      Pulse, so nothing is lost there; but ``field_ptr_after`` is
+      restricted to the ``buffer`` input stream under both APIs, so
+      nothing is lost there; but ``field_ptr_after`` is
       backed by the explicit ``EverParseFieldPtrAfterImpl`` primitive
       above rather than by ``EverParsePeep``, and it needs
       ``EverParseNullPtr`` as well.
@@ -563,7 +565,7 @@ Options are treated from left to right:
     ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static inline``
     rather than ``extern``, so that the compiler sees each stream
     operation at every validator call site instead of linking against
-    it. This holds for all three APIs. The client must therefore
+    it. This holds for both APIs. The client must therefore
     *define* those functions, not merely implement them in a separate
     translation unit: the header named by ``--input_stream_include`` is
     included into every generated ``.c`` file, so that is where the
