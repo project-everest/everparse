@@ -89,9 +89,6 @@ let _ = Arg.parse [
 	("-prefix", Arg.String (fun n -> prefix := n),
 		" <p> - Prefix generated module names with <p>");
 
-  ("-bytes", Arg.String (fun n -> bytes := n),
-		" <module> - Name of bytes module (must provide [l]bytes, pinverse_t, etc)");
-
   ("-types_from", Arg.String (fun n -> if !types_to <> "" then failwith "-types_from incompatible with -types_to"; types_from := n),
 		" <module> - Take types from some module (RFC must contain only aliases, records and structs with simple fields) (incompatible with -types_to)");
 
@@ -113,23 +110,13 @@ let _ = Arg.parse [
   ("-result_none", Arg.String (fun n -> opt_none := n),
     " <type_name> - Set the failure constructor of parsers' return type (default None)");
 
-	("-low", Arg.Unit (fun () -> emit_high := false),
-		" Generate Low* implementation only");
-
-  ("-high", Arg.Unit (fun () -> emit_low := false),
-    " Generate functional implementation only");
-
-
-  ("-pulse", Arg.Unit (fun () -> emit_pulse := true; emit_low := false),
-    " Generate Pulse/PulseParse implementation (incompatible with -low)");
+  (* The Pulse backend is now the only backend; [-pulse] is accepted as a
+     no-op for backward compatibility with existing build rules. *)
+  ("-pulse", Arg.Unit (fun () -> ()),
+    " Generate Pulse/PulseParse implementation (default; accepted for compatibility)");
   ("-eq", Arg.Unit (fun () -> emit_eq := true),
     " Generate equality functions for simple types");
 
 ] (fun s -> (ifile := s :: !ifile)) (sprintf "QuackyDucky %s\n%s"
 	ver "Generates verified parsers and their specification from RFC");
-	if !emit_pulse && not !emit_high then begin
-		eprintf "Error: -pulse and -low are incompatible\n";
-		exit 1
-	end;
-	if !emit_pulse then emit_high := false;
 	List.iter rfc_load !ifile
