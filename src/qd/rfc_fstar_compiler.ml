@@ -593,9 +593,8 @@ let emit_copyful_safe_leaf_writer o i n blen =
    and conv is [leaf_conv] (i.e. emitted via [emit_copyful_leaf], e.g. a
    leaf-readable sum), and which already has a non-graceful
    [<n>_writer : l2r_leaf_writer <n>_serializer] and an
-   [<n>_size32 : LSZ.size32 <n>_serializer]. The exact serialized size is
-   obtained from [<n>_size32] via [PPSL.leaf_size_of_size32] (the parser kind's
-   [Some] high bound guarantees no saturation), and fed to the variable-length
+   [<n>_leaf_size : leaf_size <n>_serializer] giving the exact serialized size,
+   which is fed to the variable-length
    leaf writer/size combinators. Works for both constant- and variable-size
    leaf-readable types. *)
 let emit_copyful_safe_leaf_writer_vl o i n =
@@ -609,11 +608,11 @@ let emit_copyful_safe_leaf_writer_vl o i n =
 (* Emit the copyful tag block (read_<n>/free_<n>/write_<n>/size_<n>) for an
    if-then-else discriminant whose high-level value is a plain [Seq.lseq byte
    clen], using the LowParse.Pulse.SeqBytes combinators. The freeable low
-   representation is [PPBY.lvec FStar.UInt8.t]: a Pulse.Lib.Vec carrying a
+   representation is [LSeqB.lvec FStar.UInt8.t]: a Pulse.Lib.Vec carrying a
    runtime length. This is what lets the discriminant constant be built by a
    total [Seq.seq_of_list] (no [assume]). *)
 let emit_copyful_seqbytes o i n clen =
-  w i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
+  w i "let %s_lowtype = LSeqB.lvec FStar.UInt8.t\n\n" n;
   w i "noextract let %s_mid = Seq.seq FStar.UInt8.t\n\n" n;
   w i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LSeqB.vmatch_copy_seqbytes\n\n" n n n;
   w i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = LSeqB.seq_flbytes_conv %d\n\n" n n n clen;
@@ -630,11 +629,11 @@ let emit_copyful_seqbytes o i n clen =
 
 (* As [emit_copyful_seqbytes], but for VARIABLE-length byte types (bounded
    vlbytes). The high-level value is a plain [Seq.seq FStar.UInt8.t]
-   refinement; the freeable low representation is again [PPBY.lvec
+   refinement; the freeable low representation is again [LSeqB.lvec
    FStar.UInt8.t]. [combinator] is the copyful_parse_* expression and [conv]
    the option-conv, both from LowParse.Pulse.SeqBytes. *)
 let emit_copyful_seqbytes_vl ?writer ?size o i n combinator conv =
-  w i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
+  w i "let %s_lowtype = LSeqB.lvec FStar.UInt8.t\n\n" n;
   w i "noextract let %s_mid = Seq.seq FStar.UInt8.t\n\n" n;
   w i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LSeqB.vmatch_copy_seqbytes\n\n" n n n;
   w i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = %s\n\n" n n n conv;
@@ -1791,7 +1790,7 @@ let write_api o i ?param:(p=None) has_lserializer is_private (md: parser_kind_me
    [emit_copyful_seqbytes]. *)
 let compile_ite_tag o i tagt clen is_private =
   (* The executable tag representation is the Vec-based lowtype
-     ([<tagt>_lowtype = PPBY.lvec uint8]); the high [Seq.lseq uint8 clen] type is
+     ([<tagt>_lowtype = LSeqB.lvec uint8]); the high [Seq.lseq uint8 clen] type is
      referenced only by noextract/GTot specs and phantom parser indices, so mark
      it noextract to avoid a [Prims_list__uint8_t] cons-list typedef in the
      extracted C. *)
@@ -3218,7 +3217,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
          value is a plain [Seq.lseq FStar.UInt8.t k]; the spec is built over
          [parse_lseq_bytes]/[serialize_lseq_bytes] and the copyful tag block uses
          the LowParse.Pulse.SeqBytes combinators.  The executable representation is
-         the Vec-based [<n>_lowtype = PPBY.lvec uint8]; the high [Seq.lseq] type is
+         the Vec-based [<n>_lowtype = LSeqB.lvec uint8]; the high [Seq.lseq] type is
          referenced only by noextract/GTot specs and (phantom) parser indices, so
          mark it noextract to keep KaRaMeL from emitting a [Prims_list__uint8_t]
          cons-list typedef. *)
@@ -3298,7 +3297,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high) ->
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
       (* The executable byte representation is the Vec-based lowtype
-         ([<n>_lowtype = PPBY.lvec uint8]); the high-level type [<n>] is the spec
+         ([<n>_lowtype = LSeqB.lvec uint8]); the high-level type [<n>] is the spec
          [Seq.seq uint8] refinement, referenced only by noextract/GTot specs and
          (phantom) parser indices, never built at runtime.  Mark it noextract so
          KaRaMeL does not lower it to a [Prims_list__uint8_t] cons-list typedef. *)
@@ -3927,7 +3926,6 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w i "module LT = LowParse.TacLib\n";
   w i "module PPB = LowParse.PulseParse.Base\n";
   w i "module PPC = LowParse.PulseParse.Combinators\n";
-  w i "module PPBY = LowParse.PulseParse.Bytes\n";
   w i "module PPVD = LowParse.PulseParse.VLData\n";
   w i "module PPAR = LowParse.PulseParse.Array\n";
   w i "module PPVCL = LowParse.PulseParse.VCList\n";
@@ -3975,7 +3973,6 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w o "module PPS = LowParse.PulseParse.Sum\n";
   w o "module PPBI = LowParse.PulseParse.BoundedInt\n";
   w o "module PPBILE = LowParse.PulseParse.BoundedIntLE\n";
-  w o "module PPBY = LowParse.PulseParse.Bytes\n";
   w o "module PPBCVLI = LowParse.PulseParse.BCVLI\n";
   w o "module PPVG = LowParse.PulseParse.VLGen\n";
   w o "module PPVCL = LowParse.PulseParse.VCList\n";

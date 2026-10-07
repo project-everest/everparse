@@ -69,7 +69,7 @@ lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-prelude-verify: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+3d-prelude-verify: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 .PHONY: 3d-prelude-verify
 
@@ -84,7 +84,7 @@ endif
 .PHONY: 3d-exe
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-pulse-prelude: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES))) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
+3d-pulse-prelude: $(filter src/lowparse/%,$(ALL_CHECKED_FILES)) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
 
 .PHONY: 3d-pulse-prelude
 
@@ -280,7 +280,7 @@ endif
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+cbor-extract-pre: cbor-verify $(filter src/lowparse/%,$(ALL_CHECKED_FILES))
 
 .PHONY: cbor-extract-pre
 

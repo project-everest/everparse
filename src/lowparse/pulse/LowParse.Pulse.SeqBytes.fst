@@ -10,7 +10,6 @@ module Trade = Pulse.Lib.Trade.Util
 module V = Pulse.Lib.Vec
 module R = Pulse.Lib.Reference
 module PPB = LowParse.PulseParse.Base
-module PPBY = LowParse.PulseParse.Bytes
 module LPS = LowParse.Pulse.Base
 module PPC = LowParse.PulseParse.Combinators
 module LPC = LowParse.Pulse.Combinators
@@ -20,6 +19,62 @@ module U32 = FStar.UInt32
 module M = FStar.Math.Lemmas
 module LPPI = LowParse.Pulse.Int
 module SC = LowParse.Pulse.SizeComparison
+
+(* A sized, owned vector: an owned [Pulse.Lib.Vec.vec] paired with a *runtime*
+   length field whose [SizeT] value is, by a type refinement, provably equal to
+   the vector's (ghost) length [V.length].
+
+   WHY A REFINED LENGTH FIELD (rather than a bare pair or a pure proposition):
+   [V.length] is [Ghost], so there is NO runtime operation to recover a vector's
+   size. A copyful serializer (l2r_safe_writer) must, at run time, read the byte
+   length to (a) compute the serialized size and (b) gracefully fail when the
+   high-level conv rejects the value (e.g. an out-of-bounds [seq_vlbytes]).
+   Carrying the length as a refined field makes the runtime [lvec_len] a *sound*
+   stand-in for the ghost vector length, so those checks need no (impossible)
+   runtime length lookup. The vector comes FIRST because the refinement on
+   [lvec_len] mentions [lvec_vec]. *)
+noeq
+type lvec (t: Type0) = {
+  lvec_vec: V.vec t;
+  lvec_len: (n: SZ.t { SZ.v n == V.length lvec_vec });
+}
+
+inline_for_extraction
+fn alloc_and_copy
+  (input: S.slice byte)
+  (#pm: perm)
+  (#w: Ghost.erased (Seq.seq byte))
+requires
+  S.pts_to input #pm w
+returns res: lvec byte
+ensures
+  S.pts_to input #pm w **
+  V.pts_to res.lvec_vec w **
+  pure (V.is_full_vec res.lvec_vec /\ SZ.v res.lvec_len == Seq.length w)
+{
+  S.pts_to_len input;
+  let length = S.len input;
+  let vc = V.alloc 0uy length;
+  V.to_array_pts_to vc;
+  let tmp = S.from_array (V.vec_to_array vc) length;
+  S.pts_to_len tmp;
+  SZ.size_v_inj (S.len input);
+  SZ.size_v_inj (S.len tmp);
+  S.copy tmp input;
+  S.to_array tmp;
+  V.to_vec_pts_to vc;
+  let res : lvec byte = { lvec_vec = vc; lvec_len = length };
+  rewrite (V.pts_to vc w) as (V.pts_to res.lvec_vec w);
+  res
+}
+
+let vlbytes_prefix_slice_lemma (hdr pay tail: Seq.seq byte)
+: Lemma
+  (ensures Seq.slice (Seq.append hdr (Seq.append pay tail)) 0 (Seq.length hdr + Seq.length pay)
+           == Seq.append hdr pay)
+= Seq.lemma_eq_intro
+    (Seq.slice (Seq.append hdr (Seq.append pay tail)) 0 (Seq.length hdr + Seq.length pay))
+    (Seq.append hdr pay)
 
 ghost fn pts_to_serialized_lseq_bytes_intro
   (n: nat)
@@ -148,23 +203,20 @@ fn compute_remaining_size_lseq_bytes_copy
 }
 
 (* ---------------------------------------------------------------------------
-   Copyful (owned, freeable) fixed-length-bytes combinators over [Seq.seq byte].
+   Copyful (owned, freeable) fixed-length-bytes combinators over [Seq.seq byte]:
+   validate_seq_flbytes / vmatch_copy_seqbytes / seq_flbytes_conv /
+   free_copy_seqbytes / copyful_parse_seq_flbytes / l2r_safe_writer_seq_flbytes /
+   l2r_safe_size_seq_flbytes.
 
-   These are the [Seq]-native analogs of the [FStar.Bytes] flbytes block in
-   [LowParse.PulseParse.Bytes] (validate_flbytes / vmatch_copy_bytes /
-   flbytes_conv / free_copy_bytes / copyful_parse_flbytes /
-   l2r_safe_writer_flbytes / l2r_safe_size_flbytes). They let if-then-else
-   discriminant tags be emitted as a registered, *copyful, non-leaf* type whose
-   high-level value is a plain [Seq.lseq byte sz] (no [FStar.Bytes]), as required
-   to make QuackyDucky's TypeIfeq sound and -pulse-ready.
+   They let if-then-else discriminant tags be emitted as a registered, *copyful,
+   non-leaf* type whose high-level value is a plain [Seq.lseq byte sz], as
+   required to make QuackyDucky's TypeIfeq sound.
 
-   The freeable low-level representation is reused verbatim from the FStar.Bytes
-   library: [PPBY.lvec byte] (a [Pulse.Lib.Vec] plus a refined runtime length)
-   and the content-agnostic [PPBY.alloc_and_copy]; only the vmatch (which here
-   ranges over [Seq.seq byte] instead of [B32.bytes]) and the vmatch-folding
-   combinators are Seq-specific. The conversion of [Seq.seq byte] to its
-   serialized bytes is the identity, so all the [B32.reveal _] coercions of the
-   FStar.Bytes version disappear. *)
+   The freeable low-level representation is the content-agnostic [lvec byte] (a
+   [Pulse.Lib.Vec] plus a refined runtime length) together with
+   [alloc_and_copy]; only the vmatch and the vmatch-folding combinators are
+   byte-specific. The conversion of a [Seq.seq byte] to its serialized bytes is
+   the identity, so no coercions are needed anywhere in this block. *)
 
 inline_for_extraction
 let validate_seq_flbytes
@@ -174,7 +226,7 @@ let validate_seq_flbytes
 = validate_total_constant_size (parse_lseq_bytes sz) sz_sz
 
 let vmatch_copy_seqbytes
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (v: Seq.seq byte)
 : slprop
 = V.pts_to x.lvec_vec v **
@@ -188,7 +240,7 @@ let seq_flbytes_conv
 
 inline_for_extraction
 fn free_copy_seqbytes
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#v: Ghost.erased (Seq.seq byte))
 requires
   vmatch_copy_seqbytes x v
@@ -202,7 +254,7 @@ ensures
 inline_for_extraction
 fn copyful_parse_seq_flbytes
   (sz: nat { sz < 4294967296 })
-: PPB.copyful_parse #(PPBY.lvec byte) #(Seq.seq byte) #(Seq.lseq byte sz) vmatch_copy_seqbytes (parse_lseq_bytes sz) (seq_flbytes_conv sz)
+: PPB.copyful_parse #(lvec byte) #(Seq.seq byte) #(Seq.lseq byte sz) vmatch_copy_seqbytes (parse_lseq_bytes sz) (seq_flbytes_conv sz)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -210,7 +262,7 @@ fn copyful_parse_seq_flbytes
 {
   PPB.pts_to_parsed_elim input;
   with w. assert (S.pts_to input #pm w);
-  let vc = PPBY.alloc_and_copy input;
+  let vc = alloc_and_copy input;
   Trade.elim (S.pts_to input #pm w) (PPB.pts_to_parsed (parse_lseq_bytes sz) input #pm v);
   rewrite (V.pts_to vc.lvec_vec w) as (V.pts_to vc.lvec_vec (Ghost.reveal v));
   fold (vmatch_copy_seqbytes vc v);
@@ -236,9 +288,9 @@ inline_for_extraction
 fn l2r_safe_writer_seq_flbytes
   (sz: nat { sz < 4294967296 })
   (sz_sz: SZ.t { SZ.v sz_sz == sz })
-: PPB.l2r_safe_writer #(PPBY.lvec byte) #(Seq.seq byte) #(Seq.lseq byte sz) vmatch_copy_seqbytes #_ #(parse_lseq_bytes sz) (serialize_lseq_bytes sz) (seq_flbytes_conv sz)
+: PPB.l2r_safe_writer #(lvec byte) #(Seq.seq byte) #(Seq.lseq byte sz) vmatch_copy_seqbytes #_ #(parse_lseq_bytes sz) (serialize_lseq_bytes sz) (seq_flbytes_conv sz)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (out: S.slice byte)
   (#v: Ghost.erased (Seq.seq byte))
@@ -285,9 +337,9 @@ inline_for_extraction
 fn l2r_safe_size_seq_flbytes
   (sz: nat { sz < 4294967296 })
   (sz_sz: SZ.t { SZ.v sz_sz == sz })
-: PPB.l2r_safe_size #(PPBY.lvec byte) #(Seq.seq byte) #(Seq.lseq byte sz) vmatch_copy_seqbytes #_ #(parse_lseq_bytes sz) (serialize_lseq_bytes sz) (seq_flbytes_conv sz)
+: PPB.l2r_safe_size #(lvec byte) #(Seq.seq byte) #(Seq.lseq byte sz) vmatch_copy_seqbytes #_ #(parse_lseq_bytes sz) (serialize_lseq_bytes sz) (seq_flbytes_conv sz)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (perr: R.ref bool)
 {
@@ -308,16 +360,13 @@ fn l2r_safe_size_seq_flbytes
 }
 
 (* ---------------------------------------------------------------------------
-   Variable-length, Seq-native (NO FStar.Bytes) byte combinators over
+   Variable-length byte combinators over
    [Seq.seq byte] / [parse_bounded_seq_vlbytes_t min max].
 
-   These are the [Seq]-native analogs of the [FStar.Bytes] bounded-vlbytes
-   combinators in [LowParse.PulseParse.Bytes]. The high-level (ghost) value is a
-   plain [Seq.seq byte] (no [FStar.Bytes]); the owned low representation
-   [PPBY.lvec byte] and the vmatch [vmatch_copy_seqbytes] are reused verbatim
-   from the fixed-length Seq block above. Because the seq-all-bytes serializer is
-   the identity, every [B32.reveal]/[B32.hide] coercion of the FStar.Bytes
-   version disappears. *)
+   The high-level (ghost) value is a plain [Seq.seq byte]; the owned low
+   representation [lvec byte] and the vmatch [vmatch_copy_seqbytes] are reused
+   verbatim from the fixed-length block above. Because the seq-all-bytes
+   serializer is the identity, no coercions are needed. *)
 
 let seq_vlbytes_conv
   (min: nat)
@@ -398,14 +447,14 @@ fn copyful_parse_seq_all_bytes
   (#v: Ghost.erased bytes)
 requires
   PPB.pts_to_parsed parse_seq_all_bytes input #pm v
-returns vc: PPBY.lvec byte
+returns vc: lvec byte
 ensures
   PPB.pts_to_parsed parse_seq_all_bytes input #pm v **
   vmatch_copy_seqbytes vc v
 {
   PPB.pts_to_parsed_elim input;
   with w. assert (S.pts_to input #pm w);
-  let vc = PPBY.alloc_and_copy input;
+  let vc = alloc_and_copy input;
   Trade.elim (S.pts_to input #pm w) (PPB.pts_to_parsed parse_seq_all_bytes input #pm v);
   rewrite (V.pts_to vc.lvec_vec w) as (V.pts_to vc.lvec_vec (Ghost.reveal v));
   fold (vmatch_copy_seqbytes vc v);
@@ -417,7 +466,7 @@ fn copyful_parse_bounded_seq_vldata_strong_payload
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-: PPB.copyful_parse #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes) vmatch_copy_seqbytes (parse_bounded_vldata_strong min max serialize_seq_all_bytes) (vldata_seq_all_bytes_conv min max)
+: PPB.copyful_parse #(lvec byte) #(Seq.seq byte) #(parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes) vmatch_copy_seqbytes (parse_bounded_vldata_strong min max serialize_seq_all_bytes) (vldata_seq_all_bytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -439,7 +488,7 @@ fn copyful_parse_bounded_seq_vlbytes
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-: PPB.copyful_parse #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes (parse_bounded_seq_vlbytes min max) (seq_vlbytes_conv min max)
+: PPB.copyful_parse #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes (parse_bounded_seq_vlbytes min max) (seq_vlbytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -469,8 +518,7 @@ fn copyful_parse_bounded_seq_vlbytes
    [(log256' max)]-byte big-endian length header into the prefix and copies the
    owned payload bytes after it. The runtime length is read from the [lvec_len]
    field (sound by its refinement). Because the seq-all-bytes serializer is the
-   identity, all the [B32.reveal] coercions of the FStar.Bytes version
-   disappear. *)
+   identity, no coercions are needed. *)
 inline_for_extraction
 fn l2r_safe_writer_bounded_seq_vlbytes
   (min: nat)
@@ -478,9 +526,9 @@ fn l2r_safe_writer_bounded_seq_vlbytes
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (l_sz: SZ.t { SZ.v l_sz == log256' max })
-: PPB.l2r_safe_writer #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes min max) (serialize_bounded_seq_vlbytes min max) (seq_vlbytes_conv min max)
+: PPB.l2r_safe_writer #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes min max) (serialize_bounded_seq_vlbytes min max) (seq_vlbytes_conv min max)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (out: S.slice byte)
   (#v: Ghost.erased (Seq.seq byte))
@@ -529,7 +577,7 @@ fn l2r_safe_writer_bounded_seq_vlbytes
       (* close the postcondition: written prefix == serialized bytes *)
       serialize_bounded_seq_vlbytes_bytes_eq min max (Ghost.reveal y);
       serialize_bounded_integer_spec (log256' max) (U32.uint_to_t (Seq.length (Ghost.reveal y)));
-      PPBY.vlbytes_prefix_slice_lemma hdr (Ghost.reveal y) (Seq.slice (Ghost.reveal v) (log256' max + SZ.v n) (Seq.length (Ghost.reveal v)));
+      vlbytes_prefix_slice_lemma hdr (Ghost.reveal y) (Seq.slice (Ghost.reveal v) (log256' max + SZ.v n) (Seq.length (Ghost.reveal v)));
       fold (vmatch_copy_seqbytes x y);
       tot_sz
     }
@@ -556,9 +604,9 @@ fn l2r_safe_size_bounded_seq_vlbytes
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (l_sz: SZ.t { SZ.v l_sz == log256' max })
-: PPB.l2r_safe_size #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes min max) (serialize_bounded_seq_vlbytes min max) (seq_vlbytes_conv min max)
+: PPB.l2r_safe_size #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes min max) (serialize_bounded_seq_vlbytes min max) (seq_vlbytes_conv min max)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (perr: R.ref bool)
 {
@@ -585,14 +633,12 @@ fn l2r_safe_size_bounded_seq_vlbytes
 #pop-options
 
 (* ---------------------------------------------------------------------------
-   CASE A: Seq-native bounded vlbytes with an EXPLICIT (possibly oversized)
-   fixed-width length header [l >= log256' max]. These are the [Seq]-native
-   analogs of the [FStar.Bytes] [parse_bounded_vlbytes'] family in
-   [LowParse.PulseParse.Bytes] (the '-primed', explicit-[l] combinators): each
-   mirrors the corresponding tight (default [log256' max]) Seq combinator above,
-   but takes an explicit header width [l] and threads it through the primed
-   VLData accessor/validator/jumper. Because the seq-all-bytes serializer is the
-   identity, every [B32.reveal]/[B32.hide] coercion disappears. *)
+   CASE A: bounded vlbytes with an EXPLICIT (possibly oversized) fixed-width
+   length header [l >= log256' max]. Each combinator mirrors the corresponding
+   tight (default [log256' max]) one above, but takes an explicit header width
+   [l] and threads it through the primed VLData accessor/validator/jumper.
+   Because the seq-all-bytes serializer is the identity, no coercions are
+   needed. *)
 
 inline_for_extraction
 fn copyful_parse_bounded_seq_vldata_strong_payload'
@@ -600,7 +646,7 @@ fn copyful_parse_bounded_seq_vldata_strong_payload'
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-: PPB.copyful_parse #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes) vmatch_copy_seqbytes (parse_bounded_vldata_strong' min max l serialize_seq_all_bytes) (vldata_seq_all_bytes_conv min max)
+: PPB.copyful_parse #(lvec byte) #(Seq.seq byte) #(parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes) vmatch_copy_seqbytes (parse_bounded_vldata_strong' min max l serialize_seq_all_bytes) (vldata_seq_all_bytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -645,7 +691,7 @@ fn copyful_parse_bounded_seq_vlbytes'
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-: PPB.copyful_parse #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes (parse_bounded_seq_vlbytes_gen min max l) (seq_vlbytes_conv min max)
+: PPB.copyful_parse #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes (parse_bounded_seq_vlbytes_gen min max l) (seq_vlbytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -683,9 +729,9 @@ fn l2r_safe_writer_bounded_seq_vlbytes'
   (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (l: nat { l >= log256' max /\ l <= 4 })
   (l_sz: SZ.t { SZ.v l_sz == l })
-: PPB.l2r_safe_writer #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes_gen min max l) (serialize_bounded_seq_vlbytes_gen min max l) (seq_vlbytes_conv min max)
+: PPB.l2r_safe_writer #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes_gen min max l) (serialize_bounded_seq_vlbytes_gen min max l) (seq_vlbytes_conv min max)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (out: S.slice byte)
   (#v: Ghost.erased (Seq.seq byte))
@@ -733,7 +779,7 @@ fn l2r_safe_writer_bounded_seq_vlbytes'
       (* close the postcondition: written prefix == serialized bytes *)
       serialize_bounded_seq_vlbytes_gen_bytes_eq min max l (Ghost.reveal y);
       serialize_bounded_integer_spec l (U32.uint_to_t (Seq.length (Ghost.reveal y)));
-      PPBY.vlbytes_prefix_slice_lemma hdr (Ghost.reveal y) (Seq.slice (Ghost.reveal v) (l + SZ.v n) (Seq.length (Ghost.reveal v)));
+      vlbytes_prefix_slice_lemma hdr (Ghost.reveal y) (Seq.slice (Ghost.reveal v) (l + SZ.v n) (Seq.length (Ghost.reveal v)));
       fold (vmatch_copy_seqbytes x y);
       tot_sz
     }
@@ -761,9 +807,9 @@ fn l2r_safe_size_bounded_seq_vlbytes'
   (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (l: nat { l >= log256' max /\ l <= 4 })
   (l_sz: SZ.t { SZ.v l_sz == l })
-: PPB.l2r_safe_size #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes_gen min max l) (serialize_bounded_seq_vlbytes_gen min max l) (seq_vlbytes_conv min max)
+: PPB.l2r_safe_size #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t min max) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlbytes_gen min max l) (serialize_bounded_seq_vlbytes_gen min max l) (seq_vlbytes_conv min max)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (perr: R.ref bool)
 {
@@ -790,12 +836,10 @@ fn l2r_safe_size_bounded_seq_vlbytes'
 #pop-options
 
 (* ---------------------------------------------------------------------------
-   CASE B: Seq-native bounded vlbytes framed by a GENERIC (variable-width) length
-   header parser [pk] (bitcoin_varint / asn1_len / asn1_len8). These are the
-   [Seq]-native analogs of the [FStar.Bytes] [parse_bounded_vlgenbytes] family in
-   [LowParse.PulseParse.Bytes], with [serialize_all_bytes -> serialize_seq_all_bytes]
-   (the identity). Used by QuackyDucky under -pulse for byte payloads whose length
-   is encoded by a variable-width integer. *)
+   CASE B: bounded vlbytes framed by a GENERIC (variable-width) length header
+   parser [pk] (bitcoin_varint / asn1_len / asn1_len8), built over
+   [serialize_seq_all_bytes] (the identity). Used by QuackyDucky for byte
+   payloads whose length is encoded by a variable-width integer. *)
 
 #push-options "--z3rlimit 128"
 
@@ -847,7 +891,7 @@ fn copyful_parse_bounded_seq_vlgen_payload
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
   (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
-: PPB.copyful_parse #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_vldata_strong_t vmin vmax #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes) vmatch_copy_seqbytes (parse_bounded_vlgen vmin vmax pk serialize_seq_all_bytes) (vldata_seq_all_bytes_conv vmin vmax)
+: PPB.copyful_parse #(lvec byte) #(Seq.seq byte) #(parse_bounded_vldata_strong_t vmin vmax #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes) vmatch_copy_seqbytes (parse_bounded_vlgen vmin vmax pk serialize_seq_all_bytes) (vldata_seq_all_bytes_conv vmin vmax)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -873,7 +917,7 @@ fn copyful_parse_bounded_seq_vlgenbytes
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
   (u: squash (sk.parser_kind_subkind == Some ParserStrong))
-: PPB.copyful_parse #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t vmin vmax) vmatch_copy_seqbytes (parse_bounded_seq_vlgenbytes vmin vmax pk) (seq_vlbytes_conv vmin vmax)
+: PPB.copyful_parse #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t vmin vmax) vmatch_copy_seqbytes (parse_bounded_seq_vlgenbytes vmin vmax pk) (seq_vlbytes_conv vmin vmax)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -941,9 +985,9 @@ fn l2r_safe_writer_bounded_seq_vlgenbytes
   (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
   (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
   (hw: LPS.l2r_leaf_writer ssk)
-: PPB.l2r_safe_writer #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t vmin vmax) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlgenbytes vmin vmax pk) (serialize_bounded_seq_vlgenbytes vmin vmax ssk) (seq_vlbytes_conv vmin vmax)
+: PPB.l2r_safe_writer #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t vmin vmax) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlgenbytes vmin vmax pk) (serialize_bounded_seq_vlgenbytes vmin vmax ssk) (seq_vlbytes_conv vmin vmax)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (out: S.slice byte)
   (#v: Ghost.erased (Seq.seq byte))
@@ -1001,7 +1045,7 @@ fn l2r_safe_writer_bounded_seq_vlgenbytes
         SZ.fits_lte (SZ.v h + SZ.v n) (SZ.v lout);
         let tot = SZ.add h n;
         (* close the postcondition: written prefix == serialized bytes *)
-        PPBY.vlbytes_prefix_slice_lemma hdr (Ghost.reveal y)
+        vlbytes_prefix_slice_lemma hdr (Ghost.reveal y)
           (Seq.slice (Ghost.reveal v) (SZ.v h + SZ.v n) (Seq.length (Ghost.reveal v)));
         perr := false;
         fold (vmatch_copy_seqbytes x y);
@@ -1034,9 +1078,9 @@ fn l2r_safe_size_bounded_seq_vlgenbytes
   (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
   (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
   (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
-: PPB.l2r_safe_size #(PPBY.lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t vmin vmax) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlgenbytes vmin vmax pk) (serialize_bounded_seq_vlgenbytes vmin vmax ssk) (seq_vlbytes_conv vmin vmax)
+: PPB.l2r_safe_size #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t vmin vmax) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlgenbytes vmin vmax pk) (serialize_bounded_seq_vlgenbytes vmin vmax ssk) (seq_vlbytes_conv vmin vmax)
 =
-  (x: PPBY.lvec byte)
+  (x: lvec byte)
   (#y: Ghost.erased (Seq.seq byte))
   (perr: R.ref bool)
 {

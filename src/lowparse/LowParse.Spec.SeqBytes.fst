@@ -190,13 +190,11 @@ let length_serialize_bounded_seq_vlbytes
     x
 
 (* ----------------------------------------------------------------------------
-   Seq-native bounded vlbytes with an EXPLICIT (possibly oversized) fixed-width
-   length header [l >= log256' max]. Mirrors the FStar.Bytes
-   [parse_bounded_vlbytes'] / [serialize_bounded_vlbytes'] family
-   (LowParse.Spec.Bytes) with [serialize_all_bytes -> serialize_seq_all_bytes]
-   (the identity), so the value type is [parse_bounded_seq_vlbytes_t] over
-   [Seq.seq byte] instead of [FStar.Bytes]. Used by QuackyDucky under -pulse for
-   staged implicit-sum byte payloads whose header width exceeds the value bound.
+   Bounded vlbytes with an EXPLICIT (possibly oversized) fixed-width
+   length header [l >= log256' max], built over [serialize_seq_all_bytes] (the
+   identity), so the value type is [parse_bounded_seq_vlbytes_t] over
+   [Seq.seq byte]. Used by QuackyDucky for staged implicit-sum byte payloads
+   whose header width exceeds the value bound.
    ---------------------------------------------------------------------------- *)
 
 let parse_bounded_seq_vlbytes_aux
@@ -270,11 +268,9 @@ let serialize_bounded_seq_vlbytes_gen_bytes_eq
     y
 
 (* ----------------------------------------------------------------------------
-   Seq-native bounded vlbytes framed by a GENERIC (variable-width) length header
-   parser [pk]. Mirrors the FStar.Bytes [parse_bounded_vlgenbytes] /
-   [serialize_bounded_vlgenbytes] family with
-   [serialize_all_bytes -> serialize_seq_all_bytes]. Used by QuackyDucky under
-   -pulse for byte payloads whose length is encoded by bitcoin_varint / asn1_len
+   Bounded vlbytes framed by a GENERIC (variable-width) length header
+   parser [pk], built over [serialize_seq_all_bytes]. Used by QuackyDucky
+   for byte payloads whose length is encoded by bitcoin_varint / asn1_len
    / asn1_len8.
    ---------------------------------------------------------------------------- *)
 

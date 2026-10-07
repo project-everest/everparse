@@ -5,7 +5,7 @@ module LowParseExample12
    with DER length encoding and bounded vlbytes payload. *)
 
 include LowParse.Spec.VLGen
-include LowParse.Spec.Bytes
+include LowParse.Spec.SeqBytes
 include LowParse.Spec.DER
 open FStar.Tactics.V2
 open Pulse.Lib.Pervasives
@@ -20,26 +20,26 @@ module PPB = LowParse.PulseParse.Base
 module PPC = LowParse.PulseParse.Combinators
 module PPBI = LowParse.PulseParse.BoundedInt
 module PPVG = LowParse.PulseParse.VLGen
-module PPBY = LowParse.PulseParse.Bytes
+module LSeqB = LowParse.Pulse.SeqBytes
 module PPDER = LowParse.Pulse.DER
 module I32 = FStar.Int32
 module U8 = FStar.UInt8
 
 inline_for_extraction
 noextract
-type t = parse_bounded_vlbytes_t 0 512
+type t = parse_bounded_seq_vlbytes_t 0 512
 
 inline_for_extraction
 noextract
 let parse_t_kind : parser_kind = strong_parser_kind 3 517 None
 
-let parse_t' = parse_vlgen 0 1023 (parse_bounded_der_length32 0 1023) (serialize_bounded_vlbytes 0 512)
+let parse_t' = parse_vlgen 0 1023 (parse_bounded_der_length32 0 1023) (serialize_bounded_seq_vlbytes 0 512)
 
 let kind_eq : squash (parse_t_kind == get_parser_kind parse_t') = _ by (FStar.Tactics.trefl ())
 
 let parse_t : parser parse_t_kind t = parse_t'
 
-let serialize_t : serializer parse_t = serialize_vlgen 0 1023 (serialize_bounded_der_length32 0 1023) (serialize_bounded_vlbytes 0 512)
+let serialize_t : serializer parse_t = serialize_vlgen 0 1023 (serialize_bounded_der_length32 0 1023) (serialize_bounded_seq_vlbytes 0 512)
 
 (* leaf_readers *)
 
@@ -75,8 +75,8 @@ let validate_t : LPS.validator parse_t =
   PPVG.validate_vlgen 0 1023
     (PPDER.validate_bounded_der_length32 0ul 1023ul (LPI.read_u8' ()) leaf_read_bi_serialized)
     leaf_read_der
-    (serialize_bounded_vlbytes 0 512)
-    (PPBY.validate_bounded_vlbytes 0 512 (leaf_read_bi 2))
+    (serialize_bounded_seq_vlbytes 0 512)
+    (LSeqB.validate_bounded_seq_vlbytes 0 512 (leaf_read_bi 2))
     ()
 
 (* Pulse jumper *)
@@ -87,7 +87,7 @@ let jump_t : LPS.jumper parse_t =
   PPVG.jump_vlgen 0 1023
     (PPDER.jump_bounded_der_length32 0 1023 leaf_read_u8)
     leaf_read_der
-    (serialize_bounded_vlbytes 0 512)
+    (serialize_bounded_seq_vlbytes 0 512)
     ()
 
 fn main ()
