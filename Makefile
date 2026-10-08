@@ -112,7 +112,7 @@ else
 endif
 
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
-#	+$(MAKE) -C doc 3d-test
+	+$(MAKE) -C doc 3d-test
 
 # KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
 # what 3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
