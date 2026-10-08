@@ -10,13 +10,13 @@ extern "C" {
 #include "arch_flags.h"
 #include "EverParse.h"
 
-uint64_t
+uint8_t
 PointArch3264ValidatePoint(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos
 );
 
 #if defined(__cplusplus)

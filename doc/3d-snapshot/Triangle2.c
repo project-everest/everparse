@@ -4,41 +4,63 @@
 
 #include "EverParse.h"
 
-uint64_t
+uint8_t
 Triangle2ValidateTriangle(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos
 )
 {
   /* Validating field corners */
-  BOOLEAN hasBytesForCorners = (InputLength - StartPosition) >= (uint64_t)12U;
-  uint64_t resForCorners;
-  uint64_t positionAfterCornersOrError;
-  if (hasBytesForCorners)
+  size_t p1 = *SlPos;
+  uint64_t fieldStartTriangle = (uint64_t)p1;
+  uint64_t startPositionTriangle = fieldStartTriangle;
+  size_t pos = (size_t)0U;
+  size_t p0 = pos;
+  size_t p2 = *SlPos;
+  size_t rem = SlLen - p2;
+  BOOLEAN hasBytes = p0 <= rem && (size_t)12U <= (rem - p0);
+  uint8_t res;
+  uint8_t resultAfterTriangle;
+  size_t consumed;
+  size_t p;
+  size_t p_;
+  if (hasBytes)
   {
-    resForCorners = StartPosition + (uint64_t)12U;
+    pos = p0 + (size_t)12U;
+    res = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
   {
-    resForCorners =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
+    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  positionAfterCornersOrError = resForCorners;
-  if (EverParseIsSuccess(positionAfterCornersOrError))
+  if (res == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    return positionAfterCornersOrError;
+    consumed = pos;
+    p = *SlPos;
+    p_ = p + consumed;
+    *SlPos = p_;
+    resultAfterTriangle = EVERPARSE_VALIDATOR_SUCCESS;
+  }
+  else
+  {
+    resultAfterTriangle = res;
+  }
+  if (resultAfterTriangle == EVERPARSE_VALIDATOR_SUCCESS)
+  {
+    return resultAfterTriangle;
   }
   ErrorHandlerFn("_triangle",
     "corners",
-    EverParseErrorReasonOfResult(positionAfterCornersOrError),
-    EverParseGetValidatorErrorKind(positionAfterCornersOrError),
+    EverParseErrorReasonOfResult(resultAfterTriangle),
+    resultAfterTriangle,
     Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterCornersOrError;
+    SlBase,
+    SlLen,
+    SlPos,
+    startPositionTriangle);
+  return resultAfterTriangle;
 }
 

@@ -220,14 +220,9 @@ let get_z3_skip_c_initializers () : ML bool =
 let get_use_error_handler_macro () : ML bool =
   !use_error_handler_macro
 
-let uses_pulse_backend () : ML bool =
-  match get_api () with
-  | ApiLegacyLowstar -> false
-  | ApiPulse | ApiLowstar -> true
-
 let uses_pulse_api () : ML bool =
   match get_api () with
-  | ApiLegacyLowstar | ApiLowstar -> false
+  | ApiLowstar -> false
   | ApiPulse -> true
 
 let pulse_backend_module () : ML string =

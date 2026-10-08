@@ -145,7 +145,7 @@ let kind_nlist (#b:_) (#w:_) (kelt:parser_kind b w) (nopt:option nat)
 
 let kind_all_bytes
   : parser_kind false WeakKindConsumesAll
-  = LowParse.Spec.Bytes.parse_all_bytes_kind
+  = LowParse.Spec.SeqBytes.parse_seq_all_bytes_kind
 
 let kind_t_at_most
   : parser_kind false WeakKindStrongPrefix

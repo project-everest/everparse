@@ -91,8 +91,6 @@ val get_z3_skip_c_initializers: unit -> ML bool
 
 val get_use_error_handler_macro: unit -> ML bool
 
-val uses_pulse_backend: unit -> ML bool
-
 val uses_pulse_api: unit -> ML bool
 
 val pulse_backend_module: unit -> ML string

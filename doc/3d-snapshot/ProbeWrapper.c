@@ -1,6 +1,11 @@
 #include "ProbeWrapper.h"
 #include "EverParse.h"
 #include "Probe.h"
+#include "EverParsePulse.h"
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(size_t) >= sizeof(uint32_t), "EverParse: size_t must be at least as wide as uint32_t");
+_Static_assert(sizeof(size_t) <= sizeof(uint64_t), "EverParse: size_t must be no wider than uint64_t");
+#endif
 #include "Probe_ExternalAPI.h"
 
 void ProbeEverParseError(const char *StructName, const char *FieldName, const char *Reason);
@@ -10,31 +15,37 @@ void DefaultErrorHandler(
 	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
-	uint64_t error_code,
+	uint8_t error_code,
 	uint8_t *context,
-	EVERPARSE_INPUT_BUFFER input,
+	uint8_t *base,
+	size_t len,
+	size_t *pos,
 	uint64_t start_pos)
 {
 	EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;
+	(void) len;
+	(void) pos;
 	EverParseDefaultErrorHandler(
 		typename_s,
 		fieldname,
 		reason,
-		error_code,
+		(uint64_t)error_code,
 		frame,
-		input,
+		base,
 		start_pos
 	);
 }
 
 BOOLEAN ProbeCheckS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateS(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateS(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -47,12 +58,14 @@ BOOLEAN ProbeCheckS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 
 BOOLEAN ProbeCheckCompleteS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateS(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateS(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -60,7 +73,7 @@ BOOLEAN ProbeCheckCompleteS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_S", "", "unexpected trailing bytes");
 		return FALSE;
@@ -70,12 +83,14 @@ BOOLEAN ProbeCheckCompleteS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_
 
 BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateU(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateU(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -88,12 +103,14 @@ BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT
 
 BOOLEAN ProbeCheckCompleteU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateU(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateU(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -101,7 +118,7 @@ BOOLEAN ProbeCheckCompleteU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_U", "", "unexpected trailing bytes");
 		return FALSE;
@@ -111,12 +128,14 @@ BOOLEAN ProbeCheckCompleteU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER
 
 BOOLEAN ProbeCheckV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateV(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateV(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -129,12 +148,14 @@ BOOLEAN ProbeCheckV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT
 
 BOOLEAN ProbeCheckCompleteV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateV(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateV(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -142,7 +163,7 @@ BOOLEAN ProbeCheckCompleteV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_V", "", "unexpected trailing bytes");
 		return FALSE;
@@ -152,12 +173,14 @@ BOOLEAN ProbeCheckCompleteV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER
 
 static BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateIndirect( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateIndirect( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -208,12 +231,14 @@ uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint6
 
 static BOOLEAN ProbeCheckCompleteIndirect(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateIndirect( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateIndirect( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -221,7 +246,7 @@ static BOOLEAN ProbeCheckCompleteIndirect(uint8_t *base, uint32_t len) {
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_Indirect", "", "unexpected trailing bytes");
 		return FALSE;
@@ -269,12 +294,14 @@ uint32_t ProbeProbeAndCopyCheckCompleteIndirect(EVERPARSE_COPY_BUFFER_T probeDes
 
 BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -287,12 +314,14 @@ BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 
 BOOLEAN ProbeCheckCompleteI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -300,7 +329,7 @@ BOOLEAN ProbeCheckCompleteI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_I", "", "unexpected trailing bytes");
 		return FALSE;
@@ -310,12 +339,14 @@ BOOLEAN ProbeCheckCompleteI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_
 
 static BOOLEAN ProbeCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -404,12 +435,14 @@ uint32_t ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVE
 
 static BOOLEAN ProbeCheckCompleteMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -417,7 +450,7 @@ static BOOLEAN ProbeCheckCompleteMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVER
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_MultiProbe", "", "unexpected trailing bytes");
 		return FALSE;
@@ -503,12 +536,14 @@ uint32_t ProbeProbeAndCopyAltCheckCompleteMultiProbe(EVERPARSE_COPY_BUFFER_T des
 
 BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -521,12 +556,14 @@ BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t l
 
 BOOLEAN ProbeCheckCompleteMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -534,7 +571,7 @@ BOOLEAN ProbeCheckCompleteMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, ui
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_MaybeT", "", "unexpected trailing bytes");
 		return FALSE;
@@ -544,12 +581,14 @@ BOOLEAN ProbeCheckCompleteMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, ui
 
 BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -562,12 +601,14 @@ BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_
 
 BOOLEAN ProbeCheckCompleteCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -575,7 +616,7 @@ BOOLEAN ProbeCheckCompleteCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base,
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_CoercePtr", "", "unexpected trailing bytes");
 		return FALSE;
@@ -585,12 +626,14 @@ BOOLEAN ProbeCheckCompleteCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base,
 
 static BOOLEAN ProbeCheckProbeOnly(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateProbeOnly( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateProbeOnly( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -641,12 +684,14 @@ uint32_t ProbeProbeAndCopyCheckProbeOnly(EVERPARSE_COPY_BUFFER_T probeDest, uint
 
 static BOOLEAN ProbeCheckCompleteProbeOnly(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateProbeOnly( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateProbeOnly( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -654,7 +699,7 @@ static BOOLEAN ProbeCheckCompleteProbeOnly(uint8_t *base, uint32_t len) {
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_ProbeOnly", "", "unexpected trailing bytes");
 		return FALSE;
@@ -702,12 +747,14 @@ uint32_t ProbeProbeAndCopyCheckCompleteProbeOnly(EVERPARSE_COPY_BUFFER_T probeDe
 
 BOOLEAN ProbeCheckBothEntrypoints(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateBothEntrypoints( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateBothEntrypoints( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -758,12 +805,14 @@ uint32_t ProbeProbeAndCopyCheckBothEntrypoints(EVERPARSE_COPY_BUFFER_T probeDest
 
 BOOLEAN ProbeCheckCompleteBothEntrypoints(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateBothEntrypoints( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateBothEntrypoints( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -771,7 +820,7 @@ BOOLEAN ProbeCheckCompleteBothEntrypoints(uint8_t *base, uint32_t len) {
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_BothEntrypoints", "", "unexpected trailing bytes");
 		return FALSE;
@@ -819,12 +868,14 @@ uint32_t ProbeProbeAndCopyCheckCompleteBothEntrypoints(EVERPARSE_COPY_BUFFER_T p
 
 BOOLEAN ValidateMyData(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateNamedPlainEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateNamedPlainEp( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -837,12 +888,14 @@ BOOLEAN ValidateMyData(uint8_t *base, uint32_t len) {
 
 BOOLEAN ValidateMyDataComplete(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateNamedPlainEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateNamedPlainEp( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -850,7 +903,7 @@ BOOLEAN ValidateMyDataComplete(uint8_t *base, uint32_t len) {
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_NamedPlainEp", "", "unexpected trailing bytes");
 		return FALSE;
@@ -860,12 +913,14 @@ BOOLEAN ValidateMyDataComplete(uint8_t *base, uint32_t len) {
 
 static BOOLEAN ProbeCheckNamedProbeEp(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateNamedProbeEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateNamedProbeEp( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -916,12 +971,14 @@ uint32_t ProbeMyData(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint
 
 static BOOLEAN ProbeCheckCompleteNamedProbeEp(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateNamedProbeEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateNamedProbeEp( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -929,7 +986,7 @@ static BOOLEAN ProbeCheckCompleteNamedProbeEp(uint8_t *base, uint32_t len) {
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_NamedProbeEp", "", "unexpected trailing bytes");
 		return FALSE;
@@ -977,12 +1034,14 @@ uint32_t ProbeMyDataComplete(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAd
 
 BOOLEAN CheckAll(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateNamedBothEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateNamedBothEp( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -1033,12 +1092,14 @@ uint32_t ProbeAll(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_
 
 BOOLEAN CheckAllComplete(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = ProbeValidateNamedBothEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = ProbeValidateNamedBothEp( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -1046,7 +1107,7 @@ BOOLEAN CheckAllComplete(uint8_t *base, uint32_t len) {
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		ProbeEverParseError("_NamedBothEp", "", "unexpected trailing bytes");
 		return FALSE;

@@ -9,16 +9,16 @@ extern "C" {
 
 #include "EverParse.h"
 
-uint64_t
+uint8_t
 SpecializeDep1ValidateEntry(
   BOOLEAN Requestor32,
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLen,
-  uint64_t StartPosition
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos
 );
 
 #if defined(__cplusplus)

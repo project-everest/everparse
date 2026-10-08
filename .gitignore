@@ -31,3 +31,6 @@ nuget_package
 .opam
 .opam.tmp
 opam-env.Makefile
+
+# Python bytecode caches, from the test scripts under share/everparse/tests
+__pycache__/

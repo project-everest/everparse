@@ -4,107 +4,202 @@
 
 #include "EverParse.h"
 
-uint64_t
+uint8_t
 ReadPairValidatePair(
   uint32_t *X,
   uint32_t *Y,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos
 )
 {
   /* Validating field first */
+  size_t p1 = *SlPos;
+  uint64_t fieldStartPair = (uint64_t)p1;
+  uint64_t startPositionPair = fieldStartPair;
+  size_t pos0 = (size_t)0U;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytesForFirst = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterFirst0;
-  uint64_t positionAfterFirstOrError;
-  uint32_t first;
-  BOOLEAN actionResultForFirst;
-  uint64_t positionAfterFirst;
-  BOOLEAN hasBytesForSecond;
-  uint64_t positionAfterSecond;
-  uint64_t positionAfterSecondOrError;
+  size_t p00 = pos0;
+  size_t p2 = *SlPos;
+  size_t rem0 = SlLen - p2;
+  BOOLEAN hasBytes0 = p00 <= rem0 && (size_t)4U <= (rem0 - p00);
+  uint8_t resultAfterfirst0;
+  uint8_t resultAfterPair;
+  size_t p01;
+  size_t m0;
+  uint8_t *sub0;
+  size_t pos_;
+  uint8_t first0;
+  size_t pos_1;
+  uint8_t first10;
+  size_t pos_2;
+  uint8_t first20;
+  uint8_t first30;
+  uint32_t n0;
+  uint32_t bfirst0;
+  uint32_t n1;
+  uint32_t bfirst1;
+  uint32_t n2;
+  uint32_t bfirst2;
+  uint32_t res0;
+  uint32_t first4;
+  BOOLEAN actionSuccessFirst;
+  uint8_t resultAfterfirst;
+  size_t p3;
+  uint64_t fieldStartPair0;
+  uint64_t startPositionPair0;
+  size_t pos;
+  size_t p02;
+  size_t p;
+  size_t rem;
+  BOOLEAN hasBytes;
+  uint8_t resultAftersecond;
+  uint8_t resultAfterPair0;
+  size_t p0;
+  size_t m;
+  uint8_t *sub;
+  size_t pos_0;
+  uint8_t first;
+  size_t pos_10;
+  uint8_t first1;
+  size_t pos_20;
+  uint8_t first2;
+  uint8_t first3;
+  uint32_t n3;
+  uint32_t bfirst3;
+  uint32_t n4;
+  uint32_t bfirst4;
+  uint32_t n;
+  uint32_t bfirst;
+  uint32_t res;
   uint32_t second;
-  BOOLEAN actionResultForSecond;
-  if (hasBytesForFirst)
+  BOOLEAN actionSuccessSecond;
+  if (hasBytes0)
   {
-    positionAfterFirst0 = StartPosition + 4ULL;
+    pos0 = p00 + (size_t)4U;
+    resultAfterfirst0 = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
   {
-    positionAfterFirst0 =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
+    resultAfterfirst0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (EverParseIsError(positionAfterFirst0))
+  if (resultAfterfirst0 == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    positionAfterFirstOrError = positionAfterFirst0;
+    p01 = *SlPos;
+    m0 = p01 + (size_t)4U;
+    sub0 = SlBase + p01;
+    pos_ = (size_t)1U;
+    first0 = sub0[0U];
+    pos_1 = pos_ + (size_t)1U;
+    first10 = sub0[pos_];
+    pos_2 = pos_1 + (size_t)1U;
+    first20 = sub0[pos_1];
+    first30 = sub0[pos_2];
+    n0 = (uint32_t)first30;
+    bfirst0 = (uint32_t)first20;
+    n1 = bfirst0 + n0 * 256U;
+    bfirst1 = (uint32_t)first10;
+    n2 = bfirst1 + n1 * 256U;
+    bfirst2 = (uint32_t)first0;
+    res0 = bfirst2 + n2 * 256U;
+    *SlPos = m0;
+    first4 = res0;
+    *X = first4;
+    actionSuccessFirst = TRUE;
+    resultAfterPair =
+      actionSuccessFirst ? EVERPARSE_VALIDATOR_SUCCESS
+                         : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
   }
   else
   {
-    first = Load32Le(Input + (uint32_t)StartPosition);
-    *X = first;
-    actionResultForFirst = TRUE;
-    KRML_MAYBE_UNUSED_VAR(actionResultForFirst);
-    positionAfterFirstOrError = positionAfterFirst0;
+    resultAfterPair = resultAfterfirst0;
   }
-  if (EverParseIsSuccess(positionAfterFirstOrError))
+  if (resultAfterPair == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    positionAfterFirst = positionAfterFirstOrError;
+    resultAfterfirst = resultAfterPair;
   }
   else
   {
     ErrorHandlerFn("_Pair",
       "first",
-      EverParseErrorReasonOfResult(positionAfterFirstOrError),
-      EverParseGetValidatorErrorKind(positionAfterFirstOrError),
+      EverParseErrorReasonOfResult(resultAfterPair),
+      resultAfterPair,
       Ctxt,
-      Input,
-      StartPosition);
-    positionAfterFirst = positionAfterFirstOrError;
+      SlBase,
+      SlLen,
+      SlPos,
+      startPositionPair);
+    resultAfterfirst = resultAfterPair;
   }
-  if (EverParseIsError(positionAfterFirst))
+  if (resultAfterfirst == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    return positionAfterFirst;
+    /* Validating field second */
+    p3 = *SlPos;
+    fieldStartPair0 = (uint64_t)p3;
+    startPositionPair0 = fieldStartPair0;
+    pos = (size_t)0U;
+    /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+    p02 = pos;
+    p = *SlPos;
+    rem = SlLen - p;
+    hasBytes = p02 <= rem && (size_t)4U <= (rem - p02);
+    if (hasBytes)
+    {
+      pos = p02 + (size_t)4U;
+      resultAftersecond = EVERPARSE_VALIDATOR_SUCCESS;
+    }
+    else
+    {
+      resultAftersecond = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    }
+    if (resultAftersecond == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      p0 = *SlPos;
+      m = p0 + (size_t)4U;
+      sub = SlBase + p0;
+      pos_0 = (size_t)1U;
+      first = sub[0U];
+      pos_10 = pos_0 + (size_t)1U;
+      first1 = sub[pos_0];
+      pos_20 = pos_10 + (size_t)1U;
+      first2 = sub[pos_10];
+      first3 = sub[pos_20];
+      n3 = (uint32_t)first3;
+      bfirst3 = (uint32_t)first2;
+      n4 = bfirst3 + n3 * 256U;
+      bfirst4 = (uint32_t)first1;
+      n = bfirst4 + n4 * 256U;
+      bfirst = (uint32_t)first;
+      res = bfirst + n * 256U;
+      *SlPos = m;
+      second = res;
+      *Y = second;
+      actionSuccessSecond = TRUE;
+      resultAfterPair0 =
+        actionSuccessSecond ? EVERPARSE_VALIDATOR_SUCCESS
+                            : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+    }
+    else
+    {
+      resultAfterPair0 = resultAftersecond;
+    }
+    if (resultAfterPair0 == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      return resultAfterPair0;
+    }
+    ErrorHandlerFn("_Pair",
+      "second",
+      EverParseErrorReasonOfResult(resultAfterPair0),
+      resultAfterPair0,
+      Ctxt,
+      SlBase,
+      SlLen,
+      SlPos,
+      startPositionPair0);
+    return resultAfterPair0;
   }
-  /* Validating field second */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytesForSecond = (InputLength - positionAfterFirst) >= 4ULL;
-  if (hasBytesForSecond)
-  {
-    positionAfterSecond = positionAfterFirst + 4ULL;
-  }
-  else
-  {
-    positionAfterSecond =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterFirst);
-  }
-  if (EverParseIsError(positionAfterSecond))
-  {
-    positionAfterSecondOrError = positionAfterSecond;
-  }
-  else
-  {
-    second = Load32Le(Input + (uint32_t)positionAfterFirst);
-    *Y = second;
-    actionResultForSecond = TRUE;
-    KRML_MAYBE_UNUSED_VAR(actionResultForSecond);
-    positionAfterSecondOrError = positionAfterSecond;
-  }
-  if (EverParseIsSuccess(positionAfterSecondOrError))
-  {
-    return positionAfterSecondOrError;
-  }
-  ErrorHandlerFn("_Pair",
-    "second",
-    EverParseErrorReasonOfResult(positionAfterSecondOrError),
-    EverParseGetValidatorErrorKind(positionAfterSecondOrError),
-    Ctxt,
-    Input,
-    positionAfterFirst);
-  return positionAfterSecondOrError;
+  return resultAfterfirst;
 }
 

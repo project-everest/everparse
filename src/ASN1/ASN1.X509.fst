@@ -3,6 +3,7 @@ module ASN1.X509
 
 module U32 = FStar.UInt32
 module List = FStar.List.Tot
+module Seq = FStar.Seq
 
 open ASN1.Base
 open ASN1.Syntax
@@ -345,7 +346,7 @@ let iPAddressChoice
 
 let iPAddressFamily
 = asn1_sequence [
-    "addressFamily" *^ (PLAIN ^: (mk_restricted_field asn1_octetstring (fun s -> let l = Bytes.length s in 2 <= l && l <= 3)));
+    "addressFamily" *^ (PLAIN ^: (mk_restricted_field asn1_octetstring (fun s -> let l = Seq.length s in 2 <= l && l <= 3)));
     "ipAddressChoice" *^ (PLAIN ^: iPAddressChoice)]
     (_ by (seq_tac ()))
 

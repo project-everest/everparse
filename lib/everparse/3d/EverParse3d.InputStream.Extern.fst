@@ -3,10 +3,9 @@ open Pulse.Lib.Pervasives
 #lang-pulse
 
 (* The [extern] backend: the input stream is an abstract, client-provided C
-   object. Everything about it is assumed, exactly as in the Low* version
-   (src/3d/prelude/extern/EverParse3d.InputStream.Extern.Base.fsti): the C
-   client is trusted to implement the EverParseHas/Read/Peep/Skip/Empty
-   primitives declared in EverParse.h.
+   object. Everything about it is assumed: the C client is trusted to
+   implement the EverParseHas/Read/Peep/Skip/Empty primitives declared in
+   EverParse.h.
 
    The stream carries its own length on the C side, so in the common case
    there is nothing for [len_t] to hold. It cannot be [unit] all the same:
@@ -23,10 +22,8 @@ open Pulse.Lib.Pervasives
                "unbounded" tag: a zero-length view at absolute position 0 is
                legal and must be distinguishable from it.)
 
-   This mirrors the Low* backend, whose stream record carries a
-   [has_length: bool] / [length: pos_t] pair and branches on it in exactly the
-   same three places (src/3d/prelude/extern/EverParse3d.InputStream.Extern.fst,
-   [has], [has_at], [empty]). A pair is not an option here: [len_t] is passed
+   A [has_length: bool] / [length: pos_t] pair would express the same thing,
+   but is not an option here: [len_t] is passed
    by value to every validator, and a struct would be monomorphized by KaRaMeL
    into whichever *generated* module used it first -- the very thing the
    [trunc_t] design in EverParse3d.InputStream.Base exists to avoid.

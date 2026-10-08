@@ -28,8 +28,9 @@ def main():
     assert "--api" in help_text and "pulse|lowstar" in help_text
     assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
-    # The legacy Low* backend is gone: pulse is the default and
-    # Options.Base.valid_api no longer accepts legacy_lowstar.
+    # The legacy Low* backend is gone: pulse is the default, and
+    # legacy_lowstar is rejected like any other unknown backend because
+    # Options.Base.valid_api no longer accepts it.
     for args in [("--pulse",), ("--no_pulse",), ("--api",),
                  ("--api", "invalid"), ("--api", "legacy_lowstar"),
                  ("--__micro_step", "copy_pulse_internal_h")]:
@@ -54,10 +55,11 @@ def main():
             output.mkdir()
             run(*options, "--odir", output, "--no_copy_everparse_h", source)
 
-        # No --api, and --no_api after one, both select the default, pulse.
+        # Omitting --api now selects pulse, and --no_api resets an earlier
+        # --api back to that default, so all three must agree byte for byte.
         for extension in [".fst", ".fsti", "Wrapper.c", "Wrapper.h"]:
-            expected = (root / "pulse" / f"ApiChoice{extension}").read_bytes()
-            for name in ["default", "reset"]:
+            expected = (root / "default" / f"ApiChoice{extension}").read_bytes()
+            for name in ["pulse", "reset"]:
                 assert (root / name / f"ApiChoice{extension}").read_bytes() == expected
         assert "Pulse.Lib.Pervasives" in (
             root / "pulse" / "ApiChoice.fst"
@@ -65,11 +67,13 @@ def main():
         assert "EverParsePulse.h" in (
             root / "pulse" / "ApiChoiceWrapper.c"
         ).read_text()
-        assert "Pulse.Lib.Pervasives" in (
-            root / "lowstar" / "ApiChoice.fst"
-        ).read_text()
+        # --api lowstar is Pulse-implemented too, but exposes the Low*-compatible
+        # C ABI rather than the native Pulse one.
         assert "EverParsePulse.h" not in (
             root / "lowstar" / "ApiChoiceWrapper.c"
+        ).read_text()
+        assert "Pulse.Lib.Pervasives" in (
+            root / "lowstar" / "ApiChoice.fst"
         ).read_text()
         assert "EverParse3d.Lowstar.BufferAdapter" in (
             root / "lowstar" / "ApiChoice.fst"
@@ -130,7 +134,7 @@ def main():
                 )
             run(*options, "--odir", output, "--__micro_step", "save_hashes", source)
             run(*options, "--odir", output, "--check_hashes", "weak", source)
-        # The default is pulse, so its hashes are the pulse ones.
+        # Omitting --api now selects pulse, so the two must agree both ways.
         run("--api", "pulse", "--odir", root / "default",
             "--check_hashes", "weak", source)
         run("--odir", root / "pulse", "--check_hashes", "weak", source)

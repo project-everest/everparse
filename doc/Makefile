@@ -14,7 +14,18 @@ FSTAR_EXE ?= fstar.exe
 3D_FILES=$(filter-out $(3D_EXCLUDE) $(3D_FILES_WITH_CONFIG),$(wildcard *.3d))
 3D_MODULES=$(basename $(3D_FILES) $(3D_FILES_WITH_CONFIG))
 3D_MODULES_AND_WRAPPERS=$(3D_MODULES) $(addsuffix Wrapper,$(3D_MODULES))
-3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS))) $(addsuffix StaticAssertions.c,AlignAuto Align Specialize1StandaloneAuto)
+3D_STATIC_ASSERTIONS=$(addsuffix StaticAssertions.c,AlignAuto Align Specialize1StandaloneAuto)
+3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS))) $(3D_STATIC_ASSERTIONS)
+
+# Files 3d emits itself, as opposed to the ones KaRaMeL extracts. KaRaMeL's
+# Makefile.basic took ALL_C_FILES from the Makefile.include it generated
+# alongside, which listed only its own output, so these were never compiled
+# here. EverParse's Makefile.basic instead defaults ALL_C_FILES to
+# $(wildcard *.c), so they have to be excluded explicitly to keep the compile
+# set the same. This is not incidental for the static assertions: AlignBase.h
+# and Align.3d deliberately disagree, and 3d-lang.rst documents
+# `sizeof(TLV) == 10` as an assertion the reader is *expected* to see fail.
+3D_NOT_COMPILED=$(3D_STATIC_ASSERTIONS) $(addsuffix Wrapper.c,$(3D_MODULES))
 3D_DIFF=$(addsuffix .diff,$(3D_C_AND_H_FILES))
 3D_OUT=$(addprefix out/,$(3D_C_AND_H_FILES))
 3D_SNAPSHOT=$(addprefix 3d-snapshot/,$(3D_C_AND_H_FILES))
@@ -67,7 +78,7 @@ endif
 	$(3D) --odir out --batch $(3D_FILES)
 	$(3D) --odir out --batch $(3D_FILES_WITH_CONFIG) --config $(3D_CONFIG)
 	cp $(AUX_HEADERS) out
-	+$(MAKE) -C out -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
+	+$(MAKE) -C out -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic BLACKLIST='$(3D_NOT_COMPILED)' USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
 $(3D_OUT): out/%: 3d-do-tests
 

@@ -2,6 +2,7 @@ module ASN1.Base
 open LowParse.Tot.Base
 open LowParse.Tot.Combinators
 
+open ASN1.Bytes
 open ASN1.Spec.Time
 open ASN1.Spec.Content.INTEGER
 
@@ -10,7 +11,6 @@ open ASN1.Spec.Content.INTEGER
 module U32 = FStar.UInt32
 module I32 = FStar.Int32
 module U8 = FStar.UInt8
-module B = FStar.Bytes
 module Seq = FStar.Seq
 module List = FStar.List.Tot
 
@@ -70,13 +70,13 @@ let pow2_le (n:nat {n < 8}) : Lemma (pow2 n < 256) = pow2_mono n 8
 type asn1_bitstring_t = 
 | BYTES_WITH_UNUSEDBITS :
   unused : U8.t {0 <= (U8.v unused) /\ (U8.v unused) <= 7} ->
-  b : B.bytes {let _ = pow2_le (U8.v unused) in
+  b : asn1_bytes {let _ = pow2_le (U8.v unused) in
                (U8.v unused = 0) \/ 
-               ((U8.v unused > 0) /\ B.length b > 0 /\ 
-                FStar.UInt.mod (U8.v (B.index b ((B.length b) - 1))) (pow2 (U8.v unused)) = 0)} -> asn1_bitstring_t
+               ((U8.v unused > 0) /\ Seq.length b > 0 /\ 
+                FStar.UInt.mod (U8.v (Seq.index b ((Seq.length b) - 1))) (pow2 (U8.v unused)) = 0)} -> asn1_bitstring_t
 //TODO: use bit op
 
-type asn1_octetstring_t = B.bytes
+type asn1_octetstring_t = asn1_bytes
 
 type utf8_cp_t = (x : U32.t {U32.v x < pow2 21})
 
@@ -113,9 +113,9 @@ type asn1_oid_t =
 
 // type asn1_roid_t = unit
 
-type asn1_utctime_t = (b : B.bytes {is_valid_ASN1UTCTIME b})
+type asn1_utctime_t = (b : asn1_bytes {is_valid_ASN1UTCTIME b})
 
-type asn1_generalizedtime_t = (b : B.bytes {is_valid_ASN1GENERALIZEDTIME b})
+type asn1_generalizedtime_t = (b : asn1_bytes {is_valid_ASN1GENERALIZEDTIME b})
 
 let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
   match k with

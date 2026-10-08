@@ -29,9 +29,9 @@ module H = Hashtable
 let use_error_handler () : ML bool =
   not (Options.get_use_error_handler_macro ())
 
-(* --api pulse: generate code against the Pulse combinator backend
-   (lib/everparse/3d) instead of the Low* one (src/3d/prelude). *)
-let pulse () : ML bool = Options.uses_pulse_backend ()
+(* Both surviving APIs generate code against the Pulse combinator backend in
+   lib/everparse/3d; only the exposed C API differs. *)
+let pulse () : ML bool = true
 
 let lowstar_api () : ML bool = Options.get_api () = HashingOptions.ApiLowstar
 
@@ -68,8 +68,8 @@ let pulse_cb_inst_args () : ML string =
 (* The client context (`EVERPARSE_EXTRA_T`) that the extern/static backends
    thread down to the stream primitives. The generated validator binds it so
    that `EverParse3d.Util.solve_from_ctx` can resolve it inside the body, and
-   so that KaRaMeL emits it as the validator's first C parameter -- exactly as
-   the Low* backend does. The buffer backend has no context (`extra_t = unit`),
+   so that KaRaMeL emits it as the validator's first C parameter. The buffer
+   backend has no context (`extra_t = unit`),
    so nothing is emitted and the binder erases. *)
 let pulse_extra_binder () : ML string =
   if HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
@@ -81,7 +81,7 @@ let pulse_is_buffer () : ML bool =
 
 (* `field_ptr_after` needs the client's Peep primitive, which both `extern` and
    `static` provide -- they are the same F* development, differing only in the
-   C linkage of the stream primitives, exactly as in Low*. *)
+   C linkage of the stream primitives. *)
 let pulse_has_field_ptr_after () : ML bool =
   match Options.get_input_stream_binding () with
   | HashingOptions.InputStreamExtern _ -> true
@@ -95,8 +95,8 @@ type inv =
   | Inv_ptr  : expr -> inv
   | Inv_copy_buf: expr -> inv
   (* --api pulse only: the ambient state of the external actions generated for
-     output types. In Low* this is carried by the Eloc_output location alone,
-     but a Pulse state_dict fuses invariant and footprint. *)
+     output types. The `Eloc_output` location carries this on its own, but a
+     Pulse state_dict fuses invariant and footprint. *)
   | Inv_output : inv
 
 noeq
@@ -865,9 +865,9 @@ let pulse_key_arg_of (e:string) : ML string =
 
 (* --api pulse: the `state_dict` of a type declaration.
 
-   The Low* `inv` describes exactly the set of extra resources a type needs:
-   the user-provided pointers it dereferences or assigns, and the copy buffers
-   it probes into. In Pulse each of these becomes a keyed entry of a
+   The `inv` type above describes exactly the set of extra resources a type
+   needs: the user-provided pointers it dereferences or assigns, and the copy
+   buffers it probes into. In Pulse each of these becomes a keyed entry of a
    `state_dict`, the key being the printed name of the resource, so that
    disjointness is a decidable computation on string literals rather than an
    SMT obligation about memory footprints.
@@ -1018,13 +1018,11 @@ let rec print_action (mname:string) (a:T.action)
         | T.Action_field_pos_32 ->
           if pulse ()
           then begin
-            (* Same restriction as Low*, where `action_field_pos_32` carries a
-               `squash (backend_flag == BackendFlagBuffer)`: the action narrows
-               the position to 32 bits, which is only lossless when the whole
-               input is addressed by a 32-bit length. The buffer backend is the
-               one that guarantees that; `extern` and `static` hand out an
-               opaque stream whose cumulative position has no such bound, so
-               the cast would silently truncate. *)
+            (* The action narrows the position to 32 bits, which is only
+               lossless when the whole input is addressed by a 32-bit length.
+               The buffer backend is the one that guarantees that; `extern` and
+               `static` hand out an opaque stream whose cumulative position has
+               no such bound, so the cast would silently truncate. *)
             if not (pulse_is_buffer ())
             then A.error "The field_pos_32 action (also spelled field_pos) is only supported by the buffer backend" A.dummy_range;
             "Action_field_pos_32"

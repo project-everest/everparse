@@ -50,10 +50,14 @@ KRML = $(KRML_EXE) \
 	 $(KRML_OPTS) \
 	 -warn-error '@2@15-26'
 
+# Link and run, rather than just compiling: ../Test.fst is a real client of the
+# generated API, and its main returns non-zero if the validator/jumper/accessor
+# chain does not round-trip the field it plants.
 test: $(CUSTARD_KRML)
 	-@mkdir out
 	$(KRML) -no-prefix Test $^
-	$(CC) -c -I out -I .. $$f out/*.c
+	$(CC) -I out -I .. -o out/test.exe out/*.c
+	./out/test.exe
 
 depend: $(FSTAR_DEP_FILE)
 

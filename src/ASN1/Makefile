@@ -6,11 +6,11 @@ LOWPARSE_HOME = $(EVERPARSE_SRC_PATH)/lowparse
 
 INCLUDE_PATHS += $(LOWPARSE_HOME)
 
-ALREADY_CACHED := *,-ASN1Test,-ASN1,
+ALREADY_CACHED := *,-ASN1,
 
 OUTPUT_DIRECTORY := ocaml/extracted
 
-NOT_INCLUDED = ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1Test.fst $(wildcard ASN1.bak*)
+NOT_INCLUDED = ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.bak*)
 
 FSTAR_FILES := $(filter-out $(NOT_INCLUDED),$(wildcard *.fst *.fsti))
 

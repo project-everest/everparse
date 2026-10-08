@@ -4,76 +4,107 @@
 
 #include "EverParse.h"
 
-uint64_t
+uint8_t
 BaseValidateUlong(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos,
+  size_t *Pos
 )
 {
+  size_t p1 = *SlPos;
+  uint64_t viewStart = (uint64_t)p1;
+  size_t fieldOff = *Pos;
+  uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytesForMissing = (InputLength - StartPosition) >= 4ULL;
-  uint64_t positionAfterMissingOrError;
-  if (hasBytesForMissing)
+  size_t p0 = *Pos;
+  size_t p = *SlPos;
+  size_t rem = SlLen - p;
+  BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
+  uint8_t res;
+  if (hasBytes)
   {
-    positionAfterMissingOrError = StartPosition + 4ULL;
+    *Pos = p0 + (size_t)4U;
+    res = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
   {
-    positionAfterMissingOrError =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
+    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (EverParseIsSuccess(positionAfterMissingOrError))
+  if (res == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    return positionAfterMissingOrError;
+    return res;
   }
   ErrorHandlerFn("___ULONG",
     "missing",
-    EverParseErrorReasonOfResult(positionAfterMissingOrError),
-    EverParseGetValidatorErrorKind(positionAfterMissingOrError),
+    EverParseErrorReasonOfResult(res),
+    res,
     Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterMissingOrError;
+    SlBase,
+    SlLen,
+    SlPos,
+    startPos);
+  return res;
 }
 
-uint64_t
+uint8_t
 BaseValidatePair(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos
 )
 {
-  BOOLEAN hasBytesForFirstSecond = (InputLength - StartPosition) >= 8ULL;
-  uint64_t resForFirstSecond;
-  uint64_t positionAfterFirstOrError;
-  if (hasBytesForFirstSecond)
+  size_t p1 = *SlPos;
+  uint64_t fieldStartPair = (uint64_t)p1;
+  uint64_t startPositionPair = fieldStartPair;
+  size_t pos = (size_t)0U;
+  size_t p0 = pos;
+  size_t p2 = *SlPos;
+  size_t rem = SlLen - p2;
+  BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
+  uint8_t res;
+  uint8_t resultAfterPair;
+  size_t consumed;
+  size_t p;
+  size_t p_;
+  if (hasBytes)
   {
-    resForFirstSecond = StartPosition + 8ULL;
+    pos = p0 + (size_t)8U;
+    res = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
   {
-    resForFirstSecond =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
+    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  positionAfterFirstOrError = resForFirstSecond;
-  if (EverParseIsSuccess(positionAfterFirstOrError))
+  if (res == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    return positionAfterFirstOrError;
+    consumed = pos;
+    p = *SlPos;
+    p_ = p + consumed;
+    *SlPos = p_;
+    resultAfterPair = EVERPARSE_VALIDATOR_SUCCESS;
+  }
+  else
+  {
+    resultAfterPair = res;
+  }
+  if (resultAfterPair == EVERPARSE_VALIDATOR_SUCCESS)
+  {
+    return resultAfterPair;
   }
   ErrorHandlerFn("_Pair",
     "first",
-    EverParseErrorReasonOfResult(positionAfterFirstOrError),
-    EverParseGetValidatorErrorKind(positionAfterFirstOrError),
+    EverParseErrorReasonOfResult(resultAfterPair),
+    resultAfterPair,
     Ctxt,
-    Input,
-    StartPosition);
-  return positionAfterFirstOrError;
+    SlBase,
+    SlLen,
+    SlPos,
+    startPositionPair);
+  return resultAfterPair;
 }
 

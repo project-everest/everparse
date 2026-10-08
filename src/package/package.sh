@@ -202,7 +202,7 @@ make_everparse() {
     #     generated modules;
     #   - lib/everparse/3d/krml/<backend>/EverParse.h: the pre-generated
     #     runtime header, one per input stream backend, copied into the output
-    #     directory just as src/3d/prelude/<backend>/EverParse.h is for Low*;
+    #     directory;
     #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
     #     self-contained Low*-compatible runtime generated from Pulse;
     # src/lowparse/pulse is already covered by the src/lowparse copy above, and

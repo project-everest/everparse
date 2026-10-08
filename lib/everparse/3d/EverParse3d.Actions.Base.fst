@@ -228,18 +228,16 @@ let leaf_reader
 
 (* Several combinators below tag their local bindings with `rename_let`, so that
    the extracted C names the temporaries after the 3D field they come from
-   rather than `res_key`, `val_key`, ... This mirrors what the Low* prelude does
-   in src/3d/prelude/EverParse3d.Actions.Base.fst. The names used are:
+   rather than `res_key`, `val_key`, ... The names used are:
 
      <field>                    the value read by the leaf reader
      <field>ConstraintIsOk      the result of a refinement check
      action_success_<field>     the boolean returned by an action
      resultAfter<field>         the result of validating <field>
 
-   The last one is spelled `positionAfter<field>` in Low*, where a validator
-   returns the position it stopped at. Pulse validators keep the position in the
-   `sl_pos` reference and return an error code instead, so the Low* name would
-   be misleading here.
+   Pulse validators keep the current position in the `sl_pos` reference and
+   return an error code rather than the position they stopped at, hence
+   `resultAfter` rather than `positionAfter`.
 
    `name` is a parameter of these combinators, so the attribute only becomes a
    string literal once the combinator is inlined into 3D-generated code; this

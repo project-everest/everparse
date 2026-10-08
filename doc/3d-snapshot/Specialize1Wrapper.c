@@ -1,6 +1,11 @@
 #include "Specialize1Wrapper.h"
 #include "EverParse.h"
 #include "Specialize1.h"
+#include "EverParsePulse.h"
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(size_t) >= sizeof(uint32_t), "EverParse: size_t must be at least as wide as uint32_t");
+_Static_assert(sizeof(size_t) <= sizeof(uint64_t), "EverParse: size_t must be no wider than uint64_t");
+#endif
 
 void Specialize1EverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
@@ -9,31 +14,37 @@ void DefaultErrorHandler(
 	const char *typename_s,
 	const char *fieldname,
 	const char *reason,
-	uint64_t error_code,
+	uint8_t error_code,
 	uint8_t *context,
-	EVERPARSE_INPUT_BUFFER input,
+	uint8_t *base,
+	size_t len,
+	size_t *pos,
 	uint64_t start_pos)
 {
 	EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;
+	(void) len;
+	(void) pos;
 	EverParseDefaultErrorHandler(
 		typename_s,
 		fieldname,
 		reason,
-		error_code,
+		(uint64_t)error_code,
 		frame,
-		input,
+		base,
 		start_pos
 	);
 }
 
 BOOLEAN Specialize1CheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -46,12 +57,14 @@ BOOLEAN Specialize1CheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EV
 
 BOOLEAN Specialize1CheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -59,7 +72,7 @@ BOOLEAN Specialize1CheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T d
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		Specialize1EverParseError("R", "", "unexpected trailing bytes");
 		return FALSE;
@@ -69,12 +82,14 @@ BOOLEAN Specialize1CheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T d
 
 BOOLEAN Specialize1CheckRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -87,12 +102,14 @@ BOOLEAN Specialize1CheckRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS,
 
 BOOLEAN Specialize1CheckCompleteRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
+	size_t everparse_pos;
+	uint8_t ep_status;
 
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	everparse_pos = (size_t)0U;
+	ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
 
-	if (EverParseIsError(ep_status))
+	if (ep_status != 0U)
 	{
 		if (frame.filled)
 		{
@@ -100,7 +117,7 @@ BOOLEAN Specialize1CheckCompleteRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (everparse_pos != (size_t)len)
 	{
 		Specialize1EverParseError("_RMux", "", "unexpected trailing bytes");
 		return FALSE;
