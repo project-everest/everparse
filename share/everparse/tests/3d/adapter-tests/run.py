@@ -15,7 +15,6 @@ ROOT = HERE.parents[4]
 TESTS = ROOT / "share/everparse/tests/3d/lowstar"
 BUILD = HERE / "_build"
 FSTAR = os.environ.get("FSTAR_EXE", str(ROOT / "opt/FStar/out/bin/fstar.exe"))
-PULSE = Path(os.environ.get("PULSE_HOME", ROOT / "opt/pulse/out"))
 KRML = os.environ.get("KRML_EXE", str(ROOT / "opt/karamel/out/bin/krml"))
 CC = shlex.split(os.environ.get("CC", "cc"))
 SANITIZE = os.environ.get("SANITIZE", "0") == "1"
@@ -79,15 +78,23 @@ def large(bits32=False):
     out = output("large")
     flags = ["--z3version", "4.13.3", "--include", ROOT / "src/lowparse",
              "--include", ROOT / "src/lowparse/pulse",
-             "--include", PULSE / "lib/pulse",
              "--include", ROOT / "lib/everparse/3d", "--include", HERE,
-             "--cache_checked_modules", "--cache_dir", out, "--cmi",
+             "--cache_checked_modules", "--cache_dir", out,
              "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",
              "--warn_error", "@241"]
     run([FSTAR] + flags + [HERE / "LargeExtern.fsti"], out)
     run([FSTAR] + flags + [HERE / "LargeExtern.fst"], out)
-    run([FSTAR] + flags + ["--codegen", "krml", "--extract", "LargeExtern",
-                          "--odir", out, HERE / "LargeExtern.fst"], out)
+    # Extract with Custard, not the old --codegen krml. This client is linked
+    # against the Custard-extracted runtime (krml/extracted/Custard.krml), and
+    # the two extractors disagree about erased arguments -- Custard drops them
+    # outright, the old one passes units for KaRaMeL to remove later -- so
+    # mixing them makes KaRaMeL reject the call sites on arity. See the comment
+    # on fstar_extract_args in src/3d/ocaml/Batch.ml.
+    run([FSTAR] + flags + ["--codegen", "Custard", "--custard_backend", "KrmlC",
+                           "--custard_split",
+                           "--custard_entry_module", "LargeExtern",
+                           "--odir", out, HERE / "LargeExtern.fst",
+                           "-o", out / "LargeExtern.krml"], out)
     api = ["EverParse3d.Actions.Common", "EverParse3d.Prelude.StaticHeader",
            "EverParse3d.ErrorCode", "EverParse3d.Lowstar.Public",
            "EverParse3d.Lowstar.SupportExtern",
