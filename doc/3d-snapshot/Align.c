@@ -7,24 +7,34 @@
 uint8_t
 AlignValidateColoredPoint1(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint8_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    size_t x6,
+    size_t *x7,
+    uint64_t x8
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
-  size_t p1 = *SlPos;
-  uint64_t fieldStartColoredPoint1 = (uint64_t)p1;
-  uint64_t startPositionColoredPoint1 = fieldStartColoredPoint1;
+  size_t p = SlPos[0U];
+  uint64_t fieldStartColoredPoint1 = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p2 = *SlPos;
-  size_t rem = SlLen - p2;
+  size_t p1 = SlPos[0U];
+  size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)6U <= (rem - p0);
   uint8_t res;
   uint8_t resultAfterColoredPoint1;
   size_t consumed;
-  size_t p;
+  size_t p2;
   size_t p_;
   if (hasBytes)
   {
@@ -38,9 +48,9 @@ AlignValidateColoredPoint1(
   if (res == EVERPARSE_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p = *SlPos;
-    p_ = p + consumed;
-    *SlPos = p_;
+    p2 = SlPos[0U];
+    p_ = p2 + consumed;
+    SlPos[0U] = p_;
     resultAfterColoredPoint1 = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
@@ -59,7 +69,7 @@ AlignValidateColoredPoint1(
     SlBase,
     SlLen,
     SlPos,
-    startPositionColoredPoint1);
+    fieldStartColoredPoint1);
   return resultAfterColoredPoint1;
 }
 
