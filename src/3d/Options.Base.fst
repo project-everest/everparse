@@ -165,8 +165,8 @@ let _api : ref (option (valid_string valid_api)) = alloc None
 let get_api () : ML api_t =
   match !_api with
   | None
-  | Some "pulse" -> ApiPulse
   | Some "lowstar" -> ApiLowstar
+  | Some "pulse" -> ApiPulse
 
 let char_le (c1 c2: FStar.Char.char) : Tot bool =
   FStar.Char.int_of_char c1 <= FStar.Char.int_of_char c2
