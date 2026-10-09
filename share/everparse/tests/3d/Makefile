@@ -100,7 +100,7 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 	pulse-comments-test pulse-renamelet-test \
 	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test \
 	pulse-batch-interpret-test pulse-subdirs \
-	pulse-reserved-module-name-test
+	pulse-module-name-c-test
 
 all: api-option-test
 
@@ -322,24 +322,24 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 	      $(3D) --odir out.fail.pulse --__micro_step verify $$f || exit 1 ; \
 	    done ) >$@.out 2>$@.err
 
-# TEMPORARY, to be removed together with the frontend check it exercises: see
-# the comment on check_no_reserved_module_name in src/3d/Main.fst. A module
-# named C must be rejected up front under --api pulse, rather than reaching KaRaMeL
-# and failing there with an unintelligible message about C._zero_for_deref.
-# This cannot be expressed as a FAIL*.3d negative test, because the whole point
-# is the module name. It is also deliberately absent from share/everparse/tests/3d/lowstar: the
-# Low* backend accepts a module named C, and must keep accepting it.
-.PHONY: pulse-reserved-module-name-test
-pulse-reserved-module-name-test:
-	rm -rf out.reserved.pulse && mkdir -p out.reserved.pulse
-	printf 'entrypoint\ntypedef struct _P {\n  UINT8 x;\n} P;\n' > out.reserved.pulse/C.3d
-	! $(3D) --odir out.reserved.pulse --no_batch out.reserved.pulse/C.3d \
-	  > out.reserved.pulse/C.out 2>&1
-	grep -q 'cannot be named C' out.reserved.pulse/C.out
+# A 3d module named C used to be rejected up front: KaRaMeL suppresses its
+# builtin C module -- which supplies the _zero_for_deref marker that Pulse
+# extraction emits for every reference dereference -- as soon as an input file
+# is named C, and the run then died on a dangling C._zero_for_deref. Pulse now
+# emits Pulse.Lib.Pervasives._zero_for_deref, whose implementation is among the
+# inputs, so the name is fine again. Check it end to end, through KaRaMeL.
+# This cannot be expressed as an ordinary test in $(batch_tests), because the
+# whole point is the module name, and EverParse.h is generated per batch.
+.PHONY: pulse-module-name-c-test
+pulse-module-name-c-test:
+	rm -rf out.modname.pulse && mkdir -p out.modname.pulse
+	printf 'entrypoint\ntypedef struct _P {\n  UINT8 x;\n} P;\n' > out.modname.pulse/C.3d
+	$(3D) --odir out.modname.pulse --batch out.modname.pulse/C.3d
+	test -f out.modname.pulse/C.c
 
 clean-files:
 	rm -rf $(OUT_DIR) $(VERIFY_DIR) $(ELF_DIR) $(CLEANUP_DIR) $(INPLACE_DIR) \
-	  $(Z3TESTGEN_DIR) $(INTERPRET_DIR) out.fail.pulse out.reserved.pulse \
+	  $(Z3TESTGEN_DIR) $(INTERPRET_DIR) out.fail.pulse out.modname.pulse \
 	  test-cpp.pulse.exe \
 	  test-cpp-interpret.pulse.exe *.out *.err
 	set -e ; for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
