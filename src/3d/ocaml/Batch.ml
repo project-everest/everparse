@@ -447,20 +447,17 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
      Warning 26 (Top-type casts) is expected for the Pulse ref-dereference
      idiom, which survives in the inlined code. *)
   let backend_args =
-    (* With `--input_stream extern` (and `static`, which shares the module)
-       the stream primitives are `assume val`s implemented by the client in
-       C, so KaRaMeL's "no corresponding implementation" warning is expected
-       and must not be fatal. *)
-    let extern_warns =
-      match string_of_input_stream_binding input_stream_binding with
-      | "extern" | "static" -> "-2"
-      | _ -> ""
-    in
+    (* Warning 2 (no corresponding implementation) stays fatal for every input
+       stream binding. With `--input_stream extern` (and `static`, which shares
+       the module) the stream primitives are `assume val`s implemented by the
+       client in C, but they live in EverParse3d.InputStream.Extern, which the
+       -library bundle below already covers: KaRaMeL assumes a library module
+       rather than emitting it, so it never reports them as unbound. *)
     (if lowstar_api () then ["-static-header"; pulse_everparse_only_bundle] else []) @
     ("-add-include" :: (if lowstar_api () then "EverParse:\"EverParseEndianness.h\""
       else "EverParse:\"EverParsePulseEndianness.h\"") ::
       "-library" :: pulse_everparse_only_bundle ::
-      "-warn-error" :: Printf.sprintf "-9@4-20-26%s" extern_warns :: [])
+      "-warn-error" :: "-9@4-20-26" :: [])
   in
   let krml_args =
     "-tmpdir" :: out_dir ::
