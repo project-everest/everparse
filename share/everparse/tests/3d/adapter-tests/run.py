@@ -108,7 +108,7 @@ def large(bits32=False):
          "-add-include", '"EverParse.h"',
          "-library", "Prims,LowParse.*,EverParse3d.*,Pulse.*",
          "-static-header", "Prims,LowParse.*,EverParse3d.*,Pulse.*",
-         "-warn-error", "-9@4-20-26-2", "-fnoreturn-else", "-fparentheses",
+         "-warn-error", "-9@4-20-26", "-fnoreturn-else", "-fparentheses",
          "-fcurly-braces", "-fmicrosoft", "-fno-shadow",
          "-header", ROOT / "src/3d/noheader.txt", "-minimal", "-fextern-c",
          "-finitialize-locals", "no", "-no-inline-type-abbrev",
