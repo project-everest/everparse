@@ -9,15 +9,15 @@ extern "C" {
 
 #include "EverParse.h"
 
-uint8_t
+uint64_t
 ReadPairValidatePair(
   uint32_t *X,
   uint32_t *Y,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
+  uint8_t *Input,
+  uint64_t InputLength,
+  uint64_t StartPosition
 );
 
 #if defined(__cplusplus)

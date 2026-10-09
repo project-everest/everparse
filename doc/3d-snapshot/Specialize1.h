@@ -9,28 +9,28 @@ extern "C" {
 
 #include "EverParse.h"
 
-uint8_t
+uint64_t
 Specialize1ValidateR(
   BOOLEAN Requestor32,
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
+  uint8_t *Input,
+  uint64_t InputLen,
+  uint64_t StartPosition
 );
 
-uint8_t
+uint64_t
 Specialize1ValidateRmux(
   BOOLEAN Requestor32,
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
+  uint8_t *Input,
+  uint64_t InputLen,
+  uint64_t StartPosition
 );
 
 #if defined(__cplusplus)
