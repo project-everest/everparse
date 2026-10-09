@@ -59,12 +59,14 @@ STATIC_HEADER_buffer := $(STATIC_HEADER_COMMON)
 STATIC_HEADER_extern := $(STATIC_HEADER_COMMON)
 STATIC_HEADER_static := $(STATIC_HEADER_COMMON),EverParse3d.InputStream.Extern
 
+# Warning 2 (no corresponding implementation) stays fatal for every backend.
 # With `extern` (and `static`) the stream primitives are assumed vals that the
-# client implements in C, so KaRaMeL's "no corresponding implementation"
-# warning (2) is expected.
+# client implements in C, but they are all reached through the -bundle below
+# and KaRaMeL emits them as plain extern declarations, so none of them is
+# reported as unbound.
 WARN_buffer := -9@4-20-26
-WARN_extern := -9@4-20-26-2
-WARN_static := $(WARN_extern)
+WARN_extern := $(WARN_buffer)
+WARN_static := $(WARN_buffer)
 
 # The public EVERPARSE_ERROR_HANDLER typedef.
 #
