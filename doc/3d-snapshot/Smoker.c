@@ -2,62 +2,68 @@
 
 #include "Smoker.h"
 
-static uint8_t
-ValidateCoreSmoker(
+uint8_t
+SmokerValidateCoreSmoker(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
-  size_t p1 = *SlPos;
-  uint64_t fieldStartSmoker = (uint64_t)p1;
-  uint64_t startPositionSmoker = fieldStartSmoker;
+  size_t p = SlPos[0U];
+  uint64_t fieldStartSmoker = (uint64_t)p;
   size_t pos = (size_t)0U;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p00 = pos;
-  size_t p2 = *SlPos;
-  size_t rem0 = SlLen - p2;
-  BOOLEAN hasBytes0 = p00 <= rem0 && (size_t)4U <= (rem0 - p00);
+  size_t p0 = pos;
+  size_t p1 = SlPos[0U];
+  size_t rem = SlLen - p1;
+  BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t resultAfterage;
   uint8_t resultAfterSmoker;
   size_t p01;
   size_t m;
   uint8_t *sub;
-  size_t pos_;
   uint8_t first;
-  size_t pos_1;
+  size_t pos_;
   uint8_t first1;
-  size_t pos_2;
+  size_t pos_1;
   uint8_t first2;
   uint8_t first3;
-  uint32_t n0;
-  uint32_t bfirst0;
-  uint32_t n1;
-  uint32_t bfirst1;
   uint32_t n;
   uint32_t bfirst;
-  uint32_t res0;
+  uint32_t n1;
+  uint32_t bfirst1;
+  uint32_t n2;
+  uint32_t bfirst2;
   uint32_t age;
   BOOLEAN ageConstraintIsOk;
   size_t pos1;
-  size_t p3;
+  size_t p2;
   uint64_t viewStart;
   size_t fieldOff;
   uint64_t startPos;
-  size_t p0;
-  size_t p4;
-  size_t rem;
-  BOOLEAN hasBytes;
-  uint8_t res1;
+  size_t p02;
+  size_t p3;
+  size_t rem1;
+  BOOLEAN hasBytes1;
   uint8_t res;
+  uint8_t res1;
   size_t consumed;
-  size_t p;
+  size_t p4;
   size_t p_;
-  if (hasBytes0)
+  if (hasBytes)
   {
-    pos = p00 + (size_t)4U;
+    pos = p0 + (size_t)4U;
     resultAfterage = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -66,74 +72,72 @@ ValidateCoreSmoker(
   }
   if (resultAfterage == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = *SlPos;
+    p01 = SlPos[0U];
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    pos_ = (size_t)1U;
+    SlPos[0U] = m;
     first = sub[0U];
+    pos_ = (size_t)2U;
+    first1 = sub[1U];
     pos_1 = pos_ + (size_t)1U;
-    first1 = sub[pos_];
-    pos_2 = pos_1 + (size_t)1U;
-    first2 = sub[pos_1];
-    first3 = sub[pos_2];
-    n0 = (uint32_t)first3;
-    bfirst0 = (uint32_t)first2;
-    n1 = bfirst0 + n0 * 256U;
+    first2 = sub[pos_];
+    first3 = sub[pos_1];
+    n = (uint32_t)first3;
+    bfirst = (uint32_t)first2;
+    n1 = bfirst + n * 256U;
     bfirst1 = (uint32_t)first1;
-    n = bfirst1 + n1 * 256U;
-    bfirst = (uint32_t)first;
-    res0 = bfirst + n * 256U;
-    *SlPos = m;
-    age = res0;
+    n2 = bfirst1 + n1 * 256U;
+    bfirst2 = (uint32_t)first;
+    age = bfirst2 + n2 * 256U;
     ageConstraintIsOk = age >= 21U;
     if (ageConstraintIsOk)
     {
       pos1 = (size_t)0U;
       /* Validating field cigarettesConsumed */
-      p3 = *SlPos;
-      viewStart = (uint64_t)p3;
+      p2 = SlPos[0U];
+      viewStart = (uint64_t)p2;
       fieldOff = pos1;
       startPos = viewStart + (uint64_t)fieldOff;
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      p0 = pos1;
-      p4 = *SlPos;
-      rem = SlLen - p4;
-      hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
-      if (hasBytes)
+      p02 = pos1;
+      p3 = SlPos[0U];
+      rem1 = SlLen - p3;
+      hasBytes1 = p02 <= rem1 && (size_t)1U <= (rem1 - p02);
+      if (hasBytes1)
       {
-        pos1 = p0 + (size_t)1U;
-        res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+        pos1 = p02 + (size_t)1U;
+        res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
       {
-        res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+        res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
       }
-      if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+      if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
-        res = res1;
+        res1 = res;
       }
       else
       {
         ErrorHandlerFn("_smoker",
           "cigarettesConsumed",
-          EverParsePulseInternalErrorReasonOfResult(res1),
-          res1 == 0U || (res1 >= 2U && res1 <= 8U) ? (uint64_t)(uint32_t)res1 : 15ULL,
+          EverParsePulseInternalErrorReasonOfResult(res),
+          res == 0U || (res >= 2U && res <= 8U) ? (uint64_t)(uint32_t)res : 15ULL,
           Ctxt,
           SlBase,
           startPos);
-        res = res1;
+        res1 = res;
       }
-      if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+      if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         consumed = pos1;
-        p = *SlPos;
-        p_ = p + consumed;
-        *SlPos = p_;
+        p4 = SlPos[0U];
+        p_ = p4 + consumed;
+        SlPos[0U] = p_;
         resultAfterSmoker = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
       {
-        resultAfterSmoker = res;
+        resultAfterSmoker = res1;
       }
     }
     else
@@ -156,14 +160,23 @@ ValidateCoreSmoker(
                                                                                     : 15ULL,
     Ctxt,
     SlBase,
-    startPositionSmoker);
+    fieldStartSmoker);
   return resultAfterSmoker;
 }
 
 uint64_t
 SmokerValidateSmoker(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER Handler,
+  void
+  (*Handler)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t Length,
   uint64_t Start
@@ -172,7 +185,7 @@ SmokerValidateSmoker(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreSmoker(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = SmokerValidateCoreSmoker(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

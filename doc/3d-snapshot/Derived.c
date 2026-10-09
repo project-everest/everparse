@@ -2,27 +2,35 @@
 
 #include "Derived.h"
 
-static uint8_t
-ValidateCoreTriple(
+uint8_t
+DerivedValidateCoreTriple(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
-  size_t p1 = *SlPos;
-  uint64_t fieldStartTriple = (uint64_t)p1;
-  uint64_t startPositionTriple = fieldStartTriple;
+  size_t p = SlPos[0U];
+  uint64_t fieldStartTriple = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p2 = *SlPos;
-  size_t rem = SlLen - p2;
+  size_t p1 = SlPos[0U];
+  size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)12U <= (rem - p0);
   uint8_t res;
   uint8_t resultAfterTriple;
   size_t consumed;
-  size_t p;
+  size_t p2;
   size_t p_;
   if (hasBytes)
   {
@@ -36,9 +44,9 @@ ValidateCoreTriple(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p = *SlPos;
-    p_ = p + consumed;
-    *SlPos = p_;
+    p2 = SlPos[0U];
+    p_ = p2 + consumed;
+    SlPos[0U] = p_;
     resultAfterTriple = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -56,14 +64,23 @@ ValidateCoreTriple(
                                                                                     : 15ULL,
     Ctxt,
     SlBase,
-    startPositionTriple);
+    fieldStartTriple);
   return resultAfterTriple;
 }
 
 uint64_t
 DerivedValidateTriple(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER Handler,
+  void
+  (*Handler)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t Length,
   uint64_t Start
@@ -72,7 +89,7 @@ DerivedValidateTriple(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreTriple(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = DerivedValidateCoreTriple(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -81,27 +98,35 @@ DerivedValidateTriple(
     + position;
 }
 
-static uint8_t
-ValidateCoreQuad(
+uint8_t
+DerivedValidateCoreQuad(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
-  size_t p1 = *SlPos;
-  uint64_t fieldStartQuad = (uint64_t)p1;
-  uint64_t startPositionQuad = fieldStartQuad;
+  size_t p = SlPos[0U];
+  uint64_t fieldStartQuad = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p2 = *SlPos;
-  size_t rem = SlLen - p2;
+  size_t p1 = SlPos[0U];
+  size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)16U <= (rem - p0);
   uint8_t res;
   uint8_t resultAfterQuad;
   size_t consumed;
-  size_t p;
+  size_t p2;
   size_t p_;
   if (hasBytes)
   {
@@ -115,9 +140,9 @@ ValidateCoreQuad(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p = *SlPos;
-    p_ = p + consumed;
-    *SlPos = p_;
+    p2 = SlPos[0U];
+    p_ = p2 + consumed;
+    SlPos[0U] = p_;
     resultAfterQuad = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -135,14 +160,23 @@ ValidateCoreQuad(
                                                                               : 15ULL,
     Ctxt,
     SlBase,
-    startPositionQuad);
+    fieldStartQuad);
   return resultAfterQuad;
 }
 
 uint64_t
 DerivedValidateQuad(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER Handler,
+  void
+  (*Handler)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t Length,
   uint64_t Start
@@ -151,7 +185,7 @@ DerivedValidateQuad(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreQuad(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = DerivedValidateCoreQuad(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

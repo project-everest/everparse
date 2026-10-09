@@ -2,27 +2,35 @@
 
 #include "HelloWorld.h"
 
-static uint8_t
-ValidateCorePoint(
+uint8_t
+HelloWorldValidateCorePoint(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
-  size_t p1 = *SlPos;
-  uint64_t fieldStartPoint = (uint64_t)p1;
-  uint64_t startPositionPoint = fieldStartPoint;
+  size_t p = SlPos[0U];
+  uint64_t fieldStartPoint = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p2 = *SlPos;
-  size_t rem = SlLen - p2;
+  size_t p1 = SlPos[0U];
+  size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
   uint8_t resultAfterPoint;
   size_t consumed;
-  size_t p;
+  size_t p2;
   size_t p_;
   if (hasBytes)
   {
@@ -36,9 +44,9 @@ ValidateCorePoint(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p = *SlPos;
-    p_ = p + consumed;
-    *SlPos = p_;
+    p2 = SlPos[0U];
+    p_ = p2 + consumed;
+    SlPos[0U] = p_;
     resultAfterPoint = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -56,14 +64,23 @@ ValidateCorePoint(
                                                                                  : 15ULL,
     Ctxt,
     SlBase,
-    startPositionPoint);
+    fieldStartPoint);
   return resultAfterPoint;
 }
 
 uint64_t
 HelloWorldValidatePoint(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER Handler,
+  void
+  (*Handler)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t Length,
   uint64_t Start
@@ -72,7 +89,7 @@ HelloWorldValidatePoint(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = HelloWorldValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

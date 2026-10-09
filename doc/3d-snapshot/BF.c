@@ -2,117 +2,118 @@
 
 #include "BF.h"
 
-static inline uint8_t
-ValidateCoreBf2bis(
+inline uint8_t
+BfValidateCoreBf2bis(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
   size_t pos = (size_t)0U;
-  size_t p1 = *SlPos;
-  uint64_t viewStart = (uint64_t)p1;
+  size_t p = SlPos[0U];
+  uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  size_t p00 = pos;
-  size_t p2 = *SlPos;
-  size_t rem0 = SlLen - p2;
-  BOOLEAN hasBytes0 = p00 <= rem0 && (size_t)2U <= (rem0 - p00);
-  uint8_t res0;
+  size_t p0 = pos;
+  size_t p1 = SlPos[0U];
+  size_t rem = SlLen - p1;
+  BOOLEAN hasBytes = p0 <= rem && (size_t)2U <= (rem - p0);
+  uint8_t res;
   uint8_t resultAfterBitfield0;
   size_t p01;
-  size_t m0;
-  uint8_t *sub0;
-  size_t pos_;
-  uint8_t first0;
-  uint8_t first10;
-  uint16_t n0;
-  uint16_t bfirst0;
-  uint16_t res1;
+  size_t m;
+  uint8_t *sub;
+  uint8_t first;
+  uint8_t first1;
+  uint16_t n;
+  uint16_t bfirst;
   uint16_t bitfield0;
-  size_t p3;
+  size_t p2;
   uint64_t fieldStartBf2bis;
-  uint64_t startPositionBf2bis;
   size_t pos1;
   size_t p02;
-  size_t p4;
+  size_t p3;
   size_t rem1;
   BOOLEAN hasBytes1;
   uint8_t resultAfterBitfield1;
   uint8_t resultAfterBf2bis;
   size_t p03;
-  size_t m;
-  uint8_t *sub;
-  size_t pos_0;
-  uint8_t first;
-  uint8_t first1;
-  uint16_t n;
-  uint16_t bfirst;
-  uint16_t res2;
+  size_t m1;
+  uint8_t *sub1;
+  uint8_t first2;
+  uint8_t first3;
+  uint16_t n1;
+  uint16_t bfirst1;
   uint16_t bitfield1;
   BOOLEAN bitfield1constraintIsOk;
   size_t pos2;
+  size_t p4;
+  uint64_t viewStart1;
+  size_t fieldOff1;
+  uint64_t startPos1;
+  size_t p04;
   size_t p5;
-  uint64_t viewStart0;
-  size_t fieldOff0;
-  uint64_t startPos0;
-  size_t p0;
-  size_t p6;
-  size_t rem;
-  BOOLEAN hasBytes;
-  uint8_t res3;
-  uint8_t res;
+  size_t rem2;
+  BOOLEAN hasBytes2;
+  uint8_t res1;
+  uint8_t res2;
   size_t consumed;
-  size_t p;
+  size_t p6;
   size_t p_;
-  if (hasBytes0)
+  if (hasBytes)
   {
-    pos = p00 + (size_t)2U;
-    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    pos = p0 + (size_t)2U;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    resultAfterBitfield0 = res0;
+    resultAfterBitfield0 = res;
   }
   else
   {
     ErrorHandlerFn("_BF2bis",
       "__bitfield_0",
-      EverParsePulseInternalErrorReasonOfResult(res0),
-      res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
+      EverParsePulseInternalErrorReasonOfResult(res),
+      res == 0U || (res >= 2U && res <= 8U) ? (uint64_t)(uint32_t)res : 15ULL,
       Ctxt,
       SlBase,
       startPos);
-    resultAfterBitfield0 = res0;
+    resultAfterBitfield0 = res;
   }
   if (resultAfterBitfield0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = *SlPos;
-    m0 = p01 + (size_t)2U;
-    sub0 = SlBase + p01;
-    pos_ = (size_t)1U;
-    first0 = sub0[0U];
-    first10 = sub0[pos_];
-    n0 = (uint16_t)(uint32_t)first10;
-    bfirst0 = (uint16_t)(uint32_t)first0;
-    res1 = (uint32_t)bfirst0 + (uint32_t)n0 * 256U;
-    *SlPos = m0;
-    bitfield0 = res1;
-    p3 = *SlPos;
-    fieldStartBf2bis = (uint64_t)p3;
-    startPositionBf2bis = fieldStartBf2bis;
+    p01 = SlPos[0U];
+    m = p01 + (size_t)2U;
+    sub = SlBase + p01;
+    SlPos[0U] = m;
+    first = sub[0U];
+    first1 = sub[1U];
+    n = (uint16_t)(uint32_t)first1;
+    bfirst = (uint16_t)(uint32_t)first;
+    bitfield0 = (uint32_t)bfirst + (uint32_t)n * 256U;
+    p2 = SlPos[0U];
+    fieldStartBf2bis = (uint64_t)p2;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
     p02 = pos1;
-    p4 = *SlPos;
-    rem1 = SlLen - p4;
+    p3 = SlPos[0U];
+    rem1 = SlLen - p3;
     hasBytes1 = p02 <= rem1 && (size_t)2U <= (rem1 - p02);
     if (hasBytes1)
     {
@@ -125,67 +126,65 @@ ValidateCoreBf2bis(
     }
     if (resultAfterBitfield1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = *SlPos;
-      m = p03 + (size_t)2U;
-      sub = SlBase + p03;
-      pos_0 = (size_t)1U;
-      first = sub[0U];
-      first1 = sub[pos_0];
-      n = (uint16_t)(uint32_t)first1;
-      bfirst = (uint16_t)(uint32_t)first;
-      res2 = (uint32_t)bfirst + (uint32_t)n * 256U;
-      *SlPos = m;
-      bitfield1 = res2;
+      p03 = SlPos[0U];
+      m1 = p03 + (size_t)2U;
+      sub1 = SlBase + p03;
+      SlPos[0U] = m1;
+      first2 = sub1[0U];
+      first3 = sub1[1U];
+      n1 = (uint16_t)(uint32_t)first3;
+      bfirst1 = (uint16_t)(uint32_t)first2;
+      bitfield1 = (uint32_t)bfirst1 + (uint32_t)n1 * 256U;
       bitfield1constraintIsOk =
         EverParseGetBitfield16(bitfield1, 0U, 12U) < EverParseGetBitfield16(bitfield0, 0U, 6U);
       if (bitfield1constraintIsOk)
       {
         pos2 = (size_t)0U;
         /* Validating field z */
-        p5 = *SlPos;
-        viewStart0 = (uint64_t)p5;
-        fieldOff0 = pos2;
-        startPos0 = viewStart0 + (uint64_t)fieldOff0;
+        p4 = SlPos[0U];
+        viewStart1 = (uint64_t)p4;
+        fieldOff1 = pos2;
+        startPos1 = viewStart1 + (uint64_t)fieldOff1;
         /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-        p0 = pos2;
-        p6 = *SlPos;
-        rem = SlLen - p6;
-        hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
-        if (hasBytes)
+        p04 = pos2;
+        p5 = SlPos[0U];
+        rem2 = SlLen - p5;
+        hasBytes2 = p04 <= rem2 && (size_t)1U <= (rem2 - p04);
+        if (hasBytes2)
         {
-          pos2 = p0 + (size_t)1U;
-          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+          pos2 = p04 + (size_t)1U;
+          res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
-          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+          res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
         }
-        if (res3 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+        if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
-          res = res3;
+          res2 = res1;
         }
         else
         {
           ErrorHandlerFn("_BF2bis",
             "z",
-            EverParsePulseInternalErrorReasonOfResult(res3),
-            res3 == 0U || (res3 >= 2U && res3 <= 8U) ? (uint64_t)(uint32_t)res3 : 15ULL,
+            EverParsePulseInternalErrorReasonOfResult(res1),
+            res1 == 0U || (res1 >= 2U && res1 <= 8U) ? (uint64_t)(uint32_t)res1 : 15ULL,
             Ctxt,
             SlBase,
-            startPos0);
-          res = res3;
+            startPos1);
+          res2 = res1;
         }
-        if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+        if (res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           consumed = pos2;
-          p = *SlPos;
-          p_ = p + consumed;
-          *SlPos = p_;
+          p6 = SlPos[0U];
+          p_ = p6 + consumed;
+          SlPos[0U] = p_;
           resultAfterBf2bis = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
-          resultAfterBf2bis = res;
+          resultAfterBf2bis = res2;
         }
       }
       else
@@ -208,123 +207,124 @@ ValidateCoreBf2bis(
                                                                                       : 15ULL,
       Ctxt,
       SlBase,
-      startPositionBf2bis);
+      fieldStartBf2bis);
     return resultAfterBf2bis;
   }
   return resultAfterBitfield0;
 }
 
-static inline uint8_t
-ValidateCoreBf3(
+inline uint8_t
+BfValidateCoreBf3(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
   size_t pos = (size_t)0U;
-  size_t p1 = *SlPos;
-  uint64_t viewStart = (uint64_t)p1;
+  size_t p = SlPos[0U];
+  uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-  size_t p00 = pos;
-  size_t p2 = *SlPos;
-  size_t rem0 = SlLen - p2;
-  BOOLEAN hasBytes0 = p00 <= rem0 && (size_t)2U <= (rem0 - p00);
-  uint8_t res0;
+  size_t p0 = pos;
+  size_t p1 = SlPos[0U];
+  size_t rem = SlLen - p1;
+  BOOLEAN hasBytes = p0 <= rem && (size_t)2U <= (rem - p0);
+  uint8_t res;
   uint8_t resultAfterBitfield0;
   size_t p01;
-  size_t m0;
-  uint8_t *sub0;
-  size_t pos_;
-  uint8_t last0;
-  uint8_t last10;
-  uint16_t n0;
-  uint16_t blast0;
-  uint16_t res1;
+  size_t m;
+  uint8_t *sub;
+  uint8_t last;
+  uint8_t last1;
+  uint16_t n;
+  uint16_t blast;
   uint16_t bitfield0;
-  size_t p3;
+  size_t p2;
   uint64_t fieldStartBf3;
-  uint64_t startPositionBf3;
   size_t pos1;
   size_t p02;
-  size_t p4;
+  size_t p3;
   size_t rem1;
   BOOLEAN hasBytes1;
   uint8_t resultAfterBitfield1;
   uint8_t resultAfterBf3;
   size_t p03;
-  size_t m;
-  uint8_t *sub;
-  size_t pos_0;
-  uint8_t last;
-  uint8_t last1;
-  uint16_t n;
-  uint16_t blast;
-  uint16_t res2;
+  size_t m1;
+  uint8_t *sub1;
+  uint8_t last2;
+  uint8_t last3;
+  uint16_t n1;
+  uint16_t blast1;
   uint16_t bitfield1;
   BOOLEAN bitfield1constraintIsOk;
   size_t pos2;
+  size_t p4;
+  uint64_t viewStart1;
+  size_t fieldOff1;
+  uint64_t startPos1;
+  size_t p04;
   size_t p5;
-  uint64_t viewStart0;
-  size_t fieldOff0;
-  uint64_t startPos0;
-  size_t p0;
-  size_t p6;
-  size_t rem;
-  BOOLEAN hasBytes;
-  uint8_t res3;
-  uint8_t res;
+  size_t rem2;
+  BOOLEAN hasBytes2;
+  uint8_t res1;
+  uint8_t res2;
   size_t consumed;
-  size_t p;
+  size_t p6;
   size_t p_;
-  if (hasBytes0)
+  if (hasBytes)
   {
-    pos = p00 + (size_t)2U;
-    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    pos = p0 + (size_t)2U;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    resultAfterBitfield0 = res0;
+    resultAfterBitfield0 = res;
   }
   else
   {
     ErrorHandlerFn("_BF3",
       "__bitfield_0",
-      EverParsePulseInternalErrorReasonOfResult(res0),
-      res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
+      EverParsePulseInternalErrorReasonOfResult(res),
+      res == 0U || (res >= 2U && res <= 8U) ? (uint64_t)(uint32_t)res : 15ULL,
       Ctxt,
       SlBase,
       startPos);
-    resultAfterBitfield0 = res0;
+    resultAfterBitfield0 = res;
   }
   if (resultAfterBitfield0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = *SlPos;
-    m0 = p01 + (size_t)2U;
-    sub0 = SlBase + p01;
-    pos_ = (size_t)1U;
-    last0 = sub0[pos_];
-    last10 = sub0[0U];
-    n0 = (uint16_t)(uint32_t)last10;
-    blast0 = (uint16_t)(uint32_t)last0;
-    res1 = (uint32_t)blast0 + (uint32_t)n0 * 256U;
-    *SlPos = m0;
-    bitfield0 = res1;
-    p3 = *SlPos;
-    fieldStartBf3 = (uint64_t)p3;
-    startPositionBf3 = fieldStartBf3;
+    p01 = SlPos[0U];
+    m = p01 + (size_t)2U;
+    sub = SlBase + p01;
+    SlPos[0U] = m;
+    last = sub[1U];
+    last1 = sub[0U];
+    n = (uint16_t)(uint32_t)last1;
+    blast = (uint16_t)(uint32_t)last;
+    bitfield0 = (uint32_t)blast + (uint32_t)n * 256U;
+    p2 = SlPos[0U];
+    fieldStartBf3 = (uint64_t)p2;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
     p02 = pos1;
-    p4 = *SlPos;
-    rem1 = SlLen - p4;
+    p3 = SlPos[0U];
+    rem1 = SlLen - p3;
     hasBytes1 = p02 <= rem1 && (size_t)2U <= (rem1 - p02);
     if (hasBytes1)
     {
@@ -337,17 +337,15 @@ ValidateCoreBf3(
     }
     if (resultAfterBitfield1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = *SlPos;
-      m = p03 + (size_t)2U;
-      sub = SlBase + p03;
-      pos_0 = (size_t)1U;
-      last = sub[pos_0];
-      last1 = sub[0U];
-      n = (uint16_t)(uint32_t)last1;
-      blast = (uint16_t)(uint32_t)last;
-      res2 = (uint32_t)blast + (uint32_t)n * 256U;
-      *SlPos = m;
-      bitfield1 = res2;
+      p03 = SlPos[0U];
+      m1 = p03 + (size_t)2U;
+      sub1 = SlBase + p03;
+      SlPos[0U] = m1;
+      last2 = sub1[1U];
+      last3 = sub1[0U];
+      n1 = (uint16_t)(uint32_t)last3;
+      blast1 = (uint16_t)(uint32_t)last2;
+      bitfield1 = (uint32_t)blast1 + (uint32_t)n1 * 256U;
       bitfield1constraintIsOk =
         EverParseGetBitfield16MsbFirst(bitfield1, 0U, 12U) <
           EverParseGetBitfield16MsbFirst(bitfield0,
@@ -357,50 +355,50 @@ ValidateCoreBf3(
       {
         pos2 = (size_t)0U;
         /* Validating field z */
-        p5 = *SlPos;
-        viewStart0 = (uint64_t)p5;
-        fieldOff0 = pos2;
-        startPos0 = viewStart0 + (uint64_t)fieldOff0;
+        p4 = SlPos[0U];
+        viewStart1 = (uint64_t)p4;
+        fieldOff1 = pos2;
+        startPos1 = viewStart1 + (uint64_t)fieldOff1;
         /* Checking that we have enough space for a UINT8BE, i.e., 1 byte */
-        p0 = pos2;
-        p6 = *SlPos;
-        rem = SlLen - p6;
-        hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
-        if (hasBytes)
+        p04 = pos2;
+        p5 = SlPos[0U];
+        rem2 = SlLen - p5;
+        hasBytes2 = p04 <= rem2 && (size_t)1U <= (rem2 - p04);
+        if (hasBytes2)
         {
-          pos2 = p0 + (size_t)1U;
-          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+          pos2 = p04 + (size_t)1U;
+          res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
-          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+          res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
         }
-        if (res3 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+        if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
-          res = res3;
+          res2 = res1;
         }
         else
         {
           ErrorHandlerFn("_BF3",
             "z",
-            EverParsePulseInternalErrorReasonOfResult(res3),
-            res3 == 0U || (res3 >= 2U && res3 <= 8U) ? (uint64_t)(uint32_t)res3 : 15ULL,
+            EverParsePulseInternalErrorReasonOfResult(res1),
+            res1 == 0U || (res1 >= 2U && res1 <= 8U) ? (uint64_t)(uint32_t)res1 : 15ULL,
             Ctxt,
             SlBase,
-            startPos0);
-          res = res3;
+            startPos1);
+          res2 = res1;
         }
-        if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+        if (res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           consumed = pos2;
-          p = *SlPos;
-          p_ = p + consumed;
-          *SlPos = p_;
+          p6 = SlPos[0U];
+          p_ = p6 + consumed;
+          SlPos[0U] = p_;
           resultAfterBf3 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
-          resultAfterBf3 = res;
+          resultAfterBf3 = res2;
         }
       }
       else
@@ -423,31 +421,38 @@ ValidateCoreBf3(
                                                                              : 15ULL,
       Ctxt,
       SlBase,
-      startPositionBf3);
+      fieldStartBf3);
     return resultAfterBf3;
   }
   return resultAfterBitfield0;
 }
 
-static uint8_t
-ValidateCoreDummy(
+uint8_t
+BfValidateCoreDummy(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
   /* Validating field emp2 */
-  size_t p0 = *SlPos;
-  uint64_t fieldStartDummy = (uint64_t)p0;
-  uint64_t startPositionDummy = fieldStartDummy;
-  uint8_t resultAfterDummy = ValidateCoreBf2bis(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+  size_t p = SlPos[0U];
+  uint64_t fieldStartDummy = (uint64_t)p;
+  uint8_t resultAfterDummy = BfValidateCoreBf2bis(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
   uint8_t resultAfteremp2;
-  size_t p;
-  uint64_t fieldStartDummy0;
-  uint64_t startPositionDummy0;
-  uint8_t resultAfterDummy0;
+  size_t p1;
+  uint64_t fieldStartDummy1;
+  uint8_t resultAfterDummy1;
   if (resultAfterDummy == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfteremp2 = resultAfterDummy;
@@ -461,29 +466,28 @@ ValidateCoreDummy(
                                                                                    : 15ULL,
       Ctxt,
       SlBase,
-      startPositionDummy);
+      fieldStartDummy);
     resultAfteremp2 = resultAfterDummy;
   }
   if (resultAfteremp2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field emp3 */
-    p = *SlPos;
-    fieldStartDummy0 = (uint64_t)p;
-    startPositionDummy0 = fieldStartDummy0;
-    resultAfterDummy0 = ValidateCoreBf3(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
-    if (resultAfterDummy0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
+    p1 = SlPos[0U];
+    fieldStartDummy1 = (uint64_t)p1;
+    resultAfterDummy1 = BfValidateCoreBf3(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+    if (resultAfterDummy1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      return resultAfterDummy0;
+      return resultAfterDummy1;
     }
     ErrorHandlerFn("_dummy",
       "emp3",
-      EverParsePulseInternalErrorReasonOfResult(resultAfterDummy0),
-      resultAfterDummy0 == 0U || (resultAfterDummy0 >= 2U && resultAfterDummy0 <= 8U) ? (uint64_t)(uint32_t)resultAfterDummy0
+      EverParsePulseInternalErrorReasonOfResult(resultAfterDummy1),
+      resultAfterDummy1 == 0U || (resultAfterDummy1 >= 2U && resultAfterDummy1 <= 8U) ? (uint64_t)(uint32_t)resultAfterDummy1
                                                                                       : 15ULL,
       Ctxt,
       SlBase,
-      startPositionDummy0);
-    return resultAfterDummy0;
+      fieldStartDummy1);
+    return resultAfterDummy1;
   }
   return resultAfteremp2;
 }
@@ -491,7 +495,16 @@ ValidateCoreDummy(
 uint64_t
 BfValidateDummy(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER Handler,
+  void
+  (*Handler)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t Length,
   uint64_t Start
@@ -500,7 +513,7 @@ BfValidateDummy(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreDummy(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = BfValidateCoreDummy(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
