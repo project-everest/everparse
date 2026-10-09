@@ -13,10 +13,10 @@ uint64_t
 ProbeValidateS(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
@@ -24,10 +24,10 @@ ProbeValidateU(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
@@ -35,29 +35,29 @@ ProbeValidateV(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateIndirect(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateI(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
@@ -65,75 +65,75 @@ ProbeValidateMultiProbe(
   EVERPARSE_COPY_BUFFER_T DestT1,
   EVERPARSE_COPY_BUFFER_T DestT2,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateMaybeT(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateCoercePtr(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateProbeOnly(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateBothEntrypoints(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateNamedPlainEp(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateNamedProbeEp(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 ProbeValidateNamedBothEp(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 #if defined(__cplusplus)

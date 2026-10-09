@@ -13,20 +13,20 @@ uint64_t
 GetFieldPtrValidateT(
   uint8_t **Out,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 uint64_t
 GetFieldPtrValidateTact(
   uint8_t **Out,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 #if defined(__cplusplus)
