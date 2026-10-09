@@ -4,40 +4,29 @@
 
 #include "EverParse.h"
 
-inline uint8_t
-TaggedUnionValidateIntPayload(
+static inline uint8_t
+ValidateIntPayload(
   uint32_t Size,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
   size_t pos0;
-  size_t p3;
+  size_t p1;
   uint64_t viewStart;
   size_t fieldOff;
   uint64_t startPos;
   size_t p00;
-  size_t p10;
+  size_t p2;
   size_t rem0;
   BOOLEAN hasBytes0;
   uint8_t res0;
-  uint8_t res10;
+  uint8_t res1;
   size_t consumed0;
-  size_t p20;
+  size_t p3;
   size_t p_;
   size_t pos1;
   size_t p4;
@@ -45,50 +34,50 @@ TaggedUnionValidateIntPayload(
   size_t fieldOff0;
   uint64_t startPos0;
   size_t p01;
-  size_t p11;
+  size_t p5;
   size_t rem1;
   BOOLEAN hasBytes1;
   uint8_t res2;
-  uint8_t res11;
+  uint8_t res3;
   size_t consumed1;
-  size_t p21;
+  size_t p6;
   size_t p_0;
   size_t pos2;
-  size_t p5;
+  size_t p7;
   uint64_t viewStart1;
   size_t fieldOff1;
   uint64_t startPos1;
   size_t p0;
-  size_t p12;
+  size_t p8;
   size_t rem;
   BOOLEAN hasBytes;
-  uint8_t res3;
-  uint8_t res12;
+  uint8_t res4;
+  uint8_t res5;
   size_t consumed2;
-  size_t p2;
+  size_t p9;
   size_t p_1;
   size_t pos;
-  size_t p;
+  size_t p10;
   uint64_t viewStart2;
   size_t fieldOff2;
   uint64_t startPos2;
+  uint8_t res6;
   uint8_t res;
-  uint8_t res1;
   size_t consumed;
-  size_t p1;
+  size_t p;
   size_t p_2;
   if (Size == (uint32_t)TAGGEDUNION_SIZE8)
   {
     pos0 = (size_t)0U;
     /* Validating field value8 */
-    p3 = SlPos[0U];
-    viewStart = (uint64_t)p3;
+    p1 = *SlPos;
+    viewStart = (uint64_t)p1;
     fieldOff = pos0;
     startPos = viewStart + (uint64_t)fieldOff;
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
     p00 = pos0;
-    p10 = SlPos[0U];
-    rem0 = SlLen - p10;
+    p2 = *SlPos;
+    rem0 = SlLen - p2;
     hasBytes0 = p00 <= rem0 && (size_t)1U <= (rem0 - p00);
     if (hasBytes0)
     {
@@ -101,7 +90,7 @@ TaggedUnionValidateIntPayload(
     }
     if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
     {
-      res10 = res0;
+      res1 = res0;
     }
     else
     {
@@ -114,30 +103,30 @@ TaggedUnionValidateIntPayload(
         SlLen,
         SlPos,
         startPos);
-      res10 = res0;
+      res1 = res0;
     }
-    if (res10 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
     {
       consumed0 = pos0;
-      p20 = SlPos[0U];
-      p_ = p20 + consumed0;
-      SlPos[0U] = p_;
+      p3 = *SlPos;
+      p_ = p3 + consumed0;
+      *SlPos = p_;
       return EVERPARSE_VALIDATOR_SUCCESS;
     }
-    return res10;
+    return res1;
   }
   if (Size == (uint32_t)TAGGEDUNION_SIZE16)
   {
     pos1 = (size_t)0U;
     /* Validating field value16 */
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     viewStart0 = (uint64_t)p4;
     fieldOff0 = pos1;
     startPos0 = viewStart0 + (uint64_t)fieldOff0;
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
     p01 = pos1;
-    p11 = SlPos[0U];
-    rem1 = SlLen - p11;
+    p5 = *SlPos;
+    rem1 = SlLen - p5;
     hasBytes1 = p01 <= rem1 && (size_t)2U <= (rem1 - p01);
     if (hasBytes1)
     {
@@ -150,7 +139,7 @@ TaggedUnionValidateIntPayload(
     }
     if (res2 == EVERPARSE_VALIDATOR_SUCCESS)
     {
-      res11 = res2;
+      res3 = res2;
     }
     else
     {
@@ -163,207 +152,196 @@ TaggedUnionValidateIntPayload(
         SlLen,
         SlPos,
         startPos0);
-      res11 = res2;
+      res3 = res2;
     }
-    if (res11 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res3 == EVERPARSE_VALIDATOR_SUCCESS)
     {
       consumed1 = pos1;
-      p21 = SlPos[0U];
-      p_0 = p21 + consumed1;
-      SlPos[0U] = p_0;
+      p6 = *SlPos;
+      p_0 = p6 + consumed1;
+      *SlPos = p_0;
       return EVERPARSE_VALIDATOR_SUCCESS;
     }
-    return res11;
+    return res3;
   }
   if (Size == (uint32_t)TAGGEDUNION_SIZE32)
   {
     pos2 = (size_t)0U;
     /* Validating field value32 */
-    p5 = SlPos[0U];
-    viewStart1 = (uint64_t)p5;
+    p7 = *SlPos;
+    viewStart1 = (uint64_t)p7;
     fieldOff1 = pos2;
     startPos1 = viewStart1 + (uint64_t)fieldOff1;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p0 = pos2;
-    p12 = SlPos[0U];
-    rem = SlLen - p12;
+    p8 = *SlPos;
+    rem = SlLen - p8;
     hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
     if (hasBytes)
     {
       pos2 = p0 + (size_t)4U;
-      res3 = EVERPARSE_VALIDATOR_SUCCESS;
+      res4 = EVERPARSE_VALIDATOR_SUCCESS;
     }
     else
     {
-      res3 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res4 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res3 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res4 == EVERPARSE_VALIDATOR_SUCCESS)
     {
-      res12 = res3;
+      res5 = res4;
     }
     else
     {
       ErrorHandlerFn("_int_payload",
         "value32",
-        EverParseErrorReasonOfResult(res3),
-        res3,
+        EverParseErrorReasonOfResult(res4),
+        res4,
         Ctxt,
         SlBase,
         SlLen,
         SlPos,
         startPos1);
-      res12 = res3;
+      res5 = res4;
     }
-    if (res12 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res5 == EVERPARSE_VALIDATOR_SUCCESS)
     {
       consumed2 = pos2;
-      p2 = SlPos[0U];
-      p_1 = p2 + consumed2;
-      SlPos[0U] = p_1;
+      p9 = *SlPos;
+      p_1 = p9 + consumed2;
+      *SlPos = p_1;
       return EVERPARSE_VALIDATOR_SUCCESS;
     }
-    return res12;
+    return res5;
   }
   pos = (size_t)0U;
-  p = SlPos[0U];
-  viewStart2 = (uint64_t)p;
+  p10 = *SlPos;
+  viewStart2 = (uint64_t)p10;
   fieldOff2 = pos;
   startPos2 = viewStart2 + (uint64_t)fieldOff2;
-  res = EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  res6 = EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
+  if (res6 == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    res1 = res;
+    res = res6;
   }
   else
   {
     ErrorHandlerFn("_int_payload",
       "_x_17",
-      EverParseErrorReasonOfResult(res),
-      res,
+      EverParseErrorReasonOfResult(res6),
+      res6,
       Ctxt,
       SlBase,
       SlLen,
       SlPos,
       startPos2);
-    res1 = res;
+    res = res6;
   }
-  if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSE_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p1 = SlPos[0U];
-    p_2 = p1 + consumed;
-    SlPos[0U] = p_2;
+    p = *SlPos;
+    p_2 = p + consumed;
+    *SlPos = p_2;
     return EVERPARSE_VALIDATOR_SUCCESS;
   }
-  return res1;
+  return res;
 }
 
 uint8_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
-  uint64_t viewStart = (uint64_t)p;
+  size_t p1 = *SlPos;
+  uint64_t viewStart = (uint64_t)p1;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = SlPos[0U];
-  size_t rem = SlLen - p1;
-  BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
-  uint8_t res;
+  size_t p00 = pos;
+  size_t p2 = *SlPos;
+  size_t rem = SlLen - p2;
+  BOOLEAN hasBytes = p00 <= rem && (size_t)4U <= (rem - p00);
+  uint8_t res0;
   uint8_t resultAftersize;
-  size_t p01;
+  size_t p0;
   size_t m;
   uint8_t *sub;
-  uint8_t first;
   size_t pos_;
-  uint8_t first1;
+  uint8_t first;
   size_t pos_1;
+  uint8_t first1;
+  size_t pos_2;
   uint8_t first2;
   uint8_t first3;
-  uint32_t n;
-  uint32_t bfirst;
+  uint32_t n0;
+  uint32_t bfirst0;
   uint32_t n1;
   uint32_t bfirst1;
-  uint32_t n2;
-  uint32_t bfirst2;
+  uint32_t n;
+  uint32_t bfirst;
+  uint32_t res;
   uint32_t size;
-  size_t p2;
+  size_t p;
   uint64_t fieldStartInteger;
+  uint64_t startPositionInteger;
   uint8_t resultAfterInteger;
   if (hasBytes)
   {
-    pos = p0 + (size_t)4U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
+    pos = p00 + (size_t)4U;
+    res0 = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
   {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    resultAftersize = res;
+    resultAftersize = res0;
   }
   else
   {
     ErrorHandlerFn("_integer",
       "size",
-      EverParseErrorReasonOfResult(res),
-      res,
+      EverParseErrorReasonOfResult(res0),
+      res0,
       Ctxt,
       SlBase,
       SlLen,
       SlPos,
       startPos);
-    resultAftersize = res;
+    resultAftersize = res0;
   }
   if (resultAftersize == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
-    m = p01 + (size_t)4U;
-    sub = SlBase + p01;
-    SlPos[0U] = m;
+    p0 = *SlPos;
+    m = p0 + (size_t)4U;
+    sub = SlBase + p0;
+    pos_ = (size_t)1U;
     first = sub[0U];
-    pos_ = (size_t)2U;
-    first1 = sub[1U];
     pos_1 = pos_ + (size_t)1U;
-    first2 = sub[pos_];
-    first3 = sub[pos_1];
-    n = (uint32_t)first3;
-    bfirst = (uint32_t)first2;
-    n1 = bfirst + n * 256U;
+    first1 = sub[pos_];
+    pos_2 = pos_1 + (size_t)1U;
+    first2 = sub[pos_1];
+    first3 = sub[pos_2];
+    n0 = (uint32_t)first3;
+    bfirst0 = (uint32_t)first2;
+    n1 = bfirst0 + n0 * 256U;
     bfirst1 = (uint32_t)first1;
-    n2 = bfirst1 + n1 * 256U;
-    bfirst2 = (uint32_t)first;
-    size = bfirst2 + n2 * 256U;
+    n = bfirst1 + n1 * 256U;
+    bfirst = (uint32_t)first;
+    res = bfirst + n * 256U;
+    *SlPos = m;
+    size = res;
     /* Validating field payload */
-    p2 = SlPos[0U];
-    fieldStartInteger = (uint64_t)p2;
-    resultAfterInteger =
-      TaggedUnionValidateIntPayload(size,
-        Ctxt,
-        ErrorHandlerFn,
-        SlBase,
-        SlLen,
-        SlPos);
+    p = *SlPos;
+    fieldStartInteger = (uint64_t)p;
+    startPositionInteger = fieldStartInteger;
+    resultAfterInteger = ValidateIntPayload(size, Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
     if (resultAfterInteger == EVERPARSE_VALIDATOR_SUCCESS)
     {
       return resultAfterInteger;
@@ -376,7 +354,7 @@ TaggedUnionValidateInteger(
       SlBase,
       SlLen,
       SlPos,
-      fieldStartInteger);
+      startPositionInteger);
     return resultAfterInteger;
   }
   return resultAftersize;

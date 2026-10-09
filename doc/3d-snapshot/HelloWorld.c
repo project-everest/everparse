@@ -7,34 +7,24 @@
 uint8_t
 HelloWorldValidatePoint(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
-  uint64_t fieldStartPoint = (uint64_t)p;
+  size_t p1 = *SlPos;
+  uint64_t fieldStartPoint = (uint64_t)p1;
+  uint64_t startPositionPoint = fieldStartPoint;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
-  size_t rem = SlLen - p1;
+  size_t p2 = *SlPos;
+  size_t rem = SlLen - p2;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
   uint8_t resultAfterPoint;
   size_t consumed;
-  size_t p2;
+  size_t p;
   size_t p_;
   if (hasBytes)
   {
@@ -48,9 +38,9 @@ HelloWorldValidatePoint(
   if (res == EVERPARSE_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
-    p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    p = *SlPos;
+    p_ = p + consumed;
+    *SlPos = p_;
     resultAfterPoint = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
@@ -69,7 +59,7 @@ HelloWorldValidatePoint(
     SlBase,
     SlLen,
     SlPos,
-    fieldStartPoint);
+    startPositionPoint);
   return resultAfterPoint;
 }
 

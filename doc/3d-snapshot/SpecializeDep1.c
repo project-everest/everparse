@@ -5,78 +5,237 @@
 #include "SpecializeDep1_ExternalAPI.h"
 #include "EverParse.h"
 
-void
-SpecializeDep1CopyBytes(
-  uint64_t Numbytes,
-  EVERPARSE_STRING Tn,
-  EVERPARSE_STRING Fn,
-  EVERPARSE_STRING Fd,
+static inline uint8_t
+ValidateUnion(
+  uint8_t Tag,
   uint8_t *Ctxt,
-  void
-  (*Err)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos
+)
+{
+  size_t pos0;
+  size_t p1;
+  uint64_t viewStart;
+  size_t fieldOff;
+  uint64_t startPos;
+  size_t p00;
+  size_t p2;
+  size_t rem0;
+  BOOLEAN hasBytes0;
+  uint8_t res0;
+  uint8_t res1;
+  size_t consumed0;
+  size_t p3;
+  size_t p_;
+  size_t pos1;
+  size_t p4;
+  uint64_t viewStart0;
+  size_t fieldOff0;
+  uint64_t startPos0;
+  size_t p01;
+  size_t p5;
+  size_t rem1;
+  BOOLEAN hasBytes1;
+  uint8_t res2;
+  uint8_t res3;
+  size_t consumed1;
+  size_t p6;
+  size_t p_0;
+  size_t pos;
+  size_t p7;
+  uint64_t viewStart1;
+  size_t fieldOff1;
+  uint64_t startPos1;
+  size_t p0;
+  size_t p8;
+  size_t rem;
+  BOOLEAN hasBytes;
+  uint8_t res4;
+  uint8_t res;
+  size_t consumed;
+  size_t p;
+  size_t p_1;
+  if (Tag == 0U)
+  {
+    pos0 = (size_t)0U;
+    /* Validating field case0 */
+    p1 = *SlPos;
+    viewStart = (uint64_t)p1;
+    fieldOff = pos0;
+    startPos = viewStart + (uint64_t)fieldOff;
+    /* Checking that we have enough space for a UINT8, i.e., 1 byte */
+    p00 = pos0;
+    p2 = *SlPos;
+    rem0 = SlLen - p2;
+    hasBytes0 = p00 <= rem0 && (size_t)1U <= (rem0 - p00);
+    if (hasBytes0)
+    {
+      pos0 = p00 + (size_t)1U;
+      res0 = EVERPARSE_VALIDATOR_SUCCESS;
+    }
+    else
+    {
+      res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    }
+    if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      res1 = res0;
+    }
+    else
+    {
+      ErrorHandlerFn("_UNION",
+        "case0",
+        EverParseErrorReasonOfResult(res0),
+        res0,
+        Ctxt,
+        SlBase,
+        SlLen,
+        SlPos,
+        startPos);
+      res1 = res0;
+    }
+    if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      consumed0 = pos0;
+      p3 = *SlPos;
+      p_ = p3 + consumed0;
+      *SlPos = p_;
+      return EVERPARSE_VALIDATOR_SUCCESS;
+    }
+    return res1;
+  }
+  if (Tag == 1U)
+  {
+    pos1 = (size_t)0U;
+    /* Validating field case1 */
+    p4 = *SlPos;
+    viewStart0 = (uint64_t)p4;
+    fieldOff0 = pos1;
+    startPos0 = viewStart0 + (uint64_t)fieldOff0;
+    /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
+    p01 = pos1;
+    p5 = *SlPos;
+    rem1 = SlLen - p5;
+    hasBytes1 = p01 <= rem1 && (size_t)2U <= (rem1 - p01);
+    if (hasBytes1)
+    {
+      pos1 = p01 + (size_t)2U;
+      res2 = EVERPARSE_VALIDATOR_SUCCESS;
+    }
+    else
+    {
+      res2 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    }
+    if (res2 == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      res3 = res2;
+    }
+    else
+    {
+      ErrorHandlerFn("_UNION",
+        "case1",
+        EverParseErrorReasonOfResult(res2),
+        res2,
+        Ctxt,
+        SlBase,
+        SlLen,
+        SlPos,
+        startPos0);
+      res3 = res2;
+    }
+    if (res3 == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      consumed1 = pos1;
+      p6 = *SlPos;
+      p_0 = p6 + consumed1;
+      *SlPos = p_0;
+      return EVERPARSE_VALIDATOR_SUCCESS;
+    }
+    return res3;
+  }
+  pos = (size_t)0U;
+  /* Validating field other */
+  p7 = *SlPos;
+  viewStart1 = (uint64_t)p7;
+  fieldOff1 = pos;
+  startPos1 = viewStart1 + (uint64_t)fieldOff1;
+  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+  p0 = pos;
+  p8 = *SlPos;
+  rem = SlLen - p8;
+  hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
+  if (hasBytes)
+  {
+    pos = p0 + (size_t)4U;
+    res4 = EVERPARSE_VALIDATOR_SUCCESS;
+  }
+  else
+  {
+    res4 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+  }
+  if (res4 == EVERPARSE_VALIDATOR_SUCCESS)
+  {
+    res = res4;
+  }
+  else
+  {
+    ErrorHandlerFn("_UNION",
+      "other",
+      EverParseErrorReasonOfResult(res4),
+      res4,
+      Ctxt,
+      SlBase,
+      SlLen,
+      SlPos,
+      startPos1);
+    res = res4;
+  }
+  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  {
+    consumed = pos;
+    p = *SlPos;
+    p_1 = p + consumed;
+    *SlPos = p_1;
+    return EVERPARSE_VALIDATOR_SUCCESS;
+  }
+  return res;
+}
+
+static void
+CopyBytes(
+  uint64_t Numbytes,
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
-  uint64_t rd;
-  uint64_t wr;
-  BOOLEAN ok;
-  KRML_MAYBE_UNUSED_VAR(Tn);
-  KRML_MAYBE_UNUSED_VAR(Fn);
-  KRML_MAYBE_UNUSED_VAR(Fd);
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(Err);
-  KRML_MAYBE_UNUSED_VAR(Sz);
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
-  ok = ProbeAndCopy(Numbytes, rd, wr, Src, Dest);
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy(Numbytes, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Numbytes;
-    WriteOffset[0U] = wr + Numbytes;
+    *ReadOffset = rd + Numbytes;
+    *WriteOffset = wr + Numbytes;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
-void
-SpecializeDep1Specialized32ProbeUnion(
+static void
+Specialized32ProbeUnion(
   uint8_t Tag,
   EVERPARSE_STRING Tn,
   EVERPARSE_STRING Fn,
-  EVERPARSE_STRING Fd,
   uint8_t *Ctxt,
-  void
-  (*Err)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER Err,
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
@@ -94,22 +253,11 @@ SpecializeDep1Specialized32ProbeUnion(
   uint64_t position;
   if (Tag == 0U)
   {
-    SpecializeDep1CopyBytes(1ULL,
-      Tn,
-      Fn,
-      Fd,
-      Ctxt,
-      Err,
-      ReadOffset,
-      WriteOffset,
-      Failed,
-      Src,
-      Sz,
-      Dest);
-    hasFailed = Failed[0U];
+    CopyBytes(1ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
+    hasFailed = *Failed;
     if (hasFailed)
     {
-      p0 = EverParseStreamPos(Dest)[0U];
+      p0 = *EverParseStreamPos(Dest);
       position0 = (uint64_t)p0;
       Err(Tn,
         Fn,
@@ -124,22 +272,11 @@ SpecializeDep1Specialized32ProbeUnion(
   }
   else if (Tag == 1U)
   {
-    SpecializeDep1CopyBytes(2ULL,
-      Tn,
-      Fn,
-      Fd,
-      Ctxt,
-      Err,
-      ReadOffset,
-      WriteOffset,
-      Failed,
-      Src,
-      Sz,
-      Dest);
-    hasFailed0 = Failed[0U];
+    CopyBytes(2ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
+    hasFailed0 = *Failed;
     if (hasFailed0)
     {
-      p1 = EverParseStreamPos(Dest)[0U];
+      p1 = *EverParseStreamPos(Dest);
       position1 = (uint64_t)p1;
       Err(Tn,
         Fn,
@@ -154,22 +291,11 @@ SpecializeDep1Specialized32ProbeUnion(
   }
   else
   {
-    SpecializeDep1CopyBytes(4ULL,
-      Tn,
-      Fn,
-      Fd,
-      Ctxt,
-      Err,
-      ReadOffset,
-      WriteOffset,
-      Failed,
-      Src,
-      Sz,
-      Dest);
-    hasFailed1 = Failed[0U];
+    CopyBytes(4ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
+    hasFailed1 = *Failed;
     if (hasFailed1)
     {
-      p2 = EverParseStreamPos(Dest)[0U];
+      p2 = *EverParseStreamPos(Dest);
       position2 = (uint64_t)p2;
       Err(Tn,
         Fn,
@@ -182,10 +308,10 @@ SpecializeDep1Specialized32ProbeUnion(
         position2);
     }
   }
-  hasFailed2 = Failed[0U];
+  hasFailed2 = *Failed;
   if (hasFailed2)
   {
-    p = EverParseStreamPos(Dest)[0U];
+    p = *EverParseStreamPos(Dest);
     position = (uint64_t)p;
     Err(Tn,
       Fn,
@@ -200,591 +326,132 @@ SpecializeDep1Specialized32ProbeUnion(
   }
 }
 
-void
-SpecializeDep1Specialized32ProbeTlv(
-  uint16_t Len,
-  EVERPARSE_STRING Tn,
-  EVERPARSE_STRING Fn,
-  EVERPARSE_STRING Fd,
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
-  uint64_t *ReadOffset,
-  uint64_t *WriteOffset,
-  BOOLEAN *Failed,
-  uint64_t Src,
-  uint64_t Sz,
-  EVERPARSE_COPY_BUFFER_T Dest
-)
-{
-  uint64_t rd = ReadOffset[0U];
-  uint8_t v = ProbeAndReadU8(Failed, rd, Src, Dest);
-  BOOLEAN hasFailed = Failed[0U];
-  uint8_t res1;
-  size_t p0;
-  uint64_t position0;
-  BOOLEAN hasFailed1;
-  size_t p1;
-  uint64_t position1;
-  uint64_t wr;
-  BOOLEAN ok;
-  BOOLEAN hasFailed2;
-  size_t p2;
-  uint64_t position2;
-  BOOLEAN hasFailed3;
-  size_t p3;
-  uint64_t position3;
-  uint64_t ctr;
-  BOOLEAN stop;
-  BOOLEAN anf0;
-  BOOLEAN cond;
-  uint64_t c0;
-  BOOLEAN hf0;
-  uint64_t r0;
-  BOOLEAN hasFailed4;
-  size_t p4;
-  uint64_t position4;
-  BOOLEAN hf1;
-  uint64_t r1;
-  size_t p5;
-  uint64_t position5;
-  uint64_t bytesRead;
-  size_t p;
-  uint64_t position;
-  BOOLEAN anf00;
-  if (hasFailed)
-  {
-    p0 = EverParseStreamPos(Dest)[0U];
-    position0 = (uint64_t)p0;
-    Err(Tn,
-      Fn,
-      Fd,
-      0U,
-      Ctxt,
-      EverParseStreamOf(Dest),
-      EverParseStreamLen(Dest),
-      EverParseStreamPos(Dest),
-      position0);
-    res1 = v;
-  }
-  else
-  {
-    ReadOffset[0U] = rd + 1ULL;
-    res1 = v;
-  }
-  hasFailed1 = Failed[0U];
-  if (hasFailed1)
-  {
-    p1 = EverParseStreamPos(Dest)[0U];
-    position1 = (uint64_t)p1;
-    Err(Tn,
-      Fn,
-      "tag",
-      0U,
-      Ctxt,
-      EverParseStreamOf(Dest),
-      EverParseStreamLen(Dest),
-      EverParseStreamPos(Dest),
-      position1);
-    return;
-  }
-  wr = WriteOffset[0U];
-  ok = WriteU8(res1, wr, Dest);
-  if (ok)
-  {
-    WriteOffset[0U] = wr + 1ULL;
-  }
-  else
-  {
-    Failed[0U] = TRUE;
-  }
-  hasFailed2 = Failed[0U];
-  if (hasFailed2)
-  {
-    p2 = EverParseStreamPos(Dest)[0U];
-    position2 = (uint64_t)p2;
-    Err(Tn,
-      Fn,
-      "tag",
-      0U,
-      Ctxt,
-      EverParseStreamOf(Dest),
-      EverParseStreamLen(Dest),
-      EverParseStreamPos(Dest),
-      position2);
-    return;
-  }
-  SpecializeDep1CopyBytes(4ULL,
-    Tn,
-    Fn,
-    Fd,
-    Ctxt,
-    Err,
-    ReadOffset,
-    WriteOffset,
-    Failed,
-    Src,
-    Sz,
-    Dest);
-  hasFailed3 = Failed[0U];
-  if (hasFailed3)
-  {
-    p3 = EverParseStreamPos(Dest)[0U];
-    position3 = (uint64_t)p3;
-    Err(Tn,
-      Fn,
-      "length",
-      0U,
-      Ctxt,
-      EverParseStreamOf(Dest),
-      EverParseStreamLen(Dest),
-      EverParseStreamPos(Dest),
-      position3);
-    return;
-  }
-  ctr = (uint64_t)(uint32_t)Len;
-  stop = FALSE;
-  anf0 = stop;
-  cond = !anf0;
-  while (cond)
-  {
-    c0 = ctr;
-    hf0 = Failed[0U];
-    if (hf0)
-    {
-      stop = TRUE;
-    }
-    else if (c0 == 0ULL)
-    {
-      stop = TRUE;
-    }
-    else
-    {
-      r0 = ReadOffset[0U];
-      SpecializeDep1Specialized32ProbeUnion(res1,
-        Tn,
-        Fn,
-        Fd,
-        Ctxt,
-        Err,
-        ReadOffset,
-        WriteOffset,
-        Failed,
-        Src,
-        Sz,
-        Dest);
-      hasFailed4 = Failed[0U];
-      if (hasFailed4)
-      {
-        p4 = EverParseStreamPos(Dest)[0U];
-        position4 = (uint64_t)p4;
-        Err(Tn,
-          Fn,
-          "payload",
-          0U,
-          Ctxt,
-          EverParseStreamOf(Dest),
-          EverParseStreamLen(Dest),
-          EverParseStreamPos(Dest),
-          position4);
-      }
-      hf1 = Failed[0U];
-      r1 = ReadOffset[0U];
-      if (hf1)
-      {
-        stop = TRUE;
-      }
-      else if (r1 == r0)
-      {
-        p5 = EverParseStreamPos(Dest)[0U];
-        position5 = (uint64_t)p5;
-        Err(Tn,
-          Fn,
-          Fd,
-          0U,
-          Ctxt,
-          EverParseStreamOf(Dest),
-          EverParseStreamLen(Dest),
-          EverParseStreamPos(Dest),
-          position5);
-        Failed[0U] = TRUE;
-        stop = TRUE;
-      }
-      else
-      {
-        bytesRead = r1 - r0;
-        if (c0 < bytesRead)
-        {
-          p = EverParseStreamPos(Dest)[0U];
-          position = (uint64_t)p;
-          Err(Tn,
-            Fn,
-            Fd,
-            0U,
-            Ctxt,
-            EverParseStreamOf(Dest),
-            EverParseStreamLen(Dest),
-            EverParseStreamPos(Dest),
-            position);
-          Failed[0U] = TRUE;
-          stop = TRUE;
-        }
-        else
-        {
-          ctr = c0 - bytesRead;
-        }
-      }
-    }
-    anf00 = stop;
-    cond = !anf00;
-  }
-}
-
-inline uint8_t
-SpecializeDep1ValidateUnion(
-  uint8_t Tag,
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t pos0;
-  size_t p3;
-  uint64_t viewStart;
-  size_t fieldOff;
-  uint64_t startPos;
-  size_t p00;
-  size_t p10;
-  size_t rem0;
-  BOOLEAN hasBytes0;
-  uint8_t res0;
-  uint8_t res10;
-  size_t consumed0;
-  size_t p20;
-  size_t p_;
-  size_t pos1;
-  size_t p4;
-  uint64_t viewStart0;
-  size_t fieldOff0;
-  uint64_t startPos0;
-  size_t p01;
-  size_t p11;
-  size_t rem1;
-  BOOLEAN hasBytes1;
-  uint8_t res2;
-  uint8_t res11;
-  size_t consumed1;
-  size_t p21;
-  size_t p_0;
-  size_t pos;
-  size_t p;
-  uint64_t viewStart1;
-  size_t fieldOff1;
-  uint64_t startPos1;
-  size_t p0;
-  size_t p1;
-  size_t rem;
-  BOOLEAN hasBytes;
-  uint8_t res;
-  uint8_t res1;
-  size_t consumed;
-  size_t p2;
-  size_t p_1;
-  if (Tag == 0U)
-  {
-    pos0 = (size_t)0U;
-    /* Validating field case0 */
-    p3 = SlPos[0U];
-    viewStart = (uint64_t)p3;
-    fieldOff = pos0;
-    startPos = viewStart + (uint64_t)fieldOff;
-    /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    p00 = pos0;
-    p10 = SlPos[0U];
-    rem0 = SlLen - p10;
-    hasBytes0 = p00 <= rem0 && (size_t)1U <= (rem0 - p00);
-    if (hasBytes0)
-    {
-      pos0 = p00 + (size_t)1U;
-      res0 = EVERPARSE_VALIDATOR_SUCCESS;
-    }
-    else
-    {
-      res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-    }
-    if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
-    {
-      res10 = res0;
-    }
-    else
-    {
-      ErrorHandlerFn("_UNION",
-        "case0",
-        EverParseErrorReasonOfResult(res0),
-        res0,
-        Ctxt,
-        SlBase,
-        SlLen,
-        SlPos,
-        startPos);
-      res10 = res0;
-    }
-    if (res10 == EVERPARSE_VALIDATOR_SUCCESS)
-    {
-      consumed0 = pos0;
-      p20 = SlPos[0U];
-      p_ = p20 + consumed0;
-      SlPos[0U] = p_;
-      return EVERPARSE_VALIDATOR_SUCCESS;
-    }
-    return res10;
-  }
-  if (Tag == 1U)
-  {
-    pos1 = (size_t)0U;
-    /* Validating field case1 */
-    p4 = SlPos[0U];
-    viewStart0 = (uint64_t)p4;
-    fieldOff0 = pos1;
-    startPos0 = viewStart0 + (uint64_t)fieldOff0;
-    /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-    p01 = pos1;
-    p11 = SlPos[0U];
-    rem1 = SlLen - p11;
-    hasBytes1 = p01 <= rem1 && (size_t)2U <= (rem1 - p01);
-    if (hasBytes1)
-    {
-      pos1 = p01 + (size_t)2U;
-      res2 = EVERPARSE_VALIDATOR_SUCCESS;
-    }
-    else
-    {
-      res2 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-    }
-    if (res2 == EVERPARSE_VALIDATOR_SUCCESS)
-    {
-      res11 = res2;
-    }
-    else
-    {
-      ErrorHandlerFn("_UNION",
-        "case1",
-        EverParseErrorReasonOfResult(res2),
-        res2,
-        Ctxt,
-        SlBase,
-        SlLen,
-        SlPos,
-        startPos0);
-      res11 = res2;
-    }
-    if (res11 == EVERPARSE_VALIDATOR_SUCCESS)
-    {
-      consumed1 = pos1;
-      p21 = SlPos[0U];
-      p_0 = p21 + consumed1;
-      SlPos[0U] = p_0;
-      return EVERPARSE_VALIDATOR_SUCCESS;
-    }
-    return res11;
-  }
-  pos = (size_t)0U;
-  /* Validating field other */
-  p = SlPos[0U];
-  viewStart1 = (uint64_t)p;
-  fieldOff1 = pos;
-  startPos1 = viewStart1 + (uint64_t)fieldOff1;
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  p0 = pos;
-  p1 = SlPos[0U];
-  rem = SlLen - p1;
-  hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
-  if (hasBytes)
-  {
-    pos = p0 + (size_t)4U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
-  }
-  else
-  {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
-  {
-    res1 = res;
-  }
-  else
-  {
-    ErrorHandlerFn("_UNION",
-      "other",
-      EverParseErrorReasonOfResult(res),
-      res,
-      Ctxt,
-      SlBase,
-      SlLen,
-      SlPos,
-      startPos1);
-    res1 = res;
-  }
-  if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
-  {
-    consumed = pos;
-    p2 = SlPos[0U];
-    p_1 = p2 + consumed;
-    SlPos[0U] = p_1;
-    return EVERPARSE_VALIDATOR_SUCCESS;
-  }
-  return res1;
-}
-
-inline uint8_t
-SpecializeDep1ValidateTlv(
+static inline uint8_t
+ValidateTlv(
   uint16_t Len,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
-  uint64_t viewStart = (uint64_t)p;
+  size_t p1 = *SlPos;
+  uint64_t viewStart = (uint64_t)p1;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  size_t p0 = pos;
-  size_t p1 = SlPos[0U];
-  size_t rem = SlLen - p1;
-  BOOLEAN hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
-  uint8_t res;
+  size_t p00 = pos;
+  size_t p2 = *SlPos;
+  size_t rem0 = SlLen - p2;
+  BOOLEAN hasBytes0 = p00 <= rem0 && (size_t)1U <= (rem0 - p00);
+  uint8_t res0;
   uint8_t resultAftertag;
   size_t p01;
-  size_t m;
-  uint8_t *sub;
+  size_t m0;
+  uint8_t *sub0;
+  uint8_t res1;
   uint8_t tag;
-  size_t p2;
+  size_t p3;
   uint64_t fieldStartTlv;
+  uint64_t startPositionTlv;
   size_t pos1;
   size_t p02;
-  size_t p3;
-  size_t rem1;
+  size_t p4;
+  size_t rem;
   BOOLEAN hasBytes1;
   uint8_t resultAfterlength;
   uint8_t resultAfterTlv;
-  size_t p03;
-  size_t m1;
-  uint8_t *sub1;
-  uint8_t first;
+  size_t p0;
+  size_t m;
+  uint8_t *sub;
   size_t pos_;
-  uint8_t first1;
+  uint8_t first;
   size_t pos_1;
+  uint8_t first1;
+  size_t pos_2;
   uint8_t first2;
   uint8_t first3;
-  uint32_t n;
-  uint32_t bfirst;
+  uint32_t n0;
+  uint32_t bfirst0;
   uint32_t n1;
   uint32_t bfirst1;
-  uint32_t n2;
-  uint32_t bfirst2;
+  uint32_t n;
+  uint32_t bfirst;
+  uint32_t res2;
   uint32_t length;
   BOOLEAN lengthConstraintIsOk;
-  size_t p4;
-  uint64_t fieldStartTlv1;
-  size_t nSz;
   size_t p5;
-  size_t avail;
-  BOOLEAN hasBytes2;
-  uint8_t resultAfterTlv0;
+  uint64_t fieldStartTlv1;
+  uint64_t startPositionTlv1;
+  size_t nSz;
   size_t p6;
+  size_t avail0;
+  BOOLEAN hasBytes;
+  uint8_t resultAfterTlv0;
+  size_t p7;
   size_t tr;
-  uint8_t res1;
+  uint8_t *tb;
+  size_t tl;
+  size_t *tp;
+  uint8_t res;
   BOOLEAN stop;
   BOOLEAN anf0;
   BOOLEAN cond;
-  size_t p7;
-  size_t avail1;
-  BOOLEAN hasMore;
   size_t p8;
+  size_t avail;
+  BOOLEAN hasMore;
+  size_t p;
   uint64_t fieldStartTlv2;
+  uint64_t startPositionTlv2;
   uint8_t resultAfterTlv1;
   uint8_t r;
   BOOLEAN anf00;
   uint8_t fres;
-  if (hasBytes)
+  if (hasBytes0)
   {
-    pos = p0 + (size_t)1U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
+    pos = p00 + (size_t)1U;
+    res0 = EVERPARSE_VALIDATOR_SUCCESS;
   }
   else
   {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    resultAftertag = res;
+    resultAftertag = res0;
   }
   else
   {
     ErrorHandlerFn("_TLV",
       "tag",
-      EverParseErrorReasonOfResult(res),
-      res,
+      EverParseErrorReasonOfResult(res0),
+      res0,
       Ctxt,
       SlBase,
       SlLen,
       SlPos,
       startPos);
-    resultAftertag = res;
+    resultAftertag = res0;
   }
   if (resultAftertag == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
-    m = p01 + (size_t)1U;
-    sub = SlBase + p01;
-    SlPos[0U] = m;
-    tag = sub[0U];
-    p2 = SlPos[0U];
-    fieldStartTlv = (uint64_t)p2;
+    p01 = *SlPos;
+    m0 = p01 + (size_t)1U;
+    sub0 = SlBase + p01;
+    res1 = sub0[0U];
+    *SlPos = m0;
+    tag = res1;
+    p3 = *SlPos;
+    fieldStartTlv = (uint64_t)p3;
+    startPositionTlv = fieldStartTlv;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p02 = pos1;
-    p3 = SlPos[0U];
-    rem1 = SlLen - p3;
-    hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
+    p4 = *SlPos;
+    rem = SlLen - p4;
+    hasBytes1 = p02 <= rem && (size_t)4U <= (rem - p02);
     if (hasBytes1)
     {
       pos1 = p02 + (size_t)4U;
@@ -796,65 +463,66 @@ SpecializeDep1ValidateTlv(
     }
     if (resultAfterlength == EVERPARSE_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
-      m1 = p03 + (size_t)4U;
-      sub1 = SlBase + p03;
-      SlPos[0U] = m1;
-      first = sub1[0U];
-      pos_ = (size_t)2U;
-      first1 = sub1[1U];
+      p0 = *SlPos;
+      m = p0 + (size_t)4U;
+      sub = SlBase + p0;
+      pos_ = (size_t)1U;
+      first = sub[0U];
       pos_1 = pos_ + (size_t)1U;
-      first2 = sub1[pos_];
-      first3 = sub1[pos_1];
-      n = (uint32_t)first3;
-      bfirst = (uint32_t)first2;
-      n1 = bfirst + n * 256U;
+      first1 = sub[pos_];
+      pos_2 = pos_1 + (size_t)1U;
+      first2 = sub[pos_1];
+      first3 = sub[pos_2];
+      n0 = (uint32_t)first3;
+      bfirst0 = (uint32_t)first2;
+      n1 = bfirst0 + n0 * 256U;
       bfirst1 = (uint32_t)first1;
-      n2 = bfirst1 + n1 * 256U;
-      bfirst2 = (uint32_t)first;
-      length = bfirst2 + n2 * 256U;
+      n = bfirst1 + n1 * 256U;
+      bfirst = (uint32_t)first;
+      res2 = bfirst + n * 256U;
+      *SlPos = m;
+      length = res2;
       lengthConstraintIsOk = length == (uint32_t)Len;
       if (lengthConstraintIsOk)
       {
         /* Validating field payload */
-        p4 = SlPos[0U];
-        fieldStartTlv1 = (uint64_t)p4;
+        p5 = *SlPos;
+        fieldStartTlv1 = (uint64_t)p5;
+        startPositionTlv1 = fieldStartTlv1;
         nSz = (size_t)(uint32_t)Len;
-        p5 = SlPos[0U];
-        avail = SlLen - p5;
-        hasBytes2 = nSz <= avail;
-        if (!hasBytes2)
+        p6 = *SlPos;
+        avail0 = SlLen - p6;
+        hasBytes = nSz <= avail0;
+        if (!hasBytes)
         {
           resultAfterTlv0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
         }
         else
         {
-          p6 = SlPos[0U];
-          tr = p6 + nSz;
-          res1 = EVERPARSE_VALIDATOR_SUCCESS;
+          p7 = *SlPos;
+          tr = p7 + nSz;
+          tb = SlBase;
+          tl = tr;
+          tp = SlPos;
+          res = EVERPARSE_VALIDATOR_SUCCESS;
           stop = FALSE;
           anf0 = stop;
           cond = !anf0;
           while (cond)
           {
-            p7 = SlPos[0U];
-            avail1 = tr - p7;
-            hasMore = (size_t)1U <= avail1;
+            p8 = *tp;
+            avail = tl - p8;
+            hasMore = (size_t)1U <= avail;
             if (!hasMore)
             {
               stop = TRUE;
             }
             else
             {
-              p8 = SlPos[0U];
-              fieldStartTlv2 = (uint64_t)p8;
-              resultAfterTlv1 =
-                SpecializeDep1ValidateUnion(tag,
-                  Ctxt,
-                  ErrorHandlerFn,
-                  SlBase,
-                  tr,
-                  SlPos);
+              p = *tp;
+              fieldStartTlv2 = (uint64_t)p;
+              startPositionTlv2 = fieldStartTlv2;
+              resultAfterTlv1 = ValidateUnion(tag, Ctxt, ErrorHandlerFn, tb, tl, tp);
               if (resultAfterTlv1 == EVERPARSE_VALIDATOR_SUCCESS)
               {
                 r = resultAfterTlv1;
@@ -866,22 +534,22 @@ SpecializeDep1ValidateTlv(
                   EverParseErrorReasonOfResult(resultAfterTlv1),
                   resultAfterTlv1,
                   Ctxt,
-                  SlBase,
-                  tr,
-                  SlPos,
-                  fieldStartTlv2);
+                  tb,
+                  tl,
+                  tp,
+                  startPositionTlv2);
                 r = resultAfterTlv1;
               }
               if (!(r == EVERPARSE_VALIDATOR_SUCCESS))
               {
-                res1 = r;
+                res = r;
                 stop = TRUE;
               }
             }
             anf00 = stop;
             cond = !anf00;
           }
-          fres = res1;
+          fres = res;
           resultAfterTlv0 = fres == EVERPARSE_VALIDATOR_SUCCESS ? fres : fres;
         }
         if (resultAfterTlv0 == EVERPARSE_VALIDATOR_SUCCESS)
@@ -898,7 +566,7 @@ SpecializeDep1ValidateTlv(
             SlBase,
             SlLen,
             SlPos,
-            fieldStartTlv1);
+            startPositionTlv1);
           resultAfterTlv = resultAfterTlv0;
         }
       }
@@ -923,66 +591,306 @@ SpecializeDep1ValidateTlv(
       SlBase,
       SlLen,
       SlPos,
-      fieldStartTlv);
+      startPositionTlv);
     return resultAfterTlv;
   }
   return resultAftertag;
 }
 
-inline uint8_t
-SpecializeDep1ValidateSpecializedWrapper32(
+static void
+Specialized32ProbeTlv(
+  uint16_t Len,
+  EVERPARSE_STRING Tn,
+  EVERPARSE_STRING Fn,
+  EVERPARSE_STRING Fd,
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Err,
+  uint64_t *ReadOffset,
+  uint64_t *WriteOffset,
+  BOOLEAN *Failed,
+  uint64_t Src,
+  EVERPARSE_COPY_BUFFER_T Dest
+)
+{
+  uint64_t rd = *ReadOffset;
+  uint8_t v = ProbeAndReadU8(Failed, rd, Src, Dest);
+  BOOLEAN hasFailed = *Failed;
+  uint8_t res1;
+  size_t p0;
+  uint64_t position0;
+  BOOLEAN hasFailed0;
+  size_t p1;
+  uint64_t position1;
+  uint64_t wr;
+  BOOLEAN ok;
+  BOOLEAN hasFailed1;
+  size_t p2;
+  uint64_t position2;
+  BOOLEAN hasFailed2;
+  size_t p3;
+  uint64_t position3;
+  uint64_t ctr;
+  BOOLEAN stop;
+  BOOLEAN anf0;
+  BOOLEAN cond;
+  uint64_t c0;
+  BOOLEAN hf0;
+  uint64_t r0;
+  BOOLEAN hasFailed3;
+  size_t p4;
+  uint64_t position4;
+  BOOLEAN hf1;
+  uint64_t r1;
+  size_t p5;
+  uint64_t position5;
+  uint64_t bytesRead;
+  size_t p;
+  uint64_t position;
+  BOOLEAN anf00;
+  if (hasFailed)
+  {
+    p0 = *EverParseStreamPos(Dest);
+    position0 = (uint64_t)p0;
+    Err(Tn,
+      Fn,
+      Fd,
+      0U,
+      Ctxt,
+      EverParseStreamOf(Dest),
+      EverParseStreamLen(Dest),
+      EverParseStreamPos(Dest),
+      position0);
+    res1 = v;
+  }
+  else
+  {
+    *ReadOffset = rd + 1ULL;
+    res1 = v;
+  }
+  hasFailed0 = *Failed;
+  if (hasFailed0)
+  {
+    p1 = *EverParseStreamPos(Dest);
+    position1 = (uint64_t)p1;
+    Err(Tn,
+      Fn,
+      "tag",
+      0U,
+      Ctxt,
+      EverParseStreamOf(Dest),
+      EverParseStreamLen(Dest),
+      EverParseStreamPos(Dest),
+      position1);
+    return;
+  }
+  wr = *WriteOffset;
+  ok = WriteU8(res1, wr, Dest);
+  if (ok)
+  {
+    *WriteOffset = wr + 1ULL;
+  }
+  else
+  {
+    *Failed = TRUE;
+  }
+  hasFailed1 = *Failed;
+  if (hasFailed1)
+  {
+    p2 = *EverParseStreamPos(Dest);
+    position2 = (uint64_t)p2;
+    Err(Tn,
+      Fn,
+      "tag",
+      0U,
+      Ctxt,
+      EverParseStreamOf(Dest),
+      EverParseStreamLen(Dest),
+      EverParseStreamPos(Dest),
+      position2);
+    return;
+  }
+  CopyBytes(4ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
+  hasFailed2 = *Failed;
+  if (hasFailed2)
+  {
+    p3 = *EverParseStreamPos(Dest);
+    position3 = (uint64_t)p3;
+    Err(Tn,
+      Fn,
+      "length",
+      0U,
+      Ctxt,
+      EverParseStreamOf(Dest),
+      EverParseStreamLen(Dest),
+      EverParseStreamPos(Dest),
+      position3);
+    return;
+  }
+  ctr = (uint64_t)(uint32_t)Len;
+  stop = FALSE;
+  anf0 = stop;
+  cond = !anf0;
+  while (cond)
+  {
+    c0 = ctr;
+    hf0 = *Failed;
+    if (hf0)
+    {
+      stop = TRUE;
+    }
+    else if (c0 == 0ULL)
+    {
+      stop = TRUE;
+    }
+    else
+    {
+      r0 = *ReadOffset;
+      Specialized32ProbeUnion(res1, Tn, Fn, Ctxt, Err, ReadOffset, WriteOffset, Failed, Src, Dest);
+      hasFailed3 = *Failed;
+      if (hasFailed3)
+      {
+        p4 = *EverParseStreamPos(Dest);
+        position4 = (uint64_t)p4;
+        Err(Tn,
+          Fn,
+          "payload",
+          0U,
+          Ctxt,
+          EverParseStreamOf(Dest),
+          EverParseStreamLen(Dest),
+          EverParseStreamPos(Dest),
+          position4);
+      }
+      hf1 = *Failed;
+      r1 = *ReadOffset;
+      if (hf1)
+      {
+        stop = TRUE;
+      }
+      else if (r1 == r0)
+      {
+        p5 = *EverParseStreamPos(Dest);
+        position5 = (uint64_t)p5;
+        Err(Tn,
+          Fn,
+          Fd,
+          0U,
+          Ctxt,
+          EverParseStreamOf(Dest),
+          EverParseStreamLen(Dest),
+          EverParseStreamPos(Dest),
+          position5);
+        *Failed = TRUE;
+        stop = TRUE;
+      }
+      else
+      {
+        bytesRead = r1 - r0;
+        if (c0 < bytesRead)
+        {
+          p = *EverParseStreamPos(Dest);
+          position = (uint64_t)p;
+          Err(Tn,
+            Fn,
+            Fd,
+            0U,
+            Ctxt,
+            EverParseStreamOf(Dest),
+            EverParseStreamLen(Dest),
+            EverParseStreamPos(Dest),
+            position);
+          *Failed = TRUE;
+          stop = TRUE;
+        }
+        else
+        {
+          ctr = c0 - bytesRead;
+        }
+      }
+    }
+    anf00 = stop;
+    cond = !anf00;
+  }
+}
+
+static inline uint8_t
+ValidateWrapper(
+  void
+  (*ProbeTlv)(
+    uint16_t x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    EVERPARSE_STRING x3,
+    uint8_t *x4,
+    EVERPARSE_ERROR_HANDLER x5,
+    uint64_t *x6,
+    uint64_t *x7,
+    BOOLEAN *x8,
+    uint64_t x9,
+    uint64_t x10,
+    EVERPARSE_COPY_BUFFER_T x11
+  ),
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
-  uint64_t fieldStartSpecializedWrapper32 = (uint64_t)p;
+  size_t p1 = *SlPos;
+  uint64_t fieldStartWrapper = (uint64_t)p1;
+  uint64_t startPositionWrapper = fieldStartWrapper;
   /* Validating field __precondition */
   BOOLEAN preconditionConstraintIsOk = Len > (uint16_t)5U;
-  uint8_t resultAfterSpecializedWrapper32;
-  size_t p1;
-  uint64_t fieldStartSpecializedWrapper321;
+  uint8_t resultAfterWrapper;
   size_t p2;
+  uint64_t fieldStartWrapper1;
+  uint64_t startPositionWrapper1;
+  size_t p3;
   uint64_t fieldStarttlv;
   size_t pos;
-  size_t p0;
-  size_t p3;
+  size_t p00;
+  size_t p4;
   size_t rem;
   BOOLEAN hasBytes;
   uint8_t resultAftertlv;
-  uint8_t resultAfterSpecializedWrapper320;
-  size_t p01;
+  uint8_t resultAfterWrapper0;
+  size_t p0;
   size_t m;
   uint8_t *sub;
-  uint8_t first;
   size_t pos_;
-  uint8_t first1;
+  uint8_t first;
   size_t pos_1;
+  uint8_t first1;
+  size_t pos_2;
   uint8_t first2;
+  size_t pos_3;
   uint8_t first3;
-  uint32_t n;
-  uint32_t bfirst;
-  uint32_t n1;
-  uint32_t bfirst1;
-  uint32_t n2;
-  uint32_t bfirst2;
-  uint32_t tlv;
+  size_t pos_4;
+  uint8_t first4;
+  size_t pos_5;
+  uint8_t first5;
+  size_t pos_6;
+  uint8_t first6;
+  uint8_t first7;
+  uint64_t n0;
+  uint64_t bfirst0;
+  uint64_t n1;
+  uint64_t bfirst1;
+  uint64_t n2;
+  uint64_t bfirst2;
+  uint64_t n3;
+  uint64_t bfirst3;
+  uint64_t n4;
+  uint64_t bfirst4;
+  uint64_t n5;
+  uint64_t bfirst5;
+  uint64_t n;
+  uint64_t bfirst;
+  uint64_t res0;
+  uint64_t tlv;
   uint64_t src64;
   uint64_t readOffset;
   uint64_t writeOffset;
@@ -991,7 +899,7 @@ SpecializeDep1ValidateSpecializedWrapper32(
   uint64_t wr;
   BOOLEAN hasFailed;
   uint64_t b;
-  size_t p4;
+  size_t p;
   uint64_t position;
   BOOLEAN actionSuccessTlv;
   uint8_t *x0;
@@ -1000,19 +908,20 @@ SpecializeDep1ValidateSpecializedWrapper32(
   uint8_t res;
   if (preconditionConstraintIsOk)
   {
-    p1 = SlPos[0U];
-    fieldStartSpecializedWrapper321 = (uint64_t)p1;
-    p2 = SlPos[0U];
-    fieldStarttlv = (uint64_t)p2;
+    p2 = *SlPos;
+    fieldStartWrapper1 = (uint64_t)p2;
+    startPositionWrapper1 = fieldStartWrapper1;
+    p3 = *SlPos;
+    fieldStarttlv = (uint64_t)p3;
     pos = (size_t)0U;
-    /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    p0 = pos;
-    p3 = SlPos[0U];
-    rem = SlLen - p3;
-    hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
+    /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
+    p00 = pos;
+    p4 = *SlPos;
+    rem = SlLen - p4;
+    hasBytes = p00 <= rem && (size_t)8U <= (rem - p00);
     if (hasBytes)
     {
-      pos = p0 + (size_t)4U;
+      pos = p00 + (size_t)8U;
       resultAftertlv = EVERPARSE_VALIDATOR_SUCCESS;
     }
     else
@@ -1021,32 +930,50 @@ SpecializeDep1ValidateSpecializedWrapper32(
     }
     if (resultAftertlv == EVERPARSE_VALIDATOR_SUCCESS)
     {
-      p01 = SlPos[0U];
-      m = p01 + (size_t)4U;
-      sub = SlBase + p01;
-      SlPos[0U] = m;
+      p0 = *SlPos;
+      m = p0 + (size_t)8U;
+      sub = SlBase + p0;
+      pos_ = (size_t)1U;
       first = sub[0U];
-      pos_ = (size_t)2U;
-      first1 = sub[1U];
       pos_1 = pos_ + (size_t)1U;
-      first2 = sub[pos_];
-      first3 = sub[pos_1];
-      n = (uint32_t)first3;
-      bfirst = (uint32_t)first2;
-      n1 = bfirst + n * 256U;
-      bfirst1 = (uint32_t)first1;
-      n2 = bfirst1 + n1 * 256U;
-      bfirst2 = (uint32_t)first;
-      tlv = bfirst2 + n2 * 256U;
-      src64 = UlongToPtr(tlv);
+      first1 = sub[pos_];
+      pos_2 = pos_1 + (size_t)1U;
+      first2 = sub[pos_1];
+      pos_3 = pos_2 + (size_t)1U;
+      first3 = sub[pos_2];
+      pos_4 = pos_3 + (size_t)1U;
+      first4 = sub[pos_3];
+      pos_5 = pos_4 + (size_t)1U;
+      first5 = sub[pos_4];
+      pos_6 = pos_5 + (size_t)1U;
+      first6 = sub[pos_5];
+      first7 = sub[pos_6];
+      n0 = (uint64_t)(uint32_t)first7;
+      bfirst0 = (uint64_t)(uint32_t)first6;
+      n1 = bfirst0 + n0 * 256ULL;
+      bfirst1 = (uint64_t)(uint32_t)first5;
+      n2 = bfirst1 + n1 * 256ULL;
+      bfirst2 = (uint64_t)(uint32_t)first4;
+      n3 = bfirst2 + n2 * 256ULL;
+      bfirst3 = (uint64_t)(uint32_t)first3;
+      n4 = bfirst3 + n3 * 256ULL;
+      bfirst4 = (uint64_t)(uint32_t)first2;
+      n5 = bfirst4 + n4 * 256ULL;
+      bfirst5 = (uint64_t)(uint32_t)first1;
+      n = bfirst5 + n5 * 256ULL;
+      bfirst = (uint64_t)(uint32_t)first;
+      res0 = bfirst + n * 256ULL;
+      *SlPos = m;
+      tlv = res0;
+      src64 = tlv;
       readOffset = 0ULL;
       writeOffset = 0ULL;
       failed = FALSE;
-      ok = ProbeInit("___specialized_WRAPPER_32.tlv", (uint64_t)(uint32_t)Len, Output);
+      ok = ProbeInit("_WRAPPER.tlv", (uint64_t)(uint32_t)Len, Output);
       if (ok)
       {
-        SpecializeDep1Specialized32ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
-          "___specialized_WRAPPER_32",
+        ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
+          "_WRAPPER",
           "tlv",
           "probe",
           Ctxt,
@@ -1066,292 +993,8 @@ SpecializeDep1ValidateSpecializedWrapper32(
       hasFailed = failed;
       if (hasFailed)
       {
-        p4 = EverParseStreamPos(Output)[0U];
-        position = (uint64_t)p4;
-        ErrorHandlerFn("___specialized_WRAPPER_32",
-          "tlv",
-          "probe",
-          0U,
-          Ctxt,
-          EverParseStreamOf(Output),
-          EverParseStreamLen(Output),
-          EverParseStreamPos(Output),
-          position);
-        b = 0ULL;
-      }
-      else
-      {
-        b = wr;
-      }
-      if (b != 0ULL)
-      {
-        EverParseStreamPos(Output)[0U] = (size_t)0U;
-        x0 = EverParseStreamOf(Output);
-        x1 = EverParseStreamLen(Output);
-        x2 = EverParseStreamPos(Output);
-        res =
-          SpecializeDep1ValidateTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
-            Ctxt,
-            ErrorHandlerFn,
-            x0,
-            x1,
-            x2);
-        actionSuccessTlv = res == EVERPARSE_VALIDATOR_SUCCESS;
-      }
-      else
-      {
-        ErrorHandlerFn("___specialized_WRAPPER_32",
-          "tlv",
-          EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
-          EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED,
-          Ctxt,
-          SlBase,
-          SlLen,
-          SlPos,
-          fieldStarttlv);
-        actionSuccessTlv = FALSE;
-      }
-      resultAfterSpecializedWrapper320 =
-        actionSuccessTlv ? EVERPARSE_VALIDATOR_SUCCESS
-                         : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
-    }
-    else
-    {
-      resultAfterSpecializedWrapper320 = resultAftertlv;
-    }
-    if (resultAfterSpecializedWrapper320 == EVERPARSE_VALIDATOR_SUCCESS)
-    {
-      resultAfterSpecializedWrapper32 = resultAfterSpecializedWrapper320;
-    }
-    else
-    {
-      ErrorHandlerFn("___specialized_WRAPPER_32",
-        "tlv",
-        EverParseErrorReasonOfResult(resultAfterSpecializedWrapper320),
-        resultAfterSpecializedWrapper320,
-        Ctxt,
-        SlBase,
-        SlLen,
-        SlPos,
-        fieldStartSpecializedWrapper321);
-      resultAfterSpecializedWrapper32 = resultAfterSpecializedWrapper320;
-    }
-  }
-  else
-  {
-    resultAfterSpecializedWrapper32 = EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
-  }
-  if (resultAfterSpecializedWrapper32 == EVERPARSE_VALIDATOR_SUCCESS)
-  {
-    return resultAfterSpecializedWrapper32;
-  }
-  ErrorHandlerFn("___specialized_WRAPPER_32",
-    "__precondition",
-    EverParseErrorReasonOfResult(resultAfterSpecializedWrapper32),
-    resultAfterSpecializedWrapper32,
-    Ctxt,
-    SlBase,
-    SlLen,
-    SlPos,
-    fieldStartSpecializedWrapper32);
-  return resultAfterSpecializedWrapper32;
-}
-
-inline uint8_t
-SpecializeDep1ValidateWrapper(
-  void
-  (*ProbeTlv)(
-    uint16_t x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    EVERPARSE_STRING x3,
-    uint8_t *x4,
-    void
-    (*x5)(
-      EVERPARSE_STRING x0,
-      EVERPARSE_STRING x1,
-      EVERPARSE_STRING x2,
-      uint8_t x3,
-      uint8_t *x4,
-      uint8_t *x5,
-      size_t x6,
-      size_t *x7,
-      uint64_t x8
-    ),
-    uint64_t *x6,
-    uint64_t *x7,
-    BOOLEAN *x8,
-    uint64_t x9,
-    uint64_t x10,
-    EVERPARSE_COPY_BUFFER_T x11
-  ),
-  uint16_t Len,
-  EVERPARSE_COPY_BUFFER_T Output,
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t p = SlPos[0U];
-  uint64_t fieldStartWrapper = (uint64_t)p;
-  /* Validating field __precondition */
-  BOOLEAN preconditionConstraintIsOk = Len > (uint16_t)5U;
-  uint8_t resultAfterWrapper;
-  size_t p1;
-  uint64_t fieldStartWrapper1;
-  size_t p2;
-  uint64_t fieldStarttlv;
-  size_t pos;
-  size_t p0;
-  size_t p3;
-  size_t rem;
-  BOOLEAN hasBytes;
-  uint8_t resultAftertlv;
-  uint8_t resultAfterWrapper0;
-  size_t p01;
-  size_t m;
-  uint8_t *sub;
-  uint8_t first;
-  size_t pos_;
-  uint8_t first1;
-  size_t pos_1;
-  uint8_t first2;
-  size_t pos_2;
-  uint8_t first3;
-  size_t pos_3;
-  uint8_t first4;
-  size_t pos_4;
-  uint8_t first5;
-  size_t pos_5;
-  uint8_t first6;
-  uint8_t first7;
-  uint64_t n;
-  uint64_t bfirst;
-  uint64_t n1;
-  uint64_t bfirst1;
-  uint64_t n2;
-  uint64_t bfirst2;
-  uint64_t n3;
-  uint64_t bfirst3;
-  uint64_t n4;
-  uint64_t bfirst4;
-  uint64_t n5;
-  uint64_t bfirst5;
-  uint64_t n6;
-  uint64_t bfirst6;
-  uint64_t tlv;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t wr;
-  BOOLEAN hasFailed;
-  uint64_t b;
-  size_t p4;
-  uint64_t position;
-  BOOLEAN actionSuccessTlv;
-  uint8_t *x0;
-  size_t x1;
-  size_t *x2;
-  uint8_t res;
-  if (preconditionConstraintIsOk)
-  {
-    p1 = SlPos[0U];
-    fieldStartWrapper1 = (uint64_t)p1;
-    p2 = SlPos[0U];
-    fieldStarttlv = (uint64_t)p2;
-    pos = (size_t)0U;
-    /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    p0 = pos;
-    p3 = SlPos[0U];
-    rem = SlLen - p3;
-    hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
-    if (hasBytes)
-    {
-      pos = p0 + (size_t)8U;
-      resultAftertlv = EVERPARSE_VALIDATOR_SUCCESS;
-    }
-    else
-    {
-      resultAftertlv = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-    }
-    if (resultAftertlv == EVERPARSE_VALIDATOR_SUCCESS)
-    {
-      p01 = SlPos[0U];
-      m = p01 + (size_t)8U;
-      sub = SlBase + p01;
-      SlPos[0U] = m;
-      first = sub[0U];
-      pos_ = (size_t)2U;
-      first1 = sub[1U];
-      pos_1 = pos_ + (size_t)1U;
-      first2 = sub[pos_];
-      pos_2 = pos_1 + (size_t)1U;
-      first3 = sub[pos_1];
-      pos_3 = pos_2 + (size_t)1U;
-      first4 = sub[pos_2];
-      pos_4 = pos_3 + (size_t)1U;
-      first5 = sub[pos_3];
-      pos_5 = pos_4 + (size_t)1U;
-      first6 = sub[pos_4];
-      first7 = sub[pos_5];
-      n = (uint64_t)(uint32_t)first7;
-      bfirst = (uint64_t)(uint32_t)first6;
-      n1 = bfirst + n * 256ULL;
-      bfirst1 = (uint64_t)(uint32_t)first5;
-      n2 = bfirst1 + n1 * 256ULL;
-      bfirst2 = (uint64_t)(uint32_t)first4;
-      n3 = bfirst2 + n2 * 256ULL;
-      bfirst3 = (uint64_t)(uint32_t)first3;
-      n4 = bfirst3 + n3 * 256ULL;
-      bfirst4 = (uint64_t)(uint32_t)first2;
-      n5 = bfirst4 + n4 * 256ULL;
-      bfirst5 = (uint64_t)(uint32_t)first1;
-      n6 = bfirst5 + n5 * 256ULL;
-      bfirst6 = (uint64_t)(uint32_t)first;
-      tlv = bfirst6 + n6 * 256ULL;
-      readOffset = 0ULL;
-      writeOffset = 0ULL;
-      failed = FALSE;
-      ok = ProbeInit("_WRAPPER.tlv", (uint64_t)(uint32_t)Len, Output);
-      if (ok)
-      {
-        ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
-          "_WRAPPER",
-          "tlv",
-          "probe",
-          Ctxt,
-          ErrorHandlerFn,
-          &readOffset,
-          &writeOffset,
-          &failed,
-          tlv,
-          (uint64_t)(uint32_t)Len,
-          Output);
-      }
-      else
-      {
-        failed = TRUE;
-      }
-      wr = writeOffset;
-      hasFailed = failed;
-      if (hasFailed)
-      {
-        p4 = EverParseStreamPos(Output)[0U];
-        position = (uint64_t)p4;
+        p = *EverParseStreamPos(Output);
+        position = (uint64_t)p;
         ErrorHandlerFn("_WRAPPER",
           "tlv",
           "probe",
@@ -1369,17 +1012,11 @@ SpecializeDep1ValidateWrapper(
       }
       if (b != 0ULL)
       {
-        EverParseStreamPos(Output)[0U] = (size_t)0U;
+        *EverParseStreamPos(Output) = (size_t)0U;
         x0 = EverParseStreamOf(Output);
         x1 = EverParseStreamLen(Output);
         x2 = EverParseStreamPos(Output);
-        res =
-          SpecializeDep1ValidateTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
-            Ctxt,
-            ErrorHandlerFn,
-            x0,
-            x1,
-            x2);
+        res = ValidateTlv((uint32_t)Len - (uint32_t)(uint16_t)5U, Ctxt, ErrorHandlerFn, x0, x1, x2);
         actionSuccessTlv = res == EVERPARSE_VALIDATOR_SUCCESS;
       }
       else
@@ -1417,7 +1054,7 @@ SpecializeDep1ValidateWrapper(
         SlBase,
         SlLen,
         SlPos,
-        fieldStartWrapper1);
+        startPositionWrapper1);
       resultAfterWrapper = resultAfterWrapper0;
     }
   }
@@ -1437,29 +1074,235 @@ SpecializeDep1ValidateWrapper(
     SlBase,
     SlLen,
     SlPos,
-    fieldStartWrapper);
+    startPositionWrapper);
   return resultAfterWrapper;
 }
 
-void
-SpecializeDep1EntryProbeWrapper0Tlv(
+static inline uint8_t
+ValidateSpecializedWrapper32(
+  uint16_t Len,
+  EVERPARSE_COPY_BUFFER_T Output,
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  uint8_t *SlBase,
+  size_t SlLen,
+  size_t *SlPos
+)
+{
+  size_t p1 = *SlPos;
+  uint64_t fieldStartSpecializedWrapper32 = (uint64_t)p1;
+  uint64_t startPositionSpecializedWrapper32 = fieldStartSpecializedWrapper32;
+  /* Validating field __precondition */
+  BOOLEAN preconditionConstraintIsOk = Len > (uint16_t)5U;
+  uint8_t resultAfterSpecializedWrapper32;
+  size_t p2;
+  uint64_t fieldStartSpecializedWrapper321;
+  uint64_t startPositionSpecializedWrapper321;
+  size_t p3;
+  uint64_t fieldStarttlv;
+  size_t pos;
+  size_t p00;
+  size_t p4;
+  size_t rem;
+  BOOLEAN hasBytes;
+  uint8_t resultAftertlv;
+  uint8_t resultAfterSpecializedWrapper320;
+  size_t p0;
+  size_t m;
+  uint8_t *sub;
+  size_t pos_;
+  uint8_t first;
+  size_t pos_1;
+  uint8_t first1;
+  size_t pos_2;
+  uint8_t first2;
+  uint8_t first3;
+  uint32_t n0;
+  uint32_t bfirst0;
+  uint32_t n1;
+  uint32_t bfirst1;
+  uint32_t n;
+  uint32_t bfirst;
+  uint32_t res0;
+  uint32_t tlv;
+  uint64_t src64;
+  uint64_t readOffset;
+  uint64_t writeOffset;
+  BOOLEAN failed;
+  BOOLEAN ok;
+  uint64_t wr;
+  BOOLEAN hasFailed;
+  uint64_t b;
+  size_t p;
+  uint64_t position;
+  BOOLEAN actionSuccessTlv;
+  uint8_t *x0;
+  size_t x1;
+  size_t *x2;
+  uint8_t res;
+  if (preconditionConstraintIsOk)
+  {
+    p2 = *SlPos;
+    fieldStartSpecializedWrapper321 = (uint64_t)p2;
+    startPositionSpecializedWrapper321 = fieldStartSpecializedWrapper321;
+    p3 = *SlPos;
+    fieldStarttlv = (uint64_t)p3;
+    pos = (size_t)0U;
+    /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+    p00 = pos;
+    p4 = *SlPos;
+    rem = SlLen - p4;
+    hasBytes = p00 <= rem && (size_t)4U <= (rem - p00);
+    if (hasBytes)
+    {
+      pos = p00 + (size_t)4U;
+      resultAftertlv = EVERPARSE_VALIDATOR_SUCCESS;
+    }
+    else
+    {
+      resultAftertlv = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    }
+    if (resultAftertlv == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      p0 = *SlPos;
+      m = p0 + (size_t)4U;
+      sub = SlBase + p0;
+      pos_ = (size_t)1U;
+      first = sub[0U];
+      pos_1 = pos_ + (size_t)1U;
+      first1 = sub[pos_];
+      pos_2 = pos_1 + (size_t)1U;
+      first2 = sub[pos_1];
+      first3 = sub[pos_2];
+      n0 = (uint32_t)first3;
+      bfirst0 = (uint32_t)first2;
+      n1 = bfirst0 + n0 * 256U;
+      bfirst1 = (uint32_t)first1;
+      n = bfirst1 + n1 * 256U;
+      bfirst = (uint32_t)first;
+      res0 = bfirst + n * 256U;
+      *SlPos = m;
+      tlv = res0;
+      src64 = UlongToPtr(tlv);
+      readOffset = 0ULL;
+      writeOffset = 0ULL;
+      failed = FALSE;
+      ok = ProbeInit("___specialized_WRAPPER_32.tlv", (uint64_t)(uint32_t)Len, Output);
+      if (ok)
+      {
+        Specialized32ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
+          "___specialized_WRAPPER_32",
+          "tlv",
+          "probe",
+          Ctxt,
+          ErrorHandlerFn,
+          &readOffset,
+          &writeOffset,
+          &failed,
+          src64,
+          Output);
+      }
+      else
+      {
+        failed = TRUE;
+      }
+      wr = writeOffset;
+      hasFailed = failed;
+      if (hasFailed)
+      {
+        p = *EverParseStreamPos(Output);
+        position = (uint64_t)p;
+        ErrorHandlerFn("___specialized_WRAPPER_32",
+          "tlv",
+          "probe",
+          0U,
+          Ctxt,
+          EverParseStreamOf(Output),
+          EverParseStreamLen(Output),
+          EverParseStreamPos(Output),
+          position);
+        b = 0ULL;
+      }
+      else
+      {
+        b = wr;
+      }
+      if (b != 0ULL)
+      {
+        *EverParseStreamPos(Output) = (size_t)0U;
+        x0 = EverParseStreamOf(Output);
+        x1 = EverParseStreamLen(Output);
+        x2 = EverParseStreamPos(Output);
+        res = ValidateTlv((uint32_t)Len - (uint32_t)(uint16_t)5U, Ctxt, ErrorHandlerFn, x0, x1, x2);
+        actionSuccessTlv = res == EVERPARSE_VALIDATOR_SUCCESS;
+      }
+      else
+      {
+        ErrorHandlerFn("___specialized_WRAPPER_32",
+          "tlv",
+          EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+          EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED,
+          Ctxt,
+          SlBase,
+          SlLen,
+          SlPos,
+          fieldStarttlv);
+        actionSuccessTlv = FALSE;
+      }
+      resultAfterSpecializedWrapper320 =
+        actionSuccessTlv ? EVERPARSE_VALIDATOR_SUCCESS
+                         : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+    }
+    else
+    {
+      resultAfterSpecializedWrapper320 = resultAftertlv;
+    }
+    if (resultAfterSpecializedWrapper320 == EVERPARSE_VALIDATOR_SUCCESS)
+    {
+      resultAfterSpecializedWrapper32 = resultAfterSpecializedWrapper320;
+    }
+    else
+    {
+      ErrorHandlerFn("___specialized_WRAPPER_32",
+        "tlv",
+        EverParseErrorReasonOfResult(resultAfterSpecializedWrapper320),
+        resultAfterSpecializedWrapper320,
+        Ctxt,
+        SlBase,
+        SlLen,
+        SlPos,
+        startPositionSpecializedWrapper321);
+      resultAfterSpecializedWrapper32 = resultAfterSpecializedWrapper320;
+    }
+  }
+  else
+  {
+    resultAfterSpecializedWrapper32 = EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+  }
+  if (resultAfterSpecializedWrapper32 == EVERPARSE_VALIDATOR_SUCCESS)
+  {
+    return resultAfterSpecializedWrapper32;
+  }
+  ErrorHandlerFn("___specialized_WRAPPER_32",
+    "__precondition",
+    EverParseErrorReasonOfResult(resultAfterSpecializedWrapper32),
+    resultAfterSpecializedWrapper32,
+    Ctxt,
+    SlBase,
+    SlLen,
+    SlPos,
+    startPositionSpecializedWrapper32);
+  return resultAfterSpecializedWrapper32;
+}
+
+static void
+EntryProbeWrapper0Tlv(
   uint16_t Arg0,
   EVERPARSE_STRING Tn,
   EVERPARSE_STRING Fn,
   EVERPARSE_STRING Fd,
   uint8_t *Ctxt,
-  void
-  (*Err)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER Err,
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
@@ -1468,6 +1311,7 @@ SpecializeDep1EntryProbeWrapper0Tlv(
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
+  uint64_t res1;
   BOOLEAN hasFailed;
   size_t p;
   uint64_t position;
@@ -1476,10 +1320,11 @@ SpecializeDep1EntryProbeWrapper0Tlv(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  res1 = Sz;
+  hasFailed = *Failed;
   if (hasFailed)
   {
-    p = EverParseStreamPos(Dest)[0U];
+    p = *EverParseStreamPos(Dest);
     position = (uint64_t)p;
     Err(Tn,
       Fn,
@@ -1492,16 +1337,16 @@ SpecializeDep1EntryProbeWrapper0Tlv(
       position);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
-  ok = ProbeAndCopy(Sz, rd, wr, Src, Dest);
+  rd = *ReadOffset;
+  wr = *WriteOffset;
+  ok = ProbeAndCopy(res1, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + res1;
+    *WriteOffset = wr + res1;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 uint8_t
@@ -1510,18 +1355,7 @@ SpecializeDep1ValidateEntry(
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint8_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    size_t x6,
-    size_t *x7,
-    uint64_t x8
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
   size_t SlLen,
   size_t *SlPos
@@ -1529,27 +1363,30 @@ SpecializeDep1ValidateEntry(
 {
   size_t p0;
   uint64_t fieldStartEntry;
+  uint64_t startPositionEntry;
   uint8_t resultAfterEntry;
-  size_t p2;
+  size_t p1;
   uint64_t fieldStartEntry0;
+  uint64_t startPositionEntry0;
   uint8_t resultAfterEntry0;
   size_t pos;
-  size_t p;
+  size_t p2;
   uint64_t viewStart;
   size_t fieldOff;
   uint64_t startPos;
+  uint8_t res0;
   uint8_t res;
-  uint8_t res1;
   size_t consumed;
-  size_t p1;
+  size_t p;
   size_t p_;
   if (Requestor32)
   {
     /* Validating field w32 */
-    p0 = SlPos[0U];
+    p0 = *SlPos;
     fieldStartEntry = (uint64_t)p0;
+    startPositionEntry = fieldStartEntry;
     resultAfterEntry =
-      SpecializeDep1ValidateSpecializedWrapper32(Len,
+      ValidateSpecializedWrapper32(Len,
         Output,
         Ctxt,
         ErrorHandlerFn,
@@ -1568,16 +1405,17 @@ SpecializeDep1ValidateEntry(
       SlBase,
       SlLen,
       SlPos,
-      fieldStartEntry);
+      startPositionEntry);
     return resultAfterEntry;
   }
   if (Requestor32 == FALSE)
   {
     /* Validating field w64 */
-    p2 = SlPos[0U];
-    fieldStartEntry0 = (uint64_t)p2;
+    p1 = *SlPos;
+    fieldStartEntry0 = (uint64_t)p1;
+    startPositionEntry0 = fieldStartEntry0;
     resultAfterEntry0 =
-      SpecializeDep1ValidateWrapper(SpecializeDep1EntryProbeWrapper0Tlv,
+      ValidateWrapper(EntryProbeWrapper0Tlv,
         Len,
         Output,
         Ctxt,
@@ -1597,40 +1435,40 @@ SpecializeDep1ValidateEntry(
       SlBase,
       SlLen,
       SlPos,
-      fieldStartEntry0);
+      startPositionEntry0);
     return resultAfterEntry0;
   }
   pos = (size_t)0U;
-  p = SlPos[0U];
-  viewStart = (uint64_t)p;
+  p2 = *SlPos;
+  viewStart = (uint64_t)p2;
   fieldOff = pos;
   startPos = viewStart + (uint64_t)fieldOff;
-  res = EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  res0 = EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
+  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
   {
-    res1 = res;
+    res = res0;
   }
   else
   {
     ErrorHandlerFn("_ENTRY",
       "_x_14",
-      EverParseErrorReasonOfResult(res),
-      res,
+      EverParseErrorReasonOfResult(res0),
+      res0,
       Ctxt,
       SlBase,
       SlLen,
       SlPos,
       startPos);
-    res1 = res;
+    res = res0;
   }
-  if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSE_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p1 = SlPos[0U];
-    p_ = p1 + consumed;
-    SlPos[0U] = p_;
+    p = *SlPos;
+    p_ = p + consumed;
+    *SlPos = p_;
     return EVERPARSE_VALIDATOR_SUCCESS;
   }
-  return res1;
+  return res;
 }
 
