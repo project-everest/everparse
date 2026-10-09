@@ -435,7 +435,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_skip_testcases_c" (OptBool no_produce_testcases_c) "skip generating test cases to <output directory>/testcases.c" [];
     CmdOption "z3_skip_c_initializers" (OptBool z3_skip_c_initializers) "Do not use C field initializers for test cases" [];
     CmdOption "use_error_handler_macro" (OptBool use_error_handler_macro) "Use the C macro `EverParse3dErrorHandlerMacro` instead of the dynamic error handler" [];
-    CmdOption "api" (OptStringOption "pulse|lowstar" valid_api _api) "Select the implementation and C API (default pulse)" [];
+    CmdOption "api" (OptStringOption "pulse|lowstar" valid_api _api) "Select the implementation and C API (default lowstar)" [];
     CmdOption "z3_test" (OptStringOption "parser name" always_valid _z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode _z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
     CmdOption "z3_use_ptr" (OptBool use_ptr_for_probe) "use pointers rather than array indices for probes" [];

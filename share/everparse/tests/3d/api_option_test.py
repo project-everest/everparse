@@ -53,12 +53,17 @@ def main():
             output.mkdir()
             run(*options, "--odir", output, "--no_copy_everparse_h", source)
 
-        # Omitting --api now selects pulse, and --no_api resets an earlier
+        # Omitting --api selects lowstar, and --no_api resets an earlier
         # --api back to that default, so all three must agree byte for byte.
         for extension in [".fst", ".fsti", "Wrapper.c", "Wrapper.h"]:
             expected = (root / "default" / f"ApiChoice{extension}").read_bytes()
-            for name in ["pulse", "reset"]:
+            for name in ["lowstar", "reset"]:
                 assert (root / name / f"ApiChoice{extension}").read_bytes() == expected
+        # ... and must differ from --api pulse, so that an accidental flip of
+        # the default is caught here rather than downstream in generated C.
+        assert (root / "default" / "ApiChoice.fst").read_bytes() != (
+            root / "pulse" / "ApiChoice.fst"
+        ).read_bytes()
         assert "Pulse.Lib.Pervasives" in (
             root / "pulse" / "ApiChoice.fst"
         ).read_text()
@@ -132,10 +137,10 @@ def main():
                 )
             run(*options, "--odir", output, "--__micro_step", "save_hashes", source)
             run(*options, "--odir", output, "--check_hashes", "weak", source)
-        # Omitting --api now selects pulse, so the two must agree both ways.
-        run("--api", "pulse", "--odir", root / "default",
+        # Omitting --api selects lowstar, so the two must agree both ways.
+        run("--api", "lowstar", "--odir", root / "default",
             "--check_hashes", "weak", source)
-        run("--odir", root / "pulse", "--check_hashes", "weak", source)
+        run("--odir", root / "lowstar", "--check_hashes", "weak", source)
         for name in ["pulse", "lowstar"]:
             for other in ["pulse", "lowstar"]:
                 if name != other:
