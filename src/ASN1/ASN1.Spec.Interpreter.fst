@@ -3,7 +3,7 @@ include LowParse.Tot.Base
 include LowParse.Tot.Combinators
 include LowParse.Tot.List
 include LowParse.Tot.Defaultable
-include LowParse.Tot.Bytes
+include LowParse.Tot.SeqBytes
 
 include ASN1.Debug
 

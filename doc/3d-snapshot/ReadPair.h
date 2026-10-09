@@ -14,10 +14,10 @@ ReadPairValidatePair(
   uint32_t *X,
   uint32_t *Y,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  EVERPARSE_ERROR_HANDLER Handler,
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 #if defined(__cplusplus)

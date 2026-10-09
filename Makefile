@@ -68,23 +68,13 @@ ifeq (,$(NO_PULSE))
 lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
-# lowparse needed because of .fst behind .fsti for extraction
-3d-prelude-verify: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-
-.PHONY: 3d-prelude-verify
-
-3d-prelude: 3d-prelude-verify
-	+$(MAKE) -C src/3d/prelude
-
-.PHONY: 3d-prelude
-
 3d-exe: $(NEED_Z3)
 	+$(MAKE) -C src/3d 3d
 
 .PHONY: 3d-exe
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-pulse-prelude: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES))) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
+3d-pulse-prelude: $(filter src/lowparse/%,$(ALL_CHECKED_FILES)) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
 
 .PHONY: 3d-pulse-prelude
 
@@ -97,10 +87,14 @@ ifeq (,$(NO_PULSE))
 3d: 3d-pulse-krml
 endif
 
-3d: 3d-prelude 3d-exe
+3d: 3d-exe
+
+asn1: asn1-base lowparse
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
-asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+asn1-base: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+
+.PHONY: asn1-base
 
 quackyducky: qd-exe lowparse
 
@@ -108,9 +102,6 @@ qd-exe: $(NEED_OPAM)
 	+$(MAKE) -C src/qd
 
 .PHONY: qd-exe
-
-lowparse-unit-test: lowparse
-	+$(MAKE) -C tests/lowparse
 
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
 ifeq (,$(NO_PULSE))
@@ -143,10 +134,19 @@ endif
 
 .PHONY: 3d-pulse-diff-test
 
-3d-lowstar-diff-test: 3d 3d-pulse-krml
-	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests
+# Extern/static adapter, scoped probe-view and O(1) >2^32 counter regressions,
+# exercised against both Pulse backends (--api lowstar and --api pulse). These
+# were salvaged from the deleted legacy differential gate, which was the only
+# thing that ever ran them. EVERPARSE_TEST_32BIT=1 adds the -m32 fixtures; they
+# need real multilib support (gcc-multilib on Ubuntu) and fail hard without it,
+# which is why they are opt-in.
+3d-adapter-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check-prebuilt
+ifeq (1,$(EVERPARSE_TEST_32BIT))
+	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check32-prebuilt
+endif
 
-.PHONY: 3d-lowstar-diff-test
+.PHONY: 3d-adapter-test
 
 3d-test: 3d-doc-test
 
@@ -155,7 +155,7 @@ ifeq (,$(NO_PULSE))
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
-3d-test: 3d-pulse-diff-test 3d-lowstar-diff-test
+3d-test: 3d-pulse-diff-test 3d-adapter-test
 endif
 endif
 
@@ -163,9 +163,6 @@ endif
 
 asn1-test: asn1
 	+$(MAKE) -C src/ASN1 test
-
-lowparse-bitfields-test: lowparse
-	+$(MAKE) -C tests/bitfields
 
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test: lowparse
@@ -177,19 +174,12 @@ endif
 
 .PHONY: lowparse-pulse-test
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
+lowparse-test: lowparse-pulse-test
 
-quackyducky-lowstar-test: quackyducky
-	+$(MAKE) -C tests
-
-.PHONY: quackyducky-lowstar-test
-
-quackyducky-pulse-test: quackyducky
+quackyducky-test: quackyducky
 	+$(MAKE) -C share/everparse/tests/qd
 
-.PHONY: quackyducky-pulse-test
-
-quackyducky-test: quackyducky-lowstar-test quackyducky-pulse-test
+.PHONY: quackyducky-test
 
 test: all lowparse-test quackyducky-test asn1-test cbor-test cddl-test
 
@@ -280,7 +270,7 @@ endif
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+cbor-extract-pre: cbor-verify $(filter src/lowparse/%,$(ALL_CHECKED_FILES))
 
 .PHONY: cbor-extract-pre
 
@@ -415,13 +405,12 @@ clean-tests:
 clean-3d-tests:
 	+$(MAKE) -C share/everparse/tests/3d/lowstar clean
 	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff clean
-	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests clean
 
 .PHONY: clean-3d-tests
 
-# The Pulse prelude and its test corpus. Neither is reachable from clean-3d or
-# clean-3d-tests: src/3d/Makefile cleans the Low* prelude in src/3d/prelude,
-# and the Low*-API corpus is in share/everparse/tests/3d/lowstar.
+# The 3d prelude and its test corpus. Neither is reachable from clean-3d,
+# which only cleans src/3d itself, nor from clean-3d-tests, which covers the
+# Low*-API corpus in share/everparse/tests/3d/lowstar.
 clean-3d-pulse-prelude:
 	+$(MAKE) -C lib/everparse/3d clean
 
@@ -439,7 +428,7 @@ clean-doc:
 
 clean: $(clean_rules)
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 
 release package package-noversion nuget-noversion everparse:
 	+$(MAKE) -f package.Makefile $@

@@ -1,4 +1,4 @@
-all: 3d prelude
+all: 3d
 
 EVERPARSE_SRC_PATH=$(realpath ..)
 EVERPARSE_HOME=$(realpath ../..)
@@ -8,7 +8,7 @@ FSTAR_FILES += Hashing.Hash.fst
 FSTAR_DEP_OPTIONS := --extract '* -Prims -FStar'
 OUTPUT_DIRECTORY := ocaml/generated
 
-clean_rules += clean-prelude clean-3d
+clean_rules += clean-3d
 
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
@@ -20,10 +20,7 @@ test: demo
 demo: all
 	+$(MAKE) -C $(EVERPARSE_HOME) 3d-unit-test
 
-.PHONY: all prelude test clean clean-3d clean-prelude 3d
-
-prelude:
-	+$(MAKE) -C prelude
+.PHONY: all test clean clean-3d 3d
 
 Version.fst:
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh > $@.tmp
@@ -38,11 +35,6 @@ $(EVERPARSE_3D): $(EVERPARSE_3D_MAIN)
 
 $(EVERPARSE_3D_MAIN): $(ALL_ML_FILES) $(filter-out %~,$(wildcard ocaml/*.ml*))
 	+$(MAKE) -C ocaml
-
-clean-prelude:
-	+$(MAKE) -C prelude clean
-
-.PHONY: clean-prelude
 
 clean-3d:
 	+$(MAKE) -C ocaml clean

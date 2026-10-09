@@ -189,7 +189,6 @@ make_everparse() {
     else
         $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
     fi
-    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
     $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
     $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
     if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
@@ -207,7 +206,7 @@ make_everparse() {
     #     generated modules;
     #   - lib/everparse/3d/krml/<backend>/EverParse.h: the pre-generated
     #     runtime header, one per input stream backend, copied into the output
-    #     directory just as src/3d/prelude/<backend>/EverParse.h is for Low*;
+    #     directory;
     #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
     #     self-contained Low*-compatible runtime generated from Pulse;
     #   - lib/pulse: the Pulse standard library, also on the --include path.

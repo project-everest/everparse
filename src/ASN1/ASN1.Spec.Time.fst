@@ -1,8 +1,10 @@
 module ASN1.Spec.Time
 
+open ASN1.Bytes
+
 module U32 = FStar.UInt32
 module U8 = FStar.UInt8
-module B = FStar.Bytes
+module Seq = FStar.Seq
 module Cast = FStar.Int.Cast
 
 let days_of_month
@@ -125,83 +127,83 @@ let read_4dnum
 = (U32.add (U32.mul (U32.add (U32.mul (U32.add (U32.mul (read_digit ch1) 10ul) (read_digit ch2)) 10ul) (read_digit ch3)) 10ul) (read_digit ch4))
 
 let rec is_valid_digit_range
-  (b : B.bytes)
-  (s : U32.t)
-  (l : U32.t {U32.v s + U32.v l <= (B.length b)})
-: Tot bool (decreases (U32.v l))
-= if l = 0ul then
+  (b : asn1_bytes)
+  (s : nat)
+  (l : nat {s + l <= Seq.length b})
+: Tot bool (decreases l)
+= if l = 0 then
     true
   else
-    let l' = U32.sub l 1ul in
-    is_valid_digit (B.index b (U32.v (U32.add s l'))) &&
+    let l' = l - 1 in
+    is_valid_digit (Seq.index b (s + l')) &&
     is_valid_digit_range b s l'
 
 #push-options "--fuel 8 --split_queries always"
 
 let is_valid_yymmdd
-  (b : B.bytes)
-  (s : U32.t {U32.v s + 6 <= B.length b})
-= if (is_valid_digit_range b s 6ul) then begin
-    let yy = read_2dnum (B.index b (U32.v s))     (B.index b (U32.v s + 1)) in
-    let mm = read_2dnum (B.index b (U32.v s + 2)) (B.index b (U32.v s + 3)) in
-    let dd = read_2dnum (B.index b (U32.v s + 4)) (B.index b (U32.v s + 5)) in
+  (b : asn1_bytes)
+  (s : U32.t {U32.v s + 6 <= Seq.length b})
+= if (is_valid_digit_range b (U32.v s) 6) then begin
+    let yy = read_2dnum (Seq.index b (U32.v s))     (Seq.index b (U32.v s + 1)) in
+    let mm = read_2dnum (Seq.index b (U32.v s + 2)) (Seq.index b (U32.v s + 3)) in
+    let dd = read_2dnum (Seq.index b (U32.v s + 4)) (Seq.index b (U32.v s + 5)) in
     is_valid_calendar_date2dy yy mm dd
   end
   else 
     false
 
 let is_valid_yyyymmdd
-  (b : B.bytes)
-  (s : U32.t {U32.v s + 8 <= B.length b})
-= if (is_valid_digit_range b s 8ul) then begin
-    let yyyy = read_4dnum (B.index b (U32.v s)) (B.index b (U32.v s + 1)) (B.index b (U32.v s + 2)) (B.index b (U32.v s + 3)) in
-    let mm = read_2dnum (B.index b (U32.v s + 4)) (B.index b (U32.v s + 5)) in
-    let dd = read_2dnum (B.index b (U32.v s + 6)) (B.index b (U32.v s + 7)) in
+  (b : asn1_bytes)
+  (s : U32.t {U32.v s + 8 <= Seq.length b})
+= if (is_valid_digit_range b (U32.v s) 8) then begin
+    let yyyy = read_4dnum (Seq.index b (U32.v s)) (Seq.index b (U32.v s + 1)) (Seq.index b (U32.v s + 2)) (Seq.index b (U32.v s + 3)) in
+    let mm = read_2dnum (Seq.index b (U32.v s + 4)) (Seq.index b (U32.v s + 5)) in
+    let dd = read_2dnum (Seq.index b (U32.v s + 6)) (Seq.index b (U32.v s + 7)) in
     is_valid_calendar_date4dy yyyy mm dd
   end
   else 
     false
 
 let is_valid_hh
-  (b : B.bytes)
-  (s : U32.t {U32.v s + 2 <= B.length b})
-= if (is_valid_digit_range b s 2ul) then begin
-    let hh = read_2dnum (B.index b (U32.v s))     (B.index b (U32.v s + 1)) in
+  (b : asn1_bytes)
+  (s : U32.t {U32.v s + 2 <= Seq.length b})
+= if (is_valid_digit_range b (U32.v s) 2) then begin
+    let hh = read_2dnum (Seq.index b (U32.v s))     (Seq.index b (U32.v s + 1)) in
     is_valid_time_hh hh
   end
   else 
     false
 
 let is_valid_hhmm
-  (b : B.bytes)
-  (s : U32.t {U32.v s + 4 <= B.length b})
-= if (is_valid_digit_range b s 4ul) then begin
-    let hh = read_2dnum (B.index b (U32.v s))     (B.index b (U32.v s + 1)) in
-    let mm = read_2dnum (B.index b (U32.v s + 2)) (B.index b (U32.v s + 3)) in
+  (b : asn1_bytes)
+  (s : U32.t {U32.v s + 4 <= Seq.length b})
+= if (is_valid_digit_range b (U32.v s) 4) then begin
+    let hh = read_2dnum (Seq.index b (U32.v s))     (Seq.index b (U32.v s + 1)) in
+    let mm = read_2dnum (Seq.index b (U32.v s + 2)) (Seq.index b (U32.v s + 3)) in
     is_valid_time_hhmm hh mm
   end
   else 
     false
 
 let is_valid_hhmmss
-  (b : B.bytes)
-  (s : U32.t {U32.v s + 6 <= B.length b})
-= if (is_valid_digit_range b s 6ul) then begin
-    let hh = read_2dnum (B.index b (U32.v s))     (B.index b (U32.v s + 1)) in
-    let mm = read_2dnum (B.index b (U32.v s + 2)) (B.index b (U32.v s + 3)) in
-    let ss = read_2dnum (B.index b (U32.v s + 4)) (B.index b (U32.v s + 5)) in
+  (b : asn1_bytes)
+  (s : U32.t {U32.v s + 6 <= Seq.length b})
+= if (is_valid_digit_range b (U32.v s) 6) then begin
+    let hh = read_2dnum (Seq.index b (U32.v s))     (Seq.index b (U32.v s + 1)) in
+    let mm = read_2dnum (Seq.index b (U32.v s + 2)) (Seq.index b (U32.v s + 3)) in
+    let ss = read_2dnum (Seq.index b (U32.v s + 4)) (Seq.index b (U32.v s + 5)) in
     is_valid_time_hhmmss hh mm ss
   end
   else 
     false
 
 let is_valid_utc_timezone
-  (b : B.bytes)
-  (s : U32.t {U32.v s + 5 <= B.length b})
-= if is_valid_digit_range b (U32.add s 1ul) 4ul then
-    let hh = read_2dnum (B.index b (U32.v s + 1)) (B.index b (U32.v s + 2)) in
-    let mm = read_2dnum (B.index b (U32.v s + 3)) (B.index b (U32.v s + 4)) in
-    let sign = B.index b (U32.v s) in
+  (b : asn1_bytes)
+  (s : U32.t {U32.v s + 5 <= Seq.length b})
+= if is_valid_digit_range b (U32.v s + 1) 4 then
+    let hh = read_2dnum (Seq.index b (U32.v s + 1)) (Seq.index b (U32.v s + 2)) in
+    let mm = read_2dnum (Seq.index b (U32.v s + 3)) (Seq.index b (U32.v s + 4)) in
+    let sign = Seq.index b (U32.v s) in
     if (sign = 43uy) then // +
       is_valid_utc_positive_timezone hh mm
     else if (sign = 45uy) then // -
@@ -212,22 +214,22 @@ let is_valid_utc_timezone
     false
 
 let is_valid_ASN1UTCTIME
-  (b : B.bytes)
-= let len = B.length b in
+  (b : asn1_bytes)
+= let len = Seq.length b in
   if len = 11 then
-    is_valid_yymmdd b 0ul && is_valid_hhmm b 6ul && B.index b 10 = 90uy
+    is_valid_yymmdd b 0ul && is_valid_hhmm b 6ul && Seq.index b 10 = 90uy
   else if len = 15 then
     is_valid_yymmdd b 0ul && is_valid_hhmm b 6ul && is_valid_utc_timezone b 10ul
   else if len = 13 then
-    is_valid_yymmdd b 0ul && is_valid_hhmmss b 6ul && B.index b 12 = 90uy
+    is_valid_yymmdd b 0ul && is_valid_hhmmss b 6ul && Seq.index b 12 = 90uy
   else if len = 17 then
     is_valid_yymmdd b 0ul && is_valid_hhmmss b 6ul && is_valid_utc_timezone b 12ul
   else
     false
 
 let is_valid_localtime
-  (b : B.bytes)
-  (len : nat {len <= B.length b})
+  (b : asn1_bytes)
+  (len : nat {len <= Seq.length b})
 = if len = 10 then
     is_valid_yyyymmdd b 0ul && is_valid_hh b 8ul
   else if len = 12 then
@@ -235,19 +237,19 @@ let is_valid_localtime
   else if len = 14 then
     is_valid_yyyymmdd b 0ul && is_valid_hhmmss b 8ul
   else if 15 < len && len <= 18 then
-    is_valid_yyyymmdd b 0ul && is_valid_hhmmss b 8ul && (B.index b 14 = 46uy) && (B.index b (len - 1) <> 48uy)
+    is_valid_yyyymmdd b 0ul && is_valid_hhmmss b 8ul && (Seq.index b 14 = 46uy) && (Seq.index b (len - 1) <> 48uy)
   else
     false
 
 let is_valid_ASN1GENERALIZEDTIME
-  (b : B.bytes)
-= let len = B.length b in
+  (b : asn1_bytes)
+= let len = Seq.length b in
   if len < 10 || len > 23 then
     false
   else
-    if (B.index b (len - 1) = 90uy) then
+    if (Seq.index b (len - 1) = 90uy) then
       is_valid_localtime b (len - 1)
-    else if (is_valid_digit (B.index b (len - 5))) then
+    else if (is_valid_digit (Seq.index b (len - 5))) then
         is_valid_localtime b (len - 5) && is_valid_utc_timezone b (UInt32.uint_to_t (len - 5))
       else
         is_valid_localtime b len

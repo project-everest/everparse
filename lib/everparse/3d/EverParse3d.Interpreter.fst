@@ -16,7 +16,7 @@
 module EverParse3d.Interpreter
 #lang-pulse
 
-(* This is the Pulse counterpart of src/3d/prelude/EverParse3d.Interpreter.fst.
+(* This is the Pulse interpreter for the 3d combinator language.
 
    It defines a strongly typed abstract syntax for an intermediate
    representation of 3D programs, the type `typ`, together with a threefold

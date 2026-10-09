@@ -13,6 +13,7 @@ reading the length header, "parsing" the payload will always succeed,
 by just returning it unchanged (unless the length of the input
 is greater than 2^32) *)
 
+inline_for_extraction
 let parse_seq_all_bytes_kind =
   {
     parser_kind_low = 0;
@@ -24,7 +25,7 @@ let parse_seq_all_bytes_kind =
 
 let parse_seq_all_bytes'
   (input: bytes)
-: GTot (option (bytes & consumed_length input))
+: Tot (option (bytes & consumed_length input))
 = let len = Seq.length input in
     Some (input, len)
 
@@ -48,13 +49,16 @@ let parse_seq_all_bytes_correct () : Lemma
 = parser_kind_prop_equiv parse_seq_all_bytes_kind parse_seq_all_bytes';
   parse_seq_all_bytes_injective ()
 
-let parse_seq_all_bytes : parser parse_seq_all_bytes_kind bytes =
+let tot_parse_seq_all_bytes : tot_parser parse_seq_all_bytes_kind bytes =
   parse_seq_all_bytes_correct ();
   parse_seq_all_bytes'
 
+let parse_seq_all_bytes : parser parse_seq_all_bytes_kind bytes =
+  tot_parse_seq_all_bytes
+
 let serialize_seq_all_bytes'
   (input: bytes)
-: GTot bytes
+: Tot bytes
 = input
 
 #set-options "--z3rlimit 32"
@@ -74,9 +78,12 @@ let serialize_seq_all_bytes_correct () : Lemma (serializer_correct parse_seq_all
 
 #reset-options
 
-let serialize_seq_all_bytes : serializer parse_seq_all_bytes =
+let tot_serialize_seq_all_bytes : tot_serializer #parse_seq_all_bytes_kind tot_parse_seq_all_bytes =
   serialize_seq_all_bytes_correct ();
   serialize_seq_all_bytes'
+
+let serialize_seq_all_bytes : serializer parse_seq_all_bytes =
+  tot_serialize_seq_all_bytes
 
 let parse_bounded_seq_vlbytes'
   (min: nat)
@@ -183,13 +190,11 @@ let length_serialize_bounded_seq_vlbytes
     x
 
 (* ----------------------------------------------------------------------------
-   Seq-native bounded vlbytes with an EXPLICIT (possibly oversized) fixed-width
-   length header [l >= log256' max]. Mirrors the FStar.Bytes
-   [parse_bounded_vlbytes'] / [serialize_bounded_vlbytes'] family
-   (LowParse.Spec.Bytes) with [serialize_all_bytes -> serialize_seq_all_bytes]
-   (the identity), so the value type is [parse_bounded_seq_vlbytes_t] over
-   [Seq.seq byte] instead of [FStar.Bytes]. Used by QuackyDucky under -pulse for
-   staged implicit-sum byte payloads whose header width exceeds the value bound.
+   Bounded vlbytes with an EXPLICIT (possibly oversized) fixed-width
+   length header [l >= log256' max], built over [serialize_seq_all_bytes] (the
+   identity), so the value type is [parse_bounded_seq_vlbytes_t] over
+   [Seq.seq byte]. Used by QuackyDucky for staged implicit-sum byte payloads
+   whose header width exceeds the value bound.
    ---------------------------------------------------------------------------- *)
 
 let parse_bounded_seq_vlbytes_aux
@@ -263,11 +268,9 @@ let serialize_bounded_seq_vlbytes_gen_bytes_eq
     y
 
 (* ----------------------------------------------------------------------------
-   Seq-native bounded vlbytes framed by a GENERIC (variable-width) length header
-   parser [pk]. Mirrors the FStar.Bytes [parse_bounded_vlgenbytes] /
-   [serialize_bounded_vlgenbytes] family with
-   [serialize_all_bytes -> serialize_seq_all_bytes]. Used by QuackyDucky under
-   -pulse for byte payloads whose length is encoded by bitcoin_varint / asn1_len
+   Bounded vlbytes framed by a GENERIC (variable-width) length header
+   parser [pk], built over [serialize_seq_all_bytes]. Used by QuackyDucky
+   for byte payloads whose length is encoded by bitcoin_varint / asn1_len
    / asn1_len8.
    ---------------------------------------------------------------------------- *)
 
