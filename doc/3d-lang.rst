@@ -143,11 +143,12 @@ There can be multiple definitions marked ``entrypoint`` in a given
 
 .. note::
 
-  ``--api pulse``, the native Pulse API, is the default, and ``--no_api``
-  restores it; the former ``--pulse`` option is no longer accepted.
-  ``3d --api lowstar`` instead uses verified Pulse adapters to preserve the
+  ``--api lowstar`` is the default, and ``--no_api`` restores it; the former
+  ``--pulse`` option is no longer accepted. It uses verified Pulse adapters
+  to preserve the
   Low\*-compatible C API described here, including direct validator calls,
   packed results, error callbacks, and copy-buffer projections.
+  ``3d --api pulse`` instead exposes the native Pulse API.
   ``--api`` selects the implementation and C API, while
   ``--input_stream`` independently selects ``buffer``, ``extern`` or ``static``.
   See :ref:`the --api option <3d-api-option>` for the runtime headers required

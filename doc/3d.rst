@@ -55,7 +55,7 @@ Then, EverParse/3d produces:
 
 * ``EverParsePulse.h``, ``EverParsePulseEndianness.h``: two further headers
   playing the same role for the Pulse backend. They are written under
-  ``--api pulse``, which is the default; ``--api lowstar`` does not emit
+  ``--api pulse``; ``--api lowstar``, which is the default, does not emit
   them, as its ``EverParse.h`` is self-contained
 
 3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
@@ -256,14 +256,11 @@ Options are treated from left to right:
 * ``--api pulse|lowstar``
 
   Selects the public C API. Both are implemented with the verified Pulse
-  backend. ``pulse`` is the default and exposes the native Pulse API;
-  explicitly selecting it is equivalent to omitting ``--api``. Shared named
-  error kinds use the same numbers in both APIs.
-  See the *Pulse backend primitives* part of
-  ``--input_stream`` below, and, in the :ref:`3d language reference
-  <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
+  backend. Shared named error kinds use the same numbers in both APIs.
 
-  ``lowstar`` uses Pulse validators behind verified compatibility adapters,
+  ``lowstar`` is the default; explicitly selecting it is equivalent to
+  omitting ``--api``. It uses Pulse validators behind verified compatibility
+  adapters,
   preserving the original Low\* public C API: scalar buffer positions,
   packed 64-bit validator results, error callbacks, copy-buffer projections,
   and ``buffer``, ``extern`` and ``static`` input primitives. Existing Low\*
@@ -279,8 +276,12 @@ Options are treated from left to right:
   ``--api pulse``; see ``--no_copy_everparse_h`` below for the runtime
   directory matching each selection.
 
+  ``pulse`` exposes the native Pulse API. See the *Pulse backend primitives*
+  part of ``--input_stream`` below, and, in the :ref:`3d language reference
+  <3d-lang>`, :ref:`sec-error-handling-pulse` and :ref:`sec-probing-pulse`.
+
   This replaces the former ``--pulse`` switch, which is no longer accepted.
-  ``--no_api`` resets the selection to ``pulse``.
+  ``--no_api`` resets the selection to ``lowstar``.
   API selection is independent of ``--input_stream``: both APIs support
   ``buffer``, ``extern`` and ``static``, subject to the native Pulse
   :ref:`probe restriction <sec-probing-pulse>`.
@@ -359,7 +360,7 @@ Options are treated from left to right:
     user-defined ``EVERPARSE_INPUT_STREAM_BASE`` type, representing an
     input byte stream. The client must define that type, and a set of
     functions over it that **depends on the selected API**:
-    ``--api lowstar`` and ``--api pulse`` (the default) use different names
+    ``--api lowstar`` (the default) and ``--api pulse`` use different names
     and argument types. Both sets are given below.
 
     **Low\*-compatible primitives** (``--api lowstar``)
