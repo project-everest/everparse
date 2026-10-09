@@ -2,10 +2,8 @@
 
 #include "TaggedUnion.h"
 
-#include "EverParse.h"
-
 static inline uint8_t
-ValidateIntPayload(
+ValidateCoreIntPayload(
   uint32_t Size,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
@@ -82,13 +80,13 @@ ValidateIntPayload(
     if (hasBytes0)
     {
       pos0 = p00 + (size_t)1U;
-      res0 = EVERPARSE_VALIDATOR_SUCCESS;
+      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       res1 = res0;
     }
@@ -96,22 +94,20 @@ ValidateIntPayload(
     {
       ErrorHandlerFn("_int_payload",
         "value8",
-        EverParseErrorReasonOfResult(res0),
-        res0,
+        EverParsePulseInternalErrorReasonOfResult(res0),
+        res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPos);
       res1 = res0;
     }
-    if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed0 = pos0;
       p3 = *SlPos;
       p_ = p3 + consumed0;
       *SlPos = p_;
-      return EVERPARSE_VALIDATOR_SUCCESS;
+      return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res1;
   }
@@ -131,13 +127,13 @@ ValidateIntPayload(
     if (hasBytes1)
     {
       pos1 = p01 + (size_t)2U;
-      res2 = EVERPARSE_VALIDATOR_SUCCESS;
+      res2 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res2 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res2 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res2 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       res3 = res2;
     }
@@ -145,22 +141,20 @@ ValidateIntPayload(
     {
       ErrorHandlerFn("_int_payload",
         "value16",
-        EverParseErrorReasonOfResult(res2),
-        res2,
+        EverParsePulseInternalErrorReasonOfResult(res2),
+        res2 == 0U || (res2 >= 2U && res2 <= 8U) ? (uint64_t)(uint32_t)res2 : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPos0);
       res3 = res2;
     }
-    if (res3 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res3 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed1 = pos1;
       p6 = *SlPos;
       p_0 = p6 + consumed1;
       *SlPos = p_0;
-      return EVERPARSE_VALIDATOR_SUCCESS;
+      return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res3;
   }
@@ -180,13 +174,13 @@ ValidateIntPayload(
     if (hasBytes)
     {
       pos2 = p0 + (size_t)4U;
-      res4 = EVERPARSE_VALIDATOR_SUCCESS;
+      res4 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res4 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res4 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res4 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res4 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       res5 = res4;
     }
@@ -194,22 +188,20 @@ ValidateIntPayload(
     {
       ErrorHandlerFn("_int_payload",
         "value32",
-        EverParseErrorReasonOfResult(res4),
-        res4,
+        EverParsePulseInternalErrorReasonOfResult(res4),
+        res4 == 0U || (res4 >= 2U && res4 <= 8U) ? (uint64_t)(uint32_t)res4 : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPos1);
       res5 = res4;
     }
-    if (res5 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res5 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed2 = pos2;
       p9 = *SlPos;
       p_1 = p9 + consumed2;
       *SlPos = p_1;
-      return EVERPARSE_VALIDATOR_SUCCESS;
+      return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res5;
   }
@@ -218,8 +210,8 @@ ValidateIntPayload(
   viewStart2 = (uint64_t)p10;
   fieldOff2 = pos;
   startPos2 = viewStart2 + (uint64_t)fieldOff2;
-  res6 = EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE;
-  if (res6 == EVERPARSE_VALIDATOR_SUCCESS)
+  res6 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_IMPOSSIBLE;
+  if (res6 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     res = res6;
   }
@@ -227,28 +219,26 @@ ValidateIntPayload(
   {
     ErrorHandlerFn("_int_payload",
       "_x_17",
-      EverParseErrorReasonOfResult(res6),
-      res6,
+      EverParsePulseInternalErrorReasonOfResult(res6),
+      res6 == 0U || (res6 >= 2U && res6 <= 8U) ? (uint64_t)(uint32_t)res6 : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPos2);
     res = res6;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
     p = *SlPos;
     p_2 = p + consumed;
     *SlPos = p_2;
-    return EVERPARSE_VALIDATOR_SUCCESS;
+    return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   return res;
 }
 
-uint8_t
-TaggedUnionValidateInteger(
+static uint8_t
+ValidateCoreInteger(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -293,13 +283,13 @@ TaggedUnionValidateInteger(
   if (hasBytes)
   {
     pos = p00 + (size_t)4U;
-    res0 = EVERPARSE_VALIDATOR_SUCCESS;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAftersize = res0;
   }
@@ -307,16 +297,14 @@ TaggedUnionValidateInteger(
   {
     ErrorHandlerFn("_integer",
       "size",
-      EverParseErrorReasonOfResult(res0),
-      res0,
+      EverParsePulseInternalErrorReasonOfResult(res0),
+      res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPos);
     resultAftersize = res0;
   }
-  if (resultAftersize == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAftersize == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p0 = *SlPos;
     m = p0 + (size_t)4U;
@@ -341,22 +329,42 @@ TaggedUnionValidateInteger(
     p = *SlPos;
     fieldStartInteger = (uint64_t)p;
     startPositionInteger = fieldStartInteger;
-    resultAfterInteger = ValidateIntPayload(size, Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
-    if (resultAfterInteger == EVERPARSE_VALIDATOR_SUCCESS)
+    resultAfterInteger = ValidateCoreIntPayload(size, Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+    if (resultAfterInteger == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterInteger;
     }
     ErrorHandlerFn("_integer",
       "payload",
-      EverParseErrorReasonOfResult(resultAfterInteger),
-      resultAfterInteger,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterInteger),
+      resultAfterInteger == 0U || (resultAfterInteger >= 2U && resultAfterInteger <= 8U) ? (uint64_t)(uint32_t)resultAfterInteger
+                                                                                         : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionInteger);
     return resultAfterInteger;
   }
   return resultAftersize;
+}
+
+uint64_t
+TaggedUnionValidateInteger(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreInteger(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

@@ -2,10 +2,8 @@
 
 #include "PointArch_32_64.h"
 
-#include "EverParse.h"
-
 static inline uint8_t
-ValidateInt(
+ValidateCoreInt(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -71,13 +69,13 @@ ValidateInt(
     if (hasBytes0)
     {
       pos0 = p00 + (size_t)8U;
-      res0 = EVERPARSE_VALIDATOR_SUCCESS;
+      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       res1 = res0;
     }
@@ -85,22 +83,20 @@ ValidateInt(
     {
       ErrorHandlerFn("_INT",
         "x",
-        EverParseErrorReasonOfResult(res0),
-        res0,
+        EverParsePulseInternalErrorReasonOfResult(res0),
+        res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPos);
       res1 = res0;
     }
-    if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed0 = pos0;
       p3 = *SlPos;
       p_ = p3 + consumed0;
       *SlPos = p_;
-      return EVERPARSE_VALIDATOR_SUCCESS;
+      return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res1;
   }
@@ -134,13 +130,13 @@ ValidateInt(
     if (hasBytes)
     {
       pos = p0 + (size_t)4U;
-      res2 = EVERPARSE_VALIDATOR_SUCCESS;
+      res2 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res2 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res2 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res2 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       res = res2;
     }
@@ -148,30 +144,28 @@ ValidateInt(
     {
       ErrorHandlerFn("_INT",
         "x",
-        EverParseErrorReasonOfResult(res2),
-        res2,
+        EverParsePulseInternalErrorReasonOfResult(res2),
+        res2 == 0U || (res2 >= 2U && res2 <= 8U) ? (uint64_t)(uint32_t)res2 : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPos0);
       res = res2;
     }
-    if (res == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos;
       p = *SlPos;
       p_0 = p + consumed;
       *SlPos = p_0;
-      return EVERPARSE_VALIDATOR_SUCCESS;
+      return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res;
   }
   #endif
 }
 
-uint8_t
-PointArch3264ValidatePoint(
+static uint8_t
+ValidateCorePoint(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -183,13 +177,13 @@ PointArch3264ValidatePoint(
   size_t p0 = *SlPos;
   uint64_t fieldStartPoint = (uint64_t)p0;
   uint64_t startPositionPoint = fieldStartPoint;
-  uint8_t resultAfterPoint = ValidateInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+  uint8_t resultAfterPoint = ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
   uint8_t resultAfterx;
   size_t p;
   uint64_t fieldStartPoint0;
   uint64_t startPositionPoint0;
   uint8_t resultAfterPoint0;
-  if (resultAfterPoint == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterPoint == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfterx = resultAfterPoint;
   }
@@ -197,37 +191,56 @@ PointArch3264ValidatePoint(
   {
     ErrorHandlerFn("_POINT",
       "x",
-      EverParseErrorReasonOfResult(resultAfterPoint),
-      resultAfterPoint,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterPoint),
+      resultAfterPoint == 0U || (resultAfterPoint >= 2U && resultAfterPoint <= 8U) ? (uint64_t)(uint32_t)resultAfterPoint
+                                                                                   : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionPoint);
     resultAfterx = resultAfterPoint;
   }
-  if (resultAfterx == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterx == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field y */
     p = *SlPos;
     fieldStartPoint0 = (uint64_t)p;
     startPositionPoint0 = fieldStartPoint0;
-    resultAfterPoint0 = ValidateInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
-    if (resultAfterPoint0 == EVERPARSE_VALIDATOR_SUCCESS)
+    resultAfterPoint0 = ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+    if (resultAfterPoint0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterPoint0;
     }
     ErrorHandlerFn("_POINT",
       "y",
-      EverParseErrorReasonOfResult(resultAfterPoint0),
-      resultAfterPoint0,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterPoint0),
+      resultAfterPoint0 == 0U || (resultAfterPoint0 >= 2U && resultAfterPoint0 <= 8U) ? (uint64_t)(uint32_t)resultAfterPoint0
+                                                                                      : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionPoint0);
     return resultAfterPoint0;
   }
   return resultAfterx;
+}
+
+uint64_t
+PointArch3264ValidatePoint(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

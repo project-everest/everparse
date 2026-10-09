@@ -2,10 +2,8 @@
 
 #include "GetFieldPtr.h"
 
-#include "EverParse.h"
-
-uint8_t
-GetFieldPtrValidateT(
+static uint8_t
+ValidateCoreT(
   uint8_t **Out,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
@@ -55,25 +53,25 @@ GetFieldPtrValidateT(
   if (hasBytes0)
   {
     pos0 = p00 + (size_t)10U;
-    res0 = EVERPARSE_VALIDATOR_SUCCESS;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed0 = pos0;
     p3 = *SlPos;
     p_ = p3 + consumed0;
     *SlPos = p_;
-    resultAfterT = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterT = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
     resultAfterT = res0;
   }
-  if (resultAfterT == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterT == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfterf1 = resultAfterT;
   }
@@ -81,16 +79,15 @@ GetFieldPtrValidateT(
   {
     ErrorHandlerFn("_T",
       "f1",
-      EverParseErrorReasonOfResult(resultAfterT),
-      resultAfterT,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterT),
+      resultAfterT == 0U || (resultAfterT >= 2U && resultAfterT <= 8U) ? (uint64_t)(uint32_t)resultAfterT
+                                                                       : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionT);
     resultAfterf1 = resultAfterT;
   }
-  if (resultAfterf1 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterf1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field f2 */
     p4 = *SlPos;
@@ -109,25 +106,25 @@ GetFieldPtrValidateT(
     if (hasBytes)
     {
       pos = p0 + (size_t)20U;
-      res = EVERPARSE_VALIDATOR_SUCCESS;
+      res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos;
       p = *SlPos;
       p_0 = p + consumed;
       *SlPos = p_0;
-      resultAfterT0 = EVERPARSE_VALIDATOR_SUCCESS;
+      resultAfterT0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
       resultAfterT0 = res;
     }
-    if (resultAfterT0 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterT0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       resultAfterf2 = resultAfterT0;
     }
@@ -135,49 +132,69 @@ GetFieldPtrValidateT(
     {
       ErrorHandlerFn("_T",
         "f2.base",
-        EverParseErrorReasonOfResult(resultAfterT0),
-        resultAfterT0,
+        EverParsePulseInternalErrorReasonOfResult(resultAfterT0),
+        resultAfterT0 == 0U || (resultAfterT0 >= 2U && resultAfterT0 <= 8U) ? (uint64_t)(uint32_t)resultAfterT0
+                                                                            : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPositionT1);
       resultAfterf2 = resultAfterT0;
     }
-    if (resultAfterf2 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterf2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       startPosSz = (size_t)fieldStartf2;
       hd = SlBase + startPosSz;
       *Out = hd;
       actionSuccessF2 = TRUE;
       resultAfterT1 =
-        actionSuccessF2 ? EVERPARSE_VALIDATOR_SUCCESS
-                        : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+        actionSuccessF2 ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                        : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_ACTION_FAILED;
     }
     else
     {
       resultAfterT1 = resultAfterf2;
     }
-    if (resultAfterT1 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterT1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterT1;
     }
     ErrorHandlerFn("_T",
       "f2",
-      EverParseErrorReasonOfResult(resultAfterT1),
-      resultAfterT1,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterT1),
+      resultAfterT1 == 0U || (resultAfterT1 >= 2U && resultAfterT1 <= 8U) ? (uint64_t)(uint32_t)resultAfterT1
+                                                                          : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionT0);
     return resultAfterT1;
   }
   return resultAfterf1;
 }
 
-uint8_t
-GetFieldPtrValidateTact(
+uint64_t
+GetFieldPtrValidateT(
+  uint8_t **Out,
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreT(Out, Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
+}
+
+static uint8_t
+ValidateCoreTact(
   uint8_t **Out,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
@@ -227,25 +244,25 @@ GetFieldPtrValidateTact(
   if (hasBytes0)
   {
     pos0 = p00 + (size_t)10U;
-    res0 = EVERPARSE_VALIDATOR_SUCCESS;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed0 = pos0;
     p3 = *SlPos;
     p_ = p3 + consumed0;
     *SlPos = p_;
-    resultAfterTact = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterTact = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
     resultAfterTact = res0;
   }
-  if (resultAfterTact == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterTact == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfterf1 = resultAfterTact;
   }
@@ -253,16 +270,15 @@ GetFieldPtrValidateTact(
   {
     ErrorHandlerFn("_TAct",
       "f1",
-      EverParseErrorReasonOfResult(resultAfterTact),
-      resultAfterTact,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterTact),
+      resultAfterTact == 0U || (resultAfterTact >= 2U && resultAfterTact <= 8U) ? (uint64_t)(uint32_t)resultAfterTact
+                                                                                : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionTact);
     resultAfterf1 = resultAfterTact;
   }
-  if (resultAfterf1 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterf1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field f2 */
     p4 = *SlPos;
@@ -281,25 +297,25 @@ GetFieldPtrValidateTact(
     if (hasBytes)
     {
       pos = p0 + (size_t)20U;
-      res = EVERPARSE_VALIDATOR_SUCCESS;
+      res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos;
       p = *SlPos;
       p_0 = p + consumed;
       *SlPos = p_0;
-      resultAfterTact0 = EVERPARSE_VALIDATOR_SUCCESS;
+      resultAfterTact0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
       resultAfterTact0 = res;
     }
-    if (resultAfterTact0 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterTact0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       resultAfterf2 = resultAfterTact0;
     }
@@ -307,44 +323,64 @@ GetFieldPtrValidateTact(
     {
       ErrorHandlerFn("_TAct",
         "f2.base",
-        EverParseErrorReasonOfResult(resultAfterTact0),
-        resultAfterTact0,
+        EverParsePulseInternalErrorReasonOfResult(resultAfterTact0),
+        resultAfterTact0 == 0U || (resultAfterTact0 >= 2U && resultAfterTact0 <= 8U) ? (uint64_t)(uint32_t)resultAfterTact0
+                                                                                     : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPositionTact1);
       resultAfterf2 = resultAfterTact0;
     }
-    if (resultAfterf2 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterf2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       startPosSz = (size_t)fieldStartf2;
       hd = SlBase + startPosSz;
       *Out = hd;
       actionSuccessF2 = TRUE;
       resultAfterTact1 =
-        actionSuccessF2 ? EVERPARSE_VALIDATOR_SUCCESS
-                        : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+        actionSuccessF2 ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                        : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_ACTION_FAILED;
     }
     else
     {
       resultAfterTact1 = resultAfterf2;
     }
-    if (resultAfterTact1 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterTact1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterTact1;
     }
     ErrorHandlerFn("_TAct",
       "f2",
-      EverParseErrorReasonOfResult(resultAfterTact1),
-      resultAfterTact1,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterTact1),
+      resultAfterTact1 == 0U || (resultAfterTact1 >= 2U && resultAfterTact1 <= 8U) ? (uint64_t)(uint32_t)resultAfterTact1
+                                                                                   : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionTact0);
     return resultAfterTact1;
   }
   return resultAfterf1;
+}
+
+uint64_t
+GetFieldPtrValidateTact(
+  uint8_t **Out,
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreTact(Out, Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

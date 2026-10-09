@@ -2,10 +2,8 @@
 
 #include "Derived.h"
 
-#include "EverParse.h"
-
-uint8_t
-DerivedValidateTriple(
+static uint8_t
+ValidateCoreTriple(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -29,42 +27,62 @@ DerivedValidateTriple(
   if (hasBytes)
   {
     pos = p0 + (size_t)12U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
     p = *SlPos;
     p_ = p + consumed;
     *SlPos = p_;
-    resultAfterTriple = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterTriple = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
     resultAfterTriple = res;
   }
-  if (resultAfterTriple == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterTriple == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterTriple;
   }
   ErrorHandlerFn("_Triple",
     "pair",
-    EverParseErrorReasonOfResult(resultAfterTriple),
-    resultAfterTriple,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterTriple),
+    resultAfterTriple == 0U || (resultAfterTriple >= 2U && resultAfterTriple <= 8U) ? (uint64_t)(uint32_t)resultAfterTriple
+                                                                                    : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionTriple);
   return resultAfterTriple;
 }
 
-uint8_t
-DerivedValidateQuad(
+uint64_t
+DerivedValidateTriple(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreTriple(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
+}
+
+static uint8_t
+ValidateCoreQuad(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -88,37 +106,57 @@ DerivedValidateQuad(
   if (hasBytes)
   {
     pos = p0 + (size_t)16U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
     p = *SlPos;
     p_ = p + consumed;
     *SlPos = p_;
-    resultAfterQuad = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterQuad = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
     resultAfterQuad = res;
   }
-  if (resultAfterQuad == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterQuad == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterQuad;
   }
   ErrorHandlerFn("_Quad",
     "_12",
-    EverParseErrorReasonOfResult(resultAfterQuad),
-    resultAfterQuad,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterQuad),
+    resultAfterQuad == 0U || (resultAfterQuad >= 2U && resultAfterQuad <= 8U) ? (uint64_t)(uint32_t)resultAfterQuad
+                                                                              : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionQuad);
   return resultAfterQuad;
+}
+
+uint64_t
+DerivedValidateQuad(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreQuad(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

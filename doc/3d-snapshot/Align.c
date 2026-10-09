@@ -2,10 +2,8 @@
 
 #include "Align.h"
 
-#include "EverParse.h"
-
-uint8_t
-AlignValidateColoredPoint1(
+static uint8_t
+ValidateCoreColoredPoint1(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -29,37 +27,58 @@ AlignValidateColoredPoint1(
   if (hasBytes)
   {
     pos = p0 + (size_t)6U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
     p = *SlPos;
     p_ = p + consumed;
     *SlPos = p_;
-    resultAfterColoredPoint1 = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterColoredPoint1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
     resultAfterColoredPoint1 = res;
   }
-  if (resultAfterColoredPoint1 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterColoredPoint1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterColoredPoint1;
   }
   ErrorHandlerFn("_coloredPoint1",
     "color",
-    EverParseErrorReasonOfResult(resultAfterColoredPoint1),
-    resultAfterColoredPoint1,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterColoredPoint1),
+    resultAfterColoredPoint1 == 0U ||
+      (resultAfterColoredPoint1 >= 2U && resultAfterColoredPoint1 <= 8U) ? (uint64_t)(uint32_t)resultAfterColoredPoint1
+                                                                         : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionColoredPoint1);
   return resultAfterColoredPoint1;
+}
+
+uint64_t
+AlignValidateColoredPoint1(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreColoredPoint1(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

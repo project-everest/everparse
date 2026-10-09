@@ -2,10 +2,8 @@
 
 #include "ReadPair.h"
 
-#include "EverParse.h"
-
-uint8_t
-ReadPairValidatePair(
+static uint8_t
+ValidateCorePair(
   uint32_t *X,
   uint32_t *Y,
   uint8_t *Ctxt,
@@ -79,13 +77,13 @@ ReadPairValidatePair(
   if (hasBytes0)
   {
     pos0 = p00 + (size_t)4U;
-    resultAfterfirst0 = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterfirst0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    resultAfterfirst0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterfirst0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAfterfirst0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterfirst0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p01 = *SlPos;
     m0 = p01 + (size_t)4U;
@@ -109,14 +107,14 @@ ReadPairValidatePair(
     *X = first4;
     actionSuccessFirst = TRUE;
     resultAfterPair =
-      actionSuccessFirst ? EVERPARSE_VALIDATOR_SUCCESS
-                         : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+      actionSuccessFirst ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                         : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_ACTION_FAILED;
   }
   else
   {
     resultAfterPair = resultAfterfirst0;
   }
-  if (resultAfterPair == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterPair == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfterfirst = resultAfterPair;
   }
@@ -124,16 +122,15 @@ ReadPairValidatePair(
   {
     ErrorHandlerFn("_Pair",
       "first",
-      EverParseErrorReasonOfResult(resultAfterPair),
-      resultAfterPair,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterPair),
+      resultAfterPair == 0U || (resultAfterPair >= 2U && resultAfterPair <= 8U) ? (uint64_t)(uint32_t)resultAfterPair
+                                                                                : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionPair);
     resultAfterfirst = resultAfterPair;
   }
-  if (resultAfterfirst == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterfirst == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field second */
     p3 = *SlPos;
@@ -148,13 +145,13 @@ ReadPairValidatePair(
     if (hasBytes)
     {
       pos = p02 + (size_t)4U;
-      resultAftersecond = EVERPARSE_VALIDATOR_SUCCESS;
+      resultAftersecond = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      resultAftersecond = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      resultAftersecond = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (resultAftersecond == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAftersecond == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       p0 = *SlPos;
       m = p0 + (size_t)4U;
@@ -178,28 +175,50 @@ ReadPairValidatePair(
       *Y = second;
       actionSuccessSecond = TRUE;
       resultAfterPair0 =
-        actionSuccessSecond ? EVERPARSE_VALIDATOR_SUCCESS
-                            : EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED;
+        actionSuccessSecond ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                            : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_ACTION_FAILED;
     }
     else
     {
       resultAfterPair0 = resultAftersecond;
     }
-    if (resultAfterPair0 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterPair0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterPair0;
     }
     ErrorHandlerFn("_Pair",
       "second",
-      EverParseErrorReasonOfResult(resultAfterPair0),
-      resultAfterPair0,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterPair0),
+      resultAfterPair0 == 0U || (resultAfterPair0 >= 2U && resultAfterPair0 <= 8U) ? (uint64_t)(uint32_t)resultAfterPair0
+                                                                                   : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionPair0);
     return resultAfterPair0;
   }
   return resultAfterfirst;
+}
+
+uint64_t
+ReadPairValidatePair(
+  uint32_t *X,
+  uint32_t *Y,
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCorePair(X, Y, Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

@@ -2,10 +2,8 @@
 
 #include "HelloWorld.h"
 
-#include "EverParse.h"
-
-uint8_t
-HelloWorldValidatePoint(
+static uint8_t
+ValidateCorePoint(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -29,37 +27,57 @@ HelloWorldValidatePoint(
   if (hasBytes)
   {
     pos = p0 + (size_t)4U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
     p = *SlPos;
     p_ = p + consumed;
     *SlPos = p_;
-    resultAfterPoint = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterPoint = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
     resultAfterPoint = res;
   }
-  if (resultAfterPoint == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterPoint == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterPoint;
   }
   ErrorHandlerFn("_point",
     "x",
-    EverParseErrorReasonOfResult(resultAfterPoint),
-    resultAfterPoint,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterPoint),
+    resultAfterPoint == 0U || (resultAfterPoint >= 2U && resultAfterPoint <= 8U) ? (uint64_t)(uint32_t)resultAfterPoint
+                                                                                 : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionPoint);
   return resultAfterPoint;
+}
+
+uint64_t
+HelloWorldValidatePoint(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

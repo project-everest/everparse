@@ -2,10 +2,8 @@
 
 #include "BF.h"
 
-#include "EverParse.h"
-
 static inline uint8_t
-ValidateBf2bis(
+ValidateCoreBf2bis(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -73,13 +71,13 @@ ValidateBf2bis(
   if (hasBytes0)
   {
     pos = p00 + (size_t)2U;
-    res0 = EVERPARSE_VALIDATOR_SUCCESS;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfterBitfield0 = res0;
   }
@@ -87,16 +85,14 @@ ValidateBf2bis(
   {
     ErrorHandlerFn("_BF2bis",
       "__bitfield_0",
-      EverParseErrorReasonOfResult(res0),
-      res0,
+      EverParsePulseInternalErrorReasonOfResult(res0),
+      res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPos);
     resultAfterBitfield0 = res0;
   }
-  if (resultAfterBitfield0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterBitfield0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p01 = *SlPos;
     m0 = p01 + (size_t)2U;
@@ -121,13 +117,13 @@ ValidateBf2bis(
     if (hasBytes1)
     {
       pos1 = p02 + (size_t)2U;
-      resultAfterBitfield1 = EVERPARSE_VALIDATOR_SUCCESS;
+      resultAfterBitfield1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      resultAfterBitfield1 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      resultAfterBitfield1 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (resultAfterBitfield1 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterBitfield1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       p03 = *SlPos;
       m = p03 + (size_t)2U;
@@ -158,13 +154,13 @@ ValidateBf2bis(
         if (hasBytes)
         {
           pos2 = p0 + (size_t)1U;
-          res3 = EVERPARSE_VALIDATOR_SUCCESS;
+          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
-          res3 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
         }
-        if (res3 == EVERPARSE_VALIDATOR_SUCCESS)
+        if (res3 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           res = res3;
         }
@@ -172,22 +168,20 @@ ValidateBf2bis(
         {
           ErrorHandlerFn("_BF2bis",
             "z",
-            EverParseErrorReasonOfResult(res3),
-            res3,
+            EverParsePulseInternalErrorReasonOfResult(res3),
+            res3 == 0U || (res3 >= 2U && res3 <= 8U) ? (uint64_t)(uint32_t)res3 : 15ULL,
             Ctxt,
             SlBase,
-            SlLen,
-            SlPos,
             startPos0);
           res = res3;
         }
-        if (res == EVERPARSE_VALIDATOR_SUCCESS)
+        if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           consumed = pos2;
           p = *SlPos;
           p_ = p + consumed;
           *SlPos = p_;
-          resultAfterBf2bis = EVERPARSE_VALIDATOR_SUCCESS;
+          resultAfterBf2bis = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
@@ -196,25 +190,24 @@ ValidateBf2bis(
       }
       else
       {
-        resultAfterBf2bis = EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+        resultAfterBf2bis = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
       }
     }
     else
     {
       resultAfterBf2bis = resultAfterBitfield1;
     }
-    if (resultAfterBf2bis == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterBf2bis == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterBf2bis;
     }
     ErrorHandlerFn("_BF2bis",
       "__bitfield_1",
-      EverParseErrorReasonOfResult(resultAfterBf2bis),
-      resultAfterBf2bis,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterBf2bis),
+      resultAfterBf2bis == 0U || (resultAfterBf2bis >= 2U && resultAfterBf2bis <= 8U) ? (uint64_t)(uint32_t)resultAfterBf2bis
+                                                                                      : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionBf2bis);
     return resultAfterBf2bis;
   }
@@ -222,7 +215,7 @@ ValidateBf2bis(
 }
 
 static inline uint8_t
-ValidateBf3(
+ValidateCoreBf3(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -290,13 +283,13 @@ ValidateBf3(
   if (hasBytes0)
   {
     pos = p00 + (size_t)2U;
-    res0 = EVERPARSE_VALIDATOR_SUCCESS;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfterBitfield0 = res0;
   }
@@ -304,16 +297,14 @@ ValidateBf3(
   {
     ErrorHandlerFn("_BF3",
       "__bitfield_0",
-      EverParseErrorReasonOfResult(res0),
-      res0,
+      EverParsePulseInternalErrorReasonOfResult(res0),
+      res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPos);
     resultAfterBitfield0 = res0;
   }
-  if (resultAfterBitfield0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterBitfield0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p01 = *SlPos;
     m0 = p01 + (size_t)2U;
@@ -338,13 +329,13 @@ ValidateBf3(
     if (hasBytes1)
     {
       pos1 = p02 + (size_t)2U;
-      resultAfterBitfield1 = EVERPARSE_VALIDATOR_SUCCESS;
+      resultAfterBitfield1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      resultAfterBitfield1 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      resultAfterBitfield1 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (resultAfterBitfield1 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterBitfield1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       p03 = *SlPos;
       m = p03 + (size_t)2U;
@@ -378,13 +369,13 @@ ValidateBf3(
         if (hasBytes)
         {
           pos2 = p0 + (size_t)1U;
-          res3 = EVERPARSE_VALIDATOR_SUCCESS;
+          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
-          res3 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+          res3 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
         }
-        if (res3 == EVERPARSE_VALIDATOR_SUCCESS)
+        if (res3 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           res = res3;
         }
@@ -392,22 +383,20 @@ ValidateBf3(
         {
           ErrorHandlerFn("_BF3",
             "z",
-            EverParseErrorReasonOfResult(res3),
-            res3,
+            EverParsePulseInternalErrorReasonOfResult(res3),
+            res3 == 0U || (res3 >= 2U && res3 <= 8U) ? (uint64_t)(uint32_t)res3 : 15ULL,
             Ctxt,
             SlBase,
-            SlLen,
-            SlPos,
             startPos0);
           res = res3;
         }
-        if (res == EVERPARSE_VALIDATOR_SUCCESS)
+        if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           consumed = pos2;
           p = *SlPos;
           p_ = p + consumed;
           *SlPos = p_;
-          resultAfterBf3 = EVERPARSE_VALIDATOR_SUCCESS;
+          resultAfterBf3 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
         {
@@ -416,33 +405,32 @@ ValidateBf3(
       }
       else
       {
-        resultAfterBf3 = EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+        resultAfterBf3 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
       }
     }
     else
     {
       resultAfterBf3 = resultAfterBitfield1;
     }
-    if (resultAfterBf3 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterBf3 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterBf3;
     }
     ErrorHandlerFn("_BF3",
       "__bitfield_1",
-      EverParseErrorReasonOfResult(resultAfterBf3),
-      resultAfterBf3,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterBf3),
+      resultAfterBf3 == 0U || (resultAfterBf3 >= 2U && resultAfterBf3 <= 8U) ? (uint64_t)(uint32_t)resultAfterBf3
+                                                                             : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionBf3);
     return resultAfterBf3;
   }
   return resultAfterBitfield0;
 }
 
-uint8_t
-BfValidateDummy(
+static uint8_t
+ValidateCoreDummy(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -454,13 +442,13 @@ BfValidateDummy(
   size_t p0 = *SlPos;
   uint64_t fieldStartDummy = (uint64_t)p0;
   uint64_t startPositionDummy = fieldStartDummy;
-  uint8_t resultAfterDummy = ValidateBf2bis(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+  uint8_t resultAfterDummy = ValidateCoreBf2bis(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
   uint8_t resultAfteremp2;
   size_t p;
   uint64_t fieldStartDummy0;
   uint64_t startPositionDummy0;
   uint8_t resultAfterDummy0;
-  if (resultAfterDummy == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterDummy == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfteremp2 = resultAfterDummy;
   }
@@ -468,37 +456,56 @@ BfValidateDummy(
   {
     ErrorHandlerFn("_dummy",
       "emp2",
-      EverParseErrorReasonOfResult(resultAfterDummy),
-      resultAfterDummy,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterDummy),
+      resultAfterDummy == 0U || (resultAfterDummy >= 2U && resultAfterDummy <= 8U) ? (uint64_t)(uint32_t)resultAfterDummy
+                                                                                   : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionDummy);
     resultAfteremp2 = resultAfterDummy;
   }
-  if (resultAfteremp2 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfteremp2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field emp3 */
     p = *SlPos;
     fieldStartDummy0 = (uint64_t)p;
     startPositionDummy0 = fieldStartDummy0;
-    resultAfterDummy0 = ValidateBf3(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
-    if (resultAfterDummy0 == EVERPARSE_VALIDATOR_SUCCESS)
+    resultAfterDummy0 = ValidateCoreBf3(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+    if (resultAfterDummy0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterDummy0;
     }
     ErrorHandlerFn("_dummy",
       "emp3",
-      EverParseErrorReasonOfResult(resultAfterDummy0),
-      resultAfterDummy0,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterDummy0),
+      resultAfterDummy0 == 0U || (resultAfterDummy0 >= 2U && resultAfterDummy0 <= 8U) ? (uint64_t)(uint32_t)resultAfterDummy0
+                                                                                      : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionDummy0);
     return resultAfterDummy0;
   }
   return resultAfteremp2;
+}
+
+uint64_t
+BfValidateDummy(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreDummy(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

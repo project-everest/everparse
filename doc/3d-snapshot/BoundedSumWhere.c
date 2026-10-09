@@ -2,10 +2,8 @@
 
 #include "BoundedSumWhere.h"
 
-#include "EverParse.h"
-
-uint8_t
-BoundedSumWhereValidateBoundedSum(
+static uint8_t
+ValidateCoreBoundedSum(
   uint32_t Bound,
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
@@ -93,13 +91,13 @@ BoundedSumWhereValidateBoundedSum(
     if (hasBytes0)
     {
       pos = p00 + (size_t)4U;
-      res0 = EVERPARSE_VALIDATOR_SUCCESS;
+      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       resultAfterleft = res0;
     }
@@ -107,16 +105,14 @@ BoundedSumWhereValidateBoundedSum(
     {
       ErrorHandlerFn("_boundedSum",
         "left",
-        EverParseErrorReasonOfResult(res0),
-        res0,
+        EverParsePulseInternalErrorReasonOfResult(res0),
+        res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
         Ctxt,
         SlBase,
-        SlLen,
-        SlPos,
         startPos);
       resultAfterleft = res0;
     }
-    if (resultAfterleft == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterleft == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       p01 = *SlPos;
       m0 = p01 + (size_t)4U;
@@ -150,13 +146,13 @@ BoundedSumWhereValidateBoundedSum(
       if (hasBytes)
       {
         pos1 = p02 + (size_t)4U;
-        resultAfterright_refinement = EVERPARSE_VALIDATOR_SUCCESS;
+        resultAfterright_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
       {
-        resultAfterright_refinement = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+        resultAfterright_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
       }
-      if (resultAfterright_refinement == EVERPARSE_VALIDATOR_SUCCESS)
+      if (resultAfterright_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         /* reading field_value */
         p0 = *SlPos;
@@ -182,14 +178,14 @@ BoundedSumWhereValidateBoundedSum(
         right_refinementConstraintIsOk = left <= Bound && right_refinement <= (Bound - left);
         /* end: checking constraint */
         resultAfterBoundedSum0 =
-          right_refinementConstraintIsOk ? EVERPARSE_VALIDATOR_SUCCESS
-                                         : EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+          right_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                                         : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
       }
       else
       {
         resultAfterBoundedSum0 = resultAfterright_refinement;
       }
-      if (resultAfterBoundedSum0 == EVERPARSE_VALIDATOR_SUCCESS)
+      if (resultAfterBoundedSum0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         resultAfterBoundedSum = resultAfterBoundedSum0;
       }
@@ -197,12 +193,12 @@ BoundedSumWhereValidateBoundedSum(
       {
         ErrorHandlerFn("_boundedSum",
           "right.refinement",
-          EverParseErrorReasonOfResult(resultAfterBoundedSum0),
-          resultAfterBoundedSum0,
+          EverParsePulseInternalErrorReasonOfResult(resultAfterBoundedSum0),
+          resultAfterBoundedSum0 == 0U ||
+            (resultAfterBoundedSum0 >= 2U && resultAfterBoundedSum0 <= 8U) ? (uint64_t)(uint32_t)resultAfterBoundedSum0
+                                                                           : 15ULL,
           Ctxt,
           SlBase,
-          SlLen,
-          SlPos,
           startPositionBoundedSum1);
         resultAfterBoundedSum = resultAfterBoundedSum0;
       }
@@ -214,21 +210,42 @@ BoundedSumWhereValidateBoundedSum(
   }
   else
   {
-    resultAfterBoundedSum = EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+    resultAfterBoundedSum = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
   }
-  if (resultAfterBoundedSum == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterBoundedSum == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterBoundedSum;
   }
   ErrorHandlerFn("_boundedSum",
     "__precondition",
-    EverParseErrorReasonOfResult(resultAfterBoundedSum),
-    resultAfterBoundedSum,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterBoundedSum),
+    resultAfterBoundedSum == 0U || (resultAfterBoundedSum >= 2U && resultAfterBoundedSum <= 8U) ? (uint64_t)(uint32_t)resultAfterBoundedSum
+                                                                                                : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionBoundedSum);
   return resultAfterBoundedSum;
+}
+
+uint64_t
+BoundedSumWhereValidateBoundedSum(
+  uint32_t Bound,
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreBoundedSum(Bound, Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

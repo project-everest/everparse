@@ -2,10 +2,8 @@
 
 #include "Smoker.h"
 
-#include "EverParse.h"
-
-uint8_t
-SmokerValidateSmoker(
+static uint8_t
+ValidateCoreSmoker(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -60,13 +58,13 @@ SmokerValidateSmoker(
   if (hasBytes0)
   {
     pos = p00 + (size_t)4U;
-    resultAfterage = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterage = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    resultAfterage = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAfterage = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAfterage == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterage == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p01 = *SlPos;
     m = p01 + (size_t)4U;
@@ -104,13 +102,13 @@ SmokerValidateSmoker(
       if (hasBytes)
       {
         pos1 = p0 + (size_t)1U;
-        res1 = EVERPARSE_VALIDATOR_SUCCESS;
+        res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
       {
-        res1 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+        res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
       }
-      if (res1 == EVERPARSE_VALIDATOR_SUCCESS)
+      if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         res = res1;
       }
@@ -118,22 +116,20 @@ SmokerValidateSmoker(
       {
         ErrorHandlerFn("_smoker",
           "cigarettesConsumed",
-          EverParseErrorReasonOfResult(res1),
-          res1,
+          EverParsePulseInternalErrorReasonOfResult(res1),
+          res1 == 0U || (res1 >= 2U && res1 <= 8U) ? (uint64_t)(uint32_t)res1 : 15ULL,
           Ctxt,
           SlBase,
-          SlLen,
-          SlPos,
           startPos);
         res = res1;
       }
-      if (res == EVERPARSE_VALIDATOR_SUCCESS)
+      if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         consumed = pos1;
         p = *SlPos;
         p_ = p + consumed;
         *SlPos = p_;
-        resultAfterSmoker = EVERPARSE_VALIDATOR_SUCCESS;
+        resultAfterSmoker = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
       {
@@ -142,26 +138,46 @@ SmokerValidateSmoker(
     }
     else
     {
-      resultAfterSmoker = EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+      resultAfterSmoker = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
     }
   }
   else
   {
     resultAfterSmoker = resultAfterage;
   }
-  if (resultAfterSmoker == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterSmoker == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterSmoker;
   }
   ErrorHandlerFn("_smoker",
     "age",
-    EverParseErrorReasonOfResult(resultAfterSmoker),
-    resultAfterSmoker,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterSmoker),
+    resultAfterSmoker == 0U || (resultAfterSmoker >= 2U && resultAfterSmoker <= 8U) ? (uint64_t)(uint32_t)resultAfterSmoker
+                                                                                    : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionSmoker);
   return resultAfterSmoker;
+}
+
+uint64_t
+SmokerValidateSmoker(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreSmoker(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

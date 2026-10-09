@@ -2,10 +2,8 @@
 
 #include "Triangle2.h"
 
-#include "EverParse.h"
-
-uint8_t
-Triangle2ValidateTriangle(
+static uint8_t
+ValidateCoreTriangle(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -30,37 +28,57 @@ Triangle2ValidateTriangle(
   if (hasBytes)
   {
     pos = p0 + (size_t)12U;
-    res = EVERPARSE_VALIDATOR_SUCCESS;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
     p = *SlPos;
     p_ = p + consumed;
     *SlPos = p_;
-    resultAfterTriangle = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAfterTriangle = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
     resultAfterTriangle = res;
   }
-  if (resultAfterTriangle == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterTriangle == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterTriangle;
   }
   ErrorHandlerFn("_triangle",
     "corners",
-    EverParseErrorReasonOfResult(resultAfterTriangle),
-    resultAfterTriangle,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterTriangle),
+    resultAfterTriangle == 0U || (resultAfterTriangle >= 2U && resultAfterTriangle <= 8U) ? (uint64_t)(uint32_t)resultAfterTriangle
+                                                                                          : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionTriangle);
   return resultAfterTriangle;
+}
+
+uint64_t
+Triangle2ValidateTriangle(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreTriangle(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

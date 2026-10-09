@@ -2,10 +2,8 @@
 
 #include "EnumConstraint.h"
 
-#include "EverParse.h"
-
-uint8_t
-EnumConstraintValidateEnumConstraint(
+static uint8_t
+ValidateCoreEnumConstraint(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -75,13 +73,13 @@ EnumConstraintValidateEnumConstraint(
   if (hasBytes0)
   {
     pos = p00 + (size_t)4U;
-    resultAftercol = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAftercol = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    resultAftercol = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAftercol = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAftercol == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAftercol == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p01 = *SlPos;
     m0 = p01 + (size_t)4U;
@@ -119,13 +117,13 @@ EnumConstraintValidateEnumConstraint(
       if (hasBytes)
       {
         pos1 = p02 + (size_t)4U;
-        resultAfterx_refinement = EVERPARSE_VALIDATOR_SUCCESS;
+        resultAfterx_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
       {
-        resultAfterx_refinement = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+        resultAfterx_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
       }
-      if (resultAfterx_refinement == EVERPARSE_VALIDATOR_SUCCESS)
+      if (resultAfterx_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         /* reading field_value */
         p0 = *SlPos;
@@ -151,14 +149,14 @@ EnumConstraintValidateEnumConstraint(
         x_refinementConstraintIsOk = x_refinement == 0U || col == ENUMCONSTRAINT_GREEN;
         /* end: checking constraint */
         resultAfterEnumConstraint0 =
-          x_refinementConstraintIsOk ? EVERPARSE_VALIDATOR_SUCCESS
-                                     : EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+          x_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                                     : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
       }
       else
       {
         resultAfterEnumConstraint0 = resultAfterx_refinement;
       }
-      if (resultAfterEnumConstraint0 == EVERPARSE_VALIDATOR_SUCCESS)
+      if (resultAfterEnumConstraint0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         resultAfterEnumConstraint = resultAfterEnumConstraint0;
       }
@@ -166,38 +164,59 @@ EnumConstraintValidateEnumConstraint(
       {
         ErrorHandlerFn("_enum_constraint",
           "x.refinement",
-          EverParseErrorReasonOfResult(resultAfterEnumConstraint0),
-          resultAfterEnumConstraint0,
+          EverParsePulseInternalErrorReasonOfResult(resultAfterEnumConstraint0),
+          resultAfterEnumConstraint0 == 0U ||
+            (resultAfterEnumConstraint0 >= 2U && resultAfterEnumConstraint0 <= 8U) ? (uint64_t)(uint32_t)resultAfterEnumConstraint0
+                                                                                   : 15ULL,
           Ctxt,
           SlBase,
-          SlLen,
-          SlPos,
           startPositionEnumConstraint1);
         resultAfterEnumConstraint = resultAfterEnumConstraint0;
       }
     }
     else
     {
-      resultAfterEnumConstraint = EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+      resultAfterEnumConstraint = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
     }
   }
   else
   {
     resultAfterEnumConstraint = resultAftercol;
   }
-  if (resultAfterEnumConstraint == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterEnumConstraint == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     return resultAfterEnumConstraint;
   }
   ErrorHandlerFn("_enum_constraint",
     "col",
-    EverParseErrorReasonOfResult(resultAfterEnumConstraint),
-    resultAfterEnumConstraint,
+    EverParsePulseInternalErrorReasonOfResult(resultAfterEnumConstraint),
+    resultAfterEnumConstraint == 0U ||
+      (resultAfterEnumConstraint >= 2U && resultAfterEnumConstraint <= 8U) ? (uint64_t)(uint32_t)resultAfterEnumConstraint
+                                                                           : 15ULL,
     Ctxt,
     SlBase,
-    SlLen,
-    SlPos,
     startPositionEnumConstraint);
   return resultAfterEnumConstraint;
+}
+
+uint64_t
+EnumConstraintValidateEnumConstraint(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreEnumConstraint(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

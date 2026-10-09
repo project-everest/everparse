@@ -2,10 +2,8 @@
 
 #include "OrderedPair.h"
 
-#include "EverParse.h"
-
-uint8_t
-OrderedPairValidateOrderedPair(
+static uint8_t
+ValidateCoreOrderedPair(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -75,13 +73,13 @@ OrderedPairValidateOrderedPair(
   if (hasBytes0)
   {
     pos = p00 + (size_t)4U;
-    res0 = EVERPARSE_VALIDATOR_SUCCESS;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    res0 = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAfterlesser = res0;
   }
@@ -89,16 +87,14 @@ OrderedPairValidateOrderedPair(
   {
     ErrorHandlerFn("_orderedPair",
       "lesser",
-      EverParseErrorReasonOfResult(res0),
-      res0,
+      EverParsePulseInternalErrorReasonOfResult(res0),
+      res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPos);
     resultAfterlesser = res0;
   }
-  if (resultAfterlesser == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterlesser == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p01 = *SlPos;
     m0 = p01 + (size_t)4U;
@@ -132,13 +128,13 @@ OrderedPairValidateOrderedPair(
     if (hasBytes)
     {
       pos1 = p02 + (size_t)4U;
-      resultAftergreater_refinement = EVERPARSE_VALIDATOR_SUCCESS;
+      resultAftergreater_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      resultAftergreater_refinement = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      resultAftergreater_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (resultAftergreater_refinement == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAftergreater_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       /* reading field_value */
       p0 = *SlPos;
@@ -164,28 +160,48 @@ OrderedPairValidateOrderedPair(
       greater_refinementConstraintIsOk = lesser <= greater_refinement;
       /* end: checking constraint */
       resultAfterOrderedPair =
-        greater_refinementConstraintIsOk ? EVERPARSE_VALIDATOR_SUCCESS
-                                         : EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+        greater_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                                         : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
     }
     else
     {
       resultAfterOrderedPair = resultAftergreater_refinement;
     }
-    if (resultAfterOrderedPair == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterOrderedPair == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterOrderedPair;
     }
     ErrorHandlerFn("_orderedPair",
       "greater.refinement",
-      EverParseErrorReasonOfResult(resultAfterOrderedPair),
-      resultAfterOrderedPair,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterOrderedPair),
+      resultAfterOrderedPair == 0U || (resultAfterOrderedPair >= 2U && resultAfterOrderedPair <= 8U) ? (uint64_t)(uint32_t)resultAfterOrderedPair
+                                                                                                     : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionOrderedPair);
     return resultAfterOrderedPair;
   }
   return resultAfterlesser;
+}
+
+uint64_t
+OrderedPairValidateOrderedPair(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreOrderedPair(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 

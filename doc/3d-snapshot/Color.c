@@ -2,10 +2,8 @@
 
 #include "Color.h"
 
-#include "EverParse.h"
-
-uint8_t
-ColorValidateColoredPoint(
+static uint8_t
+ValidateCoreColoredPoint(
   uint8_t *Ctxt,
   EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *SlBase,
@@ -61,13 +59,13 @@ ColorValidateColoredPoint(
   if (hasBytes0)
   {
     pos0 = p00 + (size_t)4U;
-    resultAftercol_refinement = EVERPARSE_VALIDATOR_SUCCESS;
+    resultAftercol_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
   {
-    resultAftercol_refinement = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    resultAftercol_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAftercol_refinement == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAftercol_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* reading field_value */
     p01 = *SlPos;
@@ -94,14 +92,14 @@ ColorValidateColoredPoint(
       COLOR_RED == col_refinement || COLOR_GREEN == col_refinement || COLOR_BLUE == col_refinement;
     /* end: checking constraint */
     resultAfterColoredPoint =
-      col_refinementConstraintIsOk ? EVERPARSE_VALIDATOR_SUCCESS
-                                   : EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+      col_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
+                                   : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
   }
   else
   {
     resultAfterColoredPoint = resultAftercol_refinement;
   }
-  if (resultAfterColoredPoint == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAfterColoredPoint == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     resultAftercol_refinement0 = resultAfterColoredPoint;
   }
@@ -109,16 +107,16 @@ ColorValidateColoredPoint(
   {
     ErrorHandlerFn("_coloredPoint",
       "col.refinement",
-      EverParseErrorReasonOfResult(resultAfterColoredPoint),
-      resultAfterColoredPoint,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterColoredPoint),
+      resultAfterColoredPoint == 0U ||
+        (resultAfterColoredPoint >= 2U && resultAfterColoredPoint <= 8U) ? (uint64_t)(uint32_t)resultAfterColoredPoint
+                                                                         : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionColoredPoint);
     resultAftercol_refinement0 = resultAfterColoredPoint;
   }
-  if (resultAftercol_refinement0 == EVERPARSE_VALIDATOR_SUCCESS)
+  if (resultAftercol_refinement0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     p3 = *SlPos;
     fieldStartColoredPoint0 = (uint64_t)p3;
@@ -131,39 +129,60 @@ ColorValidateColoredPoint(
     if (hasBytes)
     {
       pos = p0 + (size_t)8U;
-      res = EVERPARSE_VALIDATOR_SUCCESS;
+      res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
-      res = EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res == EVERPARSE_VALIDATOR_SUCCESS)
+    if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos;
       p = *SlPos;
       p_ = p + consumed;
       *SlPos = p_;
-      resultAfterColoredPoint0 = EVERPARSE_VALIDATOR_SUCCESS;
+      resultAfterColoredPoint0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
     {
       resultAfterColoredPoint0 = res;
     }
-    if (resultAfterColoredPoint0 == EVERPARSE_VALIDATOR_SUCCESS)
+    if (resultAfterColoredPoint0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterColoredPoint0;
     }
     ErrorHandlerFn("_coloredPoint",
       "x",
-      EverParseErrorReasonOfResult(resultAfterColoredPoint0),
-      resultAfterColoredPoint0,
+      EverParsePulseInternalErrorReasonOfResult(resultAfterColoredPoint0),
+      resultAfterColoredPoint0 == 0U ||
+        (resultAfterColoredPoint0 >= 2U && resultAfterColoredPoint0 <= 8U) ? (uint64_t)(uint32_t)resultAfterColoredPoint0
+                                                                           : 15ULL,
       Ctxt,
       SlBase,
-      SlLen,
-      SlPos,
       startPositionColoredPoint0);
     return resultAfterColoredPoint0;
   }
   return resultAftercol_refinement0;
+}
+
+uint64_t
+ColorValidateColoredPoint(
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER Handler,
+  uint8_t *Input,
+  uint64_t Length,
+  uint64_t Start
+)
+{
+  size_t len = (size_t)Length;
+  size_t initial = (size_t)Start;
+  size_t cursor = initial;
+  uint8_t status = ValidateCoreColoredPoint(Ctxt, Handler, Input, len, &cursor);
+  size_t final = cursor;
+  uint64_t position = (uint64_t)final;
+  return
+    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
+      1152921504606846976ULL
+    + position;
 }
 
