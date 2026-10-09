@@ -28,7 +28,7 @@ def main():
     assert "--api" in help_text and "pulse|lowstar" in help_text
     assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
-    # The legacy Low* backend is gone: pulse is the default, and
+    # The legacy Low* backend is gone: lowstar is the default, and
     # legacy_lowstar is rejected like any other unknown backend because
     # Options.Base.valid_api no longer accepts it.
     for args in [("--pulse",), ("--no_pulse",), ("--api",),

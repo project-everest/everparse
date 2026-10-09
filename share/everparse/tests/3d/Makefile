@@ -20,7 +20,7 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
 
 CC ?= cc
 CXX ?= c++
