@@ -79,6 +79,14 @@ clean-3d:
 
 .PHONY: hashchk hashchk-boot hashchk-rebuild
 
+# MSBuild turns every environment variable into a global property, and
+# `OtherFlags` is the F# property holding the extra fsc command line. So the
+# OTHERFLAGS that the rest of this build uses to pass F* options (CI sets
+# OTHERFLAGS='--admit_smt_queries true') would reach fsc verbatim and fail the
+# build with "FS0243: Unrecognized option: '--admit_smt_queries'". Clear it for
+# this target only; the F* rules elsewhere still see it.
+hashchk: OTHERFLAGS :=
+
 hashchk:
 	cd hashchk && dotnet build everparse.fsproj && dotnet build everparse-hashchk.fsproj
 
