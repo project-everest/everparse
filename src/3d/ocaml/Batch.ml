@@ -885,29 +885,37 @@ let save_hashes_for_module
 let copy_clang_format out_dir =
   copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format")
 
+(* [only] restricts the run to the prelude headers it names, by basename. The
+   generated EverParse.Makefile gives each header a rule of its own and has that
+   rule name the file it is responsible for, so that no two rules ever write the
+   same file and a parallel make cannot compile against a header another rule is
+   busy rewriting. [] means "all of them", which is what --batch mode and
+   postprocess_c want. *)
 let copy_everparse_h_raw
+      ?(only: string list = [])
       input_stream_binding
       out_dir =
+      let wanted name = only = [] || List.mem name only in
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
       (* Each API ships a pre-generated, backend-specific EverParse.h: pulse
          from lib/everparse/3d/krml/<backend>, lowstar from
          lib/everparse/3d/krml/lowstar/<backend>. It overwrites the stub of
          `extern` declarations that KaRaMeL emits for the -library'd runtime. *)
       let everparse_h_source = filename_concat (everparse_h_home input_stream_binding) "EverParse.h" in
-      if lowstar_api () || file_exists everparse_h_source
+      if wanted "EverParse.h" && (lowstar_api () || file_exists everparse_h_source)
       then copy everparse_h_source dest_everparse_h;
       if Options.uses_pulse_api ()
       then begin
         let everparse_pulse_h_source = filename_concat ddd_home "EverParsePulse.h" in
-        if file_exists everparse_pulse_h_source
+        if wanted "EverParsePulse.h" && file_exists everparse_pulse_h_source
         then copy everparse_pulse_h_source (filename_concat out_dir "EverParsePulse.h")
         ;
         let everparse_pulse_endianness_h_source = filename_concat ddd_home "EverParsePulseEndianness.h" in
-        if file_exists everparse_pulse_endianness_h_source
+        if wanted "EverParsePulseEndianness.h" && file_exists everparse_pulse_endianness_h_source
         then copy everparse_pulse_endianness_h_source (filename_concat out_dir "EverParsePulseEndianness.h")
       end;
       let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
-      if file_exists everparse_endianness_source
+      if wanted "EverParseEndianness.h" && file_exists everparse_endianness_source
       then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
 
 let everparse_pulse_headers out_dir =
@@ -922,10 +930,19 @@ let copy_everparse_h
       (clang_format: bool)
       (clang_format_executable: string)
       input_stream_binding
-      out_dir =
-  copy_everparse_h_raw input_stream_binding out_dir;
+      out_dir
+      (only: string list) =
+  copy_everparse_h_raw ~only input_stream_binding out_dir;
   if clang_format
-  then call_clang_format_on clang_format_executable ([filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"] @ everparse_pulse_headers out_dir)
+  then
+    (* Only reformat what this run actually copied, for the same reason it only
+       copies what it was asked for: another rule may own the rest. *)
+    let copied =
+      List.filter
+        (fun f -> only = [] || List.mem (Filename.basename f) only)
+        ([filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"] @ everparse_pulse_headers out_dir)
+    in
+    call_clang_format_on clang_format_executable copied
 
 (* Postprocess C files, assuming that they have already been processed *)
 

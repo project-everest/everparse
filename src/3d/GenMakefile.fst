@@ -536,27 +536,36 @@ let produce_everparse_h_rule
       ty = EverParse;
       from = [];
       to = mk_filename "EverParseEndianness" "h";
-      args = "--__micro_step copy_everparse_h";
+      (* EverParse.h rides along with this rule because it has no rule of its
+         own: the Nop below only orders it after this one (and, under --api
+         pulse, after the .c files, which copy it too via postprocess_c). *)
+      args = "--__micro_step copy_everparse_h EverParse.h EverParseEndianness.h";
     };
   ] `List.Tot.append`
   (* In --api pulse mode the copy_everparse_h micro-step also copies
      EverParsePulseEndianness.h (included by EverParse.h) and EverParsePulse.h
      (included by every <Mod>Wrapper.c). They need their own rules, otherwise
-     make cannot repair them. The rules are chained so that a parallel make
-     never runs the micro-step twice at once. *)
+     make cannot repair them.
+
+     Each rule names the headers its own run is responsible for, so that no two
+     rules ever write the same file. These rules used to be chained instead,
+     with every run re-copying every header. That kept two runs from overlapping
+     but did nothing about their *consumers*: once the first link finished, make
+     was free to compile against EverParseEndianness.h while the second link was
+     rewriting it, which is exactly what it did. *)
   begin if Options.uses_pulse_api ()
   then [
     {
       ty = EverParse;
-      from = [mk_filename "EverParseEndianness" "h"];
+      from = [];
       to = mk_filename "EverParsePulseEndianness" "h";
-      args = "--__micro_step copy_everparse_h";
+      args = "--__micro_step copy_everparse_h EverParsePulseEndianness.h";
     };
     {
       ty = EverParse;
-      from = [mk_filename "EverParsePulseEndianness" "h"];
+      from = [];
       to = mk_filename "EverParsePulse" "h";
-      args = "--__micro_step copy_everparse_h";
+      args = "--__micro_step copy_everparse_h EverParsePulse.h";
     };
   ] else []
   end `List.Tot.append`
