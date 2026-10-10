@@ -63,7 +63,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let mut privkeybuf = Vec::new();
             let privkey = match read_cose_key(privkey, &mut privkeybuf)? {
-                coseformat::cose_key_okp { intkeyneg4: coseformat::option__COSE_Format_bstr::Some {v: privkey}, .. } =>
+                coseformat::cose_key_okp { intkeyneg4: coseformat::option__Pulse_Lib_Slice_slice·uint8_t::Some {v: privkey}, .. } =>
                     privkey,
                 _ => panic!("wrong key format"),
             };
@@ -80,13 +80,13 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let mut pubkeybuf = Vec::new();
             let pubkey = match read_cose_key(pubkey, &mut pubkeybuf)? {
-                coseformat::cose_key_okp { intkeyneg2: coseformat::option__COSE_Format_bstr::Some {v: pubkey}, .. } =>
+                coseformat::cose_key_okp { intkeyneg2: coseformat::option__Pulse_Lib_Slice_slice·uint8_t::Some {v: pubkey}, .. } =>
                     pubkey,
                 _ => panic!("wrong key format"),
             };
 
             match commonpulse::verify1_simple(pubkey, &msgbuf) {
-                commonpulse::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: verified_payload } => {
+                coseformat::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: verified_payload } => {
                     stdout().write_all(&verified_payload)?;
                     Ok(())
                 },

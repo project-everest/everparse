@@ -1,4 +1,12 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.MatchItemFor
+include CDDL.Pulse.Serialize.Gen.MapGroup.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+open CBOR.Pulse.API.Base
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module U64 = FStar.UInt64
 open CDDL.Pulse.Serialize.Gen.MapGroup.Aux
 #lang-pulse
 
@@ -235,7 +243,7 @@ let impl_serialize_match_item_for_post_false_count_overflow
   if pvalue.serializable v then
     cbor_map_length_singleton key (pvalue.serializer v)
 
-#push-options "--z3rlimit 512 --split_queries always"
+#push-options "--z3rlimit 512"
 
 inline_for_extraction
 fn impl_serialize_match_item_for

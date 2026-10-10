@@ -10,7 +10,7 @@ test-cpp.exe
 *.err
 out.pulse
 out.fail.pulse
-out.reserved.pulse
+out.modname.pulse
 out.pulse.verify
 out.elf.pulse
 out.cleanup.pulse

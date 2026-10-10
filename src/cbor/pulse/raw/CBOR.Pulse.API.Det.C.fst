@@ -1,4 +1,18 @@
 module CBOR.Pulse.API.Det.C
+include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Det.Dummy
+include CBOR.Pulse.API.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.Constants
+module Spec = CBOR.Spec.API.Format
+module S = Pulse.Lib.Slice
+module A = Pulse.Lib.Array
+module PM = Pulse.Lib.SeqMatch
+module Trade = Pulse.Lib.Trade.Util
+module SZ = FStar.SizeT
+module U8 = FStar.UInt8
+module SU = Pulse.Lib.Slice.Util
+module AP = Pulse.Lib.ArrayPtr
 #lang-pulse
 
 (* NOTE: this .fst file does not need anything from the Raw namespace,

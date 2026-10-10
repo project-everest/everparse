@@ -1,4 +1,12 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.Map
+include CDDL.Pulse.Serialize.Gen.MapGroup.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+open CBOR.Pulse.API.Base
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module Cbor = CBOR.Spec.API.Format
+module U64 = FStar.UInt64
 #lang-pulse
 
 module GR = Pulse.Lib.GhostReference

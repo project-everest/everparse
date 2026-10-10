@@ -1,5 +1,4 @@
 module EverParse3d.Lowstar.ErrorCode
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64

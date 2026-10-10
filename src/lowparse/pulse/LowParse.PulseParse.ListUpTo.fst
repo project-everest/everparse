@@ -61,6 +61,7 @@ fn validate_list_up_to
         LPS.validator_postcond (parse_list_up_to cond p prf) offset v_bytes off res
       )
     )
+    decreases %[(if !pcontinue then 1 else 0); (Seq.length v_bytes - SZ.v (!poffset))] // fstar2 only
   {
     let off = !poffset;
     let s = Ghost.hide (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
@@ -75,7 +76,8 @@ fn validate_list_up_to
       if (cond x) {
         pcontinue := false
       } else {
-        prf s x (SZ.v off2 - SZ.v off)
+        prf s x (SZ.v off2 - SZ.v off);
+        assert (pure (SZ.v off < SZ.v off2)) // fstar2 only
       }
     } else {
       poffset := off;

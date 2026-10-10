@@ -76,9 +76,11 @@ let array_group_included_gdef_snd
 = let (g0, a1r) = destruct_group a2 in
   array_group_sem_destruct_group e.e_sem_env a2;
   let GDef n = g0 in
-  let en = match e.e_sem_env.se_bound n with
+  let en : group = match e.e_sem_env.se_bound n with
     | Some NGroup -> (e.e_env n)
-    | Some NType -> GElem false (TElem EAny) (e.e_env n)
+    | Some NType ->
+      assert (Some?.v (e.e_sem_env.se_bound n) == NType);
+      GElem false (TElem EAny) (e.e_env n)
   in
   let a1' = GConcat en a1r in
   gdef_snd_equiv e n a1r a2 en;
@@ -100,7 +102,7 @@ let array_group_included_gdef_snd
   else ROutOfFuel
 #pop-options
 
-#push-options "--z3rlimit 512 --query_stats --split_queries always --fuel 4 --ifuel 8 --z3refresh"
+#push-options "--z3rlimit 512 --query_stats --fuel 4 --ifuel 8 --z3refresh"
 
 let array_group_included
   (typ_included: typ_included_t)
@@ -172,7 +174,9 @@ let array_group_included
   | (_, (GDef n, a1r)), (a2, _) ->
     let en = match e.e_sem_env.se_bound n with
     | Some NGroup -> (e.e_env n)
-    | Some NType -> GElem false (TElem EAny) (e.e_env n)
+    | Some NType ->
+      assert (Some?.v (e.e_sem_env.se_bound n) == NType);
+      GElem false (TElem EAny) (e.e_env n)
     in
     let a1' = GConcat en a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';

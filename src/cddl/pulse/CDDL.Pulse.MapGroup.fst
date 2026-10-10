@@ -316,11 +316,14 @@ let impl_map_group_zero_or_one
   ))
 : impl_map_group_t #_ vmatch (map_group_zero_or_one g1) f1
 =
-    (impl_map_group_choice
-      w1
-      (impl_map_group_nop ())
+    impl_map_group_ext
+      (impl_map_group_choice
+        w1
+        (impl_map_group_nop ())
+        ())
+      (map_group_zero_or_one g1)
+      f1
       ()
-    )
 
 let impl_map_group_match_item_for_body_post
   (#t: Type0)
@@ -592,6 +595,15 @@ let cbor_map_sub_union_l
   ))
 = ()
 
+let cbor_map_sub_partition
+  (a s: cbor_map)
+: Lemma
+  (requires cbor_map_included s a)
+  (ensures
+    cbor_map_disjoint s (cbor_map_sub a s) /\
+    cbor_map_union s (cbor_map_sub a s) == a)
+= ()
+
 let add_sub_r
   (a b c: int)
 : Lemma
@@ -604,7 +616,7 @@ let add_sub_cancel
   ((a + c) + (b - c) == a + b)
 = ()
 
-#push-options "--z3rlimit 32 --split_queries always --fuel 2 --ifuel 1"
+#push-options "--z3rlimit 32 --fuel 2 --ifuel 1"
 
 #restart-solver
 ghost
@@ -681,7 +693,7 @@ ensures
 
 #pop-options
 
-#push-options "--z3rlimit 768 --split_queries always --fuel 2 --ifuel 1"
+#push-options "--z3rlimit 768 --fuel 2 --ifuel 1"
 
 #restart-solver
 inline_for_extraction
@@ -722,12 +734,14 @@ if (not count) {
   let gres = Ghost.hide (apply_map_group_det (map_group_filter f) v1);
   let gconsumed = Ghost.hide (MapGroupDet?.consumed gres);
   let gremaining = Ghost.hide (MapGroupDet?.remaining gres);
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal l0)); // fstar2 only
   while (
     let j = !pj;
     let is_empty = cbor_map_iterator_is_empty j;
     not is_empty
-  ) invariant exists* pl l j vconsumed_past vremaining_past v1_future v2_past v2_future rem . (
+  ) invariant exists* pl l j vconsumed_past vremaining_past v1_future v2_past v2_future rem m . (
     pts_to pj j **
+    pts_to pmeasure m ** // fstar2 only
     cbor_map_iterator_match pl j l **
     Trade.trade
       (cbor_map_iterator_match pl j l)
@@ -738,11 +752,14 @@ if (not count) {
     GR.pts_to p2_past v2_past **
     GR.pts_to p2_future v2_future **
     R.pts_to pi rem **
-    pure (impl_map_group_filter_invariant_prop f v1 v2 l vconsumed_past vremaining_past v1_future v2_past v2_future rem (Cons? l))
+    pure (impl_map_group_filter_invariant_prop f v1 v2 l vconsumed_past vremaining_past v1_future v2_past v2_future rem (Cons? l) /\ Ghost.reveal m == List.Tot.length l) // fstar2 only
   )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
   {
     let chd = cbor_map_iterator_next pj;
     Trade.trans _ _ (vmatch p c v);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     with phd hd . assert (vmatch2 phd chd hd);
     let hd_k = Ghost.hide (fst hd);
     let hd_v = Ghost.hide (snd hd);
@@ -762,7 +779,9 @@ if (not count) {
     } else {
       assert (pure (cbor_map_included s (cbor_map_filter (Util.notp f) v1_future)));
       assert (pure (cbor_map_included s v1_future));
-      let v1_future' = Ghost.hide (cbor_map_sub v1_future s);
+      cbor_map_sub_partition v1_future s;
+      let v1_future' : Ghost.erased cbor_map =
+        Ghost.hide (cbor_map_sub v1_future s);
       cbor_map_length_disjoint_union s v1_future';
       cbor_map_length_singleton hd_k hd_v;
       assert (pure (cbor_map_length v1_future' == cbor_map_length v1_future - 1));

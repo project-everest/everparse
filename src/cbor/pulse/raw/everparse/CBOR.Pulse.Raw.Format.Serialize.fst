@@ -1,6 +1,11 @@
 module CBOR.Pulse.Raw.Format.Serialize
 friend CBOR.Spec.Raw.Format
 friend CBOR.Pulse.Raw.Format.Match
+include CBOR.Pulse.Raw.Match
+open CBOR.Spec.Raw.Format
+open Pulse.Lib.Trade
+module U8 = FStar.UInt8
+module S = Pulse.Lib.Slice
 #lang-pulse
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Raw.EverParse
@@ -961,6 +966,7 @@ ensures
 }
 
 // ===== map element-predicate conversions (entry-level), duplicated from Read.fst =====
+#push-options "--z3rlimit 32"
 ghost
 fn map_peek
   (depth: Ghost.erased nat)
@@ -984,6 +990,7 @@ ensures
     ()
   }
 }
+#pop-options
 
 ghost
 fn map_to_unref
@@ -1281,7 +1288,7 @@ let size_payload_string
 // non-depth seqbytes extraction. No recursion / no `f`.
 // ============================================================================
 
-#push-options "--z3rlimit 10 --split_queries always"
+#push-options "--z3rlimit 10"
 
 ghost
 fn ser_payload_string_lens_aux_d
@@ -2677,6 +2684,10 @@ ensures
 {
   unfold (cbor_match_serialized_map xs p xh0);
   unfold (cbor_match_serialized_payload_map (to_slice xs.cbor_serialized_payload) (p `perm_mul` xs.cbor_serialized_perm) (Map?.v xh0));
+  let _ = assert_norm (
+    parse_raw_data_item_kind.parser_kind_subkind == Some ParserStrong /\
+    (LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind).parser_kind_subkind == Some ParserStrong
+  );
   with n' (r': LowParse.Spec.VCList.nlist n' (raw_data_item & raw_data_item)) . assert
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n' (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice xs.cbor_serialized_payload) #(p `perm_mul` xs.cbor_serialized_perm) r');
   rewrite (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n' (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice xs.cbor_serialized_payload) #(p `perm_mul` xs.cbor_serialized_perm) r')
@@ -4725,6 +4736,16 @@ let sz_len_nonzero (x: SZ.t) : Lemma (requires SZ.v x == 0) (ensures x == 0sz) =
 let sz_pos (x: SZ.t) : Lemma (requires x <> 0sz) (ensures SZ.v x > 0) =
   if SZ.v x = 0 then sz_len_nonzero x else ()
 
+let array_payload_cons (x: raw_data_item { Array? x }) : Lemma
+  (requires (U64.v (Array?.len x).value > 0))
+  (ensures (Cons? (Array?.v x)))
+= ()
+
+let map_payload_cons (x: raw_data_item { Map? x }) : Lemma
+  (requires (U64.v (Map?.len x).value > 0))
+  (ensures (Cons? (Map?.v x)))
+= ()
+
 #push-options "--z3rlimit 40 --fuel 2 --ifuel 2"
 ghost
 fn estab_deep_pos
@@ -4755,6 +4776,7 @@ ensures
         pts_to a.cbor_array_ptr #(x'.p `perm_mul` a.cbor_array_array_perm) s **
         PM.seq_list_match s (Array?.v x) ((depth_cb n x) (x'.p `perm_mul` a.cbor_array_payload_perm)));
       sz_pos (S.len a.cbor_array_ptr);
+      array_payload_cons x;
       array_peek n x (x'.p `perm_mul` a.cbor_array_payload_perm) s;
       assert (pure (Ghost.reveal n >= 1));
       Trade.elim _ (cbor_match_with_depth n x'.p (CBOR_Case_Array a) x);

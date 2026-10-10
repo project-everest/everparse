@@ -1654,8 +1654,12 @@ let vmatch_ref_wf
   (r: with_perm (ref tl))
   (vh: th)
 : Tot slprop
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)
-  then vmatch_ref_wf0 bound vmatch r vh (Some ())
+= let b = FStar.IndefiniteDescription.strong_excluded_middle (vh << bound) in
+  if b
+  then begin
+    assert (vh << bound);
+    vmatch_ref_wf0 bound vmatch r vh (Some ())
+  end
   else pure False
 
 let vmatch_ref_wf_eq
@@ -1668,9 +1672,12 @@ let vmatch_ref_wf_eq
 : Lemma
   (requires (vh << bound))
   (ensures (vmatch_ref_wf bound vmatch r vh == vmatch_ref vmatch r vh))
-= let b = (FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)) in // FIXME: WHY WHY WHY the let binding?
-  assert (vmatch_ref_wf bound vmatch r vh == vmatch_ref_wf0 bound vmatch r vh (Some ()));
-  assert_norm (vmatch_ref_wf0 bound vmatch r vh (Some ()) == vmatch_ref vmatch r vh)
+= let b = (FStar.IndefiniteDescription.strong_excluded_middle (vh << bound)) in // FIXME: WHY WHY WHY the let binding?
+  assert (b == true);
+  assert (vmatch_ref_wf bound (fun vl (vh': th { vh' << bound }) -> vmatch vl vh') r vh ==
+          vmatch_ref_wf0 bound (fun vl (vh': th { vh' << bound }) -> vmatch vl vh') r vh (Some ()));
+  assert_norm (vmatch_ref_wf0 bound (fun vl (vh': th { vh' << bound }) -> vmatch vl vh') r vh (Some ()) ==
+               vmatch_ref vmatch r vh)
 
 ghost fn vmatch_ref_elim_trade
   (#tl #th: Type0)

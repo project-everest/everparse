@@ -17,12 +17,14 @@ module EqTest = CDDL.Spec.EqTest
 module GR = Pulse.Lib.GhostReference
 module Map = CDDL.Spec.Map
 
+(* NOTE: no SMTPat. Associativity has a propositional-equality conclusion, so
+   both nestings join the same congruence class and E-matching (which works
+   modulo congruence) re-triggers on every member, enumerating all Catalan-many
+   parse trees of a union chain. With the SMTPat this quantifier reached ~4.06M
+   instantiations in a single query. Call it explicitly instead.
+   Related: https://github.com/Z3Prover/z3/issues/10435 *)
 let cbor_map_union_assoc_pat (m1 m2 m3: cbor_map) : Lemma
   (ensures (cbor_map_union (cbor_map_union m1 m2) m3 == cbor_map_union m1 (cbor_map_union m2 m3)))
-  [SMTPatOr [
-    [SMTPat (cbor_map_union (cbor_map_union m1 m2) m3)];
-    [SMTPat (cbor_map_union m1 (cbor_map_union m2 m3))]
-  ]]
 = cbor_map_union_assoc m1 m2 m3
 
 let cbor_map_length_disjoint_union_pat (m1 m2: cbor_map) : Lemma

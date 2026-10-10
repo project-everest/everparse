@@ -79,6 +79,26 @@ coverage of the only test that exercises `:act`/`:check`.
 it also needs the native Pulse outputs. The root `make 3d-test` builds both
 trees before running this suite on Pulse-enabled Linux builds.
 
+## The `--api lowstar` worker in the public header
+
+Both modes are compiled from the same Pulse combinators; `--api lowstar` only
+wraps the result. For each entrypoint `3d` emits a Pulse-native worker named
+`validate_<reserved_prefix>core_<root>` (`InterpreterTarget.pulse_worker_name`),
+with `reserved_prefix = "___"`, and wraps it in a public adapter `validate_<root>`
+returning the legacy `uint64_t` result. KaRaMeL drops the reserved prefix and
+renders the worker as `<Module>ValidateCore<Root>` (`check_api.py` matches
+`Validate_*Core`, tolerating a prefix that survives). The worker returns
+`uint8_t`, like any Pulse validator.
+
+The worker is tagged `KrmlPrivate`, so the old per-module extraction hid it in
+`internal/`, which `check_api.py` deliberately does not glob. Custard ignores
+`KrmlPrivate` (see the comment in `../lowstar/Makefile`), so the worker now
+sits in the public header, next to the adapter. `check_api.py` therefore
+excludes those names from the `--api lowstar` result-type check:
+only the adapter is public API. A genuinely wrong public validator -- a
+`uint8_t` `<Module>Validate<Root>` in an `--api lowstar` tree -- is still
+rejected, and `test_harness.py` asserts both halves of that.
+
 ## The sub-directory tests
 
 The top-level batch covers the 25 `.3d` files in `share/everparse/tests/3d/lowstar` itself. The

@@ -1,4 +1,6 @@
 module CBOR.Spec.API.MapPairSet
+open CBOR.Spec.API.Type
+open CBOR.Spec.Util
 module S = CBOR.Spec.Raw.Set
 
 let f : S.order elt = CBOR.Spec.Raw.Format.MapPair.map_pair_order

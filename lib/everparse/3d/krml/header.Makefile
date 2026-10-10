@@ -59,12 +59,14 @@ STATIC_HEADER_buffer := $(STATIC_HEADER_COMMON)
 STATIC_HEADER_extern := $(STATIC_HEADER_COMMON)
 STATIC_HEADER_static := $(STATIC_HEADER_COMMON),EverParse3d.InputStream.Extern
 
+# Warning 2 (no corresponding implementation) stays fatal for every backend.
 # With `extern` (and `static`) the stream primitives are assumed vals that the
-# client implements in C, so KaRaMeL's "no corresponding implementation"
-# warning (2) is expected.
+# client implements in C, but they are all reached through the -bundle below
+# and KaRaMeL emits them as plain extern declarations, so none of them is
+# reported as unbound.
 WARN_buffer := -9@4-20-26
-WARN_extern := -9@4-20-26-2
-WARN_static := $(WARN_extern)
+WARN_extern := $(WARN_buffer)
+WARN_static := $(WARN_buffer)
 
 # The public EVERPARSE_ERROR_HANDLER typedef.
 #
@@ -100,6 +102,14 @@ HANDLER_buffer := EverParse3d.Actions.ErrorHandler.Buffer.error_handler
 HANDLER_extern := EverParse3d.Actions.ErrorHandler.Extern.error_handler
 HANDLER_static := $(HANDLER_extern)
 
+# `Custard.\*` is Custard's bucket for monomorphized instances of polymorphic
+# definitions. It is named on the right of the `=` only, so those instances are
+# private to the bundle: the reachable ones are inlined into EverParse.h, the
+# rest are dropped. It is deliberately absent from pulse_everparse_only_bundle
+# in src/3d/ocaml/Batch.ml, because that pattern list is also the client's
+# `-library` and the client's own Custard run produces its own `Custard.\*`
+# modules, which must be emitted rather than assumed. The two still agree in
+# the sense that matters: no Custard.\* declaration survives into EverParse.h.
 define header_rule
 $(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	mkdir -p $(1)
@@ -117,7 +127,7 @@ $(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	  -fextern-c \
 	  -finitialize-locals no \
 	  -bundle 'Prims,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle '$$(API_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*[rename=EverParse,rename-prefix]' \
+	  -bundle '$$(API_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*,Custard.\*[rename=EverParse,rename-prefix]' \
 	  $$(KRML_FILES)
 	test '!' -e $(1)/EverParse.c
 	test '!' -e $(1)/SHOULDNOTBETHERE.h
@@ -151,13 +161,14 @@ lowstar/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft -fno-shadow -fextern-c \
 	  -finitialize-locals no \
 	  -bundle 'Prims,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle '$$(LOWSTAR_$(1))=LowParse.\*,EverParse3d.\*,Pulse.\*[rename=EverParse,rename-prefix]' \
+	  -bundle '$$(LOWSTAR_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*,Custard.\*[rename=EverParse,rename-prefix]' \
 	  -bundle 'EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]' \
 	  $$(KRML_FILES)
 	test '!' -e lowstar/$(1)/EverParse.c
 	test '!' -e lowstar/$(1)/EverParsePulseInternal.h
 	test '!' -e lowstar/$(1)/SHOULDNOTBETHERE.h
 	test '!' -d lowstar/$(1)/internal
+	test "$$$$(ls lowstar/$(1))" = EverParse.h
 endef
 
 $(foreach b,$(BACKENDS),$(eval $(call lowstar_header_rule,$(b))))

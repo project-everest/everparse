@@ -1,5 +1,13 @@
 module CBOR.Pulse.Raw.Format.Nondet.Validate
 friend CBOR.Spec.Raw.Format
+open CBOR.Spec.Raw.Format
+open CBOR.Spec.Raw.Nondet
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
+open Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
 #lang-pulse
 module EP = CBOR.Pulse.Raw.EverParse.Format
 module EPND = CBOR.Pulse.Raw.EverParse.Nondet.Basic

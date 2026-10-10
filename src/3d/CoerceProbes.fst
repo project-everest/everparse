@@ -19,7 +19,6 @@ module CoerceProbes
   elaborating CoerceProbeFunctionStubs into ProbeFunctions, 
   by coercing a 32-bit layout type into a 64-bit layout type 
 *)
-open FStar.Mul
 open FStar.List.Tot
 open Ast
 open FStar.All

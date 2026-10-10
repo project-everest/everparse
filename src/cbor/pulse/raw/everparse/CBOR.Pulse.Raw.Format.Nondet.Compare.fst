@@ -1,5 +1,9 @@
 module CBOR.Pulse.Raw.Format.Nondet.Compare
 friend CBOR.Pulse.Raw.Format.Match
+include CBOR.Spec.Raw.Format
+include CBOR.Spec.Raw.Valid
+include CBOR.Pulse.Raw.Match
+open Pulse.Lib.Pervasives
 #lang-pulse
 
 module EP = CBOR.Pulse.Raw.EverParse.Nondet.Basic

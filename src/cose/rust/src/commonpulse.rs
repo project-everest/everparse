@@ -19,10 +19,6 @@ pub fn mk_int(i: i32) -> crate::coseformat::evercddl_int
     }
 }
 
-pub type ser_to = ();
-
-pub type to_be_signed_spec = ();
-
 pub fn create_sig(
     privkey: &[u8],
     phdr: crate::coseformat::empty_or_serialized_map,
@@ -31,8 +27,7 @@ pub fn create_sig(
     sigbuf: &mut [u8]
 )
 {
-    let sz: usize = 1024usize;
-    let mut arr: Box<[u8]> = vec![0u8; sz].into_boxed_slice();
+    let mut arr: Box<[u8]> = vec![0u8; 1024usize].into_boxed_slice();
     let outbuf: &mut [u8] = &mut arr;
     let sig_struct: crate::coseformat::sig_structure =
         crate::coseformat::sig_structure
@@ -40,7 +35,7 @@ pub fn create_sig(
             context: crate::coseformat::evercddl_int_ugly_tags::Inr,
             body_protected: phdr,
             _x0:
-            crate::coseformat::either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·::Inr
+            crate::coseformat::either__·COSE_Format_empty_or_serialized_map····Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t··_·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·::Inr
             { v: (aad,payload) }
         };
     let written: usize = crate::coseformat::serialize_sig_structure(sig_struct, outbuf);
@@ -48,8 +43,7 @@ pub fn create_sig(
     { crate::commonabort::abort() }
     else
     {
-        let res: &[u8] = &outbuf[0usize..written];
-        let tbs: &[u8] = res;
+        let tbs: &[u8] = &outbuf[0usize..written];
         crate::ed25519::sign(sigbuf, privkey, tbs)
     }
 }
@@ -83,29 +77,27 @@ pub fn mk_phdrs <'a>(
             crate::coseformat::option__COSE_Format_evercddl_label_ugly::Some
             { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
             intkey2:
-            crate::coseformat::option__FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env34_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env34_type_1::None,
+            crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
             intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
-            intkey4: crate::coseformat::option__COSE_Format_bstr::None,
+            intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
             _x0:
-            crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_FStar_Pervasives_either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+            crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
             {
                 v:
-                crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+                crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
                 {
                     v:
                     (
-                        crate::coseformat::option__COSE_Format_everparsenomatch::None,crate::coseformat::option__COSE_Format_everparsenomatch::None
+                        crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None,crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None
                     )
                 }
             },
             _x1:
-            crate::coseformat::either__CDDL_Pulse_Types_slice__·COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_values::Inl
+            crate::coseformat::either__Pulse_Lib_Slice_slice··COSE_Format_evercddl_label···CBOR_Pulse_Raw_Type_cbor_raw·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw::Inl
             { v: rest2 }
         }
     }
 }
-
-pub type sign1_spec = ();
 
 pub fn sign1 <'a>(
     privkey: &'a [u8],
@@ -116,10 +108,9 @@ pub fn sign1 <'a>(
 ) ->
     &'a [u8]
 {
-    let alg: i32 = -8i32;
     let phdrauxbuf: [(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw); 0] =
         [dummy_map_val(); 0usize];
-    let alg·: crate::coseformat::evercddl_int = mk_int(alg);
+    let alg·: crate::coseformat::evercddl_int = mk_int(-8i32);
     let rest2: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
         &phdrauxbuf;
     let phdr: crate::coseformat::empty_or_serialized_map =
@@ -132,23 +123,23 @@ pub fn sign1 <'a>(
                 crate::coseformat::option__COSE_Format_evercddl_label_ugly::Some
                 { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
                 intkey2:
-                crate::coseformat::option__FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env34_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env34_type_1::None,
+                crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
                 intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
-                intkey4: crate::coseformat::option__COSE_Format_bstr::None,
+                intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
                 _x0:
-                crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_FStar_Pervasives_either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+                crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
                 {
                     v:
-                    crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+                    crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
                     {
                         v:
                         (
-                            crate::coseformat::option__COSE_Format_everparsenomatch::None,crate::coseformat::option__COSE_Format_everparsenomatch::None
+                            crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None,crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None
                         )
                     }
                 },
                 _x1:
-                crate::coseformat::either__CDDL_Pulse_Types_slice__·COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_values::Inl
+                crate::coseformat::either__Pulse_Lib_Slice_slice··COSE_Format_evercddl_label···CBOR_Pulse_Raw_Type_cbor_raw·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw::Inl
                 { v: rest2 }
             }
         };
@@ -162,7 +153,7 @@ pub fn sign1 <'a>(
                 protected: phdr,
                 unprotected: uhdr,
                 payload:
-                crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl { v: payload },
+                crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl { v: payload },
                 signature: sigbuf2
             },
             outbuf
@@ -173,10 +164,7 @@ pub fn sign1 <'a>(
         outbuf
     }
     else
-    {
-        let res: &[u8] = &outbuf[0usize..outbuf_sz];
-        res
-    }
+    { &outbuf[0usize..outbuf_sz] }
 }
 
 pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [u8]) ->
@@ -191,32 +179,31 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
         {
             intkey1: crate::coseformat::option__COSE_Format_evercddl_label_ugly::None,
             intkey2:
-            crate::coseformat::option__FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env34_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env34_type_1::None,
+            crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
             intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
-            intkey4: crate::coseformat::option__COSE_Format_bstr::None,
+            intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
             _x0:
-            crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_FStar_Pervasives_either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+            crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
             {
                 v:
-                crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+                crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
                 {
                     v:
                     (
-                        crate::coseformat::option__COSE_Format_everparsenomatch::None,crate::coseformat::option__COSE_Format_everparsenomatch::None
+                        crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None,crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None
                     )
                 }
             },
             _x1:
-            crate::coseformat::either__CDDL_Pulse_Types_slice__·COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_values::Inl
+            crate::coseformat::either__Pulse_Lib_Slice_slice··COSE_Format_evercddl_label···CBOR_Pulse_Raw_Type_cbor_raw·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw::Inl
             { v: rest2 }
         };
     let aadbuf: [u8; 0] = [0u8; 0usize];
     let aadslice: &[u8] = &aadbuf;
-    let alg: i32 = -8i32;
     let phdrauxbuf: [(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw); 0] =
         [dummy_map_val(); 0usize];
-    let alg·: crate::coseformat::evercddl_int = mk_int(alg);
-    let rest20: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
+    let alg·: crate::coseformat::evercddl_int = mk_int(-8i32);
+    let rest21: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
         &phdrauxbuf;
     let phdr: crate::coseformat::empty_or_serialized_map =
         crate::coseformat::empty_or_serialized_map::Mkempty_or_serialized_map0
@@ -228,24 +215,24 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
                 crate::coseformat::option__COSE_Format_evercddl_label_ugly::Some
                 { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
                 intkey2:
-                crate::coseformat::option__FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env34_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env34_type_1::None,
+                crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
                 intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
-                intkey4: crate::coseformat::option__COSE_Format_bstr::None,
+                intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
                 _x0:
-                crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_FStar_Pervasives_either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+                crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
                 {
                     v:
-                    crate::coseformat::either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·::Inr
+                    crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
                     {
                         v:
                         (
-                            crate::coseformat::option__COSE_Format_everparsenomatch::None,crate::coseformat::option__COSE_Format_everparsenomatch::None
+                            crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None,crate::cbordetveraux::option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags::None
                         )
                     }
                 },
                 _x1:
-                crate::coseformat::either__CDDL_Pulse_Types_slice__·COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_values::Inl
-                { v: rest20 }
+                crate::coseformat::either__Pulse_Lib_Slice_slice··COSE_Format_evercddl_label···CBOR_Pulse_Raw_Type_cbor_raw·_CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw::Inl
+                { v: rest21 }
             }
         };
     let mut sigbuf: [u8; 64] = [0u8; 64usize];
@@ -258,7 +245,7 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
                 protected: phdr,
                 unprotected: uhdr,
                 payload:
-                crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl { v: payload },
+                crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl { v: payload },
                 signature: sigbuf2
             },
             outbuf
@@ -269,10 +256,7 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
         outbuf
     }
     else
-    {
-        let res: &[u8] = &outbuf[0usize..outbuf_sz];
-        res
-    }
+    { &outbuf[0usize..outbuf_sz] }
 }
 
 pub fn verify_sig(
@@ -284,8 +268,7 @@ pub fn verify_sig(
 ) ->
     bool
 {
-    let sz: usize = 1024usize;
-    let mut arr: Box<[u8]> = vec![0u8; sz].into_boxed_slice();
+    let mut arr: Box<[u8]> = vec![0u8; 1024usize].into_boxed_slice();
     let outbuf: &mut [u8] = &mut arr;
     let sig_struct: crate::coseformat::sig_structure =
         crate::coseformat::sig_structure
@@ -293,7 +276,7 @@ pub fn verify_sig(
             context: crate::coseformat::evercddl_int_ugly_tags::Inr,
             body_protected: phdr,
             _x0:
-            crate::coseformat::either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·::Inr
+            crate::coseformat::either__·COSE_Format_empty_or_serialized_map····Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t··_·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·::Inr
             { v: (aad,payload) }
         };
     let written: usize = crate::coseformat::serialize_sig_structure(sig_struct, outbuf);
@@ -304,51 +287,39 @@ pub fn verify_sig(
     }
     else
     {
-        let res: &[u8] = &outbuf[0usize..written];
-        let tbs: &[u8] = res;
+        let tbs: &[u8] = &outbuf[0usize..written];
         let success: bool = crate::ed25519::verify(pubkey, tbs, sigbuf);
         success
     }
 }
 
-pub type good_signature = ();
-
-fn uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(
-    projectee: crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil
-) ->
-    bool
-{
-    match projectee
-    { crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl { .. } => true, _ => false }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum option__Pulse_Lib_Slice_slice·uint8_t <'a>
-{
-    None,
-    Some { v: &'a [u8] }
-}
-
 pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
-    option__Pulse_Lib_Slice_slice·uint8_t
+    crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t
     <'a>
 {
     let
-    res:
-    crate::coseformat::option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·
+    res: crate::coseformat::option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·
     =
         crate::coseformat::validate_and_parse_cose_sign1_tagged(msg);
     match res
     {
-        crate::coseformat::option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__Pulse_Lib_Slice_slice·uint8_t::None,
-        crate::coseformat::option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·::Some
+        crate::coseformat::option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·::None
+        => crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
+        crate::coseformat::option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: res1 }
         =>
           {
               let x: crate::coseformat::cose_sign1 = res1.0;
               let rem: &[u8] = res1.1;
-              if rem.len() == 0usize && uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(x.payload)
+              if
+              rem.len() == 0usize
+              &&
+              match x.payload
+              {
+                  crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl { .. } => true,
+                  _tmp => false,
+                  _ => panic!("Incomplete pattern matching")
+              }
               {
                   let sig: &[u8] = x.signature;
                   let success: bool =
@@ -360,7 +331,7 @@ pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
                               aad,
                               match x.payload
                               {
-                                  crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl
+                                  crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                                   { v }
                                   => v,
                                   _ => panic!("Incomplete pattern matching")
@@ -375,45 +346,52 @@ pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
                       let payload: &[u8] =
                           match x.payload
                           {
-                              crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl
+                              crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                               { v }
                               => v,
                               _ => panic!("Incomplete pattern matching")
                           };
-                      option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
+                      crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
                   }
                   else
-                  { option__Pulse_Lib_Slice_slice·uint8_t::None }
+                  { crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None }
               }
               else
-              { option__Pulse_Lib_Slice_slice·uint8_t::None }
+              { crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
-    option__Pulse_Lib_Slice_slice·uint8_t
+    crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t
     <'a>
 {
     let aadbuf: [u8; 0] = [0u8; 0usize];
     let aadslice: &[u8] = &aadbuf;
     let
-    res:
-    crate::coseformat::option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·
+    res: crate::coseformat::option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·
     =
         crate::coseformat::validate_and_parse_cose_sign1_tagged(msg);
     match res
     {
-        crate::coseformat::option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__Pulse_Lib_Slice_slice·uint8_t::None,
-        crate::coseformat::option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·::Some
+        crate::coseformat::option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·::None
+        => crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
+        crate::coseformat::option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: res1 }
         =>
           {
               let x: crate::coseformat::cose_sign1 = res1.0;
               let rem: &[u8] = res1.1;
-              if rem.len() == 0usize && uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(x.payload)
+              if
+              rem.len() == 0usize
+              &&
+              match x.payload
+              {
+                  crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl { .. } => true,
+                  _tmp => false,
+                  _ => panic!("Incomplete pattern matching")
+              }
               {
                   let sig: &[u8] = x.signature;
                   let success: bool =
@@ -425,7 +403,7 @@ pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
                               aadslice,
                               match x.payload
                               {
-                                  crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl
+                                  crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                                   { v }
                                   => v,
                                   _ => panic!("Incomplete pattern matching")
@@ -440,18 +418,18 @@ pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
                       let payload: &[u8] =
                           match x.payload
                           {
-                              crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl
+                              crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl
                               { v }
                               => v,
                               _ => panic!("Incomplete pattern matching")
                           };
-                      option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
+                      crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::Some { v: payload }
                   }
                   else
-                  { option__Pulse_Lib_Slice_slice·uint8_t::None }
+                  { crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None }
               }
               else
-              { option__Pulse_Lib_Slice_slice·uint8_t::None }
+              { crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None }
           },
         _ => panic!("Incomplete pattern matching")
     }

@@ -14,6 +14,7 @@
    limitations under the License.
 *)
 module InterpreterTarget
+open Binding
 (* The abstract syntax for the code produced by 3d, targeting prelude/Interpreter.fst *)
 open FStar.All
 open FStar.List.Tot
@@ -798,11 +799,9 @@ let print_derived_name (mname:string) (tag:string) (i:A.ident) =
 let pulse_kenv : ref (list string) = alloc []
 
 let set_pulse_kenv (l:list string) : ML unit =
-  FStar.ST.recall pulse_kenv;
   pulse_kenv := l
 
 let get_pulse_kenv () : ML (list string) =
-  FStar.ST.recall pulse_kenv;
   !pulse_kenv
 
 (* The ghost key binder for a parameter. It must not be expressible in 3D, or
@@ -1405,15 +1404,9 @@ let print_disj mname (i:index disj) =
 let print_td_iface_pulse is_entrypoint mname root_name binders args
                          sd ha ar pk_wk pk_nz =
   let ar = if is_entrypoint then false else ar in
-  let kind_t =
-    Printf.sprintf "[@@noextract_to \"krml\"]\n\
-                    inline_for_extraction\n\
-                    noextract\n\
-                    val kind_%s : P.parser_kind %b P.%s"
-      root_name
-      pk_nz
-      pk_wk
-  in
+  (* NOTE: the kind itself is *not* declared here; `print_binding` emits its
+     definition into the interface instead, for every type decl. *)
+  let kind_t = "" in
   let def'_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
@@ -1521,7 +1514,14 @@ let print_public_adapter_binding compatible root_name binders allow_reading work
     root_name binders (pulse_adapter_module ()) allow_reading worker_name args
   else ""
 
-#push-options "--split_queries always"
+// This large ML pretty-printer builds its result through ~20 chained
+// `let` bindings, so its (trivial) verification condition is a deep
+// continuation-passing term. The whole query verifies using ~8 rlimit,
+// but the default budget of 5 makes F* cancel it and retry by splitting,
+// and the split subquery then diverges into a quantifier cascade over the
+// effect continuations ("incomplete quantifiers"). Raising the budget lets
+// the whole query succeed in one shot, avoiding the split entirely.
+#push-options "--z3rlimit 32"
 let print_binding mname (td:type_decl)
 : ML (string & string)
 = let tdn = td.name in
@@ -1553,18 +1553,46 @@ let print_binding mname (td:type_decl)
   let def = print_type_decl mname binders td in
   let weak_kind = A.print_weak_kind k.pk_weak_kind in
   let pk_of_binding =
-      (* The kind expression is a nest of `and_then_kind`/`glb` applications,
-         each of which mentions its arguments several times. Left unreduced,
-         F* extraction unfolds them and the term grows exponentially with the
-         nesting depth. Reduce the nest to a literal record here. *)
-      let kind_expr =
-        Printf.sprintf "coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s"
-          (T.print_kind mname k)
-      in
       let kind_expr =
         if pulse ()
-        then Printf.sprintf "norm [delta_namespace [\"EverParse3d\"; \"LowParse\"]; zeta; iota; primops] (%s)" kind_expr
-        else kind_expr
+        then
+          (* The kind expression is a nest of `and_then_kind`/`glb`
+             applications, each of which mentions its arguments several times.
+             Left unreduced, F* extraction unfolds the whole nest at once and
+             the term grows exponentially with the nesting depth (one level per
+             struct field), because each record projection on a not-yet-reduced
+             argument is a *stuck* projection that recent F* normalizers
+             re-normalize instead of sharing.
+
+             So we reduce the nest to a literal `parser_kind` record right
+             here, and -- crucially -- we do it with `T.exact_with_ref (T.norm_term ...)`
+             rather than with `norm [...] (...)`: the former makes the *body* of
+             `kind_X` be the literal record, whereas the latter leaves the
+             unreduced nest (under a `norm` marker) in the body, so that every
+             later unfolding of `kind_X` would redo the work. With the literal
+             body, kinds are computed bottom-up, one `and_then_kind` at a time,
+             and the whole process is linear in the number of fields.
+
+             The base kinds referenced here live either in `EverParse3d.Kinds`
+             (which, for this reason, has no interface hiding them), or in the
+             current module, or in another 3d module, hence the
+             `delta_namespace` below. *)
+          let modules =
+            "EverParse3d" :: "LowParse" :: T.kind_modules mname k
+          in
+          let modules = List.Tot.fold_left
+            (fun acc m -> if List.Tot.mem m acc then acc else acc `List.Tot.append` [m])
+            []
+            modules
+          in
+          Printf.sprintf
+            "_ by (T.norm [delta_namespace [%s]; zeta; iota; primops]; T.exact_with_ref (T.norm_term [delta_namespace [%s]; zeta; iota; primops] (`(%s))))"
+            (String.concat "; " (List.map (fun m -> Printf.sprintf "\"%s\"" m) modules))
+            (String.concat "; " (List.map (fun m -> Printf.sprintf "\"%s\"" m) modules))
+            (T.print_kind mname k)
+        else
+          Printf.sprintf "coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s"
+            (T.print_kind mname k)
       in
       Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction noextract\n\
@@ -1750,10 +1778,10 @@ let print_binding mname (td:type_decl)
          root_name
          (T.print_typ mname t)
   in
-  let impl =
+  let impl_with (pk:string) =
     String.concat "\n"
       [def;
-      pk_of_binding;
+      pk;
       def';
       (as_type_or_parser "type");
       (as_type_or_parser "parser");
@@ -1762,21 +1790,32 @@ let print_binding mname (td:type_decl)
       dtyp;
       enum_typ_of_binding]
   in
+  let impl = impl_with pk_of_binding in
   // impl, ""
   if Some? td.enum_typ
   && (td.name.td_entrypoint || td.attrs.is_exported)
   then "", impl //exported enums are fully revealed
-  else if td.name.td_entrypoint
-      || td.attrs.is_exported
+  else if pulse ()
   then
-    let iface =
-      if pulse ()
+    (* The kind definition always goes to the interface, even for a type that
+       is not otherwise exported: a client module builds its own kinds on top
+       of ours, and can only reduce them to a literal `parser_kind` record if
+       ours are transparent. It must then not be repeated in the
+       implementation. See the comment on `pk_of_binding` above. *)
+    let iface_rest =
+      if td.name.td_entrypoint || td.attrs.is_exported
       then
         print_td_iface_pulse td.name.td_entrypoint
                     mname root_name binders args
                     sd td.has_action td.allow_reading
                     weak_kind k.pk_nz
-      else
+      else ""
+    in
+    impl_with "", String.concat "\n" [pk_of_binding; iface_rest]
+  else if td.name.td_entrypoint
+      || td.attrs.is_exported
+  then
+    let iface =
       print_td_iface td.name.td_entrypoint
                     mname root_name binders args
                     inv eloc disj td.has_action td.allow_reading
@@ -1784,7 +1823,6 @@ let print_binding mname (td:type_decl)
     in
     impl, iface
   else impl, ""
-
 #pop-options
 
 let print_decl mname (d:decl)

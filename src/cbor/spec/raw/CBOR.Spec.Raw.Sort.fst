@@ -1,4 +1,6 @@
 module CBOR.Spec.Raw.Sort
+include CBOR.Spec.Raw.Optimal
+open CBOR.Spec.Util
 open CBOR.Spec.Raw.Map
 
 let cbor_map_sort order = map_sort order

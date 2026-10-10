@@ -1,5 +1,6 @@
 module CDDL.Spec.AST.Print
 
+include CDDL.Spec.AST.Base
 (* Print an AST value as a string of valid F* syntax. Reparsing the
    output (in a scope where [CDDL.Spec.AST.Base] is in scope) should
    yield a value equal to the original. *)

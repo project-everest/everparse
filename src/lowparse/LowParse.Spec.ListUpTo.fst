@@ -1,4 +1,7 @@
 module LowParse.Spec.ListUpTo
+include LowParse.Spec.Base
+module L = FStar.List.Tot
+module Seq = FStar.Seq
 open LowParse.Spec.Base
 open LowParse.Spec.Fuel
 open LowParse.Spec.Combinators

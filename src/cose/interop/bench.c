@@ -83,7 +83,7 @@ void bench_serialize(EVP_PKEY *pkey) {
 
     bstr signed_msg = COSE_OpenSSL_sign1(pkey, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
     COSE_Format_cose_sign1 c =
-        COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg).v.fst;
+        COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg).v._1;
 
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
@@ -106,15 +106,15 @@ void bench_serialize_sig_struct(EVP_PKEY *pkey) {
 
     bstr signed_msg = COSE_OpenSSL_sign1(pkey, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
     COSE_Format_cose_sign1 c =
-        COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg).v.fst;
+        COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg).v._1;
     COSE_Format_sig_structure sig_struct = {
         .context = 1,
         .body_protected = c.protected0,
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
-                .fst = aad,
-                .snd = payload,
+                ._1 = aad,
+                ._2 = payload,
             },
         },
     };
@@ -141,8 +141,8 @@ void bench_ed25519_sign(EVP_PKEY *pkey) {
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
-                .fst = { .len = 0, .elt = (uint8_t[]) {} },
-                .snd = payload,
+                ._1 = { .len = 0, .elt = (uint8_t[]) {} },
+                ._2 = payload,
             },
         },
     };
@@ -171,8 +171,8 @@ void bench_ed25519_verify(EVP_PKEY *pkey) {
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
-                .fst = { .len = 0, .elt = (uint8_t[]) {} },
-                .snd = payload,
+                ._1 = { .len = 0, .elt = (uint8_t[]) {} },
+                ._2 = payload,
             },
         },
     };

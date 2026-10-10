@@ -1,4 +1,17 @@
 module CDDL.Pulse.Serialize.Gen.ArrayGroup
+include CDDL.Pulse.Serialize.Gen.Base
+include CDDL.Pulse.Parse.ArrayGroup
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+open CBOR.Pulse.API.Base
+module Trade = Pulse.Lib.Trade.Util
+module R = Pulse.Lib.Reference
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module Cbor = CBOR.Spec.API.Format
+module U64 = FStar.UInt64
+module Iterator = CDDL.Pulse.Iterator.Base
 #lang-pulse
 module SM = Pulse.Lib.SeqMatch.Util
 module GR = Pulse.Lib.GhostReference
@@ -78,15 +91,17 @@ let list_append_length_pat
   [SMTPat (List.Tot.append l1 l2)]
 = List.Tot.append_length l1 l2
 
+(* NOTE: no SMTPat here. Associativity has a propositional-equality conclusion,
+   so both nestings join the same congruence class and E-matching (which works
+   modulo congruence) re-triggers on every member, enumerating all Catalan-many
+   parse trees of an append chain. With the SMTPat this quantifier reached
+   ~358k instantiations in a single query and starved the arithmetic solver.
+   Related: https://github.com/Z3Prover/z3/issues/10435 *)
 let list_append_assoc_pat
   (#t: Type)
   (l1 l2 l3: list t)
 : Lemma
   (ensures (List.Tot.append l1 (List.Tot.append l2 l3) == List.Tot.append (List.Tot.append l1 l2) l3))
-  [SMTPatOr [
-    [SMTPat (List.Tot.append l1 (List.Tot.append l2 l3))];
-    [SMTPat (List.Tot.append (List.Tot.append l1 l2) l3)];
-  ]]
 = List.Tot.append_assoc l1 l2 l3
 
 let list_append_nil_r_pat
@@ -99,7 +114,7 @@ let list_append_nil_r_pat
 
 (* Parse list lemmas *)
 
-#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1"
 
 let rec cbor_parse_list_split
   (p: cbor_parser)
@@ -139,7 +154,9 @@ let rec cbor_parse_list_split
       assert (n1 - 1 + n2 == n1 + n2 - 1);
       match cbor_parse_list p n2 (Seq.slice s' pos1' (Seq.length s')) with
       | None -> ()
-      | Some (l2, pos2) -> ()
+      | Some (l2, pos2) ->
+        assert (cbor_parse_list p (n1 - 1 + n2) s' == Some (List.Tot.append l1' l2, pos1' + pos2));
+        assert (nx + (pos1' + pos2) == (nx + pos1') + pos2)
 
 let rec cbor_parse_list_max_length
   (#p: cbor_parser)
@@ -611,7 +628,7 @@ let impl_serialize_array_group_item_correct
 
 #pop-options
 
-#push-options "--z3rlimit_factor 8 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 8 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -979,7 +996,7 @@ let rec ag_spec_zero_or_more_size_append
   | [] -> ()
   | hd :: tl -> ag_spec_zero_or_more_size_append p tl l2
 
-#push-options "--fuel 4 --ifuel 4 --z3rlimit_factor 4 --split_queries always"
+#push-options "--fuel 4 --ifuel 4 --z3rlimit_factor 4"
 #restart-solver
 let rec ag_spec_zero_or_more_serializer_append
   (#source: nonempty_array_group)
@@ -1008,7 +1025,11 @@ let rec ag_spec_zero_or_more_serializer_append
   match l1 with
   | [] -> ()
   | hd :: tl ->
-    ag_spec_zero_or_more_serializer_append ps1 tl l2
+    ag_spec_zero_or_more_serializer_append ps1 tl l2;
+    List.Tot.append_assoc
+      (ps1.ag_serializer hd)
+      ((ag_spec_zero_or_more ps1).ag_serializer tl)
+      ((ag_spec_zero_or_more ps1).ag_serializer l2)
 #pop-options
 
 let ag_serializable_zero_or_more_append
@@ -1037,7 +1058,7 @@ let ag_serializable_zero_or_more_append
   end;
   ()
 
-#push-options "--z3rlimit_factor 32 --fuel 4 --ifuel 4 --split_queries always"
+#push-options "--z3rlimit_factor 32 --fuel 4 --ifuel 4"
 #restart-solver
 
 let rec ag_spec_zero_or_more_serializer_cons_aux
@@ -1064,7 +1085,11 @@ let rec ag_spec_zero_or_more_serializer_cons_aux
 = match l1 with
   | [] -> ()
   | hd :: tl ->
-    ag_spec_zero_or_more_serializer_cons_aux ps1 tl l2
+    ag_spec_zero_or_more_serializer_cons_aux ps1 tl l2;
+    List.Tot.append_assoc
+      (ps1.ag_serializer hd)
+      ((ag_spec_zero_or_more ps1).ag_serializer tl)
+      ((ag_spec_zero_or_more ps1).ag_serializer l2)
 
 let ag_spec_zero_or_more_serializer_cons
   (#source: nonempty_array_group)
@@ -1161,8 +1186,16 @@ let impl_serialize_array_group_valid_zero_or_more_item
     let max_l1 = Some?.v (cbor_array_max_length lmax (ps.ag_serializer l1)) in
     assert (max_all == max_l1 + max_xcl2);
     norm_spec [delta_only [`%impl_serialize_array_group_valid; `%impl_serialize_array_group_requires]; iota; zeta] (impl_serialize_array_group_valid lmax l ps (List.Tot.append l1 (x :: l2)) len);
+    assert (len >= max_all);
+    assert (max_all >= max_xcl2);
     assert (len >= max_x);
-    assert (FStar.UInt.fits (List.Tot.length (List.Tot.append l (ps.ag_serializer l1)) + List.Tot.length (ps1.ag_serializer x)) 64);
+    ag_spec_zero_or_more_serializer_append ps1 l1 (x :: l2);
+    let lhs_len = List.Tot.length (List.Tot.append l (ps.ag_serializer l1)) + List.Tot.length (ps1.ag_serializer x) in
+    let rhs_len = List.Tot.length l + List.Tot.length (ps.ag_serializer (List.Tot.append l1 (x :: l2))) in
+    assert (lhs_len <= rhs_len);
+    assert (FStar.UInt.fits rhs_len 64);
+    assert (lhs_len >= 0);
+    assert (FStar.UInt.fits lhs_len 64);
     norm_spec [delta_only [`%impl_serialize_array_group_valid; `%impl_serialize_array_group_requires]; iota; zeta] (impl_serialize_array_group_valid lmax (List.Tot.append l (ps.ag_serializer l1)) ps1 x len);
     ()
   end
@@ -1233,6 +1266,8 @@ let impl_serialize_array_group_post_zero_or_more_extend
     i < SZ.v size_prev /\
     Seq.index (Seq.slice w_prev 0 (SZ.v size_prev)) i == Seq.index (Seq.slice w 0 (SZ.v size_prev)) i
   ));
+  Seq.slice_slice w_prev 0 (SZ.v size_prev) 0 (SZ.v size_before_overall);
+  Seq.slice_slice w 0 (SZ.v size_prev) 0 (SZ.v size_before_overall);
   Seq.lemma_eq_intro (Seq.slice w_prev 0 (SZ.v size_before_overall)) (Seq.slice w 0 (SZ.v size_before_overall));
   Seq.lemma_eq_intro (Seq.slice w0 0 (SZ.v size_before_overall)) (Seq.slice w 0 (SZ.v size_before_overall))
 
@@ -1423,7 +1458,7 @@ let ag_spec_zero_or_more_serializer_nil
 
 #pop-options
 
-#push-options "--z3rlimit_factor 64 --fuel 2 --ifuel 2 --split_queries always"
+#push-options "--z3rlimit_factor 64 --fuel 2 --ifuel 2"
 #restart-solver
 
 let impl_serialize_array_group_post_zero_or_more_exit
@@ -1490,7 +1525,7 @@ let impl_serialize_array_group_post_zero_or_more_exit
 
 #pop-options
 
-#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1572,7 +1607,9 @@ fn impl_serialize_array_group_zero_or_more_slice
         SZ.v size_before <= SZ.v size
       )
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v slen - SZ.v (!pi))] // fstar2 only
+  {
     with s2 l2 . assert (SM.seq_list_match s2 l2 r1);
     S.pts_to_len c.s;
     SM.seq_list_match_length r1 s2 l2;
@@ -1580,7 +1617,7 @@ fn impl_serialize_array_group_zero_or_more_slice
     with s2' l2' . assert (SM.seq_list_match s2' l2' r1);
     let y = Ghost.hide (List.Tot.hd l2);
     let i = !pi;
-    let x = S.op_Array_Access c.s i;
+    let x = S.op_Dot_Lparen_Rparen c.s i;
     Trade.rewrite_with_trade (r1 _ _) (r1 x y);
     Trade.trans_hyp_l (r1 x y) _ _ _;
     with l1 . assert (GR.pts_to pl1 l1);
@@ -1687,7 +1724,7 @@ let impl_serialize_array_group_zero_or_more_iterator_t
 =
   impl_serialize_array_group lmin lmax #_ #(list tgt1) #_ (ag_spec_zero_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
-#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1731,6 +1768,7 @@ fn impl_serialize_array_group_zero_or_more_iterator
   let mut pres = true;
   ag_spec_zero_or_more_serializer_nil ps1;
   Trade.refl (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v);
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal v)); // fstar2 only
   while (
     with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
     let c = !pc;
@@ -1738,7 +1776,7 @@ fn impl_serialize_array_group_zero_or_more_iterator
     let em = cddl_array_iterator_is_empty is_empty impl_tgt1 _ c;
     let res = !pres;
     (res && not em)
-  ) invariant exists* l1 c res l2 w count size . (
+  ) invariant exists* l1 c res l2 w count size m . (
     GR.pts_to pl1 l1 **
     pts_to pc c **
     rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c l2 **
@@ -1746,11 +1784,13 @@ fn impl_serialize_array_group_zero_or_more_iterator
     pts_to out w **
     pts_to out_count count **
     pts_to out_size size **
+    pts_to pmeasure m ** // fstar2 only
     Trade.trade
       (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c l2)
       (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v)
       **
     pure (
+      Ghost.reveal m == List.Tot.length l2 /\ // fstar2 only
       (res == true ==> Ghost.reveal v == List.Tot.append l1 l2) /\
       ps.ag_serializable l1 /\
       Seq.length w == Seq.length w0 /\
@@ -1763,10 +1803,14 @@ fn impl_serialize_array_group_zero_or_more_iterator
         SZ.v size_before <= SZ.v size
       )
     )
-  ) {
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
     with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
     let x : impl_tgt1 = cddl_array_iterator_next length share gather truncate impl_tgt1 _ pc;
     with gc' l2' . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc' l2');
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     let z : Ghost.erased tgt1 = Ghost.hide (List.Tot.hd l2);
     Trade.rewrite_with_trade (dsnd (Iterator.mk_spec r1) _ _) (r1 x z);
     Trade.trans_hyp_l (r1 x z) _ _ _;
@@ -1941,7 +1985,7 @@ let impl_serialize_array_group_one_or_more_nonempty
 
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_one_or_more_slice
@@ -2012,7 +2056,7 @@ let impl_serialize_array_group_one_or_more_iterator_t
 =
   impl_serialize_array_group lmin lmax #_ #(list tgt1) #_ (ag_spec_one_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]

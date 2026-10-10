@@ -142,7 +142,7 @@ type asn1_decorator : Type =
 let id_dec = Set.set asn1_id_t & asn1_decorator
 let id_decs = list id_dec
 
-let rec asn1_sequence_k_wf' (li : id_decs) (s : Set.set asn1_id_t) : Type =
+let rec asn1_sequence_k_wf' (li : id_decs) (s : Set.set asn1_id_t) : prop =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -152,7 +152,7 @@ let rec asn1_sequence_k_wf' (li : id_decs) (s : Set.set asn1_id_t) : Type =
     | PLAIN -> asn1_sequence_k_wf tl
     | _ -> asn1_sequence_k_wf' tl (Set.union s s'))
 
-and asn1_sequence_k_wf (li : id_decs) : Type =
+and asn1_sequence_k_wf (li : id_decs) : prop =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -166,7 +166,7 @@ let my_as_set l = Set.as_set l
 let proj2_of_3 (#a #b : Type) (#c : a -> b -> Type) (x : dtuple3 a (fun _ -> b) c) : a & b = 
   let (| xa, xb, _ |) = x in (xa, xb)
 
-let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.set asn1_id_t) : Type =
+let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.set asn1_id_t) : prop =
   match li with
   | [] -> Set.disjoint s ks
   | hd :: tl ->
@@ -176,7 +176,7 @@ let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.s
     | PLAIN -> asn1_any_prefix_k_wf ks tl
     | OPTION | DEFAULT -> asn1_any_prefix_k_wf' ks tl (Set.union s s'))
 
-and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : id_decs) : Type =
+and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : id_decs) : prop =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -280,7 +280,7 @@ let rec assoc_slt (#xT: eqtype) (#yT : Type) (l : list (xT & yT)) (x : xT) :
 = match l with
   | (a, b) :: t -> if x = a then () else (assoc_slt t x)
 
-let idlookup_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (t : Type) : GTot Type0
+let idlookup_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (t : Type) : GTot prop
 = (t << lc \/ t == False)
 
 let idlookup_t (#key : eqtype) (id : key) (lc : list (key & Type)) :
@@ -298,7 +298,7 @@ let idlookup_t (#key : eqtype) (id : key) (lc : list (key & Type)) :
     let _ = List.assoc_memP_none id lc in
     False 
 
-let idlookup_with_fallback_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (fb : Type) (t : Type) : GTot Type0
+let idlookup_with_fallback_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (fb : Type) (t : Type) : GTot prop
 = (t << lc \/ t == fb)
 
 let idlookup_with_fallback_t (#key : eqtype) (id : key) (lc : list (key & Type)) (fb : Type) :

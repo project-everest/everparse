@@ -1,5 +1,7 @@
 module CBOR.Spec.Raw.Base
 
+include CBOR.Spec.Constants
+open CBOR.Spec.Util
 let rec holds_on_raw_data_item
   (p: (raw_data_item -> bool))
   (x: raw_data_item)

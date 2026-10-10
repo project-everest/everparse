@@ -71,7 +71,7 @@ jobs:
           eval $(opam env)
           export FSTAR_TAG=
           # ^ no tag in source package
-          make -skj$(nproc) package-src ADMIT=1
+          make -skj$(nproc) package-src ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=/dev/null
 
       - name: Save
         if: steps.check-cache.outputs.cache-hit != 'true'
@@ -104,7 +104,7 @@ jobs:
         # This will install Cygwin as well
 
       - name: Set-up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: src/3d/hashchk/global.json
 

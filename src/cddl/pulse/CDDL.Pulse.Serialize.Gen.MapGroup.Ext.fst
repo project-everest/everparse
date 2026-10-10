@@ -1,4 +1,8 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.Ext
+include CDDL.Pulse.Serialize.Gen.MapGroup.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+open CBOR.Pulse.API.Base
 #lang-pulse
 
 module GR = Pulse.Lib.GhostReference

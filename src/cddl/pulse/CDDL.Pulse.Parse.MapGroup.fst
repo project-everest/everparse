@@ -71,7 +71,7 @@ let impl_zero_copy_map_group
 
 module Util = CBOR.Spec.Util
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --query_stats --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --query_stats"
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map
@@ -649,6 +649,31 @@ let mk_map_iterator_eq_postcond
     res.ps2 === ps2 /\
     True
 
+let mk_map_iterator_eq_postcond_ser2
+  (#ty #ty2: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (cddl_map_iterator_contents: cbor_map_iterator_t)
+  (pm: perm)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#src_elt1: Type0)
+  (#r1: rel impl_elt1 src_elt1)
+  (#t1: Ghost.erased typ)
+  (sp1: Ghost.erased (spec t1 src_elt1 true))
+  (eq1: Ghost.erased (EqTest.eq_test src_elt1))
+  (tex: Ghost.erased map_constraint)
+  (#src_elt2: Type0)
+  (#r2: rel impl_elt2 src_elt2)
+  (#t2: Ghost.erased typ)
+  (#ser2: Ghost.erased (src_elt2 -> bool))
+  (ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (res: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch vmatch2 (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+: Lemma
+  (requires (mk_map_iterator_eq_postcond cddl_map_iterator_contents pm sp1 eq1 tex ps2 res))
+  (ensures (res.ser2 == ser2))
+= ()
+
 let mk_map_iterator_eq
   (#ty #ty2: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -727,7 +752,7 @@ let rec parse_table_entries_memP_key
   (decreases l)
 = match l with
   | (k', v') :: q ->
-    if t1 k' && not (tex (k', v')) && t2 v' && FStar.StrongExcludedMiddle.strong_excluded_middle (sp1.parser k' == k)
+    if t1 k' && not (tex (k', v')) && t2 v' && FStar.IndefiniteDescription.strong_excluded_middle (sp1.parser k' == k)
     then ()
     else parse_table_entries_memP_key sp1 tex ps2 q k
 
@@ -978,6 +1003,7 @@ fn cddl_map_iterator_is_empty
   Trade.refl (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
   let mut pj = i.cddl_map_iterator_contents;
   let mut pres = true;
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal li)); // fstar2 only
   while (
     with p' gj lj . assert (pts_to pj gj ** cbor_map_iterator_match p' gj lj);
     let j = !pj;
@@ -987,19 +1013,25 @@ fn cddl_map_iterator_is_empty
     Trade.elim _ (cbor_map_iterator_match p' gj lj);
     let res = !pres;
     (res && not test)
-  ) invariant exists* p' j lj res . (
+  ) invariant exists* p' j lj res m . (
     pts_to pj j **
+    pts_to pmeasure m ** // fstar2 only
     cbor_map_iterator_match p' j lj **
     Trade.trade
       (cbor_map_iterator_match p' j lj)
       (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li) **
     pts_to pres res **
     pure (
-      Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 lj))
+      Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 lj)) /\
+      Ghost.reveal m == List.Tot.length lj // fstar2 only
     )
-  ) {
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
     let elt = map_next pj;
     Trade.trans _ _ (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     let elt_key = map_entry_key elt;
     let test_key = cddl_map_iterator_impl_validate1 i elt_key;
     Trade.elim _ (vmatch2 _ elt _);
@@ -1118,7 +1150,7 @@ ensures exists* l .
 }
 #pop-options
 #show-options
-#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --split_queries always --query_stats"
+#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --query_stats"
 inline_for_extraction
 fn cddl_map_iterator_next
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -1168,12 +1200,15 @@ fn cddl_map_iterator_next
   Trade.elim (vmatch _ hv0 _) (vmatch2 _ hd0 _);
   let te0 = cddl_map_iterator_impl_validate_ex i hd0;
   let mut pcont = (not tk0 || not tv0 || te0);
+  with p0 j0 lj0 . assert (cbor_map_iterator_match p0 j0 lj0); // fstar2 only
+  let mut pmeasure = Ghost.hide (List.Tot.length lj0); // fstar2 only
   while (
     !pcont
-  ) invariant exists* p' hd pmhd vhd j lj cond .
+  ) invariant exists* p' hd pmhd vhd j lj cond m .
     pts_to phd hd **
     vmatch2 pmhd hd vhd **
     pts_to pj j **
+    pts_to pmeasure m ** // fstar2 only
     cbor_map_iterator_match p' j lj **
     Trade.trade
       (vmatch2 pmhd hd vhd ** cbor_map_iterator_match p' j lj)
@@ -1182,12 +1217,16 @@ fn cddl_map_iterator_next
     pure (
       cond == not (Ghost.reveal gi.t1 (fst vhd) && not (Ghost.reveal gi.tex vhd) && Ghost.reveal gi.t2 (snd vhd)) /\
       List.Tot.no_repeats_p (List.Tot.map fst (vhd :: lj)) /\
-      parse_table_entries i.sp1.parser i.tex i.ps2 li == parse_table_entries i.sp1.parser i.tex i.ps2 (vhd :: lj)
+      parse_table_entries i.sp1.parser i.tex i.ps2 li == parse_table_entries i.sp1.parser i.tex i.ps2 (vhd :: lj) /\
+      Ghost.reveal m == List.Tot.length lj // fstar2 only
     )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
   {
     Trade.elim_hyp_l _ _ _;
     let hd = map_next pj;
     Trade.trans _ _ (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     phd := hd;
     let hk = map_entry_key hd;
     let tk = cddl_map_iterator_impl_validate1 i hk;
@@ -1364,6 +1403,12 @@ let impl_zero_copy_map_zero_or_more_aux
   assert (sp1 == i.sp1);
   assert (except == i.tex);
   assert (i.t2 == value);
+  mk_map_iterator_eq_postcond_ser2 contents pm sp1 key_eq except sp2.parser i;
+  assert_norm (
+    (coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable
+      <: (dfst (Iterator.mk_spec r2) -> bool))
+    === (sp2.serializable <: (tvalue -> bool))
+  );
   assert (Ghost.reveal i.ser2 == coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable);
   assert (i.ps2 === Ghost.hide sp2.parser);
   assert (sp2.parser == coerce_eq () (Ghost.reveal i.ps2));

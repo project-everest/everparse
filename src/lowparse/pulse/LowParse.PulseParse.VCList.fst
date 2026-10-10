@@ -334,6 +334,7 @@ fn validate_nlist
         (SZ.v offset + snd (Some?.v (parse (parse_nlist (SZ.v n) p) s0)) ==
          SZ.v off + snd (Some?.v (parse (parse_nlist (SZ.v r) p) s))))
     ))
+    decreases %[(if !pcontinue then 1 else 0); (SZ.v (!pcount))] // fstar2 only
   {
     let off = !poffset;
     let r = !pcount;
@@ -518,7 +519,9 @@ ensures exists* v' pm' .
     pure (
       nlist_nth_inv #t n0 v0 i0 i n v
     )
-  ) {
+  )
+    decreases (SZ.v i0 - SZ.v (!pi)) // fstar2 only
+  {
     with 'res. assert R.pts_to pres 'res;
     let res = !pres;
     rewrite each 'res as res;
@@ -829,6 +832,7 @@ ensures
       (Ghost.reveal rem <: list eh) == snd (L.splitAt (SZ.v i) (Ghost.reveal fl)) /\
       L.length (Ghost.reveal rem) == m
     )
+    decreases (SZ.v n - SZ.v (!pi)) // fstar2 only
   {
     let i = !pi;
     let cur = !pcur;
@@ -852,7 +856,7 @@ ensures
     unfold (nlist_hd_tl_post p sq m cur pm_cur remc (hd, tl));
     unfold (nlist_hd_tl_post' p sq m cur pm_cur remc hd tl);
     let elx = w hd;
-    V.op_Array_Assignment vec i elx;
+    V.op_Dot_Lparen_Rparen_Less_Minus vec i elx;
     with s1'. assert (V.pts_to vec s1');
     SM.seq_seq_match_rewrite_seq (PPB.vmatch_conv elem_vmatch elem_conv) s1 s1' (Ghost.reveal sl) (Ghost.reveal sl) 0 (SZ.v i);
     Seq.lemma_seq_of_list_index (Ghost.reveal fl) (SZ.v i);
@@ -1034,10 +1038,11 @@ fn free_vclist
       invariant exists* i. R.pts_to pi i ** V.pts_to (snd y) s **
         SM.seq_seq_match elem_vmatch s (Seq.seq_of_list (Ghost.reveal v)) (SZ.v i) (L.length (Ghost.reveal v)) **
         pure (SZ.v i <= SZ.v nn /\ Seq.length s == SZ.v nn /\ L.length (Ghost.reveal v) == SZ.v nn)
+        decreases (SZ.v nn - SZ.v (!pi)) // fstar2 only
       {
         let i = !pi;
         SM.seq_seq_match_dequeue_left elem_vmatch s (Seq.seq_of_list (Ghost.reveal v)) (SZ.v i) (L.length (Ghost.reveal v));
-        let elem = V.op_Array_Access (snd y) i;
+        let elem = V.op_Dot_Lparen_Rparen (snd y) i;
         free_elem elem;
         pi := SZ.add i 1sz;
       };
@@ -1210,6 +1215,7 @@ fn l2r_safe_writer_list_body
           Seq.slice vout 0 (SZ.v off) == serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y))) /\
           (e == true ==> (SZ.v i < SZ.v n /\ Seq.length (Ghost.reveal v) < Seq.length (serialize (serialize_list p s) (Ghost.reveal y))))
         )
+        decreases %[(if !perr then 0 else 1); (SZ.v n - SZ.v (!pi))] // fstar2 only
       {
         let i = !pi;
         let off = !poff;
@@ -1217,7 +1223,7 @@ fn l2r_safe_writer_list_body
           S.pts_to out vout **
           SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0 (SZ.v i) **
           SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n));
-        let xi = V.op_Array_Access (snd yy) i;
+        let xi = V.op_Dot_Lparen_Rparen (snd yy) i;
         SM.seq_seq_match_dequeue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n);
         Seq.lemma_seq_of_list_index (Ghost.reveal y) (SZ.v i);
         rewrite (PPB.vmatch_conv elem_vmatch elem_conv (Seq.index ss (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i)))
@@ -1362,10 +1368,11 @@ fn l2r_safe_size_list_body
           SZ.v off == Seq.length (serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y)))) /\
           (Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) < pow2 16 ==> e == false)
         )
+        decreases %[(if !perr then 0 else 1); (SZ.v n - SZ.v (!pi))] // fstar2 only
       {
         let i = !pi;
         let off = !poff;
-        let xi = V.op_Array_Access (snd yy) i;
+        let xi = V.op_Dot_Lparen_Rparen (snd yy) i;
         SM.seq_seq_match_dequeue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n);
         Seq.lemma_seq_of_list_index (Ghost.reveal y) (SZ.v i);
         rewrite (PPB.vmatch_conv elem_vmatch elem_conv (Seq.index ss (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i)))

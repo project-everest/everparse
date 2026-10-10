@@ -71,7 +71,7 @@ fn slice_u8_eq_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squash
     assert (pure (AST.byte_list_of_char_list (a :: q) == AST.uint32_to_uint8 (AST.u32_of_char a) :: AST.byte_list_of_char_list q));
     assert (pure (AST.byte_list_of_char_list (a :: q) == a' :: AST.byte_list_of_char_list q));
     assert (pure (Seq.equal (Seq.seq_of_list (AST.byte_list_of_char_list (a :: q))) (Seq.cons a' (Seq.seq_of_list (AST.byte_list_of_char_list q)))));
-    let x = S.op_Array_Access s i;
+    let x = S.op_Dot_Lparen_Rparen s i;
     let i' = SZ.add i 1sz;
     assert (pure (Seq.equal (Seq.slice v (SZ.v i) (SZ.v i + List.Tot.length (a :: q))) (Seq.cons x (Seq.slice v (SZ.v i') (SZ.v i' + List.Tot.length q)))));
     Classical.move_requires (Seq.lemma_cons_inj x a' (Seq.slice v (SZ.v i') (SZ.v i' + List.Tot.length q))) (Seq.seq_of_list (AST.byte_list_of_char_list q));
@@ -232,7 +232,7 @@ fn slice_u8_fill_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squa
   (#v: _)
   {
     S.pts_to_len s;
-    S.op_Array_Assignment s i a';
+    S.op_Dot_Lparen_Rparen_Less_Minus s i a';
     let i' = SZ.add i 1sz;
     f s i'
   }

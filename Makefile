@@ -50,9 +50,9 @@ ifeq (,$(NO_PULSE))
 endif
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
+$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
 
-$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
+$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
 ifeq (1,$(ADMIT_LOWPARSE))
 $(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
@@ -167,7 +167,7 @@ asn1-test: asn1
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test: lowparse
 	+$(MAKE) -C share/everparse/tests/lowparse
-#	+$(MAKE) -C tests/pulse # TODO: move it into `share/everparse/tests/lowparse` and re-enable it
+	+$(MAKE) -C tests/pulse # TODO: move it into `share/everparse/tests/lowparse`
 else
 lowparse-pulse-test:
 endif

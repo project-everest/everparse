@@ -1,6 +1,7 @@
 module Hashtable
 open FStar.All
 val t (key:eqtype) (value:Type0) : Type0
+val nonempty_t (key:eqtype) (value:Type0) : squash (nonempty (t key value))
 val create (#key:eqtype) (#value:Type) (n:int) : ML (t key value)
 val try_find (#key:eqtype) (#value:Type) (h:t key value) (k:key) : ML (option value)
 val insert (#key:eqtype) (#value:Type) (h:t key value) (k:key) (v:value) : ML unit

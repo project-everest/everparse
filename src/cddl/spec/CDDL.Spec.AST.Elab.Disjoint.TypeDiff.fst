@@ -6,7 +6,7 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 64 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 64 --query_stats --fuel 4 --ifuel 8"
 
 let typ_diff_disjoint
   (typ_disjoint: typ_disjoint_t)

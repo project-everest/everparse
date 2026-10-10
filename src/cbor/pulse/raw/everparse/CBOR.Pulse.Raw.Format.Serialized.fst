@@ -1,5 +1,11 @@
 module CBOR.Pulse.Raw.Format.Serialized
 friend CBOR.Pulse.Raw.Format.Match
+open CBOR.Pulse.Raw.Iterator.Base
+include CBOR.Pulse.Raw.Match
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
+module SZ = FStar.SizeT
+module U64 = FStar.UInt64
 #lang-pulse
 open CBOR.Spec.Raw.Base
 open CBOR.Pulse.Raw.Iterator

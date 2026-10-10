@@ -1,5 +1,6 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma10
 
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Invariant
 module Map = CDDL.Spec.Map
 module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
@@ -9,7 +10,7 @@ module EqTest = CDDL.Spec.EqTest
 
 open CDDL.Spec.MapGroup
 
-#push-options "--z3rlimit 256 --fuel 1 --ifuel 1 --z3seed 42"
+#push-options "--z3rlimit 256 --z3rlimit_factor 16 --fuel 1 --ifuel 1 --z3seed 42"
 
 let invariant_value_ser_fail
   #pe #minl #maxl p key tkey sp1 value tvalue inj sp2 except em out vout size count m v0 v min max vout_old gk gv min_old max_old sz1 l

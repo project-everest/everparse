@@ -266,6 +266,7 @@ BOOLEAN WriteU641(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return wr
 BOOLEAN WriteU642(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
 BOOLEAN WriteU643(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
 BOOLEAN WriteU644(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
+BOOLEAN WriteU32(uint32_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write32(v, w, d); }
 BOOLEAN WriteU320(uint32_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write32(v, w, d); }
 
 void hx_init(void) {

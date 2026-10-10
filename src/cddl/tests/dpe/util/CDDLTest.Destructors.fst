@@ -181,10 +181,17 @@ ensures
   pure (v == xl)
 {
   destruct_pair _ _ xl xh ();
-  Trade.Util.trans_hyp_l _ _ _ res;
   let v = (fst xl, snd xl);
   rewrite each xl as v;
-  Trade.Util.assoc_hyp_r _ _ _ res;
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+  intro (Trade.trade (r0 (fst v) (fst xh) ** (r1 (snd v) (snd xh) ** rest)) res)
+    #(Trade.trade (r0 (fst v) (fst xh) ** r1 (snd v) (snd xh)) (rel_pair r0 r1 v xh) **
+      Trade.trade (rel_pair r0 r1 v xh ** rest) res)
+    fn _ {
+      Trade.elim_trade (r0 (fst v) (fst xh) ** r1 (snd v) (snd xh)) (rel_pair r0 r1 v xh);
+      Trade.elim_trade (rel_pair r0 r1 v xh ** rest) res;
+    };
+  (* end: valid for fstar2 only *)
   v
 }
 
@@ -214,8 +221,9 @@ requires
 ensures
   trade (p ** emp) q
 {
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
   slprop_equivs();
-  rewrite each p as (p ** emp);
+  (* end: valid for fstar2 only *)
 }
 
 fn trade_emp_hyp_r_elim (p q r:_)
@@ -224,8 +232,9 @@ requires
 ensures
   trade (p ** q) r
 {
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
   slprop_equivs();
-  rewrite each (emp ** q) as q;
+  (* end: valid for fstar2 only *)
 }
 
 ghost

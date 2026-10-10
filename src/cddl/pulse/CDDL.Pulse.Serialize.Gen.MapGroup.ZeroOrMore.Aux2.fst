@@ -1,4 +1,11 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux1
+module Trade = Pulse.Lib.Trade.Util
+module SZ = FStar.SizeT
+module U64 = FStar.UInt64
+module Iterator = CDDL.Pulse.Iterator.Base
+module EqTest = CDDL.Spec.EqTest
+module Map = CDDL.Spec.Map
 #lang-pulse
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Proof0
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma1
@@ -81,6 +88,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     pure (
       impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l
     )
+    decreases %[(if !pres then 1 else 0); (pow2 64 - 1 - U64.v (!out_count))] // fstar2 only
   {
     with c_ v_ em_ res_ vout_ size_ count_ m_ min_ max_ . _;
     impl_serialize_map_zero_or_more_loop_body

@@ -18,11 +18,11 @@ let remove_extension (s: string) =
 let concat (d: string) (f: string) =
     System.IO.Path.Combine(d, f)
 
-let int_of_string (s: string) : Prims.int =
+let int_of_string (s: string) : bigint =
     let r = ref 0
     if System.Int32.TryParse(s, r)
-    then Prims.int_intro !r
-    else Prims.int_zero
+    then bigint r.Value
+    else 0I
 
 let file_exists (s: string) : bool =
     System.IO.File.Exists(s)

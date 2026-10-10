@@ -32,14 +32,14 @@ let make_constant_size_parser_precond_precond
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
   (s1: bytes { Seq.length s1 == sz } )
   (s2: bytes { Seq.length s2 == sz } )
-: GTot Type0
+: GTot prop
 = (Some? (f s1) \/ Some? (f s2)) /\ f s1 == f s2
 
 let make_constant_size_parser_precond
   (sz: nat)
   (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
-: GTot Type0
+: GTot prop
 = forall (s1: bytes {Seq.length s1 == sz}) (s2: bytes {Seq.length s2 == sz}) . {:pattern (f s1); (f s2)}
     make_constant_size_parser_precond_precond sz t f s1 s2 ==> Seq.equal s1 s2
 
@@ -47,7 +47,7 @@ let make_constant_size_parser_precond'
   (sz: nat)
   (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot (option t)))
-: GTot Type0
+: GTot prop
 = forall (s1: bytes {Seq.length s1 == sz}) (s2: bytes {Seq.length s2 == sz}) . {:pattern (f s1); (f s2)}
     make_constant_size_parser_precond_precond sz t f s1 s2 ==> s1 == s2
 
@@ -142,7 +142,7 @@ let make_total_constant_size_parser_precond
   (sz: nat)
   (t: Type)
   (f: ((s: bytes {Seq.length s == sz}) -> GTot t))
-: GTot Type0
+: GTot prop
 = forall (s1: bytes {Seq.length s1 == sz}) (s2: bytes {Seq.length s2 == sz}) . {:pattern (f s1); (f s2)}
   f s1 == f s2 ==> Seq.equal s1 s2
 
@@ -230,7 +230,7 @@ let serialize_empty : serializer parse_empty = tot_serialize_empty
 
 let fail_parser_kind_precond
   (k: parser_kind)
-: GTot Type0
+: GTot prop
 = k.parser_kind_metadata <> Some ParserKindMetadataTotal /\
   (Some? k.parser_kind_high ==> k.parser_kind_low <= Some?.v k.parser_kind_high)
 
@@ -311,7 +311,7 @@ let and_then_cases_injective_precond
   (p': (t -> Tot (bare_parser t')))
   (x1 x2: t)
   (b1 b2: bytes)
-: GTot Type0
+: GTot prop
 = Some? (parse (p' x1) b1) /\
   Some? (parse (p' x2) b2) /\ (
     let (Some (v1, _)) = parse (p' x1) b1 in
@@ -323,7 +323,7 @@ let and_then_cases_injective
   (#t:Type)
   (#t':Type)
   (p': (t -> Tot (bare_parser t')))
-: GTot Type0
+: GTot prop
 = forall (x1 x2: t) (b1 b2: bytes) . {:pattern (parse (p' x1) b1); (parse (p' x2) b2)}
   and_then_cases_injective_precond p' x1 x2 b1 b2 ==>
   x1 == x2
@@ -343,7 +343,7 @@ let and_then_cases_injective_intro
   ))
 : Lemma
   (and_then_cases_injective p')
-= Classical.forall_intro_3 (fun x1 x2 b1 -> Classical.forall_intro (Classical.move_requires (lem x1 x2 b1)))
+= Classical.forall_intro_4 (Classical.move_requires_4 lem)
 
 let and_then_injective
   (#t:Type)
@@ -504,9 +504,10 @@ let and_then_no_lookahead
   ))
   (ensures ((k.parser_kind_subkind == Some ParserStrong /\ k'.parser_kind_subkind == Some ParserStrong) ==> no_lookahead (and_then_bare p p')))
 = parser_kind_prop_equiv k p;
-  Classical.forall_intro (fun (x: t) -> parser_kind_prop_equiv k' (p' x));
+  introduce forall (x: t) . parser_kind_prop k' (p' x) <==> parser_kind_prop' k' (p' x)
+  with parser_kind_prop_equiv k' (p' x);
   if k.parser_kind_subkind = Some ParserStrong && k.parser_kind_subkind = Some ParserStrong then
-    Classical.forall_intro_2 (fun x -> Classical.move_requires (and_then_no_lookahead_on p p' x))
+    Classical.forall_intro_2 (Classical.move_requires_2 (and_then_no_lookahead_on p p'))
   else ()
 
 #set-options "--max_fuel 8 --max_ifuel 8 --z3rlimit 64"
@@ -527,7 +528,8 @@ let and_then_correct
     parser_kind_prop (and_then_kind k k') (and_then_bare p p')
   ))
 = parser_kind_prop_equiv k p;
-  Classical.forall_intro (fun x -> parser_kind_prop_equiv k' (p' x));
+  introduce forall (x: t) . parser_kind_prop k' (p' x) <==> parser_kind_prop' k' (p' x)
+  with parser_kind_prop_equiv k' (p' x);
   parser_kind_prop_equiv (and_then_kind k k') (and_then_bare p p');
   (if k.parser_kind_injective && k'.parser_kind_injective then and_then_injective p p' else ());
   and_then_no_lookahead p p'
@@ -597,7 +599,7 @@ let synth_injective
   (#t1: Type)
   (#t2: Type)
   (f: (t1 -> GTot t2))
-: GTot Type0
+: GTot prop
 = forall (x x' : t1) . {:pattern (f x); (f x')} f x == f x' ==> x == x'
 
 let synth_injective_intro
@@ -742,7 +744,7 @@ let synth_inverse
   (#t2: Type)
   (f2: (t1 -> GTot t2))
   (g1: (t2 -> GTot t1))
-: GTot Type0
+: GTot prop
 = (forall (x : t2) . {:pattern (f2 (g1 x))} f2 (g1 x) == x)
 
 let synth_inverse_intro
@@ -1917,7 +1919,7 @@ let parse_strengthen_prf
   (#k: parser_kind)
   (#t1: Type)
   (p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
 : Tot Type
 = (xbytes: bytes) ->
   (consumed: consumed_length xbytes) ->
@@ -1930,7 +1932,7 @@ let bare_parse_strengthen
   (#k: parser_kind)
   (#t1: Type)
   (p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
 : Tot (bare_parser (x: t1 { p2 x } ))
 = fun (xbytes: bytes) ->
@@ -1945,7 +1947,7 @@ let bare_parse_strengthen_no_lookahead
   (#k: parser_kind)
   (#t1: Type)
   (p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
 : Lemma
   (no_lookahead p1 ==> no_lookahead (bare_parse_strengthen p1 p2 prf))
@@ -1956,7 +1958,7 @@ let bare_parse_strengthen_injective
   (#k: parser_kind)
   (#t1: Type)
   (p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
 : Lemma
   (k.parser_kind_injective == true ==> injective (bare_parse_strengthen p1 p2 prf))
@@ -1971,7 +1973,7 @@ let bare_parse_strengthen_correct
   (#k: parser_kind)
   (#t1: Type)
   (p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
 : Lemma
   ((k.parser_kind_injective == true ==> injective (bare_parse_strengthen p1 p2 prf)) /\
@@ -1986,7 +1988,7 @@ let parse_strengthen
   (#k: parser_kind)
   (#t1: Type)
   (p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
 : Tot (parser k (x: t1 { p2 x } ))
 = bare_parse_strengthen_correct p1 p2 prf;
@@ -1996,7 +1998,7 @@ let serialize_strengthen'
   (#k: parser_kind)
   (#t1: Type)
   (#p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
   (s: serializer p1)
   (input: t1 { p2 input } )
@@ -2007,7 +2009,7 @@ let serialize_strengthen_correct
   (#k: parser_kind)
   (#t1: Type)
   (#p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
   (s: serializer p1)
   (input: t1 { p2 input } )
@@ -2020,7 +2022,7 @@ let serialize_strengthen
   (#k: parser_kind)
   (#t1: Type)
   (#p1: parser k t1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
   (s: serializer p1)
 : Tot (serializer (parse_strengthen p1 p2 prf))
@@ -2273,7 +2275,11 @@ let tot_parse_dtuple2_filter_swap'
     dsnd x == dsnd x'
   | _ -> False
   )
-= Classical.forall_intro_2 (fun x1 input -> tot_parse_filter_eq (p2 x1) (f x1) input);
+= introduce forall (x1: t1) (input: bytes) .
+    parse (tot_parse_filter (p2 x1) (f x1)) input == (match parse (p2 x1) input with
+    | None -> None
+    | Some (x, consumed) -> if f x1 x then Some (x, consumed) else None)
+  with tot_parse_filter_eq (p2 x1) (f x1) input;
   Classical.forall_intro (tot_parse_filter_eq (tot_parse_dtuple2 p1 p2) (fun x -> f (dfst x) (dsnd x)))
 
 let tot_parse_dtuple2_filter_swap

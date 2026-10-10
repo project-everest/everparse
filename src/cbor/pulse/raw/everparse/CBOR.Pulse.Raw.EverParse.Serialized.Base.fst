@@ -1,5 +1,15 @@
 module CBOR.Pulse.Raw.EverParse.Serialized.Base
 friend CBOR.Pulse.Raw.Format.Match
+open Pulse.Lib.Slice
+open Pulse.Lib.Trade
+open LowParse.Spec.Base
+open LowParse.Pulse.Base
+include CBOR.Pulse.Raw.Match
+open CBOR.Spec.Raw.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.Raw.EverParse
+module S = Pulse.Lib.Slice
+module U64 = FStar.UInt64
 #lang-pulse
 
 open CBOR.Pulse.Raw.EverParse.Format

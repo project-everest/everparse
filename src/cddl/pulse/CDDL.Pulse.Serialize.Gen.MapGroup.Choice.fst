@@ -1,4 +1,10 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.Choice
+include CDDL.Pulse.Serialize.Gen.MapGroup.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+open CBOR.Pulse.API.Base
+module Trade = Pulse.Lib.Trade.Util
+module U64 = FStar.UInt64
 open CDDL.Pulse.Serialize.Gen.MapGroup.Aux
 #lang-pulse
 

@@ -7,7 +7,7 @@ let perm_div (p1 p2: perm) : Tot perm = p1 /. p2
 
 let perm_mul (p1 p2: perm) : Tot perm = p1 *. p2
 
-#push-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr native --z3rlimit 16"
+#push-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.nl_arith_repr native --z3rlimit 16"
 
 #restart-solver
 
@@ -33,7 +33,8 @@ let half_mul (a b: real) : Lemma
 
 let perm_mul_div (a b: perm) : Lemma
   (a `perm_mul` (b `perm_div` a) == b)
-= assert (a *. (b /. a) == b)
+= let q : perm = b `perm_div` a in
+  assert (a `perm_mul` q == b)
 
 let perm_half_mult
   (pm ip: perm)

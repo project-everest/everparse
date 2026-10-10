@@ -513,7 +513,7 @@ fn impl_serialize_any
   (out: _)
 {
   unfold (rel_cbor_not_freeable vmatch false c v);
-  let ser = cbor_det_serialize c.c out;
+  let ser = cbor_det_serialize (cwp_c c) out;
   Cbor.cbor_det_serialize_parse v;  
   fold (rel_cbor_not_freeable vmatch false c v);
   match ser {

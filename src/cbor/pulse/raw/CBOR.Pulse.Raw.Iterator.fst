@@ -343,7 +343,7 @@ ensures
   with sq . assert (pts_to i.s #(pm `perm_mul` i.slice_perm) sq);
   S.pts_to_len i.s;
   PM.seq_list_match_length (elt_match (pm `perm_mul` i.payload_perm)) _ _;
-  let res = Pulse.Lib.Slice.op_Array_Access i.s 0sz;
+  let res = Pulse.Lib.Slice.op_Dot_Lparen_Rparen i.s 0sz;
   PM.seq_list_match_cons_elim_trade _ l (elt_match (pm `perm_mul` i.payload_perm)); // 2: (elt_match _ (List.Tot.hd l) ** PM.seq_list_match _ (List.Tot.tl l) _) @==> PM.seq_list_match _ l _
 //  assert (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l)); // FIXME: make this work, without the need for `rewrite ... sq`, see below
   let s' = slice_split_right i.s 1sz; // 3: pts_to s' _ @==> pts_to i.s _

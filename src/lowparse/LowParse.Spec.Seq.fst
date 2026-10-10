@@ -109,7 +109,7 @@ val seq_length_constant_size_parser_correct
     let pb = parse (parse_seq p) b in
     Some? pb /\ (
     let (Some (l, _)) = pb in
-    FStar.Mul.op_Star (Seq.length l) k.parser_kind_low == Seq.length b
+    op_Star (Seq.length l) k.parser_kind_low == Seq.length b
   )))
 
 let seq_length_constant_size_parser_correct #k #t p b =

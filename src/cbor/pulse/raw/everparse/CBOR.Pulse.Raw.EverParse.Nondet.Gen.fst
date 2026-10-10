@@ -1,4 +1,14 @@
 module CBOR.Pulse.Raw.EverParse.Nondet.Gen
+include CBOR.Spec.Raw.Nondet
+open CBOR.Spec.Util
+open CBOR.Spec.Raw.EverParse
+include CBOR.Pulse.Raw.EverParse.Format
+open LowParse.Spec.VCList
+open LowParse.Pulse.VCList
+open Pulse.Lib.Pervasives
+module S = Pulse.Lib.Slice.Util
+module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
 #lang-pulse
 
 inline_for_extraction
@@ -87,6 +97,11 @@ let check_equiv_head_correct_pre
     equiv a1 a2 = Some false
   )
 
+let list_sum_raw_cons (l: list raw_data_item) // fstar2 only
+: Lemma (requires (Cons? l)) // fstar2 only
+  (ensures (list_sum raw_data_item_size l == raw_data_item_size (List.Tot.hd l) + list_sum raw_data_item_size (List.Tot.tl l))) // fstar2 only
+= () // fstar2 only
+
 let check_equiv_head_correct_post
   (gl1: list raw_data_item)
   (gl2: list raw_data_item)
@@ -99,6 +114,7 @@ let check_equiv_head_correct_post
     let l1' = dsnd (synth_raw_data_item_from_alt_recip a1) `List.Tot.append` q1 in
     let l2' = dsnd (synth_raw_data_item_from_alt_recip a2) `List.Tot.append` q2 in
     (check_equiv_head a1 a2 ==> list_sum raw_data_item_size l1' + list_sum raw_data_item_size l2' <= list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2) /\
+    (check_equiv_head a1 a2 ==> list_sum raw_data_item_size l1' + list_sum raw_data_item_size l2' < list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2) /\ // fstar2 only
     check_equiv_list gl1 gl2 equiv == (if check_equiv_head a1 a2 then check_equiv_list l1' l2' equiv else Some false)
   )
 
@@ -213,10 +229,13 @@ requires
   pts_to_serialized (serialize_leaf_content h1) c1 #p1 gc1 **
   pts_to_serialized (serialize_leaf_content h2) c2 #p2 gc2 **
   pure (
+    // Workaround for https://github.com/FStarLang/FStar/issues/4498 : stating the
+    // equalities on the whole (header, leaf content) pairs avoids a dependent
+    // subtyping check that the core typechecker can no longer discharge.
     h1 == get_raw_data_item_header a1 /\
-    Ghost.reveal gc1 == dsnd (dfst (synth_raw_data_item_from_alt_recip a1)) /\
+    (| h1, Ghost.reveal gc1 |) == dfst (synth_raw_data_item_from_alt_recip a1) /\
     h2 == get_raw_data_item_header a2 /\
-    Ghost.reveal gc2 == dsnd (dfst (synth_raw_data_item_from_alt_recip a2)) /\
+    (| h2, Ghost.reveal gc2 |) == dfst (synth_raw_data_item_from_alt_recip a2) /\
     get_header_major_type h1 == get_header_major_type h2
   )
 returns res: bool
@@ -334,16 +353,18 @@ fn impl_check_equiv_list
       (serialize_nlist (SZ.v n1) serialize_raw_data_item)
       l2;
     let mut pres = Some true;
+    let mut pmeasure = Ghost.hide (list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2); // fstar2 only
     while (
       let res = !pres;
       let n = !pn;
       (CBOR.Pulse.Raw.Util.eq_Some_true res && SZ.gt n 0sz)
     )
-    invariant exists* res n' l1' l2' gl1' gl2' .
+    invariant exists* res n' l1' l2' gl1' gl2' m .
       pts_to pres res **
       pts_to pn n' **
       pts_to pl1 l1' **
       pts_to pl2 l2' **
+      pts_to pmeasure m **
       pts_to_serialized (serialize_nlist (SZ.v n') serialize_raw_data_item) l1' #p1 gl1' **
       Trade.trade
         (pts_to_serialized (serialize_nlist (SZ.v n') serialize_raw_data_item) l1' #p1 gl1')
@@ -354,8 +375,10 @@ fn impl_check_equiv_list
         (pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l2 #p2 gl2) **
       pure (
         list_sum raw_data_item_size gl1' + list_sum raw_data_item_size gl2' <= list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 /\
+        Ghost.reveal m == list_sum raw_data_item_size gl1' + list_sum raw_data_item_size gl2' /\
         check_equiv_list gl1 gl2 equiv == (if res = Some true then check_equiv_list gl1' gl2' equiv else res)
       )
+    decreases %[(if CBOR.Pulse.Raw.Util.eq_Some_true !pres then 1 else 0); (Ghost.reveal (!pmeasure))] // fstar2 only
     {
       let l1' = !pl1;
       let l2' = !pl2;
@@ -399,6 +422,9 @@ fn impl_check_equiv_list
           pn := n';
           pl1 := tl1;
           pl2 := tl2;
+          pmeasure := Ghost.hide (list_sum raw_data_item_size (List.Tot.tl gl1') + list_sum raw_data_item_size (List.Tot.tl gl2')); // fstar2 only
+          list_sum_raw_cons gl1'; // fstar2 only
+          list_sum_raw_cons gl2'; // fstar2 only
         } else {
           let gh1 = pts_to_serialized_nlist_raw_data_item_head_header' l1' (SZ.v n);
           let (hd1, tl1) = split_nondep_then'
@@ -464,6 +490,12 @@ fn impl_check_equiv_list
                 pn := n';
                 pl1 := tl1';
                 pl2 := tl2';
+                with nl1 nl2. assert (
+                  pts_to_serialized (serialize_nlist (SZ.v n') serialize_raw_data_item) tl1' #p1 nl1 **
+                  pts_to_serialized (serialize_nlist (SZ.v n') serialize_raw_data_item) tl2' #p2 nl2
+                ); // fstar2 only
+                pmeasure := Ghost.hide (list_sum raw_data_item_size nl1 + list_sum raw_data_item_size nl2); // fstar2 only
+                assert (pure (list_sum raw_data_item_size nl1 + list_sum raw_data_item_size nl2 < list_sum raw_data_item_size gl1' + list_sum raw_data_item_size gl2')); // fstar2 only
             } else {
               Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
               Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l2' #p2 gl2');
@@ -637,6 +669,7 @@ ensures
       list_sum (pair_sum raw_data_item_size raw_data_item_size) gl + (raw_data_item_size gxr_key + raw_data_item_size gxr_value) <= bound /\
       setoid_assoc_eq_with_overflow equiv equiv gll (Ghost.reveal gxr_key, Ghost.reveal gxr_value) == (if res = Some false && cont then setoid_assoc_eq_with_overflow equiv equiv gl (Ghost.reveal gxr_key, Ghost.reveal gxr_value) else res)
     )
+    decreases %[(if CBOR.Pulse.Raw.Util.eq_Some_false !pres && !pcont then 1 else 0); (SZ.v (!pn))] // fstar2 only
   {
     let l = !pll;
     with gn (gl: nlist (SZ.v gn) (raw_data_item & raw_data_item)) . assert (
@@ -811,6 +844,7 @@ ensures
       list_sum (pair_sum raw_data_item_size raw_data_item_size) gl1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) gl <= bound /\
       list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2 == (if res = Some true then list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl else res)
     )
+    decreases %[(if CBOR.Pulse.Raw.Util.eq_Some_true !pres then 1 else 0); (SZ.v (!pn))] // fstar2 only
   {
     let l = !pl;
     with gn (gl: nlist (SZ.v gn) (raw_data_item & raw_data_item)) . assert (
@@ -1060,7 +1094,7 @@ ensures pure
   ()
 }
 
-#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4 --split_queries always"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4"
 
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
@@ -1332,6 +1366,7 @@ ensures
       list_existsb_with_overflow p (List.Tot.map fst gl0) == (if res = Some false then list_existsb_with_overflow p (List.Tot.map fst gl) else res)
     )
   )
+    decreases %[(if CBOR.Pulse.Raw.Util.eq_Some_false !pres then 1 else 0); (SZ.v (!pn))] // fstar2 only
   {
     let n = !pn;
     let n' = SZ.sub n 1sz;
@@ -1470,17 +1505,19 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
     res == check_map_depth (SZ.v bound) l1 /\
     (res ==> (gl' <: list raw_data_item) == Ghost.reveal l2)
   )
+  decreases (SZ.v bound) // fstar2 only
 {
   Trade.refl (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0);
   List.Tot.append_length l1 l2;
   let mut pn = n1;
   let mut pres = true;
   let pl1 = GR.alloc (Ghost.reveal l1);
+  let mut pmeasure = Ghost.hide (list_sum raw_data_item_size (Ghost.reveal l1)); // fstar2 only
   while (
     let res = !pres;
     let n = !pn;
     (res && (SZ.gt n 0sz))
-  ) invariant exists* n l gn (gl: nlist gn raw_data_item) res ll . (
+  ) invariant exists* n l gn (gl: nlist gn raw_data_item) res ll m . (
     pts_to pn n **
     pts_to pl l **
     pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl **
@@ -1488,12 +1525,16 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
       (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl)
       (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0) **
     pts_to pres res **
+    pts_to pmeasure m **
     GR.pts_to pl1 ll **
     pure (
       check_map_depth (SZ.v bound) l1 == (res && check_map_depth (SZ.v bound) ll) /\
+      Ghost.reveal m == list_sum raw_data_item_size ll /\
       (res ==> (List.Tot.length ll == SZ.v n /\ gn == SZ.v n + List.Tot.length l2 /\ (gl <: list raw_data_item) == List.Tot.append ll l2))
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (Ghost.reveal (!pmeasure))] // fstar2 only
+  {
     let l = !pl;
     let n = !pn;
     let n' = SZ.sub n 1sz;
@@ -1524,6 +1565,9 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
       GR.op_Colon_Equals pl1 (Tagged?.v (List.Tot.hd ll) :: List.Tot.tl ll);
       Trade.trans _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl) _;
       pl := tl;
+      raw_data_item_size_eq (List.Tot.hd ll); // fstar2 only
+      assert (pure (list_sum raw_data_item_size ll == raw_data_item_size (List.Tot.hd ll) + list_sum raw_data_item_size (List.Tot.tl ll))); // fstar2 only
+      pmeasure := Ghost.hide (list_sum raw_data_item_size (Tagged?.v (List.Tot.hd ll) :: List.Tot.tl ll)); // fstar2 only
       ()
     } else if (m = cbor_major_type_array) {
       List.Tot.append_assoc (Array?.v (List.Tot.hd ll)) (List.Tot.tl ll) l2;
@@ -1536,6 +1580,10 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
       Trade.trans _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl) _;
       pl := tl;
       pn := SZ.add (impl_remaining_data_items_header (S.len tl) h) n';
+      raw_data_item_size_eq (List.Tot.hd ll); // fstar2 only
+      list_sum_append raw_data_item_size (Array?.v (List.Tot.hd ll)) (List.Tot.tl ll); // fstar2 only
+      assert (pure (list_sum raw_data_item_size ll == raw_data_item_size (List.Tot.hd ll) + list_sum raw_data_item_size (List.Tot.tl ll))); // fstar2 only
+      pmeasure := Ghost.hide (list_sum raw_data_item_size (List.Tot.append (Array?.v (List.Tot.hd ll)) (List.Tot.tl ll))); // fstar2 only
       ()
     } else if (m = cbor_major_type_map) {
       if (bound = 0sz) {
@@ -1557,6 +1605,9 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
           check_map_depth_map_true (SZ.v bound) (List.Tot.hd ll) (List.Tot.tl ll) (Map?.v (List.Tot.hd ll));
           GR.op_Colon_Equals pl1 (List.Tot.tl ll);
           pn := n';
+          raw_data_item_size_eq (List.Tot.hd ll); // fstar2 only
+          assert (pure (list_sum raw_data_item_size ll == raw_data_item_size (List.Tot.hd ll) + list_sum raw_data_item_size (List.Tot.tl ll))); // fstar2 only
+          pmeasure := Ghost.hide (list_sum raw_data_item_size (List.Tot.tl ll)); // fstar2 only
           ()
         } else {
           raw_data_item_size_eq (List.Tot.hd ll);
@@ -1571,6 +1622,9 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
       pl := tl;
       pn := n';
       GR.op_Colon_Equals pl1 (List.Tot.tl ll);
+      raw_data_item_size_eq (List.Tot.hd ll); // fstar2 only
+      assert (pure (list_sum raw_data_item_size ll == raw_data_item_size (List.Tot.hd ll) + list_sum raw_data_item_size (List.Tot.tl ll))); // fstar2 only
+      pmeasure := Ghost.hide (list_sum raw_data_item_size (List.Tot.tl ll)); // fstar2 only
     }
   };
   GR.free pl1;
@@ -1637,6 +1691,7 @@ fn trade_trans_hyp_l_nounify
   Trade.trans_hyp_l p1 p2 q r
 }
 
+#push-options "--z3rlimit_factor 4"
 inline_for_extraction
 fn impl_list_no_setoid_repeats_with_overflow_map_fst
   (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
@@ -1676,6 +1731,7 @@ ensures
       list_no_setoid_repeats_with_overflow equiv (option_sz_v bound) (List.Tot.map fst gl0) == (if res = Some true then list_no_setoid_repeats_with_overflow equiv (option_sz_v bound) (List.Tot.map fst gl) else res)
     )
   )
+    decreases %[(if CBOR.Pulse.Raw.Util.eq_Some_true !pres then 1 else 0); (SZ.v (!pn))] // fstar2 only
   {
     let n = !pn;
     let n' = SZ.sub n 1sz;
@@ -1809,9 +1865,22 @@ ensures
   Trade.elim _ _;
   !pres
 }
+#pop-options
 
 #push-options "--z3rlimit 64"
 
+let hd_map
+  (n: nat)
+  (va: Ghost.erased (LowParse.Spec.VCList.nlist n parse_raw_data_item_param.t))
+  (h: header)
+: Pure (v: Ghost.erased raw_data_item { Map? v })
+  (requires (
+    Cons? (Ghost.reveal va) /\
+    h == get_raw_data_item_header (List.Tot.hd (Ghost.reveal va)) /\
+    get_header_major_type h == cbor_major_type_map
+  ))
+  (ensures (fun res -> Ghost.reveal res == List.Tot.hd (Ghost.reveal va)))
+= Ghost.hide (List.Tot.hd (Ghost.reveal va))
 inline_for_extraction
 fn impl_check_valid_item
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
@@ -1861,12 +1930,13 @@ fn impl_check_valid_item
     let mut ph = h;
     let c = get_header_and_contents hd ph;
     Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
-    get_map_payload c (List.Tot.hd va);
+    let vhd = hd_map (SZ.v n) va h;
+    get_map_payload c vhd;
     Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
     assert_norm ((LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind).parser_kind_low == 2);
     CBOR.Pulse.Raw.EverParse.SizeComparison.nlist_count_fits
       (LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
-      (U64.v (Map?.len (List.Tot.hd va)).value)
+      (U64.v (Map?.len (Ghost.reveal vhd)).value)
       c;
     let res = impl_list_no_setoid_repeats_with_overflow_map_fst
       (impl_check_equiv)

@@ -675,6 +675,7 @@ let hex_to_uy_list (cval: string) : string =
    [tn] is the tag enum type name, [cprefix] the constructor prefix, [cl] the
    (case, field-type) list (auto-completed for all enum keys). *)
 let emit_copyful_owned_sum o i n tn cprefix cl =
+  let same_kind = sprintf "  assert_norm (LP.parse_sum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases == %s_parser_kind);\n" tn n n n in
   (* owned low representation (an inductive mirroring the high constructors).
      Emitted to the interface so the transparent direct [vmatch]
      can reference its constructors there. *)
@@ -754,7 +755,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   w o "\n";
   (* copyful parser at the library dependent-pair mid, then bridged to the
      transparent interface mid/vmatch/conv via [copyful_parse_coerce_mid]. *)
-  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.dep_maybe_enum_destr_t_tac ())) () ()\n\n" n n n n n n n n n n n tn tn n n n n n n n;
+  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n%s  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.dep_maybe_enum_destr_t_tac ())) () ()\n\n" n n n n n n n n n n same_kind n tn tn n n n n n n n;
   w o "let %s_coerce_vmatch_eq (xl: %s_low) (m1: PPS.sum_mid %s_sum %s_mid_of_tag)\n  : Lemma (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch xl m1 == %s_vmatch xl (%s_fg m1))\n  = match m1 with\n  | (| k, cm |) ->\n    (match k with\n" n n n n n n n n n n n;
   List.iter (fun (kcase, kty) ->
     w o "     | %s -> (match xl with\n" (String.capitalize_ascii kcase);
@@ -818,7 +819,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
     w o "\n";
     w o "let %s_write_coerce_eq ()\n  : Lemma (\n      (forall (x: %s_low) (m2: %s_mid) . %s_vmatch x m2 == PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch x (%s_gf m2)) /\\\n      (forall (m2: %s_mid) . %s_conv m2 == PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m2))\n    )\n  = FStar.Classical.forall_intro_2 %s_free_vmatch_eq;\n    FStar.Classical.forall_intro %s_write_conv_eq\n\n" n n n n n n n n n n n n n n n n n n;
     w i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-    w o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n n n n n n;
+    w o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n%s  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n same_kind n n n n n;
     register_writer n
   end
 
@@ -831,6 +832,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
    the default (unknown-case) field type name. *)
 let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   let g = pcombinator_name dt in
+  let same_kind = sprintf "  assert_norm (LP.parse_dsum_kind (LP.get_parser_kind %s_repr_parser) %s_sum parse_%s_cases (LP.get_parser_kind %s) == %s_parser_kind);\n" tn n n (pcombinator_name dt) n in
   let cap = String.capitalize_ascii in
   (* owned low representation (an inductive mirroring the high constructors),
      plus an Unknown constructor carrying the raw repr and the default lowtype.
@@ -900,7 +902,7 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   ) cl;
   w o "    )\n  | LP.Unknown r -> PPS.copyful_parse_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag (LP.Unknown r)\n      %s (fun lv -> %s_Unknown_%s_low r lv) () ()\n\n" n n n n n n (copyful_read_name dt) cprefix tn;
   (* copyful parser at the library dependent-pair mid, then bridged via coerce_mid. *)
-  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.copyful_parse_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n n n n n n n n n n n tn tn n n n n n n n tn;
+  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n%s  PPS.copyful_parse_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n n n n n n n n n n same_kind n tn tn n n n n n n n tn;
   (* vmatch bridge lemma (per dtuple-key / low-pattern branch, plain norm). *)
   w o "let %s_coerce_vmatch_eq (xl: %s_low) (m1: PPS.dsum_mid %s_sum %s_mid_of_tag)\n  : Lemma (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch xl m1 == %s_vmatch xl (%s_fg m1))\n  = match m1 with\n  | (| k, cm |) ->\n    (match k with\n" n n n n n n n n n n n;
   let vm_assert keyexpr xlpat =
@@ -972,7 +974,7 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
     w o "  | %s_Unknown_%s_mid rv cm -> assert (%s_conv (%s_Unknown_%s_mid rv cm) == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf (%s_Unknown_%s_mid rv cm))) by (FStar.Tactics.norm [delta; iota; zeta; primops; unascribe; nbe]; FStar.Tactics.trefl ())\n\n" cprefix tn n cprefix tn n n n n cprefix tn;
     w o "let %s_write_coerce_eq ()\n  : Lemma (\n      (forall (x: %s_low) (m2: %s_mid) . %s_vmatch x m2 == PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch x (%s_gf m2)) /\\\n      (forall (m2: %s_mid) . %s_conv m2 == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m2))\n    )\n  = FStar.Classical.forall_intro_2 %s_free_vmatch_eq;\n    FStar.Classical.forall_intro %s_write_conv_eq\n\n" n n n n n n n n n n n n n n n n n n;
     w i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-    w o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n n n n n n;
+    w o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n%s  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n same_kind n n n n n;
     register_writer n
   end;
   w o "#pop-options\n\n"
@@ -2624,11 +2626,11 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       write_bytesize o is_private n  ~param:(if is_implicit then Some tagt else None);
       if need_validator then (
         w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_validator' = PPS.validate_dsum_cases_fn %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" n n n n (pulse_validator_name def) tn;
-        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_validator k = LPC.validate_synth (PPC.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k)\n\n" n tn n n n n
+        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_validator k =\n  assert_norm (%s_parser k == %s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k);\n  let w : LPC.validator (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) =\n    LPC.validate_synth (PPC.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k)\n  in\n  LPC.validator_ext (%s_parser k) (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) w ()\n\n" n n n tn n n tn n tn n n n n n n tn n
       );
       if need_jumper then (
         w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_jumper' = PPS.jump_dsum_cases_fn %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" n n n n (pulse_jumper_name def) tn;
-        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_jumper k = LPC.jump_synth (PPC.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k)\n\n" n tn n n n n
+        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_jumper k =\n  assert_norm (%s_parser k == %s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k);\n  let j : LPC.jumper (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) =\n    LPC.jump_synth (PPC.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k)\n  in\n  LPC.jumper_ext (%s_parser k) (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) j ()\n\n" n n n tn n n tn n tn n n n n n n tn n
       )
   ) else (* tag is not erased *)
    begin
@@ -2809,6 +2811,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
                begin
                  w i "val %s_accessor_%s : PPB.accessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty) n case;
                  w o "let %s_accessor_%s : PPB.accessor %s_parser %s %s_clens_%s =\n" n case n (pcombinator_name ty) n case;
+                 w o "%s" same_kind;
                  (match d with
                  | "" ->
                    w o "  PPC.accessor_ext\n";
@@ -2837,6 +2840,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
           begin
             w i "val %s_accessor_Unknown : PPB.accessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt) n;
             w o "let %s_accessor_Unknown : PPB.accessor %s_parser %s %s_clens_Unknown =\n" n n (pcombinator_name dt) n;
+            w o "%s" same_kind;
             w o "  PPC.accessor_ext\n";
             w o "    (PPS.accessor_clens_dsum_unknown_payload %s_sum %s_repr_jumper parse_%s_cases %s ())\n" n tn n (pcombinator_name dt);
             w o "    %s_clens_Unknown\n" n;
@@ -3249,7 +3253,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       (* intro lemma *)
       (* elim lemma *)
       (* lemmas about bytesize *)
-      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `FStar.Mul.op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == L.length x `op_Star` %d) [SMTPat (%s_bytesize x)]\n\n" n n n elem_li.min_len n;
       w o "let %s_bytesize_eqn x =\n" n;
       w o "  assert_norm (LP.fldata_array_precond (LP.get_parser_kind %s) %d %d == true);\n" (pcombinator_name ty) li.max_len li.max_count;
       w o "  LP.length_serialize_array %s %d %d () x\n\n"(scombinator_name ty) li.max_len li.max_count;
@@ -3380,7 +3384,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       (* length (elem count) and elim *)
       (* nth *)
       (* lemmas about bytesize *)
-      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `FStar.Mul.op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_vlarray %d %d %s %d %d () x\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
       (emit_copyful_vlarray o i n ty low high li.min_count li.max_count);
       ()
@@ -3955,6 +3959,10 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
      if friends <> [] then (List.iter (fun f -> w o "friend %s\n" f) friends; w o "\n")
    | _ -> ());
   write_autogen o;
+  (* The implementation no longer inherits the interface's scoping declarations,
+     so it must repeat them itself. *)
+  if !types_from <> "" then w o "include %s\n\n" !types_from;
+  if !types_to <> "" then w o "include %s\n\n" (module_of_filename !types_to);
   w o "module U8 = FStar.UInt8\n";
   w o "module U16 = FStar.UInt16\n";
   w o "module U32 = FStar.UInt32\n";
@@ -3991,9 +3999,10 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   let depl = List.filter (fun x -> not (basic_type x)) depl in
   let depl = List.map module_name depl in
   (List.iter (fun dep ->
-    if BatString.starts_with dep (mn^"_") then w i "include %s\n" dep
-    else w i "open %s\n" dep) depl);
+    if BatString.starts_with dep (mn^"_") then (w i "include %s\n" dep; w o "include %s\n" dep)
+    else (w i "open %s\n" dep; w o "open %s\n" dep)) depl);
   w i "\n";
+  w o "\n";
 
   let rlimit = 16 in
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection -Pulse -PulseCore' --z3rlimit %d --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n" rlimit;

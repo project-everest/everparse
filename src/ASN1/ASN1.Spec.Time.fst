@@ -138,7 +138,7 @@ let rec is_valid_digit_range
     is_valid_digit (Seq.index b (s + l')) &&
     is_valid_digit_range b s l'
 
-#push-options "--fuel 8 --split_queries always"
+#push-options "--fuel 8"
 
 let is_valid_yymmdd
   (b : asn1_bytes)

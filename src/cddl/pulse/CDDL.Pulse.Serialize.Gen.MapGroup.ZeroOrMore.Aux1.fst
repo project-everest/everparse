@@ -1,7 +1,18 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux1
+include CDDL.Pulse.Serialize.Gen.MapGroup.Base
+include Pulse.Lib.Pervasives
+include CBOR.Spec.API.Type
+include CBOR.Pulse.API.Base
+include CDDL.Pulse.Serialize.Gen.MapGroup.Aux
+include CDDL.Pulse.Serialize.Gen.MapGroup.Choice
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module EqTest = CDDL.Spec.EqTest
+module Map = CDDL.Spec.Map
 #lang-pulse
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 32 --z3rlimit_factor 16"
 
 #restart-solver
 let map_of_list_serializable_disjoint
@@ -46,7 +57,7 @@ let map_of_list_is_append_serializable_intro_serializable
 = ()
 
 #restart-solver
-#push-options "--z3rlimit 1024 --split_queries no --z3seed 1"
+#push-options "--z3rlimit 1024 --z3seed 1"
 let map_of_list_is_append_serializable_intro
   (#key #value: Type)
   (#tkey: typ)
@@ -126,7 +137,7 @@ let map_of_list_is_append_cons
   )
 = ()
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_of_list_is_append_serializable_disjoint_at
@@ -189,7 +200,7 @@ let map_of_list_is_append_serializable_member_at
   ()
 #pop-options
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_of_list_is_append_serializable_elim

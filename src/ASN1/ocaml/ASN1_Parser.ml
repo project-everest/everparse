@@ -1,5 +1,7 @@
-let lp_bytes_of_string s : LowParse_Bytes.bytes
-  = FStar_Seq_Base.MkSeq (List.map int_of_char (List.init (String.length s) (String.get s)))
+(* Custard represents [LowParse.Bytes.bytes = Seq.seq byte] as an OCaml
+   [int list], so a byte string is converted directly. *)
+let lp_bytes_of_string (s:string) : int list
+  = List.map int_of_char (List.init (String.length s) (String.get s))
 
 let check_omitted_default (s:string)
   : bool

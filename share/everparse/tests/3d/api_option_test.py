@@ -25,10 +25,12 @@ def main():
         return result.stdout
 
     help_text = run("--help")
-    assert "--api" in help_text
+    assert "--api" in help_text and "pulse|lowstar" in help_text
+    assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
-    # legacy_lowstar is rejected like any other unknown backend now that the
-    # Low* implementation is gone.
+    # The legacy Low* backend is gone: lowstar is the default, and
+    # legacy_lowstar is rejected like any other unknown backend because
+    # Options.Base.valid_api no longer accepts it.
     for args in [("--pulse",), ("--no_pulse",), ("--api",),
                  ("--api", "invalid"), ("--api", "legacy_lowstar"),
                  ("--__micro_step", "copy_pulse_internal_h")]:
@@ -46,7 +48,7 @@ def main():
             "default": [],
             "pulse": ["--api", "pulse"],
             "lowstar": ["--api", "lowstar"],
-            "reset": ["--api", "pulse", "--no_api"],
+            "reset": ["--api", "lowstar", "--no_api"],
         }
         for name, options in modes.items():
             output = root / name

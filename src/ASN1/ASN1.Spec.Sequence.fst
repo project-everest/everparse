@@ -96,6 +96,7 @@ let parse_asn1_sequence_item_twin_nondefault
              ())
 
 
+unfold
 let and_then_cases_injective_some
   (#t: Type)
   (#t' : Type)
@@ -120,7 +121,7 @@ let and_then_cases_injective_some_intro
   ))
 : Lemma
   (and_then_cases_injective_some p')
-= Classical.forall_intro_3 (fun x1 x2 b1 -> Classical.forall_intro (Classical.move_requires (lem x1 x2 b1)))
+= Classical.forall_intro_4 (Classical.move_requires_4 lem)
 
 let and_then_cases_injective_elim
   (#t:Type)
@@ -131,7 +132,7 @@ let and_then_cases_injective_elim
   : Lemma
   (requires (and_then_cases_injective p' /\ and_then_cases_injective_precond p' x1 x2 b1 b2))
   (ensures (x1 == x2))
-= () 
+= ()
 
 let and_then_cases_injective_some_elim
   (#t:Type)
@@ -393,8 +394,8 @@ let make_asn1_sequence_parser_body_and_then_cases_injective
   (pbodytwin : asn1_id_t -> (asn1_weak_parser (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))))
   : Lemma 
     (requires (make_asn1_sequence_parser_body_twin_spec pbodytwin))
-    (ensures (and_then_cases_injective_some (make_asn1_sequence_parser_body pbodytwin)))
-= and_then_cases_injective_some_intro (make_asn1_sequence_parser_body pbodytwin)
+    (ensures (and_then_cases_injective_some (fun st -> make_asn1_sequence_parser_body pbodytwin st)))
+= and_then_cases_injective_some_intro (fun st -> make_asn1_sequence_parser_body pbodytwin st)
         (fun x1 x2 b1 b2 ->
           match x1, x2 with
           | None, _ -> _
@@ -449,10 +450,10 @@ let make_asn1_sequence_parser_guard_and_then_cases_injective
   (pbody : (l : list (gen_decorated_parser_twin) {Cons? l /\ (l << itemtwins \/ (l == itemtwins /\ 0 << 1))}) -> (st : option asn1_id_t) -> asn1_weak_parser (asn1_sequence_t (List.map (Mkgendcparser?.d) l)))
   : Lemma
   (requires (make_asn1_sequence_parser_body_spec itemtwins pbody))
-  (ensures (and_then_cases_injective_some (make_asn1_sequence_parser_guard itemtwins pbody)))
+  (ensures (and_then_cases_injective_some (fun st -> make_asn1_sequence_parser_guard itemtwins pbody st)))
 = match itemtwins with
   | [] -> _
-  | _ -> and_then_cases_injective_some_intro (make_asn1_sequence_parser_guard itemtwins pbody)
+  | _ -> and_then_cases_injective_some_intro (fun st -> make_asn1_sequence_parser_guard itemtwins pbody st)
         (fun x1 x2 b1 b2 ->
           match x1, x2 with
           | None, _ -> _
@@ -480,7 +481,7 @@ let rec make_asn1_sequence_parser''
   let _ = 
     (make_asn1_sequence_parser_body_and_then_cases_injective p) 
   in
-  make_asn1_sequence_parser_body p
+  fun st -> make_asn1_sequence_parser_body p st
 
 and make_asn1_sequence_parser'
   (itemtwins : list (gen_decorated_parser_twin))
@@ -493,7 +494,7 @@ and make_asn1_sequence_parser'
   (decreases %[itemtwins;1])
 = assert (make_asn1_sequence_parser_body_spec itemtwins make_asn1_sequence_parser'');
   let _ = (make_asn1_sequence_parser_guard_and_then_cases_injective itemtwins make_asn1_sequence_parser'') in
-  make_asn1_sequence_parser_guard itemtwins (make_asn1_sequence_parser'')
+  fun st -> make_asn1_sequence_parser_guard itemtwins (make_asn1_sequence_parser'') st
 
 let make_asn1_sequence_parser
   (itemtwins : list (gen_decorated_parser_twin))

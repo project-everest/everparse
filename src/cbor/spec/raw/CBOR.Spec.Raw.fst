@@ -2,6 +2,12 @@ module CBOR.Spec.Raw
 friend CBOR.Spec.Raw.DataModel
 friend CBOR.Spec.API.Type
 
+include CBOR.Spec.Raw.Sort
+include CBOR.Spec.API.Type
+module RF = CBOR.Spec.Raw.Format
+module R = CBOR.Spec.Raw.Sort
+module RS = CBOR.Spec.Raw.Sort
+module U = CBOR.Spec.Util
 module DM = CBOR.Spec.Raw.DataModel
 
 let mk_cbor r =
@@ -272,9 +278,23 @@ let mk_det_raw_cbor_map_raw_mem m x =
   Classical.move_requires prf1 ();
   Classical.move_requires prf2 ()
 
-let mk_cbor_eq_map x = ()
+#restart-solver
+#push-options "--z3rlimit_factor 8"
+let mk_cbor_eq_map x =
+  let R.Map len l = mk_det_raw_cbor x in
+  assert (R.raw_data_item_ints_optimal (R.Map len l) == true);
+  R.holds_on_raw_data_item_eq R.raw_data_item_ints_optimal_elem (R.Map len l);
+  assert (R.raw_uint64_optimal len == true);
+  assert (CMap? (unpack x));
+  mk_cbor_eq (R.Map len l);
+  let CMap m = unpack x in
+  assert (cbor_map_length m == List.Tot.length l);
+  FStar.UInt64.uv_inv len.value;
+  assert (len == R.mk_raw_uint64 (FStar.UInt64.uint_to_t (cbor_map_length m)));
+  ()
+#pop-options
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 

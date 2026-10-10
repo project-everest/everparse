@@ -314,7 +314,7 @@ jobs:
           eval $(opam env)
           export FSTAR_TAG=
           # ^ no tag in source package
-          make -skj$(nproc) package-src ADMIT=1
+          make -skj$(nproc) package-src ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=/dev/null
       - name: Save
         if: steps.check-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -473,7 +473,7 @@ jobs:
         with:
           ocaml-compiler: 5
       - name: Set-up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: everparse/src/3d/hashchk/global.json
       - name: Everparse CI
@@ -737,6 +737,8 @@ jobs:
           submodules: true
           ref: ${{ env.updated_sha }}
           sparse-checkout: |
+            .github/mark-deps-up-to-date.sh
+            .github/prune-deps.sh
             Dockerfile
             deps.Makefile
             opt/Makefile
@@ -746,21 +748,21 @@ jobs:
         id: cache
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
           lookup-only: true
           fail-on-cache-miss: false
       - name: Build dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }} --pull --target deps .
+          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} --pull --target deps .
       - name: Save image
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }} | gzip > deps.tgz
+          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} | gzip > deps.tgz
       - name: Upload image into cache
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |
             deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}

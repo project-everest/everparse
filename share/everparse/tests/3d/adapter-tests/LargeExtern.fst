@@ -1,5 +1,4 @@
 module LargeExtern
-friend EverParse3d.Kinds
 friend EverParse3d.Prelude
 friend EverParse3d.Actions.Base
 open Pulse.Lib.Pervasives

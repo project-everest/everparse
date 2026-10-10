@@ -1,4 +1,16 @@
 module CBOR.Pulse.Raw.EverParse.Format
+open Pulse.Lib.Slice
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
+open CBOR.Spec.Raw.EverParse
+open LowParse.Pulse.Combinators
+open LowParse.Pulse.Recursive
+module Trade = Pulse.Lib.Trade.Util
+module U64 = FStar.UInt64
+module L = LowParse.Spec.VCList
+module SZ = FStar.SizeT
+module R = Pulse.Lib.Reference
+module S = Pulse.Lib.Slice
 #lang-pulse
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
@@ -951,6 +963,28 @@ fn jump_raw_data_item (_: unit) : jumper #raw_data_item #parse_raw_data_item_kin
     input offset #pm #v
 }
 
+(* Workaround for https://github.com/FStarLang/FStar/issues/4498 : hiding the
+   represented value behind an opaque existential binder prevents the core
+   typechecker from unfolding the scrutinee of a stuck projection such as
+   `dfst (synth_raw_data_item_recip v)`, which it then rejects because `v` is
+   ghost. *)
+noextract [@@noextract_to "krml"]
+ghost
+fn pts_to_serialized_hide
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: t)
+requires pts_to_serialized s input #pm v
+ensures exists* v' . pts_to_serialized s input #pm v' ** pure (v' == v) **
+  trade (pts_to_serialized s input #pm v') (pts_to_serialized s input #pm v)
+{
+  Trade.refl (pts_to_serialized s input #pm v)
+}
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn get_header_and_contents
@@ -978,7 +1012,9 @@ fn get_header_and_contents
     synth_raw_data_item_recip
     input;
   LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  pts_to_serialized_hide (serialize_dtuple2 serialize_header serialize_content) input;
   with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   let ph, outc = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
   unfold (split_dtuple2_post serialize_header serialize_content input pm v' (ph, outc));
   unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
@@ -986,8 +1022,7 @@ fn get_header_and_contents
   let h = read_header () ph;
   Trade.elim_hyp_l _ _ _;
   outh := h;
-  rewrite each dfst (synth_raw_data_item_recip
-                      v) as h;
+  rewrite each dfst v' as h;
   outc
 }
 
@@ -1421,6 +1456,11 @@ ensures exists* v' .
 #pop-options
 
 inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_header (_: unit) : jumper (parser_of_tot_parser parse_raw_data_item_param.parse_header) =
+  jump_leaf ()
+
+inline_for_extraction
 fn impl_holds_on_raw_data_item
   (p: Ghost.erased (raw_data_item -> bool))
   (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
@@ -1431,5 +1471,5 @@ fn impl_holds_on_raw_data_item
   returns res: bool
   ensures pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
 {
-  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf ()) (holds_on_raw_data_item_pred p) impl_p input
+  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf_header ()) (jump_recursive_step_count_leaf ()) (holds_on_raw_data_item_pred p) impl_p input
 }

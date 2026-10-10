@@ -10,7 +10,7 @@ let rec list_sum_memP (#t: Type) (f: t -> nat) (l: list t) (x: t) : Lemma
   (requires (List.Tot.memP x l))
   (ensures (f x <= list_sum f l))
 = let a :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (x == a)
+  if FStar.IndefiniteDescription.strong_excluded_middle (x == a)
   then ()
   else list_sum_memP f q x
 

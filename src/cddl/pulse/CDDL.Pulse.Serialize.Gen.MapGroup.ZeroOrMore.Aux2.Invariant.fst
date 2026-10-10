@@ -1,5 +1,11 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Invariant
 
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux1
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module U64 = FStar.UInt64
+module Map = CDDL.Spec.Map
 let impl_serialize_map_zero_or_more_iterator_gen_invariant
   (#pe: cbor_parser)
   (#minl: (cbor_min_length pe))

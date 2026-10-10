@@ -34,7 +34,7 @@ let parse_der_length_payload32_bare
       match res with
       | None -> None
       | Some (z, consumed) ->
-        if U32.v z >= pow2 (8 `op_Multiply` (len - 1))
+        if U32.v z >= pow2 (8 `op_Star` (len - 1))
         then Some ((z <: refine_with_tag tag_of_der_length32 x), consumed)
         else None
 

@@ -84,7 +84,6 @@ make_everparse() {
     export EVERPARSE_USE_OPAMROOT=
     export EVERPARSE_USE_FSTAR_EXE=
     export EVERPARSE_USE_KRML_EXE=
-    export EVERPARSE_USE_PULSE_HOME=
     rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
     # Rebuild EverParse
@@ -150,11 +149,8 @@ make_everparse() {
 
     # Copy F*
     cp -L $FSTAR_PKG_ROOT/bin/* everparse/bin/
-    mkdir -p everparse/lib/fstar/
-    cp -L $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
-    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
-    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
-    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/pluginlib everparse/lib/fstar/pluginlib
+    mkdir -p everparse/lib
+    $cp -L -r $FSTAR_PKG_ROOT/lib/fstar everparse/lib/
     z3_version=4.13.3
     if ! z3=$(which z3-$z3_version$exe) ; then
 	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
@@ -163,7 +159,7 @@ make_everparse() {
 	fi
     fi
     if [[ -z "$z3" ]] ; then
-	cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version everparse/lib/fstar/z3-$z3_version
+	true
     else
 	mkdir -p everparse/lib/fstar/z3-$z3_version/bin
 	cp -r $z3 everparse/lib/fstar/z3-$z3_version/bin/z3$exe
@@ -209,7 +205,6 @@ make_everparse() {
     #     directory;
     #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
     #     self-contained Low*-compatible runtime generated from Pulse;
-    #   - lib/pulse: the Pulse standard library, also on the --include path.
     # src/lowparse/pulse is already covered by the src/lowparse copy above, and
     # EverParsePulse{,Endianness}.h are copied out to the output directory by
     # the copy_everparse_h micro-step.
@@ -226,7 +221,6 @@ make_everparse() {
         # means of producing them.
         rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile everparse/lib/everparse/3d/krml/header.Makefile
         rm -f everparse/lib/everparse/3d/krml/extracted/.depend
-        $cp -r $PULSE_HOME/lib/pulse everparse/lib/
     fi
 
     if $is_windows ; then
@@ -259,6 +253,8 @@ make_everparse() {
     if $is_windows ; then
         chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe
 	chmod a+x everparse/lib/fstar/z3-*/bin/*.dll || true
+    else
+        chmod a+x everparse/bin/*
     fi
 
     # licenses

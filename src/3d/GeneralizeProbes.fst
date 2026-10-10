@@ -23,7 +23,6 @@ module GeneralizeProbes
   probed types to 32- or 64-bit layouts
 
 *)
-open FStar.Mul
 open FStar.List.Tot
 open Ast
 open FStar.All

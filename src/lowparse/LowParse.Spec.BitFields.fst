@@ -65,7 +65,10 @@ let synth_bitfield_injective (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat)
     synth_bitfield_injective' cl 0 tot l x y;
     BF.get_bitfield_full (cl.v x);
     BF.get_bitfield_full (cl.v y);
-    assert (cl.uint_to_t (cl.v x) == cl.uint_to_t (cl.v y)))
+    assert (cl.v x == cl.v y);
+    cl.uint_to_t_v x;
+    cl.uint_to_t_v y;
+    assert (x == y))
 
 #push-options "--z3rlimit 128"
 

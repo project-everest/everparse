@@ -102,7 +102,7 @@ let make_asn1_choice_parser
   (k : asn1_k s)
   (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)))
   : 
-  Pure (asn1_strong_parser (asn1_t k))
+  Pure (LowParse.Tot.Base.parser asn1_strong_parser_kind (asn1_t k))
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
   (ensures fun _ -> True)
 = weaken asn1_strong_parser_kind (make_gen_choice_strong_parser parse_asn1_identifier_U32 lp)
@@ -115,7 +115,7 @@ let make_asn1_choice_parser_twin
   (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)))
   (id' : asn1_id_t)
   : 
-  Pure (asn1_strong_parser (asn1_t k))
+  Pure (LowParse.Tot.Base.parser asn1_strong_parser_kind (asn1_t k))
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
   (ensures fun _ -> True)
 = parse_tagged_union_payload (project_tags lp) (make_gen_choice_strong_payload_parser lp) id'
@@ -129,5 +129,31 @@ let make_asn1_choice_parser_twin_cases_injective
   : 
   Lemma 
   (requires (s == Set.as_set (List.map fst lc)) /\ (k == ASN1_CHOICE_ILC lc pf) /\ (asn1_lc_t lc == extract_types lp))
-  (ensures and_then_cases_injective (make_asn1_choice_parser_twin lc pf k lp))
+  (ensures and_then_cases_injective (fun id' -> make_asn1_choice_parser_twin lc pf k lp id'))
 = parse_tagged_union_payload_and_then_cases_injective (project_tags lp) (make_gen_choice_strong_payload_parser lp)
+
+let make_asn1_choice_parser_twin_cases
+  (lc : list (asn1_id_t & asn1_content_k))
+  (pf : squash (List.noRepeats (List.map fst lc)))
+  (#s : _)
+  (k : asn1_k s)
+  (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)))
+: Pure (
+    fp:
+      (asn1_id_t ->
+        LowParse.Tot.Base.parser asn1_strong_parser_kind (asn1_t k))
+      { and_then_cases_injective fp }
+  )
+  (requires (s == Set.as_set (List.map fst lc)) /\
+            (k == ASN1_CHOICE_ILC lc pf) /\
+            (asn1_lc_t lc == extract_types lp))
+  (ensures fun _ -> True)
+= let fp =
+    parse_tagged_union_payload
+      (project_tags lp)
+      (make_gen_choice_strong_payload_parser lp)
+  in
+  parse_tagged_union_payload_and_then_cases_injective
+    (project_tags lp)
+    (make_gen_choice_strong_payload_parser lp);
+  fp

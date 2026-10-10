@@ -1,5 +1,10 @@
 module CBOR.Spec.Raw.DataModel
 
+include CBOR.Spec.Constants
+module U64 = FStar.UInt64
+module FS = FStar.FiniteSet.Base
+module U = CBOR.Spec.Util
+open CBOR.Spec.Raw.Base
 module R = CBOR.Spec.Raw.Sort
 
 let cbor_bool
@@ -388,7 +393,7 @@ let cast_from_cbor #order #compare (x: cbor order compare) : Tot R.raw_data_item
 let cbor_list_of_list_cbor #order #compare (l: list (cbor order compare)) : Tot (list R.raw_data_item) =
   List.Tot.map cast_from_cbor l
 
-let cbor_list_of_list_cbor_correct
+let rec cbor_list_of_list_cbor_correct
   #order #compare
   (l: list (cbor order compare))
 : Lemma
@@ -397,11 +402,9 @@ let cbor_list_of_list_cbor_correct
    List.Tot.for_all (R.holds_on_raw_data_item (R.raw_data_item_sorted_elem order)) l' == true
   ))
   [SMTPat (cbor_list_of_list_cbor l)]
-= U.list_for_all_truep l;
-  assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
-  assert_norm (R.raw_data_item_sorted order == R.holds_on_raw_data_item (R.raw_data_item_sorted_elem order));
-  U.list_for_all_map cast_from_cbor l U.truep R.raw_data_item_ints_optimal (fun _ -> ());
-  U.list_for_all_map cast_from_cbor l U.truep (R.raw_data_item_sorted order)  (fun _ -> ())
+= match l with
+  | [] -> ()
+  | _ :: tl -> cbor_list_of_list_cbor_correct tl
 
 let pack #order #compare x =
   let m : R.raw_data_item = match x with

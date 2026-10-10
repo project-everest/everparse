@@ -892,7 +892,7 @@ fn l2r_safe_writer_bounded_vldata_strong_payload
         vldata_total_fits_lemma l (SZ.v res) max;
         SZ.fits_lte (SZ.v l_sz + SZ.v res) (SZ.v lout);
         let n_u32 = SZ.sizet_to_uint32 res;
-        M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
+        M.pow2_le_compat (op_Star 8 l) (op_Star 8 (log256' max));
         let write_hdr = LPPI.write_bounded_integer_header l l_sz;
         write_hdr n_u32 hdr #hdr0 l_sz;
         with hdr_written. assert (S.pts_to hdr hdr_written);
@@ -943,7 +943,8 @@ let serialize_bounded_vldata_bytes_eq
       (serialize (serialize_bounded_integer (log256' max)) (U32.uint_to_t (Seq.length (serialize s x))))
       (serialize s x)
   )
-= let x' : parse_bounded_vldata_strong_t min max s = x in
+= serialize_length s x;
+  let x' : parse_bounded_vldata_strong_t min max s = x in
   serialize_bounded_vldata_strong_bytes_eq min max (log256' max) s x'
 
 (* The serialized length is the [log256' max]-byte header plus the payload length. *)
@@ -1102,7 +1103,7 @@ fn l2r_safe_writer_bounded_vldata_payload
         vldata_total_fits_lemma l (SZ.v res) max;
         SZ.fits_lte (SZ.v l_sz + SZ.v res) (SZ.v lout);
         let n_u32 = SZ.sizet_to_uint32 res;
-        M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
+        M.pow2_le_compat (op_Star 8 l) (op_Star 8 (log256' max));
         let write_hdr = LPPI.write_bounded_integer_header l l_sz;
         write_hdr n_u32 hdr #hdr0 l_sz;
         with hdr_written. assert (S.pts_to hdr hdr_written);

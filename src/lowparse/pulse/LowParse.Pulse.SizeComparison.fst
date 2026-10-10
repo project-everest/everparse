@@ -1,7 +1,6 @@
 module LowParse.Pulse.SizeComparison
 #lang-pulse
 open Pulse.Lib.Pervasives
-open FStar.Mul
 open LowParse.Pulse.Base
 open LowParse.Spec.VCList
 

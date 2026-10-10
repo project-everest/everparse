@@ -1,15 +1,25 @@
 module CBOR.Pulse.Raw.Format.Parse
 friend CBOR.Spec.Raw.Format
+include CBOR.Pulse.Raw.Match
+open CBOR.Spec.Raw.Format
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
+open Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
+module R = CBOR.Spec.Raw.Optimal
 #lang-pulse
 open CBOR.Pulse.Raw.EverParse.Serialized.Base
 open CBOR.Spec.Raw.EverParse
 open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
+open CBOR.Spec.Raw.Format // must come last, to match the interface's resolution
 
 module CompareBytes = CBOR.Pulse.Raw.Compare.Bytes
 
-#push-options "--split_queries no --fuel 0 --ifuel 0"
+#push-options " --fuel 0 --ifuel 0"
 #push-options "--z3rlimit_factor 4"
 let parse_fail_no_serialize
   (v: Seq.seq U8.t)
@@ -19,7 +29,7 @@ let parse_fail_no_serialize
 = introduce forall v1 v2.
     (v == serialize_cbor v1 `Seq.append` v2) ==> False
   with introduce _ ==> _
-  with _ . (
+  with (
     parse_strong_prefix #parse_raw_data_item_kind #raw_data_item parse_raw_data_item (serialize_cbor v1) v
   )
 #pop-options
@@ -93,17 +103,15 @@ let cbor_parse_aux
     = parsed_data_is_serialize #parse_raw_data_item_kind #raw_data_item #parse_raw_data_item serialize_raw_data_item v;
       serialize_strong_prefix serialize_raw_data_item v1 v' v2 (Seq.slice v consumed (Seq.length v))
     in
-    Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (prf v1) v2);
+    Classical.forall_intro_2 (Classical.move_requires_2 prf);
     ()
 
-module Trade = Pulse.Lib.Trade.Util
 
 #push-options "--z3rlimit 16"
 
 #restart-solver
 
 module U64 = FStar.UInt64
-module U8 = FStar.UInt8
 
 #restart-solver
 #push-options "--fuel 1"
@@ -367,8 +375,25 @@ fn split_nondep_then_tot_kind
 module GR = Pulse.Lib.GhostReference
 module Ref = Pulse.Lib.Reference
 
+#push-options "--fuel 1 --ifuel 1"
+
+let hd_map_payload
+  (n: nat)
+  (va: LowParse.Spec.VCList.nlist n parse_raw_data_item_param.t)
+  (h: header)
+: Ghost (list (raw_data_item & raw_data_item))
+  (requires (
+    Cons? va /\
+    h == get_raw_data_item_header (List.Tot.hd va) /\
+    get_header_major_type h == cbor_major_type_map
+  ))
+  (ensures (fun res -> Map? (List.Tot.hd va) /\ res == Map?.v (List.Tot.hd va)))
+= Map?.v (List.Tot.hd va)
+
+#pop-options
+
 #restart-solver
-// #push-options "--z3rlimit 256 --query_stats --fuel 2 --ifuel 1 --split_queries always --z3refresh"
+// #push-options "--z3rlimit 256 --query_stats --fuel 2 --ifuel 1 --z3refresh"
 #push-options "--z3rlimit 128"
 fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
 = (a: _)
@@ -426,12 +451,10 @@ fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ s
         input2;
       Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
       with v3 . assert (pts_to_serialized (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l) input3 #pm v3);
-      let l0 : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (Map?.v (List.Tot.hd va));
-      assert (pure (list_of_pair_list raw_data_item (U64.v nbpairs) l0 == fst v3));
+      let l0 : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (hd_map_payload (SZ.v n) va h);      assert (pure (list_of_pair_list raw_data_item (U64.v nbpairs) l0 == fst v3));
       sorted2_correct deterministically_encoded_cbor_map_key_order (U64.v nbpairs) l0;
       let n' : erased nat = SZ.v n - 1;
-      let k : Ghost.erased parser_kind = Ghost.hide (LowParse.Spec.VCList.parse_nlist_kind n' parse_raw_data_item_kind);
-      let p : parser k (LowParse.Spec.VCList.nlist n' raw_data_item) = coerce_eq () ( LowParse.Spec.VCList.parse_nlist n' (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)));
+      let p = LowParse.Spec.VCList.parse_nlist n' (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param));
       let s : serializer p = LowParse.Spec.VCList.serialize_nlist n' (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param));
       pts_to_serialized_ext_trade_gen
         (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
@@ -484,6 +507,7 @@ fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ s
           vn == U64.v vpairs + U64.v vpairs /\
           List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l0 == (vres && sorted2 deterministically_encoded_cbor_map_key_order (vkey :: vvalue :: fst vtail))
         )
+      decreases %[(if !pres then 1 else 0); (U64.v (!ppairs))] // fstar2 only
       {
         with vn stail vtail . assert (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail);
         let tail = !ptail;
@@ -568,7 +592,7 @@ let cbor_validate_det_fail
     (ensures False)
   = serialize_cbor_inj v1 v1' v2 v2' 
   in
-  Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (aux v1) v2)
+  Classical.forall_intro_2 (Classical.move_requires_2 aux)
 
 #restart-solver
 

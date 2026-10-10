@@ -305,8 +305,8 @@ fn impl_copyful_tagged_none
   with rv . assert (r rhs rv);
   let resv = Ghost.hide (lhs, rv);
   let res = (lhs, rhs);
-  rewrite (r rhs rv) as (r (snd res) (snd resv));
-  fold (rel_pure U64.t (fst res) (fst resv));
+  rewrite (r rhs rv) as (r (pair_snd res) (pair_snd resv));
+  fold (rel_pure U64.t (pair_fst res) (pair_fst resv));
   fold (rel_pair (rel_pure U64.t) r res resv);
   res
 }
@@ -360,8 +360,8 @@ fn impl_zero_copy_tagged_none
   with rv . assert (r rhs rv);
   let resv = Ghost.hide (lhs, rv);
   let res = (lhs, rhs);
-  rewrite (r rhs rv) as (r (snd res) (snd resv));
-  fold (rel_pure U64.t (fst res) (fst resv));
+  rewrite (r rhs rv) as (r (pair_snd res) (pair_snd resv));
+  fold (rel_pure U64.t (pair_fst res) (pair_fst resv));
   fold (rel_pair (rel_pure U64.t) r res resv);
   intro
     (Trade.trade
@@ -372,8 +372,8 @@ fn impl_zero_copy_tagged_none
     fn _
   {
     unfold (rel_pair (rel_pure U64.t) r res resv);
-    unfold (rel_pure U64.t (fst res) (fst resv));
-    rewrite (r (snd res) (snd resv)) as (r rhs rv);
+    unfold (rel_pure U64.t (pair_fst res) (pair_fst resv));
+    rewrite (r (pair_snd res) (pair_snd resv)) as (r rhs rv);
     Trade.elim _ _
   };
   res
@@ -476,7 +476,7 @@ fn impl_zero_copy_any
     c = c;
     p = p;
   };
-  rewrite (vmatch p c v) as (vmatch res.p res.c v);
+  rewrite (vmatch p c v) as (vmatch (cwp_p res) (cwp_c res) v);
   fold (rel_cbor_not_freeable vmatch false res v);
   intro
     (Trade.trade
@@ -487,7 +487,7 @@ fn impl_zero_copy_any
     fn _
   {
     unfold (rel_cbor_not_freeable vmatch false res v);
-    rewrite (vmatch res.p res.c v) as (vmatch p c v);
+    rewrite (vmatch (cwp_p res) (cwp_c res) v) as (vmatch p c v);
   };
   res
 }

@@ -1,12 +1,20 @@
 module CBOR.Pulse.API.Nondet.Rust
+open CBOR.Spec.Constants
+open Pulse.Lib.Pervasives
+module Spec = CBOR.Spec.API.Format
+module Trade = Pulse.Lib.Trade.Util
+module U8 = FStar.UInt8
+module U64 = FStar.UInt64
+module S = Pulse.Lib.Slice
+module SZ = FStar.SizeT
+module Base = CBOR.Pulse.API.Base
+module PM = Pulse.Lib.SeqMatch
 #lang-pulse
 
 (* NOTE: this .fst file does not need anything from the Raw namespace,
 but it has been moved here to be hidden from verified clients. *)
 
 module Nondet = CBOR.Pulse.Raw.Nondet
-
-module C = C // necessary to pull C.krml into extraction, otherwise Karamel fails with "`C._zero_for_deref`: impossible", believing that it is a non-function external symbol, which Karamel extraction to Rust does not support
 
 (* Validation, parsing and serialization *)
 
@@ -23,7 +31,10 @@ let cbor_nondet_share () = Nondet.cbor_nondet_share ()
 
 let cbor_nondet_gather () = Nondet.cbor_nondet_gather ()
 
-let cbor_nondet_parse () map_key_bound strict_check input #pm #v = Nondet.cbor_nondet_parse () map_key_bound strict_check input #pm #v
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_aux : Base.cbor_nondet_parse_t cbor_nondet_match = Nondet.cbor_nondet_parse ()
+
+let cbor_nondet_parse () map_key_bound strict_check input #pm #v = cbor_nondet_parse_aux map_key_bound strict_check input #pm #v
 
 let cbor_nondet_match_with_size = Nondet.cbor_nondet_match_with_size
 

@@ -149,6 +149,32 @@ let read_enum_key_if
   else sv_false () sq
 
 inline_for_extraction
+let parse_enum_key_synth_reader
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (x: parse_filter_refine (parse_enum_key_cond e))
+: GTot (enum_key e)
+= parse_enum_key_synth e x
+
+inline_for_extraction
+let serialize_enum_key_synth_recip_reader
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (x: enum_key e)
+: GTot (parse_filter_refine (parse_enum_key_cond e))
+= serialize_enum_key_synth_recip e x
+
+inline_for_extraction
+let serialize_enum_key_synth_inverse_eta
+  (#key #repr: eqtype)
+  (e: enum key repr)
+: Lemma
+  (synth_inverse
+    (parse_enum_key_synth_reader e)
+    (serialize_enum_key_synth_recip_reader e))
+= Classical.forall_intro (fun k -> enum_key_of_repr_of_key e k)
+
+inline_for_extraction
 let read_enum_key
   (#key #repr: eqtype)
   (#k: Ghost.erased parser_kind) (#p: parser k repr)
@@ -157,12 +183,14 @@ let read_enum_key
   (destr: dep_maybe_enum_destr_t e (read_enum_key_t e))
   (_: squash (k.parser_kind_subkind == Some ParserStrong))
 : Tot (leaf_reader (parse_enum_key p e))
-= serialize_enum_key_synth_inverse e;
+= [@inline_let] let _ = serialize_enum_key_synth_inverse_eta e in
   leaf_reader_of_reader
     (read_synth
+      #_ #_ #_
       (read_filter (reader_of_leaf_reader r) (parse_enum_key_cond e))
-      (parse_enum_key_synth e)
-      (serialize_enum_key_synth_recip e)
+      #(enum_key e)
+      (parse_enum_key_synth_reader e)
+      (serialize_enum_key_synth_recip_reader e)
       (fun (x: parse_filter_refine (parse_enum_key_cond e)) ->
         [@inline_let] let _ = assert (maybe_enum_key_of_repr e x == Known (enum_key_of_repr e x)) in
         read_synth_cont_init

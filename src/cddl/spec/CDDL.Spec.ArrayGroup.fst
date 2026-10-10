@@ -1,5 +1,7 @@
 module CDDL.Spec.ArrayGroup
 
+include CDDL.Spec.Base
+module Cbor = CBOR.Spec.API.Type
 let array_group_concat_assoc
   (#b: _)
   (a1 a2 a3: array_group b)
@@ -128,7 +130,7 @@ let array_group_concat_unique_strong_elim2
       (l1 l2: (l: list Cbor.cbor { opt_precedes_list l b }))
   : Lemma
     ((Some? (a3 l2) /\ a1 (l1 `List.Tot.append` l2) == Some (l1, l2)) ==> a1 l1 == Some (l1, []))
-  = if FStar.StrongExcludedMiddle.strong_excluded_middle (Some? (a3 l2) /\ a1 (l1 `List.Tot.append` l2) == Some ((l1 <: list _), (l2 <: list _)))
+  = if FStar.IndefiniteDescription.strong_excluded_middle (Some? (a3 l2) /\ a1 (l1 `List.Tot.append` l2) == Some ((l1 <: list _), (l2 <: list _)))
     then begin
       let Some (l3, rem) = a3 l2 in
       let l' = l1 `List.Tot.append` l3 in
@@ -180,7 +182,7 @@ let array_group_concat_unique_strong'_strong_prefix
     (l1 l2: (l: list Cbor.cbor { opt_precedes_list l b }))
   : Lemma
     (a l1 == Some (l1, []) ==> a (l1 `List.Tot.append` l2) == Some (l1, l2))
-  = if FStar.StrongExcludedMiddle.strong_excluded_middle (a l1 == Some (l1, []))
+  = if FStar.IndefiniteDescription.strong_excluded_middle (a l1 == Some (l1, []))
     then begin
       let Some (l11, l12) = a1 l1 in
       List.Tot.append_assoc l11 l12 l2
@@ -313,7 +315,6 @@ let array_group_concat_unique_strong_zero_or_more_right
   ))
 = ()
 
-#push-options "--split_queries always"
 let array_group_concat_unique_strong'_zero_or_more_left
   #b (a1 a2: array_group b)
 : Lemma
@@ -335,7 +336,7 @@ let array_group_concat_unique_strong'_zero_or_more_left
     (decreases (List.Tot.length l1))
   = if Some? (a2 l2)
     then begin
-      if FStar.StrongExcludedMiddle.strong_excluded_middle (array_group_zero_or_more a1 l1 == Some (l1, []))
+      if FStar.IndefiniteDescription.strong_excluded_middle (array_group_zero_or_more a1 l1 == Some (l1, []))
       then
         match a1 l1 with
         | None -> ()
@@ -350,7 +351,7 @@ let array_group_concat_unique_strong'_zero_or_more_left
             List.Tot.append_l_nil l1rl;
             prf l1r l2
           end
-      else if FStar.StrongExcludedMiddle.strong_excluded_middle (array_group_zero_or_more a1 (l1 `List.Tot.append` l2) == Some (l1, l2))
+      else if FStar.IndefiniteDescription.strong_excluded_middle (array_group_zero_or_more a1 (l1 `List.Tot.append` l2) == Some (l1, l2))
       then begin
         match a1 (l1 `List.Tot.append` l2) with
         | None -> ()
@@ -374,7 +375,6 @@ let array_group_concat_unique_strong'_zero_or_more_left
 let array_group_concat_unique_strong_zero_or_more_left
   #b (a1 a2: array_group b)
 = array_group_concat_unique_strong'_zero_or_more_left a1 a2
-#pop-options
 
 let array_group_concat_unique_weak_intro
   #b (a1 a3: array_group b)
@@ -436,7 +436,7 @@ let array_group_concat_unique_strong_implies_weak
   (array_group_concat_unique_strong a1 a3 ==> array_group_concat_unique_weak a1 a3)
 = ()
 
-#push-options "--z3rlimit 128 --fuel 4 --ifuel 4"
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 #restart-solver
 
 let array_group_concat_unique_weak_concat_zero_or_more_right
@@ -505,7 +505,7 @@ let array_group_concat_unique_weak_zero_or_more_left'
     (ensures ((a1 l1 == Some (l1, []) /\ a3 l2 == Some (l2, [])) ==>
     a1 (l1 `List.Tot.append` l2) == Some (l1, l2)))
     (decreases (List.Tot.length l1))
-  = if FStar.StrongExcludedMiddle.strong_excluded_middle (a1 l1 == Some (l1, []) /\ a3 l2 == Some (l2, []))
+  = if FStar.IndefiniteDescription.strong_excluded_middle (a1 l1 == Some (l1, []) /\ a3 l2 == Some (l2, []))
     then match a10 l1 with
     | None -> ()
     | Some (l1l, l1r) ->
@@ -527,7 +527,7 @@ let array_group_concat_unique_weak_zero_or_more_left'
         a3 l2 == Some (l2, [])
     ))))
     (decreases (List.Tot.length l))
-  = if FStar.StrongExcludedMiddle.strong_excluded_middle (array_group_concat a1 a3 l == Some (l, []))
+  = if FStar.IndefiniteDescription.strong_excluded_middle (array_group_concat a1 a3 l == Some (l, []))
     then match a10 l with
     | None -> ()
     | Some (l1l, l1r) ->
@@ -549,7 +549,7 @@ let array_group_concat_unique_weak_zero_or_more_left
   #b (a1 a2: array_group b)
 = array_group_concat_unique_weak_zero_or_more_left' a1 (close_array_group a2)
 
-#push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
+#push-options "--z3rlimit 128 --z3rlimit_factor 4 --fuel 2 --ifuel 2"
 #restart-solver
 
 let array_group_concat_unique_weak_zero_or_more_right
@@ -588,7 +588,7 @@ let array_group_concat_unique_weak_zero_or_more'
     (ensures ((a1 l1 == Some (l1, []) /\ a3 l2 == Some (l2, [])) ==>
     a1 (l1 `List.Tot.append` l2) == Some (l1, l2)))
     (decreases (List.Tot.length l1))
-  = if FStar.StrongExcludedMiddle.strong_excluded_middle (a1 l1 == Some (l1, []) /\ a3 l2 == Some (l2, []))
+  = if FStar.IndefiniteDescription.strong_excluded_middle (a1 l1 == Some (l1, []) /\ a3 l2 == Some (l2, []))
     then match a10 l1 with
     | None -> ()
     | Some (l1l, l1r) ->
@@ -610,7 +610,7 @@ let array_group_concat_unique_weak_zero_or_more'
         a3 l2 == Some (l2, [])
     ))))
     (decreases (List.Tot.length l))
-  = if FStar.StrongExcludedMiddle.strong_excluded_middle (array_group_concat a1 a3 l == Some (l, []))
+  = if FStar.IndefiniteDescription.strong_excluded_middle (array_group_concat a1 a3 l == Some (l, []))
     then match a10 l with
     | None -> ()
     | Some (l1l, l1r) ->
@@ -675,9 +675,9 @@ let array_group_concat_unique_strong'_concat_left
     (Some? (a3 l2) ==> (a1 (l1 `List.Tot.append` l2) == Some (l1, l2) <==> a1 l1 == Some (l1, [])))
   = if Some? (a3 l2)
     then begin
-      if FStar.StrongExcludedMiddle.strong_excluded_middle (a1 (l1 `List.Tot.append` l2) == Some (l1, l2))
+      if FStar.IndefiniteDescription.strong_excluded_middle (a1 (l1 `List.Tot.append` l2) == Some (l1, l2))
       then assert (a1 l1 == Some (l1, []))
-      else if FStar.StrongExcludedMiddle.strong_excluded_middle (a1 l1 == Some (l1, []))
+      else if FStar.IndefiniteDescription.strong_excluded_middle (a1 l1 == Some (l1, []))
       then begin
         let Some (lg1, lg2) = g1 l1 in
         assert (g1 lg1 == Some (lg1, []));

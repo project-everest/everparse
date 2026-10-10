@@ -3110,6 +3110,11 @@ let l2r_safe_writer_dsum_postcond_lemma
 
 // Postcondition lemma for the no-room path: the output is untouched and shorter
 // than the (constant-size) tag, hence shorter than the whole serialization.
+let add_nat_ge_left
+  (a b: nat)
+: Lemma (a + b >= a)
+= ()
+
 let l2r_safe_writer_dsum_noroom_lemma
   (t: dsum)
   (#kt: parser_kind)
@@ -3151,7 +3156,25 @@ let l2r_safe_writer_dsum_noroom_lemma
     Seq.lemma_len_append
       (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) tg)
       (serialize (serialize_dsum_cases t f sr g sg tg) yh);
-    assert (Seq.length (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) k) == SZ.v tag_sz)
+    assert (Seq.length (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) k) == SZ.v tag_sz);
+    assert (dsum_conv t mid_of_tag conv_of_tag m == Some yh);
+    assert (serialize (serialize_dsum t s f sr g sg) yh ==
+      Seq.append
+        (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) tg)
+        (serialize (serialize_dsum_cases t f sr g sg tg) yh));
+    assert (tg == k);
+    Seq.lemma_len_append
+      (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) tg)
+      (serialize (serialize_dsum_cases t f sr g sg tg) yh);
+    assert (Seq.length (serialize (serialize_dsum t s f sr g sg) yh) ==
+      Seq.length (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) tg) +
+      Seq.length (serialize (serialize_dsum_cases t f sr g sg tg) yh));
+    assert (Seq.length (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) tg)
+      == SZ.v tag_sz);
+    add_nat_ge_left
+      (Seq.length (serialize (serialize_maybe_enum_key _ s (dsum_enum t)) tg))
+      (Seq.length (serialize (serialize_dsum_cases t f sr g sg tg) yh));
+    assert (Seq.length (serialize (serialize_dsum t s f sr g sg) yh) >= SZ.v tag_sz)
 
 inline_for_extraction
 fn l2r_safe_writer_dsum

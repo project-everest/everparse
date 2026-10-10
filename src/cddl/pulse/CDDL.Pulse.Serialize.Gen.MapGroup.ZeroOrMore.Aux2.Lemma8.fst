@@ -1,5 +1,6 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma8
 
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Invariant
 module Map = CDDL.Spec.Map
 module Set = CDDL.Spec.Set
 module S = Pulse.Lib.Slice

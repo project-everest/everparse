@@ -47,7 +47,7 @@ let injective_precond
   (#t: Type)
   (p: bare_parser t)
   (b1 b2: bytes)
-: GTot Type0
+: GTot prop
 = Some? (parse p b1) /\
   Some? (parse p b2) /\ (
     let (Some (v1, len1)) = parse p b1 in
@@ -73,7 +73,7 @@ let injective_postcond
   (#t: Type)
   (p: bare_parser t)
   (b1 b2: bytes)
-: GTot Type0
+: GTot prop
 = Some? (parse p b1) /\
   Some? (parse p b2) /\ (
     let (Some (v1, len1)) = parse p b1 in
@@ -96,7 +96,7 @@ let injective_postcond_ext
   ))
 = ()
 
-let injective (#t: Type) (p: bare_parser t) : GTot Type0 =
+let injective (#t: Type) (p: bare_parser t) : GTot prop =
   forall (b1 b2: bytes) . {:pattern (injective_precond p b1 b2) \/ (injective_postcond p b1 b2)}
   injective_precond p b1 b2 ==>
   injective_postcond p b1 b2
@@ -118,7 +118,7 @@ let no_lookahead_on_precond
   (#t: Type)
   (f: bare_parser t)
   (x x' : bytes)
-: GTot Type0
+: GTot prop
 = Some? (parse f x) /\ (
     let (Some v) = parse f x in
     let (_, off) = v in
@@ -130,7 +130,7 @@ let no_lookahead_on_postcond
   (#t: Type)
   (f: bare_parser t)
   (x x' : bytes)
-: GTot Type0
+: GTot prop
 = Some? (parse f x) ==> (
   let (Some v) = parse f x in
   let (y, off) = v in
@@ -145,7 +145,7 @@ let no_lookahead_on
   (#t: Type)
   (f: bare_parser t)
   (x x' : bytes)
-: GTot Type0
+: GTot prop
 = no_lookahead_on_precond f x x' ==> no_lookahead_on_postcond f x x'
 
 let no_lookahead_on_ext
@@ -165,7 +165,7 @@ let no_lookahead_on_ext
 let no_lookahead
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: GTot prop
 = forall (x x' : bytes) . {:pattern (no_lookahead_on_precond f x x') \/ (no_lookahead_on_postcond f x x')} no_lookahead_on f x x'
 
 let no_lookahead_ext
@@ -186,7 +186,7 @@ let no_lookahead_ext
 let consumes_all
   (#t: Type)
   (p: bare_parser t)
-: GTot Type0
+: GTot prop
 = forall (b: bytes) . {:pattern (parse p b)} Some? (parse p b) ==> (
     let (Some (_, len)) = parse p b in
     Seq.length b == len
@@ -198,7 +198,7 @@ let parses_at_least
   (sz: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: GTot prop
 = forall (s: bytes) . {:pattern (parse f s)}
   Some? (parse f s) ==> (
     let (_, consumed) = Some?.v (parse f s) in
@@ -240,7 +240,7 @@ let parses_at_most
   (sz: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: GTot prop
 = forall (s: bytes) . {:pattern (parse f s)}
   Some? (parse f s) ==> (
     let (_, consumed) = Some?.v (parse f s) in
@@ -251,7 +251,7 @@ let is_constant_size_parser
   (sz: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: GTot prop
 = forall (s: bytes) . {:pattern (parse f s)}
   Some? (parse f s) ==> (
     let (_, consumed) = Some?.v (parse f s) in
@@ -270,7 +270,7 @@ let is_total_constant_size_parser
   (sz: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: GTot prop
 = forall (s: bytes) . {:pattern (parse f s) }
   (Seq.length s < sz) == (None? (parse f s))
 
@@ -278,7 +278,7 @@ type parser_subkind =
   | ParserStrong
   | ParserConsumesAll
 
-let parser_subkind_prop (k: parser_subkind) (#t: Type) (f: bare_parser t) : GTot Type0 =
+let parser_subkind_prop (k: parser_subkind) (#t: Type) (f: bare_parser t) : GTot prop =
   match k with
   | ParserStrong ->
     no_lookahead f
@@ -322,23 +322,23 @@ let total_constant_size_parser_kind
 : Tot parser_kind
 = strong_parser_kind sz sz (Some ParserKindMetadataTotal)
 
-let parser_always_fails (#t: Type) (f: bare_parser t) : GTot Type0 =
+let parser_always_fails (#t: Type) (f: bare_parser t) : GTot prop =
   forall input . {:pattern (parse f input)} parse f input == None
 
-let parser_kind_metadata_prop (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot Type0 =
+let parser_kind_metadata_prop (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot prop =
   match k.parser_kind_metadata with
   | None -> True
   | Some ParserKindMetadataTotal -> k.parser_kind_high == Some k.parser_kind_low ==> is_total_constant_size_parser k.parser_kind_low f
   | Some ParserKindMetadataFail -> parser_always_fails f
 
-let parser_kind_prop' (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot Type0 =
+let parser_kind_prop' (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot prop =
   (k.parser_kind_injective ==> injective f) /\
   (Some? k.parser_kind_subkind ==> parser_subkind_prop (Some?.v k.parser_kind_subkind) f) /\
   parses_at_least k.parser_kind_low f /\
   (Some? k.parser_kind_high ==> (parses_at_most (Some?.v k.parser_kind_high) f)) /\
   parser_kind_metadata_prop k f
 
-val parser_kind_prop (#a:Type) (k:parser_kind) (f:bare_parser a) : GTot Type0
+val parser_kind_prop (#a:Type) (k:parser_kind) (f:bare_parser a) : GTot prop
 
 val parser_kind_prop_equiv
   (#t: Type) (k: parser_kind) (f: bare_parser t)
@@ -411,7 +411,7 @@ let is_strong
 
 let is_weaker_than
   (k1 k2: parser_kind)
-: GTot Type0
+: GTot prop
 = (Some? k1.parser_kind_metadata ==> k1.parser_kind_metadata == k2.parser_kind_metadata) /\
   ((k1.parser_kind_metadata <> Some ParserKindMetadataFail /\ k2.parser_kind_metadata <> Some ParserKindMetadataFail) ==> (
   (Some? k1.parser_kind_subkind ==> k1.parser_kind_subkind == k2.parser_kind_subkind) /\
@@ -511,37 +511,51 @@ let glb
     k `is_weaker_than` k2
 //    (forall k' . (k' `is_weaker_than` k1 /\ k' `is_weaker_than` k2) ==> k' `is_weaker_than` k)
   ))
-= match k1.parser_kind_metadata, k2.parser_kind_metadata with
+= (* NOTE: we destructure [k1] and [k2] with a single [match] each, and use the
+     bound field variables below, instead of writing [k1.parser_kind_low] etc.
+     Each record projector application on a not-yet-a-constructor argument is a
+     *stuck* projection, and recent F* normalizers re-normalize the projected
+     scrutinee once per projection instead of sharing it. Since [glb] mentions
+     each of its arguments seven times, chains of [glb] (as built by
+     [glb_list_of] over an enum, see [LowParse.Spec.Sum.weaken_parse_dsum_cases_kind])
+     then blow up exponentially in the length of the chain. A single [match]
+     forces each argument exactly once. *)
+  match k1 with
+  | Mkparser_kind' lo1 hi1 sk1 md1 inj1 ->
+  begin match k2 with
+  | Mkparser_kind' lo2 hi2 sk2 md2 inj2 ->
+  begin match md1, md2 with
   | _, Some ParserKindMetadataFail ->
   {
-    parser_kind_low = k1.parser_kind_low;
-    parser_kind_high = k1.parser_kind_high;
-    parser_kind_subkind = k1.parser_kind_subkind;
-    parser_kind_metadata = (match k1.parser_kind_metadata with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
-    parser_kind_injective = k1.parser_kind_injective;
+    parser_kind_low = lo1;
+    parser_kind_high = hi1;
+    parser_kind_subkind = sk1;
+    parser_kind_metadata = (match md1 with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
+    parser_kind_injective = inj1;
   }
   | Some ParserKindMetadataFail, _ ->
   {
-    parser_kind_low = k2.parser_kind_low;
-    parser_kind_high = k2.parser_kind_high;
-    parser_kind_subkind = k2.parser_kind_subkind;
+    parser_kind_low = lo2;
+    parser_kind_high = hi2;
+    parser_kind_subkind = sk2;
     parser_kind_metadata = None;
-    parser_kind_injective = k2.parser_kind_injective;
+    parser_kind_injective = inj2;
   }
   | _ ->
   {
-    parser_kind_low = (if k1.parser_kind_low < k2.parser_kind_low then k1.parser_kind_low else k2.parser_kind_low);
+    parser_kind_low = (if lo1 < lo2 then lo1 else lo2);
     parser_kind_high = (
-      if is_some k1.parser_kind_high `bool_and` is_some k2.parser_kind_high
-      then if some_v k2.parser_kind_high < some_v k1.parser_kind_high
-	   then k1.parser_kind_high
-	   else k2.parser_kind_high
+      if is_some hi1 `bool_and` is_some hi2
+      then if some_v hi2 < some_v hi1
+	   then hi1
+	   else hi2
       else None
     );
-    parser_kind_metadata = if k1.parser_kind_metadata = k2.parser_kind_metadata then k1.parser_kind_metadata else None;
-    parser_kind_subkind = if k1.parser_kind_subkind = k2.parser_kind_subkind then k1.parser_kind_subkind else None;
-    parser_kind_injective = k1.parser_kind_injective && k2.parser_kind_injective;
+    parser_kind_metadata = if md1 = md2 then md1 else None;
+    parser_kind_subkind = if sk1 = sk2 then sk1 else None;
+    parser_kind_injective = inj1 && inj2;
   }
+  end end
 #pop-options
 #pop-options
 
@@ -703,7 +717,7 @@ let serializer_correct
   (#t: Type)
   (p: parser k t)
   (f: bare_serializer t)
-: GTot Type0
+: GTot prop
 = forall (x: t) .{:pattern (parse p (f x))} parse p (f x) == Some (x, Seq.length (f x))
 
 let serializer_correct_ext_gen
@@ -741,7 +755,7 @@ let serializer_complete
   (#t: Type)
   (p: parser k t)
   (f: bare_serializer t)
-: GTot Type0
+: GTot prop
 = forall (s: bytes) . {:pattern (parse p s)}
   Some? (parse p s) ==> (
     let (Some (x, len)) = parse p s in

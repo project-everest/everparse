@@ -6,7 +6,6 @@ open LowParse.Tot.Base
 open LowParse.Tot.Combinators
 open LowParse.Tot.Int
 
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
@@ -404,9 +403,9 @@ let lemma_parse_asn1_identifier_loop'_cases_injective'
   (state : asn1_partial_id_t {partial_state_bound_f32 state = i })
 : Lemma 
   (requires (parse_loop_continuation_spec (i + 1) c))
-  (ensures (and_then_cases_injective (parse_asn1_identifier_loop' i c state)))
+  (ensures (and_then_cases_injective (fun buf -> parse_asn1_identifier_loop' i c state buf)))
 = let p = parse_asn1_identifier_loop' i c state in
-  and_then_cases_injective_intro p (fun x1 x2 b1 b2 ->
+  and_then_cases_injective_intro (fun buf -> parse_asn1_identifier_loop' i c state buf) (fun x1 x2 b1 b2 ->
     match (parse (p x1) b1) with
     | Some (id1, l1) -> match (parse (p x2) b2) with
                  | Some (id2, l2) -> 
@@ -439,7 +438,20 @@ let lemma_parse_asn1_identifier_loop'_cases_injective
 : Lemma 
   (requires (parse_loop_continuation_spec (i + 1) c))
   (ensures (parse_loop_continuation_spec i (parse_asn1_identifier_loop' i c)))
-= Classical.forall_intro (Classical.move_requires (lemma_parse_asn1_identifier_loop'_cases_injective' i c))
+= let prf (state: asn1_partial_id_t)
+    : Lemma
+      (partial_state_bound_f32 state = i ==>
+       and_then_cases_injective (fun buf -> parse_asn1_identifier_loop' i c state buf))
+    = if partial_state_bound_f32 state = i
+      then lemma_parse_asn1_identifier_loop'_cases_injective' i c state
+      else ()
+  in
+  assert_norm (
+    parse_loop_continuation_spec i (parse_asn1_identifier_loop' i c) ==
+    (forall (state: asn1_partial_id_t).
+      partial_state_bound_f32 state = i ==>
+      and_then_cases_injective (fun buf -> parse_asn1_identifier_loop' i c state buf)));
+  Classical.forall_intro prf
 
 let rec parse_asn1_identifier_loop
   (i : nat {i <= 3})
@@ -481,7 +493,8 @@ let parse_asn1_identifier_head'
   (requires (partial_state_bound_f32 state = 0))
   (ensures (fun _ -> True))
 = let c = parse_asn1_identifier_loop 0 in
-  let _ = Squash.give_proof (Classical.Sugar.forall_elim state (Squash.get_proof (parse_loop_continuation_spec 0 c))) in
+  assert (parse_loop_continuation_spec 0 c);
+  assert (and_then_cases_injective (c state));
   weaken (parse_asn1_identifier_head_kind)  
     (parse_u8
     `and_then`
@@ -788,7 +801,11 @@ let encode_asn1_first_byte
            | _ -> 3uy
            )
   in
+  assert (U8.v b0 <= 3);
   let b0' = U8.shift_left b0 6ul in
+  UInt.shift_left_value_lemma #8 (U8.v b0) 6;
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 8 == 256);
   assert (U8.v b0' <= 128 + 64);
   let b1 = (match id_flag with
            | PRIMITIVE -> 0uy
@@ -801,7 +818,9 @@ let encode_asn1_first_byte
   U8.add b0'
          (U8.add b1'
                  b)
+#pop-options
 
+#push-options "--fuel 1 --ifuel 2 --z3rlimit 64"
 let lemma_encode_asn1_first_byte_inverse
   (buf : byte)
 : Lemma (ensures
@@ -817,7 +836,11 @@ let lemma_encode_asn1_first_byte_inverse
              )
   in
   assert (b0 = (U8.shift_right buf) 6ul);
+  assert (U8.v b0 <= 3);
   let b0' = U8.shift_left b0 6ul in
+  UInt.shift_left_value_lemma #8 (U8.v b0) 6;
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 8 == 256);
   assert (U8.v b0' <= 128 + 64);
   let b1 = (match id_flag with
            | PRIMITIVE -> 0uy

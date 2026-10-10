@@ -1,3 +1,2 @@
-FStar_hash := origin/fstar1
+FStar_hash := origin/master
 karamel_hash := origin/everparse-2026.06
-pulse_hash := origin/everparse-fstar1

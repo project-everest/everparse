@@ -136,26 +136,13 @@ let krml_locate k tmpdir =
   let ch = open_in tmpfile in
   let res = input_line ch in
   close_in ch;
-  Sys.remove tmpfile;
   res
 
 let krmllib = krml_locate "krmllib"
 
 let krmlinclude = krml_locate "include"
 
-let pulse_home =
-  try
-    Sys.getenv "PULSE_HOME"
-  with
-  | Not_found ->
-     let opt_pulse = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out" in
-     if Sys.file_exists opt_pulse
-     then opt_pulse
-     else
-       (* assume a binary package *)
-       everparse_home
-
-let z3_version = "4.13.3"
+let z3_version = Z3Version.z3_version
 
 let z3_executable_option =
   let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
@@ -181,7 +168,7 @@ let everparse_src_cddl_tool = Filename.concat everparse_src_cddl "tool"
 let everparse_home_lib = Filename.concat everparse_home "lib"
 let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
 
-let include_options krml_home_krmllib =
+let include_options =
   include_option_of_paths
     [
       everparse_src_cbor_spec;
@@ -189,9 +176,6 @@ let include_options krml_home_krmllib =
       everparse_src_cddl_spec;
       everparse_src_cddl_pulse;
       everparse_src_cddl_tool;
-      krml_home_krmllib;
-      Filename.concat krml_home_krmllib "obj";
-      Filename.concat (Filename.concat pulse_home "lib") "pulse";
       Filename.concat everparse_home_lib_evercddl "lib";
       Filename.concat everparse_home_lib_evercddl "plugin";
     ]
@@ -215,15 +199,14 @@ let include_options_for_rust =
 (* TODO: honor OTHERFLAGS. This would require implementing Bash word
    splitting, since we are using lists of arguments. *)
 
-let fstar_options krmllib =
+let fstar_options =
   z3_executable_option @
     [
       "--cache_checked_modules";
       "--warn_error"; "@241";
-      "--cmi";
       "--ext"; "context_pruning";
     ] @
-      include_options krmllib
+      include_options
 
 let admit = ref false
 
@@ -231,33 +214,41 @@ let is_rust () = !lang = "Rust"
 
 let regexp_period = Re.Posix.compile_pat "[.]"
 
-let load_krml_list dir file =
-  let res = ref [] in
-  let ch = open_in (Filename.concat dir file) in
-  let rec aux () =
-    match
-      try
-        Some (input_line ch)
-      with End_of_file -> None
-    with
-    | Some ln ->
-       res := Filename.concat dir ln :: !res;
-       aux ()
-    | None ->
-       close_in ch;
-       !res
-  in
-  aux ()
+(* The modules whose every definition is a root of the extraction.  These are
+   exactly the modules the -bundle clauses below name: karamel needs each of
+   them to hold the definitions the bundle promises, and Custard emits only
+   what a root reaches. *)
+let custard_entry_modules () =
+  (if is_rust ()
+   then
+     [
+       "CBOR.Spec.Constants";
+       "CBOR.Pulse.Raw.Type";
+       "CBOR.Pulse.Raw.Slice";
+       "CBOR.Pulse.API.Det.Rust";
+       "CBOR.Pulse.API.Det.Type";
+       "CBOR.Pulse.API.Det.Dummy";
+     ]
+   else
+     [
+       "CBOR.Spec.Constants";
+       "CBOR.Pulse.API.Det.Type";
+       "CBOR.Pulse.API.Det.C";
+       "CBOR.Pulse.API.Det.Dummy";
+     ]) @ [ !mname ]
 
-let c_krml_list =
-  load_krml_list
-    (Filename.concat everparse_src_cddl_tool "extraction-c")
-    "c.lst"
+let custard_entry_module_options () =
+  List.concat_map (fun m -> ["--custard_entry_module"; m]) (custard_entry_modules ())
 
-let rust_krml_list =
-  load_krml_list
-    (Filename.concat everparse_src_cddl_tool "extraction-rust")
-    "rust.lst"
+(* The C backend includes the library's own CBORDetType.h, which defines these
+   two; without this Custard would emit an incomplete typedef of its own for
+   each and shadow the real definition. *)
+let custard_extern_type_options =
+  List.concat_map (fun t -> ["--custard_extern_type"; t])
+    [
+      "CBOR.Pulse.API.Det.Type.cbor_det_t";
+      "CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t";
+    ]
 
 let skip_compilation = ref false
 
@@ -291,7 +282,6 @@ let _ =
   let basename = produce_fst_file tmpdir dir in
   if !fstar_only then exit 0;
   let filename = Filename.concat dir basename in
-  let krmllib = krmllib tmpdir in
   let res = run_cmd fstar_exe
     (
       [
@@ -300,7 +290,7 @@ let _ =
         "--already_cached"; ("*,-" ^ !mname);
       ] @
         (if !admit then [ "--admit_smt_queries"; "true" ] else []) @
-        fstar_options krmllib
+        fstar_options
     )
   in
   if res <> 0
@@ -309,6 +299,12 @@ let _ =
       prerr_endline "Verification failed";
       exit res
     end;
+  let mname_subst = Re.replace_string regexp_period ~by:"_" !mname in
+  let krml_file = Filename.concat dir "Custard.krml" in
+  (* Custard is a whole-program extractor: this one run compiles the generated
+     module and everything it reaches, so there is no per-module krml list to
+     hand to karamel beside it.  Every module named by a -bundle below has to
+     be rooted, because a bundle is packaging and not reachability. *)
   let res =
     run_cmd fstar_exe
       (
@@ -317,11 +313,15 @@ let _ =
           "--cache_dir"; dir;
           "--odir"; dir;
           "--already_cached"; "*,";
-          "--codegen"; "krml";
-          "--extract_module"; !mname;
+          "--codegen"; "Custard";
+          "--custard_backend"; (if is_rust () then "KrmlRust" else "KrmlC");
+          "--custard_split";
         ] @
+          custard_entry_module_options () @
+          (if is_rust () then [] else custard_extern_type_options) @
           (if is_rust () then include_options_for_rust else []) @
-          fstar_options krmllib
+          fstar_options @
+          [ "-o"; krml_file ]
       )
   in
   if res <> 0
@@ -330,8 +330,6 @@ let _ =
       prerr_endline "Extraction to krml failed";
       exit res
     end;
-  let mname_subst = Re.replace_string regexp_period ~by:"_" !mname in
-  let krml_file = Filename.concat dir (mname_subst ^ ".krml") in
   let krml_options =
     if is_rust () then
       [
@@ -346,8 +344,7 @@ let _ =
         "-tmpdir"; !odir;
         "-skip-compilation";
         krml_file;
-      ] @
-        rust_krml_list
+      ]
     else
       [
           "-warn-error"; "@1..27";
@@ -358,19 +355,19 @@ let _ =
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
         "-fnoshort-enums";
-        "-bundle"; "FStar.\\*,LowStar.\\*,C.\\*,C,PulseCore.\\*,Pulse.\\*[rename=fstar]";
+        "-bundle"; "FStar.\\*,LowStar.\\*,C.\\*,C,PulseCore.\\*,Pulse.\\*,Prims,Custard.\\*[rename=fstar]";
         "-no-prefix"; "CBOR.Pulse.API.Det.C";
         "-no-prefix"; "CBOR.Pulse.API.Det.Type";
         "-no-prefix"; "CBOR.Spec.Constants";
         "-no-prefix"; "CBOR.Pulse.API.Det.Dummy";
         "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
 	"-bundle"; (!mname ^ "=\\*");
+        "-skip-makefiles";
 	"-add-include"; "\"CBORDetType.h\"";
         "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
         "-ccopt"; "-Wno-unused-variable";
         krml_file;
-      ] @
-        c_krml_list
+      ]
   in
   let krml_tmpfile = Filename.temp_file ~temp_dir:tmpdir "krml_options" ".rsp" in
   let krml_tmpfile_out = open_out krml_tmpfile in
@@ -395,6 +392,7 @@ let _ =
       else begin
         let cc = try Sys.getenv "CC" with Not_found -> "cc" in
         let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
+        let krmllib = krmllib tmpdir in
         let krmlinclude = krmlinclude tmpdir in
         let cc_args = [
           "-I"; Filename.concat (Filename.concat krmllib "dist") "minimal";

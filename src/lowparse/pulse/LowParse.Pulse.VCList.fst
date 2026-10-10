@@ -179,7 +179,9 @@ fn jump_nlist
   ) invariant exists* n offset . (
     pts_to input #pm v ** R.pts_to pn n ** R.pts_to poffset offset ** pure (
     jump_nlist_inv #t #k p n0 offset0 v n offset)
-  ) {
+  )
+    decreases (SZ.v (!pn)) // fstar2 only
+  {
     let n = !pn;
     let offset = !poffset;
     parse_nlist_eq (SZ.v n) p (Seq.slice v (SZ.v offset) (Seq.length v));
@@ -332,7 +334,12 @@ ensures
 {
   nlist_cons_as_nondep_then s n input;
   with v' . assert (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm v');
-  let res = split_nondep_then #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
+  let res =
+    split_nondep_then #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   let s1, s2 = res;
   unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' (s1, s2));
   unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
@@ -534,7 +541,12 @@ ensures exists* v' .
   )
 {
   nlist_cons_as_nondep_then s n input;
-  let res = nondep_then_fst #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer #(parse_nlist_kind (n - 1) k) (parse_nlist (n - 1) p))) input; // FIXME: WHY WHY WHY are those reveal (hide (...)) NOT reduced?
+  let res =
+    nondep_then_fst #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
@@ -563,7 +575,12 @@ ensures exists* v' .
   )
 {
   nlist_cons_as_nondep_then s n input;
-  let res = nondep_then_fst #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer #(parse_nlist_kind (n - 1) k) (parse_nlist (n - 1) p))) input; // FIXME: WHY WHY WHY are those reveal (hide (...)) NOT reduced?
+  let res =
+    nondep_then_fst #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
@@ -592,7 +609,12 @@ ensures exists* v' .
   )
 {
   nlist_cons_as_nondep_then s n input;
-  let res = nondep_then_snd #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
+  let res =
+    nondep_then_snd #_ #(nlist (n - 1) t) s j
+      #(parse_nlist_kind (n - 1) k)
+      #(parse_nlist (n - 1) p)
+      (serialize_nlist (n - 1) s)
+      input;
   Trade.trans (pts_to_serialized (serialize_nlist (n - 1) s) res #pm _) _ _;
   res
 }
@@ -726,7 +748,9 @@ ensures exists* v .
     pure (
       nlist_nth_inv #t n0 v0 i0 i n v
     )
-  ) {
+  )
+    decreases (SZ.v i0 - SZ.v (!pi)) // fstar2 only
+  {
     with 'res. assert R.pts_to pres 'res;
     let res = !pres;
     rewrite each 'res as res;
@@ -818,6 +842,7 @@ ensures
       pure (
         List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl))
       )
+    decreases %[(if !pres then 1 else 0); (SZ.v (!pi))] // fstar2 only
     {
       with gi . assert (R.pts_to pi gi);
       with 'stl. assert R.pts_to ptl 'stl;
@@ -1033,12 +1058,14 @@ fn compute_remaining_size_nlist_as_array
       )) /\
       True
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v n - SZ.v (!pi))] // fstar2 only
+  {
     let i = !pi;
     PM.seq_list_match_length (vmatch arr) _ _;
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = A.op_Array_Access a.v i;
+    let e = A.op_Dot_Lparen_Rparen a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i - 1);
@@ -1119,7 +1146,9 @@ fn l2r_write_nlist_as_array
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
     )
-  ) {
+  )
+    decreases (SZ.v n - SZ.v (!pi)) // fstar2 only
+  {
     let i = !pi;
     let off = !pres;
     PM.seq_list_match_length (vmatch arr) _ _;
@@ -1127,7 +1156,7 @@ fn l2r_write_nlist_as_array
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     serialize_nlist_append s (SZ.v i) l1 (SZ.v n - SZ.v i) l2;
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = A.op_Array_Access a.v i;
+    let e = A.op_Dot_Lparen_Rparen a.v i;
     with ve l2' . assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     List.Tot.append_assoc l1 [ve] l2';
     let i' = SZ.add i 1sz;
@@ -1296,12 +1325,14 @@ fn compute_remaining_size_nlist_as_slice
       )) /\
       True
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v len - SZ.v (!pi))] // fstar2 only
+  {
     let i = !pi;
     PM.seq_list_match_length (vmatch arr) _ _;
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = S.op_Array_Access a.v i;
+    let e = S.op_Dot_Lparen_Rparen a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     let ni' : Ghost.erased nat = Ghost.hide (n - SZ.v i - 1);
@@ -1386,7 +1417,9 @@ fn l2r_write_nlist_as_slice
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
     )
-  ) {
+  )
+    decreases (SZ.v len - SZ.v (!pi)) // fstar2 only
+  {
     let i = !pi;
     let off = !pres;
     PM.seq_list_match_length (vmatch arr) _ _;
@@ -1394,7 +1427,7 @@ fn l2r_write_nlist_as_slice
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
     serialize_nlist_append s (SZ.v i) l1 (n - SZ.v i) l2;
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
-    let e = S.op_Array_Access a.v i;
+    let e = S.op_Dot_Lparen_Rparen a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     List.Tot.append_assoc l1 [ve] l2';

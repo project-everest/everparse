@@ -1,5 +1,6 @@
 module CBOR.Spec.API.Type
 
+include CBOR.Spec.Constants
 module RF = CBOR.Spec.Raw.Format
 module R = CBOR.Spec.Raw.Sort
 module DM = CBOR.Spec.Raw.DataModel
