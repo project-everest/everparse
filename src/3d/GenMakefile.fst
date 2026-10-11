@@ -537,8 +537,8 @@ let produce_everparse_h_rule
       from = [];
       to = mk_filename "EverParseEndianness" "h";
       (* EverParse.h rides along with this rule because it has no rule of its
-         own: the Nop below only orders it after this one (and, under --api
-         pulse, after the .c files, which copy it too via postprocess_c). *)
+         own: the Nop below carries no recipe, it only orders it. So whatever
+         that Nop waits on has to be what actually produces the file. *)
       args = "--__micro_step copy_everparse_h EverParse.h EverParseEndianness.h";
     };
   ] `List.Tot.append`
@@ -574,10 +574,12 @@ let produce_everparse_h_rule
       ty = Nop;
       (* Both APIs now ship a pre-generated EverParse.h (see
          lib/everparse/3d/krml/header.Makefile) and KaRaMeL is passed -library
-         rather than -static-header, so in either mode the prelude's copy is
-         what ends up here; a stub KaRaMeL may emit is overwritten. In --api
-         pulse mode it is overwritten by postprocess_c as each .c is produced,
-         hence the dependency on those as well. *)
+         rather than -static-header, so the client's KaRaMeL run emits no
+         EverParse.h at all and the prelude's copy, made by the rule above, is
+         what ends up here in either mode. The extra dependency on the .c files
+         under --api pulse is left over from the -static-header design, where
+         KaRaMeL did emit it alongside them; it is now only ordering, since
+         those rules run with --no_everparse_h and write no prelude header. *)
       from =
         if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::
