@@ -715,12 +715,15 @@ let go () : ML unit =
   else
   if micro_step = Some HashingOptions.MicroStepCopyEverParseH
   then
-  (* Special mode: --__micro_step copy_everparse_h *)
+  (* Special mode: --__micro_step copy_everparse_h [<header> ...]
+     The header names, if any, select which prelude headers to copy; the
+     generated EverParse.Makefile names one per rule. *)
     let _ = Batch.copy_everparse_h
       (Options.get_clang_format ())
       (Options.get_clang_format_executable ())
       (Options.get_input_stream_binding ())
       (Options.output_dir ())
+      cmd_line_files
     in
     exit 0
   else

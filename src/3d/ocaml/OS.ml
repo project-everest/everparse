@@ -120,15 +120,38 @@ let run_cmd prog args =
   then ()
   else exit ret
 
-(* Copy a file. target must be a filename *)
+(* Copy a file. target must be a filename.
+
+   The copy is atomic: the contents are streamed into a temporary file in the
+   target's directory, which is then renamed over the target. Writing straight
+   into the target would truncate it and refill it one buffer at a time, so any
+   concurrent reader could observe a half-written file. That is not theoretical:
+   the generated EverParse.Makefile chains three rules that all re-run
+   `--__micro_step copy_everparse_h`, which re-copies every prelude header each
+   time, so a parallel make happily compiles against EverParseEndianness.h while
+   a later link of the chain is rewriting it. *)
 
 let copy
   source target
 =
-  BatFile.with_file_in source (fun cin ->
-    BatFile.with_file_out target (fun cout ->
-      BatIO.copy cin cout
-  ))
+  let tmp =
+    Filename.temp_file ~temp_dir:(Filename.dirname target)
+      (Filename.basename target) ".tmp"
+  in
+  (* temp_file creates the file 0600; drop it and let with_file_out recreate it
+     with the same permissions a direct copy would have produced. *)
+  Sys.remove tmp;
+  begin
+    try
+      BatFile.with_file_in source (fun cin ->
+        BatFile.with_file_out ~perm:(BatFile.unix_perm 0o666) tmp (fun cout ->
+          BatIO.copy cin cout
+      ));
+      Sys.rename tmp target
+    with e ->
+      (try Sys.remove tmp with _ -> ());
+      raise e
+  end
 
 (* Remove file, do not fail if it does not exist *)
 
