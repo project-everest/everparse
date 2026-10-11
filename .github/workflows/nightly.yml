@@ -44,19 +44,19 @@ jobs:
           git diff --exit-code
       - name: Generate CBOR .krml files
         run: |
-          make ADMIT=1 cbor-extract-krml -kj$(nproc)
+          make cbor-extract-krml -kj$(nproc)
       - name: Generate CBOR snapshot with Karamel
         run: |
-          make ADMIT=1 cbor-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cbor -kj$(nproc)
+          make cbor-snapshot -Otarget -kj$(nproc) && make cbor -kj$(nproc)
       - name: Generate COSE .krml files
         run: |
-          make ADMIT=1 cose-extract-krml -kj$(nproc)
+          make cose-extract-krml -kj$(nproc)
       - name: Generate COSE snapshot with Karamel
         run: |
-          make ADMIT=1 cose-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cose -kj$(nproc)
+          make cose-snapshot -Otarget -kj$(nproc) && make cose -kj$(nproc)
       - name: Generate 3D doc snapshot
         run: |
-          make ADMIT=1 3d-doc-snapshot -kj$(nproc)
+          make 3d-doc-snapshot -kj$(nproc)
       - name: Stage in new snapshots
         run: |
           git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cbor/pulse/nondet/rust src/cose/c src/cose/rust &&
