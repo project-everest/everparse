@@ -319,11 +319,7 @@ let pulse_everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*"
 let pulse_everparse_only_bundle_sources =
   pulse_everparse_only_bundle ^ ",Custard.\\*"
 
-(* [tmpdir] is where KaRaMeL is told to write its output. It defaults to
-   [out_dir], but callers that may run concurrently with one another in the same
-   output directory pass a private directory instead: see produce_one_c_file. *)
-let krml_args ?tmpdir input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules =
-  let tmpdir = match tmpdir with None -> out_dir | Some d -> d in
+let krml_args input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules =
   let has_external_types modul =
     file_exists (filename_concat out_dir (Printf.sprintf "%s.ExternalTypes.fsti" modul)) in
 
@@ -473,7 +469,7 @@ let krml_args ?tmpdir input_stream_binding emit_output_types_defs add_include sk
       "-warn-error" :: "-9@4-20-26" :: [])
   in
   let krml_args =
-    "-tmpdir" :: tmpdir ::
+    "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
         backend_args @
                     "-fnoreturn-else" ::
@@ -677,24 +673,6 @@ let produce_c_files
       copy pulse_makefile_basic (filename_concat out_dir "Makefile.basic")
   )
 
-(* Create a fresh empty directory inside [parent]. Filename.temp_file gives us
-   the atomic "nobody else has this name" guarantee; we then turn the file into
-   a directory. *)
-let fresh_subdirectory parent prefix =
-  let f = Filename.temp_file ~temp_dir:parent prefix "" in
-  Sys.remove f;
-  Unix.mkdir f 0o755;
-  f
-
-let rec remove_directory d =
-  Array.iter
-    (fun e ->
-      let e = filename_concat d e in
-      if Sys.is_directory e then remove_directory e else Sys.remove e
-    )
-    (Sys.readdir d);
-  Unix.rmdir d
-
 let produce_one_c_file
       input_stream_binding
       (emit_output_types_defs: bool)
@@ -706,32 +684,21 @@ let produce_one_c_file
     : unit
   =
   (* This runs once per module, and the generated makefiles let those runs
-     proceed in parallel in a single output directory. Nothing KaRaMeL emits
-     here is shared between modules -- krml_args passes -static-header, so no
-     EverParse.h is written either -- but giving each run a private output
-     directory makes that independence structural rather than a property we
-     have to keep re-establishing. We move out only the files the run owns, and
-     drop any EverParse.h: the prelude copy in out_dir is produced by the
-     header rules (or, under --no_copy_everparse_h, by nothing at all), and is
-     none of this run's business. *)
-  let tmpdir = fresh_subdirectory out_dir (Printf.sprintf "krmlout_%s_" modul) in
-  Fun.protect ~finally:(fun () -> remove_directory tmpdir) (fun () ->
-    let krml_args = krml_args ~tmpdir input_stream_binding emit_output_types_defs add_include true out_dir ((file, modul) :: dep_files_and_modules) in
-    let krml_args =
-      krml_args@
-  (*      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ *) [
-          "-bundle" ;
-          Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
-        ]
-    in
-    call_krml input_stream_binding None out_dir krml_args;
-    Array.iter
-      (fun e ->
-        if e <> "EverParse.h"
-        then OS.copy (filename_concat tmpdir e) (filename_concat out_dir e)
-      )
-      (Sys.readdir tmpdir)
-  )
+     proceed in parallel in the same output directory. That is safe because
+     every file KaRaMeL emits here is named after [modul] -- <M>.c, <M>.h and,
+     when the module has external types, <M>_ExternalAPI.h -- so no two runs
+     ever write the same file. In particular krml_args passes -static-header,
+     which is what stops KaRaMeL from also emitting the shared EverParse.h;
+     without it, concurrent runs would race over that one file. *)
+  let krml_args = krml_args input_stream_binding emit_output_types_defs add_include true out_dir ((file, modul) :: dep_files_and_modules) in
+  let krml_args =
+    krml_args@
+(*      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ *) [
+        "-bundle" ;
+        Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
+      ]
+  in
+  call_krml input_stream_binding None out_dir krml_args
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
