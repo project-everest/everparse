@@ -946,8 +946,9 @@ let copy_everparse_h_raw
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
       (* Each API ships a pre-generated, backend-specific EverParse.h: pulse
          from lib/everparse/3d/krml/<backend>, lowstar from
-         lib/everparse/3d/krml/lowstar/<backend>. It overwrites the stub of
-         `extern` declarations that KaRaMeL emits for the -library'd runtime. *)
+         lib/everparse/3d/krml/lowstar/<backend>. KaRaMeL writes none of its own
+         -- krml_args pairs -library with -static-header -- so this is the only
+         thing that puts an EverParse.h in the output directory. *)
       let everparse_h_source = filename_concat (everparse_h_home input_stream_binding) "EverParse.h" in
       if wanted "EverParse.h" && (lowstar_api () || file_exists everparse_h_source)
       then copy everparse_h_source dest_everparse_h;
