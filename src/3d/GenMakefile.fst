@@ -536,10 +536,7 @@ let produce_everparse_h_rule
       ty = EverParse;
       from = [];
       to = mk_filename "EverParseEndianness" "h";
-      (* EverParse.h rides along with this rule because it has no rule of its
-         own: the Nop below carries no recipe, it only orders it. So whatever
-         that Nop waits on has to be what actually produces the file. *)
-      args = "--__micro_step copy_everparse_h EverParse.h EverParseEndianness.h";
+      args = "--__micro_step copy_everparse_h EverParseEndianness.h";
     };
   ] `List.Tot.append`
   (* In --api pulse mode the copy_everparse_h micro-step also copies
@@ -571,16 +568,25 @@ let produce_everparse_h_rule
   end `List.Tot.append`
   [
     {
-      ty = Nop;
+      ty = EverParse;
       (* Both APIs ship a pre-generated EverParse.h (see
-         lib/everparse/3d/krml/header.Makefile), and the prelude's copy, made by
-         the rule above, is what has to end up here in either mode. KaRaMeL
-         emits none of its own: krml_args pairs -library with -static-header
-         over the same pattern, which makes KaRaMeL drop the runtime's extern
-         declarations rather than write them to a header. pulse-cleanup-test
-         checks that nothing reinstates it. The dependency on the .c files is
-         ordering only, so that a consumer waiting on EverParse.h waits for the
-         whole generated output. *)
+         lib/everparse/3d/krml/header.Makefile), and the prelude's copy is what
+         has to end up here in either mode. KaRaMeL emits none of its own:
+         krml_args pairs -library with -static-header over the same pattern,
+         which makes KaRaMeL drop the runtime's extern declarations rather than
+         write them to a header, and produce_one_c_file extracts into a private
+         directory anyway. So this rule is the file's only writer, and it can
+         copy the file itself rather than ride on the EverParseEndianness.h
+         rule. pulse-cleanup-test checks that nothing reinstates a
+         KaRaMeL-produced one.
+
+         The prerequisites are unchanged from when this was a recipe-less Nop:
+         EverParse.h #includes EverParsePulseEndianness.h and consumers list
+         EverParse.h alone, so those have to be here, and in pulse mode the .c
+         files ride along so that a consumer waiting on the generated headers
+         waits on the whole generated output --
+         share/everparse/tests/3d/modules/Makefile's
+         `hashchk-check: $(EVERPARSE_ALL_H_FILES)` relies on that. *)
       from =
         if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::
@@ -589,7 +595,7 @@ let produce_everparse_h_rule
              List.Tot.map (fun m -> mk_filename m "c") all_modules
         else [mk_filename "EverParseEndianness" "h"];
       to = mk_filename "EverParse" "h";
-      args = "";
+      args = "--__micro_step copy_everparse_h EverParse.h";
     }
   ] else []
 
