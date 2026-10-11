@@ -574,14 +574,13 @@ let produce_everparse_h_rule
       ty = Nop;
       (* Both APIs ship a pre-generated EverParse.h (see
          lib/everparse/3d/krml/header.Makefile), and the prelude's copy, made by
-         the rule above, is what has to end up here in either mode. KaRaMeL can
-         still write an EverParse.h of its own in the client's run: the runtime
-         modules are -library'd, but Custard.\* is in the bundle's sources and
-         not in the -library list, so the client's own monomorphized instances
-         land in it. produce_c_files and produce_one_c_file therefore save and
-         restore the prelude copy around KaRaMeL, and postprocess_c removes a
-         KaRaMeL-produced one under --no_copy_everparse_h; pulse-cleanup-test
-         checks exactly that. Hence the dependency on the .c files too. *)
+         the rule above, is what has to end up here in either mode. KaRaMeL
+         emits none of its own: krml_args pairs -library with -static-header
+         over the same pattern, which makes KaRaMeL drop the runtime's extern
+         declarations rather than write them to a header. pulse-cleanup-test
+         checks that nothing reinstates it. The dependency on the .c files is
+         ordering only, so that a consumer waiting on EverParse.h waits for the
+         whole generated output. *)
       from =
         if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::

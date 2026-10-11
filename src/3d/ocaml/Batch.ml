@@ -445,8 +445,17 @@ let krml_args ?tmpdir input_stream_binding emit_output_types_defs add_include sk
      because everything the runtime contributes to them is inline_for_extraction
      and has already been inlined by F* itself.
 
-     For --api lowstar, combining -static-header with -library also suppresses
-     runtime declarations, so per-parser extraction emits no EverParse.h.
+     In both modes KaRaMeL also gets -static-header over the same pattern. On
+     its own that would ask for `static inline` definitions, but combined with
+     -library it means something else: CStarToC11 drops the `extern`
+     declarations of a library module instead of emitting them (see the
+     `is_inline_static && declared_in_library` tests there). Without it,
+     KaRaMeL writes an EverParse.h of its own holding whichever subset of those
+     declarations this client happens to reach -- a file that then shadows the
+     complete pre-generated one and breaks the build with, e.g.,
+     `'EVERPARSE_VALIDATOR_SUCCESS' undeclared`. With it, no EverParse.h is
+     emitted at all. The .c and .h files are otherwise unchanged, bar one now
+     redundant `#include "EverParse.h"` in the .c, which the .h still carries.
 
      Warning 26 (Top-type casts) is expected for the Pulse ref-dereference
      idiom, which survives in the inlined code. *)
@@ -457,7 +466,7 @@ let krml_args ?tmpdir input_stream_binding emit_output_types_defs add_include sk
        client in C, but they live in EverParse3d.InputStream.Extern, which the
        -library bundle below already covers: KaRaMeL assumes a library module
        rather than emitting it, so it never reports them as unbound. *)
-    (if lowstar_api () then ["-static-header"; pulse_everparse_only_bundle] else []) @
+    ["-static-header"; pulse_everparse_only_bundle] @
     ("-add-include" :: (if lowstar_api () then "EverParse:\"EverParseEndianness.h\""
       else "EverParse:\"EverParsePulseEndianness.h\"") ::
       "-library" :: pulse_everparse_only_bundle ::
@@ -697,15 +706,14 @@ let produce_one_c_file
     : unit
   =
   (* This runs once per module, and the generated makefiles let those runs
-     proceed in parallel in a single output directory. KaRaMeL always writes an
-     EverParse.h of its own (the [rename=EverParse] bundle keeps the client's
-     own monomorphized Custard instances), so letting every run write straight
-     into out_dir would have them all clobber that one shared file -- and then
-     race over restoring or deleting it afterwards. Instead each run gets a
-     private output directory, and we move out only the files it owns,
-     deliberately dropping its EverParse.h: the prelude copy in out_dir is
-     produced by the header rules (or by --no_copy_everparse_h, by nothing at
-     all), and is none of this run's business. *)
+     proceed in parallel in a single output directory. Nothing KaRaMeL emits
+     here is shared between modules -- krml_args passes -static-header, so no
+     EverParse.h is written either -- but giving each run a private output
+     directory makes that independence structural rather than a property we
+     have to keep re-establishing. We move out only the files the run owns, and
+     drop any EverParse.h: the prelude copy in out_dir is produced by the
+     header rules (or, under --no_copy_everparse_h, by nothing at all), and is
+     none of this run's business. *)
   let tmpdir = fresh_subdirectory out_dir (Printf.sprintf "krmlout_%s_" modul) in
   Fun.protect ~finally:(fun () -> remove_directory tmpdir) (fun () ->
     let krml_args = krml_args ~tmpdir input_stream_binding emit_output_types_defs add_include true out_dir ((file, modul) :: dep_files_and_modules) in
@@ -1001,10 +1009,11 @@ let postprocess_c
       (files_and_modules: (string * string) list)
     : unit
   =
-  (* copy EverParse.h unless prevented; if prevented and Karamel produced its
-   * own (due to preserved type abbreviations from -no-inline-type-abbrev, or
-   * to the -library'd runtime in --api pulse mode), remove it so the caller's
-   * expectations of "no EverParse.h here" hold. *)
+  (* copy EverParse.h unless prevented. The removal below is a backstop: since
+   * krml_args pairs -library with -static-header, KaRaMeL writes no
+   * EverParse.h of its own, but if some future flag combination made it do so
+   * again, this keeps the caller's expectation of "no EverParse.h here" --
+   * which pulse-cleanup-test pins down -- from silently breaking. *)
   if not no_everparse_h
   then begin
       copy_everparse_h_raw input_stream_binding out_dir
