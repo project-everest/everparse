@@ -1,6 +1,6 @@
 all: verify
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
+EVERPARSE_HOME = $(realpath ../../../..)
 
 CACHE_DIRECTORY := _output
 ifeq (,$(DICE_HOME))
@@ -11,7 +11,7 @@ FSTAR_OPTIONS += --admit_smt_queries true
 FSTAR_DEP_FILE := $(CACHE_DIRECTORY)/dice.depend
 FSTAR_FILES := $(wildcard $(DICE_HOME)/dpe/*.fst $(DICE_HOME)/dpe/*.fsti)
 
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 .PHONY: all verify

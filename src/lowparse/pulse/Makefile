@@ -1,13 +1,13 @@
 all: verify
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_HOME = $(realpath ../../..)
 INCLUDE_PATHS += $(realpath ..)
 
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/everparse.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/everparse.Makefile
 
 ALREADY_CACHED := *,-LowParse.Pulse,
 OUTPUT_DIRECTORY := _output
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile

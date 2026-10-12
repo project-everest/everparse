@@ -1,9 +1,8 @@
 all: depend verify test
 
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
-EVERPARSE_SRC_PATH ?= $(EVERPARSE_HOME)/src
 
-LOWPARSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse
+LOWPARSE_HOME ?= $(EVERPARSE_HOME)/src/lowparse
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -28,7 +27,7 @@ CUSTARD_ROOTS := ../Test.fst
 
 clean_rules += clean-local
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 FSTAR_OPTIONS += $(LAX_OPT) --ext 'optimize_let_vc=false' --warn_error @272
 

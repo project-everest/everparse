@@ -2,7 +2,7 @@ all: extract
 
 CFLAGS += -O3 -I .
 
-EVERPARSE_SRC_PATH = $(realpath ../../../..)
+EVERPARSE_HOME = $(realpath ../../../../..)
 OUTPUT_DIRECTORY:=.
 
 extract: $(OUTPUT_DIRECTORY)/CBORDet.o

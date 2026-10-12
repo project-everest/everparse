@@ -1,6 +1,5 @@
 all: 3d
 
-EVERPARSE_SRC_PATH=$(realpath ..)
 EVERPARSE_HOME=$(realpath ../..)
 
 FSTAR_FILES := Main.fst Version.fst
@@ -45,7 +44,7 @@ CUSTARD_ROOTS := Main.fst
 
 clean_rules += clean-3d
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 EVERPARSE_3D=$(EVERPARSE_HOME)/bin/3d.exe
 EVERPARSE_3D_MAIN=ocaml/_build/default/Main.exe

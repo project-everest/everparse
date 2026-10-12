@@ -1,6 +1,6 @@
 all: CBORDetTest
 
-EVERPARSE_SRC_PATH = $(realpath ../../../../..)
+EVERPARSE_HOME = $(realpath ../../../../../..)
 
 CBOR_LIB_PATH = $(realpath ..)
 CBOR_INCLUDE_PATH = $(realpath ..)

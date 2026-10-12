@@ -1,10 +1,10 @@
 all: dpe
 
-EVERPARSE_SRC_PATH := $(realpath ../../..)
-include $(EVERPARSE_SRC_PATH)/windows.Makefile
+EVERPARSE_HOME := $(realpath ../../../..)
+include $(EVERPARSE_HOME)/src/windows.Makefile
 
 OUTPUT_DIRECTORY := _output
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/src/cbor/pulse $(EVERPARSE_HOME)/src/cddl/pulse $(OUTPUT_DIRECTORY)
 
 ALREADY_CACHED := *,-CDDLTest,
 FSTAR_OPTIONS += --warn_error -342
@@ -19,12 +19,12 @@ else
 CDDL_ADMIT :=
 endif
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst: dpe.cddl dpe_postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only $(CDDL_ADMIT)
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 clean-test:

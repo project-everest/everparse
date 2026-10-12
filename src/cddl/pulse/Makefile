@@ -1,7 +1,7 @@
 all: verify
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
-INCLUDE_PATHS += $(realpath ../spec) $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/pulse
+EVERPARSE_HOME = $(realpath ../../..)
+INCLUDE_PATHS += $(realpath ../spec) $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/pulse
 
 ALREADY_CACHED := *,-CDDL.Pulse,
 FSTAR_OPTIONS += --warn_error -342
@@ -16,9 +16,9 @@ CUSTARD_ROOTS := CDDL.Pulse.Test.fst
 
 clean_rules += clean-output
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE)
 

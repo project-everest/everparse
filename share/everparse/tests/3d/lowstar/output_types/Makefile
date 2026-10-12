@@ -27,8 +27,7 @@ interpret: $(SOURCE_FILES) interpret.out
 	$(CC) -o interpret.out/test3 -I interpret.out -I . $(addprefix interpret.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
 	./interpret.out/test3
 
-EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
 

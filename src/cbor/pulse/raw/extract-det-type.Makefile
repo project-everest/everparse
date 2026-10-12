@@ -1,6 +1,6 @@
 all: extract
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
+EVERPARSE_HOME = $(realpath ../../../..)
 INCLUDE_PATHS += $(realpath ..) $(realpath ../../spec) $(realpath ../../spec/raw)
 # ALREADY_CACHED := *,
 
@@ -14,9 +14,9 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := CBOR.Pulse.API.Det.Type CBOR.Spec.Constants
 
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 .PHONY: extract
 

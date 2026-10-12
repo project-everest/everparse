@@ -1,5 +1,5 @@
-ifeq (,$(EVERPARSE_SRC_PATH))
-  $(error "EVERPARSE_SRC_PATH must be set to the absolute path of the src/ subdirectory of the EverParse repository")
+ifeq (,$(EVERPARSE_HOME))
+  $(error "EVERPARSE_HOME must be set to the absolute path of the root of the EverParse repository or installation")
 endif
 
 # Which modules or namespaces are already cached? If all of your

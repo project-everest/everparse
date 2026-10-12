@@ -1,8 +1,7 @@
-EVERPARSE_SRC_PATH = $(realpath ../../..)
-EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
+EVERPARSE_HOME = $(realpath ../../../..)
 OUTPUT_DIRECTORY := _output
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/spec/raw $(EVERPARSE_SRC_PATH)/cbor/spec/raw/everparse $(EVERPARSE_SRC_PATH)/cbor/pulse/raw $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/slice-rust $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/everparse $(EVERPARSE_SRC_PATH)/lowparse $(EVERPARSE_SRC_PATH)/lowparse/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/src/cbor/pulse $(EVERPARSE_HOME)/src/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/spec/raw $(EVERPARSE_HOME)/src/cbor/spec/raw/everparse $(EVERPARSE_HOME)/src/cbor/pulse/raw $(EVERPARSE_HOME)/src/cbor/pulse/raw/slice-rust $(EVERPARSE_HOME)/src/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
 
 ALREADY_CACHED := *,-CDDLTest,
 FSTAR_OPTIONS += --warn_error -342
@@ -23,9 +22,9 @@ CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Type
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Dummy
 CUSTARD_ROOTS := $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 #KRML_OPTS += -warn-error @4@6
 

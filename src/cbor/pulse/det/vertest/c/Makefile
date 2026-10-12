@@ -1,7 +1,7 @@
 all: verify test
 
-EVERPARSE_SRC_PATH = $(realpath ../../../../..)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/pulse
+EVERPARSE_HOME = $(realpath ../../../../../..)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/pulse
 ALREADY_CACHED := *,-CBORTest,
 OUTPUT_DIRECTORY:=extracted
 CBORDET_PATH := $(realpath ../../c)
@@ -31,9 +31,9 @@ CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
 clean_rules += clean-extracted
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 .PHONY: extract test
 

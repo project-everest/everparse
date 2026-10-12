@@ -1,7 +1,7 @@
 all: build-rust
 
-EVERPARSE_SRC_PATH := $(realpath ../../..)
-include $(EVERPARSE_SRC_PATH)/windows.Makefile
+EVERPARSE_HOME := $(realpath ../../../..)
+include $(EVERPARSE_HOME)/src/windows.Makefile
 
 OUTPUT=_output/CDDLTest.Test.fst
 
@@ -12,7 +12,7 @@ CDDL_ADMIT :=
 endif
 
 $(OUTPUT): test.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
 
 RUST_MODULES := cbordetver cbordetveraux cddlextractiontest
 

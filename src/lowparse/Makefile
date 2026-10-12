@@ -6,15 +6,15 @@
 
 all: verify
 
-EVERPARSE_SRC_PATH = $(realpath ..)
+EVERPARSE_HOME = $(realpath ../..)
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 ALREADY_CACHED := *,-LowParse,
 
 clean_rules += clean-pulse
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
 

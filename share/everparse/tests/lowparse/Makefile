@@ -1,9 +1,9 @@
 all: verify extract-all
 
-EVERPARSE_SRC_PATH ?= $(realpath ../../../../src)
-LOWPARSE_PULSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse/pulse
+EVERPARSE_HOME ?= $(realpath ../../../..)
+LOWPARSE_PULSE_HOME ?= $(EVERPARSE_HOME)/src/lowparse/pulse
 
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse $(LOWPARSE_PULSE_HOME)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse $(LOWPARSE_PULSE_HOME)
 ALREADY_CACHED := *,-LowParseTestLib,-LowParseExample,
 OTHERFLAGS += --warn_error +272
 
@@ -19,10 +19,10 @@ CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := $(addprefix LowParse,$(EXAMPLES))
 CUSTARD_ROOTS := LowParseExample3.fst
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/everparse.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/everparse.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 

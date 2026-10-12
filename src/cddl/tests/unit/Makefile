@@ -38,18 +38,17 @@ all-checked: $(ALL_CHECKED)
 .PHONY: all-c
 all-c: $(ALL_C_FILES)
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
+EVERPARSE_HOME = $(realpath ../../../..)
 
 $(ODIR)/%.fst: %.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only $(CDDL_ADMIT)
 
 $(ODIR)/%.o: $(ODIR)/%.c
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
+	$(CC) -O3 -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
 
-EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 OUTPUT_DIRECTORY := _output
 SRC_PATHS += $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/src/cbor/pulse $(EVERPARSE_HOME)/src/cddl/pulse $(OUTPUT_DIRECTORY)
 
 ALREADY_CACHED := ,*
 FSTAR_OPTIONS += --warn_error -342
@@ -68,9 +67,9 @@ CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
 clean_rules += clean-tinycbor clean-QCBOR clean-c clean-output
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 
@@ -97,7 +96,7 @@ $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml
 	 -tmpdir $(OUTPUT_DIRECTORY)
 
 # $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
-# 	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
+# 	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/src/cbor/pulse/det/c/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
 
 # extract: $(OUTPUT_DIRECTORY)/test.exe
 
@@ -139,13 +138,13 @@ ifneq ($(OS),Windows_NT)
 with_qcbor := QCBOR/libqcbor.a
 endif
 $(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o $(with_qcbor) tinycbor-build/libtinycbor.a
-	$(CC) -O3 -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o -lm
+	$(CC) -O3 -o $@ $^ $(EVERPARSE_HOME)/src/cbor/pulse/det/c/CBORDet.o -lm
 
 $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
+	$(CC) -O3 -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
 
 $(ODIR)/Test_%.o: Test_%.cpp $(ODIR)/$$(call remove__,%).c tinycbor-build
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor-build -I _output --std=c++2a $(CFLAGS) -c $< -o $@
+	$(CC) -O3 -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor-build -I _output --std=c++2a $(CFLAGS) -c $< -o $@
 
 %.run: $(ODIR)/Test_%.exe
 	./$<

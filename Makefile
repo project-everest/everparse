@@ -33,7 +33,7 @@ ifeq (,$(NO_PULSE))
 all: cddl cbor-interface
 endif
 
-EVERPARSE_SRC_PATH := $(realpath src)
+EVERPARSE_HOME := $(realpath .)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
@@ -44,11 +44,11 @@ ifeq (,$(NO_PULSE))
   SRC_DIRS += lib/everparse/3d
 endif
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
 ifeq (,$(NO_PULSE))
-  include $(EVERPARSE_SRC_PATH)/pulse.Makefile
+  include $(EVERPARSE_HOME)/src/pulse.Makefile
 endif
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 $(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
 

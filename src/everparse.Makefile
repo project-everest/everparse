@@ -1,9 +1,9 @@
-ifeq (,$(EVERPARSE_SRC_PATH))
-  $(error "EVERPARSE_SRC_PATH must be set to the absolute path of the src/ subdirectory of the EverParse repository")
+ifeq (,$(EVERPARSE_HOME))
+  $(error "EVERPARSE_HOME must be set to the absolute path of the root of the EverParse repository or installation")
 endif
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 ALREADY_CACHED := LowParse,$(ALREADY_CACHED)
 
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse

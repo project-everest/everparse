@@ -30,8 +30,7 @@ interpret: $(SOURCE_FILES) TPoint.out AnonUnion.out AnonStruct.out ExternVector.
 	$(CC) -o ExternVector.out/test3 -I ExternVector.out -I . $(addprefix ExternVector.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
 	./ExternVector.out/test3
 
-EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
 

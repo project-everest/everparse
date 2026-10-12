@@ -15,8 +15,7 @@ EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar
 
 3D_Z3_EXECUTABLE ?= z3-4.13.3
 
-EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 # The standalone F# hash checker. Overridable, e.g. to test a Release
 # build or a different runtime identifier.

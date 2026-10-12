@@ -1,7 +1,7 @@
 all: extract
 
-EVERPARSE_SRC_PATH = $(realpath ../../src)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse/pulse
+EVERPARSE_HOME = $(realpath ../..)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse/pulse
 ALREADY_CACHED := *,-ArithParse,
 
 OUTPUT_DIRECTORY := _output
@@ -12,17 +12,17 @@ CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := ArithParse.Impl
 CUSTARD_ROOTS := ArithParse.Impl.fst
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/everparse.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/everparse.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 extract: $(CUSTARD_KRML)
-	$(KRML) -bundle 'ArithParse.Impl=*,Prims,Custard.\*[rename=ArithParse]' -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
+	$(KRML) -bundle 'ArithParse.Impl=*,Prims,Custard.\*[rename=ArithParse]' -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
 
 clean-output:
 	rm -rf $(OUTPUT_DIRECTORY)

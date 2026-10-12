@@ -2,11 +2,10 @@ all: extract
 
 .PHONY: all
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
-EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
+EVERPARSE_HOME = $(realpath ../../..)
 OUTPUT_DIRECTORY := _output
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/src/cbor/pulse $(EVERPARSE_HOME)/src/cddl/pulse $(OUTPUT_DIRECTORY)
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
 ifeq (1,$(ADMIT))
@@ -15,8 +14,8 @@ else
 CDDL_ADMIT :=
 endif
 
-$(OUTPUT): ../cose-sign.cddl $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
+$(OUTPUT): ../cose-sign.cddl $(EVERPARSE_HOME)/src/cddl/spec/postlude.cddl
+	$(EVERPARSE_HOME)/bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 ALREADY_CACHED := *,-COSE,-Abort,-EverCrypt
@@ -43,9 +42,9 @@ CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
 clean_rules += clean-output
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 
@@ -72,7 +71,7 @@ extract: $(CUSTARD_KRML)
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
-		-skip-linking $(CUSTARD_KRML) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
+		-skip-linking $(CUSTARD_KRML) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -header noheader.txt
 
 %.diff: extract
 	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)

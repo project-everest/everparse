@@ -8,10 +8,10 @@ endif
 
 encrypt: cose-encrypt.cddl ../cddl/spec/postlude.cddl
 	rm -rf $@.tmp $@
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $@.tmp $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $@.tmp $(CDDL_ADMIT)
 	mv $@.tmp $@
 
-EVERPARSE_SRC_PATH = $(realpath ..)
+EVERPARSE_HOME = $(realpath ../..)
 
 build-c:
 	+$(MAKE) -C c
@@ -76,12 +76,12 @@ test-extracted: test-interop test-verified-interop test-rust
 
 test-batch-c: cose-sign.cddl
 	rm -rf $@ $@.tmp
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --admit
+	$(EVERPARSE_HOME)/bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_HOME)/src/cddl/spec/postlude.cddl --mname COSEBatchTest --admit
 	mv $@.tmp $@
 
 test-batch-rust: cose-sign.cddl
 	rm -rf $@ $@.tmp
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --rust --admit
+	$(EVERPARSE_HOME)/bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_HOME)/src/cddl/spec/postlude.cddl --mname COSEBatchTest --rust --admit
 	mv $@.tmp $@
 
 test-extract: test-extract-c test-extract-rust test-batch-c test-batch-rust encrypt

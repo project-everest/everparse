@@ -1,6 +1,6 @@
 all: extract-all
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_HOME = $(realpath ../../..)
 
 OUTPUT=_output/COSE.Format.fst
 
@@ -11,7 +11,7 @@ CDDL_ADMIT :=
 endif
 
 $(OUTPUT): ../cose-sign.cddl ../../cddl/spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
 
 extract-krml: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract-krml

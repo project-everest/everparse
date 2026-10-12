@@ -1,8 +1,8 @@
 all: verify compile
 
-EVERPARSE_SRC_PATH = $(realpath ..)
+EVERPARSE_HOME = $(realpath ../..)
 
-LOWPARSE_HOME = $(EVERPARSE_SRC_PATH)/lowparse
+LOWPARSE_HOME = $(EVERPARSE_HOME)/src/lowparse
 
 INCLUDE_PATHS += $(LOWPARSE_HOME)
 
@@ -22,7 +22,7 @@ CUSTARD_ENTRY_MODULES := ASN1.X509
 CUSTARD_ENTRY_MODULES += ASN1.CRL
 CUSTARD_ROOTS := ASN1.CRL.fst
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 FSTAR_OPTIONS += --ext optimize_let_vc
 

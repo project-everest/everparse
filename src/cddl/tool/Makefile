@@ -1,24 +1,24 @@
 all: build
 
-EVERPARSE_SRC_PATH := $(realpath ../..)
-include $(EVERPARSE_SRC_PATH)/windows.Makefile
+EVERPARSE_HOME := $(realpath ../../..)
+include $(EVERPARSE_HOME)/src/windows.Makefile
 
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse $(EVERPARSE_SRC_PATH)/cbor/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/pulse $(EVERPARSE_HOME)/src/cbor/pulse
 
 ALREADY_CACHED := *,-CDDL.Tool,
 
 clean_rules += clean-ocaml clean-done
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/src/karamel.Makefile
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/src/common.Makefile
 
 ocaml.done: $(ALL_CHECKED_FILES)
 	rm -f $@
 	+$(MAKE) -f $(basename $@).Makefile
 	touch $@
 
-EVERPARSE_CDDL=$(EVERPARSE_SRC_PATH)/../bin/cddl.exe
+EVERPARSE_CDDL=$(EVERPARSE_HOME)/bin/cddl.exe
 
 build: $(EVERPARSE_CDDL)
 
@@ -26,7 +26,7 @@ build: $(EVERPARSE_CDDL)
 
 $(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
-	cd ocaml && dune install --prefix=$(EVERPARSE_SRC_PATH)/..
+	cd ocaml && dune install --prefix=$(EVERPARSE_HOME)
 
 .PHONY: all
 
