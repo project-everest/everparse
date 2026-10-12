@@ -40,14 +40,35 @@ jobs:
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
           git config --global user.email "24394600+dzomo@users.noreply.github.com"
-      - name: Install opam
-        run: |
-          sudo apt-get update && sudo apt-get install --yes --no-install-recommends opam
       - name: Advance hashes
         run: |
           make -C opt -j$(nproc) advance &&
           if ! git diff --exit-code -- opt/hashes.Makefile ; then git add -u opt/hashes.Makefile && git commit -m 'Update hashes' ; fi &&
           git diff --exit-code
+      - name: Push new branch
+        run: |
+          git checkout -b _dzomo_upgrade_${{ github.run_id }} &&
+          git push origin _dzomo_upgrade_${{ github.run_id }}
+
+  ci-linux:
+    needs: advance-hashes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: _dzomo_upgrade_${{ github.run_id }}
+      - name: Install opam
+        run: |
+          sudo apt-get update && sudo apt-get install --yes --no-install-recommends opam
+      - name: Set-up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: src/3d/hashchk/global.json
+      - name: Set up git
+        run: |
+          git config --global user.name "Dzomo, the Everest Yak"
+          git config --global user.email "24394600+dzomo@users.noreply.github.com"
       - name: Generate CBOR .krml files
         run: |
           make cbor-extract-krml -kj$(nproc)
@@ -68,10 +89,14 @@ jobs:
           git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cbor/pulse/nondet/rust src/cose/c src/cose/rust &&
           if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
           git diff --exit-code
-      - name: Push new branch
+      - name: Push branch
         run: |
-          git checkout -b _dzomo_upgrade_${{ github.run_id }} &&
-          git push origin _dzomo_upgrade_${{ github.run_id }} &&
+          git push
+      - name: Everparse CI
+        run: |
+          make -j$(nproc) -k test
+      - name: Record hash
+        run: |
           git rev-parse HEAD > hash.txt
       - name: Upload hash
         uses: actions/upload-artifact@v4
@@ -79,35 +104,6 @@ jobs:
           path: |
             hash.txt
           name: hash
-
-  ci-linux:
-    needs: advance-hashes
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: ${{ env.hash }}
-          path: everparse
-      - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5
-      - name: Set-up .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          global-json-file: everparse/src/3d/hashchk/global.json
-      - name: Everparse CI
-        run: |
-          make -C everparse -j$(nproc) -k test
 
   create-pr:
     needs: [ci-linux]
