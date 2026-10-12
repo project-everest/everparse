@@ -30,6 +30,12 @@ jobs:
         run: |
           echo "base_branch=${{ github.event_name == 'schedule' && 'master' || github.ref_name }}" > base_ref.txt
           echo "base_sha=$(git rev-parse HEAD)" >> base_ref.txt
+      - name: Upload base
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            base_ref.txt
+          name: base
       - name: Set up git
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
@@ -72,7 +78,6 @@ jobs:
         with:
           path: |
             hash.txt
-            base_ref.txt
           name: hash
 
   ci-linux:
@@ -108,6 +113,10 @@ jobs:
     needs: [ci-linux]
     runs-on: ubuntu-latest
     steps:
+      - name: Download base
+        uses: actions/download-artifact@v4
+        with:
+          name: base
       - name: Download hash
         uses: actions/download-artifact@v4
         with:
