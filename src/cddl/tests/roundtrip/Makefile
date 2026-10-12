@@ -13,13 +13,15 @@ ODIR := _output
 
 FSTAR_EXE ?= fstar.exe
 
-# evercddl.lib (handwritten + extracted) lives under $EVERPARSE_HOME/lib;
-# fstar.lib lives under the F* installation. `fstar.exe --ocamlenv` prepends
-# the latter to OCAMLPATH for us.
+# evercddl.lib (handwritten + extracted) is installed into ./evercddl by
+# src/cddl/tool/Makefile, as part of building cddl.exe; fstar.lib lives under
+# the F* installation. `fstar.exe --ocamlenv` prepends the latter to OCAMLPATH
+# for us.
+EVERCDDL_LIB_PREFIX := $(EVERPARSE_HOME)/src/cddl/tests/roundtrip/evercddl
 ifeq ($(OS),Windows_NT)
-export OCAMLPATH := $(EVERPARSE_HOME)/lib;$(OCAMLPATH)
+export OCAMLPATH := $(EVERCDDL_LIB_PREFIX)/lib;$(OCAMLPATH)
 else
-export OCAMLPATH := $(EVERPARSE_HOME)/lib:$(OCAMLPATH)
+export OCAMLPATH := $(EVERCDDL_LIB_PREFIX)/lib:$(OCAMLPATH)
 endif
 
 GEN := ocaml/_build/default/gen_fst/Main.exe

@@ -20,13 +20,22 @@ ocaml.done: $(ALL_CHECKED_FILES)
 
 EVERPARSE_CDDL=$(EVERPARSE_HOME)/bin/cddl.exe
 
+# evercddl.lib is a build-time artifact of cddl.exe, not something EverParse
+# ships: its only consumer is the roundtrip test, which links against it to
+# compare the OCaml parser with the extracted F* AST. So install it into that
+# test's own directory rather than under the $(EVERPARSE_HOME) prefix.
+EVERCDDL_LIB_PREFIX=$(EVERPARSE_HOME)/src/cddl/tests/roundtrip/evercddl
+
 build: $(EVERPARSE_CDDL)
 
 .PHONY: build
 
 $(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
-	cd ocaml && dune install --prefix=$(EVERPARSE_HOME)
+	rm -rf $(EVERCDDL_LIB_PREFIX)
+	cd ocaml && dune install --prefix=$(EVERCDDL_LIB_PREFIX) --section=lib evercddl
+	mkdir -p $(dir $@)
+	cp ocaml/_build/install/default/bin/cddl.exe $@
 
 .PHONY: all
 
@@ -38,5 +47,6 @@ clean-ocaml:
 clean-done:
 	rm -f *.depend *.depend.rsp *.done
 	rm -rf ocaml/evercddl-lib/extracted
+	rm -rf $(EVERCDDL_LIB_PREFIX)
 
 .PHONY: clean-done
