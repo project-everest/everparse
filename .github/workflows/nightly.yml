@@ -6,6 +6,10 @@ on:
         description: 'Create a pull request (if unchecked, push directly to branch)'
         type: boolean
         default: true
+      copilot_fix_attempts:
+        description: 'How many times to let GitHub Copilot CLI try to fix a failing make command (0 to disable)'
+        type: number
+        default: 3
   schedule:
     - cron: "0 22 * * 0,3"
 
@@ -96,6 +100,9 @@ jobs:
   ci-linux:
     needs: deps-upgrade
     runs-on: ubuntu-latest
+    env:
+      COPILOT_FIX_ATTEMPTS: ${{ inputs.copilot_fix_attempts }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@master
         with:
@@ -116,21 +123,33 @@ jobs:
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
           git config --global user.email "24394600+dzomo@users.noreply.github.com"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install GitHub Copilot CLI
+        run: |
+          npm install -g @github/copilot
       - name: Generate CBOR .krml files
         run: |
-          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh cbor-extract-krml -kj$(nproc)"
+          bash everparse/.github/ci-make-with-copilot.sh cbor-extract-krml -kj$(nproc)
       - name: Generate CBOR snapshot with Karamel
         run: |
-          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh cbor-snapshot -Otarget -kj$(nproc) && bash .github/ci-make.sh cbor -kj$(nproc)"
+          bash everparse/.github/ci-make-with-copilot.sh cbor-snapshot -Otarget -kj$(nproc) &&
+          bash everparse/.github/ci-make-with-copilot.sh cbor -kj$(nproc)
       - name: Generate COSE .krml files
         run: |
-          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh cose-extract-krml -kj$(nproc)"
+          bash everparse/.github/ci-make-with-copilot.sh cose-extract-krml -kj$(nproc)
       - name: Generate COSE snapshot with Karamel
         run: |
-          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh cose-snapshot -Otarget -kj$(nproc) && bash .github/ci-make.sh cose -kj$(nproc)"
+          bash everparse/.github/ci-make-with-copilot.sh cose-snapshot -Otarget -kj$(nproc) &&
+          bash everparse/.github/ci-make-with-copilot.sh cose -kj$(nproc)
       - name: Generate 3D doc snapshot
         run: |
-          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh 3d-doc-snapshot -kj$(nproc)"
+          bash everparse/.github/ci-make-with-copilot.sh 3d-doc-snapshot -kj$(nproc)
+      - name: Commit and push Copilot fixes to the snapshot build
+        run: |
+          cd everparse && bash .github/commit-copilot-fixes.sh "Copilot: fix the snapshot build after the dependency upgrade"
       - name: Download new snapshots from the container
         run: |
           cd everparse &&
@@ -147,7 +166,10 @@ jobs:
           cd everparse && git push
       - name: Everparse CI
         run: |
-          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh -j$(nproc) -k test"
+          bash everparse/.github/ci-make-with-copilot.sh -j$(nproc) -k test
+      - name: Commit and push Copilot fixes to the test suite
+        run: |
+          cd everparse && bash .github/commit-copilot-fixes.sh "Copilot: fix the test suite after the dependency upgrade"
       - name: Remove container
         run: |
           docker stop $container && docker rm $container
