@@ -186,6 +186,8 @@ jobs:
   create-pr:
     needs: [ci-linux]
     runs-on: ubuntu-latest
+    env:
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
     steps:
       - name: Download base
         uses: actions/download-artifact@v4
@@ -202,19 +204,50 @@ jobs:
           echo "base_branch=$base_branch" >> $GITHUB_ENV
           echo "base_sha=$base_sha" >> $GITHUB_ENV
           rm base_ref.txt
+          # Whether this run opens a pull request, resolved once here rather
+          # than repeated as a GitHub expression on each step that needs it.
+          if [[ "${{ github.event_name }}" == "schedule" && "$base_branch" == "master" ]] ||
+             [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.create_pr }}" == "true" ]] ; then
+            echo "creating_pr=true" >> $GITHUB_ENV
+            # Describing those changes additionally needs Copilot credentials.
+            if [[ -n "${COPILOT_GITHUB_TOKEN:-}" ]] ; then
+              echo "describe_with_copilot=true" >> $GITHUB_ENV
+            fi
+          fi
       - uses: actions/checkout@master
         with:
           submodules: true
           fetch-depth: 0
           ref: ${{ env.updated_sha }}
-      - name: create pull request
-        if: (github.event_name == 'schedule' && env.base_branch == 'master') || (github.event_name == 'workflow_dispatch' && inputs.create_pr)
+      - name: Set up Node
+        if: env.describe_with_copilot == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install GitHub Copilot CLI
+        if: env.describe_with_copilot == 'true'
         run: |
-          if [[ "$updated_sha" != "$base_sha" ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base "$base_branch" --title "Update hashes and snapshots" --fill-verbose ; fi
+          npm install -g @github/copilot
+      - name: Describe the changes with Copilot
+        if: env.describe_with_copilot == 'true'
+        run: |
+          if [[ "$updated_sha" != "$base_sha" ]] ; then bash .github/copilot-pr-description.sh "$base_sha" "$updated_sha" "$RUNNER_TEMP/pr-body.md" ; fi
+      - name: create pull request
+        if: env.creating_pr == 'true'
+        run: |
+          if [[ "$updated_sha" != "$base_sha" ]] ; then
+            git checkout -b _dzomo_pr_${{ github.run_id }} &&
+            git push --set-upstream origin _dzomo_pr_${{ github.run_id }} &&
+            if test -s "$RUNNER_TEMP/pr-body.md" ; then
+              gh pr create --base "$base_branch" --title "Update hashes and snapshots" --body-file "$RUNNER_TEMP/pr-body.md"
+            else
+              gh pr create --base "$base_branch" --title "Update hashes and snapshots" --fill-verbose
+            fi
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Push to branch directly
-        if: (github.event_name == 'schedule' && env.base_branch != 'master') || (github.event_name == 'workflow_dispatch' && !inputs.create_pr)
+        if: env.creating_pr != 'true'
         run: |
           if [[ "$updated_sha" != "$base_sha" ]] ; then git push origin HEAD:"$base_branch" ; fi
       - name: Delete branch
