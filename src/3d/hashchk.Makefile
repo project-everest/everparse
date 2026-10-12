@@ -20,7 +20,7 @@ OTHERFLAGS?=
 
 OUTPUT_DIR=hashchk/3d
 
-FSTAR=$(FSTAR_EXE) $(OTHERFLAGS) --already_cached '*,' --codegen Custard --custard_backend FSharp
+FSTAR=$(FSTAR_EXE) $(OTHERFLAGS) --already_cached '*,' --codegen FSharp
 
 # What hashchk/HashCheck.fs calls into. Dead code elimination is by
 # reachability from these, so anything omitted here is simply not emitted.

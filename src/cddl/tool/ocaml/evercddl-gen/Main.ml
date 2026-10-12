@@ -313,8 +313,7 @@ let _ =
           "--cache_dir"; dir;
           "--odir"; dir;
           "--already_cached"; "*,";
-          "--codegen"; "Custard";
-          "--custard_backend"; (if is_rust () then "KrmlRust" else "KrmlC");
+          "--codegen"; (if is_rust () then "KrmlRust" else "KrmlC");
           "--custard_split";
         ] @
           custard_entry_module_options () @

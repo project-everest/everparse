@@ -6,6 +6,12 @@ on:
         description: 'Create a pull request (if unchecked, push directly to branch)'
         type: boolean
         default: true
+      copilot_fix_attempts:
+        description: 'How many times to let GitHub Copilot CLI try to fix a failing make command (0 to disable)'
+        type: number
+        default: 3
+  schedule:
+    - cron: "0 22 * * 0,3"
 
 defaults:
   run:
@@ -28,669 +34,165 @@ jobs:
         run: |
           echo "base_branch=${{ github.event_name == 'schedule' && 'master' || github.ref_name }}" > base_ref.txt
           echo "base_sha=$(git rev-parse HEAD)" >> base_ref.txt
+      - name: Upload base
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            base_ref.txt
+          name: base
       - name: Set up git
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
           git config --global user.email "24394600+dzomo@users.noreply.github.com"
-      - name: Install opam
-        run: |
-          sudo apt-get update && sudo apt-get install --yes --no-install-recommends opam
       - name: Advance hashes
         run: |
           make -C opt -j$(nproc) advance &&
           if ! git diff --exit-code -- opt/hashes.Makefile ; then git add -u opt/hashes.Makefile && git commit -m 'Update hashes' ; fi &&
           git diff --exit-code
-      - name: Generate CBOR .krml files
-        run: |
-          make ADMIT=1 cbor-extract-krml -kj$(nproc)
-      - name: Generate CBOR snapshot with Karamel
-        run: |
-          make ADMIT=1 cbor-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cbor -kj$(nproc)
-      - name: Generate COSE .krml files
-        run: |
-          make ADMIT=1 cose-extract-krml -kj$(nproc)
-      - name: Generate COSE snapshot with Karamel
-        run: |
-          make ADMIT=1 cose-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cose -kj$(nproc)
-      - name: Generate 3D doc snapshot
-        run: |
-          make ADMIT=1 3d-doc-snapshot -kj$(nproc)
-      - name: Stage in new snapshots
-        run: |
-          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cbor/pulse/nondet/rust src/cose/c src/cose/rust &&
-          if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
-          git diff --exit-code
       - name: Push new branch
         run: |
           git checkout -b _dzomo_upgrade_${{ github.run_id }} &&
-          git push origin _dzomo_upgrade_${{ github.run_id }} &&
-          git rev-parse HEAD > hash.txt
+          git push origin _dzomo_upgrade_${{ github.run_id }}
+
+  deps-upgrade:
+    runs-on: ubuntu-latest
+    needs: advance-hashes
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: _dzomo_upgrade_${{ github.run_id }}
+          sparse-checkout: |
+            .github/mark-deps-up-to-date.sh
+            .github/prune-deps.sh
+            Dockerfile
+            deps.Makefile
+            opt/Makefile
+            opt/hashes.Makefile
+            src/package/start-code-server.sh
+
+      - uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
+          lookup-only: true
+          fail-on-cache-miss: false
+
+      - name: Build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} --pull --target deps .
+
+      - name: Save image
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} | gzip > deps.tgz
+
+      - name: Upload image into cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
+
+  ci-linux:
+    needs: deps-upgrade
+    runs-on: ubuntu-latest
+    env:
+      COPILOT_FIX_ATTEMPTS: ${{ inputs.copilot_fix_attempts }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: _dzomo_upgrade_${{ github.run_id }}
+          path: everparse
+      - uses: actions/cache/restore@v4
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
+      - name: Load deps image
+        run: |
+          { gunzip < deps.tgz | docker load ; } && rm deps.tgz
+      - name: Upload EverParse in a container
+        run: |
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && { tar c --exclude=./.git . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
+      - name: Set up git
+        run: |
+          git config --global user.name "Dzomo, the Everest Yak"
+          git config --global user.email "24394600+dzomo@users.noreply.github.com"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install GitHub Copilot CLI
+        run: |
+          npm install -g @github/copilot
+      - name: Generate CBOR .krml files
+        run: |
+          bash everparse/.github/ci-make-with-copilot.sh cbor-extract-krml -kj$(nproc)
+      - name: Generate CBOR snapshot with Karamel
+        run: |
+          bash everparse/.github/ci-make-with-copilot.sh cbor-snapshot -Otarget -kj$(nproc) &&
+          bash everparse/.github/ci-make-with-copilot.sh cbor -kj$(nproc)
+      - name: Generate COSE .krml files
+        run: |
+          bash everparse/.github/ci-make-with-copilot.sh cose-extract-krml -kj$(nproc)
+      - name: Generate COSE snapshot with Karamel
+        run: |
+          bash everparse/.github/ci-make-with-copilot.sh cose-snapshot -Otarget -kj$(nproc) &&
+          bash everparse/.github/ci-make-with-copilot.sh cose -kj$(nproc)
+      - name: Generate 3D doc snapshot
+        run: |
+          bash everparse/.github/ci-make-with-copilot.sh 3d-doc-snapshot -kj$(nproc)
+      - name: Commit and push Copilot fixes to the snapshot build
+        run: |
+          cd everparse && bash .github/commit-copilot-fixes.sh "Copilot: fix the snapshot build after the dependency upgrade"
+      - name: Download new snapshots from the container
+        run: |
+          cd everparse &&
+          rm -rf doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cbor/pulse/nondet/rust src/cose/c src/cose/rust &&
+          docker exec $container tar c doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cbor/pulse/nondet/rust src/cose/c src/cose/rust | tar -x
+      - name: Stage in new snapshots
+        run: |
+          cd everparse &&
+          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cbor/pulse/nondet/rust src/cose/c src/cose/rust &&
+          if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
+          git diff --exit-code
+      - name: Push branch
+        run: |
+          cd everparse && git push
+      - name: Everparse CI
+        run: |
+          bash everparse/.github/ci-make-with-copilot.sh -j$(nproc) -k test
+      - name: Commit and push Copilot fixes to the test suite
+        run: |
+          cd everparse && bash .github/commit-copilot-fixes.sh "Copilot: fix the test suite after the dependency upgrade"
+      - name: Remove container
+        run: |
+          docker stop $container && docker rm $container
+      - name: Record hash
+        run: |
+          cd everparse && git rev-parse HEAD > ../hash.txt
       - name: Upload hash
         uses: actions/upload-artifact@v4
         with:
           path: |
             hash.txt
-            base_ref.txt
           name: hash
-
-  build-macos:
-    runs-on: macos-latest
-    needs: advance-hashes
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: ${{ env.hash }}
-      - uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 4.14.2
-      - name: Install Homebrew tools
-        run: |
-          brew install bash gnu-getopt make gnu-time coreutils
-      - name: Build package
-        run: |
-          eval $(opam env)
-          env OPAMNODEPEXTS=0 make -f package.Makefile package -kj$(sysctl -n hw.logicalcpu)
-      - uses: actions/upload-artifact@v4
-        with:
-          path: |
-            everparse_*.tar.gz
-          name: everparse-build-macos
-
-  test-macos:
-    needs: build-macos
-    runs-on: macos-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-build-macos
-          path: test0
-      - name: Extract artifact
-        run: |
-          pushd test0 &&
-          tar xzf everparse_*.tar.gz &&
-          popd &&
-          mv test0/everparse test
-      - name: Check out repo
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
-          path: ${{ github.workspace }}/everparse
-      - name: Test EverParse (--api lowstar)
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
-      # Same tests against the native Pulse API. Use separate inputs from
-      # the Low*-compatible API step above:
-      #  - the inputs come from share/everparse/tests/3d rather than
-      #    share/everparse/tests/3d/lowstar, so that --check_hashes inplace, which rewrites the .3d
-      #    file, does not clobber the hashes the Low* run just wrote and
-      #    uploads as an artifact;
-      - name: Test EverParse (--api pulse)
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
-      - name: Test EverParse test case generation
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
-      # The --api pulse counterpart. The generated C harness differs between the
-      # two backends -- Pulse validators return a uint8_t status and report the
-      # consumed length through a size_t* position -- so this compiles and runs
-      # code the Low* step above never exercises. Its own --odir, so the two do
-      # not clobber each other.
-      - name: Test EverParse test case generation (--api pulse)
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
-      - name: Test EverCDDL
-        run: |
-          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
-      - name: Upload test artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: everparse/share/everparse/tests/3d/lowstar/Comments*
-          name: everparse-test-macos
-      # The --api pulse counterpart, kept in its own artifact: both files are
-      # called Comments.3d, so putting them in one artifact would change the
-      # archive root and break the existing interop steps.
-      - name: Upload test artifact (--api pulse)
-        uses: actions/upload-artifact@v4
-        with:
-          path: everparse/share/everparse/tests/3d/Comments*
-          name: everparse-test-pulse-macos
-
-  build-linux:
-    runs-on: Ubuntu-22.04
-    needs: advance-hashes
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: ${{ env.hash }}
-      - uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 4.14.2
-      - name: Build package
-        run: |
-          eval $(opam env)
-          env OPAMNODEPEXTS=0 make -f package.Makefile package -kj$(nproc)
-      - uses: actions/upload-artifact@v4
-        with:
-          path: |
-            everparse_*.tar.gz
-          name: everparse-build-linux
-
-  test-linux:
-    needs: build-linux
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-build-linux
-          path: test0
-      - name: Extract artifact
-        run: |
-          pushd test0
-          tar xzf everparse_*.tar.gz
-          popd
-          mv test0/everparse test
-      - name: Check out repo
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
-          path: ${{ github.workspace }}/everparse
-      - name: Test EverParse (--api lowstar)
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
-      # Same tests against the native Pulse API. Use separate inputs from
-      # the Low*-compatible API step above:
-      #  - the inputs come from share/everparse/tests/3d rather than
-      #    share/everparse/tests/3d/lowstar, so that --check_hashes inplace, which rewrites the .3d
-      #    file, does not clobber the hashes the Low* run just wrote and
-      #    uploads as an artifact;
-      - name: Test EverParse (--api pulse)
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/Arithmetic.3d ${{ github.workspace }}/everparse/share/everparse/tests/3d/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/share/everparse/tests/3d/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
-      - name: Test EverParse test case generation
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api lowstar ${{ github.workspace }}/everparse/share/everparse/tests/3d/lowstar/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
-      # The --api pulse counterpart. The generated C harness differs between the
-      # two backends -- Pulse validators return a uint8_t status and report the
-      # consumed length through a size_t* position -- so this compiles and runs
-      # code the Low* step above never exercises. Its own --odir, so the two do
-      # not clobber each other.
-      - name: Test EverParse test case generation (--api pulse)
-        run: |
-          bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
-      - name: Test EverCDDL
-        run: |
-          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
-      - name: Upload test artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: everparse/share/everparse/tests/3d/lowstar/Comments*
-          name: everparse-test-linux
-      # The --api pulse counterpart, kept in its own artifact: both files are
-      # called Comments.3d, so putting them in one artifact would change the
-      # archive root and break the existing interop steps.
-      - name: Upload test artifact (--api pulse)
-        uses: actions/upload-artifact@v4
-        with:
-          path: everparse/share/everparse/tests/3d/Comments*
-          name: everparse-test-pulse-linux
-
-  fstar-src:
-    ## NOTE: This is copied from build-src in the F* repo.
-    needs: advance-hashes
-    runs-on: ubuntu-22.04
-    # We prefer slightly older Ubuntu so we get binaries that work on
-    # all more recent versions.
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        with:
-          path: everparse
-          ref: ${{ env.hash }}
-          sparse-checkout: |
-            opt/Makefile
-            opt/hashes.Makefile
-      - name: Get F* hash
-        run: |
-          echo "fstar_hash=$(make -s -C everparse/opt echo-FStar-hash)" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        id: checkout
-        with:
-          repository: FStarLang/FStar
-          ref: ${{ env.fstar_hash }}
-      - name: Check cache
-        id: check-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: fstar-src.tar.gz
-          key: FStar-src-${{steps.checkout.outputs.commit}}
-      - uses: ocaml/setup-ocaml@v3
-        if: steps.check-cache.outputs.cache-hit != 'true'
-        with:
-          ocaml-compiler: 4.14.2
-      - name: Prepare
-        if: steps.check-cache.outputs.cache-hit != 'true'
-        run: |
-          ./.scripts/get_fstar_z3.sh $HOME/bin
-          echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
-          opam install --deps-only ./fstar.opam
-      - name: Set F* version
-        if: steps.check-cache.outputs.cache-hit != 'true'
-        run: |
-          echo FSTAR_VERSION="$(git describe --tags --dirty)" >> $GITHUB_ENV
-      - name: Build package
-        if: steps.check-cache.outputs.cache-hit != 'true'
-        run: |
-          eval $(opam env)
-          export FSTAR_TAG=
-          # ^ no tag in source package
-          make -skj$(nproc) package-src ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=/dev/null
-      - name: Save
-        if: steps.check-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: fstar-src.tar.gz
-          key: FStar-src-${{steps.checkout.outputs.commit}}
-      - uses: actions/upload-artifact@v4
-        with:
-          path: fstar-src.tar.gz
-          name: fstar-src
-
-  build-windows:
-    runs-on: windows-2025
-    needs: fstar-src
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - run: git config --global core.autocrlf input
-      - uses: actions/checkout@master
-        with:
-          ref: ${{ env.hash }}
-      - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 4.14.2
-        # This will install Cygwin as well
-      - name: Install Cygwin packages
-        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
-        env:
-          CYGWIN_ROOT: C:\.opam\.cygwin\root
-          CYGWIN_MIRROR: https://mirrors.kernel.org/sourceware/cygwin/
-        run: >-
-          "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
-      - uses: actions/download-artifact@v4
-        with:
-          name: fstar-src
-      - name: Expand F* source package
-        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
-        run: >-
-          cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar
-      - name: Build package
-        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
-        run: >-
-          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile package -kj$(nproc)
-      - uses: actions/upload-artifact@v4
-        with:
-          path: |
-            everparse_*.zip
-          name: everparse-build-windows
-      - uses: actions/upload-artifact@v4
-        with:
-          path: |
-            EverParse*.nupkg
-          name: everparse-build-nupkg
-
-  test-windows:
-    needs: build-windows
-    runs-on: windows-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-build-windows
-          path: test0
-      - name: Extract artifact
-        shell: pwsh
-        run: |
-          Expand-Archive -Path test0\everparse_*.zip -DestinationPath test1
-          Move-Item -Path test1\everparse -Destination test
-      - name: Check out repo
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
-          path: ${{ github.workspace }}\everparse
-      - name: Test EverParse (--api lowstar)
-        shell: cmd
-        run: |
-          ${{ github.workspace }}\test\everparse.cmd --api lowstar ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\Arithmetic.3d ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar && ${{ github.workspace }}\test\everparse.cmd --api lowstar Comments.3d && ${{ github.workspace }}\test\everparse.cmd --api lowstar --check_hashes inplace Comments.3d
-      # Same tests against the native Pulse API. Use separate inputs from
-      # the Low*-compatible API step above:
-      #  - the inputs come from share\everparse\tests\3d rather than
-      #    share\everparse\tests\3d\lowstar, so that --check_hashes inplace, which rewrites the .3d
-      #    file, does not clobber the hashes the Low* run just wrote and
-      #    uploads as an artifact;
-      - name: Test EverParse (--api pulse)
-        shell: cmd
-        run: |
-          ${{ github.workspace }}\test\everparse.cmd --api pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\Arithmetic.3d ${{ github.workspace }}\everparse\share\everparse\tests\3d\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\share\everparse\tests\3d && ${{ github.workspace }}\test\everparse.cmd --api pulse Comments.3d && ${{ github.workspace }}\test\everparse.cmd --api pulse --check_hashes inplace Comments.3d
-      - name: Test EverParse test case generation
-        shell: cmd
-        run: |
-          ${{ github.workspace }}\test\everparse.cmd --api lowstar ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
-      # The --api pulse counterpart. The generated C harness differs between the
-      # two backends -- Pulse validators return a uint8_t status and report the
-      # consumed length through a size_t* position -- so this compiles and runs
-      # code the Low* step above never exercises. Its own --odir, so the two do
-      # not clobber each other.
-      - name: Test EverParse test case generation (--api pulse)
-        shell: cmd
-        run: |
-          ${{ github.workspace }}\test\everparse.cmd --api pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
-      - name: Test EverParse test case generation with probe
-        shell: cmd
-        run: |
-          ${{ github.workspace }}\test\everparse.cmd --api lowstar ${{ github.workspace }}\everparse\share\everparse\tests\3d\lowstar\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
-      # The --api pulse counterpart. Beyond the harness differences above, this is
-      # the only packaged test that exercises copy buffers under --api pulse, where
-      # a client must supply EverParseStreamPos in addition to the Low*
-      # EverParseStreamOf/Len, and EverParseStreamLen returns size_t. Z3TestGen
-      # emits all three into the harness, so the test is self-contained.
-      - name: Test EverParse test case generation with probe (--api pulse)
-        shell: cmd
-        run: |
-          ${{ github.workspace }}\test\everparse.cmd --api pulse ${{ github.workspace }}\everparse\share\everparse\tests\3d\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe-pulse --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
-      - name: Upload test artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: everparse\share\everparse\tests\3d\lowstar\Comments*
-          name: everparse-test-windows
-      # The --api pulse counterpart, kept in its own artifact: both files are
-      # called Comments.3d, so putting them in one artifact would change the
-      # archive root and break the existing interop steps.
-      - name: Upload test artifact (--api pulse)
-        uses: actions/upload-artifact@v4
-        with:
-          path: everparse\share\everparse\tests\3d\Comments*
-          name: everparse-test-pulse-windows
-
-  ci-linux:
-    needs: advance-hashes
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: ${{ env.hash }}
-          path: everparse
-      - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5
-      - name: Set-up .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          global-json-file: everparse/src/3d/hashchk/global.json
-      - name: Everparse CI
-        run: |
-          make -C everparse -j$(nproc) -k test
-
-  ci-macos:
-    needs: advance-hashes
-    runs-on: macOS-latest
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: ${{ env.hash }}
-          path: everparse
-      - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5
-      - name: Install Homebrew tools
-        run: |
-          brew install bash gnu-getopt make gnu-time
-      - name: Test
-        run: |
-          nproc=$(sysctl -n hw.logicalcpu)
-          if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
-          cd everparse && gmake -j$nproc -k all test
-
-  ci-docker:
-    needs: advance-hashes
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Read hash
-        run: |
-          hash="$(cat hash.txt)"
-          echo "hash=$hash" >> $GITHUB_ENV
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: ${{ env.hash }}
-          path: everparse
-      - name: Havoc .depend
-        run: |
-          echo '$(error "This file should have been cleaned away")' > everparse/.depend
-      - name: Get number of processors
-        run: |
-          echo CI_THREADS=$(nproc) >> $GITHUB_ENV
-      - name: Build a Docker image
-        uses: docker/build-push-action@v6
-        with:
-          build-args: |
-            CI_THREADS=${{ env.CI_THREADS }}
-          context: everparse
-
-  test-interop-macos:
-    needs: [build-macos, test-linux, test-windows]
-    runs-on: macos-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-build-macos
-          path: test0
-      - name: Extract artifact
-        run: |
-          pushd test0
-          tar xzf everparse_*.tar.gz
-          popd
-          mv test0/everparse test
-      - name: Download Linux test
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-linux
-          path: linux
-      - name: Test EverParse (--api lowstar)
-        run: |
-          cd ${{ github.workspace }}/linux/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
-      - name: Download Linux test (--api pulse)
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-pulse-linux
-          path: linux-pulse
-      - name: Test EverParse (--api pulse)
-        run: |
-          cd ${{ github.workspace }}/linux-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
-      - name: Download Windows test
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-windows
-          path: windows
-      - name: Test EverParse (--api lowstar)
-        run: |
-          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
-      - name: Download Windows test (--api pulse)
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-pulse-windows
-          path: windows-pulse
-      - name: Test EverParse (--api pulse)
-        run: |
-          cd ${{ github.workspace }}/windows-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
-
-  test-interop-linux:
-    needs: [build-linux, test-macos, test-windows]
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-build-linux
-          path: test0
-      - name: Extract artifact
-        run: |
-          pushd test0
-          tar xzf everparse_*.tar.gz
-          popd
-          mv test0/everparse test
-      - name: Download Macos test
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-macos
-          path: macos
-      - name: Test EverParse (--api lowstar)
-        run: |
-          cd ${{ github.workspace }}/macos/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
-      - name: Download Macos test (--api pulse)
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-pulse-macos
-          path: macos-pulse
-      - name: Test EverParse (--api pulse)
-        run: |
-          cd ${{ github.workspace }}/macos-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
-      - name: Download Windows test
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-windows
-          path: windows
-      - name: Test EverParse (--api lowstar)
-        run: |
-          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --api lowstar --check_hashes inplace Comments.3d
-      - name: Download Windows test (--api pulse)
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-pulse-windows
-          path: windows-pulse
-      - name: Test EverParse (--api pulse)
-        run: |
-          cd ${{ github.workspace }}/windows-pulse/ && bash ${{ github.workspace }}/test/everparse.sh --api pulse --check_hashes inplace Comments.3d
-
-  test-interop-windows:
-    needs: [build-windows, test-linux, test-macos]
-    runs-on: windows-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-build-windows
-          path: test0
-      - name: Extract artifact
-        shell: pwsh
-        run: |
-          Expand-Archive -Path test0\everparse_*.zip -DestinationPath test1
-          Move-Item -Path test1\everparse -Destination test
-      - name: Download Linux test
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-linux
-          path: linux
-      - name: Test EverParse (--api lowstar)
-        shell: cmd
-        run: |
-          cd ${{ github.workspace }}\linux && ${{ github.workspace }}\test\everparse.cmd --api lowstar --check_hashes inplace Comments.3d
-      - name: Download Linux test (--api pulse)
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-pulse-linux
-          path: linux-pulse
-      - name: Test EverParse (--api pulse)
-        shell: cmd
-        run: |
-          cd ${{ github.workspace }}\linux-pulse && ${{ github.workspace }}\test\everparse.cmd --api pulse --check_hashes inplace Comments.3d
-      - name: Download Macos test
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-macos
-          path: macos
-      - name: Test EverParse (--api lowstar)
-        shell: cmd
-        run: |
-          cd ${{ github.workspace }}\macos && ${{ github.workspace }}\test\everparse.cmd --api lowstar --check_hashes inplace Comments.3d
-      - name: Download Macos test (--api pulse)
-        uses: actions/download-artifact@v4
-        with:
-          name: everparse-test-pulse-macos
-          path: macos-pulse
-      - name: Test EverParse (--api pulse)
-        shell: cmd
-        run: |
-          cd ${{ github.workspace }}\macos-pulse && ${{ github.workspace }}\test\everparse.cmd --api pulse --check_hashes inplace Comments.3d
 
   create-pr:
-    needs: [test-interop-macos, test-interop-linux, test-interop-windows, ci-linux, ci-macos, ci-docker]
+    needs: [ci-linux]
     runs-on: ubuntu-latest
+    env:
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
     steps:
+      - name: Download base
+        uses: actions/download-artifact@v4
+        with:
+          name: base
       - name: Download hash
         uses: actions/download-artifact@v4
         with:
@@ -702,67 +204,52 @@ jobs:
           echo "base_branch=$base_branch" >> $GITHUB_ENV
           echo "base_sha=$base_sha" >> $GITHUB_ENV
           rm base_ref.txt
+          # Whether this run opens a pull request, resolved once here rather
+          # than repeated as a GitHub expression on each step that needs it.
+          if [[ "${{ github.event_name }}" == "schedule" && "$base_branch" == "master" ]] ||
+             [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.create_pr }}" == "true" ]] ; then
+            echo "creating_pr=true" >> $GITHUB_ENV
+            # Describing those changes additionally needs Copilot credentials.
+            if [[ -n "${COPILOT_GITHUB_TOKEN:-}" ]] ; then
+              echo "describe_with_copilot=true" >> $GITHUB_ENV
+            fi
+          fi
       - uses: actions/checkout@master
         with:
           submodules: true
           fetch-depth: 0
           ref: ${{ env.updated_sha }}
-      - name: create pull request
-        if: (github.event_name == 'schedule' && env.base_branch == 'master') || (github.event_name == 'workflow_dispatch' && inputs.create_pr)
+      - name: Set up Node
+        if: env.describe_with_copilot == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install GitHub Copilot CLI
+        if: env.describe_with_copilot == 'true'
         run: |
-          if [[ "$updated_sha" != "$base_sha" ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base "$base_branch" --title "Update hashes and snapshots" --fill-verbose ; fi
+          npm install -g @github/copilot
+      - name: Describe the changes with Copilot
+        if: env.describe_with_copilot == 'true'
+        run: |
+          if [[ "$updated_sha" != "$base_sha" ]] ; then bash .github/copilot-pr-description.sh "$base_sha" "$updated_sha" "$RUNNER_TEMP/pr-body.md" ; fi
+      - name: create pull request
+        if: env.creating_pr == 'true'
+        run: |
+          if [[ "$updated_sha" != "$base_sha" ]] ; then
+            git checkout -b _dzomo_pr_${{ github.run_id }} &&
+            git push --set-upstream origin _dzomo_pr_${{ github.run_id }} &&
+            if test -s "$RUNNER_TEMP/pr-body.md" ; then
+              gh pr create --base "$base_branch" --title "Update hashes and snapshots" --body-file "$RUNNER_TEMP/pr-body.md"
+            else
+              gh pr create --base "$base_branch" --title "Update hashes and snapshots" --fill-verbose
+            fi
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Push to branch directly
-        if: (github.event_name == 'schedule' && env.base_branch != 'master') || (github.event_name == 'workflow_dispatch' && !inputs.create_pr)
+        if: env.creating_pr != 'true'
         run: |
           if [[ "$updated_sha" != "$base_sha" ]] ; then git push origin HEAD:"$base_branch" ; fi
       - name: Delete branch
         run: |
           if [[ "$(git rev-parse origin/_dzomo_upgrade_${{ github.run_id }})" = "$updated_sha" ]] ; then git push origin --delete _dzomo_upgrade_${{ github.run_id }} ; fi
-
-  deps:
-    runs-on: ubuntu-latest
-    needs: create-pr
-    steps:
-      - name: Download hash
-        uses: actions/download-artifact@v4
-        with:
-          name: hash
-      - name: Record hash and remove hash file
-        run: |
-          echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV && rm hash.txt
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: ${{ env.updated_sha }}
-          sparse-checkout: |
-            .github/mark-deps-up-to-date.sh
-            .github/prune-deps.sh
-            Dockerfile
-            deps.Makefile
-            opt/Makefile
-            opt/hashes.Makefile
-            src/package/start-code-server.sh
-      - uses: actions/cache/restore@v4
-        id: cache
-        with:
-          path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
-          lookup-only: true
-          fail-on-cache-miss: false
-      - name: Build dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} --pull --target deps .
-      - name: Save image
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} | gzip > deps.tgz
-      - name: Upload image into cache
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
