@@ -17,7 +17,6 @@
 #   COPILOT_FIX_ATTEMPTS   how many times to let Copilot try (default: 3;
 #                          0 disables it, restoring plain `make` behaviour)
 #   COPILOT_GITHUB_TOKEN   Copilot credentials; if unset, no fix is attempted
-#   COPILOT_FIX_TIMEOUT    seconds to give one Copilot run (default: 3600)
 #
 # Copilot edits the *host* checkout, not the container: the host checkout is
 # the one with a .git, so it is the one whose changes can be reviewed, diffed
@@ -30,7 +29,6 @@ set -u -o pipefail
 : "${container:?ci-make-with-copilot: \$container is not set}"
 src="${EVERPARSE_SRC:-everparse}"
 attempts="${COPILOT_FIX_ATTEMPTS:-3}"
-timeout_s="${COPILOT_FIX_TIMEOUT:-3600}"
 
 test $# -gt 0 || { echo "usage: $0 <make argument>..." >&2 ; exit 2 ; }
 
@@ -145,7 +143,7 @@ fi
 for attempt in $(seq 1 "$attempts") ; do
     echo "::group::Copilot fix attempt $attempt of $attempts for: make $*"
 
-    timeout "$timeout_s" copilot \
+    copilot \
         --prompt "$(copilot_prompt "$@")" \
         --allow-all \
         --no-color \

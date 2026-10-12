@@ -18,8 +18,6 @@ base="${1:?usage: $0 <base sha> <head sha> <output file>}"
 head="${2:?usage: $0 <base sha> <head sha> <output file>}"
 out="${3:?usage: $0 <base sha> <head sha> <output file>}"
 
-timeout_s="${COPILOT_FIX_TIMEOUT:-1800}"
-
 if test -z "${COPILOT_GITHUB_TOKEN:-}" ; then
     echo "copilot-pr-description: COPILOT_GITHUB_TOKEN is not set; skipping." >&2
     exit 0
@@ -71,7 +69,7 @@ Rules:
 EOF
 )
 
-timeout "$timeout_s" copilot \
+copilot \
     --prompt "$prompt" \
     --allow-all \
     --disable-builtin-mcps \
