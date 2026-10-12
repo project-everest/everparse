@@ -159,8 +159,7 @@ let fstar_extract_args krmllib input_stream_binding out_dir fst =
     | Some m when m <> modul -> ["--custard_entry_module"; m]
     | _ -> []
   in
-  "--codegen" :: "Custard" ::
-    "--custard_backend" :: "KrmlC" ::
+  "--codegen" :: "KrmlC" ::
       "--custard_split" ::
         "--custard_entry_module" :: modul ::
           config_entry_module @

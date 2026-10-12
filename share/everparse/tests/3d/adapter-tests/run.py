@@ -90,7 +90,7 @@ def large(bits32=False):
     # outright, the old one passes units for KaRaMeL to remove later -- so
     # mixing them makes KaRaMeL reject the call sites on arity. See the comment
     # on fstar_extract_args in src/3d/ocaml/Batch.ml.
-    run([FSTAR] + flags + ["--codegen", "Custard", "--custard_backend", "KrmlC",
+    run([FSTAR] + flags + ["--codegen", "KrmlC",
                            "--custard_split",
                            "--custard_entry_module", "LargeExtern",
                            "--odir", out, HERE / "LargeExtern.fst",

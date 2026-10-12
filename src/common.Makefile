@@ -129,7 +129,7 @@ verify: $(ALL_CHECKED_FILES)
 CUSTARD_BACKEND ?= OCaml
 CUSTARD_ROOTS ?= $(FSTAR_FILES)
 
-CUSTARD_FLAGS += --codegen Custard --custard_backend $(CUSTARD_BACKEND)
+CUSTARD_FLAGS += --codegen $(CUSTARD_BACKEND)
 # One output file per F* source module. On the karamel backends that grouping
 # is what -bundle and -no-prefix select on; on OCaml it is what lets
 # hand-written .ml files sit beside the generated ones. The F# backend emits
