@@ -45,9 +45,9 @@ let pulse_3d_krml_home = filename_concat (filename_concat lib_3d_home "krml") "e
 
 (* KaRaMeL is always invoked with -skip-makefiles, so it emits neither
    Makefile.basic nor Makefile.include; EverParse ships its own instead. See
-   share/everparse/3d/Makefile.basic for why. *)
+   lib/everparse/3d/Makefile.basic for why. *)
 let pulse_makefile_basic =
-  filename_concat (filename_concat (filename_concat (filename_concat everparse_home "share") "everparse") "3d") "Makefile.basic"
+  filename_concat lib_3d_home "Makefile.basic"
 
 (* The directory holding the pre-generated EverParse.h for this backend.
    See lib/everparse/3d/krml/header.Makefile. *)

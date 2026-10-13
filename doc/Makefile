@@ -78,7 +78,7 @@ endif
 	$(3D) --odir out --batch $(3D_FILES)
 	$(3D) --odir out --batch $(3D_FILES_WITH_CONFIG) --config $(3D_CONFIG)
 	cp $(AUX_HEADERS) out
-	+$(MAKE) -C out -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic BLACKLIST='$(3D_NOT_COMPILED)' USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
+	+$(MAKE) -C out -f $(EVERPARSE_HOME)/lib/everparse/3d/Makefile.basic BLACKLIST='$(3D_NOT_COMPILED)' USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
 $(3D_OUT): out/%: 3d-do-tests
 

@@ -5,7 +5,7 @@
 #
 # --batch runs the whole pipeline: generation, F* verification, F* extraction
 # to .krml and KaRaMeL extraction to C. The generated C is then compiled with
-# -Wall -Wextra -Werror through EverParse's own share/everparse/3d/Makefile.basic,
+# -Wall -Wextra -Werror through EverParse's own lib/everparse/3d/Makefile.basic,
 # and the
 # C++ driver test.cpp is linked against it and run.
 
@@ -181,11 +181,11 @@ pulse-batch:
 
 # Compile everything KaRaMeL produced, to check the generated C is well-formed
 # and that the wrappers agree with the validators' ABI. We go through the
-# share/everparse/3d/Makefile.basic, so that the generated code is held to the
+# lib/everparse/3d/Makefile.basic, so that the generated code is held to the
 # same -Wall -Wextra -Werror standard as in share/everparse/tests/3d/lowstar. USER_TARGET=test has
 # no recipe: it just forces every object to be built.
 pulse-cc: pulse-batch
-	+$(MAKE) -C $(OUT_DIR) -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
+	+$(MAKE) -C $(OUT_DIR) -f $(EVERPARSE_HOME)/lib/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
 	$(CXX) -o test-cpp.pulse.exe -I $(OUT_DIR) test.cpp $(addprefix $(OUT_DIR)/, ArithmeticWrapper.o Arithmetic.o)
 	./test-cpp.pulse.exe
 
@@ -216,7 +216,7 @@ pulse-batch-interpret-test:
 	mkdir -p $(INTERPRET_DIR)
 	$(3D) --odir $(INTERPRET_DIR) --batch --save_hashes $(interpretable_tests)
 	$(3D) --odir $(INTERPRET_DIR) --batch --check_hashes strong $(interpretable_tests)
-	+$(MAKE) -C $(INTERPRET_DIR) -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
+	+$(MAKE) -C $(INTERPRET_DIR) -f $(EVERPARSE_HOME)/lib/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
 	$(CXX) -o test-cpp-interpret.pulse.exe -I $(INTERPRET_DIR) test.cpp $(addprefix $(INTERPRET_DIR)/, ArithmeticWrapper.o Arithmetic.o)
 	./test-cpp-interpret.pulse.exe
 

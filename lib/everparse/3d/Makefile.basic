@@ -20,7 +20,7 @@
 # Since there is no Makefile.include to read the file list from, the C files
 # are discovered with a wildcard over the output directory. Use as:
 #
-#   make -C <odir> -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic \
+#   make -C <odir> -f $(EVERPARSE_HOME)/lib/everparse/3d/Makefile.basic \
 #     USER_TARGET=... USER_CFLAGS=...
 
 CFLAGS	+= -I.
