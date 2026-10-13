@@ -188,8 +188,13 @@ make_everparse() {
     fi
     $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
     $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
-    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
-    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
+    # EverParseEndianness.h is part of the 3d runtime support in
+    # lib/everparse/3d, and is needed by every API and backend, so it is copied
+    # here rather than with the rest of that directory below, which is skipped
+    # when Pulse is disabled.
+    mkdir -p everparse/lib/everparse/3d
+    if $is_windows ; then $cp -r $EVERPARSE_HOME/lib/everparse/3d/EverParseEndianness_Windows_NT.h everparse/lib/everparse/3d/ ; fi
+    $cp -r $EVERPARSE_HOME/lib/everparse/3d/EverParseEndianness.h everparse/lib/everparse/3d/
     $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
 
     # Copy the Pulse 3d runtime (--api pulse), unless Pulse is disabled altogether.
@@ -216,8 +221,8 @@ make_everparse() {
         # -skip-makefiles, so this is what the generated C is compiled with.
         mkdir -p everparse/share/everparse/3d
         $cp -r $EVERPARSE_HOME/share/everparse/3d/Makefile.basic everparse/share/everparse/3d/
-        mkdir -p everparse/lib/everparse
-        $cp -r $EVERPARSE_HOME/lib/everparse/3d everparse/lib/everparse/3d
+        mkdir -p everparse/lib/everparse/3d
+        $cp -r $EVERPARSE_HOME/lib/everparse/3d/. everparse/lib/everparse/3d/
         # Drop the build machinery: the package ships the results, not the
         # means of producing them.
         rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile everparse/lib/everparse/3d/krml/header.Makefile

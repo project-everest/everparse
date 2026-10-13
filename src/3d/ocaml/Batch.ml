@@ -36,11 +36,12 @@ let cl_wrapper () =
   let krml_home = Filename.dirname (Filename.dirname krml) in
   Filename.concat (Filename.concat (Filename.concat (Filename.concat krml_home "share") "krml") "misc") "cl-wrapper.bat"
 
-(* The generated code is checked against the Pulse combinator backend in
-   lib/everparse/3d and lib/everparse/lowparse, and needs the Pulse library
-   itself on the include path. *)
-let pulse_3d_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "3d"
-let pulse_3d_krml_home = filename_concat (filename_concat pulse_3d_home "krml") "extracted"
+(* The 3d runtime support: the Pulse combinator backend the generated code is
+   checked against (which also needs lib/everparse/lowparse and the Pulse
+   library itself on the include path), the pre-extracted C, and the static
+   headers such as EverParseEndianness.h. *)
+let lib_3d_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "3d"
+let pulse_3d_krml_home = filename_concat (filename_concat lib_3d_home "krml") "extracted"
 
 (* KaRaMeL is always invoked with -skip-makefiles, so it emits neither
    Makefile.basic nor Makefile.include; EverParse ships its own instead. See
@@ -52,14 +53,14 @@ let pulse_makefile_basic =
    See lib/everparse/3d/krml/header.Makefile. *)
 let pulse_actions_c_home input_stream_binding =
   filename_concat
-    (filename_concat pulse_3d_home "krml")
+    (filename_concat lib_3d_home "krml")
     (string_of_input_stream_binding input_stream_binding)
 
 let lowstar_api () = Options_Base.get_api () = HashingOptions.ApiLowstar
 
 let everparse_h_home input_stream_binding =
   if lowstar_api () then
-    filename_concat (filename_concat pulse_3d_home "krml/lowstar")
+    filename_concat (filename_concat lib_3d_home "krml/lowstar")
       (string_of_input_stream_binding input_stream_binding)
   else pulse_actions_c_home input_stream_binding
 
@@ -78,7 +79,7 @@ let fstar_args0 krmllib =
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
         "--include" :: (filename_concat krmllib "obj") ::
-          "--include" :: pulse_3d_home ::
+          "--include" :: lib_3d_home ::
             "--warn_error" :: "+241" ::
               OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
 
@@ -926,7 +927,7 @@ let copy_everparse_h_raw
         if wanted "EverParsePulseEndianness.h" && file_exists everparse_pulse_endianness_h_source
         then copy everparse_pulse_endianness_h_source (filename_concat out_dir "EverParsePulseEndianness.h")
       end;
-      let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
+      let everparse_endianness_source = (filename_concat lib_3d_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
       if wanted "EverParseEndianness.h" && file_exists everparse_endianness_source
       then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
 

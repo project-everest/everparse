@@ -154,8 +154,8 @@ batch-interpret-test:
 	$(3D) --odir out.batch-interpret --batch --no_copy_everparse_h --save_hashes $(INTERPRETABLE_FILES)
 	$(3D) --odir out.batch-interpret --batch --check_hashes strong $(INTERPRETABLE_FILES)
 	cp $(OTHER_HEADERS) out.batch-interpret
-	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_C_RUNTIME)/buffer'
-	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_C_RUNTIME)/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
+	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/lib/everparse/3d -I $(EVERPARSE_C_RUNTIME)/buffer'
+	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/lib/everparse/3d -I $(EVERPARSE_C_RUNTIME)/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
 	./test-cpp.exe
 
 elf-test: ELF.3d

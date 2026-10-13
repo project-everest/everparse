@@ -123,7 +123,7 @@ def large(bits32=False):
            "[rename=EverParsePrivate]"], out)
     check_no_runtime_header(log)
     for header in [ROOT / "lib/everparse/3d/krml/lowstar/extern/EverParse.h",
-                   ROOT / "src/3d/EverParseEndianness.h"]:
+                   ROOT / "lib/everparse/3d/EverParseEndianness.h"]:
         shutil.copy2(header, out)
     compile_run(out, [out / "LargeExtern.c", HERE / "large.c"],
                 [TESTS / "extern/src"], name="check32" if bits32 else "check",

@@ -61,7 +61,7 @@ PULSE_TESTS := $(EVERPARSE_HOME)/share/everparse/tests/3d
 LO_DIR ?= $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar/out.batch-interpret
 PU_DIR ?= $(PULSE_TESTS)/out.batch-interpret.pulse
 
-LO_INC = -I $(LO_DIR) -I $(EVERPARSE_HOME)/src/3d \
+LO_INC = -I $(LO_DIR) -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/lib/everparse/3d \
          -I $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar/buffer \
          -I $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar
 PU_INC = -I $(PU_DIR) -I $(PULSE_TESTS)
@@ -101,7 +101,7 @@ pulse-diff-abi: abi_check.c | check-inputs
 	  $(LO_INC) -c abi_check.c -o abi_check_lo.o
 	$(CC) $(CFLAGS_COMMON) -Werror=incompatible-pointer-types \
 	  -Werror=implicit-function-declaration -Werror=int-conversion \
-	  $(PU_INC) -I $(EVERPARSE_HOME)/src/3d -c abi_check.c -o abi_check_pu.o
+	  $(PU_INC) -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/lib/everparse/3d -c abi_check.c -o abi_check_pu.o
 	@echo "pulse-diff: EVERPARSE_ERROR_HANDLER present and compatible in both backends"
 
 # The dispatch table is derived from the generated *Wrapper.h. The same driver
