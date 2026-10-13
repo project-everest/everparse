@@ -36,6 +36,7 @@ $(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && dune install --prefix=$(EVERCDDL_LIB_PREFIX) --section=lib evercddl
 	mkdir -p $(dir $@)
 	cp ocaml/_build/install/default/bin/cddl.exe $@
+	chmod +w $@ # because dune produces read-only executables
 
 .PHONY: all
 
