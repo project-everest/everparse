@@ -22,7 +22,7 @@ KRML_OPTS += -warn-error @4@6
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 extract: $(CUSTARD_KRML)
-	$(KRML) -bundle 'ArithParse.Impl=*,Prims,Custard.\*[rename=ArithParse]' -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
+	$(KRML) -bundle 'ArithParse.Impl=*,Prims,Custard.\*[rename=ArithParse]' -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse
 
 clean-output:
 	rm -rf $(OUTPUT_DIRECTORY)

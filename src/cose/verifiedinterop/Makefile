@@ -71,7 +71,7 @@ extract: $(CUSTARD_KRML)
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
-		-skip-linking $(CUSTARD_KRML) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -header noheader.txt
+		-skip-linking $(CUSTARD_KRML) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse -header noheader.txt
 
 %.diff: extract
 	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)

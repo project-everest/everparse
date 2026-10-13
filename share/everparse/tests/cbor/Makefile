@@ -14,15 +14,15 @@
 # to the C ones (parse acceptance/rejection match, and for valid encodings
 # the Rust serializer produces the same bytes the C serializer wrote).
 #
-# Override the snapshot locations on the command line if needed:
+# Override the EverCBOR locations on the command line if needed:
 #
-#   make EVERCBOR_NONDET_PATH=/path/to/nondet/c \
-#        EVERCBOR_DET_PATH=/path/to/det/c \
+#   make EVERCBOR_INCLUDE_PATH=/path/to/include/everparse \
 #        EVERCBOR_LIB_PATH=/path/to/lib/everparse
 #
-# The snapshot directory must contain the corresponding header(s). The
-# pre-built object files (CBORNondet.o and CBORDet.o) live together in
-# lib/everparse, which EVERCBOR_LIB_PATH points at.
+# The public headers (CBORNondet.h, CBORDet.h and the types they pull in)
+# live together in include/everparse, which EVERCBOR_INCLUDE_PATH points at,
+# and the pre-built object files (CBORNondet.o and CBORDet.o) live together
+# in lib/everparse, which EVERCBOR_LIB_PATH points at.
 
 ifeq ($(OS),Windows_NT)
   local_curdir := $(shell cygpath -m $(CURDIR))
@@ -30,10 +30,9 @@ else
   local_curdir := $(CURDIR)
 endif
 
-# Default snapshot locations: the in-tree C extractions.
-EVERCBOR_NONDET_PATH ?= $(local_curdir)/../../../../src/cbor/pulse/nondet/c
-EVERCBOR_DET_PATH    ?= $(local_curdir)/../../../../src/cbor/pulse/det/c
-EVERCBOR_LIB_PATH    ?= $(local_curdir)/../../../../lib/everparse
+# Default locations: the in-tree EverParse installation.
+EVERCBOR_INCLUDE_PATH ?= $(local_curdir)/../../../../include/everparse
+EVERCBOR_LIB_PATH     ?= $(local_curdir)/../../../../lib/everparse
 
 # Number of iterations for benchmarking. Override on the command line to make
 # timing measurements more reliable, e.g. BENCH_ITERATIONS=1000.
@@ -87,12 +86,12 @@ build-det:    $(DET_BIN)
 
 $(NONDET_BIN): $(SRC) $(NONDET_OBJS)
 	$(CC) $(CFLAGS) -DEVERCBOR_NONDET -DBENCH_ITERATIONS=$(BENCH_ITERATIONS) \
-	    -I $(EVERCBOR_NONDET_PATH) \
+	    -I $(EVERCBOR_INCLUDE_PATH) \
 	    -o $@ $(SRC) $(NONDET_OBJS)
 
 $(DET_BIN): $(SRC) $(DET_OBJS)
 	$(CC) $(CFLAGS) -DEVERCBOR_DET -DBENCH_ITERATIONS=$(BENCH_ITERATIONS) \
-	    -I $(EVERCBOR_DET_PATH) \
+	    -I $(EVERCBOR_INCLUDE_PATH) \
 	    -o $@ $(SRC) $(DET_OBJS)
 
 run: run-c run-python run-rust

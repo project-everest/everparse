@@ -3,7 +3,7 @@ all: CBORNondetTest
 EVERPARSE_HOME = $(realpath ../../../../../..)
 
 CBOR_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
-CBOR_INCLUDE_PATH = $(realpath ..)
+CBOR_INCLUDE_PATH = $(EVERPARSE_HOME)/include/everparse
 
 CFLAGS += -Werror -I $(CBOR_INCLUDE_PATH)
 

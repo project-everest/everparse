@@ -241,11 +241,13 @@ make_everparse() {
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
-    # The prebuilt EverCBOR object files, which src/cbor only holds the
-    # sources and headers of.
+    # The prebuilt EverCBOR object files and their public headers, neither of
+    # which lives under src/cbor any more.
     mkdir -p everparse/lib/everparse
     $cp $EVERPARSE_HOME/lib/everparse/CBORDet.o everparse/lib/everparse/
     $cp $EVERPARSE_HOME/lib/everparse/CBORNondet.o everparse/lib/everparse/
+    mkdir -p everparse/include/everparse
+    $cp -r $EVERPARSE_HOME/include/everparse/. everparse/include/everparse/
     fi
 
     # Download and copy clang-format from the LLVM release

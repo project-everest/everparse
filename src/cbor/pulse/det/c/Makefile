@@ -1,9 +1,13 @@
 all: extract
 
-CFLAGS += -O3 -I .
-
 EVERPARSE_HOME = $(realpath ../../../../..)
 EVERPARSE_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
+EVERPARSE_INCLUDE_PATH = $(EVERPARSE_HOME)/include/everparse
+
+# -I . for the internal/ headers, which stay next to the sources; the public
+# headers live in $(EVERPARSE_INCLUDE_PATH), and internal/ refers to them as
+# <everparse/CBORDet.h>, hence its parent directory too.
+CFLAGS += -O3 -I . -I $(EVERPARSE_HOME)/include -I $(EVERPARSE_INCLUDE_PATH)
 
 extract: $(EVERPARSE_LIB_PATH)/CBORDet.o
 

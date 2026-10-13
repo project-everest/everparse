@@ -34,11 +34,11 @@ KRML_OPTS += -warn-error @4@6
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o: $(CUSTARD_KRML)
-	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*,Prims,Custard.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle CDDLTest.Client+CDDLTest.Test=*[rename=CDDLExtractionTest] -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants  -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
-	$(CC) $(CFLAGS) -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -c $(OUTPUT_DIRECTORY)/CDDLExtractionTest.c -o $@
+	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*,Prims,Custard.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle CDDLTest.Client+CDDLTest.Test=*[rename=CDDLExtractionTest] -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants  -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse
+	$(CC) $(CFLAGS) -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse -c $(OUTPUT_DIRECTORY)/CDDLExtractionTest.c -o $@
 
 $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
-	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/lib/everparse/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
+	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/lib/everparse/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse
 
 extract: $(OUTPUT_DIRECTORY)/test.exe
 

@@ -9,7 +9,10 @@ endif
 export HACL_HOME
 
 CC     := clang
-CFLAGS += -O3 -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -I ../../c -I _output
+CFLAGS += -O3 -I $(EVERPARSE_HOME)/include/everparse -I ../../c -I _output
+# For internal/CBORDet.h, needed to compile CBORDet.c below, and for
+# the <everparse/CBORDet.h> it includes in turn
+CFLAGS += -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -I $(EVERPARSE_HOME)/include
 
 $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a: $(HACL_HOME)
 	$(MAKE) -C $(dir $@)
@@ -22,7 +25,7 @@ $(CURDIR)/hacl-star:
 $(EVERPARSE_HOME)/opt/karamel:
 	+$(MAKE) -C $(dir $@) $(notdir $@)
 
-HEADERDEPS = ../../c/COSE_Format.h ../../c/COSE_EverCrypt.h $(EVERPARSE_HOME)/src/cbor/pulse/det/c/CBORDet.h
+HEADERDEPS = ../../c/COSE_Format.h ../../c/COSE_EverCrypt.h $(EVERPARSE_HOME)/include/everparse/CBORDet.h
 
 COSE_Format.o: ../../c/COSE_Format.c $(HEADERDEPS)
 

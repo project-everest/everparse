@@ -2,7 +2,7 @@ all: build
 
 EVERPARSE_HOME = $(realpath ../../..)
 
-CFLAGS += -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
+CFLAGS += -I $(EVERPARSE_HOME)/include/everparse
 
 ALL_C_FILES := $(wildcard *.c)
 ALL_O_FILES := $(ALL_C_FILES:.c=.o)

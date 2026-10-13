@@ -136,8 +136,8 @@ NOTE: Currently, CBORNondet and CBORDet cannot be used together yet.
 
   + The generated C source files for the CBOR deterministic encoding are in
     `src/cbor/pulse/det/c`, which also contains some tests in the
-    `test` subdirectory. There, the header file is `CBORDet.h`. The
-    object file is `lib/everparse/CBORDet.o`, which you can link with
+    `test` subdirectory. The header file is `include/everparse/CBORDet.h`.
+    The object file is `lib/everparse/CBORDet.o`, which you can link with
     your application.
   
   + A fully documented example is in
@@ -146,9 +146,10 @@ NOTE: Currently, CBORNondet and CBORDet cannot be used together yet.
 
   + The generated C source files for CBORNondet are in
     `src/cbor/pulse/nondet/c`, which also contains some tests in the
-    `test` subdirectory. There, the header file is `CBORNondet.h`. The
-    object file is `lib/everparse/CBORNondet.o`, which you can link with
-    your application.
+    `test` subdirectory. The header file is
+    `include/everparse/CBORNondet.h`. The object file is
+    `lib/everparse/CBORNondet.o`, which you can link with your
+    application.
   
   + A fully documented example is in
     `src/cbor/pulse/nondet/c/example`. There, `main.c` documents the C
@@ -175,7 +176,7 @@ NOTE: Support for encryption is in progress.
   + `COSE_Format.c` contains the verified parsers and serializers for COSE
   + `COSE_EverCrypt.c` is a verified implementation of sign1 and verify1 with COSE_Format and HACL* EverCrypt
   + `COSE_OpenSSL.c` is a handwritten implementation of sign1 and verify1 with OpenSSL, unverified except for parsing and serializing, calling into COSE_Format
-* To use the corresponding include files, you need to add `src/cbor/pulse/det/c` to the include path of your C compiler.
+* To use the corresponding include files, you need to add `include/everparse` to the include path of your C compiler.
 * Interop tests for the C library are in `src/cose/interop` (OpenSSL) and `src/cose/verifiedinterop/test` (HACL* EverCrypt)
 * The generated Rust source files for COSE are in `src/cose/rust`, where you can use `cargo build` and `cargo test` ; the crate is called `evercosign`
 

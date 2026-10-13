@@ -4,10 +4,10 @@ EVERPARSE_HOME = $(realpath ../../../../../..)
 INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/pulse
 ALREADY_CACHED := *,-CBORTest,
 OUTPUT_DIRECTORY:=extracted
-CBORDET_PATH := $(realpath ../../c)
+EVERPARSE_INCLUDE_PATH := $(EVERPARSE_HOME)/include/everparse
 EVERPARSE_LIB_PATH := $(EVERPARSE_HOME)/lib/everparse
 
-CFLAGS += -I $(CBORDET_PATH)
+CFLAGS += -I $(EVERPARSE_INCLUDE_PATH)
 
 # Whole-program extraction.  The [CBORDetAPI] bundle is header-only here -- its
 # definitions come from the prebuilt CBORDet.o this test links against -- but
