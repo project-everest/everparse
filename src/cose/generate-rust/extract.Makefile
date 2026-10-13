@@ -1,7 +1,7 @@
 EVERPARSE_HOME = $(realpath ../../..)
 OUTPUT_DIRECTORY := _output
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/src/cbor/pulse $(EVERPARSE_HOME)/src/cddl/pulse $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/spec/raw $(EVERPARSE_HOME)/src/cbor/spec/raw/everparse $(EVERPARSE_HOME)/src/cbor/pulse/raw $(EVERPARSE_HOME)/src/cbor/pulse/raw/slice-rust $(EVERPARSE_HOME)/src/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/lib/everparse/lowparse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/lib/everparse/cbor/pulse $(EVERPARSE_HOME)/src/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cbor/spec/raw $(EVERPARSE_HOME)/lib/everparse/cbor/spec/raw/everparse $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw/slice-rust $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/lib/everparse/lowparse
 #INCLUDE_PATHS += ../verifiedinterop
 
 CACHE_DIRECTORY := _output

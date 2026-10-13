@@ -1,6 +1,6 @@
 all: extract
 
-EVERPARSE_HOME = $(realpath ../../../..)
+EVERPARSE_HOME = $(realpath ../../../../..)
 INCLUDE_PATHS += $(realpath ..) $(realpath ../../spec) $(realpath ../../spec/raw)
 # ALREADY_CACHED := *,
 

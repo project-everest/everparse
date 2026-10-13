@@ -3,8 +3,8 @@ all: extract
 EVERPARSE_HOME := $(realpath ../../../..)
 include $(EVERPARSE_HOME)/src/windows.Makefile
 
-SRC_DIRS += $(EVERPARSE_HOME)/src/cbor/pulse
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/spec/raw $(EVERPARSE_HOME)/src/cbor/spec/raw/everparse $(EVERPARSE_HOME)/src/cbor/pulse/raw $(EVERPARSE_HOME)/src/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/lib/everparse/lowparse
+SRC_DIRS += $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cbor/spec/raw $(EVERPARSE_HOME)/lib/everparse/cbor/spec/raw/everparse $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 # Selects the byte_slice backend implementation of CBOR.Pulse.Raw.Slice (c or rust).
 # byte_slice0 is an abstract seam (CBOR.Pulse.Raw.Slice.fsti); each backend's .fst
@@ -17,7 +17,7 @@ INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/spec
 # native &[u8] model type). Exactly one impl must be on the include path, so the two
 # backends are extracted in separate passes (see the `extract` target) into separate
 # output directories.
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)
 
 FSTAR_OPTIONS += --warn_error -342
 
@@ -40,11 +40,11 @@ endif
 # selected per pass by include path and is not part of the committed checked-file
 # cache. Its .fst.checked is built by the backend's own Makefile (see the explicit
 # delegation rule near the bottom of this file and
-# src/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)/Makefile), so here we treat it as
+# lib/everparse/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)/Makefile), so here we treat it as
 # already cached and only consume it: that keeps the slice out of ALL_CHECKED_FILES
 # (so it is not also built by common.Makefile's `$(ALL_CHECKED_FILES): %.checked`
 # rule) while leaving it as a prerequisite of the slice .krml. The normal extraction
-# entry point overrides ALREADY_CACHED (src/cbor/Makefile passes
+# entry point overrides ALREADY_CACHED (lib/everparse/cbor/Makefile passes
 # '*,-CBOR,CBOR.Pulse.Raw.Slice,', which likewise re-caches the slice while keeping
 # the rest of CBOR uncached); this default applies when krml is built directly.
 ALREADY_CACHED := '*,'
@@ -64,7 +64,7 @@ include $(EVERPARSE_HOME)/src/common.Makefile
 # The recipe fires only when the .checked is missing or older than its source; on the
 # normal path cbor-verify has already built it via the same Makefile, so this is a
 # no-op safety net for direct/standalone krml builds.
-CBOR_SLICE_DIR := $(EVERPARSE_HOME)/src/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)
+CBOR_SLICE_DIR := $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)
 $(CBOR_SLICE_DIR)/CBOR.Pulse.Raw.Slice.fst.checked: $(CBOR_SLICE_DIR)/CBOR.Pulse.Raw.Slice.fst
 	+$(MAKE) -C $(CBOR_SLICE_DIR)
 

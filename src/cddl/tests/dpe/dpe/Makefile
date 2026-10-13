@@ -9,8 +9,8 @@ endif
 OUTPUT_DIRECTORY := _output
 INCLUDE_PATHS += \
 $(EVERPARSE_HOME)/src/cddl/spec \
-$(EVERPARSE_HOME)/src/cbor/spec \
-$(EVERPARSE_HOME)/src/cbor/pulse \
+$(EVERPARSE_HOME)/lib/everparse/cbor/spec \
+$(EVERPARSE_HOME)/lib/everparse/cbor/pulse \
 $(EVERPARSE_HOME)/src/cddl/pulse \
 $(EVERPARSE_HOME)/src/cddl/tool \
 ../util \

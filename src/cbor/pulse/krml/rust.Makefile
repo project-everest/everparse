@@ -1,6 +1,9 @@
 CBOR_SLICE_BACKEND := rust
 CBOR_API ?= det
 
+# The raw CBOR implementation modules live in the library tree.
+cbor_raw_dir := $(realpath ../../../../lib/everparse/cbor/pulse/raw)
+
 # The roots of this pass: every module named on the left of a karamel -bundle
 # clause below, plus the bundle names themselves (see extract.Makefile).
 CUSTARD_ENTRY_MODULES := CBOR.Spec.Constants
@@ -10,11 +13,11 @@ ifeq (det,$(CBOR_API))
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Rust
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Type
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Dummy
-CUSTARD_ROOTS := $(realpath ../raw/CBOR.Pulse.API.Det.Rust.fst)
+CUSTARD_ROOTS := $(cbor_raw_dir)/CBOR.Pulse.API.Det.Rust.fst
 else
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.Rust
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.Type
-CUSTARD_ROOTS := $(realpath ../raw/CBOR.Pulse.API.Nondet.Rust.fst)
+CUSTARD_ROOTS := $(cbor_raw_dir)/CBOR.Pulse.API.Nondet.Rust.fst
 endif
 
 include extract.Makefile

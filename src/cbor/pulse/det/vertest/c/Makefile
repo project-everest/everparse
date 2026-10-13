@@ -1,7 +1,7 @@
 all: verify test
 
 EVERPARSE_HOME = $(realpath ../../../../../..)
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
 ALREADY_CACHED := *,-CBORTest,
 OUTPUT_DIRECTORY:=extracted
 EVERPARSE_INCLUDE_PATH := $(EVERPARSE_HOME)/include/everparse

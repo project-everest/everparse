@@ -59,7 +59,7 @@ test-nofstar: all-nofstar cbor-test-unverified cose-extracted-test
 .PHONY: test-nofstar
 
 clean-cbor:
-	+$(MAKE) -C src/cbor clean
+	+$(MAKE) -C lib/everparse/cbor clean
 	+$(MAKE) -C share/everparse/tests/cbor clean
 
 .PHONY: clean-cbor

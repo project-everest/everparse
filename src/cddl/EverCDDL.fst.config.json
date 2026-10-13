@@ -1,8 +1,8 @@
 {
     "fstar_exe": "../../fstar.sh",
     "include_dirs": [
-      "../cbor/spec",
-      "../cbor/pulse",
+      "../../lib/everparse/cbor/spec",
+      "../../lib/everparse/cbor/pulse",
       "./pulse",
       "./spec",
       "./tool"

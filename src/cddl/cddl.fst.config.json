@@ -2,8 +2,8 @@
     "_comment": "This allows to interactively edit the generated CDDLTest.Test.fst file. Make sure to build the plugins before.",
     "fstar_exe": "../../fstar.sh",
     "include_dirs": [
-      "../cbor/spec",
-      "../cbor/pulse",
+      "../../lib/everparse/cbor/spec",
+      "../../lib/everparse/cbor/pulse",
       "pulse",
       "spec",
       "tool"

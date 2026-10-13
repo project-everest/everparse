@@ -1,7 +1,7 @@
 all: verify
 
 EVERPARSE_HOME = $(realpath ../../..)
-INCLUDE_PATHS += $(realpath ../spec) $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/pulse
+INCLUDE_PATHS += $(realpath ../spec) $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
 
 ALREADY_CACHED := *,-CDDL.Pulse,
 FSTAR_OPTIONS += --warn_error -342

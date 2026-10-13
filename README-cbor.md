@@ -19,7 +19,7 @@ Section 2.2:
 - the recursive combinator specification is in `/lib/everparse/lowparse/LowParse.Spec.Recursive.fst*`
 - in particular, the validator and jumper for the recursive format is in `/lib/everparse/lowparse/LowParse.Pulse.Recursive.fst`
 
-Section 3.2: in directory `/src/cbor`
+Section 3.2: in directory `/lib/everparse/cbor`
 - the CBOR raw data type is defined in `spec/raw/CBOR.Spec.Raw.Base.fst`
 - the CBOR raw data parser and serializer specifications are defined in `spec/raw/everparse/CBOR.Spec.Raw.EverParse.fst`
 - the CBOR raw data validator, jumper implementation, accessors, and the CBOR header value reader and writer, as well as the validator and jumper for the deterministic format, are defined in `pulse/raw/everparse/CBOR.Pulse.Raw.EverParse.Format.fst`
@@ -27,7 +27,7 @@ Section 3.2: in directory `/src/cbor`
 - the separation logic relation for CBOR raw data is defined in `pulse/raw/CBOR.Pulse.Raw.Match.fst`
 - the CBOR raw data serializer implementations are defined in `pulse/raw/everparse/CBOR.Pulse.Raw.Format.Serialize.fst`
 
-Section 3.3: in directory `/src/cbor`
+Section 3.3: in directory `/lib/everparse/cbor`
 - The validity and equivalence predicates are defined in `spec/raw/CBOR.Spec.Raw.Valid.fst*`
 - The deterministic encoding is defined in `spec/raw/CBOR.Spec.Raw.Optimal.fst`
 - Theorem 3.1 is `unpack_pack` and `pack_unpack` in `spec/raw/CBOR.Spec.Raw.DataModel.fst`.

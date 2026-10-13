@@ -238,6 +238,8 @@ make_everparse() {
 
     # Copy evercbor and evercddl
     if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
+    $cp -r $EVERPARSE_HOME/lib/everparse/cbor everparse/lib/everparse/cbor
+    # The C and Rust extractions of EverCBOR, which stay under src/cbor/pulse.
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe

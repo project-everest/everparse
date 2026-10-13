@@ -37,7 +37,7 @@ EVERPARSE_HOME := $(realpath .)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += lib/everparse/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+SRC_DIRS += lib/everparse/lowparse src/ASN1 lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse src/cddl/spec
 
 # LowParse's specification and its Pulse implementation share one directory, so
 # the two are told apart by module name: everything the Pulse implementation
@@ -45,7 +45,7 @@ SRC_DIRS += lib/everparse/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/
 LOWPARSE_PULSE_PATTERN := lib/everparse/lowparse/LowParse.Pulse%
 
 ifeq (,$(NO_PULSE))
-  SRC_DIRS += src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+  SRC_DIRS += lib/everparse/cbor/pulse lib/everparse/cbor/pulse/raw lib/everparse/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
   SRC_DIRS += lib/everparse/3d
 else
   FSTAR_FILES_EXCLUDE += $(LOWPARSE_PULSE_PATTERN)
@@ -66,7 +66,7 @@ $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 ifeq (1,$(ADMIT_CBOR_CDDL))
-$(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+$(filter lib/everparse/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 LOWPARSE_PULSE_CHECKED_FILES := $(filter $(LOWPARSE_PULSE_PATTERN),$(ALL_CHECKED_FILES))
@@ -211,10 +211,10 @@ submodules:
 
 .PHONY: submodules
 
-cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
+cbor-interface: $(filter-out lib/everparse/cbor/spec/raw/%,$(filter lib/everparse/cbor/spec/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))
-cbor-interface: $(filter-out src/cbor/pulse/raw/%,$(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES)))
+cbor-interface: $(filter-out lib/everparse/cbor/pulse/raw/%,$(filter lib/everparse/cbor/pulse/%,$(ALL_CHECKED_FILES)))
 endif
 
 .PHONY: cbor-interface
@@ -237,10 +237,10 @@ endif
 
 .PHONY: cbor-det-common-vertest
 
-cbor-verify-aux: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter lib/everparse/cbor/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cbor-verify-aux: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter lib/everparse/cbor/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 .PHONY: cbor-verify-aux
@@ -248,7 +248,7 @@ endif
 # The byte_slice seam (CBOR.Pulse.Raw.Slice) has two backend implementations,
 # slice-c and slice-rust, that share a module name and so cannot be checked in a
 # single dependency scan; each lives in its own directory with its own Makefile
-# (mirroring src/cbor/pulse/raw) and is excluded from SRC_DIRS and the global
+# (mirroring lib/everparse/cbor/pulse/raw) and is excluded from SRC_DIRS and the global
 # checked-file cache. `cbor-verify` is the full verification rule: cbor-verify-aux
 # (the whole CBOR closure, including the shared CBOR.Pulse.Raw.Slice.fsti.checked)
 # plus each backend's CBOR.Pulse.Raw.Slice.fst.checked, built by delegating to the
@@ -265,10 +265,10 @@ endif
 # independent targets and may run in parallel with each other under -j.
 ifeq (,$(NO_PULSE))
 cbor-verify-slice-c: cbor-verify-aux
-	+$(MAKE) -C src/cbor/pulse/raw/slice-c
+	+$(MAKE) -C lib/everparse/cbor/pulse/raw/slice-c
 
 cbor-verify-slice-rust: cbor-verify-aux
-	+$(MAKE) -C src/cbor/pulse/raw/slice-rust
+	+$(MAKE) -C lib/everparse/cbor/pulse/raw/slice-rust
 
 cbor-verify: cbor-verify-aux cbor-verify-slice-c cbor-verify-slice-rust
 else
@@ -284,12 +284,12 @@ cbor-extract-pre: cbor-verify $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FI
 .PHONY: cbor-extract-pre
 
 cbor-extract-krml: cbor-extract-pre
-	+$(MAKE) -C src/cbor extract-krml
+	+$(MAKE) -C lib/everparse/cbor extract-krml
 
 .PHONY: cbor-extract-krml
 
 cbor-test-snapshot: cbor-extract-krml
-	+$(MAKE) -C src/cbor test-snapshot
+	+$(MAKE) -C lib/everparse/cbor test-snapshot
 else
 cbor-test-snapshot: cbor-verify
 endif
@@ -299,7 +299,7 @@ endif
 # This rule is incompatible with `cbor` and `cbor-test-snapshot`
 ifeq (,$(NO_PULSE))
 cbor-snapshot: cbor-extract-krml
-	+$(MAKE) -C src/cbor snapshot
+	+$(MAKE) -C lib/everparse/cbor snapshot
 else
 cbor-snapshot:
 endif
@@ -389,7 +389,7 @@ clean-quackyducky:
 	+$(MAKE) -C src/qd clean
 
 clean-cbor-verify:
-	+$(MAKE) -C src/cbor clean-verify
+	+$(MAKE) -C lib/everparse/cbor clean-verify
 
 clean-cddl:
 	+$(MAKE) -C src/cddl clean

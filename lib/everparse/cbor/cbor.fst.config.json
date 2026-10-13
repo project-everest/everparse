@@ -1,7 +1,7 @@
 {
-    "fstar_exe": "../../fstar.sh",
+    "fstar_exe": "../../../fstar.sh",
     "include_dirs": [
-      "../../lib/everparse/lowparse",
+      "../../../lib/everparse/lowparse",
       "spec",
       "spec/raw",
       "spec/raw/everparse",

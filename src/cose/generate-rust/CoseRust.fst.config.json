@@ -5,8 +5,8 @@
       ".",
       "./_output",
       "../../../lib/everparse/lowparse",
-      "../../../src/cbor/spec",
-      "../../../src/cbor/pulse",
+      "../../../lib/everparse/cbor/spec",
+      "../../../lib/everparse/cbor/pulse",
       "../../../src/cddl/pulse",
       "../../../src/cddl/spec",
       "../../../src/cddl/tool"

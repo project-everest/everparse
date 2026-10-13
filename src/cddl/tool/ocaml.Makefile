@@ -3,8 +3,8 @@ all: extract
 EVERPARSE_HOME := $(realpath ../../..)
 include $(EVERPARSE_HOME)/src/windows.Makefile
 
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/pulse
-FSTAR_FILES := $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Base.fst $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Print.fst $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Elab.fst $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Driver.fst CDDL.Tool.Gen.fst $(EVERPARSE_HOME)/src/cbor/spec/CBOR.Spec.Constants.fst
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/pulse
+FSTAR_FILES := $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Base.fst $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Print.fst $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Elab.fst $(EVERPARSE_HOME)/src/cddl/spec/CDDL.Spec.AST.Driver.fst CDDL.Tool.Gen.fst $(EVERPARSE_HOME)/lib/everparse/cbor/spec/CBOR.Spec.Constants.fst
 ALREADY_CACHED := *,
 OUTPUT_DIRECTORY := ocaml/evercddl-lib/extracted
 FSTAR_DEP_FILE := ocaml.depend
