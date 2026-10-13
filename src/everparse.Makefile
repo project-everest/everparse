@@ -6,4 +6,4 @@ include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 ALREADY_CACHED := LowParse,$(ALREADY_CACHED)
 
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse

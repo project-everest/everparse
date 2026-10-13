@@ -4,7 +4,7 @@ EVERPARSE_HOME := $(realpath ../../../..)
 include $(EVERPARSE_HOME)/src/windows.Makefile
 
 SRC_DIRS += $(EVERPARSE_HOME)/src/cbor/pulse
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/spec/raw $(EVERPARSE_HOME)/src/cbor/spec/raw/everparse $(EVERPARSE_HOME)/src/cbor/pulse/raw $(EVERPARSE_HOME)/src/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/spec/raw $(EVERPARSE_HOME)/src/cbor/spec/raw/everparse $(EVERPARSE_HOME)/src/cbor/pulse/raw $(EVERPARSE_HOME)/src/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 # Selects the byte_slice backend implementation of CBOR.Pulse.Raw.Slice (c or rust).
 # byte_slice0 is an abstract seam (CBOR.Pulse.Raw.Slice.fsti); each backend's .fst

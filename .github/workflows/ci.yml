@@ -76,7 +76,7 @@ jobs:
          docker exec $container bash .github/ci-make.sh -kj$(nproc) lowparse ADMIT=1
       - name: Save LowParse proofs
         run: |
-          docker exec $container /bin/bash -c "tar -c src/lowparse/*.checked src/lowparse/pulse/*.checked" | gzip > lowparse.tgz && docker stop $container && docker rm $container
+          docker exec $container /bin/bash -c "tar -c lib/everparse/lowparse/*.checked" | gzip > lowparse.tgz && docker stop $container && docker rm $container
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -133,7 +133,7 @@ jobs:
           name: lowparse
       - name: Upload lowparse proofs into the container
         run: |
-          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch lib/everparse/lowparse/*.checked"
       - name: Install 32-bit C toolchain
         run: |
           docker exec --user root "$container" /bin/bash -c \
@@ -169,7 +169,7 @@ jobs:
           name: lowparse
       - name: Upload lowparse proofs into the container
         run: |
-          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch lib/everparse/lowparse/*.checked"
       - name: Build CBOR/CDDL
         run: |
           docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh -kj$(nproc) cddl cbor-verify ADMIT_LOWPARSE=1"
@@ -201,7 +201,7 @@ jobs:
           name: lowparse
       - name: Upload lowparse proofs into the container
         run: |
-          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch lib/everparse/lowparse/*.checked"
       - name: Test CBOR/CDDL
         run: |
           docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh -kj$(nproc) cddl-test cbor-test cose-test ADMIT_LOWPARSE=1 ADMIT_CBOR_CDDL=1 EVERPARSE_CHECK_DIFF=1"

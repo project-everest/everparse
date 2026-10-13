@@ -6,13 +6,20 @@
 
 all: verify
 
-EVERPARSE_HOME = $(realpath ../..)
+EVERPARSE_HOME = $(realpath ../../..)
+
+ifeq (,$(NO_PULSE))
+include $(EVERPARSE_HOME)/src/pulse.Makefile
+else
+# LowParse.Pulse* and LowParse.PulseParse* are the Pulse implementation of the
+# combinators; everything else here is pure specification and verifies without
+# Pulse. They all sit in this one directory, so select them by module name.
+FSTAR_FILES := $(filter-out LowParse.Pulse%,$(wildcard *.fst *.fsti))
+endif
 
 include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 ALREADY_CACHED := *,-LowParse,
-
-clean_rules += clean-pulse
 
 include $(EVERPARSE_HOME)/src/common.Makefile
 
@@ -20,17 +27,14 @@ tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
 
 spec: $(filter LowParse.Spec.%,$(ALL_CHECKED_FILES))
 
-.PHONY: tot spec
+pulse: $(filter LowParse.Pulse%,$(ALL_CHECKED_FILES))
+
+.PHONY: tot spec pulse
 
 .PHONY: all verify clean %.fst-in %.fsti-in fstar-test
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
-
-clean-pulse:
-	+$(MAKE) -C pulse clean
-
-.PHONY: clean-pulse
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 

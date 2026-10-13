@@ -2,7 +2,7 @@ all: depend verify test
 
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
 
-LOWPARSE_HOME ?= $(EVERPARSE_HOME)/src/lowparse
+LOWPARSE_HOME ?= $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -12,7 +12,7 @@ LAX_EXT=
 LAX_OPT=
 endif
 
-INCLUDE_PATHS += $(LOWPARSE_HOME) $(LOWPARSE_HOME)/pulse ..
+INCLUDE_PATHS += $(LOWPARSE_HOME) ..
 ALREADY_CACHED := C,Spec.Loops,LowParse,
 CACHE_DIRECTORY := cache$(LAX_EXT)
 OUTPUT_DIRECTORY := krml

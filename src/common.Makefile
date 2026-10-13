@@ -45,7 +45,9 @@ FSTAR_OPTIONS += $(PROFILE)
 ifeq ($(OS),Windows_NT)
 SRC_DIRS := $(shell cygpath -m $(SRC_DIRS))
 endif
-FSTAR_FILES ?= $(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(SRC_DIRS)))
+# FSTAR_FILES_EXCLUDE holds $(filter-out) patterns for source files that live
+# in SRC_DIRS but that this particular build must not check.
+FSTAR_FILES ?= $(filter-out $(FSTAR_FILES_EXCLUDE),$(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(SRC_DIRS))))
 
 # `ALREADY_CACHED` expected to be empty or to end with a comma
 ifeq ($(OS),Windows_NT)

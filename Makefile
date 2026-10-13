@@ -37,11 +37,18 @@ EVERPARSE_HOME := $(realpath .)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += src/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+SRC_DIRS += lib/everparse/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+
+# LowParse's specification and its Pulse implementation share one directory, so
+# the two are told apart by module name: everything the Pulse implementation
+# provides is under the LowParse.Pulse and LowParse.PulseParse namespaces.
+LOWPARSE_PULSE_PATTERN := lib/everparse/lowparse/LowParse.Pulse%
 
 ifeq (,$(NO_PULSE))
-  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+  SRC_DIRS += src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
   SRC_DIRS += lib/everparse/3d
+else
+  FSTAR_FILES_EXCLUDE += $(LOWPARSE_PULSE_PATTERN)
 endif
 
 include $(EVERPARSE_HOME)/src/karamel.Makefile
@@ -55,17 +62,19 @@ $(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
 $(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
 ifeq (1,$(ADMIT_LOWPARSE))
-$(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+$(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 ifeq (1,$(ADMIT_CBOR_CDDL))
 $(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
-lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+LOWPARSE_PULSE_CHECKED_FILES := $(filter $(LOWPARSE_PULSE_PATTERN),$(ALL_CHECKED_FILES))
+
+lowparse: $(filter-out $(LOWPARSE_PULSE_CHECKED_FILES),$(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))
-lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
+lowparse: $(LOWPARSE_PULSE_CHECKED_FILES)
 endif
 
 3d-exe: $(NEED_Z3)
@@ -74,7 +83,7 @@ endif
 .PHONY: 3d-exe
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-pulse-prelude: $(filter src/lowparse/%,$(ALL_CHECKED_FILES)) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
+3d-pulse-prelude: $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
 
 .PHONY: 3d-pulse-prelude
 
@@ -270,7 +279,7 @@ endif
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter src/lowparse/%,$(ALL_CHECKED_FILES))
+cbor-extract-pre: cbor-verify $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES))
 
 .PHONY: cbor-extract-pre
 
@@ -374,7 +383,7 @@ clean-3d:
 	+$(MAKE) -C src/3d clean
 
 clean-lowparse:
-	+$(MAKE) -C src/lowparse clean
+	+$(MAKE) -C lib/everparse/lowparse clean
 
 clean-quackyducky:
 	+$(MAKE) -C src/qd clean
@@ -436,4 +445,4 @@ release package package-noversion nuget-noversion everparse:
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 
 lowparse-fstar-test:
-	+$(MAKE) -C src/lowparse fstar-test
+	+$(MAKE) -C lib/everparse/lowparse fstar-test

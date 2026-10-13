@@ -1,9 +1,9 @@
 all: verify extract-all
 
 EVERPARSE_HOME ?= $(realpath ../../../..)
-LOWPARSE_PULSE_HOME ?= $(EVERPARSE_HOME)/src/lowparse/pulse
+LOWPARSE_HOME ?= $(EVERPARSE_HOME)/lib/everparse/lowparse
 
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse $(LOWPARSE_PULSE_HOME)
+INCLUDE_PATHS += $(LOWPARSE_HOME)
 ALREADY_CACHED := *,-LowParseTestLib,-LowParseExample,
 OTHERFLAGS += --warn_error +272
 

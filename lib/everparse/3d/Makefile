@@ -4,8 +4,7 @@ EVERPARSE_HOME := $(realpath ../../..)
 
 include $(EVERPARSE_HOME)/src/windows.Makefile
 
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 # common.Makefile assembles `clean` from clean_rules, so extend it before the
 # include. The KaRaMeL extraction of this prelude lives in the krml/

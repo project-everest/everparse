@@ -179,7 +179,8 @@ make_everparse() {
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
     $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
     mkdir -p everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
+    mkdir -p everparse/lib/everparse
+    $cp -r $EVERPARSE_HOME/lib/everparse/lowparse everparse/lib/everparse/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
@@ -205,9 +206,9 @@ make_everparse() {
     #     directory;
     #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
     #     self-contained Low*-compatible runtime generated from Pulse;
-    # src/lowparse/pulse is already covered by the src/lowparse copy above, and
-    # EverParsePulse{,Endianness}.h are copied out to the output directory by
-    # the copy_everparse_h micro-step.
+    # The Pulse combinators themselves are already covered by the
+    # lib/everparse/lowparse copy above, and EverParsePulse{,Endianness}.h are
+    # copied out to the output directory by the copy_everparse_h micro-step.
     if [[ -z "$NO_PULSE" ]] ; then
         $cp -r $EVERPARSE_HOME/src/3d/EverParsePulse.h everparse/src/3d/
         $cp -r $EVERPARSE_HOME/src/3d/EverParsePulseEndianness.h everparse/src/3d/

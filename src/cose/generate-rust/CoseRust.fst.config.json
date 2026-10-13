@@ -4,8 +4,7 @@
     "include_dirs": [
       ".",
       "./_output",
-      "../../../src/lowparse",
-      "../../../src/lowparse/pulse",
+      "../../../lib/everparse/lowparse",
       "../../../src/cbor/spec",
       "../../../src/cbor/pulse",
       "../../../src/cddl/pulse",

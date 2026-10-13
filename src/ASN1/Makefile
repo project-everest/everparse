@@ -2,7 +2,7 @@ all: verify compile
 
 EVERPARSE_HOME = $(realpath ../..)
 
-LOWPARSE_HOME = $(EVERPARSE_HOME)/src/lowparse
+LOWPARSE_HOME = $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 INCLUDE_PATHS += $(LOWPARSE_HOME)
 

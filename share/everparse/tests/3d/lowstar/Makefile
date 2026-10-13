@@ -23,7 +23,7 @@ HASHCHK_DIR=$(EVERPARSE_HOME)/src/3d/hashchk
 HASHCHK ?= dotnet $(HASHCHK_DIR)/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
 export HASHCHK
 
-INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
+INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 

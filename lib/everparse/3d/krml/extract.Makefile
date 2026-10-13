@@ -4,7 +4,7 @@ EVERPARSE_HOME := $(realpath ../../../..)
 include $(EVERPARSE_HOME)/src/windows.Makefile
 
 SRC_DIRS += $(realpath ..)
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 FSTAR_OPTIONS += --warn_error -342
 

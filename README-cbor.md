@@ -15,9 +15,9 @@ paper](https://www.microsoft.com/en-us/research/publication/evercbor/). Below is
 matching between the paper and the proofs.
 
 Section 2.2:
-- the Pulse implementation combinators are in `/src/lowparse/pulse`
-- the recursive combinator specification is in `/src/lowparse/LowParse.Spec.Recursive.fst*`
-- in particular, the validator and jumper for the recursive format is in `/src/lowparse/pulse/LowParse.Pulse.Recursive.fst`
+- the Pulse implementation combinators are in `/lib/everparse/lowparse`, under the `LowParse.Pulse` and `LowParse.PulseParse` namespaces
+- the recursive combinator specification is in `/lib/everparse/lowparse/LowParse.Spec.Recursive.fst*`
+- in particular, the validator and jumper for the recursive format is in `/lib/everparse/lowparse/LowParse.Pulse.Recursive.fst`
 
 Section 3.2: in directory `/src/cbor`
 - the CBOR raw data type is defined in `spec/raw/CBOR.Spec.Raw.Base.fst`

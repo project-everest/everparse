@@ -1,7 +1,7 @@
 all: extract
 
 EVERPARSE_HOME = $(realpath ../..)
-INCLUDE_PATHS += $(EVERPARSE_HOME)/src/lowparse/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 ALREADY_CACHED := *,-ArithParse,
 
 OUTPUT_DIRECTORY := _output

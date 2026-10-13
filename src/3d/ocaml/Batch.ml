@@ -27,7 +27,7 @@ let krml_locate k tmpdir =
 
 let krmllib = krml_locate "krmllib"
 
-let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowparse"
+let lowparse_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "lowparse"
 let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
 
 (* TODO: implement krml -locate-misc *)
@@ -37,10 +37,9 @@ let cl_wrapper () =
   Filename.concat (Filename.concat (Filename.concat (Filename.concat krml_home "share") "krml") "misc") "cl-wrapper.bat"
 
 (* The generated code is checked against the Pulse combinator backend in
-   lib/everparse/3d and src/lowparse/pulse, and needs the Pulse library itself
-   on the include path. *)
+   lib/everparse/3d and lib/everparse/lowparse, and needs the Pulse library
+   itself on the include path. *)
 let pulse_3d_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "3d"
-let lowparse_pulse_home = filename_concat lowparse_home "pulse"
 let pulse_3d_krml_home = filename_concat (filename_concat pulse_3d_home "krml") "extracted"
 
 (* KaRaMeL is always invoked with -skip-makefiles, so it emits neither
@@ -79,7 +78,6 @@ let fstar_args0 krmllib =
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
         "--include" :: (filename_concat krmllib "obj") ::
-          "--include" :: lowparse_pulse_home ::
           "--include" :: pulse_3d_home ::
             "--warn_error" :: "+241" ::
               OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"

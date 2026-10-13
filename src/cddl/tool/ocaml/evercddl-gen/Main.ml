@@ -182,7 +182,7 @@ let include_options =
 
 let everparse_src_cbor_spec_raw = Filename.concat everparse_src_cbor_spec "raw"
 let everparse_src_cbor_pulse_raw = Filename.concat everparse_src_cbor_pulse "raw"
-let everparse_src_lowparse = Filename.concat everparse_src "lowparse"
+let everparse_lowparse = Filename.concat (Filename.concat everparse_home_lib "everparse") "lowparse"
 
 let include_options_for_rust =
   include_option_of_paths
@@ -192,8 +192,7 @@ let include_options_for_rust =
       everparse_src_cbor_pulse_raw;
       Filename.concat everparse_src_cbor_pulse_raw "slice-rust";
       Filename.concat everparse_src_cbor_pulse_raw "everparse";
-      everparse_src_lowparse;
-      Filename.concat everparse_src_lowparse "pulse";
+      everparse_lowparse;
     ]
 
 (* TODO: honor OTHERFLAGS. This would require implementing Bash word

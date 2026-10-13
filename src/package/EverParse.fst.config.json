@@ -3,8 +3,7 @@
     "fstar_exe": "${EVERPARSE_HOME}/fstar.sh",
     "options": [],
     "include_dirs": [
-      "${EVERPARSE_HOME}/src/lowparse",
-      "${EVERPARSE_HOME}/src/lowparse/pulse",
+      "${EVERPARSE_HOME}/lib/everparse/lowparse",
       "${EVERPARSE_HOME}/src/cbor/spec",
       "${EVERPARSE_HOME}/src/cbor/pulse",
       "${EVERPARSE_HOME}/src/cddl/pulse",
