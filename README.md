@@ -137,8 +137,8 @@ NOTE: Currently, CBORNondet and CBORDet cannot be used together yet.
   + The generated C source files for the CBOR deterministic encoding are in
     `src/cbor/pulse/det/c`, which also contains some tests in the
     `test` subdirectory. There, the header file is `CBORDet.h`. The
-    object file is `CBORDet.o`, which you can link with your
-    application.
+    object file is `lib/everparse/CBORDet.o`, which you can link with
+    your application.
   
   + A fully documented example is in
     `src/cbor/pulse/det/c/example`. There, `main.c` documents the C
@@ -147,8 +147,8 @@ NOTE: Currently, CBORNondet and CBORDet cannot be used together yet.
   + The generated C source files for CBORNondet are in
     `src/cbor/pulse/nondet/c`, which also contains some tests in the
     `test` subdirectory. There, the header file is `CBORNondet.h`. The
-    object file is `CBORNondet.o`, which you can link with your
-    application.
+    object file is `lib/everparse/CBORNondet.o`, which you can link with
+    your application.
   
   + A fully documented example is in
     `src/cbor/pulse/nondet/c/example`. There, `main.c` documents the C

@@ -2,7 +2,7 @@ all: CBORDetTest
 
 EVERPARSE_HOME = $(realpath ../../../../../..)
 
-CBOR_LIB_PATH = $(realpath ..)
+CBOR_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
 CBOR_INCLUDE_PATH = $(realpath ..)
 
 # -Wno-pointer-sign because of string to uint8_t* conversion

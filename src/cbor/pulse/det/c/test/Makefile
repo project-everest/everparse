@@ -4,7 +4,7 @@ EVERPARSE_HOME = $(realpath ../../../../../..)
 
 #EVERPARSE_LIB_PATH = $(realpath $(EVERPARSE_HOME))/lib/evercbor
 #EVERPARSE_INCLUDE_PATH = $(realpath $(EVERPARSE_HOME))/include/evercbor
-EVERPARSE_LIB_PATH = $(realpath ..)
+EVERPARSE_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
 EVERPARSE_INCLUDE_PATH = $(realpath ..)
 
 CFLAGS += -Werror -I $(EVERPARSE_INCLUDE_PATH)

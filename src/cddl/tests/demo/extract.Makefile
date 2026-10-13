@@ -38,7 +38,7 @@ $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o: $(CUSTARD_KRML)
 	$(CC) $(CFLAGS) -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -c $(OUTPUT_DIRECTORY)/CDDLExtractionTest.c -o $@
 
 $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
-	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/src/cbor/pulse/det/c/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
+	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/lib/everparse/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
 
 extract: $(OUTPUT_DIRECTORY)/test.exe
 

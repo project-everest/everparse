@@ -96,7 +96,7 @@ $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml
 	 -tmpdir $(OUTPUT_DIRECTORY)
 
 # $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
-# 	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/src/cbor/pulse/det/c/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
+# 	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/lib/everparse/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c
 
 # extract: $(OUTPUT_DIRECTORY)/test.exe
 
@@ -138,7 +138,7 @@ ifneq ($(OS),Windows_NT)
 with_qcbor := QCBOR/libqcbor.a
 endif
 $(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o $(with_qcbor) tinycbor-build/libtinycbor.a
-	$(CC) -O3 -o $@ $^ $(EVERPARSE_HOME)/src/cbor/pulse/det/c/CBORDet.o -lm
+	$(CC) -O3 -o $@ $^ $(EVERPARSE_HOME)/lib/everparse/CBORDet.o -lm
 
 $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
 	$(CC) -O3 -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@

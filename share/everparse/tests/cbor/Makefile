@@ -17,10 +17,12 @@
 # Override the snapshot locations on the command line if needed:
 #
 #   make EVERCBOR_NONDET_PATH=/path/to/nondet/c \
-#        EVERCBOR_DET_PATH=/path/to/det/c
+#        EVERCBOR_DET_PATH=/path/to/det/c \
+#        EVERCBOR_LIB_PATH=/path/to/lib/everparse
 #
-# The snapshot directory must contain the corresponding header(s) and
-# pre-built object file (CBORNondet.o or CBORDet.o, plus its dependencies).
+# The snapshot directory must contain the corresponding header(s). The
+# pre-built object files (CBORNondet.o and CBORDet.o) live together in
+# lib/everparse, which EVERCBOR_LIB_PATH points at.
 
 ifeq ($(OS),Windows_NT)
   local_curdir := $(shell cygpath -m $(CURDIR))
@@ -31,6 +33,7 @@ endif
 # Default snapshot locations: the in-tree C extractions.
 EVERCBOR_NONDET_PATH ?= $(local_curdir)/../../../../src/cbor/pulse/nondet/c
 EVERCBOR_DET_PATH    ?= $(local_curdir)/../../../../src/cbor/pulse/det/c
+EVERCBOR_LIB_PATH    ?= $(local_curdir)/../../../../lib/everparse
 
 # Number of iterations for benchmarking. Override on the command line to make
 # timing measurements more reliable, e.g. BENCH_ITERATIONS=1000.
@@ -44,11 +47,11 @@ PYTHON_ITERATIONS ?= 1000
 CC      ?= cc
 CFLAGS  ?= -O2 -Wall
 
-# The non-deterministic snapshot ships only CBORNondet.o.
-NONDET_OBJS = $(EVERCBOR_NONDET_PATH)/CBORNondet.o
+# The non-deterministic variant links against CBORNondet.o only.
+NONDET_OBJS = $(EVERCBOR_LIB_PATH)/CBORNondet.o
 
-# The deterministic snapshot ships only CBORDet.o
-DET_OBJS    = $(EVERCBOR_DET_PATH)/CBORDet.o
+# The deterministic variant links against CBORDet.o only.
+DET_OBJS    = $(EVERCBOR_LIB_PATH)/CBORDet.o
 
 SRC = $(local_curdir)/cbor_tests.c
 

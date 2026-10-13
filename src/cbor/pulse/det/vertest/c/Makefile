@@ -5,6 +5,7 @@ INCLUDE_PATHS += $(EVERPARSE_HOME)/src/cbor/spec $(EVERPARSE_HOME)/src/cbor/puls
 ALREADY_CACHED := *,-CBORTest,
 OUTPUT_DIRECTORY:=extracted
 CBORDET_PATH := $(realpath ../../c)
+EVERPARSE_LIB_PATH := $(EVERPARSE_HOME)/lib/everparse
 
 CFLAGS += -I $(CBORDET_PATH)
 
@@ -40,7 +41,7 @@ include $(EVERPARSE_HOME)/src/common.Makefile
 extract: $(OUTPUT_DIRECTORY)/test.exe
 
 $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CBORTest.o
-	$(CC) -o $@ $^ $(CBORDET_PATH)/CBORDet.o
+	$(CC) -o $@ $^ $(EVERPARSE_LIB_PATH)/CBORDet.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<

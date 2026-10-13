@@ -3,9 +3,13 @@ all: extract
 CFLAGS += -O3 -I .
 
 EVERPARSE_HOME = $(realpath ../../../../..)
-OUTPUT_DIRECTORY:=.
+EVERPARSE_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
 
-extract: $(OUTPUT_DIRECTORY)/CBORDet.o
+extract: $(EVERPARSE_LIB_PATH)/CBORDet.o
+
+$(EVERPARSE_LIB_PATH)/CBORDet.o: CBORDet.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 test: extract
 	+$(MAKE) -C $@
@@ -17,11 +21,8 @@ all-tests: test example
 
 .PHONY: all extract test example all-tests
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
 clean-o:
-	rm -f *.o
+	rm -f *.o $(EVERPARSE_LIB_PATH)/CBORDet.o
 
 .PHONY: clean-o
 
