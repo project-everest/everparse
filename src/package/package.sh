@@ -212,11 +212,10 @@ make_everparse() {
     #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
     #     self-contained Low*-compatible runtime generated from Pulse;
     # The Pulse combinators themselves are already covered by the
-    # lib/everparse/lowparse copy above, and EverParsePulse{,Endianness}.h are
-    # copied out to the output directory by the copy_everparse_h micro-step.
+    # lib/everparse/lowparse copy above, and lib/everparse/3d/EverParsePulse{,Endianness}.h
+    # (copied along with lib/everparse/3d below) are copied out to the output
+    # directory by the copy_everparse_h micro-step.
     if [[ -z "$NO_PULSE" ]] ; then
-        $cp -r $EVERPARSE_HOME/src/3d/EverParsePulse.h everparse/src/3d/
-        $cp -r $EVERPARSE_HOME/src/3d/EverParsePulseEndianness.h everparse/src/3d/
         # EverParse's own Makefile.basic: under --api pulse, KaRaMeL is invoked
         # with -skip-makefiles, so this is what the generated C is compiled
         # with. It lives in lib/everparse/3d, hence is copied along with it

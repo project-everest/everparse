@@ -919,11 +919,11 @@ let copy_everparse_h_raw
       then copy everparse_h_source dest_everparse_h;
       if Options.uses_pulse_api ()
       then begin
-        let everparse_pulse_h_source = filename_concat ddd_home "EverParsePulse.h" in
+        let everparse_pulse_h_source = filename_concat lib_3d_home "EverParsePulse.h" in
         if wanted "EverParsePulse.h" && file_exists everparse_pulse_h_source
         then copy everparse_pulse_h_source (filename_concat out_dir "EverParsePulse.h")
         ;
-        let everparse_pulse_endianness_h_source = filename_concat ddd_home "EverParsePulseEndianness.h" in
+        let everparse_pulse_endianness_h_source = filename_concat lib_3d_home "EverParsePulseEndianness.h" in
         if wanted "EverParsePulseEndianness.h" && file_exists everparse_pulse_endianness_h_source
         then copy everparse_pulse_endianness_h_source (filename_concat out_dir "EverParsePulseEndianness.h")
       end;
