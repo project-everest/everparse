@@ -5,7 +5,7 @@ all: extract
 EVERPARSE_HOME = $(realpath ../../..)
 OUTPUT_DIRECTORY := _output
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/lib/everparse/cbor/pulse $(EVERPARSE_HOME)/src/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/lib/everparse/cbor/pulse $(EVERPARSE_HOME)/lib/everparse/cddl/pulse $(OUTPUT_DIRECTORY)
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
 ifeq (1,$(ADMIT))
@@ -14,7 +14,7 @@ else
 CDDL_ADMIT :=
 endif
 
-$(OUTPUT): ../cose-sign.cddl $(EVERPARSE_HOME)/src/cddl/spec/postlude.cddl
+$(OUTPUT): ../cose-sign.cddl $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
 	$(EVERPARSE_HOME)/bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 

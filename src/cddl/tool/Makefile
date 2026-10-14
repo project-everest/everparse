@@ -3,7 +3,7 @@ all: build
 EVERPARSE_HOME := $(realpath ../../..)
 include $(EVERPARSE_HOME)/src/windows.Makefile
 
-INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/src/cddl/spec $(EVERPARSE_HOME)/src/cddl/pulse $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/lib/everparse/cddl/pulse $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
 
 ALREADY_CACHED := *,-CDDL.Tool,
 

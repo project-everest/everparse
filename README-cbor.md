@@ -35,15 +35,15 @@ Section 3.3: in directory `/lib/everparse/cbor`
 - The verified defensive C API specifications are defined at `pulse/CBOR.Pulse.API.Base.fst` and `pulse/CBOR.Pulse.API.Det.C.fsti`, and similarly for Rust.
 - The code extracts to C at `pulse/det/c`, and to Rust at `pulse/det/rust`
 
-Section 4.1: in directory `/src/cddl/spec` (except otherwise mentioned)
+Section 4.1: in directory `/lib/everparse/cddl/spec` (except otherwise mentioned)
 - The CDDL semantics is defined as a set of combinators in `CDDL.Spec.Base.fst`, `CDDL.Spec.Misc.fst`, `CDDL.Spec.ArrayGroup.fst`,  `CDDL.Spec.MapGroup.Base.fst` and `CDDL.Spec.MapGroup.fst`.
 - Theorem 4.1 is `map_group_zero_or_more_choice` and ancillary lemmas in `CDDL.Spec.MapGroup.Base.fsti`
 - The CDDL AST is defined in `CDDL.Spec.AST.Base.fst`
 - Theorem 4.2 is `elab_map_group_sem` in `CDDL.Spec.AST.Base.fst`: it returns a `det_map_group`
 - The CDDL elaborator is defined as `mk_wf_typ` in `CDDL.Spec.AST.Elab.fst`
-- Theorem 4.3 is the postcondition of `impl_bundle_wf_type` in `/src/cddl/pulse/CDDL.Pulse.AST.Bundle.fst`
+- Theorem 4.3 is the postcondition of `impl_bundle_wf_type` in `/lib/everparse/cddl/pulse/CDDL.Pulse.AST.Bundle.fst`
 
-Section 4.2: in directory `/src/cddl/pulse`
+Section 4.2: in directory `/lib/everparse/cddl/pulse`
 - The CDDL validator implementation combinators are defined in `CDDL.Pulse.Base.fst`, `CDDL.Pulse.Misc.fst`, `CDDL.Pulse.ArrayGroup.fst` and `CDDL.Pulse.MapGroup.fst`
 - The CDDL parser implementation combinators are defined in `CDDL.Pulse.Parse.*`
 - The CDDL sserializer implementation combinators are defined in `CDDL.Pulse.Serialize.*`

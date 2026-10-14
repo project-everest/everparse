@@ -37,7 +37,7 @@ EVERPARSE_HOME := $(realpath .)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += lib/everparse/lowparse src/ASN1 lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse src/cddl/spec
+SRC_DIRS += lib/everparse/lowparse src/ASN1 lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse lib/everparse/cddl/spec
 
 # LowParse's specification and its Pulse implementation share one directory, so
 # the two are told apart by module name: everything the Pulse implementation
@@ -45,7 +45,7 @@ SRC_DIRS += lib/everparse/lowparse src/ASN1 lib/everparse/cbor/spec lib/everpars
 LOWPARSE_PULSE_PATTERN := lib/everparse/lowparse/LowParse.Pulse%
 
 ifeq (,$(NO_PULSE))
-  SRC_DIRS += lib/everparse/cbor/pulse lib/everparse/cbor/pulse/raw lib/everparse/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+  SRC_DIRS += lib/everparse/cbor/pulse lib/everparse/cbor/pulse/raw lib/everparse/cbor/pulse/raw/everparse lib/everparse/cddl/pulse src/cddl/tool
   SRC_DIRS += lib/everparse/3d
 else
   FSTAR_FILES_EXCLUDE += $(LOWPARSE_PULSE_PATTERN)
@@ -66,7 +66,7 @@ $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 ifeq (1,$(ADMIT_CBOR_CDDL))
-$(filter lib/everparse/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+$(filter lib/everparse/cbor/% lib/everparse/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 LOWPARSE_PULSE_CHECKED_FILES := $(filter $(LOWPARSE_PULSE_PATTERN),$(ALL_CHECKED_FILES))
@@ -316,10 +316,10 @@ cbor-test-extracted: cbor-test-unverified cbor-test-verified
 
 cbor-test: cbor-test-extracted cbor-test-snapshot
 
-cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
+cddl-spec: $(filter lib/everparse/cddl/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
+cddl-pulse: cddl-spec $(filter lib/everparse/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
 # cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
 cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
@@ -336,7 +336,7 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 
 ifeq (,$(NO_PULSE))
 cddl-unit-tests: cddl
-	+$(MAKE) -C src/cddl test
+	+$(MAKE) -C lib/everparse/cddl test
 else
 cddl-unit-tests:
 endif
@@ -392,7 +392,7 @@ clean-cbor-verify:
 	+$(MAKE) -C lib/everparse/cbor clean-verify
 
 clean-cddl:
-	+$(MAKE) -C src/cddl clean
+	+$(MAKE) -C lib/everparse/cddl clean
 
 .PHONY: clean-cbor-verify
 

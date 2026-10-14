@@ -241,6 +241,8 @@ make_everparse() {
     $cp -r $EVERPARSE_HOME/lib/everparse/cbor everparse/lib/everparse/cbor
     # The C and Rust extractions of EverCBOR, which stay under src/cbor/pulse.
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
+    $cp -r $EVERPARSE_HOME/lib/everparse/cddl everparse/lib/everparse/cddl
+    # The CDDL tool and tests, which stay under src/cddl.
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
     # The prebuilt EverCBOR object files and their public headers, neither of

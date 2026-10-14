@@ -80,8 +80,8 @@ The EverCDDL code generator is compiled as an executable,
 
 If you have a CDDL data format description, say `mydesc.cddl`, you can
 automatically compile it into C parsers and serializers, with
-`bin/cddl.exe src/cddl/spec/postlude.cddl mydesc.cddl` (where
-`src/cddl/spec/postlude.cddl` is a subset of the official postlude
+`bin/cddl.exe lib/everparse/cddl/spec/postlude.cddl mydesc.cddl` (where
+`lib/everparse/cddl/spec/postlude.cddl` is a subset of the official postlude
 from RFC 8610). The generated C code links against EverCBOR.
 
 If you want to generate Rust code instead, use the `--rust`

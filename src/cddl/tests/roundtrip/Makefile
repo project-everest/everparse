@@ -33,8 +33,8 @@ MNAME_cose_sign    := RoundtripCoseSign
 MNAME_cose_encrypt := RoundtripCoseEncrypt
 
 CDDLS_dpe          := $(EVERPARSE_HOME)/src/cddl/tests/dpe/dpe.cddl       $(EVERPARSE_HOME)/src/cddl/tests/dpe/dpe_postlude.cddl
-CDDLS_cose_sign    := $(EVERPARSE_HOME)/src/cose/cose-sign.cddl           $(EVERPARSE_HOME)/src/cddl/spec/postlude.cddl
-CDDLS_cose_encrypt := $(EVERPARSE_HOME)/src/cose/cose-encrypt.cddl        $(EVERPARSE_HOME)/src/cddl/spec/postlude.cddl
+CDDLS_cose_sign    := $(EVERPARSE_HOME)/src/cose/cose-sign.cddl           $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
+CDDLS_cose_encrypt := $(EVERPARSE_HOME)/src/cose/cose-encrypt.cddl        $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
 
 $(GEN): ocaml/dune-project ocaml/gen_fst/dune ocaml/gen_fst/Main.ml
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build gen_fst/Main.exe

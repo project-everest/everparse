@@ -158,40 +158,47 @@ let include_option_of_paths =
   List.concat_map (fun l -> ["--include"; l])
 
 let everparse_src = Filename.concat everparse_home "src"
-let everparse_src_cbor = Filename.concat everparse_src "cbor"
-let everparse_src_cbor_spec = Filename.concat everparse_src_cbor "spec"
-let everparse_src_cbor_pulse = Filename.concat everparse_src_cbor "pulse"
-let everparse_src_cddl = Filename.concat everparse_src "cddl"
-let everparse_src_cddl_spec = Filename.concat everparse_src_cddl "spec"
-let everparse_src_cddl_pulse = Filename.concat everparse_src_cddl "pulse"
-let everparse_src_cddl_tool = Filename.concat everparse_src_cddl "tool"
 let everparse_home_lib = Filename.concat everparse_home "lib"
+let everparse_lib = Filename.concat everparse_home_lib "everparse"
+let everparse_lib_cbor = Filename.concat everparse_lib "cbor"
+let everparse_lib_cbor_spec = Filename.concat everparse_lib_cbor "spec"
+let everparse_lib_cbor_pulse = Filename.concat everparse_lib_cbor "pulse"
+let everparse_lib_cddl = Filename.concat everparse_lib "cddl"
+let everparse_lib_cddl_spec = Filename.concat everparse_lib_cddl "spec"
+let everparse_lib_cddl_pulse = Filename.concat everparse_lib_cddl "pulse"
+(* The CDDL tool itself is not part of the library and stays under src. *)
+let everparse_src_cddl_tool =
+  Filename.concat (Filename.concat everparse_src "cddl") "tool"
+(* The public EverCBOR headers (CBORDetType.h, krmllib.h, ...) are installed
+   here. *)
+let everparse_include =
+  Filename.concat (Filename.concat everparse_home "include") "everparse"
 let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
 
 let include_options =
   include_option_of_paths
     [
-      everparse_src_cbor_spec;
-      everparse_src_cbor_pulse;
-      everparse_src_cddl_spec;
-      everparse_src_cddl_pulse;
+      everparse_lib_cbor_spec;
+      everparse_lib_cbor_pulse;
+      everparse_lib_cddl_spec;
+      everparse_lib_cddl_pulse;
       everparse_src_cddl_tool;
       Filename.concat everparse_home_lib_evercddl "lib";
       Filename.concat everparse_home_lib_evercddl "plugin";
     ]
 
-let everparse_src_cbor_spec_raw = Filename.concat everparse_src_cbor_spec "raw"
-let everparse_src_cbor_pulse_raw = Filename.concat everparse_src_cbor_pulse "raw"
-let everparse_lowparse = Filename.concat (Filename.concat everparse_home_lib "everparse") "lowparse"
+let everparse_lib_cbor_spec_raw = Filename.concat everparse_lib_cbor_spec "raw"
+let everparse_lib_cbor_pulse_raw = Filename.concat everparse_lib_cbor_pulse "raw"
+let everparse_lowparse = Filename.concat everparse_lib "lowparse"
 
 let include_options_for_rust =
   include_option_of_paths
     [
-      everparse_src_cbor_spec_raw;
-      Filename.concat everparse_src_cbor_spec_raw "everparse";
-      everparse_src_cbor_pulse_raw;
-      Filename.concat everparse_src_cbor_pulse_raw "slice-rust";
-      Filename.concat everparse_src_cbor_pulse_raw "everparse";
+      everparse_lib_cbor_spec_raw;
+      Filename.concat everparse_lib_cbor_spec_raw "everparse";
+      everparse_lib_cbor_pulse_raw;
+      Filename.concat everparse_lib_cbor_pulse_raw "slice-rust";
+      Filename.concat everparse_lib_cbor_pulse_raw "everparse";
       everparse_lowparse;
     ]
 
@@ -362,7 +369,7 @@ let _ =
 	"-bundle"; (!mname ^ "=\\*");
         "-skip-makefiles";
 	"-add-include"; "\"CBORDetType.h\"";
-        "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
+        "-I"; everparse_include;
         "-ccopt"; "-Wno-unused-variable";
         krml_file;
       ]
@@ -389,13 +396,12 @@ let _ =
       then 0
       else begin
         let cc = try Sys.getenv "CC" with Not_found -> "cc" in
-        let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
         let krmllib = krmllib tmpdir in
         let krmlinclude = krmlinclude tmpdir in
         let cc_args = [
           "-I"; Filename.concat (Filename.concat krmllib "dist") "minimal";
           "-I"; krmllib;
-          "-I"; det_c;
+          "-I"; everparse_include;
           "-I"; krmlinclude;
           "-I"; !odir;
           "-Wall"; "-Werror"; "-Wno-unknown-warning-option"; "-g"; "-fwrapv";
