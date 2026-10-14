@@ -6,7 +6,6 @@
       "../../../../../lib/everparse/cbor/pulse",
       "../../../../../lib/everparse/cddl/pulse",
       "../../../../../lib/everparse/cddl/spec",
-      "../../../../../src/cddl/tool",
         "_output",
         "util",
         "dpe"
