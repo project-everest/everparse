@@ -12,7 +12,7 @@ CDDL_ADMIT :=
 endif
 
 $(OUTPUT): test.cddl
-	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $^ --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
 
 RUST_MODULES := cbordetver cbordetveraux cddlextractiontest
 

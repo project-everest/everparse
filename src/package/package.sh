@@ -242,7 +242,7 @@ make_everparse() {
     $cp -r $EVERPARSE_HOME/lib/everparse/cddl everparse/lib/everparse/cddl
     # The CDDL tool and its roundtrip test, which stay under src/cddl.
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
-	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
+	$cp $EVERPARSE_HOME/bin/everparse-cddl.exe everparse/bin/everparse-cddl.exe
     # The prebuilt EverCBOR object files and their public headers, neither of
     # which lives under src/cbor any more.
     mkdir -p everparse/lib/everparse

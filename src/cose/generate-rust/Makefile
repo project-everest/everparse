@@ -11,7 +11,7 @@ CDDL_ADMIT :=
 endif
 
 $(OUTPUT): ../cose-sign.cddl $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
-	$(EVERPARSE_HOME)/bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
 
 extract-krml: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract-krml

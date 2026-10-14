@@ -76,11 +76,11 @@ NOTE: We finally support table extensibility patterns such as `(? 18
 => int, * int => any)`.
 
 The EverCDDL code generator is compiled as an executable,
-`bin/cddl.exe`
+`bin/everparse-cddl.exe`
 
 If you have a CDDL data format description, say `mydesc.cddl`, you can
 automatically compile it into C parsers and serializers, with
-`bin/cddl.exe lib/everparse/cddl/spec/postlude.cddl mydesc.cddl` (where
+`bin/everparse-cddl.exe lib/everparse/cddl/spec/postlude.cddl mydesc.cddl` (where
 `lib/everparse/cddl/spec/postlude.cddl` is a subset of the official postlude
 from RFC 8610). The generated C code links against EverCBOR.
 

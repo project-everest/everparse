@@ -11,7 +11,7 @@ CDDL_ADMIT :=
 endif
 
 $(OUTPUT): test.cddl
-	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $^ --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
 
 extract-all: $(OUTPUT) $(wildcard *.fst)
 	+$(MAKE) -f extract.Makefile test

@@ -12,7 +12,7 @@ tests/unit/*
 **/out
 bin/everparse-qd.exe
 bin/3d.exe
-bin/cddl.exe
+bin/everparse-cddl.exe
 src/cddl/tests/roundtrip/evercddl
 .depend.rsp
 

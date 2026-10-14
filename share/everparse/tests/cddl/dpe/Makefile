@@ -23,7 +23,7 @@ include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
 include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst: dpe.cddl dpe_postlude.cddl
-	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only $(CDDL_ADMIT)
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 clean-test:

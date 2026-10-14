@@ -241,7 +241,7 @@ jobs:
       - name: Test EverCDDL
         if: ${{ !inputs.only_build_3d }}
         run: |
-          ${{ github.workspace }}\test\bin\cddl.exe ${{ github.workspace }}\everparse\src\cddl\tests\demo\test.cddl
+          ${{ github.workspace }}\test\bin\everparse-cddl.exe ${{ github.workspace }}\everparse\src\cddl\tests\demo\test.cddl
 
   test:
     needs: [testpackage, testci]
