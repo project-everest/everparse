@@ -97,7 +97,7 @@ it with EverCDDL yet.
 
 ## QuackyDucky
 
-Run `./bin/qd.exe -help` to get instructions on how to run QuackyDucky.
+Run `./bin/everparse-qd.exe -help` to get instructions on how to run QuackyDucky.
 
 NOTE: Contrary to 3D or EverCDDL, QuackyDucky only produces F\* files
 from data format descriptions. You need to run F\* and Karamel by hand

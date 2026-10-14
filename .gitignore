@@ -10,7 +10,7 @@ _build
 *.krml
 tests/unit/*
 **/out
-bin/qd.exe
+bin/everparse-qd.exe
 bin/3d.exe
 bin/cddl.exe
 src/cddl/tests/roundtrip/evercddl

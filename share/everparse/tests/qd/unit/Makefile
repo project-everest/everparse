@@ -1,5 +1,5 @@
 EVERPARSE_HOME ?= $(realpath ../../../../..)
-QD_EXE ?= $(EVERPARSE_HOME)/bin/qd.exe
+QD_EXE ?= $(EVERPARSE_HOME)/bin/everparse-qd.exe
 
 all: extracted/Makefile Test.fst
 	+$(MAKE) -C extracted

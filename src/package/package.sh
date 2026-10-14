@@ -176,7 +176,7 @@ make_everparse() {
     $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
 
     # Copy EverParse
-    $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
+    $cp $EVERPARSE_HOME/bin/everparse-qd.exe everparse/bin/everparse-qd.exe
     $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
     mkdir -p everparse/lib/everparse
     $cp -r $EVERPARSE_HOME/lib/everparse/lowparse everparse/lib/everparse/
