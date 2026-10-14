@@ -16,7 +16,7 @@ export FSTAR_EXE
 HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
 export HASHCHK
 
-3D_LOWSTAR=$(EVERPARSE_HOME)/bin/3d.exe --api lowstar --fstar $(FSTAR_EXE)
+3D_LOWSTAR=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api lowstar --fstar $(FSTAR_EXE)
 
 # The batch corpus is not copied here: it is the one of
 # share/everparse/tests/3d/lowstar. Its batch-interpret-test runs over

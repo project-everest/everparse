@@ -5,7 +5,7 @@ EVERPARSE_HOME ?= $(realpath ../../../../../..)
 FSTAR_EXE ?= $(EVERPARSE_HOME)/bin/../opt/FStar/out/bin/fstar.exe
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE = $(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_EXE = $(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 OUTPUT_DIR = output
 
 all: test

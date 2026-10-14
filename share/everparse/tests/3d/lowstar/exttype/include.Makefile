@@ -10,4 +10,4 @@ FSTAR_EXE ?= fstar.exe
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-3D=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)

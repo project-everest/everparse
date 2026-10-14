@@ -2,7 +2,7 @@ EVERPARSE_HOME ?= $(realpath ../../../..)
 include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
 SOURCE_FILES=TPoint.3d AnonStruct.3d AnonUnion.3d
 
 all: interpret modules modules_batch

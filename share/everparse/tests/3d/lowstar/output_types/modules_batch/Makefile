@@ -4,7 +4,7 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 SOURCE_FILES=AA.3d BB.3d CC.3d
 
 all: basic

@@ -9,7 +9,7 @@ INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 FSTAR_OPTIONS += --warn_error -342
 
 # Whole-program extraction of the Pulse 3d runtime, to the .krml that
-# header.Makefile turns into EverParse.h and that `3d.exe --pulse` passes to
+# header.Makefile turns into EverParse.h and that `everparse-3d.exe --pulse` passes to
 # KaRaMeL alongside the generated modules (see all_everparse_krmls in
 # src/3d/ocaml/Batch.ml, which simply globs this directory).
 #
@@ -29,7 +29,7 @@ CUSTARD_BACKEND := KrmlC
 #
 # The four Pulse.* modules were named explicitly in the old --extract list and
 # must stay rooted: header.Makefile applies -static-header to Pulse.\*, so their
-# definitions become `static inline` in EverParse.h, and 3d.exe then passes
+# definitions become `static inline` in EverParse.h, and everparse-3d.exe then passes
 # -library Pulse.\* for the client's own KaRaMeL run, which assumes the header
 # supplies them. Dropping one as unreachable here (Pulse.Lib.Pervasives's
 # _zero_for_deref, say, which no runtime definition mentions but generated
@@ -61,7 +61,7 @@ CUSTARD_ENTRY_MODULES := \
 # U64 results, EVERPARSE_INPUT_BUFFER, the EverParseStream* primitives). It is
 # rooted here for the same reason as the Pulse-API runtime above: header.Makefile
 # turns these very modules into the API modules of the `lowstar/<backend>`
-# bundles, and 3d.exe passes `-library EverParse3d.\*` for the client's own
+# bundles, and everparse-3d.exe passes `-library EverParse3d.\*` for the client's own
 # KaRaMeL run, so every declaration has to have been *seen* here.
 #
 # The three adapter modules are what generated `--api lowstar` validators call
@@ -86,7 +86,7 @@ CUSTARD_ENTRY_MODULES += \
   EverParse3d.Lowstar.SupportExtern
 
 # header.Makefile applies -static-header to Pulse.\*, so what the Pulse runtime
-# contributes to EverParse.h is emitted there as `static inline`, and 3d.exe
+# contributes to EverParse.h is emitted there as `static inline`, and everparse-3d.exe
 # then passes -library Pulse.\* for the client's own KaRaMeL run, which assumes
 # the header supplies it. Everything the generated validators use from Pulse is
 # inline_for_extraction and so already inlined by F* -- except _zero_for_deref,

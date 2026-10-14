@@ -89,7 +89,7 @@ endif
 3d: 3d-pulse-prelude
 
 # The binary package ships the Pulse 3d runtime already extracted to .krml, so
-# that `3d.exe --api pulse` has nothing left to build. Hence the krml extraction is
+# that `everparse-3d.exe --api pulse` has nothing left to build. Hence the krml extraction is
 # part of the packaged subset, not just of the test targets.
 ifeq (,$(NO_PULSE))
 3d: 3d-pulse-krml
@@ -123,7 +123,7 @@ endif
 	+$(MAKE) -C doc 3d-test
 
 # KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
-# what 3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
+# what everparse-3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
 # per-backend EverParse.h it copies into the output directory.
 3d-pulse-krml: 3d-pulse-prelude
 	+$(MAKE) -C lib/everparse/3d/krml all

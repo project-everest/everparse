@@ -12,4 +12,4 @@ if which clang-format >/dev/null ; then
 else
     clang_format=
 fi
-exec "$EVERPARSE_HOME/bin/3d.exe" --__arg0 everparse.sh --fstar "$FSTAR_EXE" --batch --z3_executable "$EVERPARSE_HOME/lib/fstar/z3-4.13.3/bin/z3" $clang_format "$@"
+exec "$EVERPARSE_HOME/bin/everparse-3d.exe" --__arg0 everparse.sh --fstar "$FSTAR_EXE" --batch --z3_executable "$EVERPARSE_HOME/lib/fstar/z3-4.13.3/bin/z3" $clang_format "$@"

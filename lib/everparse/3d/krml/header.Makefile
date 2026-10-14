@@ -1,14 +1,14 @@
 # Pre-generation of the Pulse runtime header, EverParse.h, one per input stream
 # backend.
 #
-# `3d.exe --api pulse` used to rebuild this header on every invocation, bundling the
+# `everparse-3d.exe --api pulse` used to rebuild this header on every invocation, bundling the
 # whole runtime into the client's output directory with -static-header. That is
 # wasteful, because the result does not depend on the .3d input at all: it is
 # the fixed prelude (error codes, EverParseIsRangeOkay, the bitfield accessors)
 # plus the backend's assumed stream primitives. So we generate it once here and
 # ship it, exactly as the Low* backend does in src/3d/prelude/<backend>.
 #
-# 3d.exe then passes KaRaMeL -library instead of -static-header, which turns the
+# everparse-3d.exe then passes KaRaMeL -library instead of -static-header, which turns the
 # runtime into plain `extern` declarations and drops them from the output, and
 # copies the header generated here into the output directory. The generated
 # validators are byte-identical either way.
@@ -73,7 +73,7 @@ WARN_static := $(WARN_buffer)
 # The Low* backend gets this typedef from KaRaMeL for free: there,
 # EverParse3d.Actions.Common.error_handler is a *monomorphic* F* type
 # abbreviation, because the Low* prelude is built once per input stream
-# backend with the stream type already fixed. 3d.exe passes
+# backend with the stream type already fixed. everparse-3d.exe passes
 # `-no-inline-type-abbrev EverParse3d.Actions.Common.error_handler`, KaRaMeL
 # keeps the abbreviation as a C typedef, and -fmicrosoft uppercases it.
 #
@@ -91,7 +91,7 @@ WARN_static := $(WARN_buffer)
 # it EverParse_error_handler and -fmicrosoft uppercases it to
 # EVERPARSE_ERROR_HANDLER, matching the Low* backend exactly.
 #
-# The same alias is what 3d.exe preserves in the client's own KaRaMeL run (see
+# The same alias is what everparse-3d.exe preserves in the client's own KaRaMeL run (see
 # src/3d/ocaml/Batch.ml), so generated validator prototypes name the typedef
 # too, exactly as under Low*.
 #

@@ -914,7 +914,7 @@ definitions for those flags. Here is a sample config file:
 
 .. literalinclude:: Arch.3d.config
 
-Then, one can invoke ``3d.exe --config Arch.3d.config
+Then, one can invoke ``everparse-3d.exe --config Arch.3d.config
 PointArch_32_64.3d --batch``, which produces the following C code as
 output.
 

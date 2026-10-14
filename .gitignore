@@ -11,7 +11,7 @@ _build
 tests/unit/*
 **/out
 bin/everparse-qd.exe
-bin/3d.exe
+bin/everparse-3d.exe
 bin/everparse-cddl.exe
 src/cddl/tests/roundtrip/evercddl
 .depend.rsp

@@ -10,7 +10,7 @@ export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_API ?= pulse
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
 HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
 
@@ -22,7 +22,7 @@ everparse_makefile=$(EVERPARSE_OUTPUT_DIR)/EverParse.Makefile
 $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
-$(everparse_makefile): $(wildcard src/*.3d) Makefile $(EVERPARSE_HOME)/bin/3d.exe | $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): $(wildcard src/*.3d) Makefile $(EVERPARSE_HOME)/bin/everparse-3d.exe | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --save_hashes --skip_o_rules --no_copy_everparse_h --makefile_name $@ src/Test.3d src/Test2.3d
 
 ifeq (,$(filter clean,$(MAKECMDGOALS)))

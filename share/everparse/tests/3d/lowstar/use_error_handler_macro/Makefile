@@ -18,7 +18,7 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
 # The option under test plus an --add_include so the user-provided
 # macro definition is visible from all generated .c/.h files.

@@ -20,7 +20,7 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
 
 CC ?= cc
 CXX ?= c++
@@ -105,7 +105,7 @@ all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
 all: api-option-test
 
 api-option-test:
-	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/3d.exe" "$(FSTAR_EXE)"
+	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"
 
 .PHONY: api-option-test
 

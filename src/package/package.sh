@@ -177,7 +177,7 @@ make_everparse() {
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/everparse-qd.exe everparse/bin/everparse-qd.exe
-    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
+    $cp -r $EVERPARSE_HOME/bin/everparse-3d.exe everparse/bin/everparse-3d.exe
     mkdir -p everparse/lib/everparse
     $cp -r $EVERPARSE_HOME/lib/everparse/lowparse everparse/lib/everparse/
     if $is_windows ; then
@@ -198,7 +198,7 @@ make_everparse() {
 
     # Copy the Pulse 3d runtime (--api pulse), unless Pulse is disabled altogether.
     #
-    # `3d.exe --api pulse` needs three things at run time, all located relative to
+    # `everparse-3d.exe --api pulse` needs three things at run time, all located relative to
     # EVERPARSE_HOME by src/3d/ocaml/Batch.ml:
     #   - lib/everparse/3d: the combinator library itself, on the F* --include
     #     path, hence sources *and* .checked files;
@@ -232,7 +232,7 @@ make_everparse() {
     else
         $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
-    $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
+    $EVERPARSE_HOME/bin/everparse-3d.exe --version >> everparse/README
 
     # Copy evercbor and evercddl
     if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
@@ -316,7 +316,7 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then
-	everparse_version="$(everparse/bin/3d.exe --short_version)"
+	everparse_version="$(everparse/bin/everparse-3d.exe --short_version)"
 	mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext
     fi
 }

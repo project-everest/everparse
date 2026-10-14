@@ -25,7 +25,7 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= $(EVERPARSE_HOME)/fstar.sh
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
 # Options passed to EverParse.  See probe_error_handler_macro for the
 # rationale: --use_error_handler_macro makes the generated validators

@@ -2,7 +2,7 @@ EVERPARSE_HOME ?= $(realpath ../../../..)
 include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
 SOURCE_FILES_NO_EXTERN=TCP.3d Ethernet.3d
 SOURCE_FILES_EXTERN=ICMP.3d IPV4.3d VXLAN.3d UDP.3d IPV6.3d
 SOURCE_FILES=$(SOURCE_FILES_NO_EXTERN) $(SOURCE_FILES_EXTERN)

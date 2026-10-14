@@ -50,7 +50,7 @@ def check_no_runtime_header(log):
 
 def generate(name, grammar, api="lowstar", stream="buffer", extra_grammars=()):
     out = output(name)
-    args = [ROOT / "bin/3d.exe", "--api", api, "--input_stream", stream,
+    args = [ROOT / "bin/everparse-3d.exe", "--api", api, "--input_stream", stream,
             "--fstar", FSTAR, "--batch", "--odir", out]
     if stream != "buffer":
         args += ["--input_stream_include", "EverParseStream.h"]

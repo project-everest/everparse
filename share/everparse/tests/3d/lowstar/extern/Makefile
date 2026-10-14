@@ -26,7 +26,7 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 EVERPARSE_CMD=$(EVERPARSE_EXE) --input_stream extern --input_stream_include EverParseStream.h
 
 # Output directory for .c/.h files as well as temporary files (.fst,

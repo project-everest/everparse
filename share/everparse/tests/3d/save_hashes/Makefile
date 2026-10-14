@@ -8,7 +8,7 @@ EVERPARSE_HOME ?= $(realpath ../../../..)
 export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
 
 EVERPARSE_OUTPUT_DIR=obj
 EVERPARSE_INPUT_DIR=src
@@ -19,7 +19,7 @@ $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
 # Generate the Makefile with --save_hashes
-$(everparse_makefile): $(wildcard src/*.3d) Makefile $(EVERPARSE_HOME)/bin/3d.exe | $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): $(wildcard src/*.3d) Makefile $(EVERPARSE_HOME)/bin/everparse-3d.exe | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --save_hashes --skip_o_rules --no_copy_everparse_h --makefile_name $@ src/Test.3d src/Test2.3d
 
 ifeq (,$(filter clean,$(MAKECMDGOALS)))

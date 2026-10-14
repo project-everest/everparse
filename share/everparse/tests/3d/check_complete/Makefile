@@ -21,7 +21,7 @@ EVERPARSE_HOME ?= $(realpath ../../../..)
 export EVERPARSE_HOME
 
 FSTAR_EXE ?= fstar.exe
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE)
 
 EVERPARSE_OPTIONS=--api pulse --complete_wrappers
 

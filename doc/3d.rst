@@ -31,7 +31,7 @@ Summary
 
    * with the Linux binary package: ``everparse.sh MyFile1.3d MyFile2.3d``
 
-   * with the source tree: ``bin/3d.exe --batch MyFile1.3d MyFile2.3d``
+   * with the source tree: ``bin/everparse-3d.exe --batch MyFile1.3d MyFile2.3d``
 
 Then, EverParse/3d produces:
 
@@ -143,7 +143,7 @@ On Windows: ``everparse.cmd`` [options] input_files
 
 On Linux: ``everparse.sh`` [options] input_files
 
-From the source tree: ``bin/3d.exe``. Caveat: in that case, no options
+From the source tree: ``bin/everparse-3d.exe``. Caveat: in that case, no options
 are toggled by default (not even ``--batch`` or ``--clang_format``)
 and you need to provide all options by hand.
   

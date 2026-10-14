@@ -46,7 +46,7 @@ clean_rules += clean-3d
 
 include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
-EVERPARSE_3D=$(EVERPARSE_HOME)/bin/3d.exe
+EVERPARSE_3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe
 EVERPARSE_3D_MAIN=ocaml/_build/default/Main.exe
 
 test: demo
@@ -72,7 +72,7 @@ $(EVERPARSE_3D_MAIN): $(CUSTARD_STAMP) $(filter-out %~,$(wildcard ocaml/*.ml*))
 
 clean-3d:
 	+$(MAKE) -C ocaml clean
-	rm -rf *.checked *~ Version.fst $(EVERPARSE_HOME)/bin/3d.exe
+	rm -rf *.checked *~ Version.fst $(EVERPARSE_HOME)/bin/everparse-3d.exe
 
 .PHONY: clean-3d
 
