@@ -1,6 +1,6 @@
 all: extract
 
-EVERPARSE_HOME = $(realpath ../../../../..)
+EVERPARSE_HOME = $(realpath ../../../../../..)
 
 ifeq (,$(DICE_HOME))
   $(error "Please set DICE_HOME")

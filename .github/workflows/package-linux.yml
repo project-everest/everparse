@@ -49,7 +49,7 @@ jobs:
         with:
           sparse-checkout: |
             share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
+            share/everparse/tests/cddl/demo/test.cddl
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse (--api lowstar)
         run: |
@@ -75,4 +75,4 @@ jobs:
           bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
-          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/share/everparse/tests/cddl/demo/test.cddl

@@ -1,6 +1,6 @@
 all: verify
 
-EVERPARSE_HOME = $(realpath ../../../..)
+EVERPARSE_HOME = $(realpath ../../../../..)
 
 CACHE_DIRECTORY := _output
 ifeq (,$(DICE_HOME))

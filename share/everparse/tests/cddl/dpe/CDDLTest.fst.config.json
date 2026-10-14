@@ -1,0 +1,17 @@
+{
+    "fstar_exe": "./fstar.sh",
+    "options": [],
+    "include_dirs": [
+      "../../../../../lib/everparse/cbor/spec",
+      "../../../../../lib/everparse/cbor/pulse",
+      "../../../../../lib/everparse/cddl/pulse",
+      "../../../../../lib/everparse/cddl/spec",
+      "../../../../../src/cddl/tool",
+        "_output",
+        "util",
+        "dpe"
+    ]
+  }
+  
+
+

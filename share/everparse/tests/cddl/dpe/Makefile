@@ -1,6 +1,6 @@
 all: dpe
 
-EVERPARSE_HOME := $(realpath ../../../..)
+EVERPARSE_HOME := $(realpath ../../../../..)
 include $(EVERPARSE_HOME)/src/windows.Makefile
 
 OUTPUT_DIRECTORY := _output

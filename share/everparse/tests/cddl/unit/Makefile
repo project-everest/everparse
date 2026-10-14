@@ -38,7 +38,7 @@ all-checked: $(ALL_CHECKED)
 .PHONY: all-c
 all-c: $(ALL_C_FILES)
 
-EVERPARSE_HOME = $(realpath ../../../..)
+EVERPARSE_HOME = $(realpath ../../../../..)
 
 $(ODIR)/%.fst: %.cddl
 	$(EVERPARSE_HOME)/bin/cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only $(CDDL_ADMIT)

@@ -3,7 +3,7 @@ echo_DICE_HOME:
 .PHONY: echo_DICE_HOME
 
 ifeq (,$(EVERPARSE_HOME))
-EVERPARSE_HOME := $(realpath ../../../..)
+EVERPARSE_HOME := $(realpath ../../../../..)
 endif
 include $(EVERPARSE_HOME)/src/windows.Makefile
 

@@ -1,6 +1,6 @@
 all: extract-all
 
-EVERPARSE_HOME = $(realpath ../../../..)
+EVERPARSE_HOME = $(realpath ../../../../..)
 
 OUTPUT=_output/CDDLTest.Test.fst
 

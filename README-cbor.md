@@ -49,7 +49,7 @@ Section 4.2: in directory `/lib/everparse/cddl/pulse`
 - The CDDL sserializer implementation combinators are defined in `CDDL.Pulse.Serialize.*`
 - The CDDL code generator is defined as `impl_bundle_wf_type` in `CDDL.Pulse.AST.Bundle.fst`
 
-Section 5.1: in directory `/src/cddl/tests/unit`
+Section 5.1: in directory `/share/everparse/tests/cddl/unit`
 - Record benchmark: CDDL description in `BenchFlat.cddl`, driver code in `Test_BenchFlat.cpp`.
 - Map benchmark: CDDL description in `BenchMap.cddl`, driver code in `Test_BenchMap.cpp`.
 - Array benchmark: CDDL description in `BenchArray.cddl`. The driver `Test_BenchArray.c` serializes and parses with our tool. `Test_BenchArray__Interop1.c` serializes with our tool and parses with QCBOR. `Test_BenchArray__Interop2.c` serialized with QCBOR and parses with our tool. Finall, `Test_BenchArray__Interop3.cpp` tests against TinyCBOR.
@@ -65,7 +65,7 @@ Section 5.2: in directory `/src/cose`
 Appendix A:
 - The arithmetic example is in `/tests/pulse`
 
-Appendix C: in directory `/src/cddl/tests/dpe`
+Appendix C: in directory `/share/everparse/tests/cddl/dpe`
 - The DPE CDDL specifications are in `dpe.cddl`
 - The verified Pulse code formatting objects to and from byte arrays is in the `dpe` subdirectory
 - The in-memory profile DPE API is in `dpe/DPESlice.fsti`, adapted from Ebner et al. 2025 to be standalone
