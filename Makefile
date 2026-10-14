@@ -350,6 +350,17 @@ endif
 
 .PHONY: cddl-unit-tests
 
+# The roundtrip test uses the EverCDDL OCaml library installed by cddl-tool,
+# so it stays next to the tool, under src/cddl/tests.
+ifeq (,$(NO_PULSE))
+cddl-roundtrip-test: cddl
+	+$(MAKE) -C src/cddl/tests/roundtrip
+else
+cddl-roundtrip-test:
+endif
+
+.PHONY: cddl-roundtrip-test
+
 ifeq (,$(NO_PULSE))
 cose-extract-krml: cddl-tool
 	+$(MAKE) -C src/cose extract-krml
@@ -372,7 +383,7 @@ cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
 
-cddl-test: cddl cddl-unit-tests
+cddl-test: cddl cddl-unit-tests cddl-roundtrip-test
 
 .PHONY: cddl-test
 
@@ -400,6 +411,7 @@ clean-cbor-verify:
 
 clean-cddl:
 	+$(MAKE) -C lib/everparse/cddl clean
+	+$(MAKE) -C src/cddl/tests/roundtrip clean
 
 .PHONY: clean-cbor-verify
 
