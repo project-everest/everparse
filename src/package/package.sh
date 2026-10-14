@@ -178,7 +178,6 @@ make_everparse() {
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
     $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
-    mkdir -p everparse/src/3d
     mkdir -p everparse/lib/everparse
     $cp -r $EVERPARSE_HOME/lib/everparse/lowparse everparse/lib/everparse/
     if $is_windows ; then
@@ -186,9 +185,7 @@ make_everparse() {
     else
         $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
     fi
-    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
-    # EverParseEndianness.h and noheader.txt are part of the 3d runtime support
+    # EverParseEndianness.h, noheader.txt, .clang-format and copyright.txt are part of the 3d runtime support
     # in lib/everparse/3d, and are needed by every API and backend, so they are
     # copied here rather than with the rest of that directory below, which is
     # skipped when Pulse is disabled.
@@ -196,6 +193,8 @@ make_everparse() {
     if $is_windows ; then $cp -r $EVERPARSE_HOME/lib/everparse/3d/EverParseEndianness_Windows_NT.h everparse/lib/everparse/3d/ ; fi
     $cp -r $EVERPARSE_HOME/lib/everparse/3d/EverParseEndianness.h everparse/lib/everparse/3d/
     $cp -r $EVERPARSE_HOME/lib/everparse/3d/noheader.txt everparse/lib/everparse/3d/
+    $cp -r $EVERPARSE_HOME/lib/everparse/3d/.clang-format everparse/lib/everparse/3d/
+    $cp -r $EVERPARSE_HOME/lib/everparse/3d/copyright.txt everparse/lib/everparse/3d/
 
     # Copy the Pulse 3d runtime (--api pulse), unless Pulse is disabled altogether.
     #

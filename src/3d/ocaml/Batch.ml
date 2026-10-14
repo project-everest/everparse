@@ -28,7 +28,6 @@ let krml_locate k tmpdir =
 let krmllib = krml_locate "krmllib"
 
 let lowparse_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "lowparse"
-let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
 
 (* TODO: implement krml -locate-misc *)
 let cl_wrapper () =
@@ -895,7 +894,7 @@ let save_hashes_for_module
 (* Copy .clang-format *)
 
 let copy_clang_format out_dir =
-  copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format")
+  copy (filename_concat lib_3d_home ".clang-format") (filename_concat out_dir ".clang-format")
 
 (* [only] restricts the run to the prelude headers it names, by basename. The
    generated EverParse.Makefile gives each header a rule of its own and has that
@@ -1000,7 +999,7 @@ let postprocess_c
   List.iter (add_copyright produced_files wrappers out_dir) files_and_modules;
   if not no_everparse_h
   then begin
-      let copyright_txt = filename_concat ddd_home "copyright.txt" in
+      let copyright_txt = filename_concat lib_3d_home "copyright.txt" in
       add_copyright_header None out_dir copyright_txt (filename_concat out_dir "EverParse.h")
     end;
   (* save hashes *)
