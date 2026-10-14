@@ -63,7 +63,7 @@ Section 5.2: in directory `/src/cose`
 - The verified Rust code obtained after extracting COSE signing and verification is in the `rust` subdirectory. It can be built (resp. tested) by running `cargo build` (resp. `cargo test`) from that directory.
 
 Appendix A:
-- The arithmetic example is in `/tests/pulse`
+- The arithmetic example is in `/share/everparse/tests/lowparse/arith`
 
 Appendix C: in directory `/share/everparse/tests/cddl/dpe`
 - The DPE CDDL specifications are in `dpe.cddl`

@@ -1,6 +1,6 @@
 all: extract
 
-EVERPARSE_HOME = $(realpath ../..)
+EVERPARSE_HOME = $(realpath ../../../../..)
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 ALREADY_CACHED := *,-ArithParse,
 
