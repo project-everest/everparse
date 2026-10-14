@@ -156,10 +156,18 @@ endif
 
 .PHONY: 3d-adapter-test
 
+# The standalone F# hash checker, checking hashes produced by 3d with both
+# APIs. The 3d tests in share/everparse/tests/3d check those hashes with 3d
+# itself only.
+3d-hashchk-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C src/3d/tests
+
+.PHONY: 3d-hashchk-test
+
 3d-test: 3d-doc-test
 
 ifeq (,$(NO_PULSE))
-3d-test: 3d-unit-test 3d-pulse-test
+3d-test: 3d-unit-test 3d-pulse-test 3d-hashchk-test
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
@@ -413,6 +421,7 @@ clean-tests:
 clean-3d-tests:
 	+$(MAKE) -C share/everparse/tests/3d/lowstar clean
 	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff clean
+	+$(MAKE) -C src/3d/tests clean
 
 .PHONY: clean-3d-tests
 

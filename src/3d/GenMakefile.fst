@@ -585,8 +585,8 @@ let produce_everparse_h_rule
          EverParse.h alone, so those have to be here, and in pulse mode the .c
          files ride along so that a consumer waiting on the generated headers
          waits on the whole generated output --
-         share/everparse/tests/3d/modules/Makefile's
-         `hashchk-check: $(EVERPARSE_ALL_H_FILES)` relies on that. *)
+         src/3d/tests/modules/Makefile's
+         `build: $(EVERPARSE_ALL_H_FILES)` relies on that. *)
       from =
         if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::

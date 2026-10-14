@@ -35,13 +35,7 @@ build: $(EVERPARSE_ALL_H_FILES) $(EVERPARSE_ALL_C_FILES) $(EVERPARSE_ALL_JSON_FI
 check: build
 	$(EVERPARSE_CMD) --odir $(EVERPARSE_OUTPUT_DIR) --check_hashes strong src/Test.3d src/Test2.3d
 
-# Same, but with the standalone F# hash checker
-HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
-
-hashchk-check: build
-	$(HASHCHK) --api $(EVERPARSE_API) --odir $(EVERPARSE_OUTPUT_DIR) --check_hashes strong src/Test.3d src/Test2.3d
-
 clean:
 	rm -rf $(EVERPARSE_OUTPUT_DIR)
 
-.PHONY: all build check clean hashchk-check
+.PHONY: all build check clean
