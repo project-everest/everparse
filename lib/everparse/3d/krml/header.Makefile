@@ -21,10 +21,10 @@ all: headers
 EVERPARSE_HOME := $(realpath ../../../..)
 # On Windows, $(realpath) yields a Cygwin path (/cygdrive/d/...) that the
 # native krml.exe cannot open. windows.Makefile rewrites EVERPARSE_HOME
-# with `cygpath -m`, so DDD_HOME must be derived *after* this include.
+# with `cygpath -m`, so LIB_3D_HOME must be derived *after* this include.
 # The sibling extract.Makefile does the same.
 include $(EVERPARSE_HOME)/src/windows.Makefile
-DDD_HOME := $(EVERPARSE_HOME)/src/3d
+LIB_3D_HOME := $(EVERPARSE_HOME)/lib/everparse/3d
 
 BACKENDS := buffer extern static
 
@@ -118,7 +118,7 @@ $(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	  -skip-makefiles \
 	  -tmpdir $(1) \
 	  -minimal \
-	  -header $$(DDD_HOME)/noheader.txt \
+	  -header $$(LIB_3D_HOME)/noheader.txt \
 	  -add-include 'EverParse:"EverParsePulseEndianness.h"' \
 	  -static-header '$$(STATIC_HEADER_$(1))' \
 	  -no-inline-type-abbrev '$$(HANDLER_$(1))' \
@@ -153,7 +153,7 @@ define lowstar_header_rule
 lowstar/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	mkdir -p lowstar/$(1)
 	$$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir lowstar/$(1) \
-	  -minimal -header $$(DDD_HOME)/noheader.txt \
+	  -minimal -header $$(LIB_3D_HOME)/noheader.txt \
 	  -add-include 'EverParse:"EverParseEndianness.h"' \
 	  -static-header '$$(LOWSTAR_STATIC)$$(LOWSTAR_STATIC_$(1))' \
 	  -no-inline-type-abbrev '$$(LOWSTAR_HANDLER_$(1)),EverParse3d.Lowstar.SupportBuffer.input_buffer' \
