@@ -1,4 +1,5 @@
 EVERPARSE_HOME ?= $(realpath ../../../../../../..)
+include $(EVERPARSE_HOME)/src/windows.Makefile
 export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_API ?= lowstar
@@ -15,7 +16,6 @@ basic: $(SOURCE_FILES) basic.out
 
 FSTAR_EXE ?= fstar.exe
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse
 

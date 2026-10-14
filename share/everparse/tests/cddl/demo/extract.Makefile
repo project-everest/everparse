@@ -25,7 +25,6 @@ CUSTARD_ROOTS := CDDLTest.Client.fst
 CUSTARD_EXTERN_TYPES := CBOR.Pulse.API.Det.Type.cbor_det_t
 CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile
 

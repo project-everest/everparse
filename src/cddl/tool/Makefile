@@ -9,7 +9,6 @@ ALREADY_CACHED := *,-CDDL.Tool,
 
 clean_rules += clean-ocaml clean-done
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile
 

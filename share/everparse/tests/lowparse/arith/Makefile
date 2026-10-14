@@ -12,7 +12,6 @@ CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := ArithParse.Impl
 CUSTARD_ROOTS := ArithParse.Impl.fst
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 include $(EVERPARSE_HOME)/src/everparse.Makefile
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile

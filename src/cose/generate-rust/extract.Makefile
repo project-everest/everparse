@@ -27,7 +27,6 @@ CUSTARD_ROOTS := CommonPulse.fst
 
 clean_rules += clean-output
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile
 

@@ -17,7 +17,6 @@ else
 FSTAR_FILES := $(filter-out LowParse.Pulse%,$(wildcard *.fst *.fsti))
 endif
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 ALREADY_CACHED := *,-LowParse,
 

@@ -16,7 +16,6 @@ CUSTARD_ENTRY_MODULES := CBOR.Pulse.API.Det.Type CBOR.Spec.Constants
 
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 .PHONY: extract
 

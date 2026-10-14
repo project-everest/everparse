@@ -1,4 +1,5 @@
 EVERPARSE_HOME ?= $(realpath ../../../..)
+include $(EVERPARSE_HOME)/src/windows.Makefile
 export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
@@ -21,7 +22,6 @@ extern: $(SOURCE_FILES_EXTERN) extern.out
 
 .PHONY: all interpret extern clean
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 
 INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse
 

@@ -51,7 +51,6 @@ else
   FSTAR_FILES_EXCLUDE += $(LOWPARSE_PULSE_PATTERN)
 endif
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 ifeq (,$(NO_PULSE))
   include $(EVERPARSE_HOME)/src/pulse.Makefile
 endif

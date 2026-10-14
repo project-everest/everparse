@@ -13,6 +13,5 @@ EVERPARSE_HOME = $(realpath ../../../../../..)
 INCLUDE_PATHS += $(realpath ..)
 ALREADY_CACHED := *,-CBOR.Pulse.Raw.Slice,
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile

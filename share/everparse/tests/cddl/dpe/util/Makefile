@@ -9,6 +9,5 @@ $(EVERPARSE_HOME)/lib/everparse/cddl/pulse
 
 ALREADY_CACHED := *,-CDDL.Spec,
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile

@@ -23,8 +23,6 @@ endif
 
 EVERPARSE_HOME := $(realpath ../../../..)
 
-# karamel.Makefile adds krmllib paths; pulse.Makefile adds
-# PULSE_HOME/lib/pulse and sets OCAMLPATH for pulse extraction.
 INCLUDE_PATHS += \
     $(EVERPARSE_HOME)/lib/everparse/cbor/spec \
     $(EVERPARSE_HOME)/lib/everparse/cbor/pulse \
@@ -43,7 +41,6 @@ FSTAR_FILES := $(OUTPUT_DIRECTORY)/$(MNAME).fst
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-include $(EVERPARSE_HOME)/src/karamel.Makefile
 include $(EVERPARSE_HOME)/src/pulse.Makefile
 include $(EVERPARSE_HOME)/src/common.Makefile
 
