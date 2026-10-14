@@ -22,8 +22,8 @@ CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Type
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Dummy
 CUSTARD_ROOTS := $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 #KRML_OPTS += -warn-error @4@6
 

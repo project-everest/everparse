@@ -5,7 +5,7 @@ echo_DICE_HOME:
 ifeq (,$(EVERPARSE_HOME))
 EVERPARSE_HOME := $(realpath ../../../../..)
 endif
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 clean_rules += clean-dice
 

@@ -18,7 +18,7 @@ ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 endif
 
-include src/z3-version.Makefile
+include lib/everparse/z3-version.Makefile
 
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))
 export EVERPARSE_USE_OPAMROOT:=1

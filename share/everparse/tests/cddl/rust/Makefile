@@ -1,7 +1,7 @@
 all: build-rust
 
 EVERPARSE_HOME := $(realpath ../../../../..)
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 OUTPUT=_output/CDDLTest.Test.fst
 

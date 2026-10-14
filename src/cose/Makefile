@@ -1,17 +1,17 @@
 all: build
 
+EVERPARSE_HOME = $(realpath ../..)
+
 ifeq (1,$(ADMIT))
 CDDL_ADMIT := --admit
 else
 CDDL_ADMIT :=
 endif
 
-encrypt: cose-encrypt.cddl ../cddl/spec/postlude.cddl
+encrypt: cose-encrypt.cddl $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
 	rm -rf $@.tmp $@
 	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $@.tmp $(CDDL_ADMIT)
 	mv $@.tmp $@
-
-EVERPARSE_HOME = $(realpath ../..)
 
 build-c:
 	+$(MAKE) -C c

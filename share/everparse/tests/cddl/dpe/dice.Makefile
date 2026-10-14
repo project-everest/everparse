@@ -11,7 +11,7 @@ FSTAR_OPTIONS += --admit_smt_queries true
 FSTAR_DEP_FILE := $(CACHE_DIRECTORY)/dice.depend
 FSTAR_FILES := $(wildcard $(DICE_HOME)/dpe/*.fst $(DICE_HOME)/dpe/*.fsti)
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 .PHONY: all verify

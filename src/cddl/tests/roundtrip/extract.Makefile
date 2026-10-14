@@ -41,8 +41,8 @@ FSTAR_FILES := $(OUTPUT_DIRECTORY)/$(MNAME).fst
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 extract: $(CUSTARD_STAMP)
 

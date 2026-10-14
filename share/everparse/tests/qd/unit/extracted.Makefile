@@ -27,7 +27,7 @@ CUSTARD_ROOTS := ../Test.fst
 
 clean_rules += clean-local
 
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 FSTAR_OPTIONS += $(LAX_OPT) --ext 'optimize_let_vc=false' --warn_error @272
 

@@ -5,4 +5,4 @@ INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec
 
 ALREADY_CACHED := *,-CDDL.Spec,
 
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile

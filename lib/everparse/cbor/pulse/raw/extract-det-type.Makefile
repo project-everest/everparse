@@ -14,8 +14,8 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := CBOR.Pulse.API.Det.Type CBOR.Spec.Constants
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 .PHONY: extract
 

@@ -34,12 +34,12 @@ CUSTARD_ROOTS := CDDLTest.DPEMain.fst
 CUSTARD_EXTERN_TYPES := CBOR.Pulse.API.Det.Type.cbor_det_t
 CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
 
 ALREADY_CACHED := *,-CDDLTest.DPE,-DPESlice,
 FSTAR_OPTIONS += --warn_error -342
 
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 

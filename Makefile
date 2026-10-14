@@ -1,5 +1,5 @@
 #NOTE: if you want to add global F* options, you need to do the following:
-# 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
+# 1. Add them to FSTAR_OPTIONS in lib/everparse/fstar.Makefile
 # 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
 all: package-subset asn1 cbor
@@ -52,9 +52,9 @@ else
 endif
 
 ifeq (,$(NO_PULSE))
-  include $(EVERPARSE_HOME)/src/pulse.Makefile
+  include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
 endif
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 $(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
 

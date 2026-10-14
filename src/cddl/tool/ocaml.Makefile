@@ -1,7 +1,7 @@
 all: extract
 
 EVERPARSE_HOME := $(realpath ../../..)
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/lib/everparse/cddl/pulse
 FSTAR_FILES := $(EVERPARSE_HOME)/lib/everparse/cddl/spec/CDDL.Spec.AST.Base.fst $(EVERPARSE_HOME)/lib/everparse/cddl/spec/CDDL.Spec.AST.Print.fst $(EVERPARSE_HOME)/lib/everparse/cddl/spec/CDDL.Spec.AST.Elab.fst $(EVERPARSE_HOME)/lib/everparse/cddl/spec/CDDL.Spec.AST.Driver.fst CDDL.Tool.Gen.fst $(EVERPARSE_HOME)/lib/everparse/cbor/spec/CBOR.Spec.Constants.fst
@@ -33,7 +33,7 @@ CUSTARD_ENTRY_MODULES += CDDL.Tool.Gen
 CUSTARD_ENTRY_MODULES += CBOR.Spec.Constants
 CUSTARD_ROOTS := CDDL.Tool.Gen.fst
 
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 extract: $(CUSTARD_STAMP)
 

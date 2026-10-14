@@ -1,7 +1,7 @@
 all: dpe
 
 EVERPARSE_HOME := $(realpath ../../../../..)
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 OUTPUT_DIRECTORY := _output
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/lib/everparse/cbor/pulse $(EVERPARSE_HOME)/lib/everparse/cddl/pulse $(OUTPUT_DIRECTORY)
@@ -19,8 +19,8 @@ else
 CDDL_ADMIT :=
 endif
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst: dpe.cddl dpe_postlude.cddl
 	$(EVERPARSE_HOME)/bin/cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only $(CDDL_ADMIT)

@@ -27,8 +27,8 @@ CUSTARD_ROOTS := CommonPulse.fst
 
 clean_rules += clean-output
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 #KRML_OPTS += -warn-error @4@6
 

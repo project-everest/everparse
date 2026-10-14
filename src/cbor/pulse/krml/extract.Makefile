@@ -1,7 +1,7 @@
 all: extract
 
 EVERPARSE_HOME := $(realpath ../../../..)
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 SRC_DIRS += $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cbor/spec/raw $(EVERPARSE_HOME)/lib/everparse/cbor/spec/raw/everparse $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw $(EVERPARSE_HOME)/lib/everparse/cbor/pulse/raw/everparse $(EVERPARSE_HOME)/lib/everparse/lowparse
@@ -53,9 +53,9 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
 clean_rules += clean-extracted
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/everparse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/everparse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 # CBOR.Pulse.Raw.Slice's backend .fst is verified by its own directory's Makefile
 # (it is treated as already cached here, ALREADY_CACHED above), so delegate building

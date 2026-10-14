@@ -16,8 +16,8 @@ CUSTARD_ROOTS := CDDL.Pulse.Test.fst
 
 clean_rules += clean-output
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE)
 

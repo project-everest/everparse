@@ -6,4 +6,4 @@ INCLUDE_PATHS += $(realpath ..)
 
 ALREADY_CACHED := *,-CBOR.Spec.API,-CBOR.Spec.Raw,
 
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile

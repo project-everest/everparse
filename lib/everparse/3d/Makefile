@@ -2,7 +2,7 @@ all: verify
 
 EVERPARSE_HOME := $(realpath ../../..)
 
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 
@@ -11,8 +11,8 @@ INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 # subdirectory and has its own artifacts, which none of the shared rules reach.
 clean_rules += clean-krml-extracted
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 clean-krml-extracted:
 	+$(MAKE) -C krml clean

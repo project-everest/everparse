@@ -19,9 +19,9 @@ CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := $(addprefix LowParse,$(EXAMPLES))
 CUSTARD_ROOTS := LowParseExample3.fst
 
-include $(EVERPARSE_HOME)/src/everparse.Makefile
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/everparse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 

@@ -22,7 +22,7 @@ CUSTARD_ENTRY_MODULES := ASN1.X509
 CUSTARD_ENTRY_MODULES += ASN1.CRL
 CUSTARD_ROOTS := ASN1.CRL.fst
 
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 FSTAR_OPTIONS += --ext optimize_let_vc
 

@@ -1,7 +1,7 @@
 all: extract
 
 EVERPARSE_HOME := $(realpath ../../../..)
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 SRC_DIRS += $(realpath ..)
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
@@ -178,9 +178,9 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
 clean_rules += clean-extracted
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/everparse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/everparse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 extract-krml: $(CUSTARD_KRML)
 

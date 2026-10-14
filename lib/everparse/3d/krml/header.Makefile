@@ -23,7 +23,7 @@ EVERPARSE_HOME := $(realpath ../../../..)
 # native krml.exe cannot open. windows.Makefile rewrites EVERPARSE_HOME
 # with `cygpath -m`, so LIB_3D_HOME must be derived *after* this include.
 # The sibling extract.Makefile does the same.
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 LIB_3D_HOME := $(EVERPARSE_HOME)/lib/everparse/3d
 
 BACKENDS := buffer extern static

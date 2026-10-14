@@ -5,6 +5,6 @@ INCLUDE_PATHS += $(realpath ..) $(realpath ../..) $(realpath ../../../spec) $(re
 
 ALREADY_CACHED := *,-CBOR.Pulse.Raw.Format,-CBOR.Pulse.Raw.EverParse,
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/everparse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/everparse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile

@@ -1,7 +1,7 @@
 all: build
 
 EVERPARSE_HOME := $(realpath ../../..)
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/lib/everparse/cddl/pulse $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
 
@@ -9,8 +9,8 @@ ALREADY_CACHED := *,-CDDL.Tool,
 
 clean_rules += clean-ocaml clean-done
 
-include $(EVERPARSE_HOME)/src/pulse.Makefile
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 ocaml.done: $(ALL_CHECKED_FILES)
 	rm -f $@

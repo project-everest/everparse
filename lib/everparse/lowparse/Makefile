@@ -9,7 +9,7 @@ all: verify
 EVERPARSE_HOME = $(realpath ../../..)
 
 ifeq (,$(NO_PULSE))
-include $(EVERPARSE_HOME)/src/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
 else
 # LowParse.Pulse* and LowParse.PulseParse* are the Pulse implementation of the
 # combinators; everything else here is pure specification and verifies without
@@ -20,7 +20,7 @@ endif
 
 ALREADY_CACHED := *,-LowParse,
 
-include $(EVERPARSE_HOME)/src/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
 

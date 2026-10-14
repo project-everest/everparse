@@ -8,7 +8,7 @@
 all: test
 
 EVERPARSE_HOME := $(realpath ../../../..)
-include $(EVERPARSE_HOME)/src/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 ODIR := _output
 
 FSTAR_EXE ?= fstar.exe
