@@ -31,8 +31,8 @@ name = "nondet"
 path = "tests/nondet.rs"
 
 [dependencies]
-cborrs        = { path = "../../../../../src/cbor/pulse/det/rust" }
-cborrs-nondet = { path = "../../../../../src/cbor/pulse/nondet/rust" }
+cborrs        = { path = "../pulse/det/rust" }
+cborrs-nondet = { path = "../pulse/nondet/rust" }
 
 # Match the upstream crate test profile so the deep-recursion array tests
 # (depth 2200) don't blow the default debug stack.

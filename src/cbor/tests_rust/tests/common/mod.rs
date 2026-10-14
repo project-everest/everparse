@@ -6,14 +6,13 @@ use std::path::PathBuf;
 
 /// Returns the directory where the C tests wrote their artefact files.
 /// Override at runtime with `CBOR_TEST_OUT_DIR=...`; defaults to
-/// `<crate>/../out/`, where the C test Makefile drops them.
+/// `share/everparse/tests/cbor/out/`, where the C test Makefile drops them.
 pub fn out_dir() -> PathBuf {
     if let Ok(s) = std::env::var("CBOR_TEST_OUT_DIR") {
         return PathBuf::from(s);
     }
     let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    p.pop(); // .../share/everparse/tests/cbor
-    p.push("out");
+    p.push("../../../share/everparse/tests/cbor/out");
     p
 }
 
