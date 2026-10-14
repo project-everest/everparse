@@ -157,7 +157,6 @@ let z3_executable_option =
 let include_option_of_paths =
   List.concat_map (fun l -> ["--include"; l])
 
-let everparse_src = Filename.concat everparse_home "src"
 let everparse_home_lib = Filename.concat everparse_home "lib"
 let everparse_lib = Filename.concat everparse_home_lib "everparse"
 let everparse_lib_cbor = Filename.concat everparse_lib "cbor"
@@ -166,9 +165,6 @@ let everparse_lib_cbor_pulse = Filename.concat everparse_lib_cbor "pulse"
 let everparse_lib_cddl = Filename.concat everparse_lib "cddl"
 let everparse_lib_cddl_spec = Filename.concat everparse_lib_cddl "spec"
 let everparse_lib_cddl_pulse = Filename.concat everparse_lib_cddl "pulse"
-(* The CDDL tool itself is not part of the library and stays under src. *)
-let everparse_src_cddl_tool =
-  Filename.concat (Filename.concat everparse_src "cddl") "tool"
 (* The public EverCBOR headers (CBORDetType.h, krmllib.h, ...) are installed
    here. *)
 let everparse_include =
@@ -181,7 +177,6 @@ let include_options =
       everparse_lib_cbor_pulse;
       everparse_lib_cddl_spec;
       everparse_lib_cddl_pulse;
-      everparse_src_cddl_tool;
     ]
 
 let everparse_lib_cbor_spec_raw = Filename.concat everparse_lib_cbor_spec "raw"
@@ -355,7 +350,7 @@ let _ =
              into the generated headers; we drive the C compiler ourselves below. *)
           "-skip-compilation";
           "-tmpdir"; !odir;
-          "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
+          "-header"; Filename.concat everparse_lib_cddl "noheader.txt";
         "-fnoshort-enums";
         "-bundle"; "FStar.\\*,LowStar.\\*,C.\\*,C,PulseCore.\\*,Pulse.\\*,Prims,Custard.\\*[rename=fstar]";
         "-no-prefix"; "CBOR.Pulse.API.Det.C";
