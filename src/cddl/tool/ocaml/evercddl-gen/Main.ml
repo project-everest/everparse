@@ -173,7 +173,6 @@ let everparse_src_cddl_tool =
    here. *)
 let everparse_include =
   Filename.concat (Filename.concat everparse_home "include") "everparse"
-let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
 
 let include_options =
   include_option_of_paths
@@ -183,8 +182,6 @@ let include_options =
       everparse_lib_cddl_spec;
       everparse_lib_cddl_pulse;
       everparse_src_cddl_tool;
-      Filename.concat everparse_home_lib_evercddl "lib";
-      Filename.concat everparse_home_lib_evercddl "plugin";
     ]
 
 let everparse_lib_cbor_spec_raw = Filename.concat everparse_lib_cbor_spec "raw"
