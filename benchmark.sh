@@ -56,7 +56,7 @@ setup_env() {
     export FSTAR_EXE="$SCRIPT_DIR/opt/FStar/out/bin/fstar.exe"
     export KRML_HOME="$SCRIPT_DIR/opt/karamel"
     export EVERPARSE_HOME="$SCRIPT_DIR"
-    export EVERPARSE_Z3_VERSION=4.13.3
+    export EVERPARSE_Z3_VERSION=5.1.0
     export PATH="$OPAM_SWITCH_PREFIX/bin:./:$PATH"
 }
 

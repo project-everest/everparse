@@ -14,7 +14,7 @@ EVERPARSE_API ?= lowstar
 export EVERPARSE_API
 3D=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
-3D_Z3_EXECUTABLE ?= z3-4.13.3
+3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.1.0)
 
 all: Probe.3d
 	mkdir -p out.z3-testgen
