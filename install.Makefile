@@ -7,6 +7,8 @@ all: install-makefiles install-lowparse install-quackyducky
 
 all: install-3d
 
+all: install-cbor
+
 install-makefiles:
 	install -d $(PREFIX)/lib/everparse
 	install -m 644 $(wildcard lib/everparse/*.Makefile) $(PREFIX)/lib/everparse
@@ -30,5 +32,26 @@ install-3d:
 	install -m 755 bin/everparse-3d.exe $(PREFIX)/bin
 
 .PHONY: install-3d
+
+install-cbor:
+	install -d $(PREFIX)/include/everparse
+	install -m 644 $(wildcard include/everparse/CBOR*.h) $(PREFIX)/include/everparse
+	install -m 644 include/everparse/krmllib.h $(PREFIX)/include/everparse
+	install -d $(PREFIX)/lib/everparse
+	install -m 644 $(addprefix lib/everparse/,CBORDet.o CBORNondet.o) $(PREFIX)/lib/everparse
+	install -d $(PREFIX)/lib/everparse/cbor/spec/raw/everparse
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/spec/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/spec
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/spec/raw/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/spec/raw
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/spec/raw/everparse/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/spec/raw/everparse
+	install -d $(PREFIX)/lib/everparse/cbor/pulse/raw/everparse
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/pulse/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/pulse
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/pulse/raw/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/pulse/raw
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/pulse/raw/everparse/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/pulse/raw/everparse
+	install -d $(PREFIX)/lib/everparse/cbor/pulse/raw/slice-rust
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/pulse/raw/slice-rust/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/pulse/raw/slice-rust
+	install -d $(PREFIX)/lib/everparse/cbor/pulse/raw/slice-c
+	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/pulse/raw/slice-c/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/pulse/raw/slice-c
+
+.PHONY: install-cbor
 
 .PHONY: all install-makefiles install-lowparse install-quackyducky
