@@ -2729,6 +2729,60 @@ let list_up_to_done
 = Some? (LP.parse q v_sl) /\
   snd (Some?.v (LP.parse q v_sl)) == Seq.length v_sl - Seq.length vcur
 
+(* After a leaf reader consumed some input from [vcur], the remaining input
+   [vcur'] is still a suffix of the original input [v_sl]. Stated separately to
+   keep this reasoning out of the large VC of the loop body below. *)
+let leaf_read_is_suffix_of
+  (#k: LP.parser_kind) (#t: Type) (p: LP.parser k t) (v_sl vcur vcur': Seq.seq LP.byte)
+: Lemma
+  (requires (
+    vcur `I.seq_is_suffix_of` v_sl /\
+    begin match LP.parse p vcur with
+    | None -> False
+    | Some (_, len) -> vcur' == Seq.slice vcur len (Seq.length vcur)
+    end
+  ))
+  (ensures (
+    vcur' `I.seq_is_suffix_of` vcur /\
+    vcur' `I.seq_is_suffix_of` v_sl /\
+    Seq.length vcur' <= Seq.length vcur
+  ))
+= let Some (_, len) = LP.parse p vcur in
+  seq_slice_is_suffix_of vcur len;
+  seq_is_suffix_of_trans vcur' vcur v_sl
+
+(* One successful iteration of the loop below: [x] was read from the front of
+   [vcur], leaving [vcur']. *)
+let list_up_to_step
+  (#k: LP.parser_kind) (#t: Type)
+  (cond: (t -> GTot bool))
+  (p: LP.parser k t { k.LP.parser_kind_subkind <> Some LP.ParserConsumesAll })
+  (prf: LUT.consumes_if_not_cond cond p)
+  (v_sl vcur vcur': Seq.seq LP.byte)
+  (x: t)
+: Lemma
+  (requires (
+    vcur `I.seq_is_suffix_of` v_sl /\
+    list_up_to_ongoing (LUT.parse_list_up_to cond p prf) v_sl vcur /\
+    begin match LP.parse p vcur with
+    | None -> False
+    | Some (y, len) -> x == y /\ vcur' == Seq.slice vcur len (Seq.length vcur)
+    end
+  ))
+  (ensures (
+    if cond x
+    then list_up_to_done (LUT.parse_list_up_to cond p prf) v_sl vcur'
+    else list_up_to_ongoing (LUT.parse_list_up_to cond p prf) v_sl vcur'
+  ))
+= let q = LUT.parse_list_up_to cond p prf in
+  LUT.parse_list_up_to_eq cond p prf vcur;
+  let Some (_, len) = LP.parse p vcur in
+  if cond x then ()
+  else match LP.parse q vcur' with
+  | None -> assert (None? (LP.parse q vcur))
+  | Some ((y, z), consumed') ->
+    assert (LP.parse q vcur == Some ((x :: y, z), len + consumed'))
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction noextract
@@ -2800,8 +2854,8 @@ fn validate_list_up_to
       let x = r sl_base sl_len sl_pos contents_sl vcur;
       with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
       pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
-      seq_slice_is_suffix_of vcur (Seq.length vcur - Seq.length vcur');
-      seq_is_suffix_of_trans vcur' vcur v_sl;
+      leaf_read_is_suffix_of p v_sl vcur vcur';
+      list_up_to_step (cond_string_up_to terminator) p prf v_sl vcur vcur' x;
       if (x = terminator) {
         stop := true;
       } else {
