@@ -29,8 +29,9 @@ else
 endif
 
 # Default locations: the in-tree EverParse installation.
-EVERCBOR_INCLUDE_PATH ?= $(local_curdir)/../../../../include/everparse
-EVERCBOR_LIB_PATH     ?= $(local_curdir)/../../../../lib/everparse
+EVERPARSE_HOME        ?= $(local_curdir)/../../../..
+EVERCBOR_INCLUDE_PATH ?= $(EVERPARSE_HOME)/include/everparse
+EVERCBOR_LIB_PATH     ?= $(EVERPARSE_HOME)/lib/everparse
 
 # Number of iterations for benchmarking. Override on the command line to make
 # timing measurements more reliable, e.g. BENCH_ITERATIONS=1000.
