@@ -467,3 +467,8 @@ release package package-noversion nuget-noversion everparse:
 
 lowparse-fstar-test:
 	+$(MAKE) -C lib/everparse/lowparse fstar-test
+
+install:
+	+$(MAKE) -f install.Makefile
+
+.PHONY: install
