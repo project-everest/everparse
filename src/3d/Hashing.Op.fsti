@@ -1,6 +1,7 @@
 module Hashing.Op
 open FStar.All
 
+[@@custard_extern "Hashing_Op.hash_state"]
 val t: Type0
 
 [@@custard_extern "Hashing_Op.hash_bool"]
