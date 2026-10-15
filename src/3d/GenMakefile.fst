@@ -570,7 +570,7 @@ let produce_everparse_h_rule
     {
       ty = EverParse;
       (* Both APIs ship a pre-generated EverParse.h (see
-         lib/everparse/3d/krml/header.Makefile), and the prelude's copy is what
+         src/3d/krml/header.Makefile), and the prelude's copy is what
          has to end up here in either mode. KaRaMeL emits none of its own:
          krml_args pairs -library with -static-header over the same pattern,
          which makes KaRaMeL drop the runtime's extern declarations rather than

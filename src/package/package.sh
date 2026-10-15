@@ -221,10 +221,6 @@ make_everparse() {
         # just below.
         mkdir -p everparse/lib/everparse/3d
         $cp -r $EVERPARSE_HOME/lib/everparse/3d/. everparse/lib/everparse/3d/
-        # Drop the build machinery: the package ships the results, not the
-        # means of producing them.
-        rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile everparse/lib/everparse/3d/krml/header.Makefile
-        rm -f everparse/lib/everparse/3d/krml/extracted/.depend
     fi
 
     if $is_windows ; then

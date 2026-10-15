@@ -18,7 +18,7 @@
 
 all: headers
 
-EVERPARSE_HOME := $(realpath ../../../..)
+EVERPARSE_HOME := $(realpath ../../..)
 # On Windows, $(realpath) yields a Cygwin path (/cygdrive/d/...) that the
 # native krml.exe cannot open. windows.Makefile rewrites EVERPARSE_HOME
 # with `cygpath -m`, so LIB_3D_HOME must be derived *after* this include.
@@ -26,9 +26,14 @@ EVERPARSE_HOME := $(realpath ../../../..)
 include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 LIB_3D_HOME := $(EVERPARSE_HOME)/lib/everparse/3d
 
+# This Makefile is build machinery only and lives in src/, but the headers are
+# written next to the extracted .krml, under $(LIB_3D_HOME)/krml, where
+# everparse-3d.exe looks for them.
+KRML_DIR := $(LIB_3D_HOME)/krml
+
 BACKENDS := buffer extern static
 
-KRML_FILES := $(wildcard extracted/*.krml)
+KRML_FILES := $(wildcard $(KRML_DIR)/extracted/*.krml)
 
 # The bundle's API modules: those whose declarations stay public and so land in
 # EverParse.h. Only the selected backend's module is listed, because each of
@@ -111,12 +116,12 @@ HANDLER_static := $(HANDLER_extern)
 # modules, which must be emitted rather than assumed. The two still agree in
 # the sense that matters: no Custard.\* declaration survives into EverParse.h.
 define header_rule
-$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
-	mkdir -p $(1)
+$$(KRML_DIR)/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
+	mkdir -p $$(KRML_DIR)/$(1)
 	$$(KRML_EXE) \
 	  -skip-compilation \
 	  -skip-makefiles \
-	  -tmpdir $(1) \
+	  -tmpdir $$(KRML_DIR)/$(1) \
 	  -minimal \
 	  -header $$(LIB_3D_HOME)/noheader.txt \
 	  -add-include 'EverParse:"EverParsePulseEndianness.h"' \
@@ -129,10 +134,10 @@ $(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	  -bundle 'Prims,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
 	  -bundle '$$(API_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*,Custard.\*[rename=EverParse,rename-prefix]' \
 	  $$(KRML_FILES)
-	test '!' -e $(1)/EverParse.c
-	test '!' -e $(1)/SHOULDNOTBETHERE.h
-	test '!' -d $(1)/internal
-	grep -q 'EVERPARSE_ERROR_HANDLER)' $(1)/EverParse.h
+	test '!' -e $$(KRML_DIR)/$(1)/EverParse.c
+	test '!' -e $$(KRML_DIR)/$(1)/SHOULDNOTBETHERE.h
+	test '!' -d $$(KRML_DIR)/$(1)/internal
+	grep -q 'EVERPARSE_ERROR_HANDLER)' $$(KRML_DIR)/$(1)/EverParse.h
 endef
 
 $(foreach b,$(BACKENDS),$(eval $(call header_rule,$(b))))
@@ -150,9 +155,9 @@ LOWSTAR_STATIC_static := ,EverParse3d.InputStream.LowstarExtern.Raw
 # The final, already-consumed bundle only overrides ErrorCode's C prefix.
 # Its declarations live in EverParse.h, not in a second support header.
 define lowstar_header_rule
-lowstar/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
-	mkdir -p lowstar/$(1)
-	$$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir lowstar/$(1) \
+$$(KRML_DIR)/lowstar/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
+	mkdir -p $$(KRML_DIR)/lowstar/$(1)
+	$$(KRML_EXE) -skip-compilation -skip-makefiles -tmpdir $$(KRML_DIR)/lowstar/$(1) \
 	  -minimal -header $$(LIB_3D_HOME)/noheader.txt \
 	  -add-include 'EverParse:"EverParseEndianness.h"' \
 	  -static-header '$$(LOWSTAR_STATIC)$$(LOWSTAR_STATIC_$(1))' \
@@ -164,19 +169,19 @@ lowstar/$(1)/EverParse.h: $$(KRML_FILES) header.Makefile
 	  -bundle '$$(LOWSTAR_$(1))=Prims,LowParse.\*,EverParse3d.\*,Pulse.\*,Custard.\*[rename=EverParse,rename-prefix]' \
 	  -bundle 'EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]' \
 	  $$(KRML_FILES)
-	test '!' -e lowstar/$(1)/EverParse.c
-	test '!' -e lowstar/$(1)/EverParsePulseInternal.h
-	test '!' -e lowstar/$(1)/SHOULDNOTBETHERE.h
-	test '!' -d lowstar/$(1)/internal
-	test "$$$$(ls lowstar/$(1))" = EverParse.h
+	test '!' -e $$(KRML_DIR)/lowstar/$(1)/EverParse.c
+	test '!' -e $$(KRML_DIR)/lowstar/$(1)/EverParsePulseInternal.h
+	test '!' -e $$(KRML_DIR)/lowstar/$(1)/SHOULDNOTBETHERE.h
+	test '!' -d $$(KRML_DIR)/lowstar/$(1)/internal
+	test "$$$$(ls $$(KRML_DIR)/lowstar/$(1))" = EverParse.h
 endef
 
 $(foreach b,$(BACKENDS),$(eval $(call lowstar_header_rule,$(b))))
 
-headers: $(foreach b,$(BACKENDS),$(b)/EverParse.h lowstar/$(b)/EverParse.h)
-	rm -f lowstar/EverParsePulseInternal.h
+headers: $(foreach b,$(BACKENDS),$(KRML_DIR)/$(b)/EverParse.h $(KRML_DIR)/lowstar/$(b)/EverParse.h)
+	rm -f $(KRML_DIR)/lowstar/EverParsePulseInternal.h
 
 .PHONY: all headers clean-headers
 
 clean-headers:
-	rm -rf $(BACKENDS) lowstar
+	rm -rf $(addprefix $(KRML_DIR)/,$(BACKENDS) lowstar)

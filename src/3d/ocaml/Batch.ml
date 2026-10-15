@@ -49,7 +49,7 @@ let pulse_makefile_basic =
   filename_concat lib_3d_home "Makefile.basic"
 
 (* The directory holding the pre-generated EverParse.h for this backend.
-   See lib/everparse/3d/krml/header.Makefile. *)
+   See src/3d/krml/header.Makefile. *)
 let pulse_actions_c_home input_stream_binding =
   filename_concat
     (filename_concat lib_3d_home "krml")
@@ -305,7 +305,7 @@ let pulse_everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*"
 
 (* The same, plus Custard's bucket for monomorphized instances of polymorphic
    definitions, which the Pulse runtime's whole-program extraction produces
-   (see lib/everparse/3d/krml/extract.Makefile). Those instances are private to
+   (see src/3d/krml/extract.Makefile). Those instances are private to
    the bundle, so adding the pattern here keeps the reachable ones inlined into
    the output and drops the rest; without it they are emitted as a file of
    their own, holding spec-only declarations that do not compile.
@@ -429,7 +429,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
       (List.rev add_include)
   in
   (* In --api pulse mode the Pulse runtime is a shipped library, exactly as the Low*
-     prelude is: lib/everparse/3d/krml/header.Makefile pre-generates one
+     prelude is: src/3d/krml/header.Makefile pre-generates one
      EverParse.h per input stream backend, and copy_everparse_h_raw drops it
      into the output directory. So KaRaMeL gets -library here too, which turns
      the runtime into plain `extern` declarations resolved by that header, and

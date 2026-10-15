@@ -126,7 +126,7 @@ endif
 # what everparse-3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
 # per-backend EverParse.h it copies into the output directory.
 3d-pulse-krml: 3d-pulse-prelude
-	+$(MAKE) -C lib/everparse/3d/krml all
+	+$(MAKE) -C src/3d/krml all
 
 .PHONY: 3d-pulse-krml
 
@@ -442,6 +442,7 @@ clean-3d-tests:
 # Low*-API corpus in share/everparse/tests/3d/lowstar.
 clean-3d-pulse-prelude:
 	+$(MAKE) -C lib/everparse/3d clean
+	+$(MAKE) -C src/3d/krml clean
 
 .PHONY: clean-3d-pulse-prelude
 

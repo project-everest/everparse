@@ -1,9 +1,10 @@
 all: extract
 
-EVERPARSE_HOME := $(realpath ../../../..)
+EVERPARSE_HOME := $(realpath ../../..)
 include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
+LIB_3D_HOME := $(EVERPARSE_HOME)/lib/everparse/3d
 
-SRC_DIRS += $(realpath ..)
+SRC_DIRS += $(LIB_3D_HOME)
 INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 FSTAR_OPTIONS += --warn_error -342
@@ -11,7 +12,11 @@ FSTAR_OPTIONS += --warn_error -342
 # Whole-program extraction of the Pulse 3d runtime, to the .krml that
 # header.Makefile turns into EverParse.h and that `everparse-3d.exe --pulse` passes to
 # KaRaMeL alongside the generated modules (see all_everparse_krmls in
-# src/3d/ocaml/Batch.ml, which simply globs this directory).
+# src/3d/ocaml/Batch.ml, which simply globs $(LIB_3D_HOME)/krml/extracted).
+#
+# This Makefile and EverParse3d.Krml.Roots.fst are build machinery only: they
+# live here in src/, but the extracted .krml is written to
+# $(LIB_3D_HOME)/krml/extracted, where everparse-3d.exe looks for it.
 #
 # Custard eliminates dead code by reachability from the roots, and a karamel
 # -bundle or -library clause is packaging rather than reachability: Custard has
@@ -173,8 +178,8 @@ CUSTARD_EXTERN_TYPES += EverParse3d.InputStream.LowstarExtern.Types.extra_t
 CUSTARD_ROOTS := EverParse3d.Krml.Roots.fst
 
 ALREADY_CACHED := '*,'
-OUTPUT_DIRECTORY := extracted
-FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
+OUTPUT_DIRECTORY := $(LIB_3D_HOME)/krml/extracted
+FSTAR_DEP_FILE := .depend
 
 clean_rules += clean-extracted
 
@@ -187,7 +192,7 @@ extract-krml: $(CUSTARD_KRML)
 .PHONY: extract-krml
 
 # common.Makefile's clean-krml only removes $(OUTPUT_DIRECTORY)/*.krml, which
-# leaves the directory and the .depend it holds behind. Drop the lot.
+# leaves the directory behind. Drop the lot.
 clean-extracted:
 	rm -rf $(OUTPUT_DIRECTORY)
 
