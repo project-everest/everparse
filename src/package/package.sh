@@ -175,52 +175,19 @@ make_everparse() {
     mkdir -p everparse/share/krml
     $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
 
-    # Copy EverParse
-    $cp $EVERPARSE_HOME/bin/everparse-qd.exe everparse/bin/everparse-qd.exe
-    $cp -r $EVERPARSE_HOME/bin/everparse-3d.exe everparse/bin/everparse-3d.exe
-    mkdir -p everparse/lib/everparse
-    $cp -r $EVERPARSE_HOME/lib/everparse/lowparse everparse/lib/everparse/
+    # Install EverParse. Everything EverParse itself builds — the executables,
+    # the F* libraries and their .checked files, the 3d runtime support and its
+    # .krml extraction, the prebuilt EverCBOR objects and their public headers —
+    # is laid out by install.Makefile, so the package just runs it into
+    # everparse/. It already honors NO_PULSE and EVERPARSE_ONLY_3D, and it
+    # installs exactly what is needed, leaving out the build-system Makefiles,
+    # hint files and other build artifacts that live next to the sources.
+    $MAKE -C "$EVERPARSE_HOME" install PREFIX="$PWD/everparse"
+
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
         $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
-    fi
-    # EverParseEndianness.h, noheader.txt, .clang-format and copyright.txt are part of the 3d runtime support
-    # in lib/everparse/3d, and are needed by every API and backend, so they are
-    # copied here rather than with the rest of that directory below, which is
-    # skipped when Pulse is disabled.
-    mkdir -p everparse/lib/everparse/3d
-    if $is_windows ; then $cp -r $EVERPARSE_HOME/lib/everparse/3d/EverParseEndianness_Windows_NT.h everparse/lib/everparse/3d/ ; fi
-    $cp -r $EVERPARSE_HOME/lib/everparse/3d/EverParseEndianness.h everparse/lib/everparse/3d/
-    $cp -r $EVERPARSE_HOME/lib/everparse/3d/noheader.txt everparse/lib/everparse/3d/
-    $cp -r $EVERPARSE_HOME/lib/everparse/3d/.clang-format everparse/lib/everparse/3d/
-    $cp -r $EVERPARSE_HOME/lib/everparse/3d/copyright.txt everparse/lib/everparse/3d/
-
-    # Copy the Pulse 3d runtime (--api pulse), unless Pulse is disabled altogether.
-    #
-    # `everparse-3d.exe --api pulse` needs three things at run time, all located relative to
-    # EVERPARSE_HOME by src/3d/ocaml/Batch.ml:
-    #   - lib/everparse/3d: the combinator library itself, on the F* --include
-    #     path, hence sources *and* .checked files;
-    #   - lib/everparse/3d/krml/extracted: the same library already extracted
-    #     to .krml, which is what gets handed to KaRaMeL alongside the
-    #     generated modules;
-    #   - lib/everparse/3d/krml/<backend>/EverParse.h: the pre-generated
-    #     runtime header, one per input stream backend, copied into the output
-    #     directory;
-    #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
-    #     self-contained Low*-compatible runtime generated from Pulse;
-    # The Pulse combinators themselves are already covered by the
-    # lib/everparse/lowparse copy above, and lib/everparse/3d/EverParsePulse{,Endianness}.h
-    # (copied along with lib/everparse/3d below) are copied out to the output
-    # directory by the copy_everparse_h micro-step.
-    if [[ -z "$NO_PULSE" ]] ; then
-        # EverParse's own Makefile.basic: under --api pulse, KaRaMeL is invoked
-        # with -skip-makefiles, so this is what the generated C is compiled
-        # with. It lives in lib/everparse/3d, hence is copied along with it
-        # just below.
-        mkdir -p everparse/lib/everparse/3d
-        $cp -r $EVERPARSE_HOME/lib/everparse/3d/. everparse/lib/everparse/3d/
     fi
 
     if $is_windows ; then
@@ -229,24 +196,6 @@ make_everparse() {
         $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
     $EVERPARSE_HOME/bin/everparse-3d.exe --version >> everparse/README
-
-    # Copy evercbor and evercddl
-    if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
-    $cp -r $EVERPARSE_HOME/lib/everparse/cbor everparse/lib/everparse/cbor
-    # The C and Rust extractions of EverCBOR, which stay under src/cbor/pulse.
-    $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
-    $cp -r $EVERPARSE_HOME/lib/everparse/cddl everparse/lib/everparse/cddl
-    # The CDDL tool and its roundtrip test, which stay under src/cddl.
-    $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
-	$cp $EVERPARSE_HOME/bin/everparse-cddl.exe everparse/bin/everparse-cddl.exe
-    # The prebuilt EverCBOR object files and their public headers, neither of
-    # which lives under src/cbor any more.
-    mkdir -p everparse/lib/everparse
-    $cp $EVERPARSE_HOME/lib/everparse/CBORDet.o everparse/lib/everparse/
-    $cp $EVERPARSE_HOME/lib/everparse/CBORNondet.o everparse/lib/everparse/
-    mkdir -p everparse/include/everparse
-    $cp -r $EVERPARSE_HOME/include/everparse/. everparse/include/everparse/
-    fi
 
     # Download and copy clang-format from the LLVM release
     if $is_windows ; then
