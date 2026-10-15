@@ -9,6 +9,8 @@ all: install-3d
 
 all: install-cbor
 
+all: install-cddl
+
 install-makefiles:
 	install -d $(PREFIX)/lib/everparse
 	install -m 644 $(wildcard lib/everparse/*.Makefile) $(PREFIX)/lib/everparse
@@ -53,5 +55,17 @@ install-cbor:
 	install -m 644 $(wildcard $(addprefix lib/everparse/cbor/pulse/raw/slice-c/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cbor/pulse/raw/slice-c
 
 .PHONY: install-cbor
+
+install-cddl:
+	install -d $(PREFIX)/bin
+	install -m 755 bin/everparse-cddl.exe $(PREFIX)/bin
+	install -d $(PREFIX)/lib/everparse/cddl
+	install -m 644 lib/everparse/cddl/noheader.txt $(PREFIX)/lib/everparse/cddl
+	install -d $(PREFIX)/lib/everparse/cddl/spec
+	install -m 644 $(wildcard $(addprefix lib/everparse/cddl/spec/*.,fst fsti checked cddl)) $(PREFIX)/lib/everparse/cddl/spec
+	install -d $(PREFIX)/lib/everparse/cddl/pulse
+	install -m 644 $(wildcard $(addprefix lib/everparse/cddl/pulse/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cddl/pulse
+
+.PHONY: install-cddl
 
 .PHONY: all install-makefiles install-lowparse install-quackyducky
