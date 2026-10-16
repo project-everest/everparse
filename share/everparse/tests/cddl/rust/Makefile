@@ -1,7 +1,7 @@
 all: build-rust
 
 EVERPARSE_HOME := $(realpath ../../../../..)
-include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 
 OUTPUT=_output/CDDLTest.Test.fst
 
@@ -12,7 +12,7 @@ CDDL_ADMIT :=
 endif
 
 $(OUTPUT): test.cddl
-	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $^ --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3 "$(Z3_EXE)") $^ --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
 
 RUST_MODULES := cbordetver cbordetveraux cddlextractiontest
 

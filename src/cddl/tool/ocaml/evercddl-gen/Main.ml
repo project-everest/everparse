@@ -97,11 +97,12 @@ let everparse_home =
      (* assume the executable is in the bin/ subdirectory *)
      get_absolute_filename (Filename.concat (Filename.dirname Sys.executable_name) Filename.parent_dir_name)
 
-let fstar_exe =
-  try
-    Sys.getenv "FSTAR_EXE"
-  with
-  | Not_found ->
+let fstar_exe = ref None
+
+let resolve_fstar_exe () =
+  match !fstar_exe with
+  | Some exe -> exe
+  | None ->
      let opt_fstar_exe = Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "bin") "fstar.exe" in
      if Sys.file_exists opt_fstar_exe
      then opt_fstar_exe
@@ -112,11 +113,12 @@ let fstar_exe =
        then fstar_exe
        else "fstar.exe" (* rely on PATH *)
 
-let krml_exe =
-  try
-    Sys.getenv "KRML_EXE"
-  with
-  | Not_found ->
+let krml_exe = ref None
+
+let resolve_krml_exe () =
+  match !krml_exe with
+  | Some exe -> exe
+  | None ->
     let krml = "krml" ^ (if Sys.win32 then ".exe" else "") in
     let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "karamel") "out") "bin") krml in
     if Sys.file_exists opt_krml
@@ -125,7 +127,7 @@ let krml_exe =
        (* assume a binary package *)
        Filename.concat (Filename.concat everparse_home "bin") krml
 
-let krml_locate k tmpdir =
+let krml_locate k krml_exe tmpdir =
   let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
   let cmd = Filename.quote_command krml_exe ~stdout:tmpfile ["-locate-" ^ k] in
   if Sys.command cmd <> 0 then failwith ("Unable to run krml -locate-" ^ k);
@@ -140,15 +142,20 @@ let krmlinclude = krml_locate "include"
 
 let z3_version = Z3Version.z3_version
 
-let z3_executable_option =
-  let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
-  if test = 0
-  then ["--z3version"; z3_version]
-  else
-    let opt_z3 = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "z3") ("z3-" ^ z3_version) in
-    if Sys.file_exists opt_z3
-    then ["--smt"; opt_z3]
-    else []
+let z3_exe = ref None
+
+let z3_executable_option fstar_exe =
+  match !z3_exe with
+  | Some exe -> ["--smt"; exe]
+  | None ->
+    let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
+    if test = 0
+    then ["--z3version"; z3_version]
+    else
+      let opt_z3 = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "z3") ("z3-" ^ z3_version) in
+      if Sys.file_exists opt_z3
+      then ["--smt"; opt_z3]
+      else []
 
 let include_option_of_paths =
   List.concat_map (fun l -> ["--include"; l])
@@ -194,13 +201,12 @@ let include_options_for_rust =
    splitting, since we are using lists of arguments. *)
 
 let fstar_options =
-  z3_executable_option @
-    [
-      "--cache_checked_modules";
-      "--warn_error"; "@241";
-      "--ext"; "context_pruning";
-    ] @
-      include_options
+  [
+    "--cache_checked_modules";
+    "--warn_error"; "@241";
+    "--ext"; "context_pruning";
+  ] @
+    include_options
 
 let admit = ref false
 
@@ -249,6 +255,9 @@ let skip_compilation = ref false
 let _ =
   let argspec = ref [
       ("--admit", Arg.Unit (fun _ -> admit := true), "Admit proofs");
+      ("--fstar", Arg.String (fun exe -> fstar_exe := Some exe), "Set the F* executable");
+      ("--karamel", Arg.String (fun exe -> krml_exe := Some exe), "Set the KaRaMeL executable");
+      ("--z3", Arg.String (fun exe -> z3_exe := Some exe), "Set the Z3 executable");
       ("--rust", Arg.Unit (fun _ -> lang := "Rust"), "Produce Rust code; use the EverCDDL F* interface for Rust extraction.");
       ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
       ("--odir", Arg.String (fun d -> odir := d), "Set the output directory (default .)");
@@ -275,6 +284,9 @@ let _ =
   let dir = if !fstar_only then !odir else tmpdir in
   let basename = produce_fst_file tmpdir dir in
   if !fstar_only then exit 0;
+  let fstar_exe = resolve_fstar_exe () in
+  let krml_exe = resolve_krml_exe () in
+  let fstar_options = z3_executable_option fstar_exe @ fstar_options in
   let filename = Filename.concat dir basename in
   let res = run_cmd fstar_exe
     (
@@ -384,8 +396,8 @@ let _ =
       then 0
       else begin
         let cc = try Sys.getenv "CC" with Not_found -> "cc" in
-        let krmllib = krmllib tmpdir in
-        let krmlinclude = krmlinclude tmpdir in
+        let krmllib = krmllib krml_exe tmpdir in
+        let krmlinclude = krmlinclude krml_exe tmpdir in
         let cc_args = [
           "-I"; Filename.concat (Filename.concat krmllib "dist") "minimal";
           "-I"; krmllib;

@@ -15,7 +15,7 @@ CDDL_ADMIT :=
 endif
 
 $(OUTPUT): ../cose-sign.cddl $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
-	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3 "$(Z3_EXE)") $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 ALREADY_CACHED := *,-COSE,-Abort,-EverCrypt

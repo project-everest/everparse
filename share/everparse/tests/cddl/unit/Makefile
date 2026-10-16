@@ -41,7 +41,7 @@ all-c: $(ALL_C_FILES)
 EVERPARSE_HOME = $(realpath ../../../../..)
 
 $(ODIR)/%.fst: %.cddl
-	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3 "$(Z3_EXE)") $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only $(CDDL_ADMIT)
 
 $(ODIR)/%.o: $(ODIR)/%.c
 	$(CC) -O3 -I $(EVERPARSE_HOME)/include/everparse -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
