@@ -183,6 +183,7 @@ make_everparse() {
     # installs exactly what is needed, leaving out the build-system Makefiles,
     # hint files and other build artifacts that live next to the sources.
     $MAKE -C "$EVERPARSE_HOME" install PREFIX="$PWD/everparse"
+    $cp "$EVERPARSE_HOME"/src/package/*-exe.Makefile everparse/lib/everparse/
 
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
