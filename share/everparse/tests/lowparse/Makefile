@@ -1,5 +1,12 @@
 all: verify extract-all
 
+all: arith
+
+arith:
+	+$(MAKE) -C $@
+
+.PHONY: arith
+
 EVERPARSE_HOME ?= $(realpath ../../../..)
 LOWPARSE_HOME ?= $(EVERPARSE_HOME)/lib/everparse/lowparse
 
@@ -18,6 +25,8 @@ EXAMPLES=Example3 ExampleConstInt32le Example5 Example7 Example8 Example9 Exampl
 CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := $(addprefix LowParse,$(EXAMPLES))
 CUSTARD_ROOTS := LowParseExample3.fst
+
+clean_rules += clean-tests clean-arith
 
 include $(EVERPARSE_HOME)/lib/everparse/everparse.Makefile
 include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
@@ -48,7 +57,16 @@ $(EXAMPLES): %: verify %/a.out
 	$(CC) -I $(local_curdir) -o $@ $*/LowParse$*.c
 	./$@
 
-clean:
+clean-tests:
 	rm -rf $(OUTPUT_DIRECTORY) $(addsuffix /, $(EXAMPLES)) .depend
+
+.PHONY: clean-tests
+
+clean-arith:
+	+$(MAKE) -C arith clean
+
+.PHONY: clean-arith
+
+clean: clean-tests clean-arith
 
 .PHONY: all extract-all clean $(EXAMPLES)

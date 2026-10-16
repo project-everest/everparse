@@ -183,7 +183,6 @@ asn1-test: asn1
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test: lowparse
 	+$(MAKE) -C share/everparse/tests/lowparse
-	+$(MAKE) -C share/everparse/tests/lowparse/arith
 else
 lowparse-pulse-test:
 endif
@@ -426,7 +425,7 @@ clean-cose-test:
 .PHONY: clean-cose-test
 
 clean-tests:
-	+$(MAKE) -C share/everparse/tests/lowparse/arith clean
+	+$(MAKE) -C share/everparse/tests/lowparse clean
 
 .PHONY: clean-tests
 
