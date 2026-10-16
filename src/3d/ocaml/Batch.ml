@@ -2,22 +2,9 @@ open OS
 open HashingOptions
 
 (* paths *)
-let krml =
-  try
-    Sys.getenv "KRML_EXE"
-  with
-  | Not_found ->
-    let krml = "krml" ^ (if Sys.win32 then ".exe" else "") in
-    let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "karamel") "out") "bin") krml in
-    if Sys.file_exists opt_krml
-    then opt_krml
-    else
-       (* assume a binary package *)
-       Filename.concat (Filename.concat everparse_home "bin") krml
-
 let krml_locate k tmpdir =
   let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
-  let cmd = Filename.quote_command krml ~stdout:tmpfile ["-locate-" ^ k] in
+  let cmd = Filename.quote_command (Options.get_karamel_exe ()) ~stdout:tmpfile ["-locate-" ^ k] in
   if Sys.command cmd <> 0 then failwith ("Unable to run krml -locate-" ^ k);
   let ch = open_in tmpfile in
   let res = input_line ch in
@@ -32,7 +19,7 @@ let lowparse_home = filename_concat (filename_concat (filename_concat everparse_
 (* TODO: implement krml -locate-misc *)
 let cl_wrapper () =
   (* assume krml.exe is in bin/ *)
-  let krml_home = Filename.dirname (Filename.dirname krml) in
+  let krml_home = Filename.dirname (Filename.dirname (Options.get_karamel_exe ())) in
   Filename.concat (Filename.concat (Filename.concat (Filename.concat krml_home "share") "krml") "misc") "cl-wrapper.bat"
 
 (* The 3d runtime support: the Pulse combinator backend the generated code is
@@ -593,6 +580,7 @@ let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
   in
   aux krml_args;
   close_out h;
+  let krml = Options.get_karamel_exe () in
   print_endline (Printf.sprintf "KaRaMeL found at: %s" krml);
   run_cmd krml [Printf.sprintf "@%s" argfile];
   begin match files_and_modules_cleanup with

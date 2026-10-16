@@ -20,13 +20,10 @@ export EVERPARSE_HOME
 FSTAR_EXE ?= fstar.exe
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)")
 
 CC ?= cc
 CXX ?= c++
-KRML_EXE ?= $(EVERPARSE_HOME)/opt/karamel/out/bin/krml
-export KRML_EXE
-
 OUT_DIR=out.pulse
 ELF_DIR=out.elf.pulse
 CLEANUP_DIR=out.cleanup.pulse

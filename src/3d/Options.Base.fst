@@ -128,6 +128,8 @@ let _emit_smt_encoding : ref bool = alloc false
 
 let fstar_exe : ref (option (valid_string always_valid)) = alloc None
 
+let karamel_exe : ref (option vstring) = alloc None
+
 let _z3_diff_test: ref (option (valid_string valid_equate_types)) = alloc None
 
 let _z3_test : ref (option vstring) = alloc None
@@ -408,6 +410,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "emit_output_types_defs" (OptBool _emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool _emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
+    CmdOption "karamel" (OptStringOption "executable" always_valid karamel_exe) "The KaRaMeL executable to run (default: automatically located in the source tree or binary package)" [];
     CmdOption "blank_lines" (OptBool blank_lines) "Insert blank lines between declaration blocks for readability in generated C code (--batch only)" ["batch"];
     CmdOption "goto_for_early_return" (OptBool goto_for_early_return) "Use goto for early return in generated C code (--batch only)" ["batch"];
     CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];

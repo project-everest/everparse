@@ -24,6 +24,7 @@ CUSTARD_ENTRIES += Options.get_goto_for_early_return
 CUSTARD_ENTRIES += Options.get_hoist_locals
 CUSTARD_ENTRIES += Options.get_init_locals
 CUSTARD_ENTRIES += Options.get_line_comments
+CUSTARD_ENTRIES += Options.get_karamel_exe
 CUSTARD_ENTRIES += Options.z3_executable
 CUSTARD_ENTRIES += Options.z3_options
 CUSTARD_ENTRIES += Version.everparse_version

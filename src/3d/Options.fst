@@ -252,3 +252,13 @@ let get_fstar_exe () : ML string =
         then fstar_exe
         else "fstar.exe"
   | Some s -> s
+
+let get_karamel_exe () : ML string =
+  match !karamel_exe with
+  | Some s -> s
+  | None ->
+      let krml = if OS.is_windows () then "krml.exe" else "krml" in
+      let opt_krml = OS.concat (OS.concat (OS.concat (OS.concat (OS.concat OS.everparse_home "opt") "karamel") "out") "bin") krml in
+      if OS.file_exists opt_krml
+      then opt_krml
+      else OS.concat (OS.concat OS.everparse_home "bin") krml
