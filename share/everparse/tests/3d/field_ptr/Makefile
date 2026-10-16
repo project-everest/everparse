@@ -10,11 +10,11 @@ all: world
 # Variables needed by the EverParse-generated Makefile #
 ########################################################
 
-EVERPARSE_HOME ?= $(realpath ../../../..)
+EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse
 
 EVERPARSE_OUTPUT_DIR=obj
 EVERPARSE_INPUT_DIR=src

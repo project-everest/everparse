@@ -12,11 +12,11 @@ all: world
 # Variables needed by the EverParse-generated Makefile #
 ########################################################
 
-EVERPARSE_HOME ?= $(realpath ../../../..)
+EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE)
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)")
 
 # The option under test plus an --add_include so the user-provided
 # macro definition is visible from all generated .c/.h files.

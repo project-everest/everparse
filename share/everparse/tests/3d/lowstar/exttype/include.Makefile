@@ -6,8 +6,8 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)")

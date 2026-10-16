@@ -7,11 +7,11 @@
 # extraction, which is all that is needed -- the bug made the generated F*
 # fail to typecheck. No executable is built and nothing is run.
 
-EVERPARSE_HOME ?= $(realpath ../../../..)
+EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse
 
 EVERPARSE_OUTPUT_DIR=obj
 

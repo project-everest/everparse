@@ -15,10 +15,10 @@ all: world
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)")
 
 # The option under test plus an --add_include so the user-provided
 # macro definition is visible from all generated .c/.h files.

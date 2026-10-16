@@ -17,10 +17,10 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)")
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 CC ?= cc
 CXX ?= c++

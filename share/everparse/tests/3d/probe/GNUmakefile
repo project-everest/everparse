@@ -22,8 +22,8 @@ export EVERPARSE_HOME
 
 # Path to either the 3d executable or the everparse.sh or
 # everparse.cmd script from the EverParse binary package
-FSTAR_EXE ?= $(EVERPARSE_HOME)/fstar.sh
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 # Options passed to EverParse
 EVERPARSE_OPTIONS=

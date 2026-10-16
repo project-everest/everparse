@@ -7,10 +7,10 @@ all: check
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)")
 
 EVERPARSE_OUTPUT_DIR=obj
 EVERPARSE_INPUT_DIR=src

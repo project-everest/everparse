@@ -10,10 +10,11 @@ import tempfile
 def main():
     executable, fstar = sys.argv[1:]
     executable = str(pathlib.Path(executable).resolve())
+    fstar_options = ["--fstar", fstar] if fstar else []
 
     def run(*args, succeeds=True):
         result = subprocess.run(
-            [executable, "--fstar", fstar, *map(str, args)],
+            [executable, *fstar_options, *map(str, args)],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
