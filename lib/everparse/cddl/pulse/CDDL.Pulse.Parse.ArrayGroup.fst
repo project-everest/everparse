@@ -667,7 +667,10 @@ let cddl_array_iterator_next_t
       pure (Ghost.reveal l == a :: q)
     )
 
-#push-options "--z3rlimit 128"
+// The definition of array_group_concat_unique_strong (in the context through
+// rel_array_iterator_cond) is not needed here, and its quantifiers make Z3 5.1.0
+// spend minutes on each query of this function.
+#push-options "--z3rlimit 128 --using_facts_from '* -CDDL.Spec.ArrayGroup.array_group_concat_unique_strong'"
 
 inline_for_extraction
 fn cddl_array_iterator_next

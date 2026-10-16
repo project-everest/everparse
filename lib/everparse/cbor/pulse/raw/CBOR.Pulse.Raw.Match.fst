@@ -13,6 +13,11 @@ module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module Trade = Pulse.Lib.Trade.Util
 
+// With Z3 5.1.0, the SMT patterns of CBOR.Pulse.Raw.Util.perm_mul_assoc cause
+// a matching loop on the permission products in this module, which does not
+// need that lemma.
+#set-options "--using_facts_from '* -CBOR.Pulse.Raw.Util.perm_mul_assoc'"
+
 let cbor_match_int
   (c: cbor_int)
   (r: raw_data_item)

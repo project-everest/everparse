@@ -76,7 +76,7 @@ def compile_run(out, sources, includes=(), flags=(), name="check", bits32=False)
 
 def large(bits32=False):
     out = output("large")
-    flags = ["--z3version", "4.13.3", "--include", ROOT / "lib/everparse/lowparse",
+    flags = ["--z3version", os.environ.get("EVERPARSE_Z3_VERSION", "5.1.0"), "--include", ROOT / "lib/everparse/lowparse",
              "--include", ROOT / "lib/everparse/3d", "--include", HERE,
              "--cache_checked_modules", "--cache_dir", out,
              "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",

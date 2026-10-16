@@ -12,13 +12,14 @@ static bool sizet_lte_u64(size_t b, uint64_t a)
 {
   return
     !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
-      b <= a;
+      (uint64_t)b <= a;
 }
 
 static bool u64_lte_sizet(uint64_t a, size_t b)
 {
   return
-    b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U || a <= b;
+    b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U ||
+      a <= (uint64_t)b;
 }
 
 static bool sizet_fits_u64(size_t b)
@@ -30,7 +31,7 @@ static bool sizet_eq_u64(size_t b, uint64_t a)
 {
   return
     !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
-      b == a;
+      (uint64_t)b == a;
 }
 
 typedef enum { MGOK, MGFail, MGCutFail } impl_map_group_result;

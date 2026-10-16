@@ -12,7 +12,7 @@ FSTAR_EXE ?= fstar.exe
 
 3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
 
-3D_Z3_EXECUTABLE ?= z3-4.13.3
+3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.1.0)
 
 ifeq (,$(KRML_HOME))
   KRML_HOME := $(realpath $(EVERPARSE_HOME_)/../karamel)
