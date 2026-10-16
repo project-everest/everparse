@@ -1,2 +1,2 @@
 FStar_hash := 91ae03d6458baaf0fb04429a3401485f4031f7f1
-karamel_hash := 6c5e3d20ddcb78ac089f624dca8c94df333c53bb
+karamel_hash := 0389ac90d47da26923d971c1efd14e3a50194b08

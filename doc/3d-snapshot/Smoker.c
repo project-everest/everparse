@@ -89,7 +89,7 @@ SmokerValidateCoreSmoker(
     n2 = bfirst1 + n1 * 256U;
     bfirst2 = (uint32_t)first;
     age = bfirst2 + n2 * 256U;
-    ageConstraintIsOk = age >= 21U;
+    ageConstraintIsOk = age >= (uint32_t)21U;
     if (ageConstraintIsOk)
     {
       pos1 = (size_t)0U;

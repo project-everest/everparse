@@ -1089,7 +1089,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(
     if
     (
       bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U ||
-        arg64 <= bound
+        arg64 <= (uint64_t)bound
     )
     {
       prem[0U] = (size_t)arg64;
@@ -1104,7 +1104,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(
     if
     (
       bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U ||
-        arg64 <= bound
+        arg64 <= (uint64_t)bound
     )
     {
       size_t arg = (size_t)arg64;
@@ -1658,7 +1658,7 @@ static bool
 CBOR_Pulse_Raw_Format_Parse_impl_raw_uint64_optimal(CBOR_Spec_Raw_Base_raw_uint64 x)
 {
   return
-    x.value <= (uint32_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO == (x.size == 0U) &&
+    x.value <= (uint64_t)(uint32_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO == (x.size == 0U) &&
       (x.size <= 1U ||
         (x.size == 2U ? 256ULL <= x.value
                       : x.size == 3U ? 65536ULL <= x.value : 4294967296ULL <= x.value));
@@ -2608,12 +2608,14 @@ static CBOR_Spec_Raw_Base_raw_uint64 CBOR_Spec_Raw_Optimal_mk_raw_uint64(uint64_
   return
     (
       (CBOR_Spec_Raw_Base_raw_uint64){
-        .size = x <= (uint32_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO ? 0U
-                                                                : x < 256ULL ? 1U
-                                                                             : x < 65536ULL ? 2U
-                                                                                            : x <
-                                                                                              4294967296ULL ? 3U
-                                                                                                            : 4U,
+        .size = x <= (uint64_t)(uint32_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO ? 0U
+                                                                          : x < 256ULL ? 1U
+                                                                                       : x <
+                                                                                         65536ULL ? 2U
+                                                                                                  : x
+                                                                                                  <
+                                                                                                    4294967296ULL ? 3U
+                                                                                                                  : 4U,
         .value = x
       }
     );
