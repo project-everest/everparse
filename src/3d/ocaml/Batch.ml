@@ -85,18 +85,6 @@ let fstar_args0 krmllib =
 let list_snoc q a =
   q @ [a]
 
-let z3_version = Z3Version.z3_version
-
-let z3_executable_option fstar_exe =
-  let test = run_cmd_with_code fstar_exe ["--locate_z3"; z3_version] in
-  if test = 0
-  then ["--z3version"; z3_version]
-  else
-    let opt_z3 = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "z3") ("z3-" ^ z3_version) in
-    if Sys.file_exists opt_z3
-    then ["--smt"; opt_z3]
-    else []
-
 let fstar_args
   krmllib
   input_stream_binding
@@ -114,7 +102,7 @@ let verify_fst_file
   file
 =
   let fstar_args = list_snoc (fstar_args (krmllib out_dir) input_stream_binding out_dir) file in
-  let fstar_args = z3_executable_option fstar_exe @ fstar_args in
+  let fstar_args = ["--smt"; Z3Executable.resolve fstar_exe] @ fstar_args in
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args)
 
 let fstar_modul_of_filename fst =

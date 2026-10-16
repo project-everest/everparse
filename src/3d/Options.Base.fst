@@ -433,7 +433,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_branch_depth" (OptStringOption "nb" always_valid _z3_branch_depth) "enumerate branch choices up to depth nb (default 0)" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types _z3_diff_test) "produce differential tests for two parsers" [];
     CmdOption "z3_flight_name" (OptStringOption "ident ([0-9A-Za-z_]*" valid_flight_name z3_flight_name) "C test case number <n> will be called witness<ident><n>" [];
-    CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid _z3_executable) "z3 executable for test case generation (default `z3`; does not affect verification of generated F* code)" [];
+    CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid _z3_executable) "Z3 executable for test case generation and verification of generated F* code (default: automatically located for both)" [];
     CmdOption "z3_options" (OptStringOption "'options to z3'" always_valid _z3_options) "command-line options to pass to z3 for test case generation (does not affect verification of generated F* code)" [];
     CmdOption "z3_skip_testcases_c" (OptBool no_produce_testcases_c) "skip generating test cases to <output directory>/testcases.c" [];
     CmdOption "z3_skip_c_initializers" (OptBool z3_skip_c_initializers) "Do not use C field initializers for test cases" [];

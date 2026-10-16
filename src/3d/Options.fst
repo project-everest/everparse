@@ -180,10 +180,7 @@ let get_z3_diff_test _ =
   | None -> None
   | Some s -> let [p1; p2] = String.split [','] s in Some (p1, p2)
 
-let z3_executable () =
-  match !_z3_executable with
-  | None -> "z3"
-  | Some z3 -> z3
+let z3_executable () = !_z3_executable
 
 let get_save_z3_transcript () = !_save_z3_transcript
 

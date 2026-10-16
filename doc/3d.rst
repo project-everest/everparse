@@ -924,8 +924,10 @@ used with ``-z3_test`` or ``--z3_diff_test``:
 * ``--z3_executable path/to/z3.exe``
 
   Specify a path to the Z3 executable that should be used to generate
-  the test cases. This option does not affect the verification of the
-  generated F* files. EverParse has been tested with Z3 4.13.3 for both
+  the test cases and verify the generated F* files. If omitted, both use
+  the same executable, located automatically through F* or the local
+  versioned Z3 installation under ``opt/z3``.
+  EverParse has been tested with Z3 4.13.3 for both
   test case generation and verification of the generated F* files.
   ``everparse.sh`` / ``everparse.bat`` already sets
   ``--z3_executable`` accordingly.
