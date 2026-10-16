@@ -20,7 +20,7 @@ endif
 
 install-makefiles:
 	install -d $(PREFIX)/lib/everparse
-	install -m 644 $(wildcard lib/everparse/*.Makefile) $(PREFIX)/lib/everparse
+	install -m 644 $(filter-out %-exe.Makefile,$(wildcard lib/everparse/*.Makefile)) $(PREFIX)/lib/everparse
 
 install-lowparse:
 	install -d $(PREFIX)/lib/everparse/lowparse
