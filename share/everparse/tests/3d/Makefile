@@ -17,12 +17,10 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
-
 FSTAR_EXE ?= fstar.exe
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 CC ?= cc
 CXX ?= c++
@@ -35,8 +33,6 @@ CLEANUP_DIR=out.cleanup.pulse
 INPLACE_DIR=out.inplace-hash.pulse
 Z3TESTGEN_DIR=out.z3-testgen.pulse
 INTERPRET_DIR=out.batch-interpret.pulse
-
-3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
 
 # Same exclusions as share/everparse/tests/3d/lowstar.
 excluded_tests := FieldDependence0.3d ActAndCheck.3d
@@ -303,7 +299,7 @@ pulse-inplace-hash-test:
 # verdict Z3 predicted.
 pulse-z3-testgen-test: ELF.3d
 	mkdir -p $(Z3TESTGEN_DIR)
-	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir $(Z3TESTGEN_DIR) ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+	$(3D) --batch --odir $(Z3TESTGEN_DIR) ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
 
 # Same, on a grammar with probes, in both harness modes: the default one, where
 # the probe callback copies from a table of witness layers, and --z3_use_ptr,

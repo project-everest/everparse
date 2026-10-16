@@ -20,12 +20,10 @@ all: world
 EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
-include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
-
 # Path to either the 3d executable or the everparse.sh or
 # everparse.cmd script from the EverParse binary package
 FSTAR_EXE ?= $(EVERPARSE_HOME)/fstar.sh
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 # Options passed to EverParse.
 #
@@ -110,10 +108,8 @@ test: $(EVERPARSE_OUTPUT_DIR)/test.exe
 # Test case generation      #
 #############################
 
-3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
-
 $(EVERPARSE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d
-	$(EVERPARSE_CMD) --no_batch --z3_executable $(3D_Z3_EXECUTABLE) --odir $(EVERPARSE_OUTPUT_DIR) $< --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+	$(EVERPARSE_CMD) --no_batch --odir $(EVERPARSE_OUTPUT_DIR) $< --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
 	test -f $@
 
 $(EVERPARSE_OUTPUT_DIR)/testcases.o: $(EVERPARSE_OUTPUT_DIR)/testcases.c $(EVERPARSE_ALL_H_FILES)
@@ -155,7 +151,7 @@ DIFF_OUTPUT_DIR=obj.difftest
 
 $(DIFF_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d $(EVERPARSE_ALL_H_FILES)
 	mkdir -p $(DIFF_OUTPUT_DIR)
-	$(EVERPARSE_CMD) --no_batch --z3_executable $(3D_Z3_EXECUTABLE) --odir $(DIFF_OUTPUT_DIR) $< --z3_diff_test Probe._namedPlain,Probe._namedPlainVariant --z3_witnesses 3 --z3_branch_depth 3
+	$(EVERPARSE_CMD) --no_batch --odir $(DIFF_OUTPUT_DIR) $< --z3_diff_test Probe._namedPlain,Probe._namedPlainVariant --z3_witnesses 3 --z3_branch_depth 3
 	test -f $@
 
 $(DIFF_OUTPUT_DIR)/testcases.o: $(DIFF_OUTPUT_DIR)/testcases.c $(EVERPARSE_ALL_H_FILES)
@@ -174,7 +170,7 @@ CHECKER_OUTPUT_DIR=obj.checkertest
 
 $(CHECKER_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d $(EVERPARSE_ALL_H_FILES)
 	mkdir -p $(CHECKER_OUTPUT_DIR)
-	$(EVERPARSE_CMD) --no_batch --z3_executable $(3D_Z3_EXECUTABLE) --odir $(CHECKER_OUTPUT_DIR) $< --test_checker Probe._test1
+	$(EVERPARSE_CMD) --no_batch --odir $(CHECKER_OUTPUT_DIR) $< --test_checker Probe._test1
 	test -f $@
 
 $(CHECKER_OUTPUT_DIR)/testcases.o: $(CHECKER_OUTPUT_DIR)/testcases.c $(EVERPARSE_ALL_H_FILES)
@@ -196,7 +192,7 @@ EPROBE_OUTPUT_DIR=obj.eprobetest
 
 $(EPROBE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d $(EVERPARSE_ALL_H_FILES)
 	mkdir -p $(EPROBE_OUTPUT_DIR)
-	$(EVERPARSE_CMD) --no_batch --z3_executable $(3D_Z3_EXECUTABLE) --odir $(EPROBE_OUTPUT_DIR) $< --z3_test Probe._test2 --z3_witnesses 3 --z3_branch_depth 3
+	$(EVERPARSE_CMD) --no_batch --odir $(EPROBE_OUTPUT_DIR) $< --z3_test Probe._test2 --z3_witnesses 3 --z3_branch_depth 3
 	test -f $@
 
 $(EPROBE_OUTPUT_DIR)/testcases.o: $(EPROBE_OUTPUT_DIR)/testcases.c $(EVERPARSE_ALL_H_FILES)

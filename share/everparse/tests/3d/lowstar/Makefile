@@ -6,17 +6,12 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
-
 FSTAR_EXE ?= fstar.exe
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
 EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
-
-3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
-
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE) $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse
 
@@ -126,7 +121,7 @@ specialize_test_error_handler_macro:
 
 .PHONY: probe_error_handler_macro
 probe_error_handler_macro:
-	+$(MAKE) -C $@ 3D_Z3_EXECUTABLE=$(3D_Z3_EXECUTABLE)
+	+$(MAKE) -C $@
 
 .PHONY: save_hashes
 save_hashes:
@@ -159,7 +154,7 @@ elf-test: ELF.3d
 
 z3-testgen-test: ELF.3d
 	mkdir -p out.z3-testgen
-	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+	$(3D) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
 
 .PHONY: z3-testgen-test
 

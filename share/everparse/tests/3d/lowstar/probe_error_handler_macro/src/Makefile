@@ -8,15 +8,11 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
-
 FSTAR_EXE ?= fstar.exe
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
-
-3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE) $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 ifeq (,$(KRML_HOME))
   KRML_HOME := $(realpath $(EVERPARSE_HOME_)/../karamel)
@@ -29,7 +25,7 @@ export KRML_HOME
 all: Probe.3d
 	mkdir -p out.z3-testgen
 	cp MyErrorHandlerMacro.h out.z3-testgen/
-	$(3D) --use_error_handler_macro --add_include '"MyErrorHandlerMacro.h"' --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen Probe.3d --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5 --z3_flight_name titatu --z3_use_ptr
+	$(3D) --use_error_handler_macro --add_include '"MyErrorHandlerMacro.h"' --batch --odir out.z3-testgen Probe.3d --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5 --z3_flight_name titatu --z3_use_ptr
 
 .PHONY: all
 
