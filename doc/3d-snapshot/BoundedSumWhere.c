@@ -24,7 +24,7 @@ BoundedSumWhereValidateCoreBoundedSum(
   size_t p = SlPos[0U];
   uint64_t fieldStartBoundedSum = (uint64_t)p;
   /* Validating field __precondition */
-  BOOLEAN preconditionConstraintIsOk = Bound <= 1729U;
+  BOOLEAN preconditionConstraintIsOk = Bound <= (uint32_t)1729U;
   uint8_t resultAfterBoundedSum;
   size_t pos;
   size_t p1;

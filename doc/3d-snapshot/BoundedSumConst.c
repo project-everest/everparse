@@ -156,7 +156,8 @@ BoundedSumConstValidateCoreBoundedSum(
       bfirst5 = (uint32_t)first4;
       right_refinement = bfirst5 + n5 * 256U;
       /* start: checking constraint */
-      right_refinementConstraintIsOk = left <= 42U && right_refinement <= ((uint32_t)42U - left);
+      right_refinementConstraintIsOk =
+        left <= (uint32_t)42U && right_refinement <= ((uint32_t)42U - left);
       /* end: checking constraint */
       resultAfterBoundedSum =
         right_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS

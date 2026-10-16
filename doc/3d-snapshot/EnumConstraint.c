@@ -144,7 +144,7 @@ EnumConstraintValidateCoreEnumConstraint(
         bfirst5 = (uint32_t)first4;
         x_refinement = bfirst5 + n5 * 256U;
         /* start: checking constraint */
-        x_refinementConstraintIsOk = x_refinement == 0U || col == ENUMCONSTRAINT_GREEN;
+        x_refinementConstraintIsOk = x_refinement == (uint32_t)0U || col == ENUMCONSTRAINT_GREEN;
         /* end: checking constraint */
         resultAfterEnumConstraint0 =
           x_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
