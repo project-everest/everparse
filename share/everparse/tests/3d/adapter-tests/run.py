@@ -76,11 +76,14 @@ def compile_run(out, sources, includes=(), flags=(), name="check", bits32=False)
 
 def large(bits32=False):
     out = output("large")
-    flags = ["--z3version", os.environ.get("EVERPARSE_Z3_VERSION", "5.1.0"), "--include", ROOT / "lib/everparse/lowparse",
+    flags = ["--include", ROOT / "lib/everparse/lowparse",
              "--include", ROOT / "lib/everparse/3d", "--include", HERE,
              "--cache_checked_modules", "--cache_dir", out,
              "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",
              "--warn_error", "@241"]
+    z3_version = os.environ.get("EVERPARSE_Z3_VERSION")
+    if z3_version is not None:
+        flags = ["--z3version", z3_version] + flags
     run([FSTAR] + flags + [HERE / "LargeExtern.fsti"], out)
     run([FSTAR] + flags + [HERE / "LargeExtern.fst"], out)
     # Extract with Custard, not the old --codegen krml. This client is linked

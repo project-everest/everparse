@@ -17,6 +17,8 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
+include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+
 FSTAR_EXE ?= fstar.exe
 PYTHON ?= python3
 
@@ -34,7 +36,7 @@ INPLACE_DIR=out.inplace-hash.pulse
 Z3TESTGEN_DIR=out.z3-testgen.pulse
 INTERPRET_DIR=out.batch-interpret.pulse
 
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.1.0)
+3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
 
 # Same exclusions as share/everparse/tests/3d/lowstar.
 excluded_tests := FieldDependence0.3d ActAndCheck.3d

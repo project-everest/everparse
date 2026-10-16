@@ -6,6 +6,8 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
+include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+
 FSTAR_EXE ?= fstar.exe
 
 EVERPARSE_API ?= lowstar
@@ -13,7 +15,7 @@ export EVERPARSE_API
 EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar
 3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.1.0)
+3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
 
 
 INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse

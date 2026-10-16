@@ -2,7 +2,7 @@ all: 3d
 
 EVERPARSE_HOME=$(realpath ../..)
 
-FSTAR_FILES := Main.fst Version.fst
+FSTAR_FILES := Main.fst Version.fst Z3Version.fst
 FSTAR_FILES += Hashing.Hash.fst
 OUTPUT_DIRECTORY := ocaml/generated
 
@@ -27,6 +27,7 @@ CUSTARD_ENTRIES += Options.get_line_comments
 CUSTARD_ENTRIES += Options.z3_executable
 CUSTARD_ENTRIES += Options.z3_options
 CUSTARD_ENTRIES += Version.everparse_version
+CUSTARD_ENTRIES += Z3Version.z3_version
 CUSTARD_ENTRIES += Config.config
 CUSTARD_ENTRIES += Config.config_compile_time_flags
 CUSTARD_ENTRIES += Hashing.Hash.check_all_hashes
@@ -60,6 +61,11 @@ Version.fst:
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh > $@.tmp
 	mv $@.tmp $@
 
+Z3Version.fst: $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+	echo 'module Z3Version' > $@.tmp
+	echo 'let z3_version = "$(EVERPARSE_Z3_VERSION)"' >> $@.tmp
+	mv $@.tmp $@
+
 3d: $(EVERPARSE_3D)
 
 $(EVERPARSE_3D): $(EVERPARSE_3D_MAIN)
@@ -72,7 +78,7 @@ $(EVERPARSE_3D_MAIN): $(CUSTARD_STAMP) $(filter-out %~,$(wildcard ocaml/*.ml*))
 
 clean-3d:
 	+$(MAKE) -C ocaml clean
-	rm -rf *.checked *~ Version.fst $(EVERPARSE_HOME)/bin/everparse-3d.exe
+	rm -rf *.checked *~ Version.fst Z3Version.fst $(EVERPARSE_HOME)/bin/everparse-3d.exe
 
 .PHONY: clean-3d
 

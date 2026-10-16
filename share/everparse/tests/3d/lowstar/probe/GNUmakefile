@@ -20,6 +20,8 @@ all: world
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
 export EVERPARSE_HOME
 
+include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+
 # Path to either the 3d executable or the everparse.sh or
 # everparse.cmd script from the EverParse binary package
 FSTAR_EXE ?= $(EVERPARSE_HOME)/fstar.sh
@@ -97,7 +99,7 @@ test: $(EVERPARSE_OUTPUT_DIR)/test.exe
 # Test case generation      #
 #############################
 
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.1.0)
+3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
 
 $(EVERPARSE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d
 	$(EVERPARSE_CMD) --no_batch --z3_executable $(3D_Z3_EXECUTABLE) --odir $(EVERPARSE_OUTPUT_DIR) $< --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5

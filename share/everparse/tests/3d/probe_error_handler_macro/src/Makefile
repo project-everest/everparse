@@ -1,18 +1,20 @@
 # This Makefile only tests test case generation in batch mode.
 
 ifeq (,$(EVERPARSE_HOME))
-  EVERPARSE_HOME := $(realpath ../../../../..)
+  EVERPARSE_HOME := $(realpath ../../../../../..)
 endif
 ifeq ($(OS),Windows_NT)
   EVERPARSE_HOME := $(shell cygpath -m "$(EVERPARSE_HOME)")
 endif
 export EVERPARSE_HOME
 
+include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+
 FSTAR_EXE ?= fstar.exe
 
 3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --fstar $(FSTAR_EXE) --api pulse
 
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.1.0)
+3D_Z3_EXECUTABLE ?= z3-$(EVERPARSE_Z3_VERSION)
 
 ifeq (,$(KRML_HOME))
   KRML_HOME := $(realpath $(EVERPARSE_HOME_)/../karamel)
