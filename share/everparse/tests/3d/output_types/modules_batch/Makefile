@@ -2,7 +2,7 @@ EVERPARSE_HOME ?= $(realpath ../../../../../..)
 include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 export EVERPARSE_HOME
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 SOURCE_FILES=AA.3d BB.3d CC.3d
 
 all: basic

@@ -24,7 +24,7 @@ export EVERPARSE_HOME
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package; followed by arguments
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 EVERPARSE_CMD=$(EVERPARSE_EXE) --input_stream static --input_stream_include EverParseStream.h
 
 # Output directory for .c/.h files as well as temporary files (.fst,
