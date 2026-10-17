@@ -82,7 +82,8 @@ This data format is very similar to a C type description, where
 as little-endian; with the addition of the ``entrypoint`` keyword,
 which tells 3d to expose the validator for the type to the final user.
 
-Once we run ``3d`` with this file, we obtain several files:
+Once we run ``bin/everparse-3d.exe --batch HelloWorld.3d`` with this file,
+we obtain several files:
 
 * ``HelloWorld.c`` and ``HelloWorld.h``, which contain the actual verified
   validators;
@@ -148,21 +149,21 @@ There can be multiple definitions marked ``entrypoint`` in a given
   to preserve the
   Low\*-compatible C API described here, including direct validator calls,
   packed results, error callbacks, and copy-buffer projections.
-  ``3d --api pulse`` instead exposes the native Pulse API.
+  ``everparse-3d.exe --api pulse`` instead exposes the native Pulse API.
   ``--api`` selects the implementation and C API, while
   ``--input_stream`` independently selects ``buffer``, ``extern`` or ``static``.
   See :ref:`the --api option <3d-api-option>` for the runtime headers required
   by each selection, including when using ``--no_copy_everparse_h``.
 
   The entrypoint API is also the same under the native Pulse API:
-  ``3d --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
+  ``everparse-3d.exe --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
 
   ``ModuleWrapper.h`` includes ``EverParsePulseEndianness.h`` instead of
   ``EverParseEndianness.h``; its named ``EVERPARSE_ERROR_*`` kinds use the
   same numbers (see :ref:`sec-error-handling-pulse`).
-  ``3d --api pulse`` accordingly writes two
+  ``everparse-3d.exe --api pulse --batch`` accordingly writes two
   extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
   into the output directory alongside the ones listed above, unless
   ``--no_copy_everparse_h`` is specified. Finally, the
