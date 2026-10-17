@@ -48,7 +48,7 @@ $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
 # Generate the Makefile if any .3d file is modified
-$(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR) Makefile $(EVERPARSE_HOME)/bin/everparse-3d.exe
+$(everparse_makefile): $(wildcard src/*.3d) Makefile $(EVERPARSE_HOME)/bin/everparse-3d.exe | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/Test.3d
 
 # Include the generated Makefile

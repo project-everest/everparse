@@ -33,7 +33,7 @@ everparse_makefile=$(EVERPARSE_OUTPUT_DIR)/EverParse.Makefile
 $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
-$(everparse_makefile): Makefile $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): Makefile $(wildcard src/*.3d) | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/Test.3d
 
 ifeq (,$(filter clean,$(MAKECMDGOALS)))

@@ -46,7 +46,7 @@ $(EVERPARSE_OUTPUT_DIR):
 
 # Generate the Makefile if any .3d file is modified
 everparse_source_modules=$(wildcard $(EVERPARSE_INPUT_DIR)/*.3d)
-$(everparse_makefile): $(everparse_source_modules) $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): $(everparse_source_modules) | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ $(everparse_source_modules)
 
 # Include the generated Makefile
