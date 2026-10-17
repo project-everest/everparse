@@ -110,7 +110,7 @@ jobs:
         run: |
           docker stop $container && docker rm $container
 
-  test-3d-qd:
+  test-asn1-qd:
     runs-on: ubuntu-latest
     needs: lowparse
     steps:
@@ -141,7 +141,43 @@ jobs:
             "apt-get update && apt-get install --yes --no-install-recommends gcc-multilib"
       - name: Test 3D/QD
         run: |
-          docker exec -e EVERPARSE_TEST_32BIT=1 "$container" bash .github/ci-make.sh -kj"$(nproc)" 3d-test quackyducky-test lowparse-test asn1-test ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1 ARGS='--inventory-source filesystem'
+          docker exec -e EVERPARSE_TEST_32BIT=1 "$container" bash .github/ci-make.sh -kj"$(nproc)" quackyducky-test lowparse-test asn1-test ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1 ARGS='--inventory-source filesystem'
+      - name: Remove container
+        run: |
+          docker stop $container && docker rm $container
+
+  test-3d:
+    runs-on: ubuntu-latest
+    needs: lowparse
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - uses: actions/cache/restore@v4
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
+      - name: Load deps image
+        run: |
+          { gunzip < deps.tgz | docker load ; } && rm deps.tgz
+      - name: Upload EverParse in a container
+        run: |
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
+      - name: Download lowparse proofs
+        uses: actions/download-artifact@v4
+        with:
+          name: lowparse
+      - name: Upload lowparse proofs into the container
+        run: |
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch lib/everparse/lowparse/*.checked"
+      - name: Install 32-bit C toolchain
+        run: |
+          docker exec --user root "$container" /bin/bash -c \
+            "apt-get update && apt-get install --yes --no-install-recommends gcc-multilib"
+      - name: Test 3D/QD
+        run: |
+          docker exec -e EVERPARSE_TEST_32BIT=1 "$container" bash .github/ci-make.sh -kj"$(nproc)" 3d-test ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1 ARGS='--inventory-source filesystem'
       - name: Remove container
         run: |
           docker stop $container && docker rm $container
@@ -213,7 +249,7 @@ jobs:
   # Branch protection points here.
   ciok:
     runs-on: ubuntu-latest
-    needs: [test-lowparse, test-3d-qd, build-cbor-cddl, test-cbor-cddl]
+    needs: [test-lowparse, test-3d, test-asn1-qd, build-cbor-cddl, test-cbor-cddl]
     if: always()
     steps:
       - run: exit 1
