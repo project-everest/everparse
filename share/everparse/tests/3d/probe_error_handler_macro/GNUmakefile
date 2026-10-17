@@ -61,7 +61,7 @@ $(EVERPARSE_OUTPUT_DIR):
 # Generate the Makefile if any .3d file is modified.  We also depend on
 # the handwritten error-handler macro header, and copy it into the
 # output directory so the generated (--add_include'd) code can find it.
-$(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/Probe.3d
 	cp $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h $(EVERPARSE_OUTPUT_DIR)/
 

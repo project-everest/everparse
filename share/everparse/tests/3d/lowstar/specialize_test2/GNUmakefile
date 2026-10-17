@@ -55,7 +55,7 @@ $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
 # Generate the Makefile if any .3d file is modified
-$(everparse_makefile): GNUmakefile $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): GNUmakefile $(wildcard src/*.3d) | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/SpecializeVLArray.3d
 
 # Include the generated Makefile
