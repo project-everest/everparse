@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 set -e
 unset CDPATH
-export EVERPARSE_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-(cd "$EVERPARSE_HOME/bin" ; chmod +x * ) || true
-(cd "$EVERPARSE_HOME/lib/fstar/z3-5.1.0/bin" ; chmod +x * ) || true
-FSTAR_EXE="$EVERPARSE_HOME/bin/fstar.exe"
-export PATH="$EVERPARSE_HOME/bin:$PATH" # because of z3
-export LD_LIBRARY_PATH="$EVERPARSE_HOME/bin:$LD_LIBRARY_PATH"
+package_home="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+(cd "$package_home/bin" ; chmod +x * ) || true
+chmod +x "$package_home"/lib/fstar/z3-*/bin/* || true
+export LD_LIBRARY_PATH="$package_home/bin:$LD_LIBRARY_PATH"
 if which clang-format >/dev/null ; then
     clang_format=--clang_format
 else
     clang_format=
 fi
-exec "$EVERPARSE_HOME/bin/everparse-3d.exe" --__arg0 everparse.sh --fstar "$FSTAR_EXE" --batch --z3_executable "$EVERPARSE_HOME/lib/fstar/z3-5.1.0/bin/z3" $clang_format "$@"
+exec "$package_home/bin/everparse-3d.exe" --__arg0 everparse.sh --batch $clang_format "$@"
