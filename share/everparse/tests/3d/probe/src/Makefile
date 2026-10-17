@@ -12,7 +12,7 @@ FSTAR_EXE ?= fstar.exe
 
 3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
 
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.1.0)
+3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.3.0)
 
 all: Probe.3d
 	mkdir -p out.z3-testgen

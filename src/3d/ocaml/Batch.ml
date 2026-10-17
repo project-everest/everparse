@@ -90,7 +90,7 @@ let list_snoc q a =
 let z3_version =
   match Sys.getenv_opt "EVERPARSE_Z3_VERSION" with
   | Some v when v <> "" -> v
-  | _ -> "5.1.0"
+  | _ -> "5.3.0"
 
 let z3_executable_option fstar_exe =
   let test = run_cmd_with_code fstar_exe ["--locate_z3"; z3_version] in
