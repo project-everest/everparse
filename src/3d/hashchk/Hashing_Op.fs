@@ -54,6 +54,8 @@ type hash_state() =
       member this.Dispose() =
         h.Dispose()
 
+type t = hash_state
+
 let hash_init () : hash_state =
     new hash_state ()
 

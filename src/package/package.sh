@@ -151,7 +151,7 @@ make_everparse() {
     cp -L $FSTAR_PKG_ROOT/bin/* everparse/bin/
     mkdir -p everparse/lib
     $cp -L -r $FSTAR_PKG_ROOT/lib/fstar everparse/lib/
-    z3_version=4.13.3
+    z3_version=${EVERPARSE_Z3_VERSION:-5.3.0}
     if ! z3=$(which z3-$z3_version$exe) ; then
 	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
 	if ! [[ -f "$z3" ]] ; then

@@ -110,6 +110,8 @@ ensures
     with _pm _sq.
       rewrite S.pts_to c'.s #_pm (reveal _sq) as S.pts_to c.s #_pm _sq;
     S.gather c.s;
+    // Avoid non-linear real arithmetic, on which Z3 5.1.0 may not terminate
+    perm_mul_half_add pm c.slice_perm;
     with c v m.
       assert PM.seq_list_match #elt_low #elt_high c v m;
     rewrite each c as sq;
@@ -777,6 +779,8 @@ ensures
       };
       rewrite each (Seq.Base.slice (Seq.Base.append s1 s2) 0 (SZ.v (SZ.uint64_to_sizet len)))
         as s1;
+      perm_1_l c1.slice_perm;
+      perm_1_l c1.payload_perm;
       cbor_raw_slice_iterator_match_fold elt_match 1.0R c1 c' _ _;
       trade_trans_nounify _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
       let res = CBOR_Raw_Iterator_Slice c';

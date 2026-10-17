@@ -15,8 +15,12 @@ let cbor_parse x =
     then Some (R.mk_cbor y, n)
     else None
 
-let cbor_parse_prefix x =
-  RF.parse_cbor_prefix x
+let cbor_parse_prefix x y =
+  match RF.parse_cbor x with
+  | Some (_, n) ->
+    assert (Seq.slice x 0 n `Seq.equal` Seq.slice y 0 n);
+    RF.parse_cbor_prefix x y
+  | None -> ()
 
 let cbor_det_serialize x =
   RF.serialize_cbor (R.mk_det_raw_cbor x)
@@ -118,9 +122,74 @@ let cbor_det_serialize_map_singleton key value =
   R.mk_det_raw_cbor_map_raw_singleton key value;
   RF.serialize_cbor_map_singleton (R.mk_det_raw_cbor key) (R.mk_det_raw_cbor value)
 
-#push-options "--z3rlimit 32"
+let cbor_det_serialize_map_length_snoc
+  (m1: cbor_map)
+  (k v: cbor)
+: Lemma
+  (requires (~ (cbor_map_defined k m1)))
+  (ensures (
+    Seq.length (cbor_det_serialize_map (cbor_map_union m1 (cbor_map_singleton k v))) ==
+      Seq.length (cbor_det_serialize_map m1) + Seq.length (RF.serialize_cbor (R.mk_det_raw_cbor k)) + Seq.length (RF.serialize_cbor (R.mk_det_raw_cbor v))
+  ))
+= R.mk_det_raw_cbor_map_raw_snoc m1 k v;
+  let l1 = R.mk_det_raw_cbor_map_raw m1 in
+  let kv = (R.mk_det_raw_cbor k, R.mk_det_raw_cbor v) in
+  R.mk_det_raw_cbor_map_raw_assoc m1 k;
+  R.list_setoid_assoc_sorted_optimal RF.deterministically_encoded_cbor_map_key_order (R.mk_det_raw_cbor k) l1;
+  List.Tot.assoc_mem (R.mk_det_raw_cbor k) l1;
+  RF.cbor_map_insert_sorted l1 kv;
+  RF.serialize_cbor_map_insert_length l1 kv;
+  assert (Some? (RF.cbor_map_insert l1 kv));
+  let Some l1' = RF.cbor_map_insert l1 kv in
+  assert (cbor_det_serialize_map (cbor_map_union m1 (cbor_map_singleton k v)) == RF.serialize_cbor_map l1');
+  ()
 
-#restart-solver
+let cbor_det_serialize_map_length_union_disjoint_eq_cons_pre
+  (m1: cbor_map)
+  (k v: cbor)
+  (q: list (cbor & cbor))
+  (m2: cbor_map)
+: Lemma
+  (requires (
+    List.Tot.length ((k, v) :: q) == cbor_map_length m2 /\
+    List.Tot.no_repeats_p (List.Tot.map fst ((k, v) :: q)) /\
+    (forall x . List.Tot.assoc x ((k, v) :: q) == cbor_map_get m2 x) /\
+    cbor_map_disjoint m1 m2
+  ))
+  (ensures (
+    let ms = cbor_map_singleton k v in
+    let m1' = cbor_map_union m1 ms in
+    let m2' = cbor_map_sub m2 ms in
+    List.Tot.length q == cbor_map_length m2' /\
+    List.Tot.no_repeats_p (List.Tot.map fst q) /\
+    (forall x . List.Tot.assoc x q == cbor_map_get m2' x) /\
+    cbor_map_disjoint m1' m2' /\
+    cbor_map_union m1 m2 == cbor_map_union m1' m2' /\
+    ~ (cbor_map_defined k m1)
+  ))
+= let ms = cbor_map_singleton k v in
+  let m1' = cbor_map_union m1 ms in
+  let m2' = cbor_map_sub m2 ms in
+  assert (cbor_map_equal (cbor_map_union m1 m2) (cbor_map_union m1' m2'));
+  List.Tot.assoc_mem k q;
+  assert (cbor_map_equal m2 (cbor_map_union m2' ms));
+  cbor_map_length_disjoint_union m2' ms;
+  cbor_map_length_singleton k v
+
+let serialize_cbor_map_mk_det_raw_cbor_map_entry_cons_length
+  (k v: cbor)
+  (q: list (cbor & cbor))
+: Lemma
+  (Seq.length (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry ((k, v) :: q))) ==
+    Seq.length (RF.serialize_cbor (R.mk_det_raw_cbor k)) + Seq.length (RF.serialize_cbor (R.mk_det_raw_cbor v)) + Seq.length (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry q)))
+= RF.serialize_cbor_map_cons (R.mk_det_raw_cbor k) (R.mk_det_raw_cbor v) (List.Tot.map R.mk_det_raw_cbor_map_entry q)
+
+let length_union_disjoint_eq_arith
+  (lu lm1 lm1' lk lv ll2 lq: int)
+: Lemma
+  (requires (lu == lm1' + lq /\ lm1' == lm1 + lk + lv /\ ll2 == lk + lv + lq))
+  (ensures (lu == lm1 + ll2))
+= ()
 
 let rec cbor_det_serialize_map_length_union_disjoint_eq
   (m1: cbor_map)
@@ -140,38 +209,29 @@ let rec cbor_det_serialize_map_length_union_disjoint_eq
 = match l2 with
   | [] ->
     RF.serialize_cbor_map_nil ();
-    assert (cbor_map_equal m2 cbor_map_empty)
+    assert (cbor_map_equal m2 cbor_map_empty);
+    assert (cbor_map_equal (cbor_map_union m1 m2) m1);
+    assert (cbor_map_union m1 m2 == m1);
+    assert (Seq.length (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry l2)) == 0)
   | (k, v) :: q ->
     let ms = cbor_map_singleton k v in
     let m1' = cbor_map_union m1 ms in
     let m2' = cbor_map_sub m2 ms in
-    assert (cbor_map_equal (cbor_map_union m1 m2) (cbor_map_union m1' m2'));
-    RF.serialize_cbor_map_cons (R.mk_det_raw_cbor k) (R.mk_det_raw_cbor v) (List.Tot.map R.mk_det_raw_cbor_map_entry q);
-    List.Tot.assoc_mem k q;
-    assert (cbor_map_equal m2 (cbor_map_union m2' ms));
-    cbor_map_length_disjoint_union m2' ms;
-    cbor_map_length_singleton k v;
+    cbor_det_serialize_map_length_union_disjoint_eq_cons_pre m1 k v q m2;
+    serialize_cbor_map_mk_det_raw_cbor_map_entry_cons_length k v q;
+    cbor_det_serialize_map_length_union_disjoint_eq m1' q m2';
+    cbor_det_serialize_map_length_snoc m1 k v;
     let kr = R.mk_det_raw_cbor k in
     let vr = R.mk_det_raw_cbor v in
-    assert (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry l2) == (RF.serialize_cbor kr `Seq.append` RF.serialize_cbor vr) `Seq.append` RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry q)
-    );
-    assert (Seq.length (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry l2)) == Seq.length (RF.serialize_cbor kr) + Seq.length (RF.serialize_cbor vr) + Seq.length (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry q))
-    );
-    cbor_det_serialize_map_length_union_disjoint_eq m1' q m2';
-    R.mk_det_raw_cbor_map_raw_snoc m1 k v;
-    let l1 = R.mk_det_raw_cbor_map_raw m1 in
-    let kv = (R.mk_det_raw_cbor k, R.mk_det_raw_cbor v) in
-    R.mk_det_raw_cbor_map_raw_assoc m1 k;
-    R.list_setoid_assoc_sorted_optimal RF.deterministically_encoded_cbor_map_key_order (R.mk_det_raw_cbor k) l1;
-    List.Tot.assoc_mem (R.mk_det_raw_cbor k) l1;
-    RF.cbor_map_insert_sorted l1 kv;
-    RF.serialize_cbor_map_insert_length l1 kv;
-    assert (Some? (RF.cbor_map_insert l1 kv));
-    let Some l1' = RF.cbor_map_insert l1 kv in
-    assert (cbor_det_serialize_map m1' == RF.serialize_cbor_map l1');
-    ()
+    length_union_disjoint_eq_arith
+      (Seq.length (cbor_det_serialize_map (cbor_map_union m1 m2)))
+      (Seq.length (cbor_det_serialize_map m1))
+      (Seq.length (cbor_det_serialize_map m1'))
+      (Seq.length (RF.serialize_cbor kr))
+      (Seq.length (RF.serialize_cbor vr))
+      (Seq.length (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry l2)))
+      (Seq.length (RF.serialize_cbor_map (List.Tot.map R.mk_det_raw_cbor_map_entry q)))
 
-#pop-options
 
 let cbor_det_serialize_map_length_eq
   (l2: list (cbor & cbor))

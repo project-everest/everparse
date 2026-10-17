@@ -13,7 +13,7 @@ export EVERPARSE_API
 EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar
 3D=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
 
-3D_Z3_EXECUTABLE ?= z3-4.13.3
+3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.3.0)
 
 EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile

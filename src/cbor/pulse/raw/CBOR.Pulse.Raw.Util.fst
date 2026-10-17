@@ -31,10 +31,41 @@ let half_mul (a b: real) : Lemma
   ((a *. b) /. 2.0R == a *. (b /. 2.0R))
 = ()
 
+#pop-options
+
+// With smt.arith.nl=true, Z3 5.1.0 may not terminate (regardless of the rlimit)
+// on the following lemmas, whereas they are linear or follow
+// from Z3's own axiom for real division.
+#push-options "--z3cliopt smt.arith.nl=false --smtencoding.elim_box true --smtencoding.nl_arith_repr native --z3rlimit 16"
+
+#restart-solver
+
 let perm_mul_div (a b: perm) : Lemma
   (a `perm_mul` (b `perm_div` a) == b)
 = let q : perm = b `perm_div` a in
   assert (a `perm_mul` q == b)
+
+let half_add (x: real) : Lemma
+  (x /. 2.0R +. x /. 2.0R == x)
+= ()
+
+#pop-options
+
+// With the default (boxwrap) encoding of non-linear real arithmetic, this
+// follows from half_mul and half_add by congruence, so Z3 5.1.0 does not need
+// to do non-linear real arithmetic (on which it may not terminate.)
+#push-options "--z3rlimit 16"
+let perm_mul_half_add
+  (pm ip: perm)
+: Lemma
+  (pm `perm_mul` (ip /. 2.0R) +. (pm `perm_mul` ip) /. 2.0R == pm `perm_mul` ip)
+= half_mul pm ip;
+  half_add (pm `perm_mul` ip)
+#pop-options
+
+#push-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.nl_arith_repr native --z3rlimit 16"
+
+#restart-solver
 
 let perm_half_mult
   (pm ip: perm)

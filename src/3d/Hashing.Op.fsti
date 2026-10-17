@@ -1,6 +1,9 @@
 module Hashing.Op
 open FStar.All
 
+(* Realized by Hashing_Op.t in both ocaml/Hashing_Op.ml and
+   hashchk/Hashing_Op.fs *)
+[@@custard_extern "Hashing_Op.t"]
 val t: Type0
 
 [@@custard_extern "Hashing_Op.hash_bool"]

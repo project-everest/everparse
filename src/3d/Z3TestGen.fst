@@ -1946,8 +1946,18 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 "
   (mk_arg_conj (mk_choose_conj witness ("(= (next-array-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
+(* Every satisfiability check of the test-case generator goes through a fresh
+   `smt` tactic on the current assertion stack, rather than through Z3's
+   incremental solver: the latter keeps the state of all the previous checks
+   of the push/pop-heavy branch enumeration and witness loop below, which
+   makes its performance unpredictable (e.g. with Z3 5.1.0, the ELFTestGen test
+   gets stuck on some of these queries for hours, depending on the random
+   seed), whereas a fresh `smt` tactic answers each of them quickly. The model
+   it produces is still available to the `eval` commands that follow. *)
+let check_sat_cmd = "(check-sat-using smt)\n"
+
 let rec want_witnesses (use_ptr: bool) (print_test_case: (Seq.seq (Seq.seq int) -> option (Seq.seq (int & int)) -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
-  z3.to_z3 "(check-sat)\n";
+  z3.to_z3 check_sat_cmd;
   let status = z3.from_z3 () in
   if status = "sat" then begin
     z3.to_z3 "(eval (input-size state-witness))\n";
@@ -2021,7 +2031,7 @@ let rec enumerate_branch_traces'
   then []
   else begin
     z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
-    z3.to_z3 "(check-sat)\n";
+    z3.to_z3 check_sat_cmd;
     let status = z3.from_z3 () in
     if status = "sat"
     then
@@ -2030,7 +2040,7 @@ let rec enumerate_branch_traces'
         FStar.IO.print_string (Printf.sprintf "Checking feasibility of branch trace: %s\n" branch_trace');
         z3.to_z3 "(push)\n";
         z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
-        z3.to_z3 "(check-sat)\n";
+        z3.to_z3 check_sat_cmd;
         let status = z3.from_z3 () in
         if status = "unsat"
         then begin
@@ -2043,7 +2053,7 @@ let rec enumerate_branch_traces'
           FStar.IO.print_string "Branch condition may hold. Checking validity for parser encoding\n";
           z3.to_z3 "(push)\n";
           z3.to_z3 assert_valid_state;
-          z3.to_z3 "(check-sat)\n";
+          z3.to_z3 check_sat_cmd;
           let status = z3.from_z3 () in
           z3.to_z3 "(pop)\n";
           if status = "sat"
