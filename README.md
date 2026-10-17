@@ -38,7 +38,10 @@ platform.
 |----------------------|-------|-------|---------|
 | 3D, QuackyDucky      |  Yes  |  Yes  |  Yes    |
 | EverCBOR, EverCDDL   |  Yes  |  Yes  |  No     |
-| EverCOSign           |  Yes  |  No   |  No     |
+| EverCOSign           |  No   |  No   |  No     |
+
+NOTE: EverCOSign is currently no longer included in the binary packages,
+hopefully only temporarily. It can still be built from source.
 
 NOTE: Versions 2025.06.05 and earlier only contain 3D and QuackyDucky,
 and are not available on MacOS.
@@ -254,6 +257,20 @@ Run `make 3d`
 ## QuackyDucky
 
 Run `make quackyducky`
+
+## Install EverParse
+
+After building, run `make install PREFIX=/path/to/install` (`gmake` on
+MacOS) to install EverParse under the chosen prefix. This installs its
+executables in `bin`, libraries and Makefile fragments in `lib/everparse`,
+and public C headers in `include/everparse`. The default prefix is
+`/usr/local`.
+
+This installs **only EverParse, none of its dependencies**: F\*, KaRaMeL,
+Pulse, Z3 and other dependencies must be provided separately. It does not
+install the `everparse.sh` or `everparse.cmd` convenience wrappers either.
+For a standalone distribution with bundled dependencies, build a binary
+package as described below.
 
 ## Build a binary package
 
