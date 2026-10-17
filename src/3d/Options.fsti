@@ -100,3 +100,5 @@ val pulse_inst: unit -> ML string
 val get_z3_use_ptr: unit -> ML bool
 
 val get_fstar_exe: unit -> ML string
+
+val get_karamel_exe: unit -> ML string

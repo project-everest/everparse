@@ -1,9 +1,9 @@
 # Test for --goto_for_early_return wrapper generation
 # Generates wrappers and diffs against expected snapshot
 
-EVERPARSE_HOME ?= $(realpath ../../../..)
-FSTAR_EXE ?= $(EVERPARSE_HOME)/bin/../opt/FStar/out/bin/fstar.exe
-EVERPARSE_EXE = $(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+EVERPARSE_HOME ?= $(realpath ../../../../..)
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_EXE = $(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 OUTPUT_DIR = output
 
 all: test

@@ -23,6 +23,7 @@ jobs:
             .github/prune-deps.sh
             Dockerfile
             deps.Makefile
+            lib/everparse/z3-version.Makefile
             opt/Makefile
             opt/hashes.Makefile
             src/package/start-code-server.sh
@@ -31,19 +32,19 @@ jobs:
         id: cache
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'lib/everparse/z3-version.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
           lookup-only: true
           fail-on-cache-miss: false
 
       - name: Build dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} --pull --target deps .
+          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'lib/everparse/z3-version.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} --pull --target deps .
 
       - name: Save image
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} | gzip > deps.tgz
+          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'lib/everparse/z3-version.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }} | gzip > deps.tgz
 
       - name: Upload image into cache
         if: steps.cache.outputs.cache-hit != 'true'
@@ -51,7 +52,7 @@ jobs:
         with:
           path: |
             deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile', 'lib/everparse/z3-version.Makefile', 'Dockerfile', '.github/prune-deps.sh', '.github/mark-deps-up-to-date.sh') }}
 
   lowparse:
     runs-on: ubuntu-latest
@@ -64,19 +65,19 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
       - name: Build LowParse without proofs
         run: |
          docker exec $container bash .github/ci-make.sh -kj$(nproc) lowparse ADMIT=1
       - name: Save LowParse proofs
         run: |
-          docker exec $container /bin/bash -c "tar -c src/lowparse/*.checked src/lowparse/pulse/*.checked" | gzip > lowparse.tgz && docker stop $container && docker rm $container
+          docker exec $container /bin/bash -c "tar -c lib/everparse/lowparse/*.checked" | gzip > lowparse.tgz && docker stop $container && docker rm $container
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -95,13 +96,13 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
       - name: Build LowParse
         run: |
           docker exec $container bash .github/ci-make.sh -kj$(nproc) lowparse
@@ -120,20 +121,20 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
           name: lowparse
       - name: Upload lowparse proofs into the container
         run: |
-          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch lib/everparse/lowparse/*.checked"
       - name: Install 32-bit C toolchain
         run: |
           docker exec --user root "$container" /bin/bash -c \
@@ -156,20 +157,20 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
           name: lowparse
       - name: Upload lowparse proofs into the container
         run: |
-          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch lib/everparse/lowparse/*.checked"
       - name: Build CBOR/CDDL
         run: |
           docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh -kj$(nproc) cddl cbor-verify ADMIT_LOWPARSE=1"
@@ -188,20 +189,20 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: deps.tgz
-          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }}
       - name: Load deps image
         run: |
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile', 'everparse/lib/everparse/z3-version.Makefile', 'everparse/Dockerfile', 'everparse/.github/prune-deps.sh', 'everparse/.github/mark-deps-up-to-date.sh') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container bash .github/mark-deps-up-to-date.sh && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
           name: lowparse
       - name: Upload lowparse proofs into the container
         run: |
-          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch lib/everparse/lowparse/*.checked"
       - name: Test CBOR/CDDL
         run: |
           docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "bash .github/ci-make.sh -kj$(nproc) cddl-test cbor-test cose-test ADMIT_LOWPARSE=1 ADMIT_CBOR_CDDL=1 EVERPARSE_CHECK_DIFF=1"

@@ -50,8 +50,8 @@ def check_no_runtime_header(log):
 
 def generate(name, grammar, api="lowstar", stream="buffer", extra_grammars=()):
     out = output(name)
-    args = [ROOT / "bin/3d.exe", "--api", api, "--input_stream", stream,
-            "--fstar", FSTAR, "--batch", "--odir", out]
+    args = [ROOT / "bin/everparse-3d.exe", "--api", api, "--input_stream", stream,
+            "--fstar", FSTAR, "--karamel", KRML, "--batch", "--odir", out]
     if stream != "buffer":
         args += ["--input_stream_include", "EverParseStream.h"]
     log = run(args + [grammar] + list(extra_grammars), out)
@@ -76,12 +76,14 @@ def compile_run(out, sources, includes=(), flags=(), name="check", bits32=False)
 
 def large(bits32=False):
     out = output("large")
-    flags = ["--z3version", os.environ.get("EVERPARSE_Z3_VERSION", "5.3.0"), "--include", ROOT / "src/lowparse",
-             "--include", ROOT / "src/lowparse/pulse",
+    flags = ["--include", ROOT / "lib/everparse/lowparse",
              "--include", ROOT / "lib/everparse/3d", "--include", HERE,
              "--cache_checked_modules", "--cache_dir", out,
              "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",
              "--warn_error", "@241"]
+    z3_version = os.environ.get("EVERPARSE_Z3_VERSION")
+    if z3_version is not None:
+        flags = ["--z3version", z3_version] + flags
     run([FSTAR] + flags + [HERE / "LargeExtern.fsti"], out)
     run([FSTAR] + flags + [HERE / "LargeExtern.fst"], out)
     # Extract with Custard, not the old --codegen krml. This client is linked
@@ -110,7 +112,7 @@ def large(bits32=False):
          "-static-header", "Prims,LowParse.*,EverParse3d.*,Pulse.*",
          "-warn-error", "-9@4-20-26", "-fnoreturn-else", "-fparentheses",
          "-fcurly-braces", "-fmicrosoft", "-fno-shadow",
-         "-header", ROOT / "src/3d/noheader.txt", "-minimal", "-fextern-c",
+         "-header", ROOT / "lib/everparse/3d/noheader.txt", "-minimal", "-fextern-c",
          "-finitialize-locals", "no", "-no-inline-type-abbrev",
          "EverParse3d.Actions.ErrorHandler.LowstarExtern.error_handler"]
         + sorted((ROOT / "lib/everparse/3d/krml/extracted").glob("*.krml"))
@@ -124,7 +126,7 @@ def large(bits32=False):
            "[rename=EverParsePrivate]"], out)
     check_no_runtime_header(log)
     for header in [ROOT / "lib/everparse/3d/krml/lowstar/extern/EverParse.h",
-                   ROOT / "src/3d/EverParseEndianness.h"]:
+                   ROOT / "lib/everparse/3d/EverParseEndianness.h"]:
         shutil.copy2(header, out)
     compile_run(out, [out / "LargeExtern.c", HERE / "large.c"],
                 [TESTS / "extern/src"], name="check32" if bits32 else "check",

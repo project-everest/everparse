@@ -1,17 +1,19 @@
 all: build
 
+EVERPARSE_HOME = $(realpath ../..)
+
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+
 ifeq (1,$(ADMIT))
 CDDL_ADMIT := --admit
 else
 CDDL_ADMIT :=
 endif
 
-encrypt: cose-encrypt.cddl ../cddl/spec/postlude.cddl
+encrypt: cose-encrypt.cddl $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
 	rm -rf $@.tmp $@
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $@.tmp $(CDDL_ADMIT)
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3 "$(Z3_EXE)") $^ --odir $@.tmp $(CDDL_ADMIT)
 	mv $@.tmp $@
-
-EVERPARSE_SRC_PATH = $(realpath ..)
 
 build-c:
 	+$(MAKE) -C c
@@ -76,12 +78,12 @@ test-extracted: test-interop test-verified-interop test-rust
 
 test-batch-c: cose-sign.cddl
 	rm -rf $@ $@.tmp
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --admit
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3 "$(Z3_EXE)") --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl --mname COSEBatchTest --admit
 	mv $@.tmp $@
 
 test-batch-rust: cose-sign.cddl
 	rm -rf $@ $@.tmp
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --rust --admit
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3 "$(Z3_EXE)") --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl --mname COSEBatchTest --rust --admit
 	mv $@.tmp $@
 
 test-extract: test-extract-c test-extract-rust test-batch-c test-batch-rust encrypt

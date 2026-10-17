@@ -1,7 +1,9 @@
 all: CBORNondetTest
 
-CBOR_LIB_PATH = $(realpath ..)
-CBOR_INCLUDE_PATH = $(realpath ..)
+EVERPARSE_HOME = $(realpath ../../../../../..)
+
+CBOR_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
+CBOR_INCLUDE_PATH = $(EVERPARSE_HOME)/include/everparse
 
 # -Wno-pointer-sign because of string to uint8_t* conversion
 CFLAGS += -Werror -I $(CBOR_INCLUDE_PATH) -g -Wno-pointer-sign

@@ -58,7 +58,7 @@ WIT_RE = re.compile(
 def witnesses(home, src, ty):
     with tempfile.TemporaryDirectory() as d:
         p = subprocess.run(
-            [os.path.join(home, 'bin', '3d.exe'),
+            [os.path.join(home, 'bin', 'everparse-3d.exe'),
              '--api', 'lowstar',
              '--z3_executable', os.environ.get('Z3', 'z3'),
              '--batch', '--odir', d, os.path.join(TESTS, src),

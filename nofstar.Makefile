@@ -45,7 +45,14 @@ cbor-shared-test: cbor
 
 .PHONY: cbor-shared-test
 
-cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test cbor-shared-test
+# Re-validates the artefacts written by cbor-shared-test (in
+# share/everparse/tests/cbor/out) through the Rust det and nondet APIs.
+cbor-rust-shared-test: cbor-shared-test
+	+cd src/cbor/tests_rust && CBOR_TEST_OUT_DIR=$(CURDIR)/share/everparse/tests/cbor/out cargo test --release
+
+.PHONY: cbor-rust-shared-test
+
+cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test cbor-shared-test cbor-rust-shared-test
 
 .PHONY: cbor-test-unverified
 
@@ -59,8 +66,9 @@ test-nofstar: all-nofstar cbor-test-unverified cose-extracted-test
 .PHONY: test-nofstar
 
 clean-cbor:
-	+$(MAKE) -C src/cbor clean
+	+$(MAKE) -C lib/everparse/cbor clean
 	+$(MAKE) -C share/everparse/tests/cbor clean
+	rm -rf src/cbor/tests_rust/target src/cbor/tests_rust/Cargo.lock
 
 .PHONY: clean-cbor
 

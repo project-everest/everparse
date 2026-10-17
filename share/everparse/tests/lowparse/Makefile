@@ -1,9 +1,16 @@
 all: verify extract-all
 
-EVERPARSE_SRC_PATH ?= $(realpath ../../../../src)
-LOWPARSE_PULSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse/pulse
+all: arith
 
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse $(LOWPARSE_PULSE_HOME)
+arith:
+	+$(MAKE) -C $@
+
+.PHONY: arith
+
+EVERPARSE_HOME ?= $(realpath ../../../..)
+LOWPARSE_HOME ?= $(EVERPARSE_HOME)/lib/everparse/lowparse
+
+INCLUDE_PATHS += $(LOWPARSE_HOME)
 ALREADY_CACHED := *,-LowParseTestLib,-LowParseExample,
 OTHERFLAGS += --warn_error +272
 
@@ -19,10 +26,11 @@ CUSTARD_BACKEND := KrmlC
 CUSTARD_ENTRY_MODULES := $(addprefix LowParse,$(EXAMPLES))
 CUSTARD_ROOTS := LowParseExample3.fst
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/everparse.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+clean_rules += clean-tests clean-arith
+
+include $(EVERPARSE_HOME)/lib/everparse/everparse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 
@@ -49,7 +57,16 @@ $(EXAMPLES): %: verify %/a.out
 	$(CC) -I $(local_curdir) -o $@ $*/LowParse$*.c
 	./$@
 
-clean:
+clean-tests:
 	rm -rf $(OUTPUT_DIRECTORY) $(addsuffix /, $(EXAMPLES)) .depend
+
+.PHONY: clean-tests
+
+clean-arith:
+	+$(MAKE) -C arith clean
+
+.PHONY: clean-arith
+
+clean: clean-tests clean-arith
 
 .PHONY: all extract-all clean $(EXAMPLES)

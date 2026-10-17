@@ -17,14 +17,14 @@ all: world
 # EVERPARSE_HOME is necessary for the 3d executable. It needs to point to the
 # root of the EverParse source tree. However, EVERPARSE_HOME is not needed if
 # you run everparse.sh or everparse.cmd from the binary package.
-EVERPARSE_HOME ?= $(realpath ../../../..)
+EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
 # Command to run EverParse: path to either the 3d executable or the
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package
-FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 
 # Output directory for .c/.h files as well as temporary files (.fst,
 # .krml, etc.)
@@ -48,7 +48,7 @@ $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
 # Generate the Makefile if any .3d file is modified
-$(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR) Makefile $(EVERPARSE_HOME)/bin/3d.exe
+$(everparse_makefile): $(wildcard src/*.3d) Makefile $(EVERPARSE_HOME)/bin/everparse-3d.exe | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/Test.3d
 
 # Include the generated Makefile
@@ -104,18 +104,9 @@ ci: $(EVERPARSE_ALL_O_FILES) $(EVERPARSE_ALL_H_FILES)
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.h
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.c
 
-# Same inplace hash checks, but with the standalone F# hash checker.
-# This rule is for continuous integration only, and is called by the
-# hashchk-modules rule of the parent Makefile.
-HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
-
-hashchk-check: $(EVERPARSE_ALL_H_FILES)
-	$(HASHCHK) --api pulse --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.h
-	$(HASHCHK) --api pulse --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.c
-
 # Specify the behavior of the default rule
 world: ci test
 
 # Declare all phony rules.
 # Cf. https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
-.PHONY: all world test clean ci hashchk-check
+.PHONY: all world test clean ci

@@ -3,5 +3,6 @@
 *.checked
 3d
 Version.fst
+Z3Version.fst
 EverParse.h
 hashchk.depend

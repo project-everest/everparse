@@ -44,10 +44,6 @@ let get_absolute_filename n =
   else Filename.concat (Sys.getcwd ()) n
 
 let everparse_home =
-  try
-    Sys.getenv "EVERPARSE_HOME"
-  with
-  | Not_found ->
      (* assume the executable is in the bin/ subdirectory *)
      get_absolute_filename (Filename.concat (Filename.dirname Sys.executable_name) Filename.parent_dir_name)
 

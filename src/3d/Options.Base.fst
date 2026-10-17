@@ -128,6 +128,8 @@ let _emit_smt_encoding : ref bool = alloc false
 
 let fstar_exe : ref (option (valid_string always_valid)) = alloc None
 
+let karamel_exe : ref (option vstring) = alloc None
+
 let _z3_diff_test: ref (option (valid_string valid_equate_types)) = alloc None
 
 let _z3_test : ref (option vstring) = alloc None
@@ -408,6 +410,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "emit_output_types_defs" (OptBool _emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool _emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
+    CmdOption "karamel" (OptStringOption "executable" always_valid karamel_exe) "The KaRaMeL executable to run (default: automatically located in the source tree or binary package)" [];
     CmdOption "blank_lines" (OptBool blank_lines) "Insert blank lines between declaration blocks for readability in generated C code (--batch only)" ["batch"];
     CmdOption "goto_for_early_return" (OptBool goto_for_early_return) "Use goto for early return in generated C code (--batch only)" ["batch"];
     CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];
@@ -433,7 +436,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_branch_depth" (OptStringOption "nb" always_valid _z3_branch_depth) "enumerate branch choices up to depth nb (default 0)" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types _z3_diff_test) "produce differential tests for two parsers" [];
     CmdOption "z3_flight_name" (OptStringOption "ident ([0-9A-Za-z_]*" valid_flight_name z3_flight_name) "C test case number <n> will be called witness<ident><n>" [];
-    CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid _z3_executable) "z3 executable for test case generation (default `z3`; does not affect verification of generated F* code)" [];
+    CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid _z3_executable) "Z3 executable for test case generation and verification of generated F* code (default: automatically located for both)" [];
     CmdOption "z3_options" (OptStringOption "'options to z3'" always_valid _z3_options) "command-line options to pass to z3 for test case generation (does not affect verification of generated F* code)" [];
     CmdOption "z3_skip_testcases_c" (OptBool no_produce_testcases_c) "skip generating test cases to <output directory>/testcases.c" [];
     CmdOption "z3_skip_c_initializers" (OptBool z3_skip_c_initializers) "Do not use C field initializers for test cases" [];

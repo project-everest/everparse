@@ -18,7 +18,7 @@ ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 endif
 
-include src/z3-version.Makefile
+include lib/everparse/z3-version.Makefile
 
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))
 export EVERPARSE_USE_OPAMROOT:=1
@@ -96,7 +96,7 @@ export PATH := $(z3_dir):$(PATH)
 $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
 
-ifeq (,$(filter clean distclean $(clean_rules),$(MAKECMDGOALS)))
+ifeq (,$(filter install clean distclean $(clean_rules),$(MAKECMDGOALS)))
 opam-env.Makefile: $(NEED_OPAM_DIR)
 	rm -rf $@.tmp
 	$(EVERPARSE_OPT_PATH)/opam-env.sh > $@.tmp

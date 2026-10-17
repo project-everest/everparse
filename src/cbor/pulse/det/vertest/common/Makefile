@@ -1,12 +1,13 @@
 all: verify test
 
-EVERPARSE_SRC_PATH = $(realpath ../../../../..)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/pulse
+EVERPARSE_HOME = $(realpath ../../../../../..)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
 ALREADY_CACHED := *,-CBORTest,
 OUTPUT_DIRECTORY:=extracted
-CBORDET_PATH := $(realpath ../../c)
+EVERPARSE_INCLUDE_PATH := $(EVERPARSE_HOME)/include/everparse
+EVERPARSE_LIB_PATH := $(EVERPARSE_HOME)/lib/everparse
 
-CFLAGS += -I $(CBORDET_PATH)
+CFLAGS += -I $(EVERPARSE_INCLUDE_PATH)
 
 # Whole-program extraction.  The [CBORDetAPI] bundle is header-only here -- its
 # definitions come from the prebuilt CBORDet.o this test links against -- but
@@ -28,16 +29,15 @@ CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
 clean_rules += clean-extracted
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 .PHONY: extract test
 
 extract: $(OUTPUT_DIRECTORY)/test.exe
 
 $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CBORTest.o
-	$(CC) -o $@ $^ $(CBORDET_PATH)/CBORDet.o
+	$(CC) -o $@ $^ $(EVERPARSE_LIB_PATH)/CBORDet.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
