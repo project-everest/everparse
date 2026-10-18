@@ -96,7 +96,7 @@ jobs:
           - part: 3d-subdirs
             args: -C 3d pulse-subdirs-test
           - part: other
-            args: MODULES="cbor cddl lowparse qd"
+            args: cbor.do cddl.do lowparse.do qd.do
     steps:
       - name: Install Homebrew tools
         run: |
