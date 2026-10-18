@@ -2,4 +2,4 @@
 set -e
 unset CDPATH
 EVERPARSE_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-exec "$EVERPARSE_HOME/fstar.sh" --include "$EVERPARSE_HOME/src/cbor/spec" --include "$EVERPARSE_HOME/src/cbor/pulse"  --include "$EVERPARSE_HOME/src/cddl/spec" --include "$EVERPARSE_HOME/src/cddl/pulse" --include "$EVERPARSE_HOME/src/cddl/tool" "$@"
+exec "$EVERPARSE_HOME/fstar.sh" --include "$EVERPARSE_HOME/lib/everparse/cbor/spec" --include "$EVERPARSE_HOME/lib/everparse/cbor/pulse"  --include "$EVERPARSE_HOME/lib/everparse/cddl/spec" --include "$EVERPARSE_HOME/lib/everparse/cddl/pulse" --include "$EVERPARSE_HOME/src/cddl/tool" "$@"

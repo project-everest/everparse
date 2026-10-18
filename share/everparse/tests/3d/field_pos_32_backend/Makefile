@@ -16,11 +16,11 @@
 # accept/reject decision, so there is no need to pay for F* verification and
 # KaRaMeL extraction. Nothing is run.
 
-EVERPARSE_HOME ?= $(realpath ../../../..)
+EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 
 EVERPARSE_OUTPUT_DIR=obj
 

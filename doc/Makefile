@@ -5,9 +5,7 @@ all: html 3d
 
 EVERPARSE_HOME?=$(realpath ..)
 
-FSTAR_EXE ?= fstar.exe
-
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --hoist_locals --complete_wrappers
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") --hoist_locals --complete_wrappers
 3D_EXCLUDE=ConstColor.3d
 3D_CONFIG=Arch.3d.config
 3D_FILES_WITH_CONFIG=PointArch_32_64.3d
@@ -78,7 +76,7 @@ endif
 	$(3D) --odir out --batch $(3D_FILES)
 	$(3D) --odir out --batch $(3D_FILES_WITH_CONFIG) --config $(3D_CONFIG)
 	cp $(AUX_HEADERS) out
-	+$(MAKE) -C out -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic BLACKLIST='$(3D_NOT_COMPILED)' USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
+	+$(MAKE) -C out -f $(EVERPARSE_HOME)/lib/everparse/3d/Makefile.basic BLACKLIST='$(3D_NOT_COMPILED)' USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
 $(3D_OUT): out/%: 3d-do-tests
 

@@ -1,7 +1,7 @@
 (include_subdirs unqualified)
 (executable
   (name Main)
-  (public_name cddl.exe)
+  (public_name everparse-cddl.exe)
   (libraries
     re
     evercddl.lib

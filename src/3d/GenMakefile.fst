@@ -55,19 +55,19 @@ let print_make_rule
           if everparse_h
           then ""
           else
-            let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
+            let lib_3d_home = "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" in
             (* With --no_copy_everparse_h the client compiles against a prebuilt
                EverParse.h rather than a copy in the output directory, so the
                include path has to name the runtime matching the API and
                backend: krml/<backend> for --api pulse, krml/lowstar/<backend>
-               for --api lowstar. ddd_home still supplies
+               for --api lowstar. lib_3d_home still supplies
                EverParsePulse{,Endianness}.h and EverParseEndianness.h. *)
             let ddd_actions_home =
-              let krml = "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" `OS.concat` "krml" in
+              let krml = lib_3d_home `OS.concat` "krml" in
               let runtime = if pulse then krml else krml `OS.concat` "lowstar" in
               runtime `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
             in
-            Printf.sprintf "%s %s %s %s" iopt ddd_home iopt ddd_actions_home
+            Printf.sprintf "%s %s %s %s" iopt lib_3d_home iopt ddd_actions_home
         in
         let copt = match mtype with
         | HashingOptions.MakefileGMake -> "-c"
@@ -570,7 +570,7 @@ let produce_everparse_h_rule
     {
       ty = EverParse;
       (* Both APIs ship a pre-generated EverParse.h (see
-         lib/everparse/3d/krml/header.Makefile), and the prelude's copy is what
+         src/3d/krml/header.Makefile), and the prelude's copy is what
          has to end up here in either mode. KaRaMeL emits none of its own:
          krml_args pairs -library with -static-header over the same pattern,
          which makes KaRaMeL drop the runtime's extern declarations rather than
@@ -585,8 +585,8 @@ let produce_everparse_h_rule
          EverParse.h alone, so those have to be here, and in pulse mode the .c
          files ride along so that a consumer waiting on the generated headers
          waits on the whole generated output --
-         share/everparse/tests/3d/modules/Makefile's
-         `hashchk-check: $(EVERPARSE_ALL_H_FILES)` relies on that. *)
+         src/3d/tests/modules/Makefile's
+         `build: $(EVERPARSE_ALL_H_FILES)` relies on that. *)
       from =
         if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::

@@ -10,7 +10,7 @@ extern "C" {
 #include "krmllib.h"
 
 #include "CBORDetType.h"
-#include "../CBORDet.h"
+#include <everparse/CBORDet.h>
 
 cbor_freeable cbor_copy0_with_depth(cbor_raw x);
 

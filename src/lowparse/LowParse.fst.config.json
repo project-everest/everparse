@@ -1,6 +1,0 @@
-{
-    "fstar_exe": "../../fstar.sh",
-    "include_dirs": [
-      "./pulse"
-    ]
-  }

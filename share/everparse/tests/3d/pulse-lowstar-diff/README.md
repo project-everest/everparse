@@ -46,19 +46,22 @@ Knobs:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `ITERS` | `20000` | fuzzer iterations per entrypoint, per backend |
-| `LO_DIR` | `share/everparse/tests/3d/lowstar/out.batch-interpret` | `--api lowstar` generated C |
-| `PU_DIR` | `share/everparse/tests/3d/out.batch-interpret.pulse` | `--api pulse` generated C |
+| `LO_DIR` | `share/everparse/tests/3d/lowstar/out.batch` | `--api lowstar` generated C |
+| `PU_DIR` | `share/everparse/tests/3d/out.pulse` | `--api pulse` generated C |
 | `SUBDIR_TESTS` | see Makefile | which sub-directory tests to compare |
 | `DIFF_PREBUILT` | `0` | set to `1` only when both ordinary corpora have already been built |
 
-The two input directories are produced by the ordinary `batch-interpret-test`
-and `pulse-batch-interpret-test` targets. By default, this Makefile invokes
+The two input directories are produced by the ordinary `batch-test` and
+`pulse-batch` targets. By default, this Makefile invokes
 the root `3d-unit-test` and `3d-pulse-test` targets first, building both complete
 corpora, including subdirectory outputs. The first target explicitly selects
 `--api lowstar`; the second explicitly selects `--api pulse`.
 
 The enclosing `make 3d-test` already builds both corpora and passes
-`DIFF_PREBUILT=1` to avoid duplicate builds. Even in prebuilt mode, every compared
+`DIFF_PREBUILT=1` to avoid duplicate builds. The root `make
+3d-pulse-diff-prebuilt-test` runs this test alone with `DIFF_PREBUILT=1`; CI uses
+it in a separate job, over the generated `.c`/`.h` files saved by the jobs that
+build the corpora. Even in prebuilt mode, every compared
 directory is checked for the expected validator result type and Low\*-adapter
 worker references. Missing, mixed, or original-Low\* outputs fail rather
 than silently comparing the wrong implementations. Clean and rebuild a corpus
@@ -68,12 +71,6 @@ The top-level driver, binaries, and fuzz corpora are regenerated on each run
 so changed input directories or `ITERS` cannot reuse an old passing trace.
 `make selftest` exercises the build wiring and wrong/missing-API rejection
 without running the verifier.
-
-We read those rather than the `batch-test`/`pulse-batch` outputs because the
-latter are built from `positive_tests`, which excludes `ActAndCheck.3d` and
-`FieldDependence0.3d`. Both targets drive an identical pipeline today and
-differ only in their file list, so taking the wider one costs nothing and buys
-coverage of the only test that exercises `:act`/`:check`.
 
 `pulse-diff` is **not** part of the shared Low\*-API corpus's `all` target:
 it also needs the native Pulse outputs. The root `make 3d-test` builds both

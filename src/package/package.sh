@@ -151,7 +151,7 @@ make_everparse() {
     cp -L $FSTAR_PKG_ROOT/bin/* everparse/bin/
     mkdir -p everparse/lib
     $cp -L -r $FSTAR_PKG_ROOT/lib/fstar everparse/lib/
-    z3_version=${EVERPARSE_Z3_VERSION:-5.3.0}
+    z3_version=${EVERPARSE_Z3_VERSION}
     if ! z3=$(which z3-$z3_version$exe) ; then
 	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
 	if ! [[ -f "$z3" ]] ; then
@@ -175,52 +175,20 @@ make_everparse() {
     mkdir -p everparse/share/krml
     $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
 
-    # Copy EverParse
-    $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
-    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
-    mkdir -p everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
+    # Install EverParse. Everything EverParse itself builds — the executables,
+    # the F* libraries and their .checked files, the 3d runtime support and its
+    # .krml extraction, the prebuilt EverCBOR objects and their public headers —
+    # is laid out by install.Makefile, so the package just runs it into
+    # everparse/. It already honors NO_PULSE and EVERPARSE_ONLY_3D, and it
+    # installs exactly what is needed, leaving out the build-system Makefiles,
+    # hint files and other build artifacts that live next to the sources.
+    $MAKE -C "$EVERPARSE_HOME" install PREFIX="$PWD/everparse"
+    $cp "$EVERPARSE_HOME"/src/package/*-exe.Makefile everparse/lib/everparse/
+
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
         $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
-    fi
-    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
-    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
-    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
-    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
-
-    # Copy the Pulse 3d runtime (--api pulse), unless Pulse is disabled altogether.
-    #
-    # `3d.exe --api pulse` needs three things at run time, all located relative to
-    # EVERPARSE_HOME by src/3d/ocaml/Batch.ml:
-    #   - lib/everparse/3d: the combinator library itself, on the F* --include
-    #     path, hence sources *and* .checked files;
-    #   - lib/everparse/3d/krml/extracted: the same library already extracted
-    #     to .krml, which is what gets handed to KaRaMeL alongside the
-    #     generated modules;
-    #   - lib/everparse/3d/krml/<backend>/EverParse.h: the pre-generated
-    #     runtime header, one per input stream backend, copied into the output
-    #     directory;
-    #   - lib/everparse/3d/krml/lowstar/<backend>/EverParse.h: the
-    #     self-contained Low*-compatible runtime generated from Pulse;
-    # src/lowparse/pulse is already covered by the src/lowparse copy above, and
-    # EverParsePulse{,Endianness}.h are copied out to the output directory by
-    # the copy_everparse_h micro-step.
-    if [[ -z "$NO_PULSE" ]] ; then
-        $cp -r $EVERPARSE_HOME/src/3d/EverParsePulse.h everparse/src/3d/
-        $cp -r $EVERPARSE_HOME/src/3d/EverParsePulseEndianness.h everparse/src/3d/
-        # EverParse's own Makefile.basic: under --api pulse, KaRaMeL is invoked with
-        # -skip-makefiles, so this is what the generated C is compiled with.
-        mkdir -p everparse/share/everparse/3d
-        $cp -r $EVERPARSE_HOME/share/everparse/3d/Makefile.basic everparse/share/everparse/3d/
-        mkdir -p everparse/lib/everparse
-        $cp -r $EVERPARSE_HOME/lib/everparse/3d everparse/lib/everparse/3d
-        # Drop the build machinery: the package ships the results, not the
-        # means of producing them.
-        rm -f everparse/lib/everparse/3d/krml/Makefile everparse/lib/everparse/3d/krml/extract.Makefile everparse/lib/everparse/3d/krml/header.Makefile
-        rm -f everparse/lib/everparse/3d/krml/extracted/.depend
     fi
 
     if $is_windows ; then
@@ -228,15 +196,7 @@ make_everparse() {
     else
         $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
-    $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
-
-    # Copy evercbor and evercddl
-    if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
-    $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
-    $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
-	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
-	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
-    fi
+    $EVERPARSE_HOME/bin/everparse-3d.exe --version >> everparse/README
 
     # Download and copy clang-format from the LLVM release
     if $is_windows ; then
@@ -302,7 +262,7 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then
-	everparse_version="$(everparse/bin/3d.exe --short_version)"
+	everparse_version="$(everparse/bin/everparse-3d.exe --short_version)"
 	mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext
     fi
 }

@@ -10,7 +10,7 @@ extern "C" {
 #include "krmllib.h"
 
 #include "CBORNondetType.h"
-#include "../CBORNondet.h"
+#include <everparse/CBORNondet.h>
 
 #define FStar_Pervasives_Native_None 0
 #define FStar_Pervasives_Native_Some 1

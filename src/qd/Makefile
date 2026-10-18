@@ -1,6 +1,6 @@
 EVERPARSE_HOME ?= $(realpath ../..)
 QD_BUILD = _build/default/quackyducky.exe
-QD_BIN = $(EVERPARSE_HOME)/bin/qd.exe
+QD_BIN = $(EVERPARSE_HOME)/bin/everparse-qd.exe
 
 all: $(QD_BIN)
 

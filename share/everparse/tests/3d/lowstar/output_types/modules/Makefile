@@ -19,10 +19,10 @@ export EVERPARSE_HOME
 # Command to run EverParse: path to either the 3d executable or the
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 
 # Output directory for .c/.h files as well as temporary files (.fst,
@@ -48,7 +48,7 @@ $(EVERPARSE_OUTPUT_DIR):
 
 # Generate the Makefile if any .3d file is modified
 everparse_source_modules=$(wildcard $(EVERPARSE_INPUT_DIR)/*.3d)
-$(everparse_makefile): Makefile $(everparse_source_modules) $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): Makefile $(everparse_source_modules) | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ $(everparse_source_modules)
 
 # Include the generated Makefile

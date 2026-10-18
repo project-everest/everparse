@@ -1,4 +1,4 @@
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_HOME = $(realpath ../../..)
 
 .PHONY: all
 all: test run-bench
@@ -20,10 +20,13 @@ run-bench: bench.exe
 CC     := clang
 LDFLAGS += -lssl -lcrypto
 CFLAGS += -O3
-CFLAGS += -I ../c -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
+CFLAGS += -I ../c -I $(EVERPARSE_HOME)/include/everparse
+# For internal/CBORDet.h, needed to compile CBORDet.c below, and for
+# the <everparse/CBORDet.h> it includes in turn
+CFLAGS += -I $(EVERPARSE_HOME)/src/cbor/pulse/det/c -I $(EVERPARSE_HOME)/include
 CFLAGS += -Wall -Wenum-conversion
 
-HEADERDEPS = ../c/COSE_Format.h ../c/COSE_OpenSSL.h $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.h
+HEADERDEPS = ../c/COSE_Format.h ../c/COSE_OpenSSL.h $(EVERPARSE_HOME)/include/everparse/CBORDet.h
 
 common.o: common.c $(HEADERDEPS)
 signtest.o: signtest.c $(HEADERDEPS) common.h
@@ -37,7 +40,7 @@ COSE_Format.o: ../c/COSE_Format.c $(HEADERDEPS)
 
 COSE_OpenSSL.o: ../c/COSE_OpenSSL.c $(HEADERDEPS)
 
-CBOR_Det.o: $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)
+CBOR_Det.o: $(EVERPARSE_HOME)/src/cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)
 
 %.exe:
 	$(CC) $(LDFLAGS) $+ -o $@

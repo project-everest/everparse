@@ -8,17 +8,15 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-3D=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
-
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.3.0)
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 all: Probe.3d
 	mkdir -p out.z3-testgen
-	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen Probe.3d --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5 --z3_flight_name titatu --z3_use_ptr
+	$(3D) --batch --odir out.z3-testgen Probe.3d --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5 --z3_flight_name titatu --z3_use_ptr
 
 .PHONY: all
 
