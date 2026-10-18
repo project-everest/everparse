@@ -81,9 +81,22 @@ jobs:
         run: |
           ${{ github.workspace }}/test/bin/everparse-cddl.exe ${{ github.workspace }}/everparse/share/everparse/tests/cddl/demo/test.cddl
 
+  # The shared test suite, split into parts of comparable length: on a single
+  # 3-core macOS runner, it takes over an hour and a half.
   test-share:
+    name: test-share (${{ matrix.part }})
     needs: build
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: 3d-corpus
+            args: -C 3d pulse-corpus-test
+          - part: 3d-subdirs
+            args: -C 3d pulse-subdirs-test
+          - part: other
+            args: MODULES="cbor cddl lowparse qd"
     steps:
       - name: Install Homebrew tools
         run: |
@@ -105,7 +118,7 @@ jobs:
       - name: Test shared suite
         working-directory: everparse/share/everparse/tests
         run: |
-          gmake -j$(nproc) -k EVERPARSE_HOME="${{ github.workspace }}/test"
+          gmake -j$(nproc) -k EVERPARSE_HOME="${{ github.workspace }}/test" ${{ matrix.args }}
 
   test:
     runs-on: ubuntu-latest
