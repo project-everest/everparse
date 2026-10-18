@@ -67,13 +67,21 @@ clean_out_files := \
 	$(addsuffix .h,$(modules_or_wrappers)) \
 	$(module_extern_apis)
 
-all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
-	pulse-comments-test pulse-renamelet-test \
-	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test \
-	pulse-subdirs \
-	pulse-module-name-c-test
+# Two groups of comparable cost, mirroring corpus-test and subdirs-test in
+# share/everparse/tests/3d/lowstar, so that CI can run them as separate jobs
+# (the root 3d-pulse-corpus-test and 3d-pulse-subdirs-test).
+all: pulse-corpus-test pulse-subdirs-test
 
-all: api-option-test
+pulse-corpus-test: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
+	pulse-comments-test pulse-renamelet-test \
+	elf-test \
+	pulse-module-name-c-test \
+	api-option-test
+
+pulse-subdirs-test: pulse-z3-testgen-test pulse-z3-testgen-probe-test \
+	pulse-subdirs
+
+.PHONY: pulse-corpus-test pulse-subdirs-test
 
 api-option-test:
 	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"

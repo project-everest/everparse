@@ -58,7 +58,10 @@ corpora, including subdirectory outputs. The first target explicitly selects
 `--api lowstar`; the second explicitly selects `--api pulse`.
 
 The enclosing `make 3d-test` already builds both corpora and passes
-`DIFF_PREBUILT=1` to avoid duplicate builds. Even in prebuilt mode, every compared
+`DIFF_PREBUILT=1` to avoid duplicate builds. The root `make
+3d-pulse-diff-prebuilt-test` runs this test alone with `DIFF_PREBUILT=1`; CI uses
+it in a separate job, over the generated `.c`/`.h` files saved by the jobs that
+build the corpora. Even in prebuilt mode, every compared
 directory is checked for the expected validator result type and Low\*-adapter
 worker references. Missing, mixed, or original-Low\* outputs fail rather
 than silently comparing the wrong implementations. Clean and rebuild a corpus

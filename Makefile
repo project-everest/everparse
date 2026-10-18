@@ -111,13 +111,19 @@ qd-exe: $(NEED_OPAM)
 
 .PHONY: qd-exe
 
-3d-unit-test: 3d $(NEED_Z3_TESTGEN)
+# The --api lowstar tests, in two halves that CI runs as separate jobs:
+# the top-level corpus, and the subdirectory tests.
+3d-unit-test: 3d-unit-corpus-test 3d-unit-subdirs-test
+
+3d-unit-corpus-test 3d-unit-subdirs-test: 3d-unit-%-test: 3d $(NEED_Z3_TESTGEN)
 ifeq (,$(NO_PULSE))
-	+$(MAKE) -C share/everparse/tests/3d/lowstar EVERPARSE_API=lowstar
+	+$(MAKE) -C share/everparse/tests/3d/lowstar EVERPARSE_API=lowstar $*-test
 else
-	@echo "3d-unit-test requires the Pulse implementation (--api lowstar)" >&2
+	@echo "$@ requires the Pulse implementation (--api lowstar)" >&2
 	@exit 1
 endif
+
+.PHONY: 3d-unit-test 3d-unit-corpus-test 3d-unit-subdirs-test
 
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
@@ -131,16 +137,25 @@ endif
 .PHONY: 3d-pulse-krml
 
 # The Pulse combinator backend (--api pulse): generation, F* verification,
-# KaRaMeL extraction to C, then compiling and running the C tests.
-3d-pulse-test: 3d-exe 3d-pulse-krml
-	+$(MAKE) -C share/everparse/tests/3d
+# KaRaMeL extraction to C, then compiling and running the C tests. In the same
+# two halves as 3d-unit-test.
+3d-pulse-test: 3d-pulse-corpus-test 3d-pulse-subdirs-test
 
-.PHONY: 3d-pulse-test
+3d-pulse-corpus-test 3d-pulse-subdirs-test: 3d-pulse-%-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C share/everparse/tests/3d pulse-$*-test
+
+.PHONY: 3d-pulse-test 3d-pulse-corpus-test 3d-pulse-subdirs-test
 
 3d-pulse-diff-test: 3d-pulse-test 3d-unit-test
+	+$(MAKE) 3d-pulse-diff-prebuilt-test
+
+# The differential test alone, over the outputs of 3d-unit-test and
+# 3d-pulse-test, which must already be there: CI builds them in other jobs.
+# It needs only a C compiler and Python, not F*.
+3d-pulse-diff-prebuilt-test:
 	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff DIFF_PREBUILT=1
 
-.PHONY: 3d-pulse-diff-test
+.PHONY: 3d-pulse-diff-test 3d-pulse-diff-prebuilt-test
 
 # Extern/static adapter, scoped probe-view and O(1) >2^32 counter regressions,
 # exercised against both Pulse backends (--api lowstar and --api pulse). These

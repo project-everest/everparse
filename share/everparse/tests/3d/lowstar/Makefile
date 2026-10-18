@@ -43,8 +43,17 @@ clean_out_files += $(EXTRA_CLEAN_OUT_FILES)
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules \
-	 tcpip extern output-types elf-test static funptr ifdefs \
+# The tests come in two groups of comparable cost, so that CI can run them as
+# separate jobs (the root 3d-unit-corpus-test and 3d-unit-subdirs-test):
+# corpus-test runs over the top-level .3d files, subdirs-test runs the
+# subdirectory tests. The ELFTestGen test-case generation (z3-testgen-test)
+# is a single long serial command, so it goes with the subdirectory tests to
+# balance the two.
+all: corpus-test subdirs-test
+
+corpus-test: batch-test batch-test-negative batch-cleanup-test inplace-hash-test elf-test
+
+subdirs-test: modules tcpip extern output-types static funptr ifdefs \
 	 probe iter z3-testgen-test exttype z3-testgen-probe-test \
 	 use_error_handler_macro \
 	 check_complete \
@@ -53,8 +62,10 @@ all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules
 ifneq ($(OS),Windows_NT)
 # Tests disabled on Windows because of UlongToPtr conflict
 # probe_error_handler_macro disabled on Windows because sys/mman.h is not available
-all: specialize_test specialize_test2 specialize_test_error_handler_macro specialize_tagged_union_array probe_error_handler_macro
+subdirs-test: specialize_test specialize_test2 specialize_test_error_handler_macro specialize_tagged_union_array probe_error_handler_macro
 endif
+
+.PHONY: corpus-test subdirs-test
 
 .PHONY: exttype
 
