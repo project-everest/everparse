@@ -19,11 +19,10 @@ export HASHCHK
 3D_LOWSTAR=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api lowstar --fstar $(FSTAR_EXE)
 
 # The batch corpus is not copied here: it is the one of
-# share/everparse/tests/3d/lowstar. Its batch-interpret-test runs over
-# INTERPRETABLE_FILES, a superset of the files of its batch-test, and the two
-# run the very same pipeline, so checking the former is enough.
+# share/everparse/tests/3d/lowstar, i.e. every non-FAIL .3d file there, as in
+# its batch-test.
 LOWSTAR_TESTS=$(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar
-INTERPRETABLE_FILES=$(filter-out $(LOWSTAR_TESTS)/FAIL%.3d, $(wildcard $(LOWSTAR_TESTS)/*.3d))
+BATCH_FILES=$(filter-out $(LOWSTAR_TESTS)/FAIL%.3d, $(wildcard $(LOWSTAR_TESTS)/*.3d))
 
 APIS=lowstar pulse
 
@@ -44,11 +43,11 @@ hashchk-boot:
 .PHONY: batch-test
 batch-test:
 	mkdir -p out.batch
-	$(3D_LOWSTAR) --odir out.batch --batch --no_copy_everparse_h --save_hashes $(INTERPRETABLE_FILES)
+	$(3D_LOWSTAR) --odir out.batch --batch --no_copy_everparse_h --save_hashes $(BATCH_FILES)
 
 .PHONY: hashchk-batch-test
 hashchk-batch-test: batch-test hashchk-boot
-	$(HASHCHK) --api lowstar --odir out.batch --check_hashes strong $(INTERPRETABLE_FILES)
+	$(HASHCHK) --api lowstar --odir out.batch --check_hashes strong $(BATCH_FILES)
 
 .PHONY: inplace-hash-test
 inplace-hash-test:
