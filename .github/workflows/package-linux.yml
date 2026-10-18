@@ -77,10 +77,23 @@ jobs:
         run: |
           ${{ github.workspace }}/test/bin/everparse-cddl.exe ${{ github.workspace }}/everparse/share/everparse/tests/cddl/demo/test.cddl
 
+  # The shared test suite, split into parts of comparable length, as in
+  # package-macos.yml.
   test-share:
+    name: test-share (${{ matrix.part }})
     needs: build
     # The Z3 5.1.0 binary bundled in the package needs glibc >= 2.38.
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: 3d-corpus
+            args: -C 3d pulse-corpus-test
+          - part: 3d-subdirs
+            args: -C 3d pulse-subdirs-test
+          - part: other
+            args: cbor.do cddl.do lowparse.do qd.do
     steps:
       - name: Download and extract artifact
         uses: actions/download-artifact@v4
@@ -99,7 +112,7 @@ jobs:
       - name: Test shared suite
         working-directory: everparse/share/everparse/tests
         run: |
-          make -j$(nproc) -k EVERPARSE_HOME="${{ github.workspace }}/test"
+          make -j$(nproc) -k EVERPARSE_HOME="${{ github.workspace }}/test" ${{ matrix.args }}
 
   test:
     runs-on: ubuntu-latest
