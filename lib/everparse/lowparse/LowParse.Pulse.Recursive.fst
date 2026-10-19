@@ -747,3 +747,192 @@ fn impl_pred_recursive
   elim_trade _ _;
   res
 }
+
+let parse_tot_nlist_forall_pred_recursive
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pr: pred_recursive_t s)
+  (n: nat)
+: Tot (parser
+    (C.parse_filter_kind (L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind)))
+    (C.parse_filter_refine #(L.nlist n p.t) (List.Tot.for_all pr.pred)))
+= C.parse_filter (L.tot_parse_nlist n (parse_recursive p)) (List.Tot.for_all pr.pred)
+
+#push-options "--z3rlimit_factor 16"
+
+let parse_consume_nlist_forall_pred_recursive_eq
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pr: pred_recursive_t s)
+  (q: (p.header -> GTot bool))
+  (q_correct: (h: p.header) -> (c: L.nlist (p.count h) p.t) ->
+    Lemma (pr.base (p.synth_ (| h, c |)) == q h))
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (parse_consume (parse_tot_nlist_forall_pred_recursive s pr n) b == (
+    if n = 0
+    then Some 0
+    else match parse p.parse_header b with
+    | None -> None
+    | Some (h, consumed1) ->
+      if q h
+      then
+        let b2 = Seq.slice b consumed1 (Seq.length b) in
+        match parse_consume (parse_tot_nlist_forall_pred_recursive s pr (p.count h + (n - 1))) b2 with
+        | None -> None
+        | Some consumed2 -> Some (consumed1 + consumed2)
+      else None
+  ))
+= C.parse_filter_eq
+    #(L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind))
+    (L.tot_parse_nlist n (parse_recursive p)) (List.Tot.for_all pr.pred) b;
+  L.tot_parse_nlist_eq n (parse_recursive p) b;
+  if n = 0
+  then ()
+  else begin
+    parse_recursive_eq' p b;
+    match parse p.parse_header b with
+    | None -> ()
+    | Some (h, consumed1) ->
+      let b2 = Seq.slice b consumed1 (Seq.length b) in
+      tot_parse_nlist_sum (parse_recursive p) (p.count h) (n - 1) b2;
+      C.parse_filter_eq
+        #(L.parse_nlist_kind (p.count h + (n - 1)) (parse_recursive_kind p.parse_header_kind))
+        (L.tot_parse_nlist (p.count h + (n - 1)) (parse_recursive p))
+        (List.Tot.for_all pr.pred)
+        b2;
+      match parse (L.tot_parse_nlist (p.count h) (parse_recursive p)) b2 with
+      | None -> ()
+      | Some (c, consumed2) ->
+        pr.prf (p.synth_ (| h, c |));
+        q_correct h c;
+        C.synth_injective_synth_inverse_synth_inverse_recip p.synth_ s.synth_recip ();
+        assert (s.synth_recip (p.synth_ (| h, c |)) == (| h, c |));
+        assert (get_children s (p.synth_ (| h, c |)) == c);
+        match parse (L.tot_parse_nlist (n - 1) (parse_recursive p))
+          (Seq.slice b2 consumed2 (Seq.length b2)) with
+        | None -> ()
+        | Some (rem, _) -> List.Tot.for_all_append pr.pred c rem
+  end
+
+let validate_tot_nlist_forall_pred_recursive_progress
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pr: pred_recursive_t s)
+  (q: (p.header -> GTot bool))
+  (q_correct: (h: p.header) -> (c: L.nlist (p.count h) p.t) ->
+    Lemma (pr.base (p.synth_ (| h, c |)) == q h))
+  (v: bytes)
+  (n: pos)
+  (off off': nat)
+: Lemma
+  (requires (
+    off <= Seq.length v /\
+    begin match parse p.parse_header (Seq.slice v off (Seq.length v)) with
+    | None -> False
+    | Some (h, consumed) -> off' == off + consumed /\ q h
+    end
+  ))
+  (ensures (
+    off <= off' /\ off' <= Seq.length v /\
+    begin match parse p.parse_header (Seq.slice v off (Seq.length v)) with
+    | None -> False
+    | Some (h, _) ->
+      let pr0 = parse_consume (parse_tot_nlist_forall_pred_recursive s pr n) (Seq.slice v off (Seq.length v)) in
+      let pr1 = parse_consume (parse_tot_nlist_forall_pred_recursive s pr (p.count h + (n - 1))) (Seq.slice v off' (Seq.length v)) in
+      Some? pr0 == Some? pr1 /\
+      (Some? pr0 ==> off + Some?.v pr0 == off' + Some?.v pr1)
+    end
+  ))
+= parse_consume_nlist_forall_pred_recursive_eq s pr q q_correct n (Seq.slice v off (Seq.length v))
+
+inline_for_extraction
+fn validate_tot_nlist_forall_pred_recursive
+  (#p: Ghost.erased parse_recursive_param)
+  (s: Ghost.erased (serialize_recursive_param p))
+  (w: validator (parser_of_tot_parser p.parse_header))
+  (f: validate_recursive_step_count s)
+  (pr: pred_recursive_t s)
+  (q: (p.header -> GTot bool))
+  (q_correct: (h: p.header) -> (c: L.nlist (p.count h) p.t) ->
+    Lemma (pr.base (p.synth_ (| h, c |)) == q h))
+  (g: C.validate_filter_test_t (serializer_of_tot_serializer s.serialize_header) q)
+  (n0: SZ.t)
+: validator (parse_tot_nlist_forall_pred_recursive s pr (SZ.v n0))
+=
+  (input: S.slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset0: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  S.pts_to_len input;
+  let mut pn = n0;
+  let mut pres = true;
+  while (
+    let res = !pres;
+    let n = !pn;
+    (res && (SZ.gt n 0sz))
+  ) invariant exists* res n offset .
+    pts_to pres res **
+    pts_to pn n **
+    pts_to poffset offset **
+    pts_to input #pm v **
+    pure (
+      SZ.v offset <= Seq.length v /\ (
+        let pr0 = parse_consume (parse_tot_nlist_forall_pred_recursive s pr (SZ.v n0)) (Seq.slice v (SZ.v offset0) (Seq.length v)) in
+        let pr1 = parse_consume (parse_tot_nlist_forall_pred_recursive s pr (SZ.v n)) (Seq.slice v (SZ.v offset) (Seq.length v)) in
+        Some? pr0 == (res && Some? pr1) /\
+        (Some? pr0 ==> SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr1)
+    ))
+    decreases %[(if !pres then 1 else 0); (Seq.length v - SZ.v (!poffset))]
+  {
+    let off = !poffset;
+    let n = !pn;
+    parse_consume_nlist_forall_pred_recursive_eq s pr q q_correct (SZ.v n) (Seq.slice v (SZ.v off) (Seq.length v));
+    C.parse_filter_eq
+      #(L.parse_nlist_kind (SZ.v n) (parse_recursive_kind p.parse_header_kind))
+      (L.tot_parse_nlist (SZ.v n) (parse_recursive p)) (List.Tot.for_all pr.pred) (Seq.slice v (SZ.v off) (Seq.length v));
+    parse_nlist_recursive_bound_correct p (SZ.v n) (Seq.slice v (SZ.v off) (Seq.length v));
+    if SZ.gt n (SZ.sub (S.len input) off) {
+      pres := false
+    } else {
+      let res1 = w input poffset;
+      if not res1 {
+        pres := false
+      } else {
+        let offset = !poffset;
+        let input1 = peek_trade_gen (serializer_of_tot_serializer s.serialize_header) input off offset;
+        parser_kind_prop_equiv p.parse_header_kind p.parse_header;
+        with gv . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) input1 #pm gv);
+        let res_pred = g input1;
+        if not res_pred {
+          elim_trade _ _;
+          pres := false
+        } else {
+          parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v n - 1)) (Seq.slice v (SZ.v offset) (Seq.length v));
+          let bound = SZ.sub (SZ.sub (S.len input) off) n;
+          let res2 = f #gv #pm input1 bound pn;
+          elim_trade _ _;
+          let count = !pn;
+          if (res2 || SZ.gt count bound) {
+            validate_tot_nlist_recursive_overflow p v (SZ.v n) (SZ.v off);
+            pres := false
+          } else {
+            validate_tot_nlist_forall_pred_recursive_progress s pr q q_correct v (SZ.v n) (SZ.v off) (SZ.v offset);
+            let n' : SZ.t = SZ.add (SZ.sub n 1sz) count;
+            pn := n'
+          }
+        }
+      }
+    }
+  };
+  L.tot_parse_nlist_eq 0 (parse_recursive p) (Seq.slice v (SZ.v (!poffset)) (Seq.length v));
+  C.parse_filter_eq
+    #(L.parse_nlist_kind 0 (parse_recursive_kind p.parse_header_kind))
+    (L.tot_parse_nlist 0 (parse_recursive p)) (List.Tot.for_all pr.pred) (Seq.slice v (SZ.v (!poffset)) (Seq.length v));
+  !pres
+}
+
+#pop-options
