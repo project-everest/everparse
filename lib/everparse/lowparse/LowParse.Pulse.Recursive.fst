@@ -936,3 +936,48 @@ fn validate_tot_nlist_forall_pred_recursive
 }
 
 #pop-options
+
+
+let parse_forall_pred_recursive_eq
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (pr: pred_recursive_t s)
+  (b: bytes)
+: Lemma
+  (match parse (C.parse_filter #(parse_recursive_kind p.parse_header_kind) (parse_recursive p) pr.pred) b, parse (parse_tot_nlist_forall_pred_recursive s pr 1) b with
+   | None, None -> True
+   | Some (_, c1), Some (_, c2) -> c1 == c2
+   | _ -> False)
+= C.parse_filter_eq
+    #(L.parse_nlist_kind 1 (parse_recursive_kind p.parse_header_kind))
+    (L.tot_parse_nlist 1 (parse_recursive p)) (List.Tot.for_all pr.pred) b;
+  C.parse_filter_eq
+    #(parse_recursive_kind p.parse_header_kind)
+    (parse_recursive p) pr.pred b;
+  L.tot_parse_nlist_eq 1 (parse_recursive p) b;
+  match parse (parse_recursive p) b with
+  | None -> ()
+  | Some (_, c) -> L.tot_parse_nlist_eq 0 (parse_recursive p) (Seq.slice b c (Seq.length b))
+
+inline_for_extraction
+fn validate_forall_pred_recursive
+  (#p: Ghost.erased parse_recursive_param)
+  (s: Ghost.erased (serialize_recursive_param p))
+  (w: validator (parser_of_tot_parser p.parse_header))
+  (f: validate_recursive_step_count s)
+  (pr: Ghost.erased (pred_recursive_t s))
+  (q: Ghost.erased (p.header -> GTot bool))
+  (q_correct: (h: p.header) -> (c: L.nlist (p.count h) p.t) ->
+    Lemma (pr.base (p.synth_ (| h, c |)) == Ghost.reveal q h))
+  (g: C.validate_filter_test_t (serializer_of_tot_serializer s.serialize_header) (Ghost.reveal q))
+: validator #(C.parse_filter_refine #p.t pr.pred) #(C.parse_filter_kind (parse_recursive_kind p.parse_header_kind)) (C.parse_filter #(parse_recursive_kind p.parse_header_kind) (parse_recursive p) pr.pred)
+=
+  (input: S.slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parse_forall_pred_recursive_eq s pr (Seq.slice v (SZ.v offset) (Seq.length v));
+  validate_tot_nlist_forall_pred_recursive s w f pr q q_correct g 1sz input poffset
+}

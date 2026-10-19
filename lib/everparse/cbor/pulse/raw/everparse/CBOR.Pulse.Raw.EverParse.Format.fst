@@ -945,6 +945,87 @@ fn validate_raw_data_item (_: unit) : validator #raw_data_item #parse_raw_data_i
     input poffset #offset #pm #v
 }
 
+let map_length_bounded_header
+  (n: nat)
+  (l: leaf)
+: Tot bool
+= match l with
+  | (| h, _ |) ->
+    if get_header_major_type h = cbor_major_type_map
+    then U64.v (get_header_argument_as_uint64 h) <= n
+    else true
+
+let map_length_bounded_header_correct
+  (n: nat)
+  (l: leaf)
+  (c: L.nlist (remaining_data_items l) raw_data_item)
+: Lemma
+  ((holds_on_raw_data_item_pred (map_length_bounded_elem n)).base (synth_raw_data_item_from_alt (| l, c |)) == map_length_bounded_header n l)
+= ()
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn impl_map_length_bounded_header (n: SZ.t) :
+  validate_filter_test_t #leaf #_ #(parser_of_tot_parser parse_raw_data_item_param.parse_header) (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) (map_length_bounded_header (SZ.v n))
+=
+  (a: _)
+  (#pm: perm)
+  (#va: Ghost.erased leaf)
+{
+  pts_to_serialized_ext_trade
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (serialize_dtuple2 serialize_header serialize_leaf_content)
+    a;
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  let typ = get_header_major_type h;
+  if (typ = cbor_major_type_map) {
+    let arg64 = get_header_argument_as_uint64 h;
+    SZCmp.u64_lte_sizet arg64 n
+  } else {
+    true
+  }
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_raw_data_item_map_length_bounded' (n: SZ.t) =
+  validate_forall_pred_recursive
+    serialize_raw_data_item_param
+    (validate_leaf ())
+    (validate_recursive_step_count_leaf ())
+    (holds_on_raw_data_item_pred (map_length_bounded_elem (SZ.v n)))
+    (map_length_bounded_header (SZ.v n))
+    (map_length_bounded_header_correct (SZ.v n))
+    (impl_map_length_bounded_header n)
+
+fn validate_raw_data_item_map_length_bounded (n: SZ.t) : validator #(parse_filter_refine (map_length_bounded (SZ.v n))) #(parse_filter_kind parse_raw_data_item_kind) (parse_filter parse_raw_data_item (map_length_bounded (SZ.v n))) =
+  (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  let b : Ghost.erased bytes = Seq.slice v (SZ.v offset) (Seq.length v);
+  LowParse.Spec.Combinators.parse_filter_eq
+    #parse_raw_data_item_kind
+    (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)
+    (holds_on_raw_data_item_pred (map_length_bounded_elem (SZ.v n))).pred
+    b;
+  LowParse.Spec.Combinators.parse_filter_eq
+    parse_raw_data_item
+    (map_length_bounded (SZ.v n))
+    b;
+  validate_raw_data_item_map_length_bounded' n
+    input poffset #offset #pm #v
+}
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let jump_raw_data_item' (_: unit) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =

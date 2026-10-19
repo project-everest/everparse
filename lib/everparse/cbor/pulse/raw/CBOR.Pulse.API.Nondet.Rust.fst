@@ -36,6 +36,11 @@ let cbor_nondet_parse_aux : Base.cbor_nondet_parse_t cbor_nondet_match = Nondet.
 
 let cbor_nondet_parse () map_key_bound strict_check input #pm #v = cbor_nondet_parse_aux map_key_bound strict_check input #pm #v
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_map_length_bounded_aux : Base.cbor_nondet_validate_map_length_bounded_t = Nondet.cbor_nondet_validate_map_length_bounded ()
+
+let cbor_nondet_validate_map_length_bounded () map_length_bound map_key_bound strict_check input #pm #v = cbor_nondet_validate_map_length_bounded_aux map_length_bound map_key_bound strict_check input #pm #v
+
 let cbor_nondet_match_with_size = Nondet.cbor_nondet_match_with_size
 
 let cbor_nondet_match_with_size_intro = Nondet.cbor_nondet_match_with_size_intro

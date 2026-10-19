@@ -21,6 +21,11 @@ val cbor_nondet_gather () : Base.gather_t cbor_nondet_match
 
 val cbor_nondet_parse (_: unit) : Base.cbor_nondet_parse_t cbor_nondet_match
 
+(* Validates that the input starts with a valid CBOR object in which every
+   map (at any nesting depth) has at most map_length_bound entries.
+   Returns the number of bytes consumed, or 0 on failure. *)
+val cbor_nondet_validate_map_length_bounded (_: unit) : Base.cbor_nondet_validate_map_length_bounded_t
+
 val cbor_nondet_match_with_size
   (size: nat)
   (p: perm)

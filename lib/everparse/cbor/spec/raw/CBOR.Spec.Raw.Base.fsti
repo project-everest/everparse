@@ -488,3 +488,19 @@ let rec map_key_depth_le_map_depth
     list_max_le map_key_depth map_depth l (fun x -> map_key_depth_le_map_depth x)
   | Tagged _ y -> map_key_depth_le_map_depth y
   | _ -> ()
+
+(* Every map in a raw data item has at most `n` entries *)
+
+let map_length_bounded_elem
+  (n: nat)
+  (x: raw_data_item)
+: Tot bool
+= match x with
+  | Map len _ -> U64.v len.value <= n
+  | _ -> true
+
+let map_length_bounded
+  (n: nat)
+  (x: raw_data_item)
+: Tot bool
+= holds_on_raw_data_item (map_length_bounded_elem n) x

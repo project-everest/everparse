@@ -25,6 +25,8 @@ val cbor_nondet_gather
 
 val cbor_nondet_validate (_: unit) : cbor_nondet_validate_t
 
+val cbor_nondet_validate_map_length_bounded (_: unit) : cbor_nondet_validate_map_length_bounded_t
+
 val cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t cbor_nondet_match
 
 val cbor_nondet_parse (_: unit) : cbor_nondet_parse_t #cbor_nondet_t cbor_nondet_match

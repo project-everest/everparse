@@ -3703,6 +3703,95 @@ fn cbor_nondet_validate_from_arrayptr
 }
 
 noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_map_length_bounded_post
+  (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
+  (strict_check: bool)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: GTot bool
+=
+  let r = Spec.cbor_parse v in
+  if SZ.v res = 0
+  then
+    if Some? r
+    then (
+      not (Spec.cbor_map_length_bounded (SZ.v map_length_bound) (fst (Some?.v r))) ||
+      (Some? map_key_bound && Spec.cbor_map_key_depth (fst (Some?.v r)) > SZ.v (Some?.v map_key_bound))
+    )
+    else true
+  else (
+    Some? r &&
+    SZ.v res = snd (Some?.v r) &&
+    Spec.cbor_map_length_bounded (SZ.v map_length_bound) (fst (Some?.v r)) &&
+    begin if Some? map_key_bound && strict_check
+    then Spec.cbor_map_key_depth (fst (Some?.v r)) <= SZ.v (Some?.v map_key_bound)
+    else true
+    end
+  )
+
+(* Like cbor_nondet_validate_t, but additionally rejects any input
+   containing a map (at any depth) with more than map_length_bound
+   entries. *)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_map_length_bounded_t
+=
+  (map_length_bound: SZ.t) ->
+  (map_key_bound: option SZ.t) ->
+  (strict_check: bool) ->
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+    (pts_to input #pm v)
+    (fun res -> pts_to input #pm v ** pure (
+      cbor_nondet_validate_map_length_bounded_post map_length_bound map_key_bound strict_check v res
+    ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_map_length_bounded_from_arrayptr_t
+=
+  (map_length_bound: SZ.t) ->
+  (check_map_key_bound: bool) ->
+  (map_key_bound: SZ.t) ->
+  (strict_check: bool) ->
+  (input: AP.ptr U8.t) ->
+  (len: SZ.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+    (pts_to input #pm v ** pure (
+      Seq.length v == SZ.v len
+    ))
+    (fun res -> pts_to input #pm v ** pure (
+      cbor_nondet_validate_map_length_bounded_post map_length_bound (mk_map_key_bound check_map_key_bound map_key_bound) strict_check v res
+    ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_validate_map_length_bounded_from_arrayptr
+  (f: cbor_nondet_validate_map_length_bounded_t)
+: cbor_nondet_validate_map_length_bounded_from_arrayptr_t
+=
+  (map_length_bound: SZ.t)
+  (check_map_key_bound: bool)
+  (map_key_bound: SZ.t)
+  (strict_check: bool)
+  (input: AP.ptr U8.t)
+  (len: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  let s = S.arrayptr_to_slice_intro input len;
+  let res = f map_length_bound (mk_map_key_bound check_map_key_bound map_key_bound) strict_check s;
+  S.arrayptr_to_slice_elim s;
+  res
+}
+
+noextract [@@noextract_to "krml"]
 let cbor_nondet_parse_valid_post
   (v: Seq.seq U8.t)
   (v': Spec.cbor)

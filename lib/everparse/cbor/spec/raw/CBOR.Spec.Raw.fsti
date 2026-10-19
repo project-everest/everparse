@@ -290,3 +290,10 @@ val mk_cbor_map_key_depth
 : Lemma
   (requires R.valid_raw_data_item x)
   (ensures cbor_map_key_depth (mk_cbor x) == R.map_key_depth x)
+
+val mk_cbor_map_length_bounded
+  (n: nat)
+  (x: raw_data_item)
+: Lemma
+  (requires R.valid_raw_data_item x)
+  (ensures cbor_map_length_bounded n (mk_cbor x) == R.map_length_bounded n x)
