@@ -23,12 +23,12 @@ ReadPairValidateCorePair(
 )
 {
   /* Validating field first */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartPair = (uint64_t)p;
   size_t pos = (size_t)0U;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p2 = SlPos[0U];
+  size_t p2 = *SlPos;
   size_t rem = SlLen - p2;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t resultAfterfirst;
@@ -86,10 +86,10 @@ ReadPairValidateCorePair(
   }
   if (resultAfterfirst == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p010 = SlPos[0U];
+    p010 = *SlPos;
     m0 = p010 + (size_t)4U;
     sub0 = SlBase + p010;
-    SlPos[0U] = m0;
+    *SlPos = m0;
     first0 = sub0[0U];
     pos_ = (size_t)2U;
     first10 = sub0[1U];
@@ -103,7 +103,7 @@ ReadPairValidateCorePair(
     n20 = bfirst10 + n10 * 256U;
     bfirst20 = (uint32_t)first0;
     first4 = bfirst20 + n20 * 256U;
-    X[0U] = first4;
+    *X = first4;
     resultAfterPair = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -129,12 +129,12 @@ ReadPairValidateCorePair(
   if (resultAfterfirst1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field second */
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartPair1 = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p01 = pos1;
-    p5 = SlPos[0U];
+    p5 = *SlPos;
     rem1 = SlLen - p5;
     hasBytes1 = p01 <= rem1 && (size_t)4U <= (rem1 - p01);
     if (hasBytes1)
@@ -148,10 +148,10 @@ ReadPairValidateCorePair(
     }
     if (resultAftersecond == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p02 = SlPos[0U];
+      p02 = *SlPos;
       m = p02 + (size_t)4U;
       sub = SlBase + p02;
-      SlPos[0U] = m;
+      *SlPos = m;
       first = sub[0U];
       pos_0 = (size_t)2U;
       first1 = sub[1U];
@@ -165,7 +165,7 @@ ReadPairValidateCorePair(
       n2 = bfirst1 + n1 * 256U;
       bfirst2 = (uint32_t)first;
       second = bfirst2 + n2 * 256U;
-      Y[0U] = second;
+      *Y = second;
       resultAfterPair1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else

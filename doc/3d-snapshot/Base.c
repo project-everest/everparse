@@ -21,19 +21,19 @@ BaseValidateCoreUlong(
   size_t *Pos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
-  size_t fieldOff = Pos[0U];
+  size_t fieldOff = *Pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = Pos[0U];
-  size_t p1 = SlPos[0U];
+  size_t p0 = *Pos;
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
   if (hasBytes)
   {
-    Pos[0U] = p0 + (size_t)4U;
+    *Pos = p0 + (size_t)4U;
     res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -106,11 +106,11 @@ BaseValidateCorePair(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartPair = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
   uint8_t res;
@@ -130,9 +130,9 @@ BaseValidateCorePair(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterPair = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else

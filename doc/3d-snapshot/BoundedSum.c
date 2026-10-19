@@ -22,13 +22,13 @@ BoundedSumValidateCoreBoundedSum(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -101,10 +101,10 @@ BoundedSumValidateCoreBoundedSum(
   }
   if (resultAfterleft == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -119,12 +119,12 @@ BoundedSumValidateCoreBoundedSum(
     bfirst2 = (uint32_t)first;
     left = bfirst2 + n2 * 256U;
     /* Validating field right */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartBoundedSum = (uint64_t)p2;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p02 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
     if (hasBytes1)
@@ -139,10 +139,10 @@ BoundedSumValidateCoreBoundedSum(
     if (resultAfterright_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       /* reading field_value */
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)4U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first4 = sub1[0U];
       pos_2 = (size_t)2U;
       first5 = sub1[1U];
@@ -234,13 +234,13 @@ BoundedSumValidateCoreMySum(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -290,10 +290,10 @@ BoundedSumValidateCoreMySum(
   }
   if (resultAfterbound == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -308,7 +308,7 @@ BoundedSumValidateCoreMySum(
     bfirst2 = (uint32_t)first;
     bound = bfirst2 + n2 * 256U;
     /* Validating field sum */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartmySum = (uint64_t)p2;
     resultAftermySum =
       BoundedSumValidateCoreBoundedSum(bound,

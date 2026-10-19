@@ -1590,8 +1590,7 @@ fn compute_deep(c: cbor_raw) -> bool
         cbor_raw::CBOR_Case_Tagged { .. } => true,
         cbor_raw::CBOR_Case_Array { v: a } => (a.cbor_array_ptr).len() != 0usize,
         cbor_raw::CBOR_Case_Map { v: a } => (a.cbor_map_ptr).len() != 0usize,
-        _tmp => false,
-        _ => panic!("Incomplete pattern matching")
+        _ => false
     }
 }
 
@@ -1873,13 +1872,7 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                 let b0: initial_byte_t = xh1._1;
                 if b0.major_type == cbor_major_type_array
                 {
-                    if
-                    match x·
-                    {
-                        cbor_raw::CBOR_Case_Array { .. } => true,
-                        _tmp => false,
-                        _ => panic!("Incomplete pattern matching")
-                    }
+                    if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
                     {
                         let a: &[cbor_raw] =
                             match
@@ -1888,9 +1881,8 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                                 cbor_raw::CBOR_Case_Array { v: a } =>
                                   option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
                                   { v: a.cbor_array_ptr },
-                                _tmp =>
-                                  option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None,
-                                _ => panic!("Incomplete pattern matching")
+                                _ =>
+                                  option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
                             }
                             {
                                 option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
@@ -1948,13 +1940,7 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                     let b1: initial_byte_t = xh1._1;
                     if b1.major_type == cbor_major_type_map
                     {
-                        if
-                        match x·
-                        {
-                            cbor_raw::CBOR_Case_Map { .. } => true,
-                            _tmp => false,
-                            _ => panic!("Incomplete pattern matching")
-                        }
+                        if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
                         {
                             let a: &[cbor_map_entry] =
                                 match
@@ -1963,9 +1949,8 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                                     cbor_raw::CBOR_Case_Map { v: a } =>
                                       option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
                                       { v: a.cbor_map_ptr },
-                                    _tmp =>
-                                      option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None,
-                                    _ => panic!("Incomplete pattern matching")
+                                    _ =>
+                                      option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
                                 }
                                 {
                                     option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
@@ -2032,13 +2017,7 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                         let b2: initial_byte_t = xh1._1;
                         if b2.major_type == cbor_major_type_tagged
                         {
-                            if
-                            match x·
-                            {
-                                cbor_raw::CBOR_Case_Tagged { .. } => true,
-                                _tmp => false,
-                                _ => panic!("Incomplete pattern matching")
-                            }
+                            if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
                             {
                                 let x2·: cbor_raw =
                                     match x·
@@ -2114,13 +2093,7 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                 let b0: initial_byte_t = xh1._1;
                 if b0.major_type == cbor_major_type_array
                 {
-                    if
-                    match x·
-                    {
-                        cbor_raw::CBOR_Case_Array { .. } => true,
-                        _tmp => false,
-                        _ => panic!("Incomplete pattern matching")
-                    }
+                    if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
                     { true }
                     else
                     {
@@ -2147,13 +2120,7 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                     let b1: initial_byte_t = xh1._1;
                     if b1.major_type == cbor_major_type_map
                     {
-                        if
-                        match x·
-                        {
-                            cbor_raw::CBOR_Case_Map { .. } => true,
-                            _tmp => false,
-                            _ => panic!("Incomplete pattern matching")
-                        }
+                        if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
                         { true }
                         else
                         {
@@ -2180,13 +2147,7 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                         let b2: initial_byte_t = xh1._1;
                         if b2.major_type == cbor_major_type_tagged
                         {
-                            if
-                            match x·
-                            {
-                                cbor_raw::CBOR_Case_Tagged { .. } => true,
-                                _tmp => false,
-                                _ => panic!("Incomplete pattern matching")
-                            }
+                            if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
                             {
                                 match x·
                                 {
@@ -2431,13 +2392,7 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
             let b0: initial_byte_t = xh1._1;
             if b0.major_type == cbor_major_type_array
             {
-                if
-                match x·
-                {
-                    cbor_raw::CBOR_Case_Array { .. } => true,
-                    _tmp => false,
-                    _ => panic!("Incomplete pattern matching")
-                }
+                if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
                 {
                     let a: &[cbor_raw] =
                         match
@@ -2446,9 +2401,7 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                             cbor_raw::CBOR_Case_Array { v: a } =>
                               option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
                               { v: a.cbor_array_ptr },
-                            _tmp =>
-                              option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None,
-                            _ => panic!("Incomplete pattern matching")
+                            _ => option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
                         }
                         {
                             option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
@@ -2501,13 +2454,7 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                 let b1: initial_byte_t = xh1._1;
                 if b1.major_type == cbor_major_type_map
                 {
-                    if
-                    match x·
-                    {
-                        cbor_raw::CBOR_Case_Map { .. } => true,
-                        _tmp => false,
-                        _ => panic!("Incomplete pattern matching")
-                    }
+                    if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
                     {
                         let a: &[cbor_map_entry] =
                             match
@@ -2516,9 +2463,8 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                                 cbor_raw::CBOR_Case_Map { v: a } =>
                                   option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
                                   { v: a.cbor_map_ptr },
-                                _tmp =>
-                                  option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None,
-                                _ => panic!("Incomplete pattern matching")
+                                _ =>
+                                  option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
                             }
                             {
                                 option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
@@ -2574,13 +2520,7 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     let b2: initial_byte_t = xh1._1;
                     if b2.major_type == cbor_major_type_tagged
                     {
-                        if
-                        match x·
-                        {
-                            cbor_raw::CBOR_Case_Tagged { .. } => true,
-                            _tmp => false,
-                            _ => panic!("Incomplete pattern matching")
-                        }
+                        if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
                         {
                             let x2·: cbor_raw =
                                 match x·
@@ -2649,13 +2589,7 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
             let b0: initial_byte_t = xh1._1;
             if b0.major_type == cbor_major_type_array
             {
-                if
-                match x·
-                {
-                    cbor_raw::CBOR_Case_Array { .. } => true,
-                    _tmp => false,
-                    _ => panic!("Incomplete pattern matching")
-                }
+                if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
                 { res1 }
                 else
                 {
@@ -2682,13 +2616,7 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                 let b1: initial_byte_t = xh1._1;
                 if b1.major_type == cbor_major_type_map
                 {
-                    if
-                    match x·
-                    {
-                        cbor_raw::CBOR_Case_Map { .. } => true,
-                        _tmp => false,
-                        _ => panic!("Incomplete pattern matching")
-                    }
+                    if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
                     { res1 }
                     else
                     {
@@ -2715,13 +2643,7 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     let b2: initial_byte_t = xh1._1;
                     if b2.major_type == cbor_major_type_tagged
                     {
-                        if
-                        match x·
-                        {
-                            cbor_raw::CBOR_Case_Tagged { .. } => true,
-                            _tmp => false,
-                            _ => panic!("Incomplete pattern matching")
-                        }
+                        if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
                         {
                             match x·
                             {
@@ -2817,20 +2739,10 @@ pub(crate) enum option__bool
 }
 
 fn eq_Some_true(x: option__bool) -> bool
-{
-    match x
-    { option__bool::Some { v: b } => b, _tmp => false, _ => panic!("Incomplete pattern matching") }
-}
+{ match x { option__bool::Some { v: b } => b, _ => false } }
 
 fn eq_Some_false(x: option__bool) -> bool
-{
-    match x
-    {
-        option__bool::Some { v: b } => ! b,
-        _tmp => false,
-        _ => panic!("Incomplete pattern matching")
-    }
-}
+{ match x { option__bool::Some { v: b } => ! b, _ => false } }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum option__size_t
@@ -2840,14 +2752,7 @@ pub enum option__size_t
 }
 
 fn eq_Some_0sz(x: option__size_t) -> bool
-{
-    match x
-    {
-        option__size_t::Some { v: y } => y == 0usize,
-        _tmp => false,
-        _ => panic!("Incomplete pattern matching")
-    }
-}
+{ match x { option__size_t::Some { v: y } => y == 0usize, _ => false } }
 
 pub(crate) fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize) -> bool
 {
@@ -2881,7 +2786,6 @@ pub(crate) fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize
                 else
                 { 0usize };
             let _letpattern1: (&[u8], &[u8]) = tl·.split_at(i1);
-            let _tmp: &[u8] = _letpattern1.0;
             let tl: &[u8] = _letpattern1.1;
             let m: u8 = get_header_major_type(h);
             if m == cbor_major_type_tagged
@@ -2928,9 +2832,7 @@ fn impl_check_map_depth(bound: usize, n0: usize, l0: &[u8]) -> bool
 
 fn impl_check_map_depth_opt(bound: option__size_t, n0: usize, l0: &[u8]) -> bool
 {
-    if
-    match bound
-    { option__size_t::None => true, _tmp => false, _ => panic!("Incomplete pattern matching") }
+    if match bound { option__size_t::None => true, _ => false }
     { true }
     else
     {
@@ -3110,13 +3012,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                 let l2·: &[u8] = (&pl2)[0usize];
                                 let r: option__bool =
                                     impl_check_equiv_map_hd_basic(map_bound·, l1·, l2·);
-                                if
-                                match r
-                                {
-                                    option__bool::None => true,
-                                    _tmp => false,
-                                    _ => panic!("Incomplete pattern matching")
-                                }
+                                if match r { option__bool::None => true, _ => false }
                                 { (&mut pres2)[0usize] = r }
                                 else
                                 {
@@ -3288,13 +3184,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                 cond1 = eq_Some_true(res2) && n20 > 0usize
                             };
                             let res2: option__bool = (&pres2)[0usize];
-                            if
-                            match res2
-                            {
-                                option__bool::None => true,
-                                _tmp => false,
-                                _ => panic!("Incomplete pattern matching")
-                            }
+                            if match res2 { option__bool::None => true, _ => false }
                             { (&mut pres1)[0usize] = res2 }
                             else
                             {
@@ -3324,13 +3214,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                         let l2·: &[u8] = (&pl21)[0usize];
                                         let r: option__bool =
                                             impl_check_equiv_map_hd_basic(map_bound·, l1·, l2·);
-                                        if
-                                        match r
-                                        {
-                                            option__bool::None => true,
-                                            _tmp => false,
-                                            _ => panic!("Incomplete pattern matching")
-                                        }
+                                        if match r { option__bool::None => true, _ => false }
                                         { (&mut pres3)[0usize] = r }
                                         else
                                         {
@@ -3613,13 +3497,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                     let l2·: &[u8] = (&pl2)[0usize];
                                     let r: option__bool =
                                         impl_check_equiv_map_hd_basic(map_bound·, l1·, l2·);
-                                    if
-                                    match r
-                                    {
-                                        option__bool::None => true,
-                                        _tmp => false,
-                                        _ => panic!("Incomplete pattern matching")
-                                    }
+                                    if match r { option__bool::None => true, _ => false }
                                     { (&mut pres3)[0usize] = r }
                                     else
                                     {
@@ -3801,13 +3679,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                     cond2 = eq_Some_true(res12) && n20 > 0usize
                                 };
                                 let res12: option__bool = (&pres3)[0usize];
-                                if
-                                match res12
-                                {
-                                    option__bool::None => true,
-                                    _tmp => false,
-                                    _ => panic!("Incomplete pattern matching")
-                                }
+                                if match res12 { option__bool::None => true, _ => false }
                                 { (&mut pres2)[0usize] = res12 }
                                 else
                                 {
@@ -3841,13 +3713,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                     l1·,
                                                     l2·
                                                 );
-                                            if
-                                            match r
-                                            {
-                                                option__bool::None => true,
-                                                _tmp => false,
-                                                _ => panic!("Incomplete pattern matching")
-                                            }
+                                            if match r { option__bool::None => true, _ => false }
                                             { (&mut pres4)[0usize] = r }
                                             else
                                             {
@@ -4117,13 +3983,7 @@ fn impl_check_equiv_list_basic(
             let l1·: &[u8] = (&pl1)[0usize];
             let l2·: &[u8] = (&pl2)[0usize];
             let r: option__bool = impl_check_equiv_map_hd_basic(map_bound, l1·, l2·);
-            if
-            match r
-            {
-                option__bool::None => true,
-                _tmp => false,
-                _ => panic!("Incomplete pattern matching")
-            }
+            if match r { option__bool::None => true, _ => false }
             { (&mut pres)[0usize] = r }
             else
             {
@@ -4422,13 +4282,7 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                                 cond1 = n21 > 0usize && eq_Some_false(res2)
                             };
                             let res2: option__bool = (&pres2)[0usize];
-                            if
-                            match res2
-                            {
-                                option__bool::None => true,
-                                _tmp => false,
-                                _ => panic!("Incomplete pattern matching")
-                            }
+                            if match res2 { option__bool::None => true, _ => false }
                             { (&mut pres1)[0usize] = option__bool::None }
                             else if
                             match res2
@@ -4562,13 +4416,7 @@ fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_basic(
                     let lh1: &[u8] = _letpattern2.0;
                     let lt1: &[u8] = _letpattern2.1;
                     let res1: option__bool = impl_check_equiv_basic(option__size_t::None, lh, lh1);
-                    if
-                    match res1
-                    {
-                        option__bool::None => true,
-                        _tmp => false,
-                        _ => panic!("Incomplete pattern matching")
-                    }
+                    if match res1 { option__bool::None => true, _ => false }
                     { (&mut pres1)[0usize] = res1 }
                     else
                     {
@@ -4824,7 +4672,7 @@ pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
                 { .. }
             )
             => true,
-            _tmp => false
+            _ => false
         }
         {
             match x1
@@ -4864,7 +4712,7 @@ pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
                 { .. }
             )
             => true,
-            _tmp => false
+            _ => false
         }
         {
             match x1
@@ -4919,7 +4767,7 @@ pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
     {
         (cbor_raw::CBOR_Case_Serialized_Map { .. },cbor_raw::CBOR_Case_Serialized_Map { .. }) =>
           true,
-        _tmp => false
+        _ => false
     }
     {
         match x1
@@ -4956,14 +4804,7 @@ pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
             let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0usize];
             let __anf00: bool = cbor_map_iterator_is_empty_with_depth(i11);
             let mut cond0: bool =
-                match res0
-                {
-                    option__bool::None => true,
-                    _tmp => false,
-                    _ => panic!("Incomplete pattern matching")
-                }
-                &&
-                ! __anf00;
+                match res0 { option__bool::None => true, _ => false } && ! __anf00;
             while
             cond0
             {
@@ -4982,15 +4823,7 @@ pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
                 let res1: option__bool = (&pres1)[0usize];
                 let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0usize];
                 let __anf02: bool = cbor_map_iterator_is_empty_with_depth(i110);
-                cond0 =
-                    match res1
-                    {
-                        option__bool::None => true,
-                        _tmp => false,
-                        _ => panic!("Incomplete pattern matching")
-                    }
-                    &&
-                    ! __anf02
+                cond0 = match res1 { option__bool::None => true, _ => false } && ! __anf02
             };
             let __anf01: option__bool = (&pres1)[0usize];
             let __anf010: bool = eq_Some_true(__anf01);
@@ -5022,14 +4855,7 @@ pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
                 let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0usize];
                 let __anf010: bool = cbor_map_iterator_is_empty_with_depth(i11);
                 let mut cond1: bool =
-                    match res1
-                    {
-                        option__bool::None => true,
-                        _tmp => false,
-                        _ => panic!("Incomplete pattern matching")
-                    }
-                    &&
-                    ! __anf010;
+                    match res1 { option__bool::None => true, _ => false } && ! __anf010;
                 while
                 cond1
                 {
@@ -5049,15 +4875,7 @@ pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
                     let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
                         (&pi1)[0usize];
                     let __anf012: bool = cbor_map_iterator_is_empty_with_depth(i110);
-                    cond1 =
-                        match res2
-                        {
-                            option__bool::None => true,
-                            _tmp => false,
-                            _ => panic!("Incomplete pattern matching")
-                        }
-                        &&
-                        ! __anf012
+                    cond1 = match res2 { option__bool::None => true, _ => false } && ! __anf012
                 };
                 let __anf011: option__bool = (&pres2)[0usize];
                 let __anf02: bool = eq_Some_true(__anf011);
