@@ -317,8 +317,7 @@ pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
               match x.payload
               {
                   crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl { .. } => true,
-                  _tmp => false,
-                  _ => panic!("Incomplete pattern matching")
+                  _ => false
               }
               {
                   let sig: &[u8] = x.signature;
@@ -389,8 +388,7 @@ pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
               match x.payload
               {
                   crate::coseformat::either__Pulse_Lib_Slice_slice·uint8_t_··::Inl { .. } => true,
-                  _tmp => false,
-                  _ => panic!("Incomplete pattern matching")
+                  _ => false
               }
               {
                   let sig: &[u8] = x.signature;

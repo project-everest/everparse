@@ -77,13 +77,13 @@ TaggedUnionValidateCoreIntPayload(
   {
     pos0 = (size_t)0U;
     /* Validating field value8 */
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     viewStart = (uint64_t)p3;
     fieldOff = pos0;
     startPos = viewStart + (uint64_t)fieldOff;
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
     p00 = pos0;
-    p10 = SlPos[0U];
+    p10 = *SlPos;
     rem0 = SlLen - p10;
     hasBytes0 = p00 <= rem0 && (size_t)1U <= (rem0 - p00);
     if (hasBytes0)
@@ -113,9 +113,9 @@ TaggedUnionValidateCoreIntPayload(
     if (res10 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed0 = pos0;
-      p20 = SlPos[0U];
+      p20 = *SlPos;
       p_ = p20 + consumed0;
-      SlPos[0U] = p_;
+      *SlPos = p_;
       return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res10;
@@ -124,13 +124,13 @@ TaggedUnionValidateCoreIntPayload(
   {
     pos1 = (size_t)0U;
     /* Validating field value16 */
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     viewStart0 = (uint64_t)p4;
     fieldOff0 = pos1;
     startPos0 = viewStart0 + (uint64_t)fieldOff0;
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
     p01 = pos1;
-    p11 = SlPos[0U];
+    p11 = *SlPos;
     rem1 = SlLen - p11;
     hasBytes1 = p01 <= rem1 && (size_t)2U <= (rem1 - p01);
     if (hasBytes1)
@@ -160,9 +160,9 @@ TaggedUnionValidateCoreIntPayload(
     if (res11 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed1 = pos1;
-      p21 = SlPos[0U];
+      p21 = *SlPos;
       p_0 = p21 + consumed1;
-      SlPos[0U] = p_0;
+      *SlPos = p_0;
       return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res11;
@@ -171,13 +171,13 @@ TaggedUnionValidateCoreIntPayload(
   {
     pos2 = (size_t)0U;
     /* Validating field value32 */
-    p5 = SlPos[0U];
+    p5 = *SlPos;
     viewStart1 = (uint64_t)p5;
     fieldOff1 = pos2;
     startPos1 = viewStart1 + (uint64_t)fieldOff1;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p0 = pos2;
-    p12 = SlPos[0U];
+    p12 = *SlPos;
     rem = SlLen - p12;
     hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
     if (hasBytes)
@@ -207,15 +207,15 @@ TaggedUnionValidateCoreIntPayload(
     if (res12 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed2 = pos2;
-      p2 = SlPos[0U];
+      p2 = *SlPos;
       p_1 = p2 + consumed2;
-      SlPos[0U] = p_1;
+      *SlPos = p_1;
       return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res12;
   }
   pos = (size_t)0U;
-  p = SlPos[0U];
+  p = *SlPos;
   viewStart2 = (uint64_t)p;
   fieldOff2 = pos;
   startPos2 = viewStart2 + (uint64_t)fieldOff2;
@@ -238,9 +238,9 @@ TaggedUnionValidateCoreIntPayload(
   if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     p_2 = p1 + consumed;
-    SlPos[0U] = p_2;
+    *SlPos = p_2;
     return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   return res1;
@@ -265,13 +265,13 @@ TaggedUnionValidateCoreInteger(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -321,10 +321,10 @@ TaggedUnionValidateCoreInteger(
   }
   if (resultAftersize == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -339,7 +339,7 @@ TaggedUnionValidateCoreInteger(
     bfirst2 = (uint32_t)first;
     size = bfirst2 + n2 * 256U;
     /* Validating field payload */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartInteger = (uint64_t)p2;
     resultAfterInteger =
       TaggedUnionValidateCoreIntPayload(size,

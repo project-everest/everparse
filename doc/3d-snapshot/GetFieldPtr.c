@@ -22,11 +22,11 @@ GetFieldPtrValidateCoreT(
 )
 {
   /* Validating field f1 */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartT = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)10U <= (rem - p0);
   uint8_t res;
@@ -67,9 +67,9 @@ GetFieldPtrValidateCoreT(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed0 = pos;
-    p20 = SlPos[0U];
+    p20 = *SlPos;
     p_ = p20 + consumed0;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterT = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -95,15 +95,15 @@ GetFieldPtrValidateCoreT(
   if (resultAfterf1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field f2 */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartT1 = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartf2 = (uint64_t)p3;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     fieldStartT2 = (uint64_t)p4;
     pos1 = (size_t)0U;
     p01 = pos1;
-    p5 = SlPos[0U];
+    p5 = *SlPos;
     rem1 = SlLen - p5;
     hasBytes1 = p01 <= rem1 && (size_t)20U <= (rem1 - p01);
     if (hasBytes1)
@@ -118,9 +118,9 @@ GetFieldPtrValidateCoreT(
     if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos1;
-      p6 = SlPos[0U];
+      p6 = *SlPos;
       p_0 = p6 + consumed;
-      SlPos[0U] = p_0;
+      *SlPos = p_0;
       resultAfterT1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
@@ -147,7 +147,7 @@ GetFieldPtrValidateCoreT(
     {
       startPosSz = (size_t)fieldStartf2;
       hd = SlBase + startPosSz;
-      Out[0U] = hd;
+      *Out = hd;
       resultAfterT2 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
@@ -222,11 +222,11 @@ GetFieldPtrValidateCoreTact(
 )
 {
   /* Validating field f1 */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartTact = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)10U <= (rem - p0);
   uint8_t res;
@@ -267,9 +267,9 @@ GetFieldPtrValidateCoreTact(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed0 = pos;
-    p20 = SlPos[0U];
+    p20 = *SlPos;
     p_ = p20 + consumed0;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterTact = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -295,15 +295,15 @@ GetFieldPtrValidateCoreTact(
   if (resultAfterf1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field f2 */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartTact1 = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartf2 = (uint64_t)p3;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     fieldStartTact2 = (uint64_t)p4;
     pos1 = (size_t)0U;
     p01 = pos1;
-    p5 = SlPos[0U];
+    p5 = *SlPos;
     rem1 = SlLen - p5;
     hasBytes1 = p01 <= rem1 && (size_t)20U <= (rem1 - p01);
     if (hasBytes1)
@@ -318,9 +318,9 @@ GetFieldPtrValidateCoreTact(
     if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos1;
-      p6 = SlPos[0U];
+      p6 = *SlPos;
       p_0 = p6 + consumed;
-      SlPos[0U] = p_0;
+      *SlPos = p_0;
       resultAfterTact1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
@@ -347,7 +347,7 @@ GetFieldPtrValidateCoreTact(
     {
       startPosSz = (size_t)fieldStartf2;
       hd = SlBase + startPosSz;
-      Out[0U] = hd;
+      *Out = hd;
       resultAfterTact2 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else

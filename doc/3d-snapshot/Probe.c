@@ -23,12 +23,12 @@ ProbeValidateCoreT(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartT = (uint64_t)p;
   size_t pos = (size_t)0U;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)2U <= (rem - p0);
   uint8_t resultAfterx;
@@ -71,10 +71,10 @@ ProbeValidateCoreT(
   }
   if (resultAfterx == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)2U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     first1 = sub[1U];
     n = (uint16_t)(uint32_t)first1;
@@ -84,12 +84,12 @@ ProbeValidateCoreT(
     if (xConstraintIsOk)
     {
       /* Validating field y */
-      p2 = SlPos[0U];
+      p2 = *SlPos;
       fieldStartT1 = (uint64_t)p2;
       pos1 = (size_t)0U;
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
       p02 = pos1;
-      p3 = SlPos[0U];
+      p3 = *SlPos;
       rem1 = SlLen - p3;
       hasBytes1 = p02 <= rem1 && (size_t)2U <= (rem1 - p02);
       if (hasBytes1)
@@ -104,10 +104,10 @@ ProbeValidateCoreT(
       if (resultAftery_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         /* reading field_value */
-        p03 = SlPos[0U];
+        p03 = *SlPos;
         m1 = p03 + (size_t)2U;
         sub1 = SlBase + p03;
-        SlPos[0U] = m1;
+        *SlPos = m1;
         first2 = sub1[0U];
         first3 = sub1[1U];
         n1 = (uint16_t)(uint32_t)first3;
@@ -185,13 +185,13 @@ ProbeValidateCoreS(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
   uint8_t res;
@@ -284,19 +284,19 @@ ProbeValidateCoreS(
   }
   if (resultAfterbound == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)1U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     bound = sub[0U];
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartS = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStarttpointer = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
     p02 = pos1;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     rem1 = SlLen - p4;
     hasBytes1 = p02 <= rem1 && (size_t)8U <= (rem1 - p02);
     if (hasBytes1)
@@ -310,10 +310,10 @@ ProbeValidateCoreS(
     }
     if (resultAftertpointer == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)8U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first = sub1[0U];
       pos_ = (size_t)2U;
       first1 = sub1[1U];
@@ -477,13 +477,13 @@ ProbeValidateCoreU(
 {
   size_t pos = (size_t)0U;
   /* Validating field tag */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
   uint8_t res;
@@ -577,9 +577,9 @@ ProbeValidateCoreU(
   if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p20 = SlPos[0U];
+    p20 = *SlPos;
     p_ = p20 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAftertag = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -588,14 +588,14 @@ ProbeValidateCoreU(
   }
   if (resultAftertag == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartU = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartspointer = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
     p01 = pos1;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     rem1 = SlLen - p4;
     hasBytes1 = p01 <= rem1 && (size_t)8U <= (rem1 - p01);
     if (hasBytes1)
@@ -609,10 +609,10 @@ ProbeValidateCoreU(
     }
     if (resultAfterspointer == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p02 = SlPos[0U];
+      p02 = *SlPos;
       m = p02 + (size_t)8U;
       sub = SlBase + p02;
-      SlPos[0U] = m;
+      *SlPos = m;
       first = sub[0U];
       pos_ = (size_t)2U;
       first1 = sub[1U];
@@ -776,13 +776,13 @@ ProbeValidateCoreV(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
   uint8_t res;
@@ -993,19 +993,19 @@ ProbeValidateCoreV(
   }
   if (resultAftertag == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)1U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     tag = sub[0U];
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartV = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartsptr = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
     p02 = pos1;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     rem1 = SlLen - p4;
     hasBytes1 = p02 <= rem1 && (size_t)8U <= (rem1 - p02);
     if (hasBytes1)
@@ -1019,10 +1019,10 @@ ProbeValidateCoreV(
     }
     if (resultAftersptr == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p030 = SlPos[0U];
+      p030 = *SlPos;
       m10 = p030 + (size_t)8U;
       sub10 = SlBase + p030;
-      SlPos[0U] = m10;
+      *SlPos = m10;
       first0 = sub10[0U];
       pos_ = (size_t)2U;
       first10 = sub10[1U];
@@ -1134,14 +1134,14 @@ ProbeValidateCoreV(
     }
     if (resultAftersptr1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p5 = SlPos[0U];
+      p5 = *SlPos;
       fieldStartV1 = (uint64_t)p5;
-      p6 = SlPos[0U];
+      p6 = *SlPos;
       fieldStarttptr = (uint64_t)p6;
       pos2 = (size_t)0U;
       /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
       p03 = pos2;
-      p7 = SlPos[0U];
+      p7 = *SlPos;
       rem2 = SlLen - p7;
       hasBytes2 = p03 <= rem2 && (size_t)8U <= (rem2 - p03);
       if (hasBytes2)
@@ -1155,10 +1155,10 @@ ProbeValidateCoreV(
       }
       if (resultAftertptr == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
-        p040 = SlPos[0U];
+        p040 = *SlPos;
         m11 = p040 + (size_t)8U;
         sub11 = SlBase + p040;
-        SlPos[0U] = m11;
+        *SlPos = m11;
         first8 = sub11[0U];
         pos_0 = (size_t)2U;
         first11 = sub11[1U];
@@ -1270,14 +1270,14 @@ ProbeValidateCoreV(
       }
       if (resultAftertptr1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
-        p8 = SlPos[0U];
+        p8 = *SlPos;
         fieldStartV2 = (uint64_t)p8;
-        p9 = SlPos[0U];
+        p9 = *SlPos;
         fieldStartt2ptr = (uint64_t)p9;
         pos3 = (size_t)0U;
         /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
         p04 = pos3;
-        p10 = SlPos[0U];
+        p10 = *SlPos;
         rem3 = SlLen - p10;
         hasBytes3 = p04 <= rem3 && (size_t)8U <= (rem3 - p04);
         if (hasBytes3)
@@ -1291,10 +1291,10 @@ ProbeValidateCoreV(
         }
         if (resultAftert2ptr == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
-          p05 = SlPos[0U];
+          p05 = *SlPos;
           m1 = p05 + (size_t)8U;
           sub1 = SlBase + p05;
-          SlPos[0U] = m1;
+          *SlPos = m1;
           first = sub1[0U];
           pos_6 = (size_t)2U;
           first1 = sub1[1U];
@@ -1459,11 +1459,11 @@ ProbeValidateCoreIndirect(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartIndirect = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)9U <= (rem - p0);
   uint8_t res;
@@ -1483,9 +1483,9 @@ ProbeValidateCoreIndirect(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterIndirect = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -1555,11 +1555,11 @@ ProbeValidateCoreTt(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartTt = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)9U <= (rem - p0);
   uint8_t res;
@@ -1579,9 +1579,9 @@ ProbeValidateCoreTt(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterTt = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -1622,14 +1622,14 @@ ProbeValidateCoreI(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartI = (uint64_t)p;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   uint64_t fieldStartttptr = (uint64_t)p1;
   size_t pos = (size_t)0U;
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
   size_t p0 = pos;
-  size_t p2 = SlPos[0U];
+  size_t p2 = *SlPos;
   size_t rem = SlLen - p2;
   BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
   uint8_t resultAfterttptr;
@@ -1692,10 +1692,10 @@ ProbeValidateCoreI(
   }
   if (resultAfterttptr == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)8U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -1857,13 +1857,13 @@ ProbeValidateCoreMultiProbe(
 {
   size_t pos = (size_t)0U;
   /* Validating field fst */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -2046,9 +2046,9 @@ ProbeValidateCoreMultiProbe(
   if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed0 = pos;
-    p20 = SlPos[0U];
+    p20 = *SlPos;
     p_ = p20 + consumed0;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterfst = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -2059,13 +2059,13 @@ ProbeValidateCoreMultiProbe(
   {
     pos1 = (size_t)0U;
     /* Validating field snd */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     viewStart1 = (uint64_t)p2;
     fieldOff1 = pos1;
     startPos1 = viewStart1 + (uint64_t)fieldOff1;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p01 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p01 <= rem1 && (size_t)4U <= (rem1 - p01);
     if (hasBytes1)
@@ -2095,9 +2095,9 @@ ProbeValidateCoreMultiProbe(
     if (res3 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed1 = pos1;
-      p40 = SlPos[0U];
+      p40 = *SlPos;
       p_0 = p40 + consumed1;
-      SlPos[0U] = p_0;
+      *SlPos = p_0;
       resultAftersnd = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
@@ -2108,13 +2108,13 @@ ProbeValidateCoreMultiProbe(
     {
       pos2 = (size_t)0U;
       /* Validating field tag */
-      p4 = SlPos[0U];
+      p4 = *SlPos;
       viewStart2 = (uint64_t)p4;
       fieldOff2 = pos2;
       startPos2 = viewStart2 + (uint64_t)fieldOff2;
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
       p02 = pos2;
-      p5 = SlPos[0U];
+      p5 = *SlPos;
       rem2 = SlLen - p5;
       hasBytes2 = p02 <= rem2 && (size_t)1U <= (rem2 - p02);
       if (hasBytes2)
@@ -2144,9 +2144,9 @@ ProbeValidateCoreMultiProbe(
       if (res5 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         consumed = pos2;
-        p60 = SlPos[0U];
+        p60 = *SlPos;
         p_1 = p60 + consumed;
-        SlPos[0U] = p_1;
+        *SlPos = p_1;
         resultAftertag = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
@@ -2155,14 +2155,14 @@ ProbeValidateCoreMultiProbe(
       }
       if (resultAftertag == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
-        p6 = SlPos[0U];
+        p6 = *SlPos;
         fieldStartMultiProbe = (uint64_t)p6;
-        p7 = SlPos[0U];
+        p7 = *SlPos;
         fieldStarttptr1 = (uint64_t)p7;
         pos3 = (size_t)0U;
         /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
         p03 = pos3;
-        p8 = SlPos[0U];
+        p8 = *SlPos;
         rem3 = SlLen - p8;
         hasBytes3 = p03 <= rem3 && (size_t)8U <= (rem3 - p03);
         if (hasBytes3)
@@ -2176,10 +2176,10 @@ ProbeValidateCoreMultiProbe(
         }
         if (resultAftertptr1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
-          p040 = SlPos[0U];
+          p040 = *SlPos;
           m0 = p040 + (size_t)8U;
           sub0 = SlBase + p040;
-          SlPos[0U] = m0;
+          *SlPos = m0;
           first0 = sub0[0U];
           pos_ = (size_t)2U;
           first10 = sub0[1U];
@@ -2298,14 +2298,14 @@ ProbeValidateCoreMultiProbe(
         }
         if (resultAftertptr11 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
-          p9 = SlPos[0U];
+          p9 = *SlPos;
           fieldStartMultiProbe1 = (uint64_t)p9;
-          p10 = SlPos[0U];
+          p10 = *SlPos;
           fieldStarttptr2 = (uint64_t)p10;
           pos4 = (size_t)0U;
           /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
           p04 = pos4;
-          p11 = SlPos[0U];
+          p11 = *SlPos;
           rem4 = SlLen - p11;
           hasBytes4 = p04 <= rem4 && (size_t)8U <= (rem4 - p04);
           if (hasBytes4)
@@ -2319,10 +2319,10 @@ ProbeValidateCoreMultiProbe(
           }
           if (resultAftertptr2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
           {
-            p05 = SlPos[0U];
+            p05 = *SlPos;
             m = p05 + (size_t)8U;
             sub = SlBase + p05;
-            SlPos[0U] = m;
+            *SlPos = m;
             first = sub[0U];
             pos_0 = (size_t)2U;
             first1 = sub[1U];
@@ -2499,13 +2499,13 @@ ProbeValidateCoreMaybeT(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -2610,10 +2610,10 @@ ProbeValidateCoreMaybeT(
   }
   if (resultAfterBound == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -2627,14 +2627,14 @@ ProbeValidateCoreMaybeT(
     n2 = bfirst1 + n1 * 256U;
     bfirst2 = (uint32_t)first;
     bound = bfirst2 + n2 * 256U;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartMaybeT = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartptr = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
     p02 = pos1;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     rem1 = SlLen - p4;
     hasBytes1 = p02 <= rem1 && (size_t)8U <= (rem1 - p02);
     if (hasBytes1)
@@ -2648,10 +2648,10 @@ ProbeValidateCoreMaybeT(
     }
     if (resultAfterptr == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)8U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first4 = sub1[0U];
       pos_2 = (size_t)2U;
       first5 = sub1[1U];
@@ -2820,13 +2820,13 @@ ProbeValidateCoreCoercePtr(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -2916,10 +2916,10 @@ ProbeValidateCoreCoercePtr(
   }
   if (resultAfterBound == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -2933,14 +2933,14 @@ ProbeValidateCoreCoercePtr(
     n2 = bfirst1 + n1 * 256U;
     bfirst2 = (uint32_t)first;
     bound = bfirst2 + n2 * 256U;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartCoercePtr = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartptr = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p02 = pos1;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     rem1 = SlLen - p4;
     hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
     if (hasBytes1)
@@ -2954,10 +2954,10 @@ ProbeValidateCoreCoercePtr(
     }
     if (resultAfterptr == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)4U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first4 = sub1[0U];
       pos_2 = (size_t)2U;
       first5 = sub1[1U];
@@ -3102,11 +3102,11 @@ ProbeValidateCoreProbeOnly(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartProbeOnly = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
   uint8_t res;
@@ -3126,9 +3126,9 @@ ProbeValidateCoreProbeOnly(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterProbeOnly = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -3198,11 +3198,11 @@ ProbeValidateCoreBothEntrypoints(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartBothEntrypoints = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
   uint8_t res;
@@ -3222,9 +3222,9 @@ ProbeValidateCoreBothEntrypoints(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterBothEntrypoints = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -3295,11 +3295,11 @@ ProbeValidateCoreNamedPlainEp(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartNamedPlainEp = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
   uint8_t res;
@@ -3319,9 +3319,9 @@ ProbeValidateCoreNamedPlainEp(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterNamedPlainEp = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -3392,11 +3392,11 @@ ProbeValidateCoreNamedProbeEp(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartNamedProbeEp = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
   uint8_t res;
@@ -3416,9 +3416,9 @@ ProbeValidateCoreNamedProbeEp(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterNamedProbeEp = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -3489,11 +3489,11 @@ ProbeValidateCoreNamedBothEp(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartNamedBothEp = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
   uint8_t res;
@@ -3513,9 +3513,9 @@ ProbeValidateCoreNamedBothEp(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterNamedBothEp = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else

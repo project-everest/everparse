@@ -173,34 +173,33 @@ CBOR_Spec_Raw_EverParse_argument_as_uint64(
 }
 
 typedef struct
-Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument_s
+prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument_s
 {
   CBOR_Spec_Raw_EverParse_initial_byte_t _1;
   CBOR_Spec_Raw_EverParse_long_argument _2;
 }
-Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument;
+prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument;
 
 static uint8_t
 CBOR_Spec_Raw_EverParse_get_header_major_type(
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-  h
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument h
 )
 {
   return h._1.major_type;
 }
 
-static Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+static prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
 CBOR_Spec_Raw_EverParse_raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw_uint64 x)
 {
   return
     x.size == 0U ? (
-                   (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+                   (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
                      ._1 = { .major_type = t, .additional_info = (uint8_t)x.value },
                      ._2 = { .tag = CBOR_Spec_Raw_EverParse_LongArgumentOther }
                    }
                  )
                  : x.size == 1U ? (
-                                  (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+                                  (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
                                     ._1 = {
                                       .major_type = t,
                                       .additional_info = CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS
@@ -212,7 +211,7 @@ CBOR_Spec_Raw_EverParse_raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw
                                   }
                                 )
                                 : x.size == 2U ? (
-                                                 (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+                                                 (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
                                                    ._1 = {
                                                      .major_type = t,
                                                      .additional_info = CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS
@@ -224,7 +223,7 @@ CBOR_Spec_Raw_EverParse_raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw
                                                  }
                                                )
                                                : x.size == 3U ? (
-                                                                (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+                                                                (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
                                                                   ._1 = {
                                                                     .major_type = t,
                                                                     .additional_info = CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS
@@ -238,7 +237,7 @@ CBOR_Spec_Raw_EverParse_raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw
                                                                 }
                                                               )
                                                               : (
-                                                                (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+                                                                (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
                                                                   ._1 = {
                                                                     .major_type = t,
                                                                     .additional_info = CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS
@@ -253,12 +252,12 @@ CBOR_Spec_Raw_EverParse_raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw
                                                               );
 }
 
-static Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+static prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
 CBOR_Spec_Raw_EverParse_simple_value_as_argument(uint8_t x)
 {
   return
     x <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO ? (
-                                            (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+                                            (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
                                               ._1 = {
                                                 .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE,
                                                 .additional_info = x
@@ -269,7 +268,7 @@ CBOR_Spec_Raw_EverParse_simple_value_as_argument(uint8_t x)
                                             }
                                           )
                                           : (
-                                            (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+                                            (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
                                               ._1 = {
                                                 .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE,
                                                 .additional_info = CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS
@@ -321,21 +320,21 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
   size_t *poffset
 )
 {
-  size_t offset = poffset[0U];
-  size_t offset1 = poffset[0U];
-  size_t offset2 = poffset[0U];
+  size_t offset = *poffset;
+  size_t offset1 = *poffset;
+  size_t offset2 = *poffset;
   bool ite0;
   if (Pulse_Lib_Slice_len__uint8_t(input) - offset2 < (size_t)1U)
     ite0 = false;
   else
   {
-    poffset[0U] = offset2 + (size_t)1U;
+    *poffset = offset2 + (size_t)1U;
     ite0 = true;
   }
   bool ite1;
   if (ite0)
   {
-    size_t off = poffset[0U];
+    size_t off = *poffset;
     CBOR_Spec_Raw_EverParse_initial_byte_t
     x =
       CBOR_Pulse_Raw_EverParse_Format_read_initial_byte_t(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input,
@@ -350,7 +349,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
     ite1 = false;
   if (ite1)
   {
-    size_t off = poffset[0U];
+    size_t off = *poffset;
     CBOR_Spec_Raw_EverParse_initial_byte_t
     x =
       CBOR_Pulse_Raw_EverParse_Format_read_initial_byte_t(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input,
@@ -359,19 +358,19 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
     if (x.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
       if (x.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
       {
-        size_t offset3 = poffset[0U];
-        size_t offset4 = poffset[0U];
+        size_t offset3 = *poffset;
+        size_t offset4 = *poffset;
         bool ite;
         if (Pulse_Lib_Slice_len__uint8_t(input) - offset4 < (size_t)1U)
           ite = false;
         else
         {
-          poffset[0U] = offset4 + (size_t)1U;
+          *poffset = offset4 + (size_t)1U;
           ite = true;
         }
         if (ite)
         {
-          size_t off1 = poffset[0U];
+          size_t off1 = *poffset;
           return
             MIN_SIMPLE_VALUE_LONG_ARGUMENT <=
               Pulse_Lib_Slice_op_Array_Access__uint8_t(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input,
@@ -384,45 +383,45 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
       }
       else
       {
-        size_t offset3 = poffset[0U];
+        size_t offset3 = *poffset;
         if (Pulse_Lib_Slice_len__uint8_t(input) - offset3 < (size_t)1U)
           return false;
         else
         {
-          poffset[0U] = offset3 + (size_t)1U;
+          *poffset = offset3 + (size_t)1U;
           return true;
         }
       }
     else if (x.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
     {
-      size_t offset3 = poffset[0U];
+      size_t offset3 = *poffset;
       if (Pulse_Lib_Slice_len__uint8_t(input) - offset3 < (size_t)2U)
         return false;
       else
       {
-        poffset[0U] = offset3 + (size_t)2U;
+        *poffset = offset3 + (size_t)2U;
         return true;
       }
     }
     else if (x.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
     {
-      size_t offset3 = poffset[0U];
+      size_t offset3 = *poffset;
       if (Pulse_Lib_Slice_len__uint8_t(input) - offset3 < (size_t)4U)
         return false;
       else
       {
-        poffset[0U] = offset3 + (size_t)4U;
+        *poffset = offset3 + (size_t)4U;
         return true;
       }
     }
     else if (x.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
     {
-      size_t offset3 = poffset[0U];
+      size_t offset3 = *poffset;
       if (Pulse_Lib_Slice_len__uint8_t(input) - offset3 < (size_t)8U)
         return false;
       else
       {
-        poffset[0U] = offset3 + (size_t)8U;
+        *poffset = offset3 + (size_t)8U;
         return true;
       }
     }
@@ -433,7 +432,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
     return false;
 }
 
-static Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+static prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
 CBOR_Pulse_Raw_EverParse_Format_read_header(CBOR_Pulse_Raw_Slice_byte_slice input)
 {
   FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -546,7 +545,7 @@ CBOR_Pulse_Raw_EverParse_Format_read_header(CBOR_Pulse_Raw_Slice_byte_slice inpu
       ((CBOR_Spec_Raw_EverParse_long_argument){ .tag = CBOR_Spec_Raw_EverParse_LongArgumentOther });
   return
     (
-      (Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
+      (prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument){
         ._1 = x1,
         ._2 = ite
       }
@@ -593,7 +592,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(
   size_t *prem
 )
 {
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
   h =
     CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(a,
         CBOR_Pulse_Raw_EverParse_Format_jump_header(a, (size_t)0U))._1);
@@ -607,7 +606,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(
         arg64 <= (uint64_t)bound
     )
     {
-      prem[0U] = (size_t)arg64;
+      *prem = (size_t)arg64;
       return false;
     }
     else
@@ -627,7 +626,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(
         return true;
       else
       {
-        prem[0U] = arg + arg;
+        *prem = arg + arg;
         return false;
       }
     }
@@ -636,12 +635,12 @@ CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(
   }
   else if (typ == CBOR_MAJOR_TYPE_TAGGED)
   {
-    prem[0U] = (size_t)1U;
+    *prem = (size_t)1U;
     return false;
   }
   else
   {
-    prem[0U] = (size_t)0U;
+    *prem = (size_t)0U;
     return false;
   }
 }
@@ -656,18 +655,18 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item(
   bool pres = true;
   while (pres && pn > (size_t)0U)
   {
-    size_t off = poffset[0U];
+    size_t off = *poffset;
     size_t n = pn;
     if (n > Pulse_Lib_Slice_len__uint8_t(input) - off)
       pres = false;
     else
     {
-      size_t offset = poffset[0U];
+      size_t offset = *poffset;
       bool ite0;
       if (CBOR_Pulse_Raw_EverParse_Format_validate_header(input, poffset))
       {
-        size_t off1 = poffset[0U];
-        Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        size_t off1 = *poffset;
+        prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
         x =
           CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input,
                 offset)._2,
@@ -676,8 +675,8 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item(
         if
         (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
         {
-          size_t offset1 = poffset[0U];
-          size_t offset2 = poffset[0U];
+          size_t offset1 = *poffset;
+          size_t offset2 = *poffset;
           size_t remaining = Pulse_Lib_Slice_len__uint8_t(input) - offset2;
           bool ite1;
           if
@@ -694,14 +693,14 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item(
           bool ite;
           if (ite1)
           {
-            poffset[0U] = offset2 + (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(x._1, x._2);
+            *poffset = offset2 + (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(x._1, x._2);
             ite = true;
           }
           else
             ite = false;
           if (ite)
           {
-            size_t off2 = poffset[0U];
+            size_t off2 = *poffset;
             CBOR_Pulse_Raw_Slice_byte_slice
             x1 =
               Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, offset1)._2,
@@ -723,7 +722,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item(
         pres = false;
       else
       {
-        size_t offset1 = poffset[0U];
+        size_t offset1 = *poffset;
         CBOR_Pulse_Raw_Slice_byte_slice
         input1 =
           Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, off)._2,
@@ -747,8 +746,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item(
 
 static size_t
 CBOR_Pulse_Raw_EverParse_Format_impl_remaining_data_items_header(
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-  h
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument h
 )
 {
   uint8_t typ = CBOR_Spec_Raw_EverParse_get_header_major_type(h);
@@ -785,7 +783,7 @@ CBOR_Pulse_Raw_EverParse_Format_jump_raw_data_item(
   {
     size_t off = poffset;
     size_t off1 = CBOR_Pulse_Raw_EverParse_Format_jump_header(input, off);
-    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     x =
       CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input,
             off)._2,
@@ -812,7 +810,7 @@ CBOR_Pulse_Raw_EverParse_Format_jump_raw_data_item(
 static cbor_raw
 CBOR_Pulse_Raw_EverParse_Serialized_Base_cbor_read(CBOR_Pulse_Raw_Slice_byte_slice input)
 {
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
   ph =
     {
       ._1 = { .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE, .additional_info = 0U },
@@ -825,7 +823,7 @@ CBOR_Pulse_Raw_EverParse_Serialized_Base_cbor_read(CBOR_Pulse_Raw_Slice_byte_sli
   CBOR_Pulse_Raw_Slice_byte_slice outc = scrut._2;
   ph = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut._1);
   CBOR_Pulse_Raw_Slice_byte_slice pc = outc;
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
   h = ph;
   uint8_t typ = h._1.major_type;
   if (typ == CBOR_MAJOR_TYPE_UINT64 || typ == CBOR_MAJOR_TYPE_NEG_INT64)
@@ -1168,7 +1166,7 @@ CBOR_Pulse_Raw_Format_Serialized_cbor_serialized_array_iterator_next(
       CBOR_Pulse_Raw_EverParse_Format_jump_raw_data_item(i.s, (size_t)0U));
   CBOR_Pulse_Raw_Slice_byte_slice s2 = scrut._2;
   cbor_raw res = CBOR_Pulse_Raw_EverParse_Serialized_Base_cbor_read(scrut._1);
-  pi[0U] =
+  *pi =
     (
       (cbor_nondet_array_iterator_t){
         .tag = CBOR_Raw_Iterator_Serialized,
@@ -1255,7 +1253,7 @@ CBOR_Pulse_Raw_Format_Serialized_cbor_serialized_map_iterator_next(
       .cbor_map_entry_key = res1,
       .cbor_map_entry_value = CBOR_Pulse_Raw_EverParse_Serialized_Base_cbor_read(s21)
     };
-  pi[0U] =
+  *pi =
     (
       (cbor_nondet_map_iterator_t){
         .tag = CBOR_Raw_Iterator_Serialized,
@@ -1277,7 +1275,7 @@ CBOR_Pulse_Raw_Format_Serialized_cbor_serialized_array_iterator_next_with_depth(
       CBOR_Pulse_Raw_EverParse_Format_jump_raw_data_item(i.s, (size_t)0U));
   CBOR_Pulse_Raw_Slice_byte_slice s2 = scrut._2;
   cbor_raw res = CBOR_Pulse_Raw_EverParse_Serialized_Base_cbor_read(scrut._1);
-  pi[0U] =
+  *pi =
     (
       (cbor_nondet_array_iterator_t){
         .tag = CBOR_Raw_Iterator_Serialized,
@@ -1312,7 +1310,7 @@ CBOR_Pulse_Raw_Format_Serialized_cbor_serialized_map_iterator_next_with_depth(
       .cbor_map_entry_key = res1,
       .cbor_map_entry_value = CBOR_Pulse_Raw_EverParse_Serialized_Base_cbor_read(s21)
     };
-  pi[0U] =
+  *pi =
     (
       (cbor_nondet_map_iterator_t){
         .tag = CBOR_Raw_Iterator_Serialized,
@@ -1328,7 +1326,7 @@ static cbor_raw CBOR_Pulse_Raw_Read_cbor_match_tagged_get_payload(cbor_raw c)
     return
       CBOR_Pulse_Raw_Format_Serialized_cbor_match_serialized_tagged_get_payload(c.case_CBOR_Case_Serialized_Tagged);
   else if (c.tag == CBOR_Case_Tagged)
-    return c.case_CBOR_Case_Tagged.cbor_tagged_ptr[0U];
+    return *c.case_CBOR_Case_Tagged.cbor_tagged_ptr;
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -1448,12 +1446,12 @@ Pulse_Lib_Slice_split__CBOR_Pulse_Raw_Type_cbor_raw(
 
 static cbor_raw CBOR_Pulse_Raw_Read_cbor_array_iterator_next(cbor_nondet_array_iterator_t *pi)
 {
-  cbor_nondet_array_iterator_t scrut = pi[0U];
+  cbor_nondet_array_iterator_t scrut = *pi;
   if (scrut.tag == CBOR_Raw_Iterator_Slice)
   {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i = scrut.case_CBOR_Raw_Iterator_Slice;
     cbor_raw res = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)0U);
-    pi[0U] =
+    *pi =
       (
         (cbor_nondet_array_iterator_t){
           .tag = CBOR_Raw_Iterator_Slice,
@@ -1626,14 +1624,14 @@ Pulse_Lib_Slice_split__CBOR_Pulse_Raw_Type_cbor_map_entry(
 static cbor_map_entry
 CBOR_Pulse_Raw_Read_cbor_map_iterator_next(cbor_nondet_map_iterator_t *pi)
 {
-  cbor_nondet_map_iterator_t scrut = pi[0U];
+  cbor_nondet_map_iterator_t scrut = *pi;
   if (scrut.tag == CBOR_Raw_Iterator_Slice)
   {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
     i = scrut.case_CBOR_Raw_Iterator_Slice;
     cbor_map_entry
     res = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)0U);
-    pi[0U] =
+    *pi =
       (
         (cbor_nondet_map_iterator_t){
           .tag = CBOR_Raw_Iterator_Slice,
@@ -1665,7 +1663,7 @@ static cbor_raw CBOR_Pulse_Raw_Read_cbor_match_tagged_get_payload_with_depth(cbo
     return
       CBOR_Pulse_Raw_Format_Serialized_cbor_match_serialized_tagged_get_payload(c.case_CBOR_Case_Serialized_Tagged);
   else if (c.tag == CBOR_Case_Tagged)
-    return c.case_CBOR_Case_Tagged.cbor_tagged_ptr[0U];
+    return *c.case_CBOR_Case_Tagged.cbor_tagged_ptr;
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -1730,12 +1728,12 @@ CBOR_Pulse_Raw_Read_cbor_array_iterator_is_empty_with_depth(cbor_nondet_array_it
 static cbor_raw
 CBOR_Pulse_Raw_Read_cbor_array_iterator_next_with_depth(cbor_nondet_array_iterator_t *pi)
 {
-  cbor_nondet_array_iterator_t scrut = pi[0U];
+  cbor_nondet_array_iterator_t scrut = *pi;
   if (scrut.tag == CBOR_Raw_Iterator_Slice)
   {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i = scrut.case_CBOR_Raw_Iterator_Slice;
     cbor_raw res = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)0U);
-    pi[0U] =
+    *pi =
       (
         (cbor_nondet_array_iterator_t){
           .tag = CBOR_Raw_Iterator_Slice,
@@ -1815,14 +1813,14 @@ CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(cbor_nondet_map_iterat
 static cbor_map_entry
 CBOR_Pulse_Raw_Read_cbor_map_iterator_next_with_depth(cbor_nondet_map_iterator_t *pi)
 {
-  cbor_nondet_map_iterator_t scrut = pi[0U];
+  cbor_nondet_map_iterator_t scrut = *pi;
   if (scrut.tag == CBOR_Raw_Iterator_Slice)
   {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
     i = scrut.case_CBOR_Raw_Iterator_Slice;
     cbor_map_entry
     res = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)0U);
-    pi[0U] =
+    *pi =
       (
         (cbor_nondet_map_iterator_t){
           .tag = CBOR_Raw_Iterator_Slice,
@@ -2050,7 +2048,7 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_match_map_get_length_with_depth(cbor_raw c)
   }
 }
 
-static Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+static prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
 CBOR_Pulse_Raw_Format_Serialize_cbor_raw_get_header_d(cbor_raw xl)
 {
   if (xl.tag == CBOR_Case_Int)
@@ -2141,16 +2139,15 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_raw_get_header_d(cbor_raw xl)
   }
 }
 
-static Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+static prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
 CBOR_Pulse_Raw_Format_Serialize_cbor_raw_with_perm_get_header_d(cbor_raw xl)
 {
   return CBOR_Pulse_Raw_Format_Serialize_cbor_raw_get_header_d(xl);
 }
 
 static CBOR_Spec_Raw_EverParse_initial_byte_t
-Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-  t
+fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument t
 )
 {
   return t._1;
@@ -2158,65 +2155,64 @@ Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_
 
 static bool
 CBOR_Pulse_Raw_Format_Serialize_size_header(
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-  x,
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument x,
   size_t *out
 )
 {
   CBOR_Spec_Raw_EverParse_initial_byte_t
   xh1 =
-    Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
-  size_t capacity = out[0U];
+    fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
+  size_t capacity = *out;
   bool ite;
   if (capacity < (size_t)1U)
     ite = false;
   else
   {
-    out[0U] = capacity - (size_t)1U;
+    *out = capacity - (size_t)1U;
     ite = true;
   }
   if (ite)
     if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
     {
-      size_t capacity1 = out[0U];
+      size_t capacity1 = *out;
       if (capacity1 < (size_t)1U)
         return false;
       else
       {
-        out[0U] = capacity1 - (size_t)1U;
+        *out = capacity1 - (size_t)1U;
         return true;
       }
     }
     else if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
     {
-      size_t capacity1 = out[0U];
+      size_t capacity1 = *out;
       if (capacity1 < (size_t)2U)
         return false;
       else
       {
-        out[0U] = capacity1 - (size_t)2U;
+        *out = capacity1 - (size_t)2U;
         return true;
       }
     }
     else if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
     {
-      size_t capacity1 = out[0U];
+      size_t capacity1 = *out;
       if (capacity1 < (size_t)4U)
         return false;
       else
       {
-        out[0U] = capacity1 - (size_t)4U;
+        *out = capacity1 - (size_t)4U;
         return true;
       }
     }
     else if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
     {
-      size_t capacity1 = out[0U];
+      size_t capacity1 = *out;
       if (capacity1 < (size_t)8U)
         return false;
       else
       {
-        out[0U] = capacity1 - (size_t)8U;
+        *out = capacity1 - (size_t)8U;
         return true;
       }
     }
@@ -2246,7 +2242,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
 {
   if (CBOR_Pulse_Raw_Format_Serialize_compute_deep(x_))
   {
-    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     xh1 = CBOR_Pulse_Raw_Format_Serialize_cbor_raw_with_perm_get_header_d(x_);
     if (CBOR_Pulse_Raw_Format_Serialize_size_header(xh1, out))
     {
@@ -2262,12 +2258,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
               "unreachable (pattern matches are exhaustive in F*)");
         size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-        size_t cur = out[0U];
+        size_t cur = *out;
         if (cur < length)
           return false;
         else
         {
-          out[0U] = cur - length;
+          *out = cur - length;
           return true;
         }
       }
@@ -2322,12 +2318,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
               KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
                 "unreachable (pattern matches are exhaustive in F*)");
           size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-          size_t cur = out[0U];
+          size_t cur = *out;
           if (cur < length)
             return false;
           else
           {
-            out[0U] = cur - length;
+            *out = cur - length;
             return true;
           }
         }
@@ -2384,12 +2380,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
               KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
                 "unreachable (pattern matches are exhaustive in F*)");
           size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-          size_t cur = out[0U];
+          size_t cur = *out;
           if (cur < length)
             return false;
           else
           {
-            out[0U] = cur - length;
+            *out = cur - length;
             return true;
           }
         }
@@ -2398,7 +2394,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
         {
           cbor_raw ite;
           if (x_.tag == CBOR_Case_Tagged)
-            ite = x_.case_CBOR_Case_Tagged.cbor_tagged_ptr[0U];
+            ite = *x_.case_CBOR_Case_Tagged.cbor_tagged_ptr;
           else
             ite = KRML_EABORT(cbor_raw, "unreachable (pattern matches are exhaustive in F*)");
           return CBOR_Pulse_Raw_Format_Serialize_siz__d(ite, out);
@@ -2413,12 +2409,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
               KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
                 "unreachable (pattern matches are exhaustive in F*)");
           size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-          size_t cur = out[0U];
+          size_t cur = *out;
           if (cur < length)
             return false;
           else
           {
-            out[0U] = cur - length;
+            *out = cur - length;
             return true;
           }
         }
@@ -2430,7 +2426,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
   }
   else
   {
-    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     xh1 = CBOR_Pulse_Raw_Format_Serialize_cbor_raw_with_perm_get_header_d(x_);
     if (CBOR_Pulse_Raw_Format_Serialize_size_header(xh1, out))
     {
@@ -2446,12 +2442,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
               "unreachable (pattern matches are exhaustive in F*)");
         size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-        size_t cur = out[0U];
+        size_t cur = *out;
         if (cur < length)
           return false;
         else
         {
-          out[0U] = cur - length;
+          *out = cur - length;
           return true;
         }
       }
@@ -2468,12 +2464,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
               KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
                 "unreachable (pattern matches are exhaustive in F*)");
           size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-          size_t cur = out[0U];
+          size_t cur = *out;
           if (cur < length)
             return false;
           else
           {
-            out[0U] = cur - length;
+            *out = cur - length;
             return true;
           }
         }
@@ -2490,12 +2486,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
               KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
                 "unreachable (pattern matches are exhaustive in F*)");
           size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-          size_t cur = out[0U];
+          size_t cur = *out;
           if (cur < length)
             return false;
           else
           {
-            out[0U] = cur - length;
+            *out = cur - length;
             return true;
           }
         }
@@ -2521,12 +2517,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
               KRML_EABORT(CBOR_Pulse_Raw_Slice_byte_slice,
                 "unreachable (pattern matches are exhaustive in F*)");
           size_t length = Pulse_Lib_Slice_len__uint8_t(ite);
-          size_t cur = out[0U];
+          size_t cur = *out;
           if (cur < length)
             return false;
           else
           {
-            out[0U] = cur - length;
+            *out = cur - length;
             return true;
           }
         }
@@ -2558,9 +2554,8 @@ Pulse_Lib_Slice_op_Array_Assignment__uint8_t(
 }
 
 static CBOR_Spec_Raw_EverParse_long_argument
-Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-  t
+fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument t
 )
 {
   return t._2;
@@ -2568,15 +2563,14 @@ Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_
 
 static size_t
 CBOR_Pulse_Raw_Format_Serialize_write_header(
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-  x,
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument x,
   CBOR_Pulse_Raw_Slice_byte_slice out,
   size_t offset
 )
 {
   CBOR_Spec_Raw_EverParse_initial_byte_t
   xh1 =
-    Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
+    fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
   size_t pos_ = offset + (size_t)1U;
   Pulse_Lib_Slice_op_Array_Assignment__uint8_t(out,
     pos_ - (size_t)1U,
@@ -2589,7 +2583,7 @@ CBOR_Pulse_Raw_Format_Serialize_write_header(
       xh1.major_type));
   CBOR_Spec_Raw_EverParse_long_argument
   x2_ =
-    Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
+    fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
   if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
     if (xh1.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
     {
@@ -2726,7 +2720,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
 {
   if (CBOR_Pulse_Raw_Format_Serialize_compute_deep(x_))
   {
-    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     xh1 = CBOR_Pulse_Raw_Format_Serialize_cbor_raw_with_perm_get_header_d(x_);
     size_t res1 = CBOR_Pulse_Raw_Format_Serialize_write_header(xh1, out, offset);
     CBOR_Spec_Raw_EverParse_initial_byte_t b = xh1._1;
@@ -2868,7 +2862,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
       {
         cbor_raw ite;
         if (x_.tag == CBOR_Case_Tagged)
-          ite = x_.case_CBOR_Case_Tagged.cbor_tagged_ptr[0U];
+          ite = *x_.case_CBOR_Case_Tagged.cbor_tagged_ptr;
         else
           ite = KRML_EABORT(cbor_raw, "unreachable (pattern matches are exhaustive in F*)");
         return CBOR_Pulse_Raw_Format_Serialize_ser__d(ite, out, res1);
@@ -2894,7 +2888,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
   }
   else
   {
-    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     xh1 = CBOR_Pulse_Raw_Format_Serialize_cbor_raw_with_perm_get_header_d(x_);
     size_t res1 = CBOR_Pulse_Raw_Format_Serialize_write_header(xh1, out, offset);
     CBOR_Spec_Raw_EverParse_initial_byte_t b = xh1._1;
@@ -3067,14 +3061,14 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
   bool pres = true;
   while (pres && pn > (size_t)0U)
   {
-    CBOR_Pulse_Raw_Slice_byte_slice l = pl[0U];
+    CBOR_Pulse_Raw_Slice_byte_slice l = *pl;
     size_t n_ = pn - (size_t)1U;
     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
     scrut =
       Pulse_Lib_Slice_split__uint8_t(l,
         CBOR_Pulse_Raw_EverParse_Format_jump_header(l, (size_t)0U));
     CBOR_Pulse_Raw_Slice_byte_slice tl_ = scrut._2;
-    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     h = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut._1);
     CBOR_Spec_Raw_EverParse_initial_byte_t b = h._1;
     size_t ite;
@@ -3085,10 +3079,10 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
     CBOR_Pulse_Raw_Slice_byte_slice tl = Pulse_Lib_Slice_split__uint8_t(tl_, ite)._2;
     uint8_t m = CBOR_Spec_Raw_EverParse_get_header_major_type(h);
     if (m == CBOR_MAJOR_TYPE_TAGGED)
-      pl[0U] = tl;
+      *pl = tl;
     else if (m == CBOR_MAJOR_TYPE_ARRAY)
     {
-      pl[0U] = tl;
+      *pl = tl;
       pn = CBOR_Pulse_Raw_EverParse_Format_impl_remaining_data_items_header(h) + n_;
     }
     else if (m == CBOR_MAJOR_TYPE_MAP)
@@ -3096,7 +3090,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
         pres = false;
       else
       {
-        pl[0U] = tl;
+        *pl = tl;
         if
         (
           CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(bound - (size_t)1U,
@@ -3109,7 +3103,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
       }
     else
     {
-      pl[0U] = tl;
+      *pl = tl;
       pn = n_;
     }
   }
@@ -3154,11 +3148,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
   CBOR_Pulse_Raw_Slice_byte_slice l2
 )
 {
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
   h1 =
     CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(l1,
         CBOR_Pulse_Raw_EverParse_Format_jump_header(l1, (size_t)0U))._1);
-  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
   h2 =
     CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(l2,
         CBOR_Pulse_Raw_EverParse_Format_jump_header(l2, (size_t)0U))._1);
@@ -3192,7 +3186,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
       map1 =
         Pulse_Lib_Slice_split__uint8_t(l1,
           CBOR_Pulse_Raw_EverParse_Format_jump_raw_data_item(l1, (size_t)0U))._1;
-      Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+      prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
       ph = h1;
       FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
       scrut0 =
@@ -3203,8 +3197,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
       CBOR_Pulse_Raw_Slice_byte_slice c1 = outc0;
       size_t
       nv1 =
-        (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1),
-          Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1));
+        (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1),
+          fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1));
       CBOR_Pulse_Raw_Slice_byte_slice
       map2 =
         Pulse_Lib_Slice_split__uint8_t(l2,
@@ -3218,8 +3212,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
       CBOR_Pulse_Raw_Slice_byte_slice c2 = outc;
       size_t
       nv2 =
-        (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2),
-          Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2));
+        (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2),
+          fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2));
       CBOR_Pulse_Raw_Slice_byte_slice pl = c1;
       size_t pn = nv1;
       FStar_Pervasives_Native_option__bool
@@ -3302,7 +3296,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                   Pulse_Lib_Slice_split__uint8_t(l1_,
                     CBOR_Pulse_Raw_EverParse_Format_jump_header(l1_, (size_t)0U));
                 CBOR_Pulse_Raw_Slice_byte_slice tl1 = scrut0._2;
-                Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                 h11 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut0._1);
                 uint8_t mt11 = CBOR_Spec_Raw_EverParse_get_header_major_type(h11);
                 FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3310,7 +3304,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                   Pulse_Lib_Slice_split__uint8_t(l2_,
                     CBOR_Pulse_Raw_EverParse_Format_jump_header(l2_, (size_t)0U));
                 CBOR_Pulse_Raw_Slice_byte_slice tl2 = scrut1._2;
-                Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                 h21 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut1._1);
                 if (mt11 != CBOR_Spec_Raw_EverParse_get_header_major_type(h21))
                   pres2 =
@@ -3360,11 +3354,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                   {
                     CBOR_Spec_Raw_EverParse_long_argument
                     scrut0 =
-                      Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
+                      fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
                     uint8_t sv1;
                     if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                       sv1 =
-                        Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
+                        fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
                     else if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                       sv1 = scrut0.case_LongArgumentSimpleValue;
                     else
@@ -3373,11 +3367,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                           "unreachable (pattern matches are exhaustive in F*)");
                     CBOR_Spec_Raw_EverParse_long_argument
                     scrut =
-                      Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
+                      fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
                     uint8_t ite;
                     if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                       ite =
-                        Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
+                        fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
                     else if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                       ite = scrut.case_LongArgumentSimpleValue;
                     else
@@ -3390,13 +3384,13 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                   {
                     uint64_t
                     len =
-                      CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
-                        Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
+                      CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
+                        fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
                     if
                     (
                       len !=
-                        CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
-                          Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
+                        CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
+                          fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
                     )
                       ite2 = false;
                     else if
@@ -3486,7 +3480,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                       Pulse_Lib_Slice_split__uint8_t(l1_,
                         CBOR_Pulse_Raw_EverParse_Format_jump_header(l1_, (size_t)0U));
                     CBOR_Pulse_Raw_Slice_byte_slice tl1 = scrut0._2;
-                    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                     h11 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut0._1);
                     uint8_t mt11 = CBOR_Spec_Raw_EverParse_get_header_major_type(h11);
                     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3494,7 +3488,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                       Pulse_Lib_Slice_split__uint8_t(l2_,
                         CBOR_Pulse_Raw_EverParse_Format_jump_header(l2_, (size_t)0U));
                     CBOR_Pulse_Raw_Slice_byte_slice tl2 = scrut1._2;
-                    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                     h21 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut1._1);
                     if (mt11 != CBOR_Spec_Raw_EverParse_get_header_major_type(h21))
                       pres3 =
@@ -3544,11 +3538,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                       {
                         CBOR_Spec_Raw_EverParse_long_argument
                         scrut0 =
-                          Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
+                          fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
                         uint8_t sv1;
                         if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                           sv1 =
-                            Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
+                            fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
                         else if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                           sv1 = scrut0.case_LongArgumentSimpleValue;
                         else
@@ -3557,11 +3551,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                               "unreachable (pattern matches are exhaustive in F*)");
                         CBOR_Spec_Raw_EverParse_long_argument
                         scrut =
-                          Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
+                          fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
                         uint8_t ite;
                         if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                           ite =
-                            Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
+                            fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
                         else if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                           ite = scrut.case_LongArgumentSimpleValue;
                         else
@@ -3574,13 +3568,13 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                       {
                         uint64_t
                         len =
-                          CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
-                            Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
+                          CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
+                            fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
                         if
                         (
                           len !=
-                            CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
-                              Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
+                            CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
+                              fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
                         )
                           ite2 = false;
                         else if
@@ -3718,7 +3712,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                     Pulse_Lib_Slice_split__uint8_t(l1_,
                       CBOR_Pulse_Raw_EverParse_Format_jump_header(l1_, (size_t)0U));
                   CBOR_Pulse_Raw_Slice_byte_slice tl1 = scrut0._2;
-                  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                   h11 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut0._1);
                   uint8_t mt11 = CBOR_Spec_Raw_EverParse_get_header_major_type(h11);
                   FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3726,7 +3720,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                     Pulse_Lib_Slice_split__uint8_t(l2_,
                       CBOR_Pulse_Raw_EverParse_Format_jump_header(l2_, (size_t)0U));
                   CBOR_Pulse_Raw_Slice_byte_slice tl2 = scrut1._2;
-                  Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                  prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                   h21 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut1._1);
                   if (mt11 != CBOR_Spec_Raw_EverParse_get_header_major_type(h21))
                     pres3 =
@@ -3776,11 +3770,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                     {
                       CBOR_Spec_Raw_EverParse_long_argument
                       scrut0 =
-                        Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
+                        fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
                       uint8_t sv1;
                       if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                         sv1 =
-                          Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
+                          fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
                       else if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                         sv1 = scrut0.case_LongArgumentSimpleValue;
                       else
@@ -3789,11 +3783,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                             "unreachable (pattern matches are exhaustive in F*)");
                       CBOR_Spec_Raw_EverParse_long_argument
                       scrut =
-                        Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
+                        fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
                       uint8_t ite;
                       if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                         ite =
-                          Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
+                          fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
                       else if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                         ite = scrut.case_LongArgumentSimpleValue;
                       else
@@ -3806,13 +3800,13 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                     {
                       uint64_t
                       len =
-                        CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
-                          Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
+                        CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
+                          fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
                       if
                       (
                         len !=
-                          CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
-                            Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
+                          CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
+                            fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
                       )
                         ite2 = false;
                       else if
@@ -3902,7 +3896,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                         Pulse_Lib_Slice_split__uint8_t(l1_,
                           CBOR_Pulse_Raw_EverParse_Format_jump_header(l1_, (size_t)0U));
                       CBOR_Pulse_Raw_Slice_byte_slice tl1 = scrut0._2;
-                      Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                      prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                       h11 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut0._1);
                       uint8_t mt11 = CBOR_Spec_Raw_EverParse_get_header_major_type(h11);
                       FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3910,7 +3904,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                         Pulse_Lib_Slice_split__uint8_t(l2_,
                           CBOR_Pulse_Raw_EverParse_Format_jump_header(l2_, (size_t)0U));
                       CBOR_Pulse_Raw_Slice_byte_slice tl2 = scrut1._2;
-                      Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                      prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
                       h21 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut1._1);
                       if (mt11 != CBOR_Spec_Raw_EverParse_get_header_major_type(h21))
                         pres4 =
@@ -3960,11 +3954,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                         {
                           CBOR_Spec_Raw_EverParse_long_argument
                           scrut0 =
-                            Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
+                            fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11);
                           uint8_t sv1;
                           if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                             sv1 =
-                              Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
+                              fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11).additional_info;
                           else if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                             sv1 = scrut0.case_LongArgumentSimpleValue;
                           else
@@ -3973,11 +3967,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                                 "unreachable (pattern matches are exhaustive in F*)");
                           CBOR_Spec_Raw_EverParse_long_argument
                           scrut =
-                            Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
+                            fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21);
                           uint8_t ite;
                           if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                             ite =
-                              Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
+                              fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21).additional_info;
                           else if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                             ite = scrut.case_LongArgumentSimpleValue;
                           else
@@ -3990,13 +3984,13 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                         {
                           uint64_t
                           len =
-                            CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
-                              Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
+                            CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11),
+                              fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h11));
                           if
                           (
                             len !=
-                              CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
-                                Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
+                              CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21),
+                                fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h21))
                           )
                             ite2 = false;
                           else if
@@ -4115,7 +4109,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(
             Pulse_Lib_Slice_split__uint8_t(l1_,
               CBOR_Pulse_Raw_EverParse_Format_jump_header(l1_, (size_t)0U));
           CBOR_Pulse_Raw_Slice_byte_slice tl1 = scrut0._2;
-          Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+          prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
           h1 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut0._1);
           uint8_t mt1 = CBOR_Spec_Raw_EverParse_get_header_major_type(h1);
           FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -4123,7 +4117,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(
             Pulse_Lib_Slice_split__uint8_t(l2_,
               CBOR_Pulse_Raw_EverParse_Format_jump_header(l2_, (size_t)0U));
           CBOR_Pulse_Raw_Slice_byte_slice tl2 = scrut1._2;
-          Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+          prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
           h2 = CBOR_Pulse_Raw_EverParse_Format_read_header(scrut1._1);
           if (mt1 != CBOR_Spec_Raw_EverParse_get_header_major_type(h2))
             pres =
@@ -4173,22 +4167,22 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(
             {
               CBOR_Spec_Raw_EverParse_long_argument
               scrut0 =
-                Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1);
+                fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1);
               uint8_t sv1;
               if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                 sv1 =
-                  Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1).additional_info;
+                  fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1).additional_info;
               else if (scrut0.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                 sv1 = scrut0.case_LongArgumentSimpleValue;
               else
                 sv1 = KRML_EABORT(uint8_t, "unreachable (pattern matches are exhaustive in F*)");
               CBOR_Spec_Raw_EverParse_long_argument
               scrut =
-                Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2);
+                fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2);
               uint8_t ite;
               if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
                 ite =
-                  Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2).additional_info;
+                  fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2).additional_info;
               else if (scrut.tag == CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue)
                 ite = scrut.case_LongArgumentSimpleValue;
               else
@@ -4199,13 +4193,13 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(
             {
               uint64_t
               len =
-                CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1),
-                  Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1));
+                CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1),
+                  fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h1));
               if
               (
                 len !=
-                  CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2),
-                    Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2))
+                  CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2),
+                    fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h2))
               )
                 ite2 = false;
               else if (mt11 == CBOR_MAJOR_TYPE_BYTE_STRING || mt11 == CBOR_MAJOR_TYPE_TEXT_STRING)
@@ -4270,7 +4264,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
   {
     size_t n = pn;
     CBOR_Pulse_Raw_Slice_byte_slice pi = ppi;
-    Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+    prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     h =
       CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(pi,
           CBOR_Pulse_Raw_EverParse_Format_jump_header(pi, (size_t)0U))._1);
@@ -4281,7 +4275,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
       hd =
         Pulse_Lib_Slice_split__uint8_t(pi,
           CBOR_Pulse_Raw_EverParse_Format_jump_raw_data_item(pi, (size_t)0U))._1;
-      Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+      prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
       ph = h;
       FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
       scrut =
@@ -4292,8 +4286,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
       CBOR_Pulse_Raw_Slice_byte_slice pl = outc;
       size_t
       pn1 =
-        (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(Custard_FStar_Pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h),
-          Custard_FStar_Pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h));
+        (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(fstar_pervasives_dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h),
+          fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h));
       FStar_Pervasives_Native_option__bool
       pres1 = { .tag = FStar_Pervasives_Native_Some, .v = true };
       size_t n1 = pn1;
@@ -4392,7 +4386,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
     else
     {
       size_t off1 = CBOR_Pulse_Raw_EverParse_Format_jump_header(pi, (size_t)0U);
-      Custard_Prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+      prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
       x =
         CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(pi,
               (size_t)0U)._2,
@@ -5554,12 +5548,12 @@ cbor_nondet_parse(
     return false;
   else
   {
-    uint8_t *input = pinput[0U];
-    if (pinput[0U] == NULL)
+    uint8_t *input = *pinput;
+    if (*pinput == NULL)
       return false;
     else
     {
-      size_t len = plen[0U];
+      size_t len = *plen;
       CBOR_Pulse_Raw_Slice_byte_slice
       s = Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input, len);
       size_t
@@ -5581,9 +5575,9 @@ cbor_nondet_parse(
         return false;
       else
       {
-        pinput[0U] = input + consume;
-        plen[0U] = len - consume;
-        dest[0U] =
+        *pinput = input + consume;
+        *plen = len - consume;
+        *dest =
           CBOR_Pulse_Raw_Nondet_cbor_nondet_parse_valid(Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input,
               consume),
             consume);
@@ -5636,7 +5630,7 @@ bool cbor_nondet_read_simple_value(cbor_raw x, uint8_t *dest)
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_read_simple_value(x);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_read_simple_value(x);
     return true;
   }
 }
@@ -5652,7 +5646,7 @@ bool cbor_nondet_read_uint64(cbor_raw x, uint64_t *dest)
       return false;
     else
     {
-      dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_read_uint64(x);
+      *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_read_uint64(x);
       return true;
     }
   }
@@ -5672,7 +5666,7 @@ bool cbor_nondet_read_int64(cbor_raw x, int64_t *dest)
         return false;
       else
       {
-        dest[0U] = (int64_t)raw;
+        *dest = (int64_t)raw;
         return true;
       }
     }
@@ -5683,7 +5677,7 @@ bool cbor_nondet_read_int64(cbor_raw x, int64_t *dest)
         return false;
       else
       {
-        dest[0U] = -1LL - (int64_t)raw;
+        *dest = -1LL - (int64_t)raw;
         return true;
       }
     }
@@ -5713,8 +5707,8 @@ bool cbor_nondet_get_string(cbor_raw x, uint8_t **dest, uint64_t *dlen)
       uint8_t
       *res =
         Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(CBOR_Pulse_Raw_Nondet_cbor_nondet_get_string(x));
-      dlen[0U] = len;
-      dest[0U] = res;
+      *dlen = len;
+      *dest = res;
       return true;
     }
   }
@@ -5746,8 +5740,8 @@ bool cbor_nondet_get_tagged(cbor_raw x, cbor_raw *dest, uint64_t *dtag)
   {
     uint64_t tag = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_tagged_tag(x);
     cbor_raw res = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_tagged_payload(x);
-    dtag[0U] = tag;
-    dest[0U] = res;
+    *dtag = tag;
+    *dest = res;
     return true;
   }
 }
@@ -5760,7 +5754,7 @@ bool cbor_nondet_get_array_length(cbor_raw x, uint64_t *dest)
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_array_length(x);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_array_length(x);
     return true;
   }
 }
@@ -5773,7 +5767,7 @@ bool cbor_nondet_array_iterator_start(cbor_raw x, cbor_nondet_array_iterator_t *
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_array_iterator_start(x);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_array_iterator_start(x);
     return true;
   }
 }
@@ -5792,11 +5786,11 @@ bool cbor_nondet_array_iterator_next(cbor_nondet_array_iterator_t *x, cbor_raw *
 {
   if (x == NULL || dest == NULL)
     return false;
-  else if (cbor_nondet_array_iterator_is_empty(x[0U]))
+  else if (cbor_nondet_array_iterator_is_empty(*x))
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_array_iterator_next(x);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_array_iterator_next(x);
     return true;
   }
 }
@@ -5817,7 +5811,7 @@ bool cbor_nondet_get_array_item(cbor_raw x, uint64_t i, cbor_raw *dest)
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_array_item(x, i);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_array_item(x, i);
     return true;
   }
 }
@@ -5830,7 +5824,7 @@ bool cbor_nondet_get_map_length(cbor_raw x, uint64_t *dest)
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_map_length(x);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_get_map_length(x);
     return true;
   }
 }
@@ -5843,7 +5837,7 @@ bool cbor_nondet_map_iterator_start(cbor_raw x, cbor_nondet_map_iterator_t *dest
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_start(x);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_start(x);
     return true;
   }
 }
@@ -5872,15 +5866,15 @@ cbor_nondet_map_iterator_next(
 {
   if (x == NULL || dest_key == NULL || dest_value == NULL)
     return false;
-  else if (cbor_nondet_map_iterator_is_empty(x[0U]))
+  else if (cbor_nondet_map_iterator_is_empty(*x))
     return false;
   else
   {
     cbor_map_entry res = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_next(x);
     cbor_raw res_key = cbor_nondet_map_entry_key(res);
     cbor_raw res_value = cbor_nondet_map_entry_value(res);
-    dest_key[0U] = res_key;
-    dest_value[0U] = res_value;
+    *dest_key = res_key;
+    *dest_value = res_value;
     return true;
   }
 }
@@ -5904,7 +5898,7 @@ bool cbor_nondet_map_get(cbor_raw x, cbor_raw k, cbor_raw *dest)
       return false;
     else if (scrut.tag == FStar_Pervasives_Native_Some)
     {
-      dest[0U] = scrut.v;
+      *dest = scrut.v;
       return true;
     }
     else
@@ -5927,7 +5921,7 @@ bool cbor_nondet_mk_simple_value(uint8_t v, cbor_raw *dest)
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_simple_value(v);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_simple_value(v);
     return true;
   }
 }
@@ -5963,7 +5957,7 @@ bool cbor_nondet_mk_byte_string(uint8_t *a, uint64_t len, cbor_raw *dest)
       ite = true;
     if (ite)
     {
-      dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_string(CBOR_MAJOR_TYPE_BYTE_STRING, s);
+      *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_string(CBOR_MAJOR_TYPE_BYTE_STRING, s);
       return true;
     }
     else
@@ -5982,7 +5976,7 @@ bool cbor_nondet_mk_text_string(uint8_t *a, uint64_t len, cbor_raw *dest)
     s = Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
     if (CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(s))
     {
-      dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, s);
+      *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, s);
       return true;
     }
     else
@@ -5996,7 +5990,7 @@ bool cbor_nondet_mk_tagged(uint64_t tag, cbor_raw *r, cbor_raw *dest)
     return false;
   else
   {
-    dest[0U] = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_tagged(tag, r);
+    *dest = CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_tagged(tag, r);
     return true;
   }
 }
@@ -6014,7 +6008,7 @@ bool cbor_nondet_mk_array(cbor_raw *a, uint64_t len, cbor_raw *dest)
     return false;
   else
   {
-    dest[0U] =
+    *dest =
       CBOR_Pulse_Raw_Nondet_cbor_nondet_mk_array(Pulse_Lib_Slice_arrayptr_to_slice_intro__CBOR_Pulse_Raw_Type_cbor_raw(a,
           (size_t)len));
     return true;
@@ -6050,7 +6044,7 @@ bool cbor_nondet_mk_map(cbor_map_entry *a, uint64_t len, cbor_raw *dest)
       return false;
     else if (scrut.tag == FStar_Pervasives_Native_Some)
     {
-      dest[0U] = scrut.v;
+      *dest = scrut.v;
       return true;
     }
     else

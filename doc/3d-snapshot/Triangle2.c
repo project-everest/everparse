@@ -21,11 +21,11 @@ Triangle2ValidateCoreTriangle(
 )
 {
   /* Validating field corners */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartTriangle = (uint64_t)p;
   size_t pos = (size_t)0U;
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)12U <= (rem - p0);
   uint8_t res;
@@ -45,9 +45,9 @@ Triangle2ValidateCoreTriangle(
   if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_ = p2 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAfterTriangle = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
