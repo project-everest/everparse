@@ -48,6 +48,24 @@ cbor_nondet_parse(
   cbor_raw *dest
 );
 
+size_t
+cbor_nondet_validate_map_length_bounded(
+  size_t map_length_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
+  bool strict_check,
+  uint8_t *input,
+  size_t len
+);
+
+size_t
+cbor_nondet_validate_bounded(
+  size_t map_depth_bound,
+  size_t map_length_bound,
+  uint8_t *input,
+  size_t len
+);
+
 size_t cbor_nondet_size(cbor_raw x, size_t bound);
 
 size_t cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len);

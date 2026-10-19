@@ -20,6 +20,32 @@ pub fn cbor_nondet_parse <'a>(
     <'a>
 { crate::cbornondetveraux::cbor_nondet_parse(map_key_bound, strict_check, input) }
 
+pub fn cbor_nondet_validate_map_length_bounded(
+    map_length_bound: usize,
+    map_key_bound: crate::cbornondetveraux::option__size_t,
+    strict_check: bool,
+    input: &[u8]
+) ->
+    usize
+{
+    crate::cbornondetveraux::cbor_nondet_validate_map_length_bounded(
+        map_length_bound,
+        map_key_bound,
+        strict_check,
+        input
+    )
+}
+
+pub fn cbor_nondet_validate_bounded(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &[u8]
+) ->
+    usize
+{
+    crate::cbornondetveraux::cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, input)
+}
+
 pub fn cbor_nondet_size(x: crate::cbornondetveraux::cbor_raw, bound: usize) -> usize
 { crate::cbornondetveraux::cbor_nondet_size(x, bound) }
 

@@ -789,6 +789,387 @@ fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
     (&poffset)[0usize]
 }
 
+fn validate_raw_data_item_map_length_bounded(n: usize, input: &[u8], poffset: &mut [usize]) ->
+    bool
+{
+    let mut pn: [usize; 1] = [1usize; 1usize];
+    let mut pres: [bool; 1] = [true; 1usize];
+    let res: bool = (&pres)[0usize];
+    let n1: usize = (&pn)[0usize];
+    let mut cond: bool = res && n1 > 0usize;
+    while
+    cond
+    {
+        let off: usize = poffset[0usize];
+        let n10: usize = (&pn)[0usize];
+        if n10 > input.len().wrapping_sub(off)
+        { (&mut pres)[0usize] = false }
+        else
+        {
+            let offset: usize = poffset[0usize];
+            let is_valid1: bool = validate_header(input, poffset);
+            let res1: bool =
+                if is_valid1
+                {
+                    let off1: usize = poffset[0usize];
+                    let _letpattern: (&[u8], &[u8]) = input.split_at(offset);
+                    let input·: &[u8] =
+                        {
+                            let _input1: &[u8] = _letpattern.0;
+                            let input23: &[u8] = _letpattern.1;
+                            let consumed: usize = off1.wrapping_sub(offset);
+                            let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                            let input2: &[u8] = _letpattern1.0;
+                            let _input3: &[u8] = _letpattern1.1;
+                            input2
+                        };
+                    let
+                    x:
+                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                    =
+                        read_header(input·);
+                    let b: initial_byte_t = x._1;
+                    if
+                    b.major_type == cbor_major_type_byte_string
+                    ||
+                    b.major_type == cbor_major_type_text_string
+                    {
+                        let offset1: usize = poffset[0usize];
+                        let offset2: usize = poffset[0usize];
+                        let remaining: usize = input.len().wrapping_sub(offset2);
+                        let q1: usize = remaining.wrapping_div(32768usize);
+                        let q2: usize = q1.wrapping_div(32768usize);
+                        let q3: usize = q2.wrapping_div(32768usize);
+                        let q4: usize = q3.wrapping_div(32768usize);
+                        let __anf0: bool =
+                            if q4 >= 16usize
+                            { true }
+                            else
+                            {
+                                let b64: u64 = remaining as u64;
+                                argument_as_uint64(x._1, x._2) <= b64
+                            };
+                        let is_valid: bool =
+                            if __anf0
+                            {
+                                poffset[0usize] =
+                                    offset2.wrapping_add(argument_as_uint64(x._1, x._2) as usize);
+                                true
+                            }
+                            else
+                            { false };
+                        if is_valid
+                        {
+                            let off2: usize = poffset[0usize];
+                            let _letpattern1: (&[u8], &[u8]) = input.split_at(offset1);
+                            let x1: &[u8] =
+                                {
+                                    let _input1: &[u8] = _letpattern1.0;
+                                    let input23: &[u8] = _letpattern1.1;
+                                    let consumed: usize = off2.wrapping_sub(offset1);
+                                    let _letpattern2: (&[u8], &[u8]) = input23.split_at(consumed);
+                                    let input2: &[u8] = _letpattern2.0;
+                                    let _input3: &[u8] = _letpattern2.1;
+                                    input2
+                                };
+                            if get_header_major_type(x) == cbor_major_type_byte_string
+                            { true }
+                            else
+                            { impl_correct(x1) }
+                        }
+                        else
+                        { false }
+                    }
+                    else
+                    { true }
+                }
+                else
+                { false };
+            if ! res1
+            { (&mut pres)[0usize] = false }
+            else
+            {
+                let offset1: usize = poffset[0usize];
+                let _letpattern: (&[u8], &[u8]) = input.split_at(off);
+                let input1: &[u8] =
+                    {
+                        let _input1: &[u8] = _letpattern.0;
+                        let input23: &[u8] = _letpattern.1;
+                        let consumed: usize = offset1.wrapping_sub(off);
+                        let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                        let input2: &[u8] = _letpattern1.0;
+                        let _input3: &[u8] = _letpattern1.1;
+                        input2
+                    };
+                let i: usize = jump_header(input1, 0usize);
+                let _letpattern1: (&[u8], &[u8]) = input1.split_at(i);
+                let res_pred: bool =
+                    {
+                        let input11: &[u8] = _letpattern1.0;
+                        let _input2: &[u8] = _letpattern1.1;
+                        let
+                        h:
+                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                        =
+                            read_header(input11);
+                        let typ: u8 = get_header_major_type(h);
+                        if typ == cbor_major_type_map
+                        {
+                            let arg64: u64 = argument_as_uint64(h._1, h._2);
+                            let q1: usize = n.wrapping_div(32768usize);
+                            let q2: usize = q1.wrapping_div(32768usize);
+                            let q3: usize = q2.wrapping_div(32768usize);
+                            let q4: usize = q3.wrapping_div(32768usize);
+                            if q4 >= 16usize
+                            { true }
+                            else
+                            {
+                                let b64: u64 = n as u64;
+                                arg64 <= b64
+                            }
+                        }
+                        else
+                        { true }
+                    };
+                if ! res_pred
+                { (&mut pres)[0usize] = false }
+                else
+                {
+                    let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n10);
+                    let res2: bool = validate_recursive_step_count_leaf(input1, bound, &mut pn);
+                    let count: usize = (&pn)[0usize];
+                    if res2 || count > bound
+                    { (&mut pres)[0usize] = false }
+                    else
+                    {
+                        let n·: usize = n10.wrapping_sub(1usize).wrapping_add(count);
+                        (&mut pn)[0usize] = n·
+                    }
+                }
+            }
+        };
+        let res0: bool = (&pres)[0usize];
+        let n11: usize = (&pn)[0usize];
+        cond = res0 && n11 > 0usize
+    };
+    (&pres)[0usize]
+}
+
+pub(crate) fn validate_raw_data_item_nlist_bounded(
+    map_length_bound: usize,
+    d: usize,
+    n: usize,
+    input: &[u8],
+    poffset: &mut [usize]
+) ->
+    bool
+{
+    let mut pn: [usize; 1] = [n; 1usize];
+    let mut pres: [bool; 1] = [true; 1usize];
+    let res: bool = (&pres)[0usize];
+    let n1: usize = (&pn)[0usize];
+    let mut cond: bool = res && n1 > 0usize;
+    while
+    cond
+    {
+        let off: usize = poffset[0usize];
+        let n10: usize = (&pn)[0usize];
+        if n10 > input.len().wrapping_sub(off)
+        { (&mut pres)[0usize] = false }
+        else
+        {
+            let offset: usize = poffset[0usize];
+            let is_valid1: bool = validate_header(input, poffset);
+            let res1: bool =
+                if is_valid1
+                {
+                    let off1: usize = poffset[0usize];
+                    let _letpattern: (&[u8], &[u8]) = input.split_at(offset);
+                    let input·: &[u8] =
+                        {
+                            let _input1: &[u8] = _letpattern.0;
+                            let input23: &[u8] = _letpattern.1;
+                            let consumed: usize = off1.wrapping_sub(offset);
+                            let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                            let input2: &[u8] = _letpattern1.0;
+                            let _input3: &[u8] = _letpattern1.1;
+                            input2
+                        };
+                    let
+                    x:
+                    dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                    =
+                        read_header(input·);
+                    let b: initial_byte_t = x._1;
+                    if
+                    b.major_type == cbor_major_type_byte_string
+                    ||
+                    b.major_type == cbor_major_type_text_string
+                    {
+                        let offset1: usize = poffset[0usize];
+                        let offset2: usize = poffset[0usize];
+                        let remaining: usize = input.len().wrapping_sub(offset2);
+                        let q1: usize = remaining.wrapping_div(32768usize);
+                        let q2: usize = q1.wrapping_div(32768usize);
+                        let q3: usize = q2.wrapping_div(32768usize);
+                        let q4: usize = q3.wrapping_div(32768usize);
+                        let __anf0: bool =
+                            if q4 >= 16usize
+                            { true }
+                            else
+                            {
+                                let b64: u64 = remaining as u64;
+                                argument_as_uint64(x._1, x._2) <= b64
+                            };
+                        let is_valid: bool =
+                            if __anf0
+                            {
+                                poffset[0usize] =
+                                    offset2.wrapping_add(argument_as_uint64(x._1, x._2) as usize);
+                                true
+                            }
+                            else
+                            { false };
+                        if is_valid
+                        {
+                            let off2: usize = poffset[0usize];
+                            let _letpattern1: (&[u8], &[u8]) = input.split_at(offset1);
+                            let x1: &[u8] =
+                                {
+                                    let _input1: &[u8] = _letpattern1.0;
+                                    let input23: &[u8] = _letpattern1.1;
+                                    let consumed: usize = off2.wrapping_sub(offset1);
+                                    let _letpattern2: (&[u8], &[u8]) = input23.split_at(consumed);
+                                    let input2: &[u8] = _letpattern2.0;
+                                    let _input3: &[u8] = _letpattern2.1;
+                                    input2
+                                };
+                            if get_header_major_type(x) == cbor_major_type_byte_string
+                            { true }
+                            else
+                            { impl_correct(x1) }
+                        }
+                        else
+                        { false }
+                    }
+                    else
+                    { true }
+                }
+                else
+                { false };
+            if ! res1
+            { (&mut pres)[0usize] = false }
+            else
+            {
+                let offset1: usize = poffset[0usize];
+                let _letpattern: (&[u8], &[u8]) = input.split_at(off);
+                let input1: &[u8] =
+                    {
+                        let _input1: &[u8] = _letpattern.0;
+                        let input23: &[u8] = _letpattern.1;
+                        let consumed: usize = offset1.wrapping_sub(off);
+                        let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                        let input2: &[u8] = _letpattern1.0;
+                        let _input3: &[u8] = _letpattern1.1;
+                        input2
+                    };
+                let i: usize = jump_header(input1, 0usize);
+                let _letpattern1: (&[u8], &[u8]) = input1.split_at(i);
+                let res_base: bool =
+                    {
+                        let input11: &[u8] = _letpattern1.0;
+                        let _input2: &[u8] = _letpattern1.1;
+                        let
+                        h:
+                        dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                        =
+                            read_header(input11);
+                        let typ: u8 = get_header_major_type(h);
+                        if typ == cbor_major_type_map
+                        {
+                            let arg64: u64 = argument_as_uint64(h._1, h._2);
+                            let q1: usize = map_length_bound.wrapping_div(32768usize);
+                            let q2: usize = q1.wrapping_div(32768usize);
+                            let q3: usize = q2.wrapping_div(32768usize);
+                            let q4: usize = q3.wrapping_div(32768usize);
+                            if q4 >= 16usize
+                            { true }
+                            else
+                            {
+                                let b64: u64 = map_length_bound as u64;
+                                arg64 <= b64
+                            }
+                        }
+                        else
+                        { true }
+                    };
+                if ! res_base
+                { (&mut pres)[0usize] = false }
+                else
+                {
+                    let i1: usize = jump_header(input1, 0usize);
+                    let _letpattern2: (&[u8], &[u8]) = input1.split_at(i1);
+                    let is_incr: bool =
+                        {
+                            let input11: &[u8] = _letpattern2.0;
+                            let _input2: &[u8] = _letpattern2.1;
+                            let
+                            h:
+                            dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                            =
+                                read_header(input11);
+                            let typ: u8 = get_header_major_type(h);
+                            typ == cbor_major_type_map
+                        };
+                    let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n10);
+                    let res2: bool = validate_recursive_step_count_leaf(input1, bound, &mut pn);
+                    let count: usize = (&pn)[0usize];
+                    if res2 || count > bound
+                    { (&mut pres)[0usize] = false }
+                    else if is_incr
+                    {
+                        if d == 0usize
+                        { (&mut pres)[0usize] = false }
+                        else
+                        {
+                            let d·: usize = d.wrapping_sub(1usize);
+                            let res3: bool =
+                                validate_raw_data_item_nlist_bounded(
+                                    map_length_bound,
+                                    d·,
+                                    count,
+                                    input,
+                                    poffset
+                                );
+                            if ! res3
+                            { (&mut pres)[0usize] = false }
+                            else
+                            { (&mut pn)[0usize] = n10.wrapping_sub(1usize) }
+                        }
+                    }
+                    else
+                    { (&mut pn)[0usize] = n10.wrapping_sub(1usize).wrapping_add(count) }
+                }
+            }
+        };
+        let res0: bool = (&pres)[0usize];
+        let n11: usize = (&pn)[0usize];
+        cond = res0 && n11 > 0usize
+    };
+    (&pres)[0usize]
+}
+
+fn validate_raw_data_item_bounded(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &[u8],
+    poffset: &mut [usize]
+) ->
+    bool
+{
+    validate_raw_data_item_nlist_bounded(map_length_bound, map_depth_bound, 1usize, input, poffset)
+}
+
 #[derive(PartialEq, Clone, Copy)]
 pub struct cbor_int
 { pub cbor_int_type: u8, pub cbor_int_size: u8, pub cbor_int_value: u64 }
@@ -4956,6 +5337,64 @@ fn cbor_validate_nondet(map_key_bound: option__size_t, strict_check: bool, input
     { 0usize }
 }
 
+fn cbor_validate_nondet_map_length_bounded(
+    map_length_bound: usize,
+    map_key_bound: option__size_t,
+    strict_check: bool,
+    input: &[u8]
+) ->
+    usize
+{
+    let mut poff: [usize; 1] = [0usize; 1usize];
+    let res: bool = validate_raw_data_item_map_length_bounded(map_length_bound, input, &mut poff);
+    if res
+    {
+        let off: usize = (&poff)[0usize];
+        let _letpattern: (&[u8], &[u8]) = input.split_at(0usize);
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = _letpattern.0;
+                let input23: &[u8] = _letpattern.1;
+                let consumed: usize = off.wrapping_sub(0usize);
+                let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                let input2: &[u8] = _letpattern1.0;
+                let _input3: &[u8] = _letpattern1.1;
+                input2
+            };
+        let res1: bool = impl_check_valid_basic(map_key_bound, strict_check, input·);
+        if res1 { off } else { 0usize }
+    }
+    else
+    { 0usize }
+}
+
+fn cbor_validate_nondet_bounded(map_depth_bound: usize, map_length_bound: usize, input: &[u8]) ->
+    usize
+{
+    let mut poff: [usize; 1] = [0usize; 1usize];
+    let res: bool =
+        validate_raw_data_item_bounded(map_depth_bound, map_length_bound, input, &mut poff);
+    if res
+    {
+        let off: usize = (&poff)[0usize];
+        let _letpattern: (&[u8], &[u8]) = input.split_at(0usize);
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = _letpattern.0;
+                let input23: &[u8] = _letpattern.1;
+                let consumed: usize = off.wrapping_sub(0usize);
+                let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                let input2: &[u8] = _letpattern1.0;
+                let _input3: &[u8] = _letpattern1.1;
+                input2
+            };
+        let res1: bool = impl_check_valid_basic(option__size_t::None, false, input·);
+        if res1 { off } else { 0usize }
+    }
+    else
+    { 0usize }
+}
+
 pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a> { c }
 
 fn cbor_nondet_validate(map_key_bound: option__size_t, strict_check: bool, input: &[u8]) ->
@@ -4993,6 +5432,25 @@ pub(crate) fn cbor_nondet_parse <'a>(
         { v: (resl,inr) }
     }
 }
+
+pub(crate) fn cbor_nondet_validate_map_length_bounded(
+    map_length_bound: usize,
+    map_key_bound: option__size_t,
+    strict_check: bool,
+    input: &[u8]
+) ->
+    usize
+{
+    cbor_validate_nondet_map_length_bounded(map_length_bound, map_key_bound, strict_check, input)
+}
+
+pub(crate) fn cbor_nondet_validate_bounded(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &[u8]
+) ->
+    usize
+{ cbor_validate_nondet_bounded(map_depth_bound, map_length_bound, input) }
 
 pub(crate) fn cbor_nondet_size(x: cbor_raw, bound: usize) -> usize { cbor_size(x, bound) }
 
