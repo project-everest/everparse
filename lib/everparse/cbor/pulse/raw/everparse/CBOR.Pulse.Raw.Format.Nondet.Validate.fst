@@ -92,3 +92,45 @@ ensures
     0sz
   }
 }
+
+fn cbor_validate_nondet_bounded
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (input: slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+  (pts_to input #pm v)
+returns res: SZ.t
+ensures
+  (pts_to input #pm v ** pure (
+    cbor_validate_nondet_bounded_post map_depth_bound map_length_bound v res
+  ))
+{
+  LowParse.Spec.Combinators.parse_filter_eq
+    CBOR.Spec.Raw.EverParse.parse_raw_data_item
+    (CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+    v;
+  let mut poff = 0sz;
+  let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound input poff;
+  if (res) {
+    let off = !poff;
+    let input' = LowParse.Pulse.Base.peek_trade_gen
+      CBOR.Spec.Raw.EverParse.serialize_raw_data_item
+      input
+      0sz
+      off;
+    with v' . assert (LowParse.Pulse.Base.pts_to_serialized CBOR.Spec.Raw.EverParse.serialize_raw_data_item input' #pm v');
+    LowParse.Spec.Base.parser_kind_prop_equiv CBOR.Spec.Raw.EverParse.parse_raw_data_item_kind CBOR.Spec.Raw.EverParse.parse_raw_data_item;
+    let res = EPND.impl_check_valid_basic None false input';
+    Trade.elim _ _;
+    CBOR.Spec.Raw.Nondet.check_valid_correct basic_data_model None false v';
+    if (res) {
+      off
+    } else {
+      0sz
+    }
+  } else {
+    0sz
+  }
+}

@@ -3792,6 +3792,78 @@ fn cbor_nondet_validate_map_length_bounded_from_arrayptr
 }
 
 noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_post
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: GTot bool
+=
+  match Spec.cbor_parse v with
+  | Some (c, len) ->
+    if Spec.cbor_map_depth c <= SZ.v map_depth_bound && Spec.cbor_map_length_bounded (SZ.v map_length_bound) c
+    then SZ.v res = len
+    else SZ.v res = 0
+  | None -> SZ.v res = 0
+
+(* Validates that the input starts with a valid CBOR object whose map
+   nesting depth is at most map_depth_bound, and in which every map has
+   at most map_length_bound entries. Fails as soon as either bound is
+   exceeded. *)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_t
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+    (pts_to input #pm v)
+    (fun res -> pts_to input #pm v ** pure (
+      cbor_nondet_validate_bounded_post map_depth_bound map_length_bound v res
+    ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_from_arrayptr_t
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (input: AP.ptr U8.t) ->
+  (len: SZ.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+    (pts_to input #pm v ** pure (
+      Seq.length v == SZ.v len
+    ))
+    (fun res -> pts_to input #pm v ** pure (
+      cbor_nondet_validate_bounded_post map_depth_bound map_length_bound v res
+    ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_validate_bounded_from_arrayptr
+  (f: cbor_nondet_validate_bounded_t)
+: cbor_nondet_validate_bounded_from_arrayptr_t
+=
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (input: AP.ptr U8.t)
+  (len: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  let s = S.arrayptr_to_slice_intro input len;
+  let res = f map_depth_bound map_length_bound s;
+  S.arrayptr_to_slice_elim s;
+  res
+}
+
+noextract [@@noextract_to "krml"]
 let cbor_nondet_parse_valid_post
   (v: Seq.seq U8.t)
   (v': Spec.cbor)

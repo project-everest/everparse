@@ -171,6 +171,18 @@ fn cbor_nondet_validate_map_length_bounded (_: unit) : cbor_nondet_validate_map_
   CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet_map_length_bounded map_length_bound map_key_bound strict_check input;
 }
 
+fn cbor_nondet_validate_bounded (_: unit) : cbor_nondet_validate_bounded_t =
+  (map_depth_bound: _)
+  (map_length_bound: _)
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  Classical.forall_intro (Classical.move_requires SpecRaw.mk_cbor_map_depth);
+  Classical.forall_intro (Classical.move_requires (SpecRaw.mk_cbor_map_length_bounded (SZ.v map_length_bound)));
+  CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet_bounded map_depth_bound map_length_bound input;
+}
+
 fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t cbor_nondet_match =
   (input: S.slice U8.t)
   (len: SZ.t)

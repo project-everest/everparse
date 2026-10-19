@@ -981,3 +981,331 @@ fn validate_forall_pred_recursive
   parse_forall_pred_recursive_eq s pr (Seq.slice v (SZ.v offset) (Seq.length v));
   validate_tot_nlist_forall_pred_recursive s w f pr q q_correct g 1sz input poffset
 }
+
+(* Depth-bounded recursive predicates.
+
+   A `pred_depth_recursive_t p` describes a family of predicates
+   `pred d`, indexed by a "depth budget" `d`, such that checking
+   `pred d` on a node only needs its header `h` and its children:
+   `base h` must hold, and if `incr h` holds, then the children must
+   satisfy `pred (d - 1)` (and `d` must be positive), otherwise they
+   must satisfy `pred d`.
+
+   The validator below checks such a predicate in a single pass: nodes
+   whose header does not satisfy `incr` are flattened into the current
+   work counter (as in `validate_tot_nlist_recursive`), whereas nodes
+   whose header satisfies `incr` are validated by a recursive call with
+   a decremented budget, sharing the input position. Thus the recursion
+   depth is bounded by the initial budget, and validation fails as soon
+   as the budget is exceeded. *)
+
+[@@erasable]
+noeq
+type pred_depth_recursive_t
+  (p: parse_recursive_param)
+: Type
+= {
+    incr: (p.header -> bool);
+    base: (p.header -> bool);
+    pred: (nat -> p.t -> bool);
+    prf: (
+      (d: nat) ->
+      (h: p.header) ->
+      (c: L.nlist (p.count h) p.t) ->
+      Lemma
+      (pred d (p.synth_ (| h, c |)) == (
+        base h && (
+          if incr h
+          then d > 0 && List.Tot.for_all (pred (d - 1)) c
+          else List.Tot.for_all (pred d) c
+      )))
+    );
+  }
+
+let parse_tot_nlist_depth
+  (#p: parse_recursive_param)
+  (pd: pred_depth_recursive_t p)
+  (d: nat)
+  (n: nat)
+: Tot (parser
+    (C.parse_filter_kind (L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind)))
+    (C.parse_filter_refine #(L.nlist n p.t) (List.Tot.for_all (pd.pred d))))
+= C.parse_filter (L.tot_parse_nlist n (parse_recursive p)) (List.Tot.for_all (pd.pred d))
+
+#push-options "--z3rlimit_factor 16"
+
+#restart-solver
+
+let parse_consume_nlist_depth_eq
+  (#p: parse_recursive_param)
+  (pd: pred_depth_recursive_t p)
+  (d: nat)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (parse_consume (parse_tot_nlist_depth pd d n) b == (
+    if n = 0
+    then Some 0
+    else match parse p.parse_header b with
+    | None -> None
+    | Some (h, consumed1) ->
+      if pd.base h
+      then
+        let b2 = Seq.slice b consumed1 (Seq.length b) in
+        if pd.incr h
+        then
+          if d = 0
+          then None
+          else match parse_consume (parse_tot_nlist_depth pd (d - 1) (p.count h)) b2 with
+          | None -> None
+          | Some consumed2 ->
+            let b3 = Seq.slice b2 consumed2 (Seq.length b2) in
+            match parse_consume (parse_tot_nlist_depth pd d (n - 1)) b3 with
+            | None -> None
+            | Some consumed3 -> Some (consumed1 + consumed2 + consumed3)
+        else
+          match parse_consume (parse_tot_nlist_depth pd d (p.count h + (n - 1))) b2 with
+          | None -> None
+          | Some consumed2 -> Some (consumed1 + consumed2)
+      else None
+  ))
+= C.parse_filter_eq
+    #(L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind))
+    (L.tot_parse_nlist n (parse_recursive p)) (List.Tot.for_all (pd.pred d)) b;
+  L.tot_parse_nlist_eq n (parse_recursive p) b;
+  if n = 0
+  then ()
+  else begin
+    parse_recursive_eq' p b;
+    match parse p.parse_header b with
+    | None -> ()
+    | Some (h, consumed1) ->
+      let b2 = Seq.slice b consumed1 (Seq.length b) in
+      match parse (L.tot_parse_nlist (p.count h) (parse_recursive p)) b2 with
+      | None ->
+        if pd.incr h
+        then begin
+          if d = 0
+          then ()
+          else
+            C.parse_filter_eq
+              #(L.parse_nlist_kind (p.count h) (parse_recursive_kind p.parse_header_kind))
+              (L.tot_parse_nlist (p.count h) (parse_recursive p))
+              (List.Tot.for_all (pd.pred (d - 1)))
+              b2
+        end else begin
+          tot_parse_nlist_sum (parse_recursive p) (p.count h) (n - 1) b2;
+          C.parse_filter_eq
+            #(L.parse_nlist_kind (p.count h + (n - 1)) (parse_recursive_kind p.parse_header_kind))
+            (L.tot_parse_nlist (p.count h + (n - 1)) (parse_recursive p))
+            (List.Tot.for_all (pd.pred d))
+            b2
+        end
+      | Some (c, consumed2) ->
+        pd.prf d h c;
+        let b3 = Seq.slice b2 consumed2 (Seq.length b2) in
+        assert (Seq.slice b (consumed1 + consumed2) (Seq.length b) `Seq.equal` b3);
+        if pd.incr h
+        then begin
+          if d = 0
+          then ()
+          else begin
+            C.parse_filter_eq
+              #(L.parse_nlist_kind (p.count h) (parse_recursive_kind p.parse_header_kind))
+              (L.tot_parse_nlist (p.count h) (parse_recursive p))
+              (List.Tot.for_all (pd.pred (d - 1)))
+              b2;
+            C.parse_filter_eq
+              #(L.parse_nlist_kind (n - 1) (parse_recursive_kind p.parse_header_kind))
+              (L.tot_parse_nlist (n - 1) (parse_recursive p))
+              (List.Tot.for_all (pd.pred d))
+              b3
+          end
+        end else begin
+          tot_parse_nlist_sum (parse_recursive p) (p.count h) (n - 1) b2;
+          C.parse_filter_eq
+            #(L.parse_nlist_kind (p.count h + (n - 1)) (parse_recursive_kind p.parse_header_kind))
+            (L.tot_parse_nlist (p.count h + (n - 1)) (parse_recursive p))
+            (List.Tot.for_all (pd.pred d))
+            b2;
+          match parse (L.tot_parse_nlist (n - 1) (parse_recursive p)) b3 with
+          | None -> ()
+          | Some (rem, _) -> List.Tot.for_all_append (pd.pred d) c rem
+        end
+  end
+
+#pop-options
+
+let validate_nlist_depth_overflow
+  (#p: parse_recursive_param)
+  (pd: pred_depth_recursive_t p)
+  (d: nat)
+  (v: bytes)
+  (n: nat)
+  (off: nat)
+: Lemma
+  (requires (
+    off <= Seq.length v /\
+    n > 0 /\
+    begin match parse p.parse_header (Seq.slice v off (Seq.length v)) with
+    | Some (h, _) ->
+      let bound = (Seq.length v - off) - n in
+      p.count h > bound
+    | None -> False
+    end
+  ))
+  (ensures (
+    None? (parse_consume (parse_tot_nlist_depth pd d n) (Seq.slice v off (Seq.length v)))
+  ))
+= validate_tot_nlist_recursive_overflow p v n off;
+  C.parse_filter_eq
+    #(L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind))
+    (L.tot_parse_nlist n (parse_recursive p)) (List.Tot.for_all (pd.pred d)) (Seq.slice v off (Seq.length v))
+
+let validate_nlist_depth_size
+  (#p: parse_recursive_param)
+  (pd: pred_depth_recursive_t p)
+  (d: nat)
+  (v: bytes)
+  (n: nat)
+  (off: nat)
+: Lemma
+  (requires (
+    off <= Seq.length v /\
+    n > Seq.length v - off
+  ))
+  (ensures (
+    None? (parse_consume (parse_tot_nlist_depth pd d n) (Seq.slice v off (Seq.length v)))
+  ))
+= parse_nlist_recursive_bound_correct p n (Seq.slice v off (Seq.length v));
+  C.parse_filter_eq
+    #(L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind))
+    (L.tot_parse_nlist n (parse_recursive p)) (List.Tot.for_all (pd.pred d)) (Seq.slice v off (Seq.length v))
+
+inline_for_extraction
+let validate_nlist_depth_t
+  (#p: parse_recursive_param)
+  (pd: pred_depth_recursive_t p)
+  (d: SZ.t)
+: Tot Type
+= (n: SZ.t) -> validator (parse_tot_nlist_depth pd (SZ.v d) (SZ.v n))
+
+#push-options "--z3rlimit_factor 8"
+
+#restart-solver
+
+inline_for_extraction
+fn validate_nlist_depth_body
+  (#p: Ghost.erased parse_recursive_param)
+  (s: Ghost.erased (serialize_recursive_param p))
+  (w: validator (parser_of_tot_parser p.parse_header))
+  (f: validate_recursive_step_count s)
+  (pd: pred_depth_recursive_t p)
+  (g_base: C.validate_filter_test_t (serializer_of_tot_serializer s.serialize_header) pd.base)
+  (g_incr: C.validate_filter_test_t (serializer_of_tot_serializer s.serialize_header) pd.incr)
+  (d: SZ.t)
+  (self: (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_nlist_depth_t pd d')
+  (n0: SZ.t)
+: validator (parse_tot_nlist_depth pd (SZ.v d) (SZ.v n0))
+=
+  (input: S.slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset0: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  S.pts_to_len input;
+  let mut pn = n0;
+  let mut pres = true;
+  while (
+    let res = !pres;
+    let n = !pn;
+    (res && (SZ.gt n 0sz))
+  ) invariant exists* res n offset .
+    pts_to pres res **
+    pts_to pn n **
+    pts_to poffset offset **
+    pts_to input #pm v **
+    pure (
+      SZ.v offset <= Seq.length v /\ (
+        let pr0 = parse_consume (parse_tot_nlist_depth pd (SZ.v d) (SZ.v n0)) (Seq.slice v (SZ.v offset0) (Seq.length v)) in
+        let pr1 = parse_consume (parse_tot_nlist_depth pd (SZ.v d) (SZ.v n)) (Seq.slice v (SZ.v offset) (Seq.length v)) in
+        Some? pr0 == (res && Some? pr1) /\
+        (Some? pr0 ==> SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr1)
+    ))
+    decreases %[(if !pres then 1 else 0); (Seq.length v - SZ.v (!poffset))]
+  {
+    let off = !poffset;
+    let n = !pn;
+    parse_consume_nlist_depth_eq pd (SZ.v d) (SZ.v n) (Seq.slice v (SZ.v off) (Seq.length v));
+    if SZ.gt n (SZ.sub (S.len input) off) {
+      validate_nlist_depth_size pd (SZ.v d) v (SZ.v n) (SZ.v off);
+      pres := false
+    } else {
+      let res1 = w input poffset;
+      if not res1 {
+        pres := false
+      } else {
+        let offset = !poffset;
+        let input1 = peek_trade_gen (serializer_of_tot_serializer s.serialize_header) input off offset;
+        parser_kind_prop_equiv p.parse_header_kind p.parse_header;
+        with gv . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) input1 #pm gv);
+        let res_base = g_base input1;
+        if not res_base {
+          elim_trade _ _;
+          pres := false
+        } else {
+          let is_incr = g_incr input1;
+          let bound = SZ.sub (SZ.sub (S.len input) off) n;
+          let res2 = f #gv #pm input1 bound pn;
+          elim_trade _ _;
+          let count = !pn;
+          if (res2 || SZ.gt count bound) {
+            validate_nlist_depth_overflow pd (SZ.v d) v (SZ.v n) (SZ.v off);
+            pres := false
+          } else if is_incr {
+            if (d = 0sz) {
+              pres := false
+            } else {
+              let d' = SZ.sub d 1sz;
+              let res3 = self d' count input poffset;
+              if not res3 {
+                pres := false
+              } else {
+                pn := SZ.sub n 1sz
+              }
+            }
+          } else {
+            parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v n - 1)) (Seq.slice v (SZ.v offset) (Seq.length v));
+            pn := SZ.add (SZ.sub n 1sz) count
+          }
+        }
+      }
+    }
+  };
+  parse_consume_nlist_depth_eq pd (SZ.v d) 0 (Seq.slice v (SZ.v (!poffset)) (Seq.length v));
+  !pres
+}
+
+#pop-options
+
+let parse_depth_recursive_eq
+  (#p: parse_recursive_param)
+  (pd: pred_depth_recursive_t p)
+  (d: nat)
+  (b: bytes)
+: Lemma
+  (match parse (C.parse_filter #(parse_recursive_kind p.parse_header_kind) (parse_recursive p) (pd.pred d)) b, parse (parse_tot_nlist_depth pd d 1) b with
+   | None, None -> True
+   | Some (_, c1), Some (_, c2) -> c1 == c2
+   | _ -> False)
+= C.parse_filter_eq
+    #(L.parse_nlist_kind 1 (parse_recursive_kind p.parse_header_kind))
+    (L.tot_parse_nlist 1 (parse_recursive p)) (List.Tot.for_all (pd.pred d)) b;
+  C.parse_filter_eq
+    #(parse_recursive_kind p.parse_header_kind)
+    (parse_recursive p) (pd.pred d) b;
+  L.tot_parse_nlist_eq 1 (parse_recursive p) b;
+  match parse (parse_recursive p) b with
+  | None -> ()
+  | Some (_, c) -> L.tot_parse_nlist_eq 0 (parse_recursive p) (Seq.slice b c (Seq.length b))

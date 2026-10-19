@@ -1026,6 +1026,167 @@ fn validate_raw_data_item_map_length_bounded (n: SZ.t) : validator #(parse_filte
     input poffset #offset #pm #v
 }
 
+let raw_data_item_bounded_incr
+  (l: leaf)
+: Tot bool
+= match l with
+  | (| h, _ |) -> get_header_major_type h = cbor_major_type_map
+
+let rec list_for_all_raw_data_item_bounded
+  (d n: nat)
+  (c: list raw_data_item)
+: Lemma
+  (List.Tot.for_all (raw_data_item_bounded d n) c == (List.Tot.for_all (map_depth_le d) c && List.Tot.for_all (map_length_bounded n) c))
+= match c with
+  | [] -> ()
+  | a :: q ->
+    assert (raw_data_item_bounded d n a == (map_depth_le d a && map_length_bounded n a));
+    list_for_all_raw_data_item_bounded d n q
+
+let rec list_for_all_map_length_bounded
+  (n: nat)
+  (c: list raw_data_item)
+: Lemma
+  (List.Tot.for_all (map_length_bounded n) c == List.Tot.for_all (holds_on_raw_data_item (map_length_bounded_elem n)) c)
+= match c with
+  | [] -> ()
+  | _ :: q -> list_for_all_map_length_bounded n q
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+let raw_data_item_bounded_prf
+  (n: nat)
+  (d: nat)
+  (l: leaf)
+  (c: L.nlist (remaining_data_items l) raw_data_item)
+: Lemma
+  (raw_data_item_bounded d n (synth_raw_data_item_from_alt (| l, c |)) == (
+    map_length_bounded_header n l && (
+      if raw_data_item_bounded_incr l
+      then d > 0 && List.Tot.for_all (raw_data_item_bounded (d - 1) n) c
+      else List.Tot.for_all (raw_data_item_bounded d n) c
+  )))
+= let x = synth_raw_data_item_from_alt (| l, c |) in
+  let _ = LowParse.Spec.Combinators.synth_injective_synth_inverse_synth_inverse_recip synth_raw_data_item_from_alt synth_raw_data_item_from_alt_recip () in
+  assert (synth_raw_data_item_from_alt_recip x == (| l, c |));
+  assert (get_children serialize_raw_data_item_param x == c);
+  holds_on_raw_data_item_eq_recursive (map_length_bounded_elem n) x;
+  map_depth_le_eq_recursive d x;
+  map_length_bounded_header_correct n l c;
+  assert (map_length_bounded_elem n x == map_length_bounded_header n l);
+  list_for_all_map_length_bounded n c;
+  assert (map_length_bounded n x == (map_length_bounded_header n l && List.Tot.for_all (map_length_bounded n) c));
+  assert (Map? x == raw_data_item_bounded_incr l);
+  assert (raw_data_item_bounded d n x == (map_depth_le d x && map_length_bounded n x));
+  list_for_all_raw_data_item_bounded d n c;
+  if d > 0
+  then list_for_all_raw_data_item_bounded (d - 1) n c
+
+#pop-options
+
+let raw_data_item_bounded_pred
+  (n: nat)
+: Tot (pred_depth_recursive_t parse_raw_data_item_param)
+= {
+    incr = raw_data_item_bounded_incr;
+    base = map_length_bounded_header n;
+    pred = (fun d -> raw_data_item_bounded d n);
+    prf = raw_data_item_bounded_prf n;
+  }
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn impl_raw_data_item_bounded_incr (_: unit) :
+  validate_filter_test_t #leaf #_ #(parser_of_tot_parser parse_raw_data_item_param.parse_header) (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) raw_data_item_bounded_incr
+=
+  (a: _)
+  (#pm: perm)
+  (#va: Ghost.erased leaf)
+{
+  pts_to_serialized_ext_trade
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (serialize_dtuple2 serialize_header serialize_leaf_content)
+    a;
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  let typ = get_header_major_type h;
+  (typ = cbor_major_type_map)
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_raw_data_item_nlist_bounded_body
+  (map_length_bound: SZ.t)
+  (d: SZ.t)
+  (self: (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_nlist_depth_t (raw_data_item_bounded_pred (SZ.v map_length_bound)) d')
+  (n: SZ.t)
+: validator (parse_tot_nlist_depth (raw_data_item_bounded_pred (SZ.v map_length_bound)) (SZ.v d) (SZ.v n))
+= validate_nlist_depth_body
+    serialize_raw_data_item_param
+    (validate_leaf ())
+    (validate_recursive_step_count_leaf ())
+    (raw_data_item_bounded_pred (SZ.v map_length_bound))
+    (impl_map_length_bounded_header map_length_bound)
+    (impl_raw_data_item_bounded_incr ())
+    d
+    self
+    n
+
+fn rec validate_raw_data_item_nlist_bounded
+  (map_length_bound: SZ.t)
+  (d: SZ.t)
+  (n: SZ.t)
+  (input: S.slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+requires
+  pts_to input #pm v ** R.pts_to poffset offset ** pure (SZ.v offset <= Seq.length v)
+returns res: bool
+ensures
+  pts_to input #pm v ** (exists* off . R.pts_to poffset off ** pure (
+    validator_postcond (parse_tot_nlist_depth (raw_data_item_bounded_pred (SZ.v map_length_bound)) (SZ.v d) (SZ.v n)) offset v off res
+  ))
+decreases (SZ.v d)
+{
+  validate_raw_data_item_nlist_bounded_body
+    map_length_bound
+    d
+    (fun (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_raw_data_item_nlist_bounded map_length_bound d')
+    n
+    input poffset #offset #pm #v
+}
+
+fn validate_raw_data_item_bounded (map_depth_bound: SZ.t) (map_length_bound: SZ.t) : validator #(parse_filter_refine (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))) #(parse_filter_kind parse_raw_data_item_kind) (parse_filter parse_raw_data_item (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))) =
+  (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  let b : Ghost.erased bytes = Seq.slice v (SZ.v offset) (Seq.length v);
+  parse_depth_recursive_eq (raw_data_item_bounded_pred (SZ.v map_length_bound)) (SZ.v map_depth_bound) b;
+  LowParse.Spec.Combinators.parse_filter_eq
+    #parse_raw_data_item_kind
+    (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)
+    ((raw_data_item_bounded_pred (SZ.v map_length_bound)).pred (SZ.v map_depth_bound))
+    b;
+  LowParse.Spec.Combinators.parse_filter_eq
+    parse_raw_data_item
+    (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+    b;
+  validate_raw_data_item_nlist_bounded map_length_bound map_depth_bound 1sz
+    input poffset #offset #pm #v
+}
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let jump_raw_data_item' (_: unit) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
