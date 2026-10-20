@@ -6,6 +6,7 @@ module U64 = FStar.UInt64
 module U32 = FStar.UInt32
 module BF = LowParse.BitFields
 module R = Pulse.Lib.Reference
+module B = EverParse3d.CAbi.Boolean
 
 [@@CMacro]
 let validator_max_length = 1152921504606846975UL
@@ -65,7 +66,7 @@ let is_range_okay (size offset access_size: U32.t) : bool =
   U32.gte size access_size && U32.gte (U32.sub size access_size) offset
 
 noeq type error_frame = {
-  filled: bool;
+  filled: B.t;
   start_pos: U64.t;
   typename_s: string;
   fieldname: string;
@@ -81,13 +82,13 @@ fn record_error
 requires R.pts_to context (Ghost.reveal frame)
 returns _: unit
 ensures R.pts_to context
-  (if (Ghost.reveal frame).filled then Ghost.reveal frame else
-    { filled = true; start_pos = start_pos; typename_s = typename_s;
+  (if B.to_bool (Ghost.reveal frame).filled then Ghost.reveal frame else
+    { filled = B.of_bool true; start_pos = start_pos; typename_s = typename_s;
       fieldname = fieldname; reason = reason; error_code = error_code })
 {
   let frame = !context;
-  if (not frame.filled) {
-    context := { filled = true; start_pos = start_pos; typename_s = typename_s;
+  if (not (B.to_bool frame.filled)) {
+    context := { filled = B.of_bool true; start_pos = start_pos; typename_s = typename_s;
       fieldname = fieldname; reason = reason; error_code = error_code };
   }
 }

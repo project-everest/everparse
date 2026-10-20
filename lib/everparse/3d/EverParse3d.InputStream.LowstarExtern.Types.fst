@@ -7,6 +7,7 @@ module U64 = FStar.UInt64
 module R = Pulse.Lib.Reference
 module I = EverParse3d.InputStream.Base
 module E = EverParse3d.Lowstar.ErrorCode
+module B = EverParse3d.CAbi.Boolean
 
 // Abstract client ABI types and ghost model, as in the old extern Base.fsti.
 // The position indexing storage is ghost, NOT a client position-query API.
@@ -19,7 +20,7 @@ assume val storage (base: input_stream_base) (position: nat) : slprop
 // Preserve this named record during extraction as EVERPARSE_INPUT_BUFFER.
 noeq type input_buffer = {
   base: input_stream_base;
-  has_length: bool;
+  has_length: B.t;
   length: U64.t;
 }
 
@@ -31,7 +32,7 @@ noextract
 let view_ok (b: base_t) (c: Seq.seq U8.t) : prop =
   Seq.length c <= Seq.length (get_all b.base) /\
   Seq.equal c (Seq.slice (get_all b.base) 0 (Seq.length c)) /\
-  (if b.has_length then U64.v b.length == Seq.length c
+  (if B.to_bool b.has_length then U64.v b.length == Seq.length c
    else Seq.equal c (get_all b.base))
 
 // Public ownership has no local reference. Its scalar position uses the
@@ -53,7 +54,7 @@ let stream_is_prefix_of
   (parent: base_t) (_: len_t) (py: pos_t)
   (c0 suffix: Seq.seq U8.t) : slprop =
   pure (bx.base == parent.base /\ px == py /\ view_ok parent c0 /\
-        bx.has_length /\
+        B.to_bool bx.has_length /\
         U64.v bx.length + Seq.length suffix == Seq.length c0 /\
         Seq.equal suffix
           (Seq.slice c0 (U64.v bx.length) (Seq.length c0)))
@@ -66,8 +67,8 @@ let pts_to_inst : I.input_stream_pts_to base_t len_t pos_t = {
 
 inline_for_extraction
 let make_input_buffer (base: input_stream_base) : base_t =
-  { base = base; has_length = false; length = 0UL }
+  { base = base; has_length = B.of_bool false; length = 0UL }
 
 inline_for_extraction
 let make_input_buffer_with_length (base: input_stream_base) (length: U64.t)
-  : base_t = { base = base; has_length = true; length = length }
+  : base_t = { base = base; has_length = B.of_bool true; length = length }

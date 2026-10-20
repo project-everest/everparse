@@ -49,6 +49,7 @@ open Pulse.Lib.Pervasives
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
+module B = EverParse3d.CAbi.Boolean
 module U64 = FStar.UInt64
 module I = EverParse3d.InputStream.Base
 module LP = LowParse.Spec.Base
@@ -183,13 +184,13 @@ assume val stream_has :
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt bool
+    stt B.t
     (requires (
       stream_pts_to_raw base pos contents v
     ))
     (ensures (fun res ->
       stream_pts_to_raw base pos contents v **
-      pure (res == true <==> SZ.v n <= Seq.length v)
+      pure (B.to_bool res == true <==> SZ.v n <= Seq.length v)
     ))
 
 (* Bounded views must *not* consult the client: it reports what the underlying
@@ -217,7 +218,7 @@ ensures stream_pts_to base len pos contents v **
     unfold (stream_pts_to base len pos contents v);
     let res = stream_has base pos n contents v;
     fold (stream_pts_to base len pos contents v);
-    res
+    B.to_bool res
   }
 }
 
@@ -240,15 +241,15 @@ assume val stream_has_at :
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt bool
+    stt B.t
     (requires (
       stream_pts_to_raw base pos contents v
     ))
     (ensures (fun res ->
       stream_pts_to_raw base pos contents v ** pure (
       SZ.v off <= Seq.length v ==> (
-        (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-        (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+        (B.to_bool res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+        (B.to_bool res == true ==> SZ.fits (SZ.v off + SZ.v n))
       )
     )))
 
@@ -284,7 +285,7 @@ ensures stream_pts_to base len pos contents v **
     unfold (stream_pts_to base len pos contents v);
     let res = stream_has_at base pos off n contents v;
     fold (stream_pts_to base len pos contents v);
-    res
+    B.to_bool res
   }
 }
 
@@ -706,7 +707,7 @@ assume val field_ptr_after_impl
   (w0: Ghost.erased ___PUINT8)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-: stt bool
+: stt B.t
     (R.pts_to w #1.0R w0 ** stream_pts_to_raw sl_base sl_pos contents_sl v_sl)
     (fun _ -> exists* w' . R.pts_to w #1.0R w' ** stream_pts_to_raw sl_base sl_pos contents_sl v_sl)
 
@@ -733,7 +734,7 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
   fold (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
   rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
        as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  res
+  B.to_bool res
 }
 
 (* The client's Peep answers for the whole stream, so inside a truncated view

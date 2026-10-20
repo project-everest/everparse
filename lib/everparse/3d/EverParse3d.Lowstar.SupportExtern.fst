@@ -6,6 +6,7 @@ module P = EverParse3d.Lowstar.Public
 module T = EverParse3d.InputStream.LowstarExtern.Types
 module R = Pulse.Lib.Reference
 module U64 = FStar.UInt64
+module B = EverParse3d.CAbi.Boolean
 
 fn default_error_handler
   (typename_s fieldname reason: string)
@@ -15,8 +16,8 @@ fn default_error_handler
 requires R.pts_to context (Ghost.reveal frame)
 returns _: unit
 ensures R.pts_to context
-  (if (Ghost.reveal frame).P.filled then Ghost.reveal frame else
-    { P.filled = true; P.start_pos = start_pos; P.typename_s = typename_s;
+  (if B.to_bool (Ghost.reveal frame).P.filled then Ghost.reveal frame else
+    { P.filled = B.of_bool true; P.start_pos = start_pos; P.typename_s = typename_s;
       P.fieldname = fieldname; P.reason = reason; P.error_code = error_code })
 {
   P.record_error typename_s fieldname reason error_code context start_pos

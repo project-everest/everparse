@@ -5,15 +5,16 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module AP = Pulse.Lib.ArrayPtr
 module Util = EverParse3d.Util
+module B = EverParse3d.CAbi.Boolean
 
 // Trusted client boundary: the five old C primitives. All position arguments
 // and sequences are erased; only extra, raw base, U64 count and dst reach C.
 val has (#[Util.solve_from_ctx ()] extra: extra_t)
   (b: input_stream_base) (n: U64.t) (#pos: Ghost.erased nat)
-  : stt bool
+  : stt B.t
     (storage b pos ** pure (pos <= Seq.length (get_all b)))
     (fun r -> storage b pos **
-      pure (r == true <==> U64.v n <= Seq.length (get_all b) - pos))
+      pure (B.to_bool r == true <==> U64.v n <= Seq.length (get_all b) - pos))
 
 val skip (#[Util.solve_from_ctx ()] extra: extra_t)
   (b: input_stream_base) (n: U64.t) (#pos: Ghost.erased nat)
