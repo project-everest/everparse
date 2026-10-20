@@ -1073,9 +1073,10 @@ pub(crate) fn validate_raw_data_item_nlist_bounded(
                         let _input3: &[u8] = _letpattern1.1;
                         input2
                     };
+                let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n10);
                 let i: usize = jump_header(input1, 0usize);
                 let _letpattern1: (&[u8], &[u8]) = input1.split_at(i);
-                let res_base: bool =
+                let r: u8 =
                     {
                         let input11: &[u8] = _letpattern1.0;
                         let _input2: &[u8] = _letpattern1.1;
@@ -1085,48 +1086,94 @@ pub(crate) fn validate_raw_data_item_nlist_bounded(
                         =
                             read_header(input11);
                         let typ: u8 = get_header_major_type(h);
-                        if typ == cbor_major_type_map
+                        if typ == cbor_major_type_array
+                        {
+                            let arg64: u64 = argument_as_uint64(h._1, h._2);
+                            let q1: usize = bound.wrapping_div(32768usize);
+                            let q2: usize = q1.wrapping_div(32768usize);
+                            let q3: usize = q2.wrapping_div(32768usize);
+                            let q4: usize = q3.wrapping_div(32768usize);
+                            let __anf0: bool =
+                                if q4 >= 16usize
+                                { true }
+                                else
+                                {
+                                    let b64: u64 = bound as u64;
+                                    arg64 <= b64
+                                };
+                            if __anf0
+                            {
+                                (&mut pn)[0usize] = arg64 as usize;
+                                2u8
+                            }
+                            else
+                            { 1u8 }
+                        }
+                        else if typ == cbor_major_type_map
                         {
                             let arg64: u64 = argument_as_uint64(h._1, h._2);
                             let q1: usize = map_length_bound.wrapping_div(32768usize);
                             let q2: usize = q1.wrapping_div(32768usize);
                             let q3: usize = q2.wrapping_div(32768usize);
                             let q4: usize = q3.wrapping_div(32768usize);
-                            if q4 >= 16usize
-                            { true }
+                            let __anf0: bool =
+                                if q4 >= 16usize
+                                { true }
+                                else
+                                {
+                                    let b64: u64 = map_length_bound as u64;
+                                    arg64 <= b64
+                                };
+                            if ! __anf0
+                            { 0u8 }
                             else
                             {
-                                let b64: u64 = map_length_bound as u64;
-                                arg64 <= b64
+                                let q11: usize = bound.wrapping_div(32768usize);
+                                let q21: usize = q11.wrapping_div(32768usize);
+                                let q31: usize = q21.wrapping_div(32768usize);
+                                let q41: usize = q31.wrapping_div(32768usize);
+                                let __anf01: bool =
+                                    if q41 >= 16usize
+                                    { true }
+                                    else
+                                    {
+                                        let b64: u64 = bound as u64;
+                                        arg64 <= b64
+                                    };
+                                if __anf01
+                                {
+                                    let arg: usize = arg64 as usize;
+                                    if bound.wrapping_sub(arg) < arg
+                                    { 1u8 }
+                                    else
+                                    {
+                                        (&mut pn)[0usize] = arg.wrapping_add(arg);
+                                        3u8
+                                    }
+                                }
+                                else
+                                { 1u8 }
                             }
                         }
+                        else if typ == cbor_major_type_tagged
+                        {
+                            (&mut pn)[0usize] = 1usize;
+                            2u8
+                        }
                         else
-                        { true }
+                        {
+                            (&mut pn)[0usize] = 0usize;
+                            2u8
+                        }
                     };
-                if ! res_base
+                if r == 0u8
                 { (&mut pres)[0usize] = false }
                 else
                 {
-                    let i1: usize = jump_header(input1, 0usize);
-                    let _letpattern2: (&[u8], &[u8]) = input1.split_at(i1);
-                    let is_incr: bool =
-                        {
-                            let input11: &[u8] = _letpattern2.0;
-                            let _input2: &[u8] = _letpattern2.1;
-                            let
-                            h:
-                            dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
-                            =
-                                read_header(input11);
-                            let typ: u8 = get_header_major_type(h);
-                            typ == cbor_major_type_map
-                        };
-                    let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n10);
-                    let res2: bool = validate_recursive_step_count_leaf(input1, bound, &mut pn);
                     let count: usize = (&pn)[0usize];
-                    if res2 || count > bound
+                    if r == 1u8 || count > bound
                     { (&mut pres)[0usize] = false }
-                    else if is_incr
+                    else if r == 3u8
                     {
                         if d == 0usize
                         { (&mut pres)[0usize] = false }

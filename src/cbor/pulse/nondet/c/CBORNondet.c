@@ -1011,40 +1011,74 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
         input1 =
           Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, off)._2,
             offset1 - off)._1;
+        size_t bound = Pulse_Lib_Slice_len__uint8_t(input) - off - n1;
         prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
         h =
           CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(input1,
               CBOR_Pulse_Raw_EverParse_Format_jump_header(input1, (size_t)0U))._1);
-        bool ite;
-        if (CBOR_Spec_Raw_EverParse_get_header_major_type(h) == CBOR_MAJOR_TYPE_MAP)
+        uint8_t typ = CBOR_Spec_Raw_EverParse_get_header_major_type(h);
+        uint8_t r;
+        if (typ == CBOR_MAJOR_TYPE_ARRAY)
         {
           uint64_t arg64 = CBOR_Spec_Raw_EverParse_argument_as_uint64(h._1, h._2);
-          ite =
-            map_length_bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >=
-              (size_t)16U
-            || arg64 <= (uint64_t)map_length_bound;
+          if
+          (
+            bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U
+            || arg64 <= (uint64_t)bound
+          )
+          {
+            pn = (size_t)arg64;
+            r = 2U;
+          }
+          else
+            r = 1U;
+        }
+        else if (typ == CBOR_MAJOR_TYPE_MAP)
+        {
+          uint64_t arg64 = CBOR_Spec_Raw_EverParse_argument_as_uint64(h._1, h._2);
+          if
+          (
+            !(map_length_bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U
+            >= (size_t)16U
+            || arg64 <= (uint64_t)map_length_bound)
+          )
+            r = 0U;
+          else if
+          (
+            bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U
+            || arg64 <= (uint64_t)bound
+          )
+          {
+            size_t arg = (size_t)arg64;
+            if (bound - arg < arg)
+              r = 1U;
+            else
+            {
+              pn = arg + arg;
+              r = 3U;
+            }
+          }
+          else
+            r = 1U;
+        }
+        else if (typ == CBOR_MAJOR_TYPE_TAGGED)
+        {
+          pn = (size_t)1U;
+          r = 2U;
         }
         else
-          ite = true;
-        if (!ite)
+        {
+          pn = (size_t)0U;
+          r = 2U;
+        }
+        if (r == 0U)
           pres = false;
         else
         {
-          bool
-          is_incr =
-            CBOR_Spec_Raw_EverParse_get_header_major_type(CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(input1,
-                  CBOR_Pulse_Raw_EverParse_Format_jump_header(input1, (size_t)0U))._1))
-            == CBOR_MAJOR_TYPE_MAP;
-          size_t bound = Pulse_Lib_Slice_len__uint8_t(input) - off - n1;
-          bool
-          res2 =
-            CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(input1,
-              bound,
-              &pn);
           size_t count = pn;
-          if (res2 || count > bound)
+          if (r == 1U || count > bound)
             pres = false;
-          else if (is_incr)
+          else if (r == 3U)
             if (d == (size_t)0U)
               pres = false;
             else if
