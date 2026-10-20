@@ -67,6 +67,8 @@ def inventory(text):
     functions = {}
     types = {}
     values = {}
+    record_names = {}
+    record_fields = {}
     index = 0
     while index < len(tokens):
         if tokens[index] == "}":
@@ -83,9 +85,10 @@ def inventory(text):
             elif token == ")":
                 parens -= 1
             elif token == "{":
-                if not parens and not braces and tokens[start] != "typedef":
+                if (not parens and not braces
+                        and tokens[start] not in ("typedef", "struct")):
                     name, declaration = function_type(tokens[start:index])
-                    if name in functions:
+                    if name in functions and functions[name] != declaration:
                         raise ValueError("Duplicate function: " + name)
                     functions[name] = declaration
                     depth = 1
@@ -104,28 +107,40 @@ def inventory(text):
                 if declaration[0] == "typedef":
                     if declaration[1] == "struct":
                         name = declaration[-1]
-                        opening = declaration.index("{")
-                        types[name] = {
-                            "kind": "record",
-                            "fields": spelling(declaration[opening + 1:-2]),
-                        }
+                        if "{" in declaration:
+                            opening = declaration.index("{")
+                            types[name] = {
+                                "kind": "record",
+                                "fields": spelling(declaration[opening + 1:-2]),
+                            }
+                        elif len(declaration) == 4:
+                            record_names[declaration[2]] = name
+                        else:
+                            raise ValueError("Unsupported record alias: "
+                                             + spelling(declaration))
                     elif "(" in declaration:
                         opening = declaration.index("(")
                         if declaration[opening + 1] != "*":
                             raise ValueError("Unsupported typedef: " + spelling(declaration))
                         name = declaration[opening + 2]
-                        types[name] = {
-                            "kind": "callback",
-                            "type": spelling(declaration[1:opening] + ["(*)"]
-                                             + declaration[opening + 4:]),
-                        }
+                        _, signature = function_type(
+                            declaration[1:opening] + ["callback"]
+                            + declaration[opening + 4:]
+                        )
+                        signature.pop("linkage")
+                        types[name] = {"kind": "callback", **signature}
                     else:
                         types[declaration[-1]] = {
                             "kind": "alias", "type": spelling(declaration[1:-1]),
                         }
+                elif declaration[0] == "struct" and "{" in declaration:
+                    opening = declaration.index("{")
+                    record_fields[declaration[1]] = spelling(
+                        declaration[opening + 1:-1]
+                    )
                 elif "(" in declaration:
                     name, declaration = function_type(declaration)
-                    if name in functions:
+                    if name in functions and functions[name] != declaration:
                         raise ValueError("Duplicate function: " + name)
                     functions[name] = declaration
                 elif declaration[0] == "extern":
@@ -139,6 +154,12 @@ def inventory(text):
             index += 1
         else:
             raise ValueError("Unterminated declaration: " + spelling(tokens[start:]))
+    for tag, name in record_names.items():
+        if tag not in record_fields:
+            raise ValueError("Missing record definition: " + tag)
+        types[name] = {"kind": "record", "fields": record_fields.pop(tag)}
+    if record_fields:
+        raise ValueError("Unaliased records: " + ", ".join(record_fields))
     return {"functions": functions, "types": types, "values": values, "macros": macros}
 
 

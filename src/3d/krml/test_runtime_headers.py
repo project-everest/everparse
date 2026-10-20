@@ -3,6 +3,7 @@ from pathlib import Path
 import unittest
 
 from runtime_abi import inventory
+from runtime_headers import PROFILES, annotate, profile_config
 
 
 HERE = Path(__file__).resolve().parent
@@ -105,6 +106,19 @@ class InventoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             inventory("extern uint8_t f(uint8_t (*callback)(void));")
 
+    def test_split_record_and_function_declarations(self):
+        result = inventory("""
+          typedef struct Frame_s FRAME;
+          struct Frame_s { BOOLEAN filled; };
+          static inline BOOLEAN f(uint32_t x);
+          static inline BOOLEAN f(uint32_t y) { return y > 0; }
+        """)
+        self.assertEqual(result["types"]["FRAME"],
+                         {"kind": "record", "fields": "BOOLEAN filled ;"})
+        self.assertEqual(result["functions"]["f"]["parameters"], ["uint32_t"])
+        with self.assertRaises(ValueError):
+            inventory("static bool f(void); static BOOLEAN f(void) { return 1; }")
+
     def test_reference_covers_contract(self):
         reference = json.loads((HERE / "runtime-abi.json").read_text())["profiles"]
         contract = json.loads((HERE / "runtime-contract.json").read_text())
@@ -133,6 +147,40 @@ class InventoryTests(unittest.TestCase):
                 self.assertEqual(
                     abi["functions"]["EverParseStreamOf"]["linkage"], "extern"
                 )
+
+
+class ExtractionProfileTests(unittest.TestCase):
+    def test_all_profiles_match_the_reference_names(self):
+        reference = json.loads((HERE / "runtime-abi.json").read_text())["profiles"]
+        for profile in PROFILES:
+            names, _, _, _, _ = profile_config(profile)
+            targets = [target for module in names.values() for target in module.values()]
+            self.assertEqual(len(targets), len(set(targets)))
+            expected = reference[profile]
+            self.assertEqual(set(targets),
+                             set(expected["functions"]) | set(expected["types"])
+                             | set(expected["values"]) | set(expected["macros"]))
+
+    def test_annotations_preserve_bodies(self):
+        source = "module Example\n[@ CMacro ]\nlet answer = 42ul\n"
+        result = annotate(source, {"answer": "ANSWER"})
+        self.assertIn("let answer = 42ul\n", result)
+        self.assertIn('[@@ CMacro; FStar.Attributes.rename_let "ANSWER";', result)
+        self.assertIn("FStar.Attributes.CInline", result)
+
+    def test_static_hooks_use_supplying_headers(self):
+        result = annotate("assume val has : unit -> bool\n",
+                          {"has": "EverParseHas"}, foreign={"has"},
+                          static_hooks={"EverParseHas"})
+        self.assertIn('custard_extern "EverParseHas"', result)
+        self.assertIn('custard_c_header "EverParseStreamPrimitives.h"', result)
+        self.assertNotIn("custard_declare_in_c_header", result)
+
+    def test_invalid_annotations_fail(self):
+        with self.assertRaises(ValueError):
+            annotate("let answer = 42\n", {"missing": "Missing"})
+        with self.assertRaises(ValueError):
+            annotate("let answer = 0\nlet answer = 1\n", {"answer": "Answer"})
 
 
 if __name__ == "__main__":
