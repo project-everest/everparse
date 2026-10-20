@@ -1095,14 +1095,19 @@ let raw_data_item_bounded_pred
     prf = raw_data_item_bounded_prf n;
   }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-fn impl_raw_data_item_bounded_incr (_: unit) :
-  validate_filter_test_t #leaf #_ #(parser_of_tot_parser parse_raw_data_item_param.parse_header) (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) raw_data_item_bounded_incr
+fn impl_raw_data_item_bounded_step (map_length_bound: SZ.t) :
+  validate_depth_step_t #parse_raw_data_item_param serialize_raw_data_item_param (raw_data_item_bounded_pred (SZ.v map_length_bound))
 =
-  (a: _)
-  (#pm: perm)
-  (#va: Ghost.erased leaf)
+    (#va: Ghost.erased leaf)
+    (#pm: perm)
+    (a: _)
+    (bound: SZ.t)
+    (#rem: Ghost.erased SZ.t)
+    (prem: R.ref SZ.t)
 {
   pts_to_serialized_ext_trade
     (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
@@ -1117,8 +1122,45 @@ fn impl_raw_data_item_bounded_incr (_: unit) :
     (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
   elim_trade _ _;
   let typ = get_header_major_type h;
-  (typ = cbor_major_type_map)
+  if (typ = cbor_major_type_array) {
+    let arg64 = get_header_argument_as_uint64 h;
+    if SZCmp.u64_lte_sizet arg64 bound {
+      prem := SZ.uint64_to_sizet arg64;
+      depth_step_flat
+    }
+    else {
+      depth_step_overflow
+    }
+  }
+  else if (typ = cbor_major_type_map) {
+    let arg64 = get_header_argument_as_uint64 h;
+    if not (SZCmp.u64_lte_sizet arg64 map_length_bound) {
+      depth_step_fail
+    }
+    else if SZCmp.u64_lte_sizet arg64 bound {
+      let arg = SZ.uint64_to_sizet arg64;
+      if SZ.lt (SZ.sub bound arg) arg {
+        depth_step_overflow
+      } else {
+        prem := (SZ.add arg arg);
+        depth_step_incr
+      }
+    }
+    else {
+      depth_step_overflow
+    }
+  }
+  else if (typ = cbor_major_type_tagged) {
+    prem := 1sz;
+    depth_step_flat
+  }
+  else {
+    prem := 0sz;
+    depth_step_flat
+  }
 }
+
+#pop-options
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -1131,10 +1173,8 @@ let validate_raw_data_item_nlist_bounded_body
 = validate_nlist_depth_body
     serialize_raw_data_item_param
     (validate_leaf ())
-    (validate_recursive_step_count_leaf ())
     (raw_data_item_bounded_pred (SZ.v map_length_bound))
-    (impl_map_length_bounded_header map_length_bound)
-    (impl_raw_data_item_bounded_incr ())
+    (impl_raw_data_item_bounded_step map_length_bound)
     d
     self
     n

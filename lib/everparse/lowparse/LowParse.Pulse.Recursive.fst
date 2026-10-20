@@ -1182,6 +1182,58 @@ let validate_nlist_depth_size
     #(L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind))
     (L.tot_parse_nlist n (parse_recursive p)) (List.Tot.for_all (pd.pred d)) (Seq.slice v off (Seq.length v))
 
+(* Result codes of a depth step (see validate_depth_step_t) *)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let depth_step_fail : FStar.UInt8.t = 0uy
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let depth_step_overflow : FStar.UInt8.t = 1uy
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let depth_step_flat : FStar.UInt8.t = 2uy
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let depth_step_incr : FStar.UInt8.t = 3uy
+
+let validate_depth_step_post
+  (#p: parse_recursive_param)
+  (pd: pred_depth_recursive_t p)
+  (va: p.header)
+  (bound: SZ.t)
+  (rem': SZ.t)
+  (res: FStar.UInt8.t)
+: Tot prop
+= if pd.base va
+  then
+    if res = depth_step_overflow
+    then p.count va > SZ.v bound
+    else SZ.v rem' == p.count va /\ res == (if pd.incr va then depth_step_incr else depth_step_flat)
+  else res == depth_step_fail
+
+(* A depth step checks `pd.base`, computes the number of children (failing
+   with depth_step_overflow if it exceeds `bound`), and tells whether
+   `pd.incr` holds, all from a single read of the header. *)
+inline_for_extraction
+let validate_depth_step_t
+  (#p: parse_recursive_param u#0 u#0)
+  (s: serialize_recursive_param p)
+  (pd: pred_depth_recursive_t p)
+: Tot Type
+=
+    (#va: Ghost.erased p.header) ->
+    (#pm: perm) ->
+    (a: S.slice byte) ->
+    (bound: SZ.t) ->
+    (#rem: Ghost.erased SZ.t) ->
+    (prem: R.ref SZ.t) ->
+    stt FStar.UInt8.t
+      (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) a #pm va ** R.pts_to prem rem)
+      (fun res -> pts_to_serialized (serializer_of_tot_serializer s.serialize_header) a #pm va ** (
+        exists* rem' . R.pts_to prem rem' ** pure (
+          validate_depth_step_post pd va bound rem' res
+      )))
+
 inline_for_extraction
 let validate_nlist_depth_t
   (#p: parse_recursive_param)
@@ -1199,10 +1251,8 @@ fn validate_nlist_depth_body
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
   (w: validator (parser_of_tot_parser p.parse_header))
-  (f: validate_recursive_step_count s)
   (pd: pred_depth_recursive_t p)
-  (g_base: C.validate_filter_test_t (serializer_of_tot_serializer s.serialize_header) pd.base)
-  (g_incr: C.validate_filter_test_t (serializer_of_tot_serializer s.serialize_header) pd.incr)
+  (g: validate_depth_step_t s pd)
   (d: SZ.t)
   (self: (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_nlist_depth_t pd d')
   (n0: SZ.t)
@@ -1250,20 +1300,17 @@ fn validate_nlist_depth_body
         let input1 = peek_trade_gen (serializer_of_tot_serializer s.serialize_header) input off offset;
         parser_kind_prop_equiv p.parse_header_kind p.parse_header;
         with gv . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) input1 #pm gv);
-        let res_base = g_base input1;
-        if not res_base {
-          elim_trade _ _;
+        let bound = SZ.sub (SZ.sub (S.len input) off) n;
+        let r = g #gv #pm input1 bound pn;
+        elim_trade _ _;
+        if (r = depth_step_fail) {
           pres := false
         } else {
-          let is_incr = g_incr input1;
-          let bound = SZ.sub (SZ.sub (S.len input) off) n;
-          let res2 = f #gv #pm input1 bound pn;
-          elim_trade _ _;
           let count = !pn;
-          if (res2 || SZ.gt count bound) {
+          if (r = depth_step_overflow || SZ.gt count bound) {
             validate_nlist_depth_overflow pd (SZ.v d) v (SZ.v n) (SZ.v off);
             pres := false
-          } else if is_incr {
+          } else if (r = depth_step_incr) {
             if (d = 0sz) {
               pres := false
             } else {
