@@ -16,6 +16,7 @@ RUNTIME = ROOT / "lib/everparse/3d"
 PREFIX = "EverParse3d."
 CONTRACT = json.loads((HERE / "runtime-contract.json").read_text())
 PROFILES = {p["directory"]: p for p in CONTRACT["profiles"]}
+COMPANION = "EverParseStreamPrimitives.h"
 QUALIFIERS = r"(?:(?:noeq|inline_for_extraction|private|noextract|unfold)\s+)*"
 DECLARATION = re.compile(
     r"^" + QUALIFIERS + r"(?:let|type|assume val|val|fn)\s+(\w+)\b"
@@ -24,6 +25,44 @@ DECLARATION = re.compile(
 
 def c_name(name):
     return "EverParse" + "".join(word.capitalize() for word in name.split("_"))
+
+
+def companion(profile):
+    hooks = PROFILES[profile]["static_hooks"]
+    if not hooks:
+        raise ValueError("This profile has no static client hooks: " + profile)
+    abi = json.loads((HERE / "runtime-abi.json").read_text())["profiles"][profile]
+    lines = [
+        "/* Generated from the runtime ABI contract. Client supplies the bodies. */",
+        "#ifndef EVERPARSE_STREAM_PRIMITIVES_H",
+        "#define EVERPARSE_STREAM_PRIMITIVES_H",
+        "",
+        "#include <stddef.h>",
+        "#include <stdint.h>",
+        '#include "EverParseEndianness.h"',
+        "",
+        "#ifdef __cplusplus",
+        'extern "C" {',
+        "#endif",
+        "",
+    ]
+    for name in hooks:
+        signature = abi["functions"][name]
+        types = [signature["return"]] + signature["parameters"]
+        if any("EVERPARSE_INPUT_BUFFER" in t or "EVERPARSE_ERROR_FRAME" in t
+               for t in types):
+            raise ValueError("Early static hook depends on a generated record: " + name)
+        lines.append("static inline " + signature["return"] + " " + name
+                     + "(" + ", ".join(signature["parameters"]) + ");")
+    lines += ["", "#ifdef __cplusplus", "}", "#endif", "", "#endif", ""]
+    return "\n".join(lines)
+
+
+def publish(contents, destination):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name("." + destination.name + ".tmp")
+    temporary.write_bytes(contents)
+    os.replace(temporary, destination)
 
 
 def annotate(text, names, preserved=(), foreign=(), static_hooks=()):
@@ -242,17 +281,16 @@ def extract(args):
     subprocess.run(command + extraction + [str(root), "-o", str(header)], check=True)
     if (build / "EverParse.c").exists():
         raise RuntimeError("Static-header extraction unexpectedly produced EverParse.c")
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = args.output.with_name("." + args.output.name + ".tmp")
-    shutil.copyfile(header, temporary)
-    os.replace(temporary, args.output)
+    publish(header.read_bytes(), args.output)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=PROFILES, required=True)
-    parser.add_argument("--build-dir", type=Path, required=True)
+    parser.add_argument("--build-dir", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--companion-only", action="store_true",
+                        help="Generate static hook prototypes without invoking F*")
     parser.add_argument("--fstar", default=os.environ.get("FSTAR_EXE", "fstar.exe"))
     parser.add_argument("--fstar-options", default="")
     parser.add_argument("--dependency-cache", type=Path,
@@ -261,7 +299,14 @@ def main():
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error("--jobs must be positive")
-    extract(args)
+    if args.companion_only:
+        if args.output.name != COMPANION:
+            parser.error("The companion output must be named " + COMPANION)
+        publish(companion(args.profile).encode(), args.output)
+    else:
+        if not args.build_dir:
+            parser.error("Extraction requires --build-dir")
+        extract(args)
 
 
 if __name__ == "__main__":

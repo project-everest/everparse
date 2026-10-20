@@ -3,7 +3,15 @@
 typedef void *EVERPARSE_INPUT_STREAM_BASE;
 typedef uintptr_t EVERPARSE_EXTRA_T;
 
+#if defined(STATIC) && defined(HOOKS_FIRST)
+#include "static-hooks.h"
+#endif
+
 #include "EverParse.h"
+
+#if defined(STATIC) && !defined(HOOKS_FIRST)
+#include "static-hooks.h"
+#endif
 
 #include <assert.h>
 
@@ -33,6 +41,13 @@ int main(void)
   assert(sizeof(buffer.has_length) == sizeof(BOOLEAN));
   assert(buffer.has_length == 1);
   assert(buffer.length == 7);
+#endif
+#endif
+#ifdef STATIC
+#ifdef LOWSTAR
+  assert(EverParseHas(0, 0, 0) == (BOOLEAN)255);
+#else
+  assert(EverParseStreamHas(0, 0, 0) == (BOOLEAN)255);
 #endif
 #endif
   return 0;

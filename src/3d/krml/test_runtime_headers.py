@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 from runtime_abi import inventory
-from runtime_headers import PROFILES, annotate, profile_config
+from runtime_headers import PROFILES, annotate, companion, profile_config
 
 
 HERE = Path(__file__).resolve().parent
@@ -181,6 +181,19 @@ class ExtractionProfileTests(unittest.TestCase):
             annotate("let answer = 42\n", {"missing": "Missing"})
         with self.assertRaises(ValueError):
             annotate("let answer = 0\nlet answer = 1\n", {"answer": "Answer"})
+
+    def test_companions_only_declare_selected_functions(self):
+        for profile in ("static", "lowstar/static"):
+            declarations = inventory(companion(profile))
+            self.assertEqual(set(declarations["functions"]),
+                             set(PROFILES[profile]["static_hooks"]))
+            self.assertEqual(declarations["values"], {})
+            self.assertEqual(declarations["types"], {})
+            self.assertNotIn("EverParseStreamOf", declarations["functions"])
+            for signature in declarations["functions"].values():
+                self.assertEqual(signature["linkage"], "static inline")
+        with self.assertRaises(ValueError):
+            companion("extern")
 
 
 if __name__ == "__main__":
