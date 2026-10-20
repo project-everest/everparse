@@ -3,9 +3,12 @@ all: extract-krml headers
 extract-krml:
 	+$(MAKE) -f extract.Makefile extract-krml
 
-# The per-backend EverParse.h shipped alongside the .krml files. Depends on
-# extract-krml, which produces the .krml files it is generated from.
+# The reference generator still needs .krml; direct-C headers are independent.
+RUNTIME_HEADER_GENERATOR ?= karamel
+ifeq (karamel,$(RUNTIME_HEADER_GENERATOR))
 headers: extract-krml
+endif
+headers:
 	+$(MAKE) -f header.Makefile headers
 
 .PHONY: all extract-krml headers

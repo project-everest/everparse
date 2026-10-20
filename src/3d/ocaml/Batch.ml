@@ -50,6 +50,12 @@ let everparse_h_home input_stream_binding =
       (string_of_input_stream_binding input_stream_binding)
   else pulse_actions_c_home input_stream_binding
 
+let everparse_static_headers input_stream_binding out_dir =
+  match input_stream_binding with
+  | HashingOptions.InputStreamStatic _ ->
+    [filename_concat out_dir "EverParseStreamPrimitives.h"]
+  | _ -> []
+
 let pulse_error_handler_module input_stream_binding =
   let backend =
     match string_of_input_stream_binding input_stream_binding with
@@ -790,6 +796,10 @@ let collect_files
     then
       let accu = collect_file accu (filename_concat out_dir "EverParse.h") in
       let accu = collect_file accu (filename_concat out_dir "EverParseEndianness.h") in
+      let accu =
+        List.fold_left collect_file accu
+          (everparse_static_headers (Options.get_input_stream_binding ()) out_dir)
+      in
       (* --api pulse copies two more headers into out_dir; treat them like the
          others (clang-format, cleanup, ...). *)
       let accu =
@@ -892,6 +902,12 @@ let copy_everparse_h_raw
       let everparse_h_source = filename_concat (everparse_h_home input_stream_binding) "EverParse.h" in
       if wanted "EverParse.h" && (lowstar_api () || file_exists everparse_h_source)
       then copy everparse_h_source dest_everparse_h;
+      List.iter
+        (fun destination ->
+          let name = Filename.basename destination in
+          if wanted name then
+            copy (filename_concat (everparse_h_home input_stream_binding) name) destination)
+        (everparse_static_headers input_stream_binding out_dir);
       if Options.uses_pulse_api ()
       then begin
         let everparse_pulse_h_source = filename_concat lib_3d_home "EverParsePulse.h" in
@@ -928,7 +944,8 @@ let copy_everparse_h
     let copied =
       List.filter
         (fun f -> only = [] || List.mem (Filename.basename f) only)
-        ([filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"] @ everparse_pulse_headers out_dir)
+        ([filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"]
+         @ everparse_pulse_headers out_dir @ everparse_static_headers input_stream_binding out_dir)
     in
     call_clang_format_on clang_format_executable copied
 

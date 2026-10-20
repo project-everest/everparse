@@ -525,6 +525,12 @@ let produce_clang_format_rule
    args = "--__micro_step copy_clang_format";
   }] else []
 
+let static_prelude_headers () : FStar.All.ML (list string) =
+  match Options.get_input_stream_binding () with
+  | HashingOptions.InputStreamStatic _ ->
+    [mk_filename "EverParseStreamPrimitives" "h"]
+  | _ -> []
+
 let produce_everparse_h_rule
   (everparse_h: bool)
   (all_modules: list string)
@@ -566,6 +572,13 @@ let produce_everparse_h_rule
     };
   ] else []
   end `List.Tot.append`
+  (let headers = static_prelude_headers () in
+   List.Tot.map (fun header -> {
+     ty = EverParse;
+     from = [];
+     to = header;
+     args = "--__micro_step copy_everparse_h EverParseStreamPrimitives.h";
+   }) headers) `List.Tot.append`
   [
     {
       ty = EverParse;
@@ -588,12 +601,13 @@ let produce_everparse_h_rule
          src/3d/tests/modules/Makefile's
          `build: $(EVERPARSE_ALL_H_FILES)` relies on that. *)
       from =
-        if Options.uses_pulse_api ()
+        (static_prelude_headers ()) `List.Tot.append`
+        (if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::
              mk_filename "EverParsePulseEndianness" "h" ::
              mk_filename "EverParseEndianness" "h" ::
              List.Tot.map (fun m -> mk_filename m "c") all_modules
-        else [mk_filename "EverParseEndianness" "h"];
+        else [mk_filename "EverParseEndianness" "h"]);
       to = mk_filename "EverParse" "h";
       args = "--__micro_step copy_everparse_h EverParse.h";
     }
@@ -694,6 +708,7 @@ let write_makefile
     let ln =
       begin if ext = "h" && everparse_h
       then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"] `List.Tot.append`
+           static_prelude_headers () `List.Tot.append`
            (* --api pulse additionally copies these two, and the generated C
               includes them, so they belong to the installable header set. *)
            (if Options.uses_pulse_api ()

@@ -8,6 +8,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 
 
 HERE = Path(__file__).resolve().parent
@@ -63,6 +64,14 @@ def publish(contents, destination):
     temporary = destination.with_name("." + destination.name + ".tmp")
     temporary.write_bytes(contents)
     os.replace(temporary, destination)
+
+
+def native_path(path):
+    if sys.platform == "cygwin":
+        return subprocess.check_output(
+            ["cygpath", "-m", str(path)], text=True
+        ).strip()
+    return str(path)
 
 
 def annotate(text, names, preserved=(), foreign=(), static_hooks=()):
@@ -246,9 +255,9 @@ def extract(args):
         for i, name in enumerate(sorted(names))
     ))
     flags = shlex.split(args.fstar_options)
-    flags += ["--cache_checked_modules", "--cache_dir", str(cache),
-              "--odir", str(build), "--include", str(source_dir),
-              "--include", str(ROOT / "lib/everparse/lowparse")]
+    flags += ["--cache_checked_modules", "--cache_dir", native_path(cache),
+              "--odir", native_path(build), "--include", native_path(source_dir),
+              "--include", native_path(ROOT / "lib/everparse/lowparse")]
     for path in (
         ROOT / "opt/FStar/pulse/lib/common",
         ROOT / "opt/FStar/pulse/lib/pulse",
@@ -256,13 +265,13 @@ def extract(args):
         ROOT / "opt/FStar/pulse/build/lib.pulse.checked",
     ):
         if path.is_dir():
-            flags += ["--include", str(path)]
+            flags += ["--include", native_path(path)]
     flags += ["--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",
               "--warn_error", "@241@371-342"]
     command = [args.fstar] + flags
     dep = build / ".depend"
-    subprocess.run(command + ["--dep", "full", "--output_deps_to", str(dep),
-                              str(root)], check=True)
+    subprocess.run(command + ["--dep", "full", "--output_deps_to", native_path(dep),
+                              native_path(root)], check=True)
     makefile = build / "Check.Makefile"
     makefile.write_text(
         ".DEFAULT_GOAL := all\ninclude " + str(dep) + "\n"
@@ -278,7 +287,7 @@ def extract(args):
     for name, target in external_types.items():
         extraction += ["--custard_extern_type", PREFIX + name + "=" + target + "@" + include]
     header = build / "EverParse.h"
-    subprocess.run(command + extraction + [str(root), "-o", str(header)], check=True)
+    subprocess.run(command + extraction + [native_path(root), "-o", native_path(header)], check=True)
     if (build / "EverParse.c").exists():
         raise RuntimeError("Static-header extraction unexpectedly produced EverParse.c")
     publish(header.read_bytes(), args.output)
