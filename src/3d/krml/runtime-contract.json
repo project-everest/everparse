@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "header": "EverParse.h",
+  "header_generator": "Custard C",
+  "validator_generator": ["Custard KrmlC", "KaRaMeL"],
+  "retain_runtime_krml": true,
+  "boolean": {
+    "name": "BOOLEAN",
+    "representation": "uint8_t",
+    "false": 0,
+    "true": 1,
+    "truth": "nonzero"
+  },
+  "preserve": [
+    "public identifiers",
+    "function and callback types",
+    "argument order",
+    "record field types and layout",
+    "foreign linkage",
+    "client error-handler macros",
+    "Windows endianness-header substitution"
+  ],
+  "krml_only_roots": [
+    "Pulse.Lib.Pervasives._zero_for_deref",
+    "EverParse3d.InputStream.Buffer.error_handler_macro",
+    "EverParse3d.InputStream.Extern.error_handler_macro",
+    "EverParse3d.InputStream.Static.error_handler_macro",
+    "EverParse3d.InputStream.LowstarBuffer.error_handler_macro",
+    "EverParse3d.InputStream.LowstarExtern.error_handler_macro"
+  ],
+  "profiles": [
+    {
+      "api": "pulse",
+      "stream": "buffer",
+      "directory": "buffer",
+      "static_hooks": [],
+      "extern_values": []
+    },
+    {
+      "api": "pulse",
+      "stream": "extern",
+      "directory": "extern",
+      "static_hooks": [],
+      "extern_values": ["EverParseNullPtr"]
+    },
+    {
+      "api": "pulse",
+      "stream": "static",
+      "directory": "static",
+      "static_hooks": [
+        "EverParseStreamGetPosition",
+        "EverParseStreamHas",
+        "EverParseStreamHasAt",
+        "EverParseStreamReadBytes",
+        "EverParseStreamSkip",
+        "EverParseStreamEmpty",
+        "EverParseFieldPtrAfterImpl"
+      ],
+      "extern_values": ["EverParseNullPtr"]
+    },
+    {
+      "api": "lowstar",
+      "stream": "buffer",
+      "directory": "lowstar/buffer",
+      "static_hooks": [],
+      "extern_values": []
+    },
+    {
+      "api": "lowstar",
+      "stream": "extern",
+      "directory": "lowstar/extern",
+      "static_hooks": [],
+      "extern_values": []
+    },
+    {
+      "api": "lowstar",
+      "stream": "static",
+      "directory": "lowstar/static",
+      "static_hooks": [
+        "EverParseHas",
+        "EverParseSkip",
+        "EverParseEmpty",
+        "EverParseRead",
+        "EverParsePeep"
+      ],
+      "extern_values": []
+    }
+  ]
+}
