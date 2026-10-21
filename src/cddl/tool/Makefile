@@ -1,24 +1,29 @@
 all: build
 
-EVERPARSE_SRC_PATH := $(realpath ../..)
-include $(EVERPARSE_SRC_PATH)/windows.Makefile
+EVERPARSE_HOME := $(realpath ../../..)
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse $(EVERPARSE_SRC_PATH)/cbor/pulse
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/lib/everparse/cddl/pulse $(EVERPARSE_HOME)/lib/everparse/cbor/pulse
 
 ALREADY_CACHED := *,-CDDL.Tool,
 
 clean_rules += clean-ocaml clean-done
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 ocaml.done: $(ALL_CHECKED_FILES)
 	rm -f $@
 	+$(MAKE) -f $(basename $@).Makefile
 	touch $@
 
-EVERPARSE_CDDL=$(EVERPARSE_SRC_PATH)/../bin/cddl.exe
+EVERPARSE_CDDL=$(EVERPARSE_HOME)/bin/everparse-cddl.exe
+
+# evercddl.lib is a build-time artifact of everparse-cddl.exe, not something EverParse
+# ships: its only consumer is the roundtrip test, which links against it to
+# compare the OCaml parser with the extracted F* AST. So install it into that
+# test's own directory rather than under the $(EVERPARSE_HOME) prefix.
+EVERCDDL_LIB_PREFIX=$(EVERPARSE_HOME)/src/cddl/tests/roundtrip/evercddl
 
 build: $(EVERPARSE_CDDL)
 
@@ -26,7 +31,11 @@ build: $(EVERPARSE_CDDL)
 
 $(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
-	cd ocaml && dune install --prefix=$(EVERPARSE_SRC_PATH)/..
+	rm -rf $(EVERCDDL_LIB_PREFIX)
+	cd ocaml && dune install --prefix=$(EVERCDDL_LIB_PREFIX) --section=lib evercddl
+	mkdir -p $(dir $@)
+	cp ocaml/_build/install/default/bin/everparse-cddl.exe $@
+	chmod +w $@ # because dune produces read-only executables
 
 .PHONY: all
 
@@ -38,5 +47,6 @@ clean-ocaml:
 clean-done:
 	rm -f *.depend *.depend.rsp *.done
 	rm -rf ocaml/evercddl-lib/extracted
+	rm -rf $(EVERCDDL_LIB_PREFIX)
 
 .PHONY: clean-done

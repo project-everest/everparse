@@ -38,16 +38,16 @@ Specialize1CopyBytes(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(Err);
   KRML_MAYBE_UNUSED_VAR(Sz);
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy1(Numbytes, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Numbytes;
-    WriteOffset[0U] = wr + Numbytes;
+    *ReadOffset = rd + Numbytes;
+    *WriteOffset = wr + Numbytes;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 void
@@ -85,13 +85,13 @@ Specialize1SkipBytesWrite(
   KRML_MAYBE_UNUSED_VAR(Src);
   KRML_MAYBE_UNUSED_VAR(Sz);
   KRML_MAYBE_UNUSED_VAR(Dest);
-  wr = WriteOffset[0U];
+  wr = *WriteOffset;
   if (wr <= (0xffffffffffffffffULL - Numbytes))
   {
-    WriteOffset[0U] = wr + Numbytes;
+    *WriteOffset = wr + Numbytes;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 void
@@ -129,9 +129,9 @@ Specialize1ReadAndCoercePointer(
   uint64_t wr;
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Sz);
-  rd = ReadOffset[0U];
+  rd = *ReadOffset;
   v = ProbeAndReadU320(Failed, rd, Src, Dest);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, Fd, 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -139,30 +139,30 @@ Specialize1ReadAndCoercePointer(
   }
   else
   {
-    ReadOffset[0U] = rd + 4ULL;
+    *ReadOffset = rd + 4ULL;
     res1 = v;
   }
-  hasFailed1 = Failed[0U];
+  hasFailed1 = *Failed;
   if (hasFailed1)
   {
     Err(Tn, Fn, Fieldname, 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
   res11 = UlongToPtr1(res1);
-  hasFailed2 = Failed[0U];
+  hasFailed2 = *Failed;
   if (hasFailed2)
   {
     Err(Tn, Fn, Fieldname, 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  wr = WriteOffset[0U];
+  wr = *WriteOffset;
   ok = WriteU640(res11, wr, Dest);
   if (ok)
   {
-    WriteOffset[0U] = wr + 8ULL;
+    *WriteOffset = wr + 8ULL;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 void
@@ -208,7 +208,7 @@ Specialize1Specialized32ProbeS64(
     Src,
     Sz,
     Dest);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "s1", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -226,7 +226,7 @@ Specialize1Specialized32ProbeS64(
     Src,
     Sz,
     Dest);
-  hasFailed1 = Failed[0U];
+  hasFailed1 = *Failed;
   if (hasFailed1)
   {
     Err(Tn, Fn, "alignment", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -244,7 +244,7 @@ Specialize1Specialized32ProbeS64(
     Src,
     Sz,
     Dest);
-  hasFailed2 = Failed[0U];
+  hasFailed2 = *Failed;
   if (hasFailed2)
   {
     Err(Tn, Fn, "ptrT", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -262,7 +262,7 @@ Specialize1Specialized32ProbeS64(
     Src,
     Sz,
     Dest);
-  hasFailed3 = Failed[0U];
+  hasFailed3 = *Failed;
   if (hasFailed3)
   {
     Err(Tn, Fn, "s2", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -280,7 +280,7 @@ Specialize1Specialized32ProbeS64(
     Src,
     Sz,
     Dest);
-  hasFailed4 = Failed[0U];
+  hasFailed4 = *Failed;
   if (hasFailed4)
   {
     Err(Tn, Fn, "alignment", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -309,13 +309,13 @@ Specialize1ValidateCoreT(
 {
   size_t pos = (size_t)0U;
   /* Validating field t1 */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -377,9 +377,9 @@ Specialize1ValidateCoreT(
   if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p20 = SlPos[0U];
+    p20 = *SlPos;
     p_ = p20 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     resultAftert1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   else
@@ -389,12 +389,12 @@ Specialize1ValidateCoreT(
   if (resultAftert1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field t2 */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartT = (uint64_t)p2;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p01 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p01 <= rem1 && (size_t)4U <= (rem1 - p01);
     if (hasBytes1)
@@ -409,10 +409,10 @@ Specialize1ValidateCoreT(
     if (resultAftert2_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       /* reading field_value */
-      p02 = SlPos[0U];
+      p02 = *SlPos;
       m = p02 + (size_t)4U;
       sub = SlBase + p02;
-      SlPos[0U] = m;
+      *SlPos = m;
       first = sub[0U];
       pos_ = (size_t)2U;
       first1 = sub[1U];
@@ -498,12 +498,12 @@ Specialize1ValidateCoreS64(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartS64 = (uint64_t)p;
   size_t pos = (size_t)0U;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t resultAfters1;
@@ -617,10 +617,10 @@ Specialize1ValidateCoreS64(
   }
   if (resultAfters1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -638,11 +638,11 @@ Specialize1ValidateCoreS64(
     if (s1ConstraintIsOk)
     {
       /* Validating field ___alignment_padding_4 */
-      p2 = SlPos[0U];
+      p2 = *SlPos;
       fieldStartS641 = (uint64_t)p2;
       pos1 = (size_t)0U;
       p02 = pos1;
-      p3 = SlPos[0U];
+      p3 = *SlPos;
       rem1 = SlLen - p3;
       hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
       if (hasBytes1)
@@ -657,9 +657,9 @@ Specialize1ValidateCoreS64(
       if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         consumed0 = pos1;
-        p40 = SlPos[0U];
+        p40 = *SlPos;
         p_ = p40 + consumed0;
-        SlPos[0U] = p_;
+        *SlPos = p_;
         resultAfterS640 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
@@ -684,14 +684,14 @@ Specialize1ValidateCoreS64(
       }
       if (resultAfterAlignmentPadding4 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
-        p4 = SlPos[0U];
+        p4 = *SlPos;
         fieldStartS642 = (uint64_t)p4;
-        p5 = SlPos[0U];
+        p5 = *SlPos;
         fieldStartptrT = (uint64_t)p5;
         pos2 = (size_t)0U;
         /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
         p03 = pos2;
-        p6 = SlPos[0U];
+        p6 = *SlPos;
         rem2 = SlLen - p6;
         hasBytes2 = p03 <= rem2 && (size_t)8U <= (rem2 - p03);
         if (hasBytes2)
@@ -705,10 +705,10 @@ Specialize1ValidateCoreS64(
         }
         if (resultAfterptrT == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
-          p040 = SlPos[0U];
+          p040 = *SlPos;
           m1 = p040 + (size_t)8U;
           sub1 = SlBase + p040;
-          SlPos[0U] = m1;
+          *SlPos = m1;
           first4 = sub1[0U];
           pos_2 = (size_t)2U;
           first5 = sub1[1U];
@@ -820,11 +820,11 @@ Specialize1ValidateCoreS64(
         }
         if (resultAfterptrT1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
-          p7 = SlPos[0U];
+          p7 = *SlPos;
           fieldStartS643 = (uint64_t)p7;
           pos3 = (size_t)0U;
           p04 = pos3;
-          p8 = SlPos[0U];
+          p8 = *SlPos;
           rem3 = SlLen - p8;
           hasBytes3 = p04 <= rem3 && (size_t)8U <= (rem3 - p04);
           if (hasBytes3)
@@ -839,9 +839,9 @@ Specialize1ValidateCoreS64(
           if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
           {
             consumed = pos3;
-            p9 = SlPos[0U];
+            p9 = *SlPos;
             p_0 = p9 + consumed;
-            SlPos[0U] = p_0;
+            *SlPos = p_0;
             resultAfterS642 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
           }
           else
@@ -938,7 +938,7 @@ Specialize1Specialized32ProbeT(
     Src,
     Sz,
     Dest);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "t1", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -967,13 +967,13 @@ Specialize1ValidateCoreSpecializedR32(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -1060,10 +1060,10 @@ Specialize1ValidateCoreSpecializedR32(
   }
   if (resultAfterr1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -1077,14 +1077,14 @@ Specialize1ValidateCoreSpecializedR32(
     n2 = bfirst1 + n1 * 256U;
     bfirst2 = (uint32_t)first;
     r1 = bfirst2 + n2 * 256U;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartSpecializedR32 = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartptrS = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p02 = pos1;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     rem1 = SlLen - p4;
     hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
     if (hasBytes1)
@@ -1098,10 +1098,10 @@ Specialize1ValidateCoreSpecializedR32(
     }
     if (resultAfterptrS == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)4U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first4 = sub1[0U];
       pos_2 = (size_t)2U;
       first5 = sub1[1U];
@@ -1281,13 +1281,13 @@ Specialize1ValidateCoreR64(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -1402,10 +1402,10 @@ Specialize1ValidateCoreR64(
   }
   if (resultAfterr1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -1420,11 +1420,11 @@ Specialize1ValidateCoreR64(
     bfirst2 = (uint32_t)first;
     r1 = bfirst2 + n2 * 256U;
     /* Validating field ___alignment_padding_6 */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartR64 = (uint64_t)p2;
     pos1 = (size_t)0U;
     p02 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
     if (hasBytes1)
@@ -1439,9 +1439,9 @@ Specialize1ValidateCoreR64(
     if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos1;
-      p40 = SlPos[0U];
+      p40 = *SlPos;
       p_ = p40 + consumed;
-      SlPos[0U] = p_;
+      *SlPos = p_;
       resultAfterR64 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
@@ -1466,14 +1466,14 @@ Specialize1ValidateCoreR64(
     }
     if (resultAfterAlignmentPadding6 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p4 = SlPos[0U];
+      p4 = *SlPos;
       fieldStartR641 = (uint64_t)p4;
-      p5 = SlPos[0U];
+      p5 = *SlPos;
       fieldStartptrS = (uint64_t)p5;
       pos2 = (size_t)0U;
       /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
       p03 = pos2;
-      p6 = SlPos[0U];
+      p6 = *SlPos;
       rem2 = SlLen - p6;
       hasBytes2 = p03 <= rem2 && (size_t)8U <= (rem2 - p03);
       if (hasBytes2)
@@ -1487,10 +1487,10 @@ Specialize1ValidateCoreR64(
       }
       if (resultAfterptrS == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
-        p04 = SlPos[0U];
+        p04 = *SlPos;
         m1 = p04 + (size_t)8U;
         sub1 = SlBase + p04;
-        SlPos[0U] = m1;
+        *SlPos = m1;
         first4 = sub1[0U];
         pos_2 = (size_t)2U;
         first5 = sub1[1U];
@@ -1642,22 +1642,22 @@ Specialize1RProbeFieldR640T(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy1(Sz, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + Sz;
+    *WriteOffset = wr + Sz;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 void
@@ -1691,22 +1691,22 @@ Specialize1RProbeFieldR641S64(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy1(Sz, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + Sz;
+    *WriteOffset = wr + Sz;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 uint8_t
@@ -1739,7 +1739,7 @@ Specialize1ValidateCoreR(
   if (Requestor32)
   {
     /* Validating field r32 */
-    p0 = SlPos[0U];
+    p0 = *SlPos;
     fieldStartR = (uint64_t)p0;
     resultAfterR =
       Specialize1ValidateCoreSpecializedR32(DestS,
@@ -1764,7 +1764,7 @@ Specialize1ValidateCoreR(
     return resultAfterR;
   }
   /* Validating field r64 */
-  p = SlPos[0U];
+  p = *SlPos;
   fieldStartR0 = (uint64_t)p;
   resultAfterR0 =
     Specialize1ValidateCoreR64(Specialize1RProbeFieldR640T,
@@ -1864,22 +1864,22 @@ Specialize1R32AttemptProbePtrSS32attempt(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy1(Sz, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + Sz;
+    *WriteOffset = wr + Sz;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 void
@@ -1913,22 +1913,22 @@ Specialize1S32attemptProbePtrTT(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy1(Sz, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + Sz;
+    *WriteOffset = wr + Sz;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 inline uint8_t
@@ -1951,12 +1951,12 @@ Specialize1ValidateCoreS32Attempt(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartS32Attempt = (uint64_t)p;
   size_t pos = (size_t)0U;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t resultAfterf;
@@ -2044,10 +2044,10 @@ Specialize1ValidateCoreS32Attempt(
   }
   if (resultAfterf == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -2064,14 +2064,14 @@ Specialize1ValidateCoreS32Attempt(
     fConstraintIsOk = f <= Bound;
     if (fConstraintIsOk)
     {
-      p2 = SlPos[0U];
+      p2 = *SlPos;
       fieldStartS32Attempt1 = (uint64_t)p2;
-      p3 = SlPos[0U];
+      p3 = *SlPos;
       fieldStartptrT = (uint64_t)p3;
       pos1 = (size_t)0U;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
       p02 = pos1;
-      p4 = SlPos[0U];
+      p4 = *SlPos;
       rem1 = SlLen - p4;
       hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
       if (hasBytes1)
@@ -2085,10 +2085,10 @@ Specialize1ValidateCoreS32Attempt(
       }
       if (resultAfterptrT == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
-        p030 = SlPos[0U];
+        p030 = *SlPos;
         m1 = p030 + (size_t)4U;
         sub1 = SlBase + p030;
-        SlPos[0U] = m1;
+        *SlPos = m1;
         first4 = sub1[0U];
         pos_2 = (size_t)2U;
         first5 = sub1[1U];
@@ -2194,13 +2194,13 @@ Specialize1ValidateCoreS32Attempt(
       {
         pos2 = (size_t)0U;
         /* Validating field g */
-        p5 = SlPos[0U];
+        p5 = *SlPos;
         viewStart = (uint64_t)p5;
         fieldOff = pos2;
         startPos = viewStart + (uint64_t)fieldOff;
         /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
         p03 = pos2;
-        p6 = SlPos[0U];
+        p6 = *SlPos;
         rem2 = SlLen - p6;
         hasBytes2 = p03 <= rem2 && (size_t)4U <= (rem2 - p03);
         if (hasBytes2)
@@ -2230,9 +2230,9 @@ Specialize1ValidateCoreS32Attempt(
         if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           consumed = pos2;
-          p7 = SlPos[0U];
+          p7 = *SlPos;
           p_ = p7 + consumed;
-          SlPos[0U] = p_;
+          *SlPos = p_;
           resultAfterS32Attempt = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
@@ -2290,13 +2290,13 @@ Specialize1ValidateCoreR32Attempt(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t res;
@@ -2383,10 +2383,10 @@ Specialize1ValidateCoreR32Attempt(
   }
   if (resultAfterf == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)4U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -2400,14 +2400,14 @@ Specialize1ValidateCoreR32Attempt(
     n2 = bfirst1 + n1 * 256U;
     bfirst2 = (uint32_t)first;
     f = bfirst2 + n2 * 256U;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartR32Attempt = (uint64_t)p2;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     fieldStartptrS = (uint64_t)p3;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p02 = pos1;
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     rem1 = SlLen - p4;
     hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
     if (hasBytes1)
@@ -2421,10 +2421,10 @@ Specialize1ValidateCoreR32Attempt(
     }
     if (resultAfterptrS == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)4U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first4 = sub1[0U];
       pos_2 = (size_t)2U;
       first5 = sub1[1U];
@@ -2551,22 +2551,22 @@ Specialize1RmuxProbeFieldR640T(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy1(Sz, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + Sz;
+    *WriteOffset = wr + Sz;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 void
@@ -2600,22 +2600,22 @@ Specialize1RmuxProbeFieldR641S64(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy1(Sz, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + Sz;
+    *WriteOffset = wr + Sz;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 uint8_t
@@ -2648,7 +2648,7 @@ Specialize1ValidateCoreRmux(
   if (Requestor32)
   {
     /* Validating field r32 */
-    p0 = SlPos[0U];
+    p0 = *SlPos;
     fieldStartRmux = (uint64_t)p0;
     resultAfterRmux =
       Specialize1ValidateCoreR32Attempt(DestS,
@@ -2673,7 +2673,7 @@ Specialize1ValidateCoreRmux(
     return resultAfterRmux;
   }
   /* Validating field r64 */
-  p = SlPos[0U];
+  p = *SlPos;
   fieldStartRmux0 = (uint64_t)p;
   resultAfterRmux0 =
     Specialize1ValidateCoreR64(Specialize1RmuxProbeFieldR640T,

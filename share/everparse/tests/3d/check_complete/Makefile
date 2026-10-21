@@ -17,11 +17,11 @@ all: world
 # Variables needed by the EverParse-generated Makefile #
 ########################################################
 
-EVERPARSE_HOME ?= $(realpath ../../../..)
+EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 EVERPARSE_OPTIONS=--api pulse --complete_wrappers
 
@@ -39,7 +39,7 @@ everparse_makefile=$(EVERPARSE_OUTPUT_DIR)/EverParse.Makefile
 $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
-$(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): $(wildcard src/*.3d) | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/Test.3d
 
 ifeq (,$(filter clean,$(MAKECMDGOALS)))

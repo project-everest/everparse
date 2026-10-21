@@ -66,13 +66,13 @@ PointArch3264ValidateCoreInt(
     KRML_MAYBE_UNUSED_VAR(consumed);
     pos0 = (size_t)0U;
     /* Validating field x */
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     viewStart = (uint64_t)p3;
     fieldOff = pos0;
     startPos = viewStart + (uint64_t)fieldOff;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
     p00 = pos0;
-    p10 = SlPos[0U];
+    p10 = *SlPos;
     rem0 = SlLen - p10;
     hasBytes0 = p00 <= rem0 && (size_t)8U <= (rem0 - p00);
     if (hasBytes0)
@@ -102,9 +102,9 @@ PointArch3264ValidateCoreInt(
     if (res10 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed0 = pos0;
-      p20 = SlPos[0U];
+      p20 = *SlPos;
       p_ = p20 + consumed0;
-      SlPos[0U] = p_;
+      *SlPos = p_;
       return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res10;
@@ -127,13 +127,13 @@ PointArch3264ValidateCoreInt(
     KRML_MAYBE_UNUSED_VAR(consumed0);
     pos = (size_t)0U;
     /* Validating field x */
-    p = SlPos[0U];
+    p = *SlPos;
     viewStart0 = (uint64_t)p;
     fieldOff0 = pos;
     startPos0 = viewStart0 + (uint64_t)fieldOff0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p0 = pos;
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     rem = SlLen - p1;
     hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
     if (hasBytes)
@@ -163,9 +163,9 @@ PointArch3264ValidateCoreInt(
     if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos;
-      p2 = SlPos[0U];
+      p2 = *SlPos;
       p_0 = p2 + consumed;
-      SlPos[0U] = p_0;
+      *SlPos = p_0;
       return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res1;
@@ -192,7 +192,7 @@ PointArch3264ValidateCorePoint(
 )
 {
   /* Validating field x */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartPoint = (uint64_t)p;
   uint8_t
   resultAfterPoint = PointArch3264ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
@@ -219,7 +219,7 @@ PointArch3264ValidateCorePoint(
   if (resultAfterx == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field y */
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     fieldStartPoint1 = (uint64_t)p1;
     resultAfterPoint1 = PointArch3264ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
     if (resultAfterPoint1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)

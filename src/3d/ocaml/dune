@@ -13,7 +13,8 @@
     re
     sexplib
   )
-  (flags (:standard -w -8-9-11-26-27-33-39))
+  ; F*'s String.split intrinsic omits BatString.split_on_string's by label.
+  (flags (:standard -w -6-8-9-11-26-27-33-39))
 )
 
 (ocamllex lexer)

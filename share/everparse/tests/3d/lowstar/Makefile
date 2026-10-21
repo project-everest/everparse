@@ -6,29 +6,18 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
 EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar
-3D=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.3.0)
-
-EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-
-# The standalone F# hash checker. Overridable, e.g. to test a Release
-# build or a different runtime identifier.
-HASHCHK_DIR=$(EVERPARSE_HOME)/src/3d/hashchk
-HASHCHK ?= dotnet $(HASHCHK_DIR)/bin/Debug/net10.0/win-x64/everparse-hashchk.dll
-export HASHCHK
-
-INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/src/lowparse $(EVERPARSE_HOME)/src/lowparse/pulse
+INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 
-positive_tests:=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
+positive_tests:=$(filter-out $(wildcard FAIL*.3d),$(wildcard *.3d))
 ifeq ($(OS),Windows_NT)
   # UlongToPtr is defined in Windows DLLs, conflicts with those examples
   exclude_modules := FineGrainedProbe FineGrainedProbeSpecialize Specialize2 Specialize3 Specialize5 Specialize6
@@ -54,19 +43,29 @@ clean_out_files += $(EXTRA_CLEAN_OUT_FILES)
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules \
-	 tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs \
+# The tests come in two groups of comparable cost, so that CI can run them as
+# separate jobs (the root 3d-unit-corpus-test and 3d-unit-subdirs-test):
+# corpus-test runs over the top-level .3d files, subdirs-test runs the
+# subdirectory tests. The ELFTestGen test-case generation (z3-testgen-test)
+# is a single long serial command, so it goes with the subdirectory tests to
+# balance the two.
+all: corpus-test subdirs-test
+
+corpus-test: batch-test batch-test-negative batch-cleanup-test inplace-hash-test elf-test
+
+subdirs-test: modules tcpip extern output-types static funptr ifdefs \
 	 probe iter z3-testgen-test exttype z3-testgen-probe-test \
 	 use_error_handler_macro \
 	 check_complete \
-	 save_hashes \
-	 hashchk-tests
+	 save_hashes
 
 ifneq ($(OS),Windows_NT)
 # Tests disabled on Windows because of UlongToPtr conflict
 # probe_error_handler_macro disabled on Windows because sys/mman.h is not available
-all: specialize_test specialize_test2 specialize_test_error_handler_macro specialize_tagged_union_array probe_error_handler_macro
+subdirs-test: specialize_test specialize_test2 specialize_test_error_handler_macro specialize_tagged_union_array probe_error_handler_macro
 endif
+
+.PHONY: corpus-test subdirs-test
 
 .PHONY: exttype
 
@@ -133,7 +132,7 @@ specialize_test_error_handler_macro:
 
 .PHONY: probe_error_handler_macro
 probe_error_handler_macro:
-	+$(MAKE) -C $@ 3D_Z3_EXECUTABLE=$(3D_Z3_EXECUTABLE)
+	+$(MAKE) -C $@
 
 .PHONY: save_hashes
 save_hashes:
@@ -149,14 +148,9 @@ batch-test:
 	mkdir -p out.batch
 	$(3D) --odir out.batch --batch --no_copy_everparse_h --save_hashes $(positive_tests)
 	$(3D) --odir out.batch --batch --check_hashes strong $(positive_tests)
-
-batch-interpret-test:
-	mkdir -p out.batch-interpret
-	$(3D) --odir out.batch-interpret --batch --no_copy_everparse_h --save_hashes $(INTERPRETABLE_FILES)
-	$(3D) --odir out.batch-interpret --batch --check_hashes strong $(INTERPRETABLE_FILES)
-	cp $(OTHER_HEADERS) out.batch-interpret
-	+$(MAKE) -C out.batch-interpret -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_C_RUNTIME)/buffer'
-	$(CXX) -o test-cpp.exe -I out.batch-interpret -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_C_RUNTIME)/buffer test.cpp out.batch-interpret/ArithmeticWrapper.o out.batch-interpret/Arithmetic.o
+	cp $(OTHER_HEADERS) out.batch
+	+$(MAKE) -C out.batch -f Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(EVERPARSE_HOME)/lib/everparse/3d -I $(EVERPARSE_C_RUNTIME)/buffer'
+	$(CXX) -o test-cpp.exe -I out.batch -I $(EVERPARSE_HOME)/lib/everparse/3d -I $(EVERPARSE_C_RUNTIME)/buffer test.cpp out.batch/ArithmeticWrapper.o out.batch/Arithmetic.o
 	./test-cpp.exe
 
 elf-test: ELF.3d
@@ -166,7 +160,7 @@ elf-test: ELF.3d
 
 z3-testgen-test: ELF.3d
 	mkdir -p out.z3-testgen
-	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+	$(3D) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
 
 .PHONY: z3-testgen-test
 
@@ -180,46 +174,6 @@ inplace-hash-test:
 	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
 	$(3D) --odir out.inplace-hash --batch --check_hashes inplace Comments.3d
 	$(3D) --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
-
-##############################################################
-# Same hash checks, but with the standalone F# hash checker.  #
-##############################################################
-
-# Rebuild the standalone hash checker. We use hashchk-rebuild rather
-# than hashchk-boot, because 3d is already built by the time this
-# Makefile is run, and rebuilding it here could race with the tests
-# currently running it.
-.PHONY: hashchk-boot
-hashchk-boot:
-	+$(MAKE) -C $(EVERPARSE_HOME)/src/3d hashchk-rebuild
-
-# Each of those rules depends on the test that generates the hashes,
-# and on the hash checker, so that they can all run in parallel.
-
-.PHONY: hashchk-batch-test
-hashchk-batch-test: batch-test hashchk-boot
-	$(HASHCHK) --api $(EVERPARSE_API) --odir out.batch --check_hashes strong $(positive_tests)
-
-.PHONY: hashchk-batch-interpret-test
-hashchk-batch-interpret-test: batch-interpret-test hashchk-boot
-	$(HASHCHK) --api $(EVERPARSE_API) --odir out.batch-interpret --check_hashes strong $(INTERPRETABLE_FILES)
-
-.PHONY: hashchk-inplace-hash-test
-hashchk-inplace-hash-test: inplace-hash-test hashchk-boot
-	$(HASHCHK) --api $(EVERPARSE_API) --odir out.inplace-hash --check_hashes inplace Comments.3d
-	$(HASHCHK) --api $(EVERPARSE_API) --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
-
-.PHONY: hashchk-save-hashes
-hashchk-save-hashes: save_hashes hashchk-boot
-	+$(MAKE) -C save_hashes hashchk-check
-
-.PHONY: hashchk-modules
-hashchk-modules: modules hashchk-boot
-	+$(MAKE) -C modules hashchk-check
-
-.PHONY: hashchk-tests
-hashchk-tests: hashchk-batch-test hashchk-batch-interpret-test \
-	 hashchk-inplace-hash-test hashchk-save-hashes hashchk-modules
 
 echo-clean-out-files:
 	echo "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
@@ -247,7 +201,7 @@ batch-cleanup-test:
 .PHONY: %.clean
 
 clean-files:
-	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen *.out *.err
+	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.z3-testgen *.out *.err
 
 .PHONY: clean-files
 
@@ -256,4 +210,4 @@ clean: clean-files specialize_test.clean specialize_test2.clean probe.clean exte
 clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean
 clean: check_complete.clean
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret static funptr ifdefs

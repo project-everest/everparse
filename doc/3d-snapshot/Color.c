@@ -21,12 +21,12 @@ ColorValidateCoreColoredPoint(
 )
 {
   /* Validating field col */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartColoredPoint = (uint64_t)p;
   size_t pos = (size_t)0U;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   uint8_t resultAftercol_refinement;
@@ -73,10 +73,10 @@ ColorValidateCoreColoredPoint(
   if (resultAftercol_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* reading field_value */
-    p010 = SlPos[0U];
+    p010 = *SlPos;
     m = p010 + (size_t)4U;
     sub = SlBase + p010;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     pos_ = (size_t)2U;
     first1 = sub[1U];
@@ -121,11 +121,11 @@ ColorValidateCoreColoredPoint(
   }
   if (resultAftercol_refinement1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartColoredPoint1 = (uint64_t)p2;
     pos1 = (size_t)0U;
     p01 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p01 <= rem1 && (size_t)8U <= (rem1 - p01);
     if (hasBytes1)
@@ -140,9 +140,9 @@ ColorValidateCoreColoredPoint(
     if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed = pos1;
-      p4 = SlPos[0U];
+      p4 = *SlPos;
       p_ = p4 + consumed;
-      SlPos[0U] = p_;
+      *SlPos = p_;
       resultAfterColoredPoint1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else

@@ -1,9 +1,8 @@
 all: depend verify test
 
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
-EVERPARSE_SRC_PATH ?= $(EVERPARSE_HOME)/src
 
-LOWPARSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse
+LOWPARSE_HOME ?= $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -13,7 +12,7 @@ LAX_EXT=
 LAX_OPT=
 endif
 
-INCLUDE_PATHS += $(LOWPARSE_HOME) $(LOWPARSE_HOME)/pulse ..
+INCLUDE_PATHS += $(LOWPARSE_HOME) ..
 ALREADY_CACHED := C,Spec.Loops,LowParse,
 CACHE_DIRECTORY := cache$(LAX_EXT)
 OUTPUT_DIRECTORY := krml
@@ -28,7 +27,7 @@ CUSTARD_ROOTS := ../Test.fst
 
 clean_rules += clean-local
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 FSTAR_OPTIONS += $(LAX_OPT) --ext 'optimize_let_vc=false' --warn_error @272
 

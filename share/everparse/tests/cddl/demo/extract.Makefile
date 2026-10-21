@@ -1,0 +1,52 @@
+EVERPARSE_HOME = $(realpath ../../../../..)
+OUTPUT_DIRECTORY := _output
+SRC_PATHS += $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/lib/everparse/cbor/pulse $(EVERPARSE_HOME)/lib/everparse/cddl/pulse $(OUTPUT_DIRECTORY)
+
+ALREADY_CACHED := *,-CDDLTest,
+FSTAR_OPTIONS += --warn_error -342
+FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
+FSTAR_FILES := $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst CDDLTest.Client.fst
+
+clean_rules += clean-test
+
+# Whole-program extraction.  Every module a -bundle below names has to be a
+# root: a bundle is packaging, not reachability.  [Prims] and Custard's own
+# support modules join the [fstar] bundle, and the two abstract CBOR types are
+# declared external because the -add-include'd CBORDetType.h defines them.
+CUSTARD_BACKEND := KrmlC
+CUSTARD_ENTRY_MODULES := CDDLTest.Client
+CUSTARD_ENTRY_MODULES += CDDLTest.Test
+CUSTARD_ENTRY_MODULES += CBOR.Spec.Constants
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Type
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.C
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Dummy
+CUSTARD_ROOTS := CDDLTest.Client.fst
+CUSTARD_EXTERN_TYPES := CBOR.Pulse.API.Det.Type.cbor_det_t
+CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
+
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
+
+KRML_OPTS += -warn-error @4@6
+
+KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
+
+$(OUTPUT_DIRECTORY)/CDDLExtractionTest.o: $(CUSTARD_KRML)
+	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*,Prims,Custard.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle CDDLTest.Client+CDDLTest.Test=*[rename=CDDLExtractionTest] -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants  -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse
+	$(CC) $(CFLAGS) -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse -c $(OUTPUT_DIRECTORY)/CDDLExtractionTest.c -o $@
+
+$(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
+	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_HOME)/lib/everparse/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse
+
+extract: $(OUTPUT_DIRECTORY)/test.exe
+
+test: extract
+	$(OUTPUT_DIRECTORY)/test.exe
+
+.PHONY: extract test
+
+clean-test:
+	rm -f $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o $(OUTPUT_DIRECTORY)/test.exe
+
+.PHONY: clean-test

@@ -21,13 +21,13 @@ BfValidateCoreBf2bis(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)2U <= (rem - p0);
   uint8_t res;
@@ -98,21 +98,21 @@ BfValidateCoreBf2bis(
   }
   if (resultAfterBitfield0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)2U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     first = sub[0U];
     first1 = sub[1U];
     n = (uint16_t)(uint32_t)first1;
     bfirst = (uint16_t)(uint32_t)first;
     bitfield0 = (uint32_t)bfirst + (uint32_t)n * 256U;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartBf2bis = (uint64_t)p2;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
     p02 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p02 <= rem1 && (size_t)2U <= (rem1 - p02);
     if (hasBytes1)
@@ -126,10 +126,10 @@ BfValidateCoreBf2bis(
     }
     if (resultAfterBitfield1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)2U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first2 = sub1[0U];
       first3 = sub1[1U];
       n1 = (uint16_t)(uint32_t)first3;
@@ -141,13 +141,13 @@ BfValidateCoreBf2bis(
       {
         pos2 = (size_t)0U;
         /* Validating field z */
-        p4 = SlPos[0U];
+        p4 = *SlPos;
         viewStart1 = (uint64_t)p4;
         fieldOff1 = pos2;
         startPos1 = viewStart1 + (uint64_t)fieldOff1;
         /* Checking that we have enough space for a UINT8, i.e., 1 byte */
         p04 = pos2;
-        p5 = SlPos[0U];
+        p5 = *SlPos;
         rem2 = SlLen - p5;
         hasBytes2 = p04 <= rem2 && (size_t)1U <= (rem2 - p04);
         if (hasBytes2)
@@ -177,9 +177,9 @@ BfValidateCoreBf2bis(
         if (res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           consumed = pos2;
-          p6 = SlPos[0U];
+          p6 = *SlPos;
           p_ = p6 + consumed;
-          SlPos[0U] = p_;
+          *SlPos = p_;
           resultAfterBf2bis = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
@@ -232,13 +232,13 @@ BfValidateCoreBf3(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)2U <= (rem - p0);
   uint8_t res;
@@ -309,21 +309,21 @@ BfValidateCoreBf3(
   }
   if (resultAfterBitfield0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)2U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     last = sub[1U];
     last1 = sub[0U];
     n = (uint16_t)(uint32_t)last1;
     blast = (uint16_t)(uint32_t)last;
     bitfield0 = (uint32_t)blast + (uint32_t)n * 256U;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartBf3 = (uint64_t)p2;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
     p02 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p02 <= rem1 && (size_t)2U <= (rem1 - p02);
     if (hasBytes1)
@@ -337,10 +337,10 @@ BfValidateCoreBf3(
     }
     if (resultAfterBitfield1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)2U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       last2 = sub1[1U];
       last3 = sub1[0U];
       n1 = (uint16_t)(uint32_t)last3;
@@ -355,13 +355,13 @@ BfValidateCoreBf3(
       {
         pos2 = (size_t)0U;
         /* Validating field z */
-        p4 = SlPos[0U];
+        p4 = *SlPos;
         viewStart1 = (uint64_t)p4;
         fieldOff1 = pos2;
         startPos1 = viewStart1 + (uint64_t)fieldOff1;
         /* Checking that we have enough space for a UINT8BE, i.e., 1 byte */
         p04 = pos2;
-        p5 = SlPos[0U];
+        p5 = *SlPos;
         rem2 = SlLen - p5;
         hasBytes2 = p04 <= rem2 && (size_t)1U <= (rem2 - p04);
         if (hasBytes2)
@@ -391,9 +391,9 @@ BfValidateCoreBf3(
         if (res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
         {
           consumed = pos2;
-          p6 = SlPos[0U];
+          p6 = *SlPos;
           p_ = p6 + consumed;
-          SlPos[0U] = p_;
+          *SlPos = p_;
           resultAfterBf3 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
@@ -446,7 +446,7 @@ BfValidateCoreDummy(
 )
 {
   /* Validating field emp2 */
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartDummy = (uint64_t)p;
   uint8_t resultAfterDummy = BfValidateCoreBf2bis(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
   uint8_t resultAfteremp2;
@@ -472,7 +472,7 @@ BfValidateCoreDummy(
   if (resultAfteremp2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     /* Validating field emp3 */
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     fieldStartDummy1 = (uint64_t)p1;
     resultAfterDummy1 = BfValidateCoreBf3(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
     if (resultAfterDummy1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)

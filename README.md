@@ -38,7 +38,10 @@ platform.
 |----------------------|-------|-------|---------|
 | 3D, QuackyDucky      |  Yes  |  Yes  |  Yes    |
 | EverCBOR, EverCDDL   |  Yes  |  Yes  |  No     |
-| EverCOSign           |  Yes  |  No   |  No     |
+| EverCOSign           |  No   |  No   |  No     |
+
+NOTE: EverCOSign is currently no longer included in the binary packages,
+hopefully only temporarily. It can still be built from source.
 
 NOTE: Versions 2025.06.05 and earlier only contain 3D and QuackyDucky,
 and are not available on MacOS.
@@ -76,12 +79,12 @@ NOTE: We finally support table extensibility patterns such as `(? 18
 => int, * int => any)`.
 
 The EverCDDL code generator is compiled as an executable,
-`bin/cddl.exe`
+`bin/everparse-cddl.exe`
 
 If you have a CDDL data format description, say `mydesc.cddl`, you can
 automatically compile it into C parsers and serializers, with
-`bin/cddl.exe src/cddl/spec/postlude.cddl mydesc.cddl` (where
-`src/cddl/spec/postlude.cddl` is a subset of the official postlude
+`bin/everparse-cddl.exe lib/everparse/cddl/spec/postlude.cddl mydesc.cddl` (where
+`lib/everparse/cddl/spec/postlude.cddl` is a subset of the official postlude
 from RFC 8610). The generated C code links against EverCBOR.
 
 If you want to generate Rust code instead, use the `--rust`
@@ -97,7 +100,7 @@ it with EverCDDL yet.
 
 ## QuackyDucky
 
-Run `./bin/qd.exe -help` to get instructions on how to run QuackyDucky.
+Run `./bin/everparse-qd.exe -help` to get instructions on how to run QuackyDucky.
 
 NOTE: Contrary to 3D or EverCDDL, QuackyDucky only produces F\* files
 from data format descriptions. You need to run F\* and Karamel by hand
@@ -136,9 +139,9 @@ NOTE: Currently, CBORNondet and CBORDet cannot be used together yet.
 
   + The generated C source files for the CBOR deterministic encoding are in
     `src/cbor/pulse/det/c`, which also contains some tests in the
-    `test` subdirectory. There, the header file is `CBORDet.h`. The
-    object file is `CBORDet.o`, which you can link with your
-    application.
+    `test` subdirectory. The header file is `include/everparse/CBORDet.h`.
+    The object file is `lib/everparse/CBORDet.o`, which you can link with
+    your application.
   
   + A fully documented example is in
     `src/cbor/pulse/det/c/example`. There, `main.c` documents the C
@@ -146,8 +149,9 @@ NOTE: Currently, CBORNondet and CBORDet cannot be used together yet.
 
   + The generated C source files for CBORNondet are in
     `src/cbor/pulse/nondet/c`, which also contains some tests in the
-    `test` subdirectory. There, the header file is `CBORNondet.h`. The
-    object file is `CBORNondet.o`, which you can link with your
+    `test` subdirectory. The header file is
+    `include/everparse/CBORNondet.h`. The object file is
+    `lib/everparse/CBORNondet.o`, which you can link with your
     application.
   
   + A fully documented example is in
@@ -175,7 +179,7 @@ NOTE: Support for encryption is in progress.
   + `COSE_Format.c` contains the verified parsers and serializers for COSE
   + `COSE_EverCrypt.c` is a verified implementation of sign1 and verify1 with COSE_Format and HACL* EverCrypt
   + `COSE_OpenSSL.c` is a handwritten implementation of sign1 and verify1 with OpenSSL, unverified except for parsing and serializing, calling into COSE_Format
-* To use the corresponding include files, you need to add `src/cbor/pulse/det/c` to the include path of your C compiler.
+* To use the corresponding include files, you need to add `include/everparse` to the include path of your C compiler.
 * Interop tests for the C library are in `src/cose/interop` (OpenSSL) and `src/cose/verifiedinterop/test` (HACL* EverCrypt)
 * The generated Rust source files for COSE are in `src/cose/rust`, where you can use `cargo build` and `cargo test` ; the crate is called `evercosign`
 
@@ -253,6 +257,20 @@ Run `make 3d`
 ## QuackyDucky
 
 Run `make quackyducky`
+
+## Install EverParse
+
+After building, run `make install PREFIX=/path/to/install` (`gmake` on
+MacOS) to install EverParse under the chosen prefix. This installs its
+executables in `bin`, libraries and Makefile fragments in `lib/everparse`,
+and public C headers in `include/everparse`. The default prefix is
+`/usr/local`.
+
+This installs **only EverParse, none of its dependencies**: F\*, KaRaMeL,
+Pulse, Z3 and other dependencies must be provided separately. It does not
+install the `everparse.sh` or `everparse.cmd` convenience wrappers either.
+For a standalone distribution with bundled dependencies, build a binary
+package as described below.
 
 ## Build a binary package
 

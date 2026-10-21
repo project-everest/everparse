@@ -830,7 +830,7 @@ let prelude_fst mname lang filenames source_str = "
 module "^mname^"
 (* Source CDDL file(s): "^filenames^" *)
 open CDDL.Pulse.AST.Bundle
-open CDDL.Tool.Gen
+open CDDL.Spec.AST.Driver
 module Det = CDDL.Pulse.AST.Det."^lang^"
 module Impl = CDDL.Pulse.AST.Validate
 module Env = CDDL.Pulse.AST.Env

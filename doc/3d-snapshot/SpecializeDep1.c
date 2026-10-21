@@ -38,16 +38,16 @@ SpecializeDep1CopyBytes(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(Err);
   KRML_MAYBE_UNUSED_VAR(Sz);
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy(Numbytes, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Numbytes;
-    WriteOffset[0U] = wr + Numbytes;
+    *ReadOffset = rd + Numbytes;
+    *WriteOffset = wr + Numbytes;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 void
@@ -93,7 +93,7 @@ SpecializeDep1Specialized32ProbeUnion(
       Src,
       Sz,
       Dest);
-    hasFailed = Failed[0U];
+    hasFailed = *Failed;
     if (hasFailed)
     {
       Err(Tn, Fn, "case0", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -113,7 +113,7 @@ SpecializeDep1Specialized32ProbeUnion(
       Src,
       Sz,
       Dest);
-    hasFailed0 = Failed[0U];
+    hasFailed0 = *Failed;
     if (hasFailed0)
     {
       Err(Tn, Fn, "case1", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -133,13 +133,13 @@ SpecializeDep1Specialized32ProbeUnion(
       Src,
       Sz,
       Dest);
-    hasFailed1 = Failed[0U];
+    hasFailed1 = *Failed;
     if (hasFailed1)
     {
       Err(Tn, Fn, "other", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     }
   }
-  hasFailed2 = Failed[0U];
+  hasFailed2 = *Failed;
   if (hasFailed2)
   {
     Err(Tn, Fn, "field", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -172,9 +172,9 @@ SpecializeDep1Specialized32ProbeTlv(
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
-  uint64_t rd = ReadOffset[0U];
+  uint64_t rd = *ReadOffset;
   uint8_t v = ProbeAndReadU8(Failed, rd, Src, Dest);
-  BOOLEAN hasFailed = Failed[0U];
+  BOOLEAN hasFailed = *Failed;
   uint8_t res1;
   BOOLEAN hasFailed1;
   uint64_t wr;
@@ -200,26 +200,26 @@ SpecializeDep1Specialized32ProbeTlv(
   }
   else
   {
-    ReadOffset[0U] = rd + 1ULL;
+    *ReadOffset = rd + 1ULL;
     res1 = v;
   }
-  hasFailed1 = Failed[0U];
+  hasFailed1 = *Failed;
   if (hasFailed1)
   {
     Err(Tn, Fn, "tag", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  wr = WriteOffset[0U];
+  wr = *WriteOffset;
   ok = WriteU8(res1, wr, Dest);
   if (ok)
   {
-    WriteOffset[0U] = wr + 1ULL;
+    *WriteOffset = wr + 1ULL;
   }
   else
   {
-    Failed[0U] = TRUE;
+    *Failed = TRUE;
   }
-  hasFailed2 = Failed[0U];
+  hasFailed2 = *Failed;
   if (hasFailed2)
   {
     Err(Tn, Fn, "tag", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -237,7 +237,7 @@ SpecializeDep1Specialized32ProbeTlv(
     Src,
     Sz,
     Dest);
-  hasFailed3 = Failed[0U];
+  hasFailed3 = *Failed;
   if (hasFailed3)
   {
     Err(Tn, Fn, "length", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -250,7 +250,7 @@ SpecializeDep1Specialized32ProbeTlv(
   while (cond)
   {
     c0 = ctr;
-    hf0 = Failed[0U];
+    hf0 = *Failed;
     if (hf0)
     {
       stop = TRUE;
@@ -261,7 +261,7 @@ SpecializeDep1Specialized32ProbeTlv(
     }
     else
     {
-      r0 = ReadOffset[0U];
+      r0 = *ReadOffset;
       SpecializeDep1Specialized32ProbeUnion(res1,
         Tn,
         Fn,
@@ -274,13 +274,13 @@ SpecializeDep1Specialized32ProbeTlv(
         Src,
         Sz,
         Dest);
-      hasFailed4 = Failed[0U];
+      hasFailed4 = *Failed;
       if (hasFailed4)
       {
         Err(Tn, Fn, "payload", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
       }
-      hf1 = Failed[0U];
-      r1 = ReadOffset[0U];
+      hf1 = *Failed;
+      r1 = *ReadOffset;
       if (hf1)
       {
         Err(Tn, Fn, Fd, 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -289,7 +289,7 @@ SpecializeDep1Specialized32ProbeTlv(
       else if (r1 == r0)
       {
         Err(Tn, Fn, Fd, 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
-        Failed[0U] = TRUE;
+        *Failed = TRUE;
         stop = TRUE;
       }
       else
@@ -298,7 +298,7 @@ SpecializeDep1Specialized32ProbeTlv(
         if (c0 < bytesRead)
         {
           Err(Tn, Fn, Fd, 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
-          Failed[0U] = TRUE;
+          *Failed = TRUE;
           stop = TRUE;
         }
         else
@@ -377,13 +377,13 @@ SpecializeDep1ValidateCoreUnion(
   {
     pos0 = (size_t)0U;
     /* Validating field case0 */
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     viewStart = (uint64_t)p3;
     fieldOff = pos0;
     startPos = viewStart + (uint64_t)fieldOff;
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
     p00 = pos0;
-    p10 = SlPos[0U];
+    p10 = *SlPos;
     rem0 = SlLen - p10;
     hasBytes0 = p00 <= rem0 && (size_t)1U <= (rem0 - p00);
     if (hasBytes0)
@@ -413,9 +413,9 @@ SpecializeDep1ValidateCoreUnion(
     if (res10 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed0 = pos0;
-      p20 = SlPos[0U];
+      p20 = *SlPos;
       p_ = p20 + consumed0;
-      SlPos[0U] = p_;
+      *SlPos = p_;
       return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res10;
@@ -424,13 +424,13 @@ SpecializeDep1ValidateCoreUnion(
   {
     pos1 = (size_t)0U;
     /* Validating field case1 */
-    p4 = SlPos[0U];
+    p4 = *SlPos;
     viewStart0 = (uint64_t)p4;
     fieldOff0 = pos1;
     startPos0 = viewStart0 + (uint64_t)fieldOff0;
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
     p01 = pos1;
-    p11 = SlPos[0U];
+    p11 = *SlPos;
     rem1 = SlLen - p11;
     hasBytes1 = p01 <= rem1 && (size_t)2U <= (rem1 - p01);
     if (hasBytes1)
@@ -460,22 +460,22 @@ SpecializeDep1ValidateCoreUnion(
     if (res11 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       consumed1 = pos1;
-      p21 = SlPos[0U];
+      p21 = *SlPos;
       p_0 = p21 + consumed1;
-      SlPos[0U] = p_0;
+      *SlPos = p_0;
       return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     return res11;
   }
   pos = (size_t)0U;
   /* Validating field other */
-  p = SlPos[0U];
+  p = *SlPos;
   viewStart1 = (uint64_t)p;
   fieldOff1 = pos;
   startPos1 = viewStart1 + (uint64_t)fieldOff1;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   p0 = pos;
-  p1 = SlPos[0U];
+  p1 = *SlPos;
   rem = SlLen - p1;
   hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
   if (hasBytes)
@@ -505,9 +505,9 @@ SpecializeDep1ValidateCoreUnion(
   if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     p_1 = p2 + consumed;
-    SlPos[0U] = p_1;
+    *SlPos = p_1;
     return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   return res1;
@@ -533,13 +533,13 @@ SpecializeDep1ValidateCoreTlv(
 )
 {
   size_t pos = (size_t)0U;
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t viewStart = (uint64_t)p;
   size_t fieldOff = pos;
   uint64_t startPos = viewStart + (uint64_t)fieldOff;
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
   size_t p0 = pos;
-  size_t p1 = SlPos[0U];
+  size_t p1 = *SlPos;
   size_t rem = SlLen - p1;
   BOOLEAN hasBytes = p0 <= rem && (size_t)1U <= (rem - p0);
   uint8_t res;
@@ -622,17 +622,17 @@ SpecializeDep1ValidateCoreTlv(
   }
   if (resultAftertag == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
-    p01 = SlPos[0U];
+    p01 = *SlPos;
     m = p01 + (size_t)1U;
     sub = SlBase + p01;
-    SlPos[0U] = m;
+    *SlPos = m;
     tag = sub[0U];
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartTlv = (uint64_t)p2;
     pos1 = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p02 = pos1;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem1 = SlLen - p3;
     hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
     if (hasBytes1)
@@ -646,10 +646,10 @@ SpecializeDep1ValidateCoreTlv(
     }
     if (resultAfterlength == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p03 = SlPos[0U];
+      p03 = *SlPos;
       m1 = p03 + (size_t)4U;
       sub1 = SlBase + p03;
-      SlPos[0U] = m1;
+      *SlPos = m1;
       first = sub1[0U];
       pos_ = (size_t)2U;
       first1 = sub1[1U];
@@ -667,10 +667,10 @@ SpecializeDep1ValidateCoreTlv(
       if (lengthConstraintIsOk)
       {
         /* Validating field payload */
-        p4 = SlPos[0U];
+        p4 = *SlPos;
         fieldStartTlv1 = (uint64_t)p4;
         nSz = (size_t)(uint32_t)Len;
-        p5 = SlPos[0U];
+        p5 = *SlPos;
         avail = SlLen - p5;
         hasBytes2 = nSz <= avail;
         if (!hasBytes2)
@@ -679,7 +679,7 @@ SpecializeDep1ValidateCoreTlv(
         }
         else
         {
-          p6 = SlPos[0U];
+          p6 = *SlPos;
           tr = p6 + nSz;
           res1 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
           stop = FALSE;
@@ -687,7 +687,7 @@ SpecializeDep1ValidateCoreTlv(
           cond = !anf0;
           while (cond)
           {
-            p7 = SlPos[0U];
+            p7 = *SlPos;
             avail1 = tr - p7;
             hasMore = (size_t)1U <= avail1;
             if (!hasMore)
@@ -696,7 +696,7 @@ SpecializeDep1ValidateCoreTlv(
             }
             else
             {
-              p8 = SlPos[0U];
+              p8 = *SlPos;
               fieldStartTlv2 = (uint64_t)p8;
               resultAfterTlv1 =
                 SpecializeDep1ValidateCoreUnion(tag,
@@ -796,7 +796,7 @@ SpecializeDep1ValidateCoreSpecializedWrapper32(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartSpecializedWrapper32 = (uint64_t)p;
   /* Validating field __precondition */
   BOOLEAN preconditionConstraintIsOk = Len > (uint16_t)5U;
@@ -843,14 +843,14 @@ SpecializeDep1ValidateCoreSpecializedWrapper32(
   uint8_t res;
   if (preconditionConstraintIsOk)
   {
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     fieldStartSpecializedWrapper321 = (uint64_t)p1;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStarttlv = (uint64_t)p2;
     pos = (size_t)0U;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p0 = pos;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem = SlLen - p3;
     hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
     if (hasBytes)
@@ -864,10 +864,10 @@ SpecializeDep1ValidateCoreSpecializedWrapper32(
     }
     if (resultAftertlv == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p01 = SlPos[0U];
+      p01 = *SlPos;
       m = p01 + (size_t)4U;
       sub = SlBase + p01;
-      SlPos[0U] = m;
+      *SlPos = m;
       first = sub[0U];
       pos_ = (size_t)2U;
       first1 = sub[1U];
@@ -1040,7 +1040,7 @@ SpecializeDep1ValidateCoreWrapper(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartWrapper = (uint64_t)p;
   /* Validating field __precondition */
   BOOLEAN preconditionConstraintIsOk = Len > (uint16_t)5U;
@@ -1102,14 +1102,14 @@ SpecializeDep1ValidateCoreWrapper(
   uint8_t res;
   if (preconditionConstraintIsOk)
   {
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     fieldStartWrapper1 = (uint64_t)p1;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStarttlv = (uint64_t)p2;
     pos = (size_t)0U;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
     p0 = pos;
-    p3 = SlPos[0U];
+    p3 = *SlPos;
     rem = SlLen - p3;
     hasBytes = p0 <= rem && (size_t)8U <= (rem - p0);
     if (hasBytes)
@@ -1123,10 +1123,10 @@ SpecializeDep1ValidateCoreWrapper(
     }
     if (resultAftertlv == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p01 = SlPos[0U];
+      p01 = *SlPos;
       m = p01 + (size_t)8U;
       sub = SlBase + p01;
-      SlPos[0U] = m;
+      *SlPos = m;
       first = sub[0U];
       pos_ = (size_t)2U;
       first1 = sub[1U];
@@ -1293,22 +1293,22 @@ SpecializeDep1EntryProbeWrapper0Tlv(
   BOOLEAN ok;
   KRML_MAYBE_UNUSED_VAR(Arg0);
   KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = Failed[0U];
+  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  rd = ReadOffset[0U];
-  wr = WriteOffset[0U];
+  rd = *ReadOffset;
+  wr = *WriteOffset;
   ok = ProbeAndCopy(Sz, rd, wr, Src, Dest);
   if (ok)
   {
-    ReadOffset[0U] = rd + Sz;
-    WriteOffset[0U] = wr + Sz;
+    *ReadOffset = rd + Sz;
+    *WriteOffset = wr + Sz;
     return;
   }
-  Failed[0U] = TRUE;
+  *Failed = TRUE;
 }
 
 uint8_t
@@ -1351,7 +1351,7 @@ SpecializeDep1ValidateCoreEntry(
   if (Requestor32)
   {
     /* Validating field w32 */
-    p0 = SlPos[0U];
+    p0 = *SlPos;
     fieldStartEntry = (uint64_t)p0;
     resultAfterEntry =
       SpecializeDep1ValidateCoreSpecializedWrapper32(Len,
@@ -1378,7 +1378,7 @@ SpecializeDep1ValidateCoreEntry(
   if (Requestor32 == FALSE)
   {
     /* Validating field w64 */
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     fieldStartEntry0 = (uint64_t)p2;
     resultAfterEntry0 =
       SpecializeDep1ValidateCoreWrapper(SpecializeDep1EntryProbeWrapper0Tlv,
@@ -1404,7 +1404,7 @@ SpecializeDep1ValidateCoreEntry(
     return resultAfterEntry0;
   }
   pos = (size_t)0U;
-  p = SlPos[0U];
+  p = *SlPos;
   viewStart = (uint64_t)p;
   fieldOff = pos;
   startPos = viewStart + (uint64_t)fieldOff;
@@ -1427,9 +1427,9 @@ SpecializeDep1ValidateCoreEntry(
   if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
   {
     consumed = pos;
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     p_ = p1 + consumed;
-    SlPos[0U] = p_;
+    *SlPos = p_;
     return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
   }
   return res1;

@@ -21,7 +21,7 @@ BoundedSumWhereValidateCoreBoundedSum(
   size_t *SlPos
 )
 {
-  size_t p = SlPos[0U];
+  size_t p = *SlPos;
   uint64_t fieldStartBoundedSum = (uint64_t)p;
   /* Validating field __precondition */
   BOOLEAN preconditionConstraintIsOk = Bound <= (uint32_t)1729U;
@@ -82,13 +82,13 @@ BoundedSumWhereValidateCoreBoundedSum(
   if (preconditionConstraintIsOk)
   {
     pos = (size_t)0U;
-    p1 = SlPos[0U];
+    p1 = *SlPos;
     viewStart = (uint64_t)p1;
     fieldOff = pos;
     startPos = viewStart + (uint64_t)fieldOff;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
     p0 = pos;
-    p2 = SlPos[0U];
+    p2 = *SlPos;
     rem = SlLen - p2;
     hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
     if (hasBytes)
@@ -117,10 +117,10 @@ BoundedSumWhereValidateCoreBoundedSum(
     }
     if (resultAfterleft == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
-      p01 = SlPos[0U];
+      p01 = *SlPos;
       m = p01 + (size_t)4U;
       sub = SlBase + p01;
-      SlPos[0U] = m;
+      *SlPos = m;
       first = sub[0U];
       pos_ = (size_t)2U;
       first1 = sub[1U];
@@ -135,12 +135,12 @@ BoundedSumWhereValidateCoreBoundedSum(
       bfirst2 = (uint32_t)first;
       left = bfirst2 + n2 * 256U;
       /* Validating field right */
-      p3 = SlPos[0U];
+      p3 = *SlPos;
       fieldStartBoundedSum1 = (uint64_t)p3;
       pos1 = (size_t)0U;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
       p02 = pos1;
-      p4 = SlPos[0U];
+      p4 = *SlPos;
       rem1 = SlLen - p4;
       hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
       if (hasBytes1)
@@ -155,10 +155,10 @@ BoundedSumWhereValidateCoreBoundedSum(
       if (resultAfterright_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
       {
         /* reading field_value */
-        p03 = SlPos[0U];
+        p03 = *SlPos;
         m1 = p03 + (size_t)4U;
         sub1 = SlBase + p03;
-        SlPos[0U] = m1;
+        *SlPos = m1;
         first4 = sub1[0U];
         pos_2 = (size_t)2U;
         first5 = sub1[1U];

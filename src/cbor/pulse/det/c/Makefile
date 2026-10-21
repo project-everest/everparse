@@ -1,11 +1,19 @@
 all: extract
 
-CFLAGS += -O3 -I .
+EVERPARSE_HOME = $(realpath ../../../../..)
+EVERPARSE_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
+EVERPARSE_INCLUDE_PATH = $(EVERPARSE_HOME)/include/everparse
 
-EVERPARSE_SRC_PATH = $(realpath ../../../..)
-OUTPUT_DIRECTORY:=.
+# -I . for the internal/ headers, which stay next to the sources; the public
+# headers live in $(EVERPARSE_INCLUDE_PATH), and internal/ refers to them as
+# <everparse/CBORDet.h>, hence its parent directory too.
+CFLAGS += -O3 -I . -I $(EVERPARSE_HOME)/include -I $(EVERPARSE_INCLUDE_PATH)
 
-extract: $(OUTPUT_DIRECTORY)/CBORDet.o
+extract: $(EVERPARSE_LIB_PATH)/CBORDet.o
+
+$(EVERPARSE_LIB_PATH)/CBORDet.o: CBORDet.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 test: extract
 	+$(MAKE) -C $@
@@ -17,11 +25,8 @@ all-tests: test example
 
 .PHONY: all extract test example all-tests
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
 clean-o:
-	rm -f *.o
+	rm -f *.o $(EVERPARSE_LIB_PATH)/CBORDet.o
 
 .PHONY: clean-o
 

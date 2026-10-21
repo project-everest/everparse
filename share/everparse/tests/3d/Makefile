@@ -5,7 +5,7 @@
 #
 # --batch runs the whole pipeline: generation, F* verification, F* extraction
 # to .krml and KaRaMeL extraction to C. The generated C is then compiled with
-# -Wall -Wextra -Werror through EverParse's own share/everparse/3d/Makefile.basic,
+# -Wall -Wextra -Werror through EverParse's own lib/everparse/3d/Makefile.basic,
 # and the
 # C++ driver test.cpp is linked against it and run.
 
@@ -17,57 +17,28 @@ ifeq ($(OS),Windows_NT)
 endif
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 CC ?= cc
 CXX ?= c++
-KRML_EXE ?= $(EVERPARSE_HOME)/opt/karamel/out/bin/krml
-export KRML_EXE
-
 OUT_DIR=out.pulse
 ELF_DIR=out.elf.pulse
 CLEANUP_DIR=out.cleanup.pulse
 INPLACE_DIR=out.inplace-hash.pulse
 Z3TESTGEN_DIR=out.z3-testgen.pulse
-INTERPRET_DIR=out.batch-interpret.pulse
-
-3D_Z3_EXECUTABLE ?= z3-$(or $(EVERPARSE_Z3_VERSION),5.3.0)
-
-# Same exclusions as share/everparse/tests/3d/lowstar.
-excluded_tests := FieldDependence0.3d ActAndCheck.3d
 
 exclude_modules :=
 ifeq ($(OS),Windows_NT)
   # UlongToPtr is defined in Windows DLLs, conflicts with those examples
   exclude_modules := FineGrainedProbe FineGrainedProbeSpecialize \
     Specialize2 Specialize3 Specialize5 Specialize6
-  excluded_tests += $(addsuffix .3d,$(exclude_modules))
 endif
 
-positive_tests := $(filter-out $(wildcard FAIL*.3d) $(excluded_tests),$(wildcard *.3d))
+positive_tests := $(filter-out $(wildcard FAIL*.3d) $(addsuffix .3d,$(exclude_modules)),$(wildcard *.3d))
 negative_tests := $(wildcard FAIL*.3d)
-
-# The two tests that positive_tests excludes are not untestable: they are
-# covered by pulse-batch-interpret-test, over the wider set below, exactly as
-# share/everparse/tests/3d/lowstar covers them with batch-interpret-test over INTERPRETABLE_FILES.
-#
-# The split is historical. 3D used to have two translation backends,
-# Translate.fst (specialized) and TranslateForInterpreter.fst, and :act/:check
-# were only ever supported by the latter, so ActAndCheck.3d was excluded from
-# positive_tests when it was added (commit 7b2764b70). Only
-# TranslateForInterpreter survives today, so both targets now drive the very
-# same pipeline and differ only in which files they feed it. We keep the two
-# apart anyway, so that this Makefile stays diffable against share/everparse/tests/3d/lowstar, and
-# so that pulse-cleanup-test keeps asserting an exact output file list over the
-# narrower set.
-#
-# Unlike share/everparse/tests/3d/lowstar, we also drop exclude_modules here: INTERPRETABLE_FILES
-# does not, which looks like an oversight, since those modules do not build on
-# Windows for a reason unrelated to which files a target selects.
-interpretable_tests := $(filter-out $(wildcard FAIL*.3d) $(addsuffix .3d,$(exclude_modules)),$(wildcard *.3d))
 
 # Tests whose generated code does not yet survive KaRaMeL extraction under
 # --api pulse. They still go through generation and F* verification, but not the C
@@ -96,16 +67,24 @@ clean_out_files := \
 	$(addsuffix .h,$(modules_or_wrappers)) \
 	$(module_extern_apis)
 
-all: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
-	pulse-comments-test pulse-renamelet-test \
-	elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test \
-	pulse-batch-interpret-test pulse-subdirs \
-	pulse-module-name-c-test
+# Two groups of comparable cost, mirroring corpus-test and subdirs-test in
+# share/everparse/tests/3d/lowstar, so that CI can run them as separate jobs
+# (the root 3d-pulse-corpus-test and 3d-pulse-subdirs-test).
+all: pulse-corpus-test pulse-subdirs-test
 
-all: api-option-test
+pulse-corpus-test: pulse-test pulse-test-negative pulse-cleanup-test pulse-inplace-hash-test \
+	pulse-comments-test pulse-renamelet-test \
+	elf-test \
+	pulse-module-name-c-test \
+	api-option-test
+
+pulse-subdirs-test: pulse-z3-testgen-test pulse-z3-testgen-probe-test \
+	pulse-subdirs
+
+.PHONY: pulse-corpus-test pulse-subdirs-test
 
 api-option-test:
-	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/3d.exe" "$(FSTAR_EXE)"
+	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"
 
 .PHONY: api-option-test
 
@@ -169,7 +148,6 @@ $(pulse_subdirs):
 .PHONY: all pulse-test pulse-test-negative pulse-batch pulse-cc pulse-verify clean clean-files
 .PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test
 .PHONY: pulse-comments-test pulse-renamelet-test
-.PHONY: pulse-batch-interpret-test
 
 # Generation, F* verification and KaRaMeL extraction to C, in one go, then a
 # second pass checking that regenerating the sources yields the same strong
@@ -181,11 +159,11 @@ pulse-batch:
 
 # Compile everything KaRaMeL produced, to check the generated C is well-formed
 # and that the wrappers agree with the validators' ABI. We go through the
-# share/everparse/3d/Makefile.basic, so that the generated code is held to the
+# lib/everparse/3d/Makefile.basic, so that the generated code is held to the
 # same -Wall -Wextra -Werror standard as in share/everparse/tests/3d/lowstar. USER_TARGET=test has
 # no recipe: it just forces every object to be built.
 pulse-cc: pulse-batch
-	+$(MAKE) -C $(OUT_DIR) -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
+	+$(MAKE) -C $(OUT_DIR) -f $(EVERPARSE_HOME)/lib/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
 	$(CXX) -o test-cpp.pulse.exe -I $(OUT_DIR) test.cpp $(addprefix $(OUT_DIR)/, ArithmeticWrapper.o Arithmetic.o)
 	./test-cpp.pulse.exe
 
@@ -206,19 +184,6 @@ pulse-verify:
 	done
 
 pulse-test: pulse-cc pulse-verify
-
-# The counterpart of share/everparse/tests/3d/lowstar' batch-interpret-test: the same pipeline as
-# pulse-batch/pulse-cc, but over interpretable_tests, which additionally covers
-# FieldDependence0.3d and ActAndCheck.3d. Its own output directory, because
-# EverParse.h is generated per batch and carries that batch's external
-# typedefs, so two --batch runs cannot share one.
-pulse-batch-interpret-test:
-	mkdir -p $(INTERPRET_DIR)
-	$(3D) --odir $(INTERPRET_DIR) --batch --save_hashes $(interpretable_tests)
-	$(3D) --odir $(INTERPRET_DIR) --batch --check_hashes strong $(interpretable_tests)
-	+$(MAKE) -C $(INTERPRET_DIR) -f $(EVERPARSE_HOME)/share/everparse/3d/Makefile.basic USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers -I $(CURDIR)'
-	$(CXX) -o test-cpp-interpret.pulse.exe -I $(INTERPRET_DIR) test.cpp $(addprefix $(INTERPRET_DIR)/, ArithmeticWrapper.o Arithmetic.o)
-	./test-cpp-interpret.pulse.exe
 
 # Build and link the C++ ELF test driver against the --api pulse-generated ELF
 # parser. As in share/everparse/tests/3d/lowstar, it is not run: it needs an ELF file to read.
@@ -301,7 +266,7 @@ pulse-inplace-hash-test:
 # verdict Z3 predicted.
 pulse-z3-testgen-test: ELF.3d
 	mkdir -p $(Z3TESTGEN_DIR)
-	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir $(Z3TESTGEN_DIR) ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+	$(3D) --batch --odir $(Z3TESTGEN_DIR) ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
 
 # Same, on a grammar with probes, in both harness modes: the default one, where
 # the probe callback copies from a table of witness layers, and --z3_use_ptr,
@@ -339,9 +304,8 @@ pulse-module-name-c-test:
 
 clean-files:
 	rm -rf $(OUT_DIR) $(VERIFY_DIR) $(ELF_DIR) $(CLEANUP_DIR) $(INPLACE_DIR) \
-	  $(Z3TESTGEN_DIR) $(INTERPRET_DIR) out.fail.pulse out.modname.pulse \
-	  test-cpp.pulse.exe \
-	  test-cpp-interpret.pulse.exe *.out *.err
+	  $(Z3TESTGEN_DIR) out.fail.pulse out.modname.pulse \
+	  test-cpp.pulse.exe *.out *.err
 	set -e ; for d in $(pulse_subdirs) ; do $(MAKE) -C $$d clean ; done
 
 clean: clean-files

@@ -1,7 +1,8 @@
 INTERPRETABLE_FILES=$(wildcard *.3d)
-3D=$(realpath ../bin/3d.exe)
+EVERPARSE_HOME?=$(realpath ..)
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)")
 
 interpret_all: $(filter-out ConstColor.3d, $(INTERPRETABLE_FILES))
-	EVERPARSE_KRML_OPTIONS=-skip-compilation $(3D) --no_copy_everparse_h --batch --interpret $^
+	EVERPARSE_KRML_OPTIONS=-skip-compilation $(3D) --no_copy_everparse_h --batch $^
 
 .PHONY: %.interpret
