@@ -1,9 +1,11 @@
 import json
 from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
-from runtime_abi import inventory
-from runtime_headers import PROFILES, annotate, companion, profile_config
+from runtime_abi import compare_abi, inventory
+from runtime_headers import PROFILES, annotate, companion, isolated_options, profile_config
 
 
 HERE = Path(__file__).resolve().parent
@@ -119,6 +121,20 @@ class InventoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             inventory("static bool f(void); static BOOLEAN f(void) { return 1; }")
 
+    def test_abi_comparison_rejects_boolean_and_linkage_regressions(self):
+        expected = inventory("static inline BOOLEAN f(uint8_t n) { return n; }")
+        self.assertEqual(compare_abi(expected, expected), [])
+        self.assertTrue(compare_abi(
+            expected, inventory("static inline bool f(uint8_t n) { return n; }")
+        ))
+        self.assertTrue(compare_abi(
+            expected, inventory("extern BOOLEAN f(uint8_t n);")
+        ))
+        actual = inventory(
+            "typedef bool BOOLEAN; static inline BOOLEAN f(uint8_t n) { return n; }"
+        )
+        self.assertIn("BOOLEAN is not a uint8_t alias", compare_abi(expected, actual))
+
     def test_reference_covers_contract(self):
         reference = json.loads((HERE / "runtime-abi.json").read_text())["profiles"]
         contract = json.loads((HERE / "runtime-contract.json").read_text())
@@ -194,6 +210,30 @@ class ExtractionProfileTests(unittest.TestCase):
                 self.assertEqual(signature["linkage"], "static inline")
         with self.assertRaises(ValueError):
             companion("extern")
+
+    def test_profile_options_cannot_import_other_runtime_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shared = root / "shared"
+            private = root / "private"
+            shared.mkdir()
+            private.mkdir()
+            (shared / "EverParse3d.ErrorCode.fst.checked").write_bytes(b"runtime")
+            (shared / "LowParse.Spec.Base.fsti.checked").write_bytes(b"dependency")
+            self.assertEqual(
+                isolated_options(["--include", str(shared), "--z3version", "4.15.3"],
+                                 private),
+                ["--z3version", "4.15.3"],
+            )
+            self.assertFalse((private / "EverParse3d.ErrorCode.fst.checked").exists())
+            self.assertEqual((private / "LowParse.Spec.Base.fsti.checked").read_bytes(),
+                             b"dependency")
+            with patch("runtime_headers.sys.platform", "cygwin"), patch(
+                "runtime_headers.subprocess.check_output", return_value=str(shared) + "\n"
+            ):
+                self.assertEqual(
+                    isolated_options(["--include", "C:/shared"], private), []
+                )
 
 
 if __name__ == "__main__":

@@ -169,7 +169,7 @@ jobs:
             targets: 3d-pulse-subdirs-test
             diff-input: true
           - part: misc
-            targets: 3d-hashchk-test 3d-doc-test 3d-adapter-test
+            targets: 3d-hashchk-test 3d-doc-test 3d-adapter-test 3d-runtime-header-test
             test-32bit: true
     steps:
       - uses: actions/checkout@master
@@ -197,7 +197,7 @@ jobs:
         if: matrix.test-32bit
         run: |
           docker exec --user root "$container" /bin/bash -c \
-            "apt-get update && apt-get install --yes --no-install-recommends gcc-multilib"
+            "apt-get update && apt-get install --yes --no-install-recommends gcc-multilib g++-multilib"
       - name: Test 3D
         run: |
           docker exec -e EVERPARSE_TEST_32BIT=${{ matrix.test-32bit && '1' || '' }} "$container" bash .github/ci-make.sh -kj"$(nproc)" ${{ matrix.targets }} ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1 ARGS='--inventory-source filesystem'

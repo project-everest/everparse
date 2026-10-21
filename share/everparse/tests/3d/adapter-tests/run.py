@@ -76,7 +76,8 @@ def compile_run(out, sources, includes=(), flags=(), name="check", bits32=False)
 
 def large(bits32=False):
     out = output("large")
-    flags = ["--include", ROOT / "lib/everparse/lowparse",
+    flags = shlex.split(os.environ.get("EVERPARSE_FSTAR_OPTIONS", ""))
+    flags += ["--include", ROOT / "lib/everparse/lowparse",
              "--include", ROOT / "lib/everparse/3d", "--include", HERE,
              "--cache_checked_modules", "--cache_dir", out,
              "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",

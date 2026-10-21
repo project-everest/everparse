@@ -171,6 +171,11 @@ endif
 
 .PHONY: 3d-adapter-test
 
+3d-runtime-header-test: 3d-pulse-krml
+	+$(MAKE) -C src/3d/krml -f header.Makefile check-headers
+
+.PHONY: 3d-runtime-header-test
+
 # The standalone F# hash checker, checking hashes produced by 3d with both
 # APIs. The 3d tests in share/everparse/tests/3d check those hashes with 3d
 # itself only.
@@ -182,7 +187,7 @@ endif
 3d-test: 3d-doc-test
 
 ifeq (,$(NO_PULSE))
-3d-test: 3d-unit-test 3d-pulse-test 3d-hashchk-test
+3d-test: 3d-unit-test 3d-pulse-test 3d-hashchk-test 3d-runtime-header-test
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)

@@ -5,6 +5,9 @@ module E = EverParse3d.ErrorCode
 module P = EverParse3d.Lowstar.Public
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
+module X = EverParse3d.InputStream.LowstarExtern.Types
+
+type base_t = X.input_buffer
 
 let error_code_is_range_okay (size offset access_size: U32.t) : B.t =
   B.of_bool (E.is_range_okay size offset access_size)

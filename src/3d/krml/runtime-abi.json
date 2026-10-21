@@ -328,6 +328,10 @@
             "uint64_t"
           ],
           "return": "void"
+        },
+        "EVERPARSE____PUINT8": {
+          "kind": "alias",
+          "type": "uint8_t *"
         }
       },
       "values": {
@@ -851,6 +855,10 @@
         "EVERPARSE_INPUT_BUFFER": {
           "fields": "EVERPARSE_INPUT_STREAM_BASE base ; BOOLEAN has_length ; uint64_t length ;",
           "kind": "record"
+        },
+        "EVERPARSE_BASE_T": {
+          "kind": "alias",
+          "type": "EVERPARSE_INPUT_BUFFER"
         }
       },
       "values": {}
@@ -1138,6 +1146,10 @@
         "EVERPARSE_INPUT_BUFFER": {
           "fields": "EVERPARSE_INPUT_STREAM_BASE base ; BOOLEAN has_length ; uint64_t length ;",
           "kind": "record"
+        },
+        "EVERPARSE_BASE_T": {
+          "kind": "alias",
+          "type": "EVERPARSE_INPUT_BUFFER"
         }
       },
       "values": {}
@@ -1325,6 +1337,10 @@
             "uint64_t"
           ],
           "return": "void"
+        },
+        "EVERPARSE____PUINT8": {
+          "kind": "alias",
+          "type": "uint8_t *"
         }
       },
       "values": {

@@ -74,6 +74,35 @@ def native_path(path):
     return str(path)
 
 
+def copy_lowparse_cache(source, cache):
+    for checked in source.glob("LowParse.*.checked"):
+        target = cache / checked.name
+        if not target.exists() or target.read_bytes() != checked.read_bytes():
+            shutil.copyfile(checked, target)
+
+
+def isolated_options(options, cache):
+    result = []
+    index = 0
+    while index < len(options):
+        if options[index] == "--include" and index + 1 < len(options):
+            directory_name = options[index + 1]
+            if sys.platform == "cygwin":
+                directory_name = subprocess.check_output(
+                    ["cygpath", "-u", directory_name], text=True
+                ).strip()
+            directory = Path(directory_name)
+            if directory.resolve() == RUNTIME.resolve() or any(
+                directory.glob("EverParse3d.*.checked")
+            ):
+                copy_lowparse_cache(directory, cache)
+                index += 2
+                continue
+        result.append(options[index])
+        index += 1
+    return result
+
+
 def annotate(text, names, preserved=(), foreign=(), static_hooks=()):
     lines = text.splitlines(keepends=True)
     found = set()
@@ -172,6 +201,8 @@ def profile_config(profile):
             types_module + ".extra_t": "EVERPARSE_EXTRA_T",
         })
         if lowstar:
+            names["CAbi.Public"]["base_t"] = "EVERPARSE_BASE_T"
+            preserved["CAbi.Public"] = {"base_t"}
             names["InputStream.LowstarExtern.Raw"] = {
                 name: c_name(name) for name in ("has", "skip", "empty", "read", "peep")
             }
@@ -190,6 +221,8 @@ def profile_config(profile):
                 )
             }
             foreign["InputStream.Extern"] = set(names["InputStream.Extern"])
+            names["InputStream.Extern"]["___PUINT8"] = "EVERPARSE____PUINT8"
+            preserved["InputStream.Extern"] = {"___PUINT8"}
             names["InputStream.Extern.NullPtr"] = {"null_ptr": "EverParseNullPtr"}
             foreign["InputStream.Extern.NullPtr"] = {"null_ptr"}
     if lowstar:
@@ -231,10 +264,7 @@ def extract(args):
     if args.dependency_cache:
         # Runtime .checked files carry profile-specific extraction attributes.
         # Only the unmodified LowParse dependencies may be shared.
-        for checked in args.dependency_cache.glob("LowParse.*.checked"):
-            target = cache / checked.name
-            if not target.exists() or target.read_bytes() != checked.read_bytes():
-                shutil.copyfile(checked, target)
+        copy_lowparse_cache(args.dependency_cache, cache)
     for source in sorted(RUNTIME.glob("*.fst*")):
         if source.suffix not in (".fst", ".fsti"):
             continue
@@ -254,7 +284,7 @@ def extract(args):
         "module M" + str(i) + " = " + PREFIX + name + "\n"
         for i, name in enumerate(sorted(names))
     ))
-    flags = shlex.split(args.fstar_options)
+    flags = isolated_options(shlex.split(args.fstar_options), cache)
     flags += ["--cache_checked_modules", "--cache_dir", native_path(cache),
               "--odir", native_path(build), "--include", native_path(source_dir),
               "--include", native_path(ROOT / "lib/everparse/lowparse")]

@@ -196,7 +196,7 @@ elf-test: ELF.3d
 # .checked, .krml or KaRaMeL scratch files.
 pulse-cleanup-test:
 	mkdir -p $(CLEANUP_DIR)
-	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir $(CLEANUP_DIR) --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
+	env EVERPARSE_FSTAR_OPTIONS='$(EVERPARSE_FSTAR_OPTIONS) --admit_smt_queries true' $(3D) --odir $(CLEANUP_DIR) --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
 	test "$$(ls $(CLEANUP_DIR) | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 echo-clean-out-files:

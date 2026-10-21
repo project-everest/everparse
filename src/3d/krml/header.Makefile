@@ -50,9 +50,16 @@ else
 $(error RUNTIME_HEADER_GENERATOR must be custard or karamel)
 endif
 
+check-headers: headers
+	$(PYTHON) test_runtime_headers.py
+	$(PYTHON) check_runtime_headers.py --headers $(KRML_DIR) \
+	  --build-dir $(CUSTARD_HEADER_BUILD)/consumers \
+	  $(if $(filter 1,$(EVERPARSE_TEST_32BIT)),--32bit) \
+	  $(if $(filter 1,$(SANITIZE)),--sanitize)
+
 clean-headers:
 	rm -f $(HEADER_FILES) $(COMPANION_FILES) $(RUNTIME_HEADER_SETTINGS) $(RUNTIME_HEADER_SETTINGS).tmp
 
 FORCE:
 
-.PHONY: all headers clean-headers FORCE
+.PHONY: all headers check-headers clean-headers FORCE
