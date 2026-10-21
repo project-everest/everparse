@@ -128,9 +128,8 @@ endif
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
-# KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
-# what everparse-3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
-# per-backend EverParse.h it copies into the output directory.
+# Generate the runtime .krml library for validator extraction through KaRaMeL,
+# and independently generate the six runtime headers through Custard direct C.
 3d-pulse-krml: 3d-pulse-prelude
 	+$(MAKE) -C src/3d/krml all
 

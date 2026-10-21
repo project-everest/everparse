@@ -6,7 +6,6 @@ LIB_3D_HOME := $(EVERPARSE_HOME)/lib/everparse/3d
 KRML_DIR := $(LIB_3D_HOME)/krml
 
 PYTHON ?= python3
-RUNTIME_HEADER_GENERATOR ?= karamel
 CUSTARD_HEADER_BUILD ?= $(KRML_DIR)/.custard
 CUSTARD_DEPENDENCY_CACHE ?=
 CUSTARD_HEADER_JOBS ?= 4
@@ -17,14 +16,12 @@ RUNTIME_HEADER_SETTINGS := $(KRML_DIR)/.runtime-header-settings
 
 $(RUNTIME_HEADER_SETTINGS): FORCE
 	mkdir -p $(KRML_DIR)
-	printf '%s\n' "$(RUNTIME_HEADER_GENERATOR)" "$(FSTAR_EXE)" "$(FSTAR_OPTIONS) $(OTHERFLAGS)" > $@.tmp
+	printf '%s\n' "Custard C" "$(FSTAR_EXE)" "$(FSTAR_OPTIONS) $(OTHERFLAGS)" > $@.tmp
 	cmp -s $@.tmp $@ || mv $@.tmp $@
 	rm -f $@.tmp
 
 $(COMPANION_FILES): $(KRML_DIR)/%/EverParseStreamPrimitives.h: runtime_headers.py runtime-contract.json runtime-abi.json
 	$(PYTHON) runtime_headers.py --profile $* --companion-only --output $@
-
-ifeq (custard,$(RUNTIME_HEADER_GENERATOR))
 
 HEADER_SOURCES := $(wildcard $(LIB_3D_HOME)/*.fst $(LIB_3D_HOME)/*.fsti)
 HEADER_SOURCES += $(wildcard $(EVERPARSE_HOME)/lib/everparse/lowparse/*.fst $(EVERPARSE_HOME)/lib/everparse/lowparse/*.fsti)
@@ -40,15 +37,6 @@ $(KRML_DIR)/static/EverParse.h: $(KRML_DIR)/static/EverParseStreamPrimitives.h
 $(KRML_DIR)/lowstar/static/EverParse.h: $(KRML_DIR)/lowstar/static/EverParseStreamPrimitives.h
 
 headers: $(HEADER_FILES) $(COMPANION_FILES)
-
-else ifeq (karamel,$(RUNTIME_HEADER_GENERATOR))
-
-headers: $(COMPANION_FILES) $(RUNTIME_HEADER_SETTINGS)
-	+$(MAKE) -f header-karamel.Makefile RUNTIME_HEADER_SETTINGS="$(RUNTIME_HEADER_SETTINGS)" headers
-
-else
-$(error RUNTIME_HEADER_GENERATOR must be custard or karamel)
-endif
 
 check-headers: headers
 	$(PYTHON) test_runtime_headers.py

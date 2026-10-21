@@ -3,11 +3,7 @@ all: extract-krml headers
 extract-krml:
 	+$(MAKE) -f extract.Makefile extract-krml
 
-# The reference generator still needs .krml; direct-C headers are independent.
-RUNTIME_HEADER_GENERATOR ?= karamel
-ifeq (karamel,$(RUNTIME_HEADER_GENERATOR))
-headers: extract-krml
-endif
+# Direct-C headers do not depend on the validators' runtime .krml library.
 headers:
 	+$(MAKE) -f header.Makefile headers
 

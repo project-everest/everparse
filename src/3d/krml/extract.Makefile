@@ -9,10 +9,10 @@ INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 FSTAR_OPTIONS += --warn_error -342
 
-# Whole-program extraction of the Pulse 3d runtime, to the .krml that
-# header.Makefile turns into EverParse.h and that `everparse-3d.exe --pulse` passes to
-# KaRaMeL alongside the generated modules (see all_everparse_krmls in
-# src/3d/ocaml/Batch.ml, which simply globs $(LIB_3D_HOME)/krml/extracted).
+# Whole-program extraction of the Pulse 3d runtime to the .krml library that
+# everparse-3d.exe passes to KaRaMeL alongside generated validator modules
+# (see all_everparse_krmls in src/3d/ocaml/Batch.ml).
+# Runtime headers are generated independently by runtime_headers.py.
 #
 # This Makefile and EverParse3d.Krml.Roots.fst are build machinery only: they
 # live here in src/, but the extracted .krml is written to
@@ -31,14 +31,6 @@ CUSTARD_BACKEND := KrmlC
 # tactic), exactly as in the Low* prelude, so it is never extracted itself, and
 # EverParse3d.Smoke is a verification-only smoke test. Neither is rooted; nothing
 # else reaches them, so neither is emitted.
-#
-# The four Pulse.* modules were named explicitly in the old --extract list and
-# must stay rooted: header.Makefile applies -static-header to Pulse.\*, so their
-# definitions become `static inline` in EverParse.h, and everparse-3d.exe then passes
-# -library Pulse.\* for the client's own KaRaMeL run, which assumes the header
-# supplies them. Dropping one as unreachable here (Pulse.Lib.Pervasives's
-# _zero_for_deref, say, which no runtime definition mentions but generated
-# validators do) leaves the client with an undefined reference.
 CUSTARD_ENTRY_MODULES := \
   EverParse3d.Actions.Base \
   EverParse3d.Actions.Common \
@@ -64,9 +56,8 @@ CUSTARD_ENTRY_MODULES := \
 # The `--api lowstar` runtime: a second, independent family of backends that
 # re-exports the same validators behind the historical Low* C API (packed
 # U64 results, EVERPARSE_INPUT_BUFFER, the EverParseStream* primitives). It is
-# rooted here for the same reason as the Pulse-API runtime above: header.Makefile
-# turns these very modules into the API modules of the `lowstar/<backend>`
-# bundles, and everparse-3d.exe passes `-library EverParse3d.\*` for the client's own
+# rooted here for the same reason as the Pulse-API runtime above:
+# everparse-3d.exe passes `-library EverParse3d.\*` for the client's own
 # KaRaMeL run, so every declaration has to have been *seen* here.
 #
 # The three adapter modules are what generated `--api lowstar` validators call
@@ -90,16 +81,10 @@ CUSTARD_ENTRY_MODULES += \
   EverParse3d.Lowstar.SupportBuffer \
   EverParse3d.Lowstar.SupportExtern
 
-# header.Makefile applies -static-header to Pulse.\*, so what the Pulse runtime
-# contributes to EverParse.h is emitted there as `static inline`, and everparse-3d.exe
-# then passes -library Pulse.\* for the client's own KaRaMeL run, which assumes
-# the header supplies it. Everything the generated validators use from Pulse is
-# inline_for_extraction and so already inlined by F* -- except _zero_for_deref,
-# the constant behind Pulse's `b[_zero_for_deref]` dereference idiom, which no
-# runtime definition mentions and which reachability would therefore drop,
-# leaving the client with an undefined reference. Root it by name rather than
-# rooting its module: Pulse.Lib.Pervasives re-exports the tactic builtins, and
-# rooting those drags FStarC.Tactics.\* into the output.
+# Pulse operations are inlined by F*. Keep _zero_for_deref as KaRaMeL metadata:
+# it recognizes this constant as the marker in Pulse's pointer-dereference idiom,
+# rather than emitting a C reference to it. No runtime definition mentions it.
+# Root it by name rather than its module, which also re-exports tactic builtins.
 CUSTARD_ENTRIES := Pulse.Lib.Pervasives._zero_for_deref
 
 # The `--use_error_handler_macro` hook: one [@@CMacro] assume val per backend,
