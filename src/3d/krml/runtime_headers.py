@@ -280,9 +280,16 @@ def extract(args):
         if not target.exists() or target.read_text() != text:
             target.write_text(text)
     root = source_dir / "EverParse3d.CRuntime.Roots.fst"
+    stream = "extern" if profile["api"] == "lowstar" and profile["stream"] == "static" else profile["stream"]
+    backend = ("Lowstar" if profile["api"] == "lowstar" else "") + stream.capitalize()
+    verification_modules = ["Interpreter", "ProbeActions", "InputStream." + backend]
+    if profile["api"] == "lowstar":
+        verification_modules.append(
+            "Lowstar.BufferAdapter" if profile["stream"] == "buffer"
+            else "Lowstar.ExternAdapter")
     root.write_text("module EverParse3d.CRuntime.Roots\n" + "".join(
         "module M" + str(i) + " = " + PREFIX + name + "\n"
-        for i, name in enumerate(sorted(names))
+        for i, name in enumerate(sorted(set(names) | set(verification_modules)))
     ))
     flags = isolated_options(shlex.split(args.fstar_options), cache)
     flags += ["--cache_checked_modules", "--cache_dir", native_path(cache),
@@ -309,7 +316,8 @@ def extract(args):
         + shlex.join(command) + " $<\n"
     )
     subprocess.run(["make", "-s", "-j" + str(args.jobs), "-f", str(makefile)], check=True)
-    extraction = ["--codegen", "C", "--custard_static_header",
+    extraction = ["--codegen", "C", "--custard_unit", "EverParse",
+                  "--custard_static_header",
                   "--custard_monomorphize_types", "true"]
     for module, declarations in names.items():
         for name in declarations:
@@ -320,7 +328,12 @@ def extract(args):
     subprocess.run(command + extraction + [native_path(root), "-o", native_path(header)], check=True)
     if (build / "EverParse.c").exists():
         raise RuntimeError("Static-header extraction unexpectedly produced EverParse.c")
+    for directory in (source_dir, cache):
+        for source in sorted(directory.iterdir()):
+            if source.is_file():
+                publish(source.read_bytes(), args.output.parent / directory.name / source.name)
     publish(header.read_bytes(), args.output)
+    publish((build / "EverParse.cui").read_bytes(), args.output.with_suffix(".cui"))
 
 
 def main():
