@@ -29,6 +29,12 @@ def main():
     assert "--api" in help_text and "pulse|lowstar" in help_text
     assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
+    for api in ["pulse", "lowstar"]:
+        for option in ["hoist_locals", "goto_for_early_return", "blank_lines",
+                       "line_comments", "init_locals"]:
+            arguments = [f"--{option}"] + (["c99"] if option == "init_locals" else [])
+            message = run("--api", api, *arguments, succeeds=False)
+            assert f"--{option}: not implemented yet" in message
     # The legacy Low* backend is gone: lowstar is the default, and
     # legacy_lowstar is rejected like any other unknown backend because
     # Options.Base.valid_api no longer accepts it.
@@ -98,6 +104,11 @@ def main():
             makefile = (output / "EverParse.Makefile").read_text()
             assert f"--api {options[1]}" in makefile
             assert "--pulse" not in makefile and "--no_pulse" not in makefile
+            assert "ApiChoice.cui" in makefile
+            assert "__produce_c_from_existing_checked" in makefile
+            assert "__produce_c_from_existing_krml" not in makefile
+            assert ".krml" not in makefile
+            assert " &: " in makefile
             if name == "lowstar":
                 assert "EverParsePulseInternal.h" not in makefile
                 assert "EverParsePulseEndianness.h" not in makefile
@@ -110,6 +121,14 @@ def main():
             for index in recipes:
                 assert f"--api {options[1]}" in lines[index]
                 assert str(output / "EverParse.Makefile") in lines[index - 1]
+
+            run(*options, "--odir", output, "--makefile", "nmake", source)
+            nmake = (output / "EverParse.Makefile").read_text()
+            assert " &: " not in nmake and ".krml" not in nmake
+            unit_rule = next(line for line in nmake.splitlines()
+                             if "ApiChoice.cui" in line and " : " in line)
+            assert "ApiChoice.c " in unit_rule and "ApiChoice.h " in unit_rule
+            assert "__produce_c_from_existing_checked" in nmake
 
         home = pathlib.Path(executable).parent.parent
         for backend in ["buffer", "extern", "static"]:
