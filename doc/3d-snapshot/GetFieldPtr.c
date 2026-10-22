@@ -2,8 +2,8 @@
 
 #include "GetFieldPtr.h"
 
-uint8_t
-GetFieldPtrValidateCoreT(
+static uint8_t
+ValidateCoreT(
   uint8_t **Out,
   uint8_t *Ctxt,
   void
@@ -193,7 +193,7 @@ GetFieldPtrValidateT(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = GetFieldPtrValidateCoreT(Out, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreT(Out, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -202,8 +202,8 @@ GetFieldPtrValidateT(
     + position;
 }
 
-uint8_t
-GetFieldPtrValidateCoreTact(
+static uint8_t
+ValidateCoreTact(
   uint8_t **Out,
   uint8_t *Ctxt,
   void
@@ -393,7 +393,7 @@ GetFieldPtrValidateTact(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = GetFieldPtrValidateCoreTact(Out, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreTact(Out, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

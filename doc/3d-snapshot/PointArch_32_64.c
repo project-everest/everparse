@@ -2,8 +2,8 @@
 
 #include "PointArch_32_64.h"
 
-inline uint8_t
-PointArch3264ValidateCoreInt(
+static inline uint8_t
+ValidateCoreInt(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -173,8 +173,8 @@ PointArch3264ValidateCoreInt(
   #endif
 }
 
-uint8_t
-PointArch3264ValidateCorePoint(
+static uint8_t
+ValidateCorePoint(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -194,8 +194,7 @@ PointArch3264ValidateCorePoint(
   /* Validating field x */
   size_t p = *SlPos;
   uint64_t fieldStartPoint = (uint64_t)p;
-  uint8_t
-  resultAfterPoint = PointArch3264ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+  uint8_t resultAfterPoint = ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
   uint8_t resultAfterx;
   size_t p1;
   uint64_t fieldStartPoint1;
@@ -221,7 +220,7 @@ PointArch3264ValidateCorePoint(
     /* Validating field y */
     p1 = *SlPos;
     fieldStartPoint1 = (uint64_t)p1;
-    resultAfterPoint1 = PointArch3264ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+    resultAfterPoint1 = ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
     if (resultAfterPoint1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterPoint1;
@@ -260,7 +259,7 @@ PointArch3264ValidatePoint(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = PointArch3264ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

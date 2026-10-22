@@ -2,8 +2,8 @@
 
 #include "HelloWorld.h"
 
-uint8_t
-HelloWorldValidateCorePoint(
+static uint8_t
+ValidateCorePoint(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -89,7 +89,7 @@ HelloWorldValidatePoint(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = HelloWorldValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
