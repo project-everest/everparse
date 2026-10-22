@@ -2,8 +2,8 @@
 
 #include "Triangle.h"
 
-uint8_t
-TriangleValidateCoreTriangle(
+static uint8_t
+ValidateCoreTriangle(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -89,7 +89,7 @@ TriangleValidateTriangle(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = TriangleValidateCoreTriangle(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreTriangle(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

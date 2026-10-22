@@ -47,13 +47,13 @@ install-3d: install-3d-pulse
 endif
 
 # The Pulse 3d combinator library: sources and .checked files for the F*
-# --include path, the same library already extracted to .krml for KaRaMeL, and
+# --include path, the same library already extracted to JSON for KaRaMeL, and
 # the pre-generated per-backend runtime headers.
 install-3d-pulse:
 	install -d $(PREFIX)/lib/everparse/3d
 	install -m 644 $(wildcard $(addprefix lib/everparse/3d/*.,fst fsti checked)) $(PREFIX)/lib/everparse/3d
 	install -d $(PREFIX)/lib/everparse/3d/krml/extracted
-	install -m 644 lib/everparse/3d/krml/extracted/Custard.krml $(PREFIX)/lib/everparse/3d/krml/extracted
+	install -m 644 lib/everparse/3d/krml/extracted/Custard.json $(PREFIX)/lib/everparse/3d/krml/extracted
 	for parent in "" lowstar/ ; do for backend in buffer extern static ; do install -d $(PREFIX)/lib/everparse/3d/krml/$$parent$$backend && install -m 644 lib/everparse/3d/krml/$$parent$$backend/EverParse.h $(PREFIX)/lib/everparse/3d/krml/$$parent$$backend ; done ; done
 
 .PHONY: install-3d install-3d-pulse

@@ -2,8 +2,8 @@
 
 #include "BoundedSumConst.h"
 
-uint8_t
-BoundedSumConstValidateCoreBoundedSum(
+static uint8_t
+ValidateCoreBoundedSum(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -205,7 +205,7 @@ BoundedSumConstValidateBoundedSum(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = BoundedSumConstValidateCoreBoundedSum(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreBoundedSum(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

@@ -306,7 +306,7 @@ let _ =
       exit res
     end;
   let mname_subst = Re.replace_string regexp_period ~by:"_" !mname in
-  let krml_file = Filename.concat dir "Custard.krml" in
+  let krml_file = Filename.concat dir "Custard.json" in
   (* Custard is a whole-program extractor: this one run compiles the generated
      module and everything it reaches, so there is no per-module krml list to
      hand to karamel beside it.  Every module named by a -bundle below has to

@@ -2,8 +2,8 @@
 
 #include "EnumConstraint.h"
 
-uint8_t
-EnumConstraintValidateCoreEnumConstraint(
+static uint8_t
+ValidateCoreEnumConstraint(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -218,7 +218,7 @@ EnumConstraintValidateEnumConstraint(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = EnumConstraintValidateCoreEnumConstraint(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreEnumConstraint(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

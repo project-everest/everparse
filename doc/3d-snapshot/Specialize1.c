@@ -4,43 +4,19 @@
 
 #include "Specialize1_ExternalAPI.h"
 
-void
-Specialize1CopyBytes(
+static void
+CopyBytes(
   uint64_t Numbytes,
-  PRIMS_STRING Tn,
-  PRIMS_STRING Fn,
-  PRIMS_STRING Fd,
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
-  uint64_t rd;
-  uint64_t wr;
-  BOOLEAN ok;
-  KRML_MAYBE_UNUSED_VAR(Tn);
-  KRML_MAYBE_UNUSED_VAR(Fn);
-  KRML_MAYBE_UNUSED_VAR(Fd);
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(Err);
-  KRML_MAYBE_UNUSED_VAR(Sz);
-  rd = *ReadOffset;
-  wr = *WriteOffset;
-  ok = ProbeAndCopy1(Numbytes, rd, wr, Src, Dest);
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy1(Numbytes, rd, wr, Src, Dest);
   if (ok)
   {
     *ReadOffset = rd + Numbytes;
@@ -50,42 +26,9 @@ Specialize1CopyBytes(
   *Failed = TRUE;
 }
 
-void
-Specialize1SkipBytesWrite(
-  uint64_t Numbytes,
-  PRIMS_STRING Tn,
-  PRIMS_STRING Fn,
-  PRIMS_STRING Fd,
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint64_t *ReadOffset,
-  uint64_t *WriteOffset,
-  BOOLEAN *Failed,
-  uint64_t Src,
-  uint64_t Sz,
-  EVERPARSE_COPY_BUFFER_T Dest
-)
+static void SkipBytesWrite(uint64_t Numbytes, uint64_t *WriteOffset, BOOLEAN *Failed)
 {
-  uint64_t wr;
-  KRML_MAYBE_UNUSED_VAR(Tn);
-  KRML_MAYBE_UNUSED_VAR(Fn);
-  KRML_MAYBE_UNUSED_VAR(Fd);
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(Err);
-  KRML_MAYBE_UNUSED_VAR(ReadOffset);
-  KRML_MAYBE_UNUSED_VAR(Src);
-  KRML_MAYBE_UNUSED_VAR(Sz);
-  KRML_MAYBE_UNUSED_VAR(Dest);
-  wr = *WriteOffset;
+  uint64_t wr = *WriteOffset;
   if (wr <= (0xffffffffffffffffULL - Numbytes))
   {
     *WriteOffset = wr + Numbytes;
@@ -94,8 +37,8 @@ Specialize1SkipBytesWrite(
   *Failed = TRUE;
 }
 
-void
-Specialize1ReadAndCoercePointer(
+static void
+ReadAndCoercePointer(
   PRIMS_STRING Fieldname,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -115,23 +58,18 @@ Specialize1ReadAndCoercePointer(
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
-  uint64_t rd;
-  uint32_t v;
-  BOOLEAN hasFailed;
+  uint64_t rd = *ReadOffset;
+  uint32_t v = ProbeAndReadU320(Failed, rd, Src, Dest);
+  BOOLEAN hasFailed = *Failed;
   uint32_t res1;
   BOOLEAN hasFailed1;
   uint64_t res11;
   BOOLEAN hasFailed2;
   uint64_t wr;
   BOOLEAN ok;
-  KRML_MAYBE_UNUSED_VAR(Sz);
-  rd = *ReadOffset;
-  v = ProbeAndReadU320(Failed, rd, Src, Dest);
-  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, Fd, 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -165,9 +103,8 @@ Specialize1ReadAndCoercePointer(
   *Failed = TRUE;
 }
 
-void
-Specialize1Specialized32ProbeS64(
-  uint32_t Bound,
+static void
+Specialized32ProbeS64(
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
   PRIMS_STRING Fd,
@@ -186,7 +123,6 @@ Specialize1Specialized32ProbeS64(
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
@@ -195,44 +131,21 @@ Specialize1Specialized32ProbeS64(
   BOOLEAN hasFailed2;
   BOOLEAN hasFailed3;
   BOOLEAN hasFailed4;
-  KRML_MAYBE_UNUSED_VAR(Bound);
-  Specialize1CopyBytes(4ULL,
-    Tn,
-    Fn,
-    Fd,
-    Ctxt,
-    Err,
-    ReadOffset,
-    WriteOffset,
-    Failed,
-    Src,
-    Sz,
-    Dest);
+  CopyBytes(4ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
   hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "s1", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  Specialize1SkipBytesWrite(4ULL,
-    Tn,
-    Fn,
-    Fd,
-    Ctxt,
-    Err,
-    ReadOffset,
-    WriteOffset,
-    Failed,
-    Src,
-    Sz,
-    Dest);
+  SkipBytesWrite(4ULL, WriteOffset, Failed);
   hasFailed1 = *Failed;
   if (hasFailed1)
   {
     Err(Tn, Fn, "alignment", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  Specialize1ReadAndCoercePointer("ptrT",
+  ReadAndCoercePointer("ptrT",
     Tn,
     Fn,
     Fd,
@@ -242,7 +155,6 @@ Specialize1Specialized32ProbeS64(
     WriteOffset,
     Failed,
     Src,
-    Sz,
     Dest);
   hasFailed2 = *Failed;
   if (hasFailed2)
@@ -250,36 +162,14 @@ Specialize1Specialized32ProbeS64(
     Err(Tn, Fn, "ptrT", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  Specialize1CopyBytes(4ULL,
-    Tn,
-    Fn,
-    Fd,
-    Ctxt,
-    Err,
-    ReadOffset,
-    WriteOffset,
-    Failed,
-    Src,
-    Sz,
-    Dest);
+  CopyBytes(4ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
   hasFailed3 = *Failed;
   if (hasFailed3)
   {
     Err(Tn, Fn, "s2", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  Specialize1SkipBytesWrite(4ULL,
-    Tn,
-    Fn,
-    Fd,
-    Ctxt,
-    Err,
-    ReadOffset,
-    WriteOffset,
-    Failed,
-    Src,
-    Sz,
-    Dest);
+  SkipBytesWrite(4ULL, WriteOffset, Failed);
   hasFailed4 = *Failed;
   if (hasFailed4)
   {
@@ -288,8 +178,8 @@ Specialize1Specialized32ProbeS64(
   }
 }
 
-inline uint8_t
-Specialize1ValidateCoreT(
+static inline uint8_t
+ValidateCoreT(
   uint32_t Bound,
   uint8_t *Ctxt,
   void
@@ -454,8 +344,8 @@ Specialize1ValidateCoreT(
   return resultAftert1;
 }
 
-inline uint8_t
-Specialize1ValidateCoreS64(
+static inline uint8_t
+ValidateCoreS64(
   void
   (*ProbePtrT)(
     uint32_t x0,
@@ -777,7 +667,7 @@ Specialize1ValidateCoreS64(
             base = EverParseStreamOf(Dest);
             len = (size_t)EverParseStreamLen(Dest);
             cursor = (size_t)0U;
-            res10 = Specialize1ValidateCoreT(s1, Ctxt, ErrorHandlerFn, base, len, &cursor);
+            res10 = ValidateCoreT(s1, Ctxt, ErrorHandlerFn, base, len, &cursor);
             actionSuccessPtrT = res10 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
           }
           else
@@ -899,8 +789,8 @@ Specialize1ValidateCoreS64(
   return resultAfterS64;
 }
 
-void
-Specialize1Specialized32ProbeT(
+static void
+Specialized32ProbeT(
   uint32_t Bound,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -926,18 +816,9 @@ Specialize1Specialized32ProbeT(
 {
   BOOLEAN hasFailed;
   KRML_MAYBE_UNUSED_VAR(Bound);
-  Specialize1CopyBytes(8ULL,
-    Tn,
-    Fn,
-    Fd,
-    Ctxt,
-    Err,
-    ReadOffset,
-    WriteOffset,
-    Failed,
-    Src,
-    Sz,
-    Dest);
+  KRML_MAYBE_UNUSED_VAR(Fd);
+  KRML_MAYBE_UNUSED_VAR(Sz);
+  CopyBytes(8ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
   hasFailed = *Failed;
   if (hasFailed)
   {
@@ -946,8 +827,8 @@ Specialize1Specialized32ProbeT(
   }
 }
 
-inline uint8_t
-Specialize1ValidateCoreSpecializedR32(
+static inline uint8_t
+ValidateCoreSpecializedR32(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
@@ -1122,8 +1003,7 @@ Specialize1ValidateCoreSpecializedR32(
       ok = ProbeInit1("___specialized_R32.ptrS", (uint64_t)24U, DestS);
       if (ok)
       {
-        Specialize1Specialized32ProbeS64(r1,
-          "___specialized_R32",
+        Specialized32ProbeS64("___specialized_R32",
           "ptrS",
           "probe",
           Ctxt,
@@ -1132,7 +1012,6 @@ Specialize1ValidateCoreSpecializedR32(
           &writeOffset,
           &failed,
           src64,
-          (uint64_t)24U,
           DestS);
       }
       else
@@ -1162,7 +1041,7 @@ Specialize1ValidateCoreSpecializedR32(
         len = (size_t)EverParseStreamLen(DestS);
         cursor = (size_t)0U;
         res1 =
-          Specialize1ValidateCoreS64(Specialize1Specialized32ProbeT,
+          ValidateCoreS64(Specialized32ProbeT,
             r1,
             DestT,
             Ctxt,
@@ -1212,8 +1091,8 @@ Specialize1ValidateCoreSpecializedR32(
   return resultAfterr1;
 }
 
-inline uint8_t
-Specialize1ValidateCoreR64(
+static inline uint8_t
+ValidateCoreR64(
   void
   (*ProbeS640)(
     uint32_t x0,
@@ -1559,15 +1438,7 @@ Specialize1ValidateCoreR64(
           base = EverParseStreamOf(DestS);
           len = (size_t)EverParseStreamLen(DestS);
           cursor = (size_t)0U;
-          res2 =
-            Specialize1ValidateCoreS64(ProbeS640,
-              r1,
-              DestT,
-              Ctxt,
-              ErrorHandlerFn,
-              base,
-              len,
-              &cursor);
+          res2 = ValidateCoreS64(ProbeS640, r1, DestT, Ctxt, ErrorHandlerFn, base, len, &cursor);
           actionSuccessPtrS = res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
@@ -1611,8 +1482,8 @@ Specialize1ValidateCoreR64(
   return resultAfterr1;
 }
 
-void
-Specialize1RProbeFieldR640T(
+static void
+RProbeFieldR640T(
   uint32_t Arg0,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -1660,8 +1531,8 @@ Specialize1RProbeFieldR640T(
   *Failed = TRUE;
 }
 
-void
-Specialize1RProbeFieldR641S64(
+static void
+RProbeFieldR641S64(
   uint32_t Arg0,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -1709,8 +1580,8 @@ Specialize1RProbeFieldR641S64(
   *Failed = TRUE;
 }
 
-uint8_t
-Specialize1ValidateCoreR(
+static uint8_t
+ValidateCoreR(
   BOOLEAN Requestor32,
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
@@ -1742,7 +1613,7 @@ Specialize1ValidateCoreR(
     p0 = *SlPos;
     fieldStartR = (uint64_t)p0;
     resultAfterR =
-      Specialize1ValidateCoreSpecializedR32(DestS,
+      ValidateCoreSpecializedR32(DestS,
         DestT,
         Ctxt,
         ErrorHandlerFn,
@@ -1767,8 +1638,8 @@ Specialize1ValidateCoreR(
   p = *SlPos;
   fieldStartR0 = (uint64_t)p;
   resultAfterR0 =
-    Specialize1ValidateCoreR64(Specialize1RProbeFieldR640T,
-      Specialize1RProbeFieldR641S64,
+    ValidateCoreR64(RProbeFieldR640T,
+      RProbeFieldR641S64,
       DestS,
       DestT,
       Ctxt,
@@ -1815,16 +1686,7 @@ Specialize1ValidateR(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t
-  status =
-    Specialize1ValidateCoreR(Requestor32,
-      DestS,
-      DestT,
-      Ctxt,
-      Handler,
-      Input,
-      len,
-      &cursor);
+  uint8_t status = ValidateCoreR(Requestor32, DestS, DestT, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -1833,12 +1695,10 @@ Specialize1ValidateR(
     + position;
 }
 
-void
-Specialize1R32AttemptProbePtrSS32attempt(
-  uint32_t Arg0,
+static void
+R32AttemptProbePtrSS32attempt(
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
-  PRIMS_STRING Fd,
   uint8_t *Ctxt,
   void
   (*Err)(
@@ -1858,13 +1718,10 @@ Specialize1R32AttemptProbePtrSS32attempt(
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailed = *Failed;
   uint64_t rd;
   uint64_t wr;
   BOOLEAN ok;
-  KRML_MAYBE_UNUSED_VAR(Arg0);
-  KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -1882,12 +1739,10 @@ Specialize1R32AttemptProbePtrSS32attempt(
   *Failed = TRUE;
 }
 
-void
-Specialize1S32attemptProbePtrTT(
-  uint32_t Arg0,
+static void
+S32attemptProbePtrTT(
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
-  PRIMS_STRING Fd,
   uint8_t *Ctxt,
   void
   (*Err)(
@@ -1907,13 +1762,10 @@ Specialize1S32attemptProbePtrTT(
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
-  BOOLEAN hasFailed;
+  BOOLEAN hasFailed = *Failed;
   uint64_t rd;
   uint64_t wr;
   BOOLEAN ok;
-  KRML_MAYBE_UNUSED_VAR(Arg0);
-  KRML_MAYBE_UNUSED_VAR(Fd);
-  hasFailed = *Failed;
   if (hasFailed)
   {
     Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -1931,8 +1783,8 @@ Specialize1S32attemptProbePtrTT(
   *Failed = TRUE;
 }
 
-inline uint8_t
-Specialize1ValidateCoreS32Attempt(
+static inline uint8_t
+ValidateCoreS32Attempt(
   uint32_t Bound,
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
@@ -2109,10 +1961,8 @@ Specialize1ValidateCoreS32Attempt(
         ok = ProbeInit1("_S32_Attempt.ptrT", (uint64_t)8U, Dest);
         if (ok)
         {
-          Specialize1S32attemptProbePtrTT(f,
-            "_S32_Attempt",
+          S32attemptProbePtrTT("_S32_Attempt",
             "ptrT",
-            "probe",
             Ctxt,
             ErrorHandlerFn,
             &readOffset,
@@ -2148,7 +1998,7 @@ Specialize1ValidateCoreS32Attempt(
           base = EverParseStreamOf(Dest);
           len = (size_t)EverParseStreamLen(Dest);
           cursor = (size_t)0U;
-          res0 = Specialize1ValidateCoreT(f, Ctxt, ErrorHandlerFn, base, len, &cursor);
+          res0 = ValidateCoreT(f, Ctxt, ErrorHandlerFn, base, len, &cursor);
           actionSuccessPtrT = res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
@@ -2269,8 +2119,8 @@ Specialize1ValidateCoreS32Attempt(
   return resultAfterS32Attempt;
 }
 
-inline uint8_t
-Specialize1ValidateCoreR32Attempt(
+static inline uint8_t
+ValidateCoreR32Attempt(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
@@ -2445,10 +2295,8 @@ Specialize1ValidateCoreR32Attempt(
       ok = ProbeInit1("_R32_Attempt.ptrS", (uint64_t)12U, DestS);
       if (ok)
       {
-        Specialize1R32AttemptProbePtrSS32attempt(f,
-          "_R32_Attempt",
+        R32AttemptProbePtrSS32attempt("_R32_Attempt",
           "ptrS",
-          "probe",
           Ctxt,
           ErrorHandlerFn,
           &readOffset,
@@ -2478,7 +2326,7 @@ Specialize1ValidateCoreR32Attempt(
         base = EverParseStreamOf(DestS);
         len = (size_t)EverParseStreamLen(DestS);
         cursor = (size_t)0U;
-        res1 = Specialize1ValidateCoreS32Attempt(f, DestT, Ctxt, ErrorHandlerFn, base, len, &cursor);
+        res1 = ValidateCoreS32Attempt(f, DestT, Ctxt, ErrorHandlerFn, base, len, &cursor);
         actionSuccessPtrS = res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
@@ -2520,8 +2368,8 @@ Specialize1ValidateCoreR32Attempt(
   return resultAfterf;
 }
 
-void
-Specialize1RmuxProbeFieldR640T(
+static void
+RmuxProbeFieldR640T(
   uint32_t Arg0,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -2569,8 +2417,8 @@ Specialize1RmuxProbeFieldR640T(
   *Failed = TRUE;
 }
 
-void
-Specialize1RmuxProbeFieldR641S64(
+static void
+RmuxProbeFieldR641S64(
   uint32_t Arg0,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -2618,8 +2466,8 @@ Specialize1RmuxProbeFieldR641S64(
   *Failed = TRUE;
 }
 
-uint8_t
-Specialize1ValidateCoreRmux(
+static uint8_t
+ValidateCoreRmux(
   BOOLEAN Requestor32,
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
@@ -2651,7 +2499,7 @@ Specialize1ValidateCoreRmux(
     p0 = *SlPos;
     fieldStartRmux = (uint64_t)p0;
     resultAfterRmux =
-      Specialize1ValidateCoreR32Attempt(DestS,
+      ValidateCoreR32Attempt(DestS,
         DestT,
         Ctxt,
         ErrorHandlerFn,
@@ -2676,8 +2524,8 @@ Specialize1ValidateCoreRmux(
   p = *SlPos;
   fieldStartRmux0 = (uint64_t)p;
   resultAfterRmux0 =
-    Specialize1ValidateCoreR64(Specialize1RmuxProbeFieldR640T,
-      Specialize1RmuxProbeFieldR641S64,
+    ValidateCoreR64(RmuxProbeFieldR640T,
+      RmuxProbeFieldR641S64,
       DestS,
       DestT,
       Ctxt,
@@ -2725,15 +2573,7 @@ Specialize1ValidateRmux(
   size_t initial = (size_t)Start;
   size_t cursor = initial;
   uint8_t
-  status =
-    Specialize1ValidateCoreRmux(Requestor32,
-      DestS,
-      DestT,
-      Ctxt,
-      Handler,
-      Input,
-      len,
-      &cursor);
+  status = ValidateCoreRmux(Requestor32, DestS, DestT, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

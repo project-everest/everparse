@@ -4,8 +4,8 @@
 
 #include "Probe_ExternalAPI.h"
 
-inline uint8_t
-ProbeValidateCoreT(
+static inline uint8_t
+ValidateCoreT(
   uint32_t Bound,
   uint8_t *Ctxt,
   void
@@ -165,8 +165,8 @@ ProbeValidateCoreT(
   return resultAfterT;
 }
 
-uint8_t
-ProbeValidateCoreS(
+static uint8_t
+ValidateCoreS(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
   void
@@ -382,7 +382,7 @@ ProbeValidateCoreS(
         base = EverParseStreamOf(Dest);
         len = (size_t)EverParseStreamLen(Dest);
         cursor = (size_t)0U;
-        res1 = ProbeValidateCoreT((uint32_t)bound, Ctxt, ErrorHandlerFn, base, len, &cursor);
+        res1 = ValidateCoreT((uint32_t)bound, Ctxt, ErrorHandlerFn, base, len, &cursor);
         actionSuccessTpointer = res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
@@ -446,7 +446,7 @@ ProbeValidateS(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreS(Dest, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreS(Dest, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -455,8 +455,8 @@ ProbeValidateS(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreU(
+static uint8_t
+ValidateCoreU(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
@@ -681,7 +681,7 @@ ProbeValidateCoreU(
         base = EverParseStreamOf(DestS);
         len = (size_t)EverParseStreamLen(DestS);
         cursor = (size_t)0U;
-        res2 = ProbeValidateCoreS(DestT, Ctxt, ErrorHandlerFn, base, len, &cursor);
+        res2 = ValidateCoreS(DestT, Ctxt, ErrorHandlerFn, base, len, &cursor);
         actionSuccessSpointer = res2 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
@@ -746,7 +746,7 @@ ProbeValidateU(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreU(DestS, DestT, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreU(DestS, DestT, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -755,8 +755,8 @@ ProbeValidateU(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreV(
+static uint8_t
+ValidateCoreV(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
@@ -1091,7 +1091,7 @@ ProbeValidateCoreV(
         base0 = EverParseStreamOf(DestS);
         len0 = (size_t)EverParseStreamLen(DestS);
         cursor0 = (size_t)0U;
-        res10 = ProbeValidateCoreS(DestT, Ctxt, ErrorHandlerFn, base0, len0, &cursor0);
+        res10 = ValidateCoreS(DestT, Ctxt, ErrorHandlerFn, base0, len0, &cursor0);
         actionSuccessSptr = res10 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
@@ -1227,7 +1227,7 @@ ProbeValidateCoreV(
           base1 = EverParseStreamOf(DestT);
           len1 = (size_t)EverParseStreamLen(DestT);
           cursor1 = (size_t)0U;
-          res11 = ProbeValidateCoreT((uint32_t)17U, Ctxt, ErrorHandlerFn, base1, len1, &cursor1);
+          res11 = ValidateCoreT((uint32_t)17U, Ctxt, ErrorHandlerFn, base1, len1, &cursor1);
           actionSuccessTptr = res11 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
@@ -1363,7 +1363,7 @@ ProbeValidateCoreV(
             base = EverParseStreamOf(DestT);
             len = (size_t)EverParseStreamLen(DestT);
             cursor = (size_t)0U;
-            res1 = ProbeValidateCoreT((uint32_t)tag, Ctxt, ErrorHandlerFn, base, len, &cursor);
+            res1 = ValidateCoreT((uint32_t)tag, Ctxt, ErrorHandlerFn, base, len, &cursor);
             actionSuccessT2ptr = res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
           }
           else
@@ -1432,7 +1432,7 @@ ProbeValidateV(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreV(DestS, DestT, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreV(DestS, DestT, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -1441,8 +1441,8 @@ ProbeValidateV(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreIndirect(
+static uint8_t
+ValidateCoreIndirect(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -1528,7 +1528,7 @@ ProbeValidateIndirect(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreIndirect(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreIndirect(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -1537,8 +1537,8 @@ ProbeValidateIndirect(
     + position;
 }
 
-inline uint8_t
-ProbeValidateCoreTt(
+static inline uint8_t
+ValidateCoreTt(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -1603,8 +1603,8 @@ ProbeValidateCoreTt(
   return resultAfterTt;
 }
 
-uint8_t
-ProbeValidateCoreI(
+static uint8_t
+ValidateCoreI(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
   void
@@ -1764,7 +1764,7 @@ ProbeValidateCoreI(
       base = EverParseStreamOf(Dest);
       len = (size_t)EverParseStreamLen(Dest);
       cursor = (size_t)0U;
-      res = ProbeValidateCoreTt(Ctxt, ErrorHandlerFn, base, len, &cursor);
+      res = ValidateCoreTt(Ctxt, ErrorHandlerFn, base, len, &cursor);
       actionSuccessTtptr = res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
     }
     else
@@ -1826,7 +1826,7 @@ ProbeValidateI(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreI(Dest, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreI(Dest, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -1835,8 +1835,8 @@ ProbeValidateI(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreMultiProbe(
+static uint8_t
+ValidateCoreMultiProbe(
   EVERPARSE_COPY_BUFFER_T DestT1,
   EVERPARSE_COPY_BUFFER_T DestT2,
   uint8_t *Ctxt,
@@ -2254,7 +2254,7 @@ ProbeValidateCoreMultiProbe(
             base0 = EverParseStreamOf(DestT1);
             len0 = (size_t)EverParseStreamLen(DestT1);
             cursor0 = (size_t)0U;
-            res60 = ProbeValidateCoreT((uint32_t)17U, Ctxt, ErrorHandlerFn, base0, len0, &cursor0);
+            res60 = ValidateCoreT((uint32_t)17U, Ctxt, ErrorHandlerFn, base0, len0, &cursor0);
             actionSuccessTptr1 = res60 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
           }
           else
@@ -2397,7 +2397,7 @@ ProbeValidateCoreMultiProbe(
               base = EverParseStreamOf(DestT2);
               len = (size_t)EverParseStreamLen(DestT2);
               cursor = (size_t)0U;
-              res6 = ProbeValidateCoreT((uint32_t)42U, Ctxt, ErrorHandlerFn, base, len, &cursor);
+              res6 = ValidateCoreT((uint32_t)42U, Ctxt, ErrorHandlerFn, base, len, &cursor);
               actionSuccessTptr2 = res6 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
             }
             else
@@ -2469,8 +2469,7 @@ ProbeValidateMultiProbe(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t
-  status = ProbeValidateCoreMultiProbe(DestT1, DestT2, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreMultiProbe(DestT1, DestT2, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -2479,8 +2478,8 @@ ProbeValidateMultiProbe(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreMaybeT(
+static uint8_t
+ValidateCoreMaybeT(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
   void
@@ -2726,7 +2725,7 @@ ProbeValidateCoreMaybeT(
           base = EverParseStreamOf(Dest);
           len = (size_t)EverParseStreamLen(Dest);
           cursor = (size_t)0U;
-          res1 = ProbeValidateCoreT(bound, Ctxt, ErrorHandlerFn, base, len, &cursor);
+          res1 = ValidateCoreT(bound, Ctxt, ErrorHandlerFn, base, len, &cursor);
           actionSuccessPtr = res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
         }
         else
@@ -2791,7 +2790,7 @@ ProbeValidateMaybeT(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreMaybeT(Dest, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreMaybeT(Dest, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -2800,8 +2799,8 @@ ProbeValidateMaybeT(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreCoercePtr(
+static uint8_t
+ValidateCoreCoercePtr(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
   void
@@ -3011,7 +3010,7 @@ ProbeValidateCoreCoercePtr(
         base = EverParseStreamOf(Dest);
         len = (size_t)EverParseStreamLen(Dest);
         cursor = (size_t)0U;
-        res1 = ProbeValidateCoreT(bound, Ctxt, ErrorHandlerFn, base, len, &cursor);
+        res1 = ValidateCoreT(bound, Ctxt, ErrorHandlerFn, base, len, &cursor);
         actionSuccessPtr = res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
       }
       else
@@ -3075,7 +3074,7 @@ ProbeValidateCoercePtr(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreCoercePtr(Dest, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreCoercePtr(Dest, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -3084,8 +3083,8 @@ ProbeValidateCoercePtr(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreProbeOnly(
+static uint8_t
+ValidateCoreProbeOnly(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -3171,7 +3170,7 @@ ProbeValidateProbeOnly(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreProbeOnly(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreProbeOnly(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -3180,8 +3179,8 @@ ProbeValidateProbeOnly(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreBothEntrypoints(
+static uint8_t
+ValidateCoreBothEntrypoints(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -3268,7 +3267,7 @@ ProbeValidateBothEntrypoints(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreBothEntrypoints(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreBothEntrypoints(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -3277,8 +3276,8 @@ ProbeValidateBothEntrypoints(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreNamedPlainEp(
+static uint8_t
+ValidateCoreNamedPlainEp(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -3365,7 +3364,7 @@ ProbeValidateNamedPlainEp(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreNamedPlainEp(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreNamedPlainEp(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -3374,8 +3373,8 @@ ProbeValidateNamedPlainEp(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreNamedProbeEp(
+static uint8_t
+ValidateCoreNamedProbeEp(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -3462,7 +3461,7 @@ ProbeValidateNamedProbeEp(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreNamedProbeEp(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreNamedProbeEp(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -3471,8 +3470,8 @@ ProbeValidateNamedProbeEp(
     + position;
 }
 
-uint8_t
-ProbeValidateCoreNamedBothEp(
+static uint8_t
+ValidateCoreNamedBothEp(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -3558,7 +3557,7 @@ ProbeValidateNamedBothEp(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ProbeValidateCoreNamedBothEp(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreNamedBothEp(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

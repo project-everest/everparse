@@ -2,8 +2,8 @@
 
 #include "Smoker.h"
 
-uint8_t
-SmokerValidateCoreSmoker(
+static uint8_t
+ValidateCoreSmoker(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -185,7 +185,7 @@ SmokerValidateSmoker(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = SmokerValidateCoreSmoker(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreSmoker(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

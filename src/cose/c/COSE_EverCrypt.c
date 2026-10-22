@@ -51,9 +51,9 @@ COSE_EverCrypt_create_sig(
   written =
     COSE_Format_serialize_sig_structure((
         (COSE_Format_sig_structure){
-          .context = COSE_Format_Inr,
+          .context = FStar_Pervasives_Inr,
           .body_protected = phdr,
-          ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { ._1 = aad, ._2 = payload } } }
+          ._x0 = { .tag = FStar_Pervasives_Inr, { .case_Inr = { ._1 = aad, ._2 = payload } } }
         }
       ),
       outbuf);
@@ -123,15 +123,15 @@ COSE_EverCrypt_mk_phdrs(
           .case_Mkempty_or_serialized_map0 = {
             .intkey1 = {
               .tag = FStar_Pervasives_Native_Some,
-              .v = { .tag = COSE_Format_Inl, { .case_Inl = alg_ } }
+              .v = { .tag = FStar_Pervasives_Inl, { .case_Inl = alg_ } }
             }, .intkey2 = { .tag = FStar_Pervasives_Native_None },
             .intkey3 = { .tag = FStar_Pervasives_Native_None },
             .intkey4 = { .tag = FStar_Pervasives_Native_None },
             ._x0 = {
-              .tag = COSE_Format_Inr,
+              .tag = FStar_Pervasives_Inr,
               {
                 .case_Inr = {
-                  .tag = COSE_Format_Inr,
+                  .tag = FStar_Pervasives_Inr,
                   {
                     .case_Inr = {
                       ._1 = FStar_Pervasives_Native_None,
@@ -142,7 +142,7 @@ COSE_EverCrypt_mk_phdrs(
               }
             },
             ._x1 = {
-              .tag = COSE_Format_Inl,
+              .tag = FStar_Pervasives_Inl,
               {
                 .case_Inl = from_array__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(rest,
                   (size_t)0U)
@@ -180,15 +180,15 @@ COSE_EverCrypt_sign1(
         .case_Mkempty_or_serialized_map0 = {
           .intkey1 = {
             .tag = FStar_Pervasives_Native_Some,
-            .v = { .tag = COSE_Format_Inl, { .case_Inl = alg_ } }
+            .v = { .tag = FStar_Pervasives_Inl, { .case_Inl = alg_ } }
           }, .intkey2 = { .tag = FStar_Pervasives_Native_None },
           .intkey3 = { .tag = FStar_Pervasives_Native_None },
           .intkey4 = { .tag = FStar_Pervasives_Native_None },
           ._x0 = {
-            .tag = COSE_Format_Inr,
+            .tag = FStar_Pervasives_Inr,
             {
               .case_Inr = {
-                .tag = COSE_Format_Inr,
+                .tag = FStar_Pervasives_Inr,
                 {
                   .case_Inr = {
                     ._1 = FStar_Pervasives_Native_None,
@@ -199,7 +199,7 @@ COSE_EverCrypt_sign1(
             }
           },
           ._x1 = {
-            .tag = COSE_Format_Inl,
+            .tag = FStar_Pervasives_Inl,
             {
               .case_Inl = from_array__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(phdrauxbuf,
                 (size_t)0U)
@@ -217,7 +217,7 @@ COSE_EverCrypt_sign1(
         (COSE_Format_cose_sign1){
           .protected0 = phdr,
           .unprotected = uhdr,
-          .payload = { .tag = COSE_Format_Inl, .v = payload },
+          .payload = { .tag = FStar_Pervasives_Inl, .v = payload },
           .signature = Pulse_Lib_Slice_from_array__uint8_t(sigbuf, (size_t)64U)
         }
       ),
@@ -254,10 +254,10 @@ COSE_EverCrypt_sign1_simple(
       .intkey3 = { .tag = FStar_Pervasives_Native_None },
       .intkey4 = { .tag = FStar_Pervasives_Native_None },
       ._x0 = {
-        .tag = COSE_Format_Inr,
+        .tag = FStar_Pervasives_Inr,
         {
           .case_Inr = {
-            .tag = COSE_Format_Inr,
+            .tag = FStar_Pervasives_Inr,
             {
               .case_Inr = { ._1 = FStar_Pervasives_Native_None, ._2 = FStar_Pervasives_Native_None }
             }
@@ -265,7 +265,7 @@ COSE_EverCrypt_sign1_simple(
         }
       },
       ._x1 = {
-        .tag = COSE_Format_Inl,
+        .tag = FStar_Pervasives_Inl,
         {
           .case_Inl = from_array__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(buf0,
             (size_t)0U)
@@ -298,9 +298,9 @@ COSE_EverCrypt_verify_sig(
   written =
     COSE_Format_serialize_sig_structure((
         (COSE_Format_sig_structure){
-          .context = COSE_Format_Inr,
+          .context = FStar_Pervasives_Inr,
           .body_protected = phdr,
-          ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { ._1 = aad, ._2 = payload } } }
+          ._x0 = { .tag = FStar_Pervasives_Inr, { .case_Inr = { ._1 = aad, ._2 = payload } } }
         }
       ),
       outbuf);
@@ -346,7 +346,7 @@ COSE_EverCrypt_verify1(
     res1 = scrut.v;
     COSE_Format_cose_sign1 x = res1._1;
     Pulse_Lib_Slice_slice__uint8_t rem = res1._2;
-    if (Pulse_Lib_Slice_len__uint8_t(rem) == (size_t)0U && x.payload.tag == COSE_Format_Inl)
+    if (Pulse_Lib_Slice_len__uint8_t(rem) == (size_t)0U && x.payload.tag == FStar_Pervasives_Inl)
     {
       Pulse_Lib_Slice_slice__uint8_t sig = x.signature;
       bool ite0;
@@ -354,7 +354,7 @@ COSE_EverCrypt_verify1(
       {
         uint8_t *sig_ = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(sig);
         Pulse_Lib_Slice_slice__uint8_t ite;
-        if (x.payload.tag == COSE_Format_Inl)
+        if (x.payload.tag == FStar_Pervasives_Inl)
           ite = x.payload.v;
         else
           ite =
@@ -367,7 +367,7 @@ COSE_EverCrypt_verify1(
       if (ite0)
       {
         Pulse_Lib_Slice_slice__uint8_t ite;
-        if (x.payload.tag == COSE_Format_Inl)
+        if (x.payload.tag == FStar_Pervasives_Inl)
           ite = x.payload.v;
         else
           ite =

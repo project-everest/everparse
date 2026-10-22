@@ -2,8 +2,8 @@
 
 #include "TaggedUnion.h"
 
-inline uint8_t
-TaggedUnionValidateCoreIntPayload(
+static inline uint8_t
+ValidateCoreIntPayload(
   uint32_t Size,
   uint8_t *Ctxt,
   void
@@ -246,8 +246,8 @@ TaggedUnionValidateCoreIntPayload(
   return res1;
 }
 
-uint8_t
-TaggedUnionValidateCoreInteger(
+static uint8_t
+ValidateCoreInteger(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -341,13 +341,7 @@ TaggedUnionValidateCoreInteger(
     /* Validating field payload */
     p2 = *SlPos;
     fieldStartInteger = (uint64_t)p2;
-    resultAfterInteger =
-      TaggedUnionValidateCoreIntPayload(size,
-        Ctxt,
-        ErrorHandlerFn,
-        SlBase,
-        SlLen,
-        SlPos);
+    resultAfterInteger = ValidateCoreIntPayload(size, Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
     if (resultAfterInteger == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterInteger;
@@ -386,7 +380,7 @@ TaggedUnionValidateInteger(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = TaggedUnionValidateCoreInteger(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreInteger(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
