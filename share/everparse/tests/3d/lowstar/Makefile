@@ -34,12 +34,9 @@ clean_out_files=\
 	$(modules_auto_static_assertions) \
 	$(addsuffix .h,$(modules_or_wrappers)) \
 	$(module_extern_apis)
-clean_out_files += $(EXTRA_CLEAN_OUT_FILES)
-# No internal/ directory: extraction now goes through Custard, which never
-# marks an extracted definition KaRaMeL-private (FStarC.Custard.Extract.fst
-# reads the KrmlPrivate attribute only to decide what to root), so nothing is
-# ever raised to Internal visibility and KaRaMeL emits no internal header.
-# This is the same set as the --api pulse corpus in ../Makefile.
+# Custard preserves KrmlPrivate: ELFTestGen calls a private ELF validator
+# across translation units, so KaRaMeL exposes it in an internal header.
+clean_out_files += internal internal/ELF.h $(EXTRA_CLEAN_OUT_FILES)
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
@@ -179,15 +176,15 @@ echo-clean-out-files:
 	echo "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 echo-out-files:
-	echo "$$(ls out.cleanup | sort)"
+	echo "$$(cd out.cleanup && find . ! -name . | sed 's|^\./||' | sort)"
 
 test-cleanup:
-	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+	test "$$(cd out.cleanup && find . ! -name . | sed 's|^\./||' | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
 	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
-	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+	test "$$(cd out.cleanup && find . ! -name . | sed 's|^\./||' | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
