@@ -53,20 +53,12 @@ class RuntimeContractTests(unittest.TestCase):
             "false": 0, "true": 1, "truth": "nonzero",
         })
 
-    def test_validator_pipeline_is_unchanged(self):
-        self.assertTrue(self.contract["retain_runtime_krml"])
+    def test_validator_pipeline_is_native(self):
+        self.assertFalse(self.contract["retain_runtime_krml"])
         self.assertEqual(
-            self.contract["validator_generator"], ["Custard KrmlC", "KaRaMeL"]
+            self.contract["validator_generator"], ["Custard C"]
         )
-        self.assertIn(
-            "Pulse.Lib.Pervasives._zero_for_deref",
-            self.contract["krml_only_roots"],
-        )
-        self.assertEqual(
-            sum(name.endswith(".error_handler_macro")
-                for name in self.contract["krml_only_roots"]),
-            5,
-        )
+        self.assertEqual(self.contract["runtime_unit"], "EverParse.cui")
 
 
 class InventoryTests(unittest.TestCase):

@@ -1,39 +1,17 @@
 open OS
 open HashingOptions
 
-(* paths *)
-let krml_locate k tmpdir =
-  let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
-  let cmd = Filename.quote_command (Options.get_karamel_exe ()) ~stdout:tmpfile ["-locate-" ^ k] in
-  if Sys.command cmd <> 0 then failwith ("Unable to run krml -locate-" ^ k);
-  let ch = open_in tmpfile in
-  let res = input_line ch in
-  close_in ch;
-  Sys.remove tmpfile;
-  res
-
-let krmllib = krml_locate "krmllib"
-
 let lowparse_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "lowparse"
-
-(* TODO: implement krml -locate-misc *)
-let cl_wrapper () =
-  (* assume krml.exe is in bin/ *)
-  let krml_home = Filename.dirname (Filename.dirname (Options.get_karamel_exe ())) in
-  Filename.concat (Filename.concat (Filename.concat (Filename.concat krml_home "share") "krml") "misc") "cl-wrapper.bat"
 
 (* The 3d runtime support: the Pulse combinator backend the generated code is
    checked against (which also needs lib/everparse/lowparse and the Pulse
    library itself on the include path), the pre-extracted C, and the static
    headers such as EverParseEndianness.h. *)
 let lib_3d_home = filename_concat (filename_concat (filename_concat everparse_home "lib") "everparse") "3d"
-let pulse_3d_krml_home = filename_concat (filename_concat lib_3d_home "krml") "extracted"
-
-(* KaRaMeL is always invoked with -skip-makefiles, so it emits neither
-   Makefile.basic nor Makefile.include; EverParse ships its own instead. See
-   lib/everparse/3d/Makefile.basic for why. *)
 let pulse_makefile_basic =
   filename_concat lib_3d_home "Makefile.basic"
+
+let cl_wrapper () = filename_concat lib_3d_home "cl-wrapper.cmd"
 
 (* The directory holding the pre-generated EverParse.h for this backend.
    See src/3d/krml/header.Makefile. *)
@@ -56,37 +34,28 @@ let everparse_static_headers input_stream_binding out_dir =
     [filename_concat out_dir "EverParseStreamPrimitives.h"]
   | _ -> []
 
-let pulse_error_handler_module input_stream_binding =
-  let backend =
-    match string_of_input_stream_binding input_stream_binding with
-    | "extern" | "static" -> "Extern"
-    | _ -> "Buffer"
-  in
-  "EverParse3d.Actions.ErrorHandler." ^
-    (if lowstar_api () then "Lowstar" else "") ^ backend
-
 (* command lines *)
-let fstar_args0 krmllib =
-  "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,PulseCore,Pulse,EverParse3d.\\*,Spec" ::
-    "--include" :: lowparse_home ::
-      "--include" :: krmllib ::
-        "--include" :: (filename_concat krmllib "obj") ::
-          "--include" :: lib_3d_home ::
-            "--warn_error" :: "+241" ::
-              OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
+let fstar_args0 input_stream_binding =
+  let runtime = everparse_h_home input_stream_binding in
+  ["--already_cached"; "Prims,LowStar,FStar,LowParse,C,PulseCore,Pulse,EverParse3d.\\*,Spec";
+   "--include"; lowparse_home;
+   "--include"; filename_concat runtime "src";
+   "--include"; filename_concat runtime "checked";
+   "--warn_error"; "@241"] @ OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
 
 let list_snoc q a =
   q @ [a]
 
 let fstar_args
-  krmllib
+  ?output_dir
   input_stream_binding
   out_dir
 =
-    "--odir" :: out_dir ::
+    let output_dir = Option.value output_dir ~default:out_dir in
+    "--odir" :: output_dir ::
       "--cache_dir" :: out_dir ::
         "--include" :: out_dir ::
-            fstar_args0 krmllib
+            fstar_args0 input_stream_binding
 
 let verify_fst_file
   fstar_exe
@@ -94,7 +63,7 @@ let verify_fst_file
   out_dir
   file
 =
-  let fstar_args = list_snoc (fstar_args (krmllib out_dir) input_stream_binding out_dir) file in
+  let fstar_args = list_snoc (fstar_args input_stream_binding out_dir) file in
   let fstar_args = ["--smt"; Z3Executable.resolve fstar_exe] @ fstar_args in
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args)
 
@@ -102,64 +71,13 @@ let fstar_modul_of_filename fst =
   let basename = remove_extension (basename fst) in
   String.concat "." (List.map String.capitalize_ascii (String.split_on_char '.' basename))
 
-(* Custard is a whole-program extractor: it starts from the roots and follows
-   reachability, so each generated module's .krml holds not only that module
-   but everything it uses -- the EverParse3d runtime, LowParse, the Pulse
-   library. KaRaMeL then drops all of that again, because call_krml passes
-   `-library Prims,LowParse.\*,EverParse3d.\*,Pulse.\*`, leaving the `extern`
-   declarations that the shipped EverParse.h satisfies.
-
-   That detour is not waste, it is the point: the arity KaRaMeL sees for a
-   runtime primitive now comes from the same extractor that produced
-   EverParse.h. Mixing the two -- a Custard-extracted runtime with
-   old-extraction clients -- does not work, because they disagree about erased
-   arguments: `assume val stream_has_at (base: base_t) (pos: Ghost.erased
-   pos_t) ...` is a four-argument C function to Custard, which drops erased
-   arguments outright, and a seven-argument one to the old extractor, which
-   turns them into units for KaRaMeL to remove later.
-
-   `-o` restricts F* to a single file on the command line, which is exactly
-   what this per-module step passes.
-
-   The config module is rooted in every extraction, not just its own. Its
-   compile-time flags are `assume val`s, so a client only ever pulls in the
-   flags it happens to mention. KaRaMeL keeps a single copy of each file when
-   several .krml files describe it, so a client that uses no flag at all would
-   otherwise be free to shadow the complete version with an empty one. Rooting
-   the module everywhere makes all the copies identical. *)
-let fstar_extract_args krmllib input_stream_binding out_dir fst =
-  let modul = fstar_modul_of_filename fst in
-  let krml_file =
-    filename_concat out_dir
-      (Printf.sprintf "%s.krml" (String.concat "_" (String.split_on_char '.' modul)))
-  in
-  let config_entry_module =
-    match Options.config_module_name () with
-    | Some m when m <> modul -> ["--custard_entry_module"; m]
-    | _ -> []
-  in
-  "--codegen" :: "KrmlC" ::
-      "--custard_split" ::
-        "--custard_entry_module" :: modul ::
-          config_entry_module @
-          (list_snoc (list_snoc (fstar_args krmllib input_stream_binding out_dir) fst) "-o")
-          @ [krml_file]
-
-let extract_fst_file
-  fstar_exe
-  input_stream_binding
-  out_dir
-  file
-=
-  run_cmd fstar_exe (fstar_extract_args (krmllib out_dir) input_stream_binding out_dir file)
-
 let pretty_print_source_file
   fstar_exe
   input_stream_binding
   out_dir
   file
 =
-  let fstar_args = list_snoc (fstar_args (krmllib out_dir) input_stream_binding out_dir) file in
+  let fstar_args = list_snoc (fstar_args input_stream_binding out_dir) file in
   run_cmd fstar_exe ("--print_in_place" :: fstar_args)
 
 let pretty_print_source_module
@@ -190,7 +108,7 @@ let pretty_print_source_modules
 =
   List.iter (pretty_print_source_module fstar_exe input_stream_binding out_dir) files_and_modules
 
-let verify_and_extract_module
+let verify_module
       fstar_exe
       input_stream_binding
       out_dir
@@ -217,46 +135,16 @@ let verify_and_extract_module
                    types_fst_file;
                    fsti_file;
                    fst_file] in
-  let all_extract_files = [external_types_fsti_file; external_api_fsti_file; types_fst_file; fst_file] in  
-  let all_files, all_extract_files = 
+  let all_files =
     match Deps.get_config () with
-    | None -> all_files, all_extract_files
+    | None -> all_files
     | Some (_, module_name) -> 
       let cfg_fst_name = filename_concat out_dir (Printf.sprintf "%s.fst" module_name) in
-      cfg_fst_name::all_files,
-      cfg_fst_name::all_extract_files
+      cfg_fst_name::all_files
   in
-  List.iter (verify_fst_file fstar_exe input_stream_binding out_dir) (List.filter file_exists all_files);
-  List.iter (extract_fst_file fstar_exe input_stream_binding out_dir) (List.filter file_exists all_extract_files)
+  List.iter (verify_fst_file fstar_exe input_stream_binding out_dir) (List.filter file_exists all_files)
 
-let is_krml
-      filename
-  = Filename.check_suffix filename "krml"
-
-let krml_args0 = OS.getenv_array "EVERPARSE_KRML_OPTIONS"
-
-let all_krmls_in_dir
-      dir
-  = let h = Unix.opendir dir in
-    let rec aux accu =
-      match
-        begin try
-            Some (Unix.readdir h)
-          with End_of_file -> None
-        end
-      with
-      | None -> accu
-      | Some entry ->
-         aux (if is_krml entry then (filename_concat dir entry :: accu) else accu)
-    in
-    let res = aux [] in
-    Unix.closedir h;
-    res
-
-let all_everparse_krmls () =
-  all_krmls_in_dir pulse_3d_krml_home
-
-let remove_fst_and_krml_files
+let remove_intermediate_files
       out_dir
       (_, modul)
   =
@@ -276,353 +164,106 @@ let remove_fst_and_krml_files
       Printf.sprintf "%s_ExternalAPI.krml" root_name;
       Printf.sprintf "%s_ExternalTypes.krml" root_name;
       Printf.sprintf "%s.krml" root_name;
+      Printf.sprintf "%s.cui" root_name;
     ]
 
-(* The KaRaMeL bundle backing the pre-generated runtime header: LowParse,
-   EverParse3d and the Pulse library they are built on. This is both the
-   bundle's pattern list and the -library list, which must agree: the
-   pre-generated EverParse.h holds exactly what the bundle emits. *)
-let pulse_everparse_only_bundle = "Prims,LowParse.\\*,EverParse3d.\\*,Pulse.\\*"
-
-(* The same, plus Custard's bucket for monomorphized instances of polymorphic
-   definitions, which the Pulse runtime's whole-program extraction produces
-   (see src/3d/krml/extract.Makefile). Those instances are private to
-   the bundle, so adding the pattern here keeps the reachable ones inlined into
-   the output and drops the rest; without it they are emitted as a file of
-   their own, holding spec-only declarations that do not compile.
-
-   It is deliberately not in pulse_everparse_only_bundle, because that list is
-   also the -library list: a library module is assumed rather than emitted, and
-   these instances have to be emitted. *)
-let pulse_everparse_only_bundle_sources =
-  pulse_everparse_only_bundle ^ ",Custard.\\*"
-
-let krml_args input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules =
-  let has_external_types modul =
-    file_exists (filename_concat out_dir (Printf.sprintf "%s.ExternalTypes.fsti" modul)) in
-
-  let has_external_api modul =
-    file_exists (filename_concat out_dir (Printf.sprintf "%s.ExternalAPI.fsti" modul)) in
-
-  let has_types modul =
-    file_exists (filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul))
-  in
-
-  let types_krml modul =
-    if has_types modul
-    then [filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul)]
-    else []
-  in
-
-  let external_types_krml modul =
-    if has_external_types modul
-    then [filename_concat out_dir (Printf.sprintf "%s_ExternalTypes.krml" modul)]
-    else [] in
-
-  let external_api_krml modul =
-    if has_external_api modul
-    then [filename_concat out_dir (Printf.sprintf "%s_ExternalAPI.krml" modul)]
-    else [] in
-
-  let external_types_lib_args modul =
-    []
-  in
-  
-  let external_api_lib_args modul =  
-    if has_external_api modul
-    then ["-library"; Printf.sprintf "%s.ExternalAPI" modul]
-    else [] in
-
-  let external_types_prefix_args modul =
-    if has_external_types modul
-    then ["-no-prefix"; Printf.sprintf "%s.ExternalTypes" modul]
-    else [] in
-  
-  let external_api_prefix_args modul =
-    if has_external_api modul
-    then ["-no-prefix"; Printf.sprintf "%s.ExternalAPI" modul]
-    else [] in
-
-  let external_typedefs_include_args modul =
-    if has_external_types modul && emit_output_types_defs
-    then ["-add-include"; Printf.sprintf "\"%s_ExternalTypedefs.h\"" modul]
-    else [] in
-
-  let krml_files = List.fold_left
-                     (fun accu (_, modul) ->
-                       let l =
-                         (types_krml modul)@
-			 (external_types_krml modul)@(external_api_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
-                                                    accu)
-                       in
-
-		       let c_wrapper = Printf.sprintf "%sWrapper.c" modul in
-		       let l =
-		         if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir c_wrapper)
-                         then c_wrapper :: l
-                         else l in			 
-		       
-                       let static_asserts = Printf.sprintf "%sStaticAssertions.c" modul in
-                       let l =
-		         if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir static_asserts)
-                         then static_asserts :: l
-                         else l in
-		       l
-                     )
-                     (all_everparse_krmls ())
-                     files_and_modules
-  in
-  let krml_files =
-    if (not skip_c_makefiles) && Sys.file_exists (filename_concat out_dir "testcases.c")
-    then "testcases.c" :: krml_files
-    else krml_files
-  in
-  let krml_files =
-    match Options.config_module_name () with
-    | None -> krml_files
-    | Some m -> filename_concat out_dir (Printf.sprintf "%s.krml" m) :: krml_files
-  in
-  let external_types_lib_args = List.fold_left (fun accu (_, modul) ->
-                                    accu @ (external_types_lib_args modul)) [] files_and_modules in
-  let external_api_lib_args = List.fold_left (fun accu (_, modul) ->
-                                  accu @ (external_api_lib_args modul)) [] files_and_modules in
-  let external_types_no_prefix_args = List.fold_left (fun accu (_, modul) ->
-                                  accu @ (external_types_prefix_args modul)) [] files_and_modules in
-  let external_api_no_prefix_args = List.fold_left (fun accu (_, modul) ->
-                                  accu @ (external_api_prefix_args modul)) [] files_and_modules in
-  let external_typedefs_include_args = List.fold_left (fun accu (_, modul) ->
-                                           accu @ (external_typedefs_include_args modul)) [] files_and_modules in
-
-  let krml_files = List.rev krml_files in
-  let add_include_opt = "-add-early-include" in
-  let krml_add_includes =
-    List.fold_left
-      (fun accu inc ->
-        add_include_opt :: inc ::
-          List.fold_left
-            (fun accu (_, modul) ->
-              add_include_opt :: Printf.sprintf "%s.c:%s" modul inc :: accu
-            )
-            accu
-            files_and_modules
-      )
-      (krml_args0 @ krml_files)
-      (List.rev add_include)
-  in
-  (* In --api pulse mode the Pulse runtime is a shipped library, exactly as the Low*
-     prelude is: src/3d/krml/header.Makefile pre-generates one
-     EverParse.h per input stream backend, and copy_everparse_h_raw drops it
-     into the output directory. So KaRaMeL gets -library here too, which turns
-     the runtime into plain `extern` declarations resolved by that header, and
-     regenerating the runtime at every 3d invocation is no longer needed. The
-     generated validators are byte-identical to what -static-header produced,
-     because everything the runtime contributes to them is inline_for_extraction
-     and has already been inlined by F* itself.
-
-     In both modes KaRaMeL also gets -static-header over the same pattern. On
-     its own that would ask for `static inline` definitions, but combined with
-     -library it means something else: CStarToC11 drops the `extern`
-     declarations of a library module instead of emitting them (see the
-     `is_inline_static && declared_in_library` tests there). Without it,
-     KaRaMeL writes an EverParse.h of its own holding whichever subset of those
-     declarations this client happens to reach -- a file that then shadows the
-     complete pre-generated one and breaks the build with, e.g.,
-     `'EVERPARSE_VALIDATOR_SUCCESS' undeclared`. With it, no EverParse.h is
-     emitted at all. The .c and .h files are otherwise unchanged, bar one now
-     redundant `#include "EverParse.h"` in the .c, which the .h still carries.
-
-     Warning 26 (Top-type casts) is expected for the Pulse ref-dereference
-     idiom, which survives in the inlined code. *)
-  let backend_args =
-    (* Warning 2 (no corresponding implementation) stays fatal for every input
-       stream binding. With `--input_stream extern` (and `static`, which shares
-       the module) the stream primitives are `assume val`s implemented by the
-       client in C, but they live in EverParse3d.InputStream.Extern, which the
-       -library bundle below already covers: KaRaMeL assumes a library module
-       rather than emitting it, so it never reports them as unbound. *)
-    ["-static-header"; pulse_everparse_only_bundle] @
-    ("-add-include" :: (if lowstar_api () then "EverParse:\"EverParseEndianness.h\""
-      else "EverParse:\"EverParsePulseEndianness.h\"") ::
-      "-library" :: pulse_everparse_only_bundle ::
-      "-warn-error" :: "-9@4-20-26" :: [])
-  in
-  let krml_args =
-    "-tmpdir" :: out_dir ::
-      "-skip-compilation" ::
-        backend_args @
-                    "-fnoreturn-else" ::
-                      "-fparentheses" ::
-                        "-fcurly-braces" ::
-                          "-fmicrosoft" ::
-                          "-fno-shadow" ::
-                            "-header" :: filename_concat lib_3d_home "noheader.txt" ::
-                              "-minimal" ::
-                                "-add-include" :: "\"EverParse.h\"" ::
-                                  "-fextern-c" ::
-                                    (* EverParse3d.Actions.Common.error_handler is
-                                       parameterized by the input stream types in
-                                       the Pulse prelude, and KaRaMeL has no
-                                       parameterized typedefs. The monomorphic
-                                       instantiation for this backend lives in a
-                                       leaf module; keeping *that* abbreviation
-                                       yields the same EVERPARSE_ERROR_HANDLER
-                                       typedef as the Low* backend. *)
-                                    ["-no-inline-type-abbrev";
-                                     pulse_error_handler_module input_stream_binding ^ ".error_handler"] @
-                                    (if Options.get_hoist_locals ()
-                                     then ["-fhoist-locals"]
-                                     else []) @
-                                    (if Options.get_goto_for_early_return ()
-                                     then ["-goto_for_early_return"]
-                                     else []) @
-                                    (if Options.get_blank_lines ()
-                                     then ["-fblank-lines"]
-                                     else []) @
-                                    (if Options.get_line_comments ()
-                                     then ["-fline-comments"]
-                                     else []) @
-                                    (let init_locals_value = match Options.get_init_locals () with
-                                     | Some v -> v
-                                     | None -> "no"
-                                     in
-                                     ["-finitialize-locals"; init_locals_value]) @
-                                    external_types_lib_args @
-                                    external_api_lib_args @
-                                    external_types_no_prefix_args @
-                                    external_api_no_prefix_args @
-                                    external_typedefs_include_args @
-                                    krml_add_includes
-  in
-  let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
-  let krml_args =
-      if input_stream_include = ""
-      then krml_args
-      else "-add-include" :: Printf.sprintf "\"%s\"" input_stream_include :: krml_args
-  in
-  let krml_args =
-    (* KaRaMeL's makefiles are always skipped: EverParse ships its own
-       Makefile.basic, which does not need the Makefile.include that KaRaMeL
-       would emit alongside it. This makes --skip_c_makefiles a no-op as far as
-       KaRaMeL is concerned. *)
-    "-skip-makefiles" :: krml_args
-  in
-  let krml_args =
-    match Deps.get_config () with
-    | None -> krml_args
-    | Some (cfg, module_name) ->
-      let include_file = Printf.sprintf "\"%s\"" (Config.config_compile_time_flags cfg).include_file in
-      "-no-prefix" :: module_name :: "-add-include" :: include_file  :: krml_args
-  in
-  krml_args
-  
-
-let call_krml input_stream_binding files_and_modules_cleanup out_dir krml_args =
-  (* append the everparse and krmllib bundles to the list of arguments *)
-  let krml_args = krml_args @ (
-    (* The bundle's API modules -- those whose declarations stay public and so
-       land in EverParse.h rather than internal/EverParse.h. Everything else
-       in the bundle is marked private by KaRaMeL, and is either inlined into
-       the generated validators or raised to internal/ if it survives as a
-       cross translation unit symbol. Listing a module here is therefore only
-       safe when *all* of its extracted declarations belong in the public ABI:
-       adding EverParse3d.InputStream.Buffer, say, would also materialise
-       every inline_for_extraction stream helper as a real function in
-       EverParse.c, rather than letting it be inlined away. That is why the
-       assumed copy-buffer projections live in a module of their own.
-
-       Only the selected backend's module is listed: each of Buffer, Extern
-       and Static owns a [@@CMacro] error_handler_macro, and making two of
-       them public at once collides on EVERPARSE_ERROR_HANDLER_MACRO
-       (KaRaMeL warning 23). Static re-exports Extern's instance and has no
-       extracted declarations of its own, so it needs nothing public. *)
-    let backend_api =
-      if lowstar_api () then
-        match string_of_input_stream_binding input_stream_binding with
-        | "extern" | "static" -> [
-            "EverParse3d.InputStream.LowstarExtern";
-            "EverParse3d.InputStream.LowstarExtern.Types";
-            "EverParse3d.InputStream.LowstarExtern.Raw";
-            "EverParse3d.CopyBuffer.LowstarExtern"]
-        | _ -> ["EverParse3d.CopyBuffer.LowstarBuffer"; "EverParse3d.InputStream.LowstarBuffer"]
-      else
-        match string_of_input_stream_binding input_stream_binding with
-        | "extern" | "static" -> ["EverParse3d.InputStream.Extern"; "EverParse3d.InputStream.Extern.NullPtr"]
-        | _ -> ["EverParse3d.CopyBuffer.Buffer"]
-    in
-    let api_modules =
-      [
-          "EverParse3d.Actions.Common";
-          "EverParse3d.Prelude.StaticHeader";
-        ] @ (if lowstar_api () then [
-               "EverParse3d.ErrorCode";
-               "EverParse3d.Lowstar.Public";
-               (match string_of_input_stream_binding input_stream_binding with
-                | "extern" | "static" -> "EverParse3d.Lowstar.SupportExtern"
-                | _ -> "EverParse3d.Lowstar.SupportBuffer");
-               pulse_error_handler_module input_stream_binding]
-             else ["EverParse3d.ErrorCode"]) @ backend_api
-    in
-    [
-      "-bundle" ;
-      "Prims,FStar.\\*,LowStar.\\*[rename=SHOULDNOTBETHERE]";
-      "-bundle" ;
-      Printf.sprintf "%s=%s[rename=EverParse,rename-prefix]"
-        (String.concat "+" api_modules)
-        (if lowstar_api () then String.concat "," api_modules else pulse_everparse_only_bundle_sources);
-    ] @ (if lowstar_api () then [
-      "-bundle"; "EverParse3d.ErrorCode[rename=EverParsePulseInternal,rename-prefix]";
-      "-bundle"; pulse_everparse_only_bundle_sources ^ "[rename=EverParsePrivate]"
-    ] else [])
-  )
-  in
-  (* the argument list is too long, so we need to go through an argument file *)
-  let argfile = Filename.temp_file ~temp_dir:out_dir "krmlargs" ".rsp" in
-  let h = open_out argfile in
-  let rec aux = function
-    | [] -> ()
-    | a :: q ->
-       output_string h (Printf.sprintf "%s\n" a);
-       aux q
-  in
-  aux krml_args;
-  close_out h;
-  let krml = Options.get_karamel_exe () in
-  print_endline (Printf.sprintf "KaRaMeL found at: %s" krml);
-  run_cmd krml [Printf.sprintf "@%s" argfile];
-  begin match files_and_modules_cleanup with
-  | Some files_and_modules ->
-      Sys.remove argfile;
-      List.iter (remove_fst_and_krml_files out_dir) files_and_modules
-  | _ -> ()
-  end
-
-let with_preserved_everparse_h out_dir f =
-  let everparse_h = filename_concat out_dir "EverParse.h" in
-  let saved =
-    if Sys.file_exists everparse_h
-    then begin
-        let cin = open_in_bin everparse_h in
-        let n = in_channel_length cin in
-        let buf = Bytes.create n in
-        really_input cin buf 0 n;
-        close_in cin;
-        Some buf
-      end
-    else None
-  in
-  let res = f () in
-  begin match saved with
-  | None -> ()
-  | Some buf ->
-     let cout = open_out_bin everparse_h in
-     output_bytes cout buf;
-     close_out cout
+let produce_unit
+      input_stream_binding
+      add_include
+      out_dir
+      modul
+      dep_files_and_modules
+  =
+  let runtime_cui = filename_concat (everparse_h_home input_stream_binding) "EverParse.cui" in
+  if not (file_exists runtime_cui) then begin
+    prerr_endline ("Missing runtime unit " ^ runtime_cui ^ "; rebuild the 3D runtime headers.");
+    exit 1
   end;
-  res
+  if OS.getenv_array "EVERPARSE_KRML_OPTIONS" <> [] then begin
+    prerr_endline "EVERPARSE_KRML_OPTIONS: not implemented yet for Custard direct-to-C extraction";
+    exit 1
+  end;
+  let module_file suffix = filename_concat out_dir (modul ^ suffix) in
+  let auxiliary_modules =
+    List.filter_map
+      (fun (suffix, extension) ->
+        if file_exists (module_file (suffix ^ extension))
+        then Some (modul ^ suffix)
+        else None)
+      [".ExternalTypes", ".fsti"; ".ExternalAPI", ".fsti"; ".Types", ".fst"]
+  in
+  let config_modules = match Options.config_module_name () with
+    | None -> []
+    | Some name -> [name]
+  in
+  let roots =
+    List.concat_map (fun name -> ["--custard_entry_module"; name])
+      (modul :: auxiliary_modules @ config_modules)
+  in
+  let units = runtime_cui ::
+    List.map (fun (_, name) -> filename_concat out_dir (name ^ ".cui")) dep_files_and_modules
+  in
+  List.iter (fun file ->
+    if not (file_exists file) then begin
+      prerr_endline ("Missing dependency unit " ^ file ^ "; extract dependencies first.");
+      exit 1
+    end) units;
+  let links = List.concat_map (fun file -> ["--custard_link"; file]) units in
+  (* Publish only complete units; a failed extraction must leave the previous
+     outputs older than their prerequisites so that make retries it. *)
+  let staging = filename_concat out_dir (".custard-" ^ modul) in
+  if not (Sys.file_exists staging) then Unix.mkdir staging 0o700;
+  let staged name = filename_concat staging name in
+  let forwarding_headers =
+    List.filter_map (fun suffix ->
+      if file_exists (module_file (suffix ^ ".fsti"))
+      then Some (String.concat "_" (String.split_on_char '.' (modul ^ suffix)) ^ ".h")
+      else None) [".ExternalTypes"; ".ExternalAPI"]
+  in
+  let outputs = [modul ^ ".c"; modul ^ ".h"] @ forwarding_headers @ [modul ^ ".cui"] in
+  List.iter (fun name -> remove_if_exists (staged name)) outputs;
+  let fstar_exe = Options.get_fstar_exe () in
+  let args =
+    ["--smt"; Z3Executable.resolve fstar_exe;
+     "--codegen"; "C"; "--custard_unit"; modul;
+     "--custard_monomorphize_types"; "true"] @ roots @ links @
+    fstar_args ~output_dir:staging input_stream_binding out_dir @
+    [module_file ".fst"; "-o"; staged (modul ^ ".c")]
+  in
+  run_cmd fstar_exe args;
+  let include_file name = "#include \"" ^ name ^ "\"\n" in
+  let includes =
+    List.map (fun inc -> "#include " ^ inc ^ "\n") add_include @
+    (let name = HashingOptions.input_stream_include input_stream_binding in
+     if name = "" then [] else [include_file name]) @
+    (match Deps.get_config () with
+     | None -> []
+     | Some (cfg, _) -> [include_file (Config.config_compile_time_flags cfg).include_file])
+  in
+  let header = staged (modul ^ ".h") in
+  let original = open_in_bin header in
+  let contents = really_input_string original (in_channel_length original) in
+  close_in original;
+  let channel = open_out_bin header in
+  List.iter (output_string channel) includes;
+  output_string channel contents;
+  close_out channel;
+  List.iter (fun name ->
+    let channel = open_out (staged name) in
+    output_string channel (include_file (modul ^ ".h"));
+    close_out channel) forwarding_headers;
+  List.iter (fun name -> rename (staged name) (filename_concat out_dir name)) outputs;
+  Unix.rmdir staging
+
+let module_dependencies file modul =
+  Deps.collect_and_sort_dependencies [file] |>
+  List.filter_map (fun file ->
+    let name = Options_Base.module_name file in
+    if name = modul then None else Some (file, name))
 
 let produce_c_files
       input_stream_binding
-      (emit_output_types_defs: bool)
+      (_emit_output_types_defs: bool)
       (add_include: string list)
       (skip_c_makefiles: bool)
       (cleanup: bool)
@@ -630,54 +271,29 @@ let produce_c_files
       (files_and_modules: (string * string) list)
     : unit
   =
-  let krml_args = krml_args input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules in
-  (* if M.Types exists, then bundle M.Types.krml and EverParse into M *)
-  let krml_args =
-    let files_and_modules_with_types =
-      List.filter
-        (fun (_, modul) ->
-          Sys.file_exists (filename_concat out_dir (Printf.sprintf "%s.Types.fst" modul))
-        )
-        files_and_modules
-    in
-    let bundle_types = List.fold_left (fun acc (_, modul) ->
-                           "-bundle"::(Printf.sprintf "%s=%s.Types"
-                                         modul
-                                         modul)::acc) [] files_and_modules_with_types in
-    krml_args@bundle_types
-  in
-  with_preserved_everparse_h out_dir (fun () ->
-    call_krml input_stream_binding (if cleanup then Some files_and_modules else None) out_dir krml_args;
-    if lowstar_api () && not skip_c_makefiles then
-      copy pulse_makefile_basic (filename_concat out_dir "Makefile.basic")
-  )
+  List.iter (fun (file, modul) ->
+    produce_unit input_stream_binding add_include out_dir modul
+      (module_dependencies file modul)) files_and_modules;
+  if lowstar_api () && not skip_c_makefiles then
+    copy pulse_makefile_basic (filename_concat out_dir "Makefile.basic");
+  if cleanup then begin
+    List.iter (remove_intermediate_files out_dir) files_and_modules;
+    match Options.config_module_name () with
+    | None -> ()
+    | Some name -> remove_intermediate_files out_dir ("", name)
+  end
 
 let produce_one_c_file
       input_stream_binding
-      (emit_output_types_defs: bool)
+      (_emit_output_types_defs: bool)
       (add_include: string list)
       (out_dir: string)
-      (file: string)
+      (_file: string)
       (modul: string)
       (dep_files_and_modules: (string * string) list)
     : unit
   =
-  (* This runs once per module, and the generated makefiles let those runs
-     proceed in parallel in the same output directory. That is safe because
-     every file KaRaMeL emits here is named after [modul] -- <M>.c, <M>.h and,
-     when the module has external types, <M>_ExternalAPI.h -- so no two runs
-     ever write the same file. In particular krml_args passes -static-header,
-     which is what stops KaRaMeL from also emitting the shared EverParse.h;
-     without it, concurrent runs would race over that one file. *)
-  let krml_args = krml_args input_stream_binding emit_output_types_defs add_include true out_dir ((file, modul) :: dep_files_and_modules) in
-  let krml_args =
-    krml_args@
-(*      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ *) [
-        "-bundle" ;
-        Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
-      ]
-  in
-  call_krml input_stream_binding None out_dir krml_args
+  produce_unit input_stream_binding add_include out_dir modul dep_files_and_modules
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
@@ -763,7 +379,8 @@ let collect_files_from
               [
                 Printf.sprintf "%s.c" modul;
                 Printf.sprintf "%s.h" modul;
-                filename_concat "internal" (Printf.sprintf "%s.h" modul);
+                Printf.sprintf "%s_ExternalTypes.h" modul;
+                Printf.sprintf "%s_ExternalAPI.h" modul;
               ]
             else []
       end @
@@ -896,9 +513,8 @@ let copy_everparse_h_raw
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
       (* Each API ships a pre-generated, backend-specific EverParse.h: pulse
          from lib/everparse/3d/krml/<backend>, lowstar from
-         lib/everparse/3d/krml/lowstar/<backend>. KaRaMeL writes none of its own
-         -- krml_args pairs -library with -static-header -- so this is the only
-         thing that puts an EverParse.h in the output directory. *)
+         lib/everparse/3d/krml/lowstar/<backend>. Validator extraction imports
+         its CUI and does not write this shared header. *)
       let everparse_h_source = filename_concat (everparse_h_home input_stream_binding) "EverParse.h" in
       if wanted "EverParse.h" && (lowstar_api () || file_exists everparse_h_source)
       then copy everparse_h_source dest_everparse_h;
@@ -962,25 +578,13 @@ let postprocess_c
       (cleanup: bool)
       (no_everparse_h: bool)
       (save_hashes_opt: bool)
-      ?(remove_krml_produced_everparse_h: bool = false)
       (out_dir: string)
       (files_and_modules: (string * string) list)
     : unit
   =
-  (* copy EverParse.h unless prevented. The removal below is a backstop: since
-   * krml_args pairs -library with -static-header, KaRaMeL writes no
-   * EverParse.h of its own, but if some future flag combination made it do so
-   * again, this keeps the caller's expectation of "no EverParse.h here" --
-   * which pulse-cleanup-test pins down -- from silently breaking. *)
   if not no_everparse_h
   then begin
       copy_everparse_h_raw input_stream_binding out_dir
-    end
-  else if remove_krml_produced_everparse_h
-  then begin
-      let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      if Sys.file_exists dest_everparse_h
-      then Sys.remove dest_everparse_h
     end;
   (* clang-format the files if asked for *)
   if clang_format
@@ -1015,17 +619,10 @@ let produce_and_postprocess_c
       (files_and_modules: (string * string) list)
     : unit
   =
-  let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
   produce_c_files input_stream_binding emit_output_types_defs add_include skip_c_makefiles cleanup out_dir files_and_modules;
-  (* Karamel may produce an EverParse.h containing preserved type abbreviations
-   * (see -no-inline-type-abbrev). The postprocess step below copies the proper
-   * full EverParse.h from the prelude, which already provides those typedefs.
-   * If [no_everparse_h] is set and the file didn't exist before krml ran, we
-   * also need to remove the krml-produced one. *)
-  let remove_krml_produced_everparse_h = not everparse_h_existed_before in
   (* postprocess the produced C files *)
-  postprocess_c input_stream_binding true true clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt ~remove_krml_produced_everparse_h out_dir files_and_modules
+  postprocess_c input_stream_binding true true clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let produce_and_postprocess_one_c
       input_stream_binding
@@ -1073,9 +670,9 @@ let postprocess_fst
       (files_and_modules: (string * string) list)
     : unit
   =
-  (* produce the .checked and .krml files.
+  (* Produce the .checked files.
      FIXME: modules can be processed in parallel *)
-  List.iter (verify_and_extract_module fstar_exe input_stream_binding out_dir) files_and_modules;
+  List.iter (verify_module fstar_exe input_stream_binding out_dir) files_and_modules;
   (* produce the .c and .h files and format them *)
   produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 

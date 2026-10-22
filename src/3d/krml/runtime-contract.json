@@ -2,8 +2,9 @@
   "schema": 1,
   "header": "EverParse.h",
   "header_generator": "Custard C",
-  "validator_generator": ["Custard KrmlC", "KaRaMeL"],
-  "retain_runtime_krml": true,
+  "validator_generator": ["Custard C"],
+  "runtime_unit": "EverParse.cui",
+  "retain_runtime_krml": false,
   "boolean": {
     "name": "BOOLEAN",
     "representation": "uint8_t",
@@ -19,14 +20,6 @@
     "foreign linkage",
     "client error-handler macros",
     "Windows endianness-header substitution"
-  ],
-  "krml_only_roots": [
-    "Pulse.Lib.Pervasives._zero_for_deref",
-    "EverParse3d.InputStream.Buffer.error_handler_macro",
-    "EverParse3d.InputStream.Extern.error_handler_macro",
-    "EverParse3d.InputStream.Static.error_handler_macro",
-    "EverParse3d.InputStream.LowstarBuffer.error_handler_macro",
-    "EverParse3d.InputStream.LowstarExtern.error_handler_macro"
   ],
   "profiles": [
     {

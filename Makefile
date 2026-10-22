@@ -88,11 +88,10 @@ endif
 
 3d: 3d-pulse-prelude
 
-# The binary package ships the Pulse 3d runtime already extracted to .krml, so
-# that `everparse-3d.exe --api pulse` has nothing left to build. Hence the krml extraction is
-# part of the packaged subset, not just of the test targets.
+# The binary package ships the runtime headers, CUIs and their matching F*
+# source/cache profiles for direct-C validator extraction.
 ifeq (,$(NO_PULSE))
-3d: 3d-pulse-krml
+3d: 3d-runtime
 endif
 
 3d: 3d-exe
@@ -128,19 +127,20 @@ endif
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
-# Generate the runtime .krml library for validator extraction through KaRaMeL,
-# and independently generate the six runtime headers through Custard direct C.
-3d-pulse-krml: 3d-pulse-prelude
+# Generate the six runtime headers and CUIs for direct-C extraction.
+3d-runtime: 3d-pulse-prelude
 	+$(MAKE) -C src/3d/krml all
 
-.PHONY: 3d-pulse-krml
+3d-pulse-krml: 3d-runtime
+
+.PHONY: 3d-runtime 3d-pulse-krml
 
 # The Pulse combinator backend (--api pulse): generation, F* verification,
-# KaRaMeL extraction to C, then compiling and running the C tests. In the same
+# Custard extraction to C, then compiling and running the C tests. In the same
 # two halves as 3d-unit-test.
 3d-pulse-test: 3d-pulse-corpus-test 3d-pulse-subdirs-test
 
-3d-pulse-corpus-test 3d-pulse-subdirs-test: 3d-pulse-%-test: 3d-exe 3d-pulse-krml
+3d-pulse-corpus-test 3d-pulse-subdirs-test: 3d-pulse-%-test: 3d-exe 3d-runtime
 	+$(MAKE) -C share/everparse/tests/3d pulse-$*-test
 
 .PHONY: 3d-pulse-test 3d-pulse-corpus-test 3d-pulse-subdirs-test
@@ -162,7 +162,7 @@ endif
 # thing that ever ran them. EVERPARSE_TEST_32BIT=1 adds the -m32 fixtures; they
 # need real multilib support (gcc-multilib on Ubuntu) and fail hard without it,
 # which is why they are opt-in.
-3d-adapter-test: 3d-exe 3d-pulse-krml
+3d-adapter-test: 3d-exe 3d-runtime
 	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check-prebuilt
 ifeq (1,$(EVERPARSE_TEST_32BIT))
 	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check32-prebuilt
@@ -170,7 +170,7 @@ endif
 
 .PHONY: 3d-adapter-test
 
-3d-runtime-header-test: 3d-pulse-krml
+3d-runtime-header-test: 3d-runtime
 	+$(MAKE) -C src/3d/krml -f header.Makefile check-headers
 
 .PHONY: 3d-runtime-header-test
@@ -178,7 +178,7 @@ endif
 # The standalone F# hash checker, checking hashes produced by 3d with both
 # APIs. The 3d tests in share/everparse/tests/3d check those hashes with 3d
 # itself only.
-3d-hashchk-test: 3d-exe 3d-pulse-krml
+3d-hashchk-test: 3d-exe 3d-runtime
 	+$(MAKE) -C src/3d/tests
 
 .PHONY: 3d-hashchk-test

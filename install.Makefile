@@ -38,7 +38,7 @@ install-quackyducky:
 install-3d:
 	install -d $(PREFIX)/lib/everparse/3d
 	install -m 644 $(wildcard $(addprefix lib/everparse/3d/*.,txt h)) $(PREFIX)/lib/everparse/3d
-	install -m 644 $(addprefix lib/everparse/3d/,Makefile.basic .clang-format) $(PREFIX)/lib/everparse/3d
+	install -m 644 $(addprefix lib/everparse/3d/,Makefile.basic .clang-format cl-wrapper.cmd) $(PREFIX)/lib/everparse/3d
 	install -d $(PREFIX)/bin
 	install -m 755 bin/everparse-3d.exe $(PREFIX)/bin
 
@@ -47,14 +47,18 @@ install-3d: install-3d-pulse
 endif
 
 # The Pulse 3d combinator library: sources and .checked files for the F*
-# --include path, the same library already extracted to .krml for KaRaMeL, and
-# the pre-generated per-backend runtime headers.
+# --include path and the pre-generated per-backend runtime headers and units.
 install-3d-pulse:
 	install -d $(PREFIX)/lib/everparse/3d
 	install -m 644 $(wildcard $(addprefix lib/everparse/3d/*.,fst fsti checked)) $(PREFIX)/lib/everparse/3d
-	install -d $(PREFIX)/lib/everparse/3d/krml/extracted
-	install -m 644 lib/everparse/3d/krml/extracted/Custard.krml $(PREFIX)/lib/everparse/3d/krml/extracted
-	for parent in "" lowstar/ ; do for backend in buffer extern static ; do install -d $(PREFIX)/lib/everparse/3d/krml/$$parent$$backend && install -m 644 lib/everparse/3d/krml/$$parent$$backend/EverParse.h $(PREFIX)/lib/everparse/3d/krml/$$parent$$backend ; done ; done
+	for parent in "" lowstar/ ; do for backend in buffer extern static ; do \
+	  source=lib/everparse/3d/krml/$$parent$$backend ; \
+	  destination=$(PREFIX)/$$source ; \
+	  install -d $$destination/src $$destination/checked && \
+	  install -m 644 $$source/EverParse.h $$source/EverParse.cui $$destination && \
+	  install -m 644 $$source/src/*.fst $$source/src/*.fsti $$destination/src && \
+	  install -m 644 $$source/checked/*.checked $$destination/checked || exit 1 ; \
+	done ; done
 	for parent in "" lowstar/ ; do install -m 644 lib/everparse/3d/krml/$${parent}static/EverParseStreamPrimitives.h $(PREFIX)/lib/everparse/3d/krml/$${parent}static ; done
 
 .PHONY: install-3d install-3d-pulse

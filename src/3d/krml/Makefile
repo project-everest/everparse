@@ -1,4 +1,4 @@
-all: extract-krml headers
+all: headers
 
 extract-krml:
 	+$(MAKE) -f extract.Makefile extract-krml

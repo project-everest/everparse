@@ -563,8 +563,7 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    (* KaRaMeL emits no makefiles under the Pulse backend; use EverParse's own,
-       which needs neither krmllib's headers nor libkrmllib.a. *)
+    (* Native extraction needs neither krmllib nor generated makefiles. *)
     OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
   end
 
@@ -612,7 +611,7 @@ let produce_z3_and_test_gen
 ->
   let nbwitnesses = Options.get_z3_witnesses () in
   let testcases_c = testcases_c_file out_dir in
-  if produce_testcases_c then OS.overwrite_file testcases_c; // because Batch.krml_args will add the testcase file only if it exists, so we need to create it before generating the parser, otherwise we might have a race
+  if produce_testcases_c then OS.overwrite_file testcases_c;
   let buf : ref string = alloc "" in
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
   let modules = List.Tot.map snd files_and_modules in
@@ -661,7 +660,7 @@ let produce_test_checker_exe
   (emit_output_types_defs:bool)
 ->
   let testcases_c = testcases_c_file out_dir in
-  OS.overwrite_file testcases_c; // because Batch.krml_args will add the testcase file only if it exists, so we need to create it before generating the parser, otherwise we might have a race
+  OS.overwrite_file testcases_c;
   let prog = process_files_for_z3 (fun _ -> ()) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
   let modules = List.Tot.map snd files_and_modules in
   Z3TestGen.produce_test_checker_exe testcases_c prog name1;
@@ -747,11 +746,11 @@ let go () : ML unit =
   (* Special mode: --__micro_step *)
   match micro_step with
   | Some step ->
-    let f = match step with
-    | HashingOptions.MicroStepExtract -> Batch.extract_fst_file
-    | HashingOptions.MicroStepVerify -> Batch.verify_fst_file
-    in
-    List.iter (f (Options.get_fstar_exe ()) input_stream_binding out_dir) cmd_line_files
+    (match step with
+     | HashingOptions.MicroStepExtract ->
+       List.iter (produce_and_postprocess_c out_dir) cmd_line_files
+     | HashingOptions.MicroStepVerify ->
+       List.iter (Batch.verify_fst_file (Options.get_fstar_exe ()) input_stream_binding out_dir) cmd_line_files)
   | None ->
   (* Special mode: --makefile" *)
   match Options.get_makefile () with
@@ -767,8 +766,8 @@ let go () : ML unit =
       (Options.get_save_hashes ())
       cmd_line_files
   | None ->
-  (* Special mode: --__produce_c_from_existing_krml *)
-  if Options.get_produce_c_from_existing_krml ()
+  (* Special mode: --__produce_c_from_existing_checked *)
+  if Options.get_produce_c_from_existing_checked ()
   then
     let _ = List.iter
       (produce_and_postprocess_c out_dir)
