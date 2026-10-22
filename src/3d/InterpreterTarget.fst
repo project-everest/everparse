@@ -1502,16 +1502,20 @@ let print_binders_as_args mname binders =
     List.map (fun (i, _) -> print_ident mname i) binders |>
     String.concat " "
 
-let pulse_validator_attributes (is_entrypoint exported compatible: bool) : ML string =
+let pulse_validator_attributes (cname:option string) (is_entrypoint exported compatible: bool) : ML string =
   let cinline = if is_entrypoint || exported then "" else "; CInline" in
   let private_attr = if compatible then "; \"KrmlPrivate\"" else "" in
-  Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s]" cinline private_attr
+  let name_attr = match cname with
+    | None -> ""
+    | Some name -> Printf.sprintf "; FStar.Attributes.rename_let \"%s\"" name
+  in
+  Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s%s]" cinline private_attr name_attr
 
-let print_public_adapter_binding compatible root_name binders allow_reading worker_name args : ML string =
+let print_public_adapter_binding compatible cname root_name binders allow_reading worker_name args : ML string =
   if compatible
-  then Printf.sprintf "[@@normalize_for_extraction specialization_steps]\n\
+  then Printf.sprintf "[@@FStar.Attributes.rename_let \"%s\"; normalize_for_extraction specialization_steps]\n\
     let validate_%s %s = %s.adapt %b (validate_%s %s)\n"
-    root_name binders (pulse_adapter_module ()) allow_reading worker_name args
+    cname root_name binders (pulse_adapter_module ()) allow_reading worker_name args
   else ""
 
 // This large ML pretty-printer builds its result through ~20 chained
@@ -1530,6 +1534,7 @@ let print_binding mname (td:type_decl)
   let root_name = print_ident mname tdn.td_name in
   let compatible = lowstar_api () in
   let worker_name = pulse_worker_name root_name in
+  let cname = T.validator_name mname tdn.td_name.A.v.A.name in
   let print_binders = print_binders mname in
   let print_args = print_binders_as_args mname in
   (* Record the parameters in scope before printing anything that mentions a
@@ -1659,7 +1664,8 @@ let print_binding mname (td:type_decl)
         args
   in
   let validate_binding =
-    let attribs = pulse_validator_attributes td.name.td_entrypoint td.attrs.is_exported compatible in
+    let attribs = pulse_validator_attributes (if compatible then None else Some cname)
+      td.name.td_entrypoint td.attrs.is_exported compatible in
     if pulse ()
     then
       Printf.sprintf "%s\n\
@@ -1682,7 +1688,7 @@ let print_binding mname (td:type_decl)
                     args
   in
   let public_binding =
-    print_public_adapter_binding compatible root_name binders td.allow_reading worker_name args
+    print_public_adapter_binding compatible cname root_name binders td.allow_reading worker_name args
   in
   let dtyp : string =
     let reader =

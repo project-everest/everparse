@@ -320,7 +320,7 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
 noextract inline_for_extraction
 let input_stream_static = input_stream_extern
 
-[@@CMacro]
+[@@CMacro; FStar.Attributes.custard_extern "EVERPARSE_ERROR_HANDLER_MACRO"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val error_handler_macro : EH.error_handler
 
 module AB = EverParse3d.Actions.Base

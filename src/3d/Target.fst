@@ -190,8 +190,12 @@ let print_maybe_qualified_ident (mname:string) (i:A.ident) =
    "the target declares this", and names it as C already spells it: print_ident
    prefixes uppercase identifiers with `___` to keep them out of F*'s
    constructor namespace, and that prefix is an F* artifact. *)
-let print_custard_extern_attr (i:A.ident) =
-  Printf.sprintf "[@@FStar.Attributes.custard_extern \"%s\"]\n" i.A.v.A.name
+let print_custard_extern_attr (header:option string) (i:A.ident) =
+  Printf.sprintf "[@@FStar.Attributes.custard_extern \"%s\"%s]\n"
+    (String.uppercase i.A.v.A.name)
+    (match header with
+     | None -> ""
+     | Some h -> Printf.sprintf "; FStar.Attributes.custard_c_header \"%s\"" h)
 
 let print_field_id_name (i:A.ident) =
   let open A in
@@ -866,6 +870,11 @@ let pascal_case name : ML string =
   else String.uppercase (String.sub name 0 1) ^ String.sub name 1 (String.length name - 1)
 
 let uppercase (name:string) : string = String.uppercase name
+
+let print_c_function_attr (name:string) : ML string =
+  Printf.sprintf
+    "[@@FStar.Attributes.rename_let \"%s\"; FStar.Attributes.custard_declare_in_c_header]\n"
+    (pascal_case name)
 
 let rec print_as_c_type (t:typ) : ML string =
     let open Ast in
@@ -1961,7 +1970,7 @@ let rec base_output_type (t:typ) : ML A.ident =
   | T_pointer t A.UInt64 -> base_output_type t
   | _ -> failwith "Target.base_output_type called with a non-output type"
 #push-options "--fuel 1"
-let rec print_output_type_val (tbl:set) (t:typ) : ML string =
+let rec print_output_type_val (header:option string) (tbl:set) (t:typ) : ML string =
   let open A in
   if is_output_type t
   then let s = print_output_type false t in
@@ -1970,9 +1979,10 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
             assert (is_output_type t);
             match t with
             | T_app id KindOutput [] ->
-              Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr id) s
+              Printf.sprintf "\n\n%sval %s : Type0\n\n"
+                (print_custard_extern_attr header id) s
             | T_pointer bt A.UInt64 ->
-              let bs = print_output_type_val tbl bt in
+              let bs = print_output_type_val header tbl bt in
               let ptr = "Pulse.Lib.Reference.ref" in
               bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = %s %s\n\n" s ptr (print_output_type false bt))
   else ""
@@ -2013,7 +2023,8 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (Some?.v oe.oe_bitwidth)
       end in
     Printf.sprintf
-      "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
+      "\n\n%sval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
+      (print_c_function_attr fn_name)
       fn_name
       fn_arg1_t
       fn_arg2_t
@@ -2066,7 +2077,8 @@ let print_out_expr_get_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     H.insert tbl fn_name ();
     let fn_arg1_t = print_typ mname oe.oe_bt in
     let fn_res = print_typ mname oe.oe_t in  //No bitfields, we could enforce?
-    Printf.sprintf "\n\nval %s : %s -> %s\n\n" fn_name fn_arg1_t fn_res
+    Printf.sprintf "\n\n%sval %s : %s -> %s\n\n"
+      (print_c_function_attr fn_name) fn_name fn_arg1_t fn_res
 
 (*
  * C defn. for the getter for the output expression
@@ -2096,15 +2108,16 @@ let output_base_var lhs = base_id_of_output_expr lhs
 
 let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
+  let header = Some (modul ^ "_ExternalTypedefs.h") in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
     | Output_type ot ->
       let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
       Printf.sprintf "%s%s"
-        (print_output_type_val tbl t)
-        (print_output_type_val tbl (T_pointer t A.UInt64))
+        (print_output_type_val header tbl t)
+        (print_output_type_val header tbl (T_pointer t A.UInt64))
     | Extern_type i ->
-      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr header i) (print_ident i)
     | _ -> "")) in
    let prefix =
      "open Pulse.Lib.Pervasives\n\
@@ -2141,35 +2154,42 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
-      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n"
+        (print_custard_extern_attr (Some (modul ^ "_ExternalTypedefs.h")) i) (print_ident i)
     | Extern_fn f ret params false ->
-      Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
+      Printf.sprintf "\n\n%sval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
+        (print_c_function_attr f.A.v.A.name)
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
     | Extern_fn f ret params true ->
-      Printf.sprintf "\n\nval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
+      Printf.sprintf "\n\n%sval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
+        (print_c_function_attr f.A.v.A.name)
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
     | Extern_probe f PQWithOffsets ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental%s\n\n" (print_ident f) probe_inst_args
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.probe_fn_incremental%s\n\n"
+        (print_c_function_attr f.A.v.A.name) (print_ident f) probe_inst_args
     | Extern_probe f (PQRead t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s%s \n\n" 
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s%s \n\n"
+              (print_c_function_attr f.A.v.A.name)
               (print_ident f)
               (print_integer_type t)
               probe_inst_args
     | Extern_probe f (PQWrite t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s%s \n\n" 
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.write_at_offset_%s%s \n\n"
+              (print_c_function_attr f.A.v.A.name)
               (print_ident f)
               (print_integer_type t)
               probe_inst_args
     | Extern_probe f PQInit ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.init_probe_dest_t%s \n\n" 
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.init_probe_dest_t%s \n\n"
+              (print_c_function_attr f.A.v.A.name)
               (print_ident f)
               probe_inst_args
     | _ -> "")) in

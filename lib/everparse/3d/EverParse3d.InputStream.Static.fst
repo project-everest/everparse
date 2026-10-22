@@ -58,7 +58,7 @@ instance input_stream_static : I.input_stream_inst base_t len_t pos_t =
 (* The error handler used when 3d is invoked with `--use_error_handler_macro`.
    Each backend provides its own; the 3D frontend passes the one matching the
    selected `--input_stream` to `validate_with_error_handler`. *)
-[@@CMacro]
+[@@CMacro; FStar.Attributes.custard_extern "EVERPARSE_ERROR_HANDLER_MACRO"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
 (* `field_ptr_after` is available here for the same reason it is available in
