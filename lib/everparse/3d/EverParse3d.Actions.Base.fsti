@@ -6,6 +6,7 @@ open Pulse.Lib.Pervasives
 module I = EverParse3d.InputStream.Base
 module CP = EverParse3d.CopyBuffer
 module PA = EverParse3d.ProbeActions
+module Bool = EverParse3d.Boolean
 module AppCtxt = EverParse3d.AppCtxt
 open FStar.FunctionalExtensionality
 open EverParse3d.Actions.Common
@@ -486,6 +487,18 @@ val action_assignment
       (name: Ghost.erased string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
 : action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler
+
+noextract
+inline_for_extraction
+val action_deref_map
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t |}
+  (#a #b: Type0)
+  (decode: a -> Tot b)
+  (name: Ghost.erased string)
+  (x: ref a)
+  (#use_error_handler: bool)
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) b use_error_handler
 
 noextract
 inline_for_extraction
@@ -1117,6 +1130,8 @@ val probe_then_validate
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#copy_buffer_t: Type0)
   {| cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
       (error_handler_macro: error_handler #base_t #len_t #pos_t)
       (typename: string)
       (fieldname: string)
@@ -1135,10 +1150,10 @@ val probe_then_validate
       (nullable: bool)
       (dest_name: Ghost.erased string)
       (dest: copy_buffer_t)
-      (init: PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init: PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (prep_dest_sz: U64.t)
       (#mz: bool)
-      (probe: PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      (probe: PA.probe_m #_ #_ #_ #_ #inst #cb_inst #boolean_t #boolean_inst unit true mz use_error_handler)
       (sq: squash (forall x .
         ~ (extra_state.state_p x /\
            (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest).state_p x)))

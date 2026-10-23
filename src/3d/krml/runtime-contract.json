@@ -12,6 +12,10 @@
     "true": 1,
     "truth": "nonzero"
   },
+  "validator_boolean": {
+    "pulse": "bool",
+    "lowstar": "BOOLEAN"
+  },
   "preserve": [
     "public identifiers",
     "function and callback types",
