@@ -2,6 +2,7 @@
 
 Mutable checks noncanonical Low* bytes, scalar/external Bool, in-place reads,
 canonical writes after success/failure, and two parameters aliasing one cell.
+Output checks record field reads and generated setters through ordinary actions.
 Probes checks noncanonical callback results and failed refs, with each callback
 independently rejecting validation. Including the validator headers in each C
 client also makes a callback signature mismatch a compile error.
@@ -39,17 +40,23 @@ def main():
                        "--batch", "--skip_c_makefiles"]
             if fstar:
                 command += ["--fstar", fstar]
-            run(command + [str(fixture / "Mutable.3d"), str(fixture / "Probes.3d")])
-            for module, client in (("Mutable", "mutable.c"), ("Probes", "probes.c")):
+            run(command + [str(fixture / f"{module}.3d")
+                           for module in ("Mutable", "Probes", "Output")])
+            for module, client in (("Mutable", "mutable.c"), ("Probes", "probes.c"),
+                                   ("Output", "output.c")):
                 binary = output / module
+                sources = [str(fixture / client), str(output / f"{module}.c"),
+                           str(output / f"{module}Wrapper.c")]
+                helpers = output / f"{module}_OutputTypes.c"
+                if helpers.is_file():
+                    sources.append(str(helpers))
                 run(compiler + ["-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
                                 "-Wno-unused-parameter", "-Wno-ignored-qualifiers",
                                 "-D_DEFAULT_SOURCE", "-I", str(output),
                                 *(["-DTEST_LOWSTAR"] if api == "lowstar" else []),
-                                str(fixture / client), str(output / f"{module}.c"),
-                                str(output / f"{module}Wrapper.c"), "-o", str(binary)])
+                                *sources, "-o", str(binary)])
                 run([str(binary)])
-    print("Boolean scalar/ref aliasing, canonical writes and probe ABI: PASS")
+    print("Boolean scalar/ref/output fields, aliasing, canonical writes and probe ABI: PASS")
 
 
 if __name__ == "__main__":
