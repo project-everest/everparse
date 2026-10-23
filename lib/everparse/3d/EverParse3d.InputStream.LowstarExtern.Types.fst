@@ -11,9 +11,9 @@ module B = EverParse3d.CAbi.Boolean
 
 // Abstract client ABI types and ghost model, as in the old extern Base.fsti.
 // The position indexing storage is ghost, NOT a client position-query API.
-[@@FStar.Attributes.custard_extern "EVERPARSE_EXTRA_T"; FStar.Attributes.custard_c_header "EverParse.h"]
+[@@FStar.Attributes.custard_extern "EVERPARSE_EXTRA_T"; FStar.Attributes.custard_c_header "EverParseEndianness.h"]
 assume val extra_t : Type0
-[@@FStar.Attributes.custard_extern "EVERPARSE_INPUT_STREAM_BASE"; FStar.Attributes.custard_c_header "EverParse.h"]
+[@@FStar.Attributes.custard_extern "EVERPARSE_INPUT_STREAM_BASE"; FStar.Attributes.custard_c_header "EverParseEndianness.h"]
 assume val input_stream_base : Type0
 assume val get_all (base: input_stream_base)
   : GTot (s: Seq.seq U8.t { Seq.length s < E.position_limit })

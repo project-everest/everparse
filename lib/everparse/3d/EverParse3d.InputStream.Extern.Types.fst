@@ -20,10 +20,10 @@ module I = EverParse3d.InputStream.Base
    frontend passes it into the generated wrapper, which threads it down to the
    primitives below. It is abstract here so that KaRaMeL emits it as a real C
    parameter. *)
-[@@FStar.Attributes.custard_extern "EVERPARSE_EXTRA_T"; FStar.Attributes.custard_c_header "EverParse.h"]
+[@@FStar.Attributes.custard_extern "EVERPARSE_EXTRA_T"; FStar.Attributes.custard_c_header "EverParseEndianness.h"]
 assume val extra_t : Type0
 
-[@@FStar.Attributes.custard_extern "EVERPARSE_INPUT_STREAM_BASE"; FStar.Attributes.custard_c_header "EverParse.h"]
+[@@FStar.Attributes.custard_extern "EVERPARSE_INPUT_STREAM_BASE"; FStar.Attributes.custard_c_header "EverParseEndianness.h"]
 assume val input_stream_base : Type0
 
 inline_for_extraction

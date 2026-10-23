@@ -4,9 +4,7 @@ import argparse
 import json
 import os
 from pathlib import Path
-import re
 import shlex
-import shutil
 import subprocess
 import sys
 
@@ -18,10 +16,6 @@ PREFIX = "EverParse3d."
 CONTRACT = json.loads((HERE / "runtime-contract.json").read_text())
 PROFILES = {p["directory"]: p for p in CONTRACT["profiles"]}
 COMPANION = "EverParseStreamPrimitives.h"
-QUALIFIERS = r"(?:(?:noeq|inline_for_extraction|private|noextract|unfold)\s+)*"
-DECLARATION = re.compile(
-    r"^" + QUALIFIERS + r"(?:let|type|assume val|val|fn)\s+(\w+)\b"
-)
 
 
 def c_name(name):
@@ -76,83 +70,6 @@ def native_path(path):
     return str(path)
 
 
-def copy_lowparse_cache(source, cache):
-    for checked in source.glob("LowParse.*.checked"):
-        target = cache / checked.name
-        if not target.exists() or target.read_bytes() != checked.read_bytes():
-            shutil.copyfile(checked, target)
-
-
-def isolated_options(options, cache):
-    result = []
-    index = 0
-    while index < len(options):
-        if options[index] == "--include" and index + 1 < len(options):
-            directory_name = options[index + 1]
-            if sys.platform == "cygwin":
-                directory_name = subprocess.check_output(
-                    ["cygpath", "-u", directory_name], text=True
-                ).strip()
-            directory = Path(directory_name)
-            if directory.resolve() == RUNTIME.resolve() or any(
-                directory.glob("EverParse3d.*.checked")
-            ):
-                copy_lowparse_cache(directory, cache)
-                index += 2
-                continue
-        result.append(options[index])
-        index += 1
-    return result
-
-
-def annotate(text, names, preserved=(), foreign=(), static_hooks=()):
-    lines = text.splitlines(keepends=True)
-    found = set()
-    for index in range(len(lines) - 1, -1, -1):
-        match = DECLARATION.match(lines[index])
-        if not match or match[1] not in names:
-            continue
-        name = match[1]
-        if name in found:
-            raise ValueError("Ambiguous extraction annotation: " + name)
-        found.add(name)
-        target = names[name]
-        attrs = []
-        if target in static_hooks:
-            attrs += [
-                'FStar.Attributes.custard_extern "' + target + '"',
-                'FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"',
-            ]
-        else:
-            attrs.append('FStar.Attributes.rename_let "' + target + '"')
-            if name in foreign and name != "null_ptr":
-                attrs.append("FStar.Attributes.custard_declare_in_c_header")
-        if name in preserved:
-            attrs.append("FStar.Attributes.custard_no_unfold")
-        if (name not in preserved and name not in foreign
-                and not re.match(r"^(?:noeq\s+)?type\b", lines[index])):
-            attrs.append("FStar.Attributes.CInline")
-        start = index
-        while start and re.fullmatch(
-            r"\s*(?:\[@.*\]|noextract|unfold|inline_for_extraction|noeq|private)\s*",
-            lines[start - 1],
-        ):
-            start -= 1
-        previous = next((i for i in range(start, index)
-                         if lines[i].startswith("[@")), None)
-        if previous is None:
-            lines.insert(start, "[@@" + "; ".join(attrs) + "]\n")
-        else:
-            old = lines[previous].rstrip()
-            if not old.startswith("[@@"):
-                old = old.replace("[@", "[@@", 1)
-            lines[previous] = old[:-1].rstrip() + "; " + "; ".join(attrs) + "]\n"
-    if found != names.keys():
-        raise ValueError("Missing extraction declarations: "
-                         + ", ".join(sorted(names.keys() - found)))
-    return "".join(lines)
-
-
 def profile_config(profile):
     p = PROFILES[profile]
     lowstar = p["api"] == "lowstar"
@@ -189,6 +106,8 @@ def profile_config(profile):
     external_types = {}
     include = "EverParseEndianness.h" if lowstar else "EverParsePulseEndianness.h"
     copy_module = "CopyBuffer." + backend
+    external_types[("CopyBuffer.Buffer" if not lowstar else copy_module)
+                   + ".copy_buffer_t"] = "EVERPARSE_COPY_BUFFER_T"
     if not extern or lowstar:
         copy_names = ("stream_of",) if extern else ("stream_of", "stream_len")
         if not lowstar:
@@ -256,29 +175,16 @@ def profile_config(profile):
 
 
 def extract(args):
-    names, preserved, foreign, external_types, include = profile_config(args.profile)
+    names, _, _, external_types, include = profile_config(args.profile)
     profile = PROFILES[args.profile]
     build = args.build_dir.resolve()
     source_dir = build / "src"
-    cache = build / "checked"
-    for directory in (source_dir, cache):
-        directory.mkdir(parents=True, exist_ok=True)
-    if args.dependency_cache:
-        # Runtime .checked files carry profile-specific extraction attributes.
-        # Only the unmodified LowParse dependencies may be shared.
-        copy_lowparse_cache(args.dependency_cache, cache)
-    for source in sorted(RUNTIME.glob("*.fst*")):
-        if source.suffix not in (".fst", ".fsti"):
-            continue
-        module = source.stem.removeprefix(PREFIX)
-        text = source.read_text()
-        target = source_dir / source.name
-        if not target.exists() or target.read_text() != text:
-            target.write_text(text)
+    source_dir.mkdir(parents=True, exist_ok=True)
     root = source_dir / "EverParse3d.CRuntime.Roots.fst"
     stream = "extern" if profile["api"] == "lowstar" and profile["stream"] == "static" else profile["stream"]
     backend = ("Lowstar" if profile["api"] == "lowstar" else "") + stream.capitalize()
-    verification_modules = ["Interpreter", "ProbeActions", "InputStream." + backend]
+    verification_modules = ["Interpreter", "ProbeActions", "InputStream." + backend,
+                            "CopyBuffer.Buffer"]
     if profile["api"] == "lowstar":
         verification_modules.append(
             "Lowstar.BufferAdapter" if profile["stream"] == "buffer"
@@ -287,9 +193,10 @@ def extract(args):
         "module M" + str(i) + " = " + PREFIX + name + "\n"
         for i, name in enumerate(sorted(set(names) | set(verification_modules)))
     ))
-    flags = isolated_options(shlex.split(args.fstar_options), cache)
-    flags += ["--cache_checked_modules", "--cache_dir", native_path(cache),
+    flags = shlex.split(args.fstar_options)
+    flags += ["--cache_checked_modules", "--cache_dir", native_path(build),
               "--odir", native_path(build), "--include", native_path(source_dir),
+              "--include", native_path(RUNTIME),
               "--include", native_path(ROOT / "lib/everparse/lowparse")]
     for path in (
         ROOT / "opt/FStar/pulse/lib/common",
@@ -299,19 +206,10 @@ def extract(args):
     ):
         if path.is_dir():
             flags += ["--include", native_path(path)]
-    flags += ["--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",
+    flags += ["--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar,LowParse,EverParse3d.*",
               "--warn_error", "@241@371-342"]
     command = [args.fstar] + flags
-    dep = build / ".depend"
-    subprocess.run(command + ["--dep", "full", "--output_deps_to", native_path(dep),
-                              native_path(root)], check=True)
-    makefile = build / "Check.Makefile"
-    makefile.write_text(
-        ".DEFAULT_GOAL := all\ninclude " + str(dep) + "\n"
-        "all: $(ALL_CHECKED_FILES)\n%.checked:\n\t"
-        + shlex.join(command) + " $<\n"
-    )
-    subprocess.run(["make", "-s", "-j" + str(args.jobs), "-f", str(makefile)], check=True)
+    subprocess.run(command + [native_path(root)], check=True)
     extraction = ["--codegen", "C", "--custard_unit", "EverParse",
                   "--custard_static_header",
                   "--custard_monomorphize_types", "true"]
@@ -324,10 +222,6 @@ def extract(args):
     subprocess.run(command + extraction + [native_path(root), "-o", native_path(header)], check=True)
     if (build / "EverParse.c").exists():
         raise RuntimeError("Static-header extraction unexpectedly produced EverParse.c")
-    for directory in (source_dir, cache):
-        for source in sorted(directory.iterdir()):
-            if source.is_file():
-                publish(source.read_bytes(), args.output.parent / directory.name / source.name)
     publish(header.read_bytes(), args.output)
     publish((build / "EverParse.cui").read_bytes(), args.output.with_suffix(".cui"))
 
@@ -341,8 +235,6 @@ def main():
                         help="Generate static hook prototypes without invoking F*")
     parser.add_argument("--fstar", default=os.environ.get("FSTAR_EXE", "fstar.exe"))
     parser.add_argument("--fstar-options", default="")
-    parser.add_argument("--dependency-cache", type=Path,
-                        help="Optional verified LowParse cache; runtime caches are not shared")
     parser.add_argument("--jobs", type=int, default=4)
     args = parser.parse_args()
     if args.jobs < 1:

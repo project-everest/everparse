@@ -36,11 +36,9 @@ let everparse_static_headers input_stream_binding out_dir =
 
 (* command lines *)
 let fstar_args0 input_stream_binding =
-  let runtime = everparse_h_home input_stream_binding in
   ["--already_cached"; "Prims,LowStar,FStar,LowParse,C,PulseCore,Pulse,EverParse3d.\\*,Spec";
    "--include"; lowparse_home;
-   "--include"; filename_concat runtime "src";
-   "--include"; filename_concat runtime "checked";
+   "--include"; lib_3d_home;
    "--warn_error"; "@241"] @ OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
 
 let list_snoc q a =

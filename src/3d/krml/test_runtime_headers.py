@@ -1,11 +1,9 @@
 import json
 from pathlib import Path
-import tempfile
 import unittest
-from unittest.mock import patch
 
 from runtime_abi import compare_abi, inventory
-from runtime_headers import PROFILES, annotate, companion, isolated_options, profile_config
+from runtime_headers import PROFILES, RUNTIME, companion, profile_config
 
 
 HERE = Path(__file__).resolve().parent
@@ -169,26 +167,23 @@ class ExtractionProfileTests(unittest.TestCase):
                              set(expected["functions"]) | set(expected["types"])
                              | set(expected["values"]) | set(expected["macros"]))
 
-    def test_annotations_preserve_bodies(self):
-        source = "module Example\n[@ CMacro ]\nlet answer = 42ul\n"
-        result = annotate(source, {"answer": "ANSWER"})
-        self.assertIn("let answer = 42ul\n", result)
-        self.assertIn('[@@ CMacro; FStar.Attributes.rename_let "ANSWER";', result)
-        self.assertIn("FStar.Attributes.CInline", result)
+    def test_canonical_sources_own_all_bindings(self):
+        for profile in PROFILES:
+            names, _, _, external, _ = profile_config(profile)
+            for module, declarations in names.items():
+                suffix = ".fsti" if module == "InputStream.LowstarExtern.Raw" else ".fst"
+                source = (RUNTIME / ("EverParse3d." + module + suffix)).read_text()
+                for target in declarations.values():
+                    self.assertIn('"' + target + '"', source)
+            for qualified, target in external.items():
+                module, _ = qualified.rsplit(".", 1)
+                source = (RUNTIME / ("EverParse3d." + module + ".fst")).read_text()
+                self.assertIn('custard_extern "' + target + '"', source)
 
-    def test_static_hooks_use_supplying_headers(self):
-        result = annotate("assume val has : unit -> bool\n",
-                          {"has": "EverParseHas"}, foreign={"has"},
-                          static_hooks={"EverParseHas"})
-        self.assertIn('custard_extern "EverParseHas"', result)
-        self.assertIn('custard_c_header "EverParseStreamPrimitives.h"', result)
-        self.assertNotIn("custard_declare_in_c_header", result)
-
-    def test_invalid_annotations_fail(self):
-        with self.assertRaises(ValueError):
-            annotate("let answer = 42\n", {"missing": "Missing"})
-        with self.assertRaises(ValueError):
-            annotate("let answer = 0\nlet answer = 1\n", {"answer": "Answer"})
+    def test_static_and_extern_share_verified_modules(self):
+        for prefix in ("", "lowstar/"):
+            self.assertEqual(profile_config(prefix + "static"),
+                             profile_config(prefix + "extern"))
 
     def test_companions_only_declare_selected_functions(self):
         for profile in ("static", "lowstar/static"):
@@ -208,29 +203,10 @@ class ExtractionProfileTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             companion("buffer")
 
-    def test_profile_options_cannot_import_other_runtime_metadata(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            shared = root / "shared"
-            private = root / "private"
-            shared.mkdir()
-            private.mkdir()
-            (shared / "EverParse3d.ErrorCode.fst.checked").write_bytes(b"runtime")
-            (shared / "LowParse.Spec.Base.fsti.checked").write_bytes(b"dependency")
-            self.assertEqual(
-                isolated_options(["--include", str(shared), "--z3version", "4.15.3"],
-                                 private),
-                ["--z3version", "4.15.3"],
-            )
-            self.assertFalse((private / "EverParse3d.ErrorCode.fst.checked").exists())
-            self.assertEqual((private / "LowParse.Spec.Base.fsti.checked").read_bytes(),
-                             b"dependency")
-            with patch("runtime_headers.sys.platform", "cygwin"), patch(
-                "runtime_headers.subprocess.check_output", return_value=str(shared) + "\n"
-            ):
-                self.assertEqual(
-                    isolated_options(["--include", "C:/shared"], private), []
-                )
+    def test_copy_buffer_metadata_exists_for_every_stream(self):
+        for profile in PROFILES:
+            _, _, _, external, _ = profile_config(profile)
+            self.assertIn("EVERPARSE_COPY_BUFFER_T", external.values())
 
 
 if __name__ == "__main__":

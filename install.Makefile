@@ -54,10 +54,8 @@ install-3d-pulse:
 	for parent in "" lowstar/ ; do for backend in buffer extern static ; do \
 	  source=lib/everparse/3d/krml/$$parent$$backend ; \
 	  destination=$(PREFIX)/$$source ; \
-	  install -d $$destination/src $$destination/checked && \
-	  install -m 644 $$source/EverParse.h $$source/EverParse.cui $$destination && \
-	  install -m 644 $$source/src/*.fst $$source/src/*.fsti $$destination/src && \
-	  install -m 644 $$source/checked/*.checked $$destination/checked || exit 1 ; \
+	  install -d $$destination && \
+	  install -m 644 $$source/EverParse.h $$source/EverParse.cui $$destination || exit 1 ; \
 	done ; done
 	for parent in "" lowstar/ ; do for backend in extern static ; do install -m 644 lib/everparse/3d/krml/$$parent$$backend/EverParseStreamPrimitives.h $(PREFIX)/lib/everparse/3d/krml/$$parent$$backend ; done ; done
 
