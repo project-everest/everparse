@@ -54,8 +54,14 @@ def check_artifacts(out, modules, api, stream):
     profile = runtime_profile(api, stream)
     for name in ("EverParse.h", "EverParseStreamPrimitives.h"):
         original = profile / name
-        if original.is_file() and (out / name).read_bytes() != original.read_bytes():
-            raise AssertionError(f"{out / name}: runtime header must be copied unchanged")
+        if original.is_file():
+            copied = (out / name).read_bytes()
+            if name == "EverParse.h" and copied.startswith(b"/*++\n"):
+                copyright, marker, copied = copied.partition(b"--*/\n")
+                if not marker or b"Copyright (c) Microsoft Corporation" not in copyright:
+                    raise AssertionError(f"{out / name}: unexpected copyright header")
+            if copied != original.read_bytes():
+                raise AssertionError(f"{out / name}: runtime header body must be copied unchanged")
     for artifact in out.rglob("*"):
         if artifact.name in ("EverParse.c", "EverParse.cui",
                              "EverParsePulseInternal.h", "EverParsePrivate.h",
@@ -68,6 +74,8 @@ def generate(name, grammar, api="lowstar", stream="buffer", extra_grammars=()):
     out = output(name)
     args = [ROOT / "bin/everparse-3d.exe", "--api", api, "--input_stream", stream,
             "--fstar", FSTAR, "--batch", "--odir", out]
+    if os.environ.get("Z3_EXE"):
+        args += ["--z3_executable", os.environ["Z3_EXE"]]
     if stream != "buffer":
         args += ["--input_stream_include", "EverParseStream.h"]
     run(args + [grammar] + list(extra_grammars), out)
@@ -94,7 +102,7 @@ def large(bits32=False):
     out = output("large")
     flags = shlex.split(os.environ.get("EVERPARSE_FSTAR_OPTIONS", ""))
     flags += ["--include", ROOT / "lib/everparse/lowparse",
-             "--include", RUNTIME, "--include", RUNTIME / ".checked",
+             "--include", RUNTIME,
              "--include", HERE, "--include", out,
              "--cache_checked_modules", "--cache_dir", out,
              "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar,LowParse,EverParse3d.*",
@@ -102,6 +110,8 @@ def large(bits32=False):
     z3_version = os.environ.get("EVERPARSE_Z3_VERSION")
     if z3_version is not None:
         flags = ["--z3version", z3_version] + flags
+    if os.environ.get("Z3_EXE"):
+        flags = ["--smt", os.environ["Z3_EXE"]] + flags
     run([FSTAR] + flags + [HERE / "LargeExtern.fsti"], out)
     run([FSTAR] + flags + [HERE / "LargeExtern.fst"], out)
     profile = runtime_profile("lowstar", "extern")

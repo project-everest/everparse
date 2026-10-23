@@ -16,6 +16,10 @@
 PYTHON ?= python3
 JOBS ?= 16
 ROOT := $(realpath ../../../../..)
+EVERPARSE_HOME ?= $(ROOT)
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+export FSTAR_EXE Z3_EXE
+.DEFAULT_GOAL := all
 
 .PHONY: all check check32 runtime large large32 extern static probes native-probe
 all: check
