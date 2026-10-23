@@ -1,9 +1,12 @@
 import json
+from argparse import Namespace
 from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from runtime_abi import compare_abi, inventory
-from runtime_headers import PROFILES, RUNTIME, companion, profile_config
+from runtime_headers import PROFILES, RUNTIME, companion, extract, profile_config
 
 
 HERE = Path(__file__).resolve().parent
@@ -156,6 +159,12 @@ class InventoryTests(unittest.TestCase):
 
 
 class ExtractionProfileTests(unittest.TestCase):
+    def test_validator_booleans_are_independent_of_stream_booleans(self):
+        contract = json.loads((HERE / "runtime-contract.json").read_text())
+        self.assertEqual(contract["validator_boolean"],
+                         {"pulse": "bool", "lowstar": "BOOLEAN"})
+        self.assertEqual(contract["boolean"]["representation"], "uint8_t")
+
     def test_all_profiles_match_the_reference_names(self):
         reference = json.loads((HERE / "runtime-abi.json").read_text())["profiles"]
         for profile in PROFILES:
@@ -207,6 +216,34 @@ class ExtractionProfileTests(unittest.TestCase):
         for profile in PROFILES:
             _, _, _, external, _ = profile_config(profile)
             self.assertIn("EVERPARSE_COPY_BUFFER_T", external.values())
+
+    def test_extraction_cannot_shadow_the_shared_library(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build = root / "build"
+            (build / "src").mkdir(parents=True)
+            (build / "src/EverParse3d.ErrorCode.fst").write_text("stale profile source")
+            output = root / "published/EverParse.h"
+
+            def run(command, check):
+                self.assertTrue(check)
+                includes = [command[i + 1] for i, arg in enumerate(command)
+                            if arg == "--include"]
+                self.assertIn(str(RUNTIME), includes)
+                self.assertNotIn(str(build / "src"), includes)
+                self.assertNotIn(str(build / "checked"), includes)
+                if "--codegen" in command:
+                    (build / "EverParse.h").write_text("header")
+                    (build / "EverParse.cui").write_text("unit")
+
+            with patch("runtime_headers.subprocess.run", side_effect=run), \
+                    patch("runtime_headers.native_path", side_effect=str):
+                extract(Namespace(profile="extern", build_dir=build, output=output,
+                                  fstar="fstar.exe", fstar_options=""))
+            self.assertEqual(output.read_text(), "header")
+            self.assertEqual(output.with_suffix(".cui").read_text(), "unit")
+            self.assertEqual(sorted(p.name for p in output.parent.iterdir()),
+                             ["EverParse.cui", "EverParse.h"])
 
 
 if __name__ == "__main__":
