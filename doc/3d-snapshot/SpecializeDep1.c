@@ -4,43 +4,19 @@
 
 #include "SpecializeDep1_ExternalAPI.h"
 
-void
-SpecializeDep1CopyBytes(
+static void
+CopyBytes(
   uint64_t Numbytes,
-  PRIMS_STRING Tn,
-  PRIMS_STRING Fn,
-  PRIMS_STRING Fd,
-  uint8_t *Ctxt,
-  void
-  (*Err)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
-  uint64_t rd;
-  uint64_t wr;
-  BOOLEAN ok;
-  KRML_MAYBE_UNUSED_VAR(Tn);
-  KRML_MAYBE_UNUSED_VAR(Fn);
-  KRML_MAYBE_UNUSED_VAR(Fd);
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(Err);
-  KRML_MAYBE_UNUSED_VAR(Sz);
-  rd = *ReadOffset;
-  wr = *WriteOffset;
-  ok = ProbeAndCopy(Numbytes, rd, wr, Src, Dest);
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy(Numbytes, rd, wr, Src, Dest);
   if (ok)
   {
     *ReadOffset = rd + Numbytes;
@@ -50,12 +26,11 @@ SpecializeDep1CopyBytes(
   *Failed = TRUE;
 }
 
-void
-SpecializeDep1Specialized32ProbeUnion(
+static void
+Specialized32ProbeUnion(
   uint8_t Tag,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
-  PRIMS_STRING Fd,
   uint8_t *Ctxt,
   void
   (*Err)(
@@ -71,7 +46,6 @@ SpecializeDep1Specialized32ProbeUnion(
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
@@ -81,18 +55,7 @@ SpecializeDep1Specialized32ProbeUnion(
   BOOLEAN hasFailed2;
   if (Tag == 0U)
   {
-    SpecializeDep1CopyBytes(1ULL,
-      Tn,
-      Fn,
-      Fd,
-      Ctxt,
-      Err,
-      ReadOffset,
-      WriteOffset,
-      Failed,
-      Src,
-      Sz,
-      Dest);
+    CopyBytes(1ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
     hasFailed = *Failed;
     if (hasFailed)
     {
@@ -101,18 +64,7 @@ SpecializeDep1Specialized32ProbeUnion(
   }
   else if (Tag == 1U)
   {
-    SpecializeDep1CopyBytes(2ULL,
-      Tn,
-      Fn,
-      Fd,
-      Ctxt,
-      Err,
-      ReadOffset,
-      WriteOffset,
-      Failed,
-      Src,
-      Sz,
-      Dest);
+    CopyBytes(2ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
     hasFailed0 = *Failed;
     if (hasFailed0)
     {
@@ -121,18 +73,7 @@ SpecializeDep1Specialized32ProbeUnion(
   }
   else
   {
-    SpecializeDep1CopyBytes(4ULL,
-      Tn,
-      Fn,
-      Fd,
-      Ctxt,
-      Err,
-      ReadOffset,
-      WriteOffset,
-      Failed,
-      Src,
-      Sz,
-      Dest);
+    CopyBytes(4ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
     hasFailed1 = *Failed;
     if (hasFailed1)
     {
@@ -147,8 +88,8 @@ SpecializeDep1Specialized32ProbeUnion(
   }
 }
 
-void
-SpecializeDep1Specialized32ProbeTlv(
+static void
+Specialized32ProbeTlv(
   uint16_t Len,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -168,7 +109,6 @@ SpecializeDep1Specialized32ProbeTlv(
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
-  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
@@ -225,18 +165,7 @@ SpecializeDep1Specialized32ProbeTlv(
     Err(Tn, Fn, "tag", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
     return;
   }
-  SpecializeDep1CopyBytes(4ULL,
-    Tn,
-    Fn,
-    Fd,
-    Ctxt,
-    Err,
-    ReadOffset,
-    WriteOffset,
-    Failed,
-    Src,
-    Sz,
-    Dest);
+  CopyBytes(4ULL, ReadOffset, WriteOffset, Failed, Src, Dest);
   hasFailed3 = *Failed;
   if (hasFailed3)
   {
@@ -262,18 +191,7 @@ SpecializeDep1Specialized32ProbeTlv(
     else
     {
       r0 = *ReadOffset;
-      SpecializeDep1Specialized32ProbeUnion(res1,
-        Tn,
-        Fn,
-        Fd,
-        Ctxt,
-        Err,
-        ReadOffset,
-        WriteOffset,
-        Failed,
-        Src,
-        Sz,
-        Dest);
+      Specialized32ProbeUnion(res1, Tn, Fn, Ctxt, Err, ReadOffset, WriteOffset, Failed, Src, Dest);
       hasFailed4 = *Failed;
       if (hasFailed4)
       {
@@ -312,8 +230,8 @@ SpecializeDep1Specialized32ProbeTlv(
   }
 }
 
-inline uint8_t
-SpecializeDep1ValidateCoreUnion(
+static inline uint8_t
+ValidateCoreUnion(
   uint8_t Tag,
   uint8_t *Ctxt,
   void
@@ -513,8 +431,8 @@ SpecializeDep1ValidateCoreUnion(
   return res1;
 }
 
-inline uint8_t
-SpecializeDep1ValidateCoreTlv(
+static inline uint8_t
+ValidateCoreTlv(
   uint16_t Len,
   uint8_t *Ctxt,
   void
@@ -698,13 +616,7 @@ SpecializeDep1ValidateCoreTlv(
             {
               p8 = *SlPos;
               fieldStartTlv2 = (uint64_t)p8;
-              resultAfterTlv1 =
-                SpecializeDep1ValidateCoreUnion(tag,
-                  Ctxt,
-                  ErrorHandlerFn,
-                  SlBase,
-                  tr,
-                  SlPos);
+              resultAfterTlv1 = ValidateCoreUnion(tag, Ctxt, ErrorHandlerFn, SlBase, tr, SlPos);
               if (resultAfterTlv1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
               {
                 r = resultAfterTlv1;
@@ -776,8 +688,8 @@ SpecializeDep1ValidateCoreTlv(
   return resultAftertag;
 }
 
-inline uint8_t
-SpecializeDep1ValidateCoreSpecializedWrapper32(
+static inline uint8_t
+ValidateCoreSpecializedWrapper32(
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,
@@ -888,7 +800,7 @@ SpecializeDep1ValidateCoreSpecializedWrapper32(
       ok = ProbeInit("___specialized_WRAPPER_32.tlv", (uint64_t)(uint32_t)Len, Output);
       if (ok)
       {
-        SpecializeDep1Specialized32ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
+        Specialized32ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
           "___specialized_WRAPPER_32",
           "tlv",
           "probe",
@@ -898,7 +810,6 @@ SpecializeDep1ValidateCoreSpecializedWrapper32(
           &writeOffset,
           &failed,
           src64,
-          (uint64_t)(uint32_t)Len,
           Output);
       }
       else
@@ -928,7 +839,7 @@ SpecializeDep1ValidateCoreSpecializedWrapper32(
         len = (size_t)EverParseStreamLen(Output);
         cursor = (size_t)0U;
         res =
-          SpecializeDep1ValidateCoreTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
+          ValidateCoreTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
             Ctxt,
             ErrorHandlerFn,
             base,
@@ -996,8 +907,8 @@ SpecializeDep1ValidateCoreSpecializedWrapper32(
   return resultAfterSpecializedWrapper32;
 }
 
-inline uint8_t
-SpecializeDep1ValidateCoreWrapper(
+static inline uint8_t
+ValidateCoreWrapper(
   void
   (*ProbeTlv)(
     uint16_t x0,
@@ -1196,7 +1107,7 @@ SpecializeDep1ValidateCoreWrapper(
         len = (size_t)EverParseStreamLen(Output);
         cursor = (size_t)0U;
         res =
-          SpecializeDep1ValidateCoreTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
+          ValidateCoreTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
             Ctxt,
             ErrorHandlerFn,
             base,
@@ -1262,8 +1173,8 @@ SpecializeDep1ValidateCoreWrapper(
   return resultAfterWrapper;
 }
 
-void
-SpecializeDep1EntryProbeWrapper0Tlv(
+static void
+EntryProbeWrapper0Tlv(
   uint16_t Arg0,
   PRIMS_STRING Tn,
   PRIMS_STRING Fn,
@@ -1311,8 +1222,8 @@ SpecializeDep1EntryProbeWrapper0Tlv(
   *Failed = TRUE;
 }
 
-uint8_t
-SpecializeDep1ValidateCoreEntry(
+static uint8_t
+ValidateCoreEntry(
   BOOLEAN Requestor32,
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
@@ -1354,7 +1265,7 @@ SpecializeDep1ValidateCoreEntry(
     p0 = *SlPos;
     fieldStartEntry = (uint64_t)p0;
     resultAfterEntry =
-      SpecializeDep1ValidateCoreSpecializedWrapper32(Len,
+      ValidateCoreSpecializedWrapper32(Len,
         Output,
         Ctxt,
         ErrorHandlerFn,
@@ -1381,7 +1292,7 @@ SpecializeDep1ValidateCoreEntry(
     p2 = *SlPos;
     fieldStartEntry0 = (uint64_t)p2;
     resultAfterEntry0 =
-      SpecializeDep1ValidateCoreWrapper(SpecializeDep1EntryProbeWrapper0Tlv,
+      ValidateCoreWrapper(EntryProbeWrapper0Tlv,
         Len,
         Output,
         Ctxt,
@@ -1460,15 +1371,7 @@ SpecializeDep1ValidateEntry(
   size_t initial = (size_t)Start;
   size_t cursor = initial;
   uint8_t
-  status =
-    SpecializeDep1ValidateCoreEntry(Requestor32,
-      Len,
-      Output,
-      Ctxt,
-      Handler,
-      Input,
-      len,
-      &cursor);
+  status = ValidateCoreEntry(Requestor32, Len, Output, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

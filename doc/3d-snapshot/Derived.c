@@ -2,8 +2,8 @@
 
 #include "Derived.h"
 
-uint8_t
-DerivedValidateCoreTriple(
+static uint8_t
+ValidateCoreTriple(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -89,7 +89,7 @@ DerivedValidateTriple(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = DerivedValidateCoreTriple(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreTriple(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -98,8 +98,8 @@ DerivedValidateTriple(
     + position;
 }
 
-uint8_t
-DerivedValidateCoreQuad(
+static uint8_t
+ValidateCoreQuad(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -185,7 +185,7 @@ DerivedValidateQuad(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = DerivedValidateCoreQuad(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreQuad(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

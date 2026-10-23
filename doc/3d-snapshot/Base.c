@@ -2,8 +2,8 @@
 
 #include "Base.h"
 
-uint8_t
-BaseValidateCoreUlong(
+static uint8_t
+ValidateCoreUlong(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -76,7 +76,7 @@ BaseValidateUlong(
   size_t initial = (size_t)Start;
   size_t cursor = initial;
   size_t lookahead = (size_t)0U;
-  uint8_t status = BaseValidateCoreUlong(Ctxt, Handler, Input, len, &cursor, &lookahead);
+  uint8_t status = ValidateCoreUlong(Ctxt, Handler, Input, len, &cursor, &lookahead);
   size_t offset = lookahead;
   uint64_t
   position =
@@ -88,8 +88,8 @@ BaseValidateUlong(
     + position;
 }
 
-uint8_t
-BaseValidateCorePair(
+static uint8_t
+ValidateCorePair(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -175,7 +175,7 @@ BaseValidatePair(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = BaseValidateCorePair(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCorePair(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

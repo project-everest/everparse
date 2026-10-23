@@ -8,6 +8,7 @@ _build
 *.cmx
 *.cmxa
 *.krml
+Custard.json
 tests/unit/*
 **/out
 bin/everparse-qd.exe

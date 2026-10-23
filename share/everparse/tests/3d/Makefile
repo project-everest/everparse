@@ -50,11 +50,11 @@ verify_only_tests := $(filter $(no_extract_tests),$(positive_tests))
 
 VERIFY_DIR=out.pulse.verify
 
-# The exact set of files --cleanup is expected to leave behind. This is now
-# literally the Low* set from share/everparse/tests/3d/lowstar: as there, the runtime is a shipped
+# The exact set of files --cleanup is expected to leave behind. As in the
+# Low* tests in share/everparse/tests/3d/lowstar, the runtime is a shipped
 # library (lib/everparse/3d/krml/<backend>/EverParse.h), so --no_copy_everparse_h
 # leaves no EverParse.h behind -- and there is no EverParse.c and no internal/
-# directory either.
+# directory either (unlike the Low* ELF cross-module validator).
 positive_tests_nosuffix := $(basename $(positive_tests))
 modules_or_wrappers := $(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions := $(addsuffix StaticAssertions.c, TestFieldPtr Align)

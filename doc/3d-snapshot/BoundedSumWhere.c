@@ -2,8 +2,8 @@
 
 #include "BoundedSumWhere.h"
 
-uint8_t
-BoundedSumWhereValidateCoreBoundedSum(
+static uint8_t
+ValidateCoreBoundedSum(
   uint32_t Bound,
   uint8_t *Ctxt,
   void
@@ -247,8 +247,7 @@ BoundedSumWhereValidateBoundedSum(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t
-  status = BoundedSumWhereValidateCoreBoundedSum(Bound, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreBoundedSum(Bound, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
