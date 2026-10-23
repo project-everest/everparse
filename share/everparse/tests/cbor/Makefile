@@ -3,7 +3,7 @@
 # Compiles share/everparse/tests/cbor/cbor_tests.c three times — once against
 # the non-deterministic snapshot, once against the deterministic snapshot,
 # and once more against the non-deterministic snapshot but validating with
-# cbor_nondet_validate_bounded (map depth <= MAP_DEPTH_BOUND, map length <=
+# cbor_nondet_parse_bounded (map depth <= MAP_DEPTH_BOUND, map length <=
 # MAP_LENGTH_BOUND) — and runs each of the three resulting binaries.
 # Comparing the timings of the "nondet" and "bounded" runs measures the cost
 # of the bounded validator; the validation complexity tests at the end of the

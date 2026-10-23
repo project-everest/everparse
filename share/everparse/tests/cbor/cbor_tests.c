@@ -5,7 +5,7 @@
  *   - once with -DEVERCBOR_NONDET, against the non-deterministic snapshot;
  *   - once with -DEVERCBOR_NONDET -DEVERCBOR_NONDET_BOUNDED, against the
  *     non-deterministic snapshot, validating with
- *     cbor_nondet_validate_bounded(MAP_DEPTH_BOUND, MAP_LENGTH_BOUND, ...)
+ *     cbor_nondet_parse_bounded(MAP_DEPTH_BOUND, MAP_LENGTH_BOUND, ...)
  *     instead of the unbounded cbor_nondet_parse.
  *
  * Each test is repeated BENCH_ITERATIONS times and timed.
@@ -87,8 +87,12 @@ static size_t cbor_v_validate(uint8_t *bytes, size_t len) {
 #ifdef EVERCBOR_DET
   return cbor_det_validate(bytes, len);
 #elif defined(EVERCBOR_NONDET_BOUNDED)
-  return cbor_nondet_validate_bounded(MAP_DEPTH_BOUND, MAP_LENGTH_BOUND,
-                                      bytes, len);
+  uint8_t *p = bytes;
+  size_t l = len;
+  cbor_t dest;
+  if (!cbor_nondet_parse_bounded(MAP_DEPTH_BOUND, MAP_LENGTH_BOUND,
+                                 &p, &l, &dest)) return 0;
+  return len - l;
 #else
   uint8_t *p = bytes;
   size_t l = len;
