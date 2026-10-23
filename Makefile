@@ -89,7 +89,7 @@ endif
 3d: 3d-pulse-prelude
 
 # The binary package ships the runtime headers, CUIs and their matching F*
-# source/cache profiles for direct-C validator extraction.
+# shared source/cache library for direct-C validator extraction.
 ifeq (,$(NO_PULSE))
 3d: 3d-runtime
 endif

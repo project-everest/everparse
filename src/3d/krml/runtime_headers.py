@@ -178,9 +178,8 @@ def extract(args):
     names, _, _, external_types, include = profile_config(args.profile)
     profile = PROFILES[args.profile]
     build = args.build_dir.resolve()
-    source_dir = build / "src"
-    source_dir.mkdir(parents=True, exist_ok=True)
-    root = source_dir / "EverParse3d.CRuntime.Roots.fst"
+    build.mkdir(parents=True, exist_ok=True)
+    root = build / "EverParse3d.CRuntime.Roots.fst"
     stream = "extern" if profile["api"] == "lowstar" and profile["stream"] == "static" else profile["stream"]
     backend = ("Lowstar" if profile["api"] == "lowstar" else "") + stream.capitalize()
     verification_modules = ["Interpreter", "ProbeActions", "InputStream." + backend,
@@ -195,7 +194,7 @@ def extract(args):
     ))
     flags = shlex.split(args.fstar_options)
     flags += ["--cache_checked_modules", "--cache_dir", native_path(build),
-              "--odir", native_path(build), "--include", native_path(source_dir),
+              "--odir", native_path(build), "--include", native_path(build),
               "--include", native_path(RUNTIME),
               "--include", native_path(ROOT / "lib/everparse/lowparse")]
     for path in (

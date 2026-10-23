@@ -457,7 +457,7 @@ let produce_clang_format_rule
 
 let static_prelude_headers () : FStar.All.ML (list string) =
   match Options.get_input_stream_binding () with
-  | HashingOptions.InputStreamStatic _ ->
+  | HashingOptions.InputStreamStatic _ | HashingOptions.InputStreamExtern _ ->
     [mk_filename "EverParseStreamPrimitives" "h"]
   | _ -> []
 
