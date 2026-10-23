@@ -226,6 +226,27 @@ fn cbor_nondet_parse (_: unit) : cbor_nondet_parse_t #cbor_nondet_t cbor_nondet_
   }
 }
 
+fn cbor_nondet_parse_map_length_bounded (_: unit) : cbor_nondet_parse_map_length_bounded_t #cbor_nondet_t cbor_nondet_match =
+  (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
+  (strict_check: bool)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  CBOR.Pulse.API.Base.cbor_nondet_parse_map_length_bounded (cbor_nondet_validate_map_length_bounded ()) (cbor_nondet_parse_valid ()) map_length_bound map_key_bound strict_check input
+}
+
+fn cbor_nondet_parse_bounded (_: unit) : cbor_nondet_parse_bounded_t #cbor_nondet_t cbor_nondet_match =
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  CBOR.Pulse.API.Base.cbor_nondet_parse_bounded (cbor_nondet_validate_bounded ()) (cbor_nondet_parse_valid ()) map_depth_bound map_length_bound input
+}
+
 let cbor_nondet_match_with_size
   (size: nat)
   (p: perm)

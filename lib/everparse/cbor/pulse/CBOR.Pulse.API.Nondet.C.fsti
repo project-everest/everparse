@@ -25,17 +25,17 @@ val cbor_nondet_gather
 
 val cbor_nondet_parse (_: unit) : cbor_nondet_parse_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
 
-(* Validates that the input starts with a valid CBOR object in which every
-   map (at any nesting depth) has at most map_length_bound entries.
-   Returns the number of bytes consumed, or 0 on failure. *)
-val cbor_nondet_validate_map_length_bounded (_: unit) : cbor_nondet_validate_map_length_bounded_from_arrayptr_t
+(* Like cbor_nondet_parse, but additionally rejects any input containing
+   a map (at any nesting depth) with more than map_length_bound
+   entries. *)
+val cbor_nondet_parse_map_length_bounded (_: unit) : cbor_nondet_parse_map_length_bounded_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
 
-(* Validates that the input starts with a valid CBOR object whose map
+(* Like cbor_nondet_parse, but only accepts CBOR objects whose map
    nesting depth is at most map_depth_bound, and in which every map has
-   at most map_length_bound entries. Fails as soon as either bound is
-   exceeded, so that validation time is linear in the input size for
-   fixed bounds. Returns the number of bytes consumed, or 0 on failure. *)
-val cbor_nondet_validate_bounded (_: unit) : cbor_nondet_validate_bounded_from_arrayptr_t
+   at most map_length_bound entries; there is no map key depth bound,
+   as it is implied by the map depth bound. Validation fails as soon as
+   either bound is exceeded. *)
+val cbor_nondet_parse_bounded (_: unit) : cbor_nondet_parse_bounded_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
 
 val cbor_nondet_match_with_size
   (size: nat)

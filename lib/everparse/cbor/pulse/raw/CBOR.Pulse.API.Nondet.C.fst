@@ -19,9 +19,9 @@ let cbor_nondet_gather = Rust.cbor_nondet_gather
 
 let cbor_nondet_parse () = cbor_nondet_parse_from_arrayptr (Rust.cbor_nondet_validate ()) (Rust.cbor_nondet_parse_valid ())
 
-let cbor_nondet_validate_map_length_bounded () = cbor_nondet_validate_map_length_bounded_from_arrayptr (Rust.cbor_nondet_validate_map_length_bounded ())
+let cbor_nondet_parse_map_length_bounded () = cbor_nondet_parse_map_length_bounded_from_arrayptr (Rust.cbor_nondet_validate_map_length_bounded ()) (Rust.cbor_nondet_parse_valid ())
 
-let cbor_nondet_validate_bounded () = cbor_nondet_validate_bounded_from_arrayptr (Rust.cbor_nondet_validate_bounded ())
+let cbor_nondet_parse_bounded () = cbor_nondet_parse_bounded_from_arrayptr (Rust.cbor_nondet_validate_bounded ()) (Rust.cbor_nondet_parse_valid ())
 
 let cbor_nondet_match_with_size = Rust.cbor_nondet_match_with_size
 
