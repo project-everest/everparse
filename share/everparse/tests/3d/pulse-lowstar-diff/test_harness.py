@@ -1,4 +1,5 @@
 import os
+import io
 from pathlib import Path
 import subprocess
 import tempfile
@@ -7,12 +8,46 @@ from unittest.mock import patch
 
 from check_api import check_api
 import gen_seeds
+import gen_diff
 
 
 HERE = Path(__file__).resolve().parent
 
 
 class ApiTests(unittest.TestCase):
+    def test_wrapper_boolean_parameters_match_selected_api(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / "Example.h").write_text("uint8_t ExampleValidateT(void);")
+            (directory / "Example.c").write_text("")
+            wrapper = directory / "ExampleWrapper.h"
+            wrapper.write_text("BOOLEAN ExampleCheckT(bool value, bool *out);")
+            check_api("pulse", directory)
+            wrapper.write_text("BOOLEAN ExampleCheckT(BOOLEAN value, BOOLEAN *out);")
+            with self.assertRaisesRegex(ValueError, "Boolean parameters"):
+                check_api("pulse", directory)
+
+    def test_boolean_signatures_normalize_without_normalizing_integer_pointers(self):
+        lowstar = gen_diff.parse_params("BOOLEAN scalar, BOOLEAN *flag, uint8_t *byte")
+        pulse = gen_diff.parse_params("bool scalar, bool *flag, uint8_t *byte")
+        self.assertEqual(lowstar, pulse)
+        self.assertEqual(pulse, [("HX_API_BOOL", "scalar"),
+                                 ("HX_API_BOOL*", "flag"), ("uint8_t*", "byte")])
+        self.assertEqual(len(gen_diff.SIG_RE.findall(
+            "bool ExampleCheckT(bool value);\nBOOLEAN OtherCheckT(BOOLEAN value);")), 2)
+
+    def test_generated_boolean_cells_use_api_type_without_pointer_casts(self):
+        output = io.StringIO()
+        params = gen_diff.parse_params(
+            "bool scalar, bool *flag, uint8_t *base, uint32_t len")
+        gen_diff.gen([("Example", "ExampleCheckT", params)], output, str(HERE))
+        generated = output.getvalue()
+        self.assertIn("HX_API_BOOL o_flag = i_flag;", generated)
+        self.assertIn("ExampleCheckT(a_scalar, &o_flag, buf, len)", generated)
+        self.assertIn("(HX_API_BOOL)!!A[0]", generated)
+        self.assertNotIn("(bool *)", generated)
+        self.assertNotIn("(BOOLEAN *)", generated)
+
     def test_expected_apis_and_wrong_results(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)

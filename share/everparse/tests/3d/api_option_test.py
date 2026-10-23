@@ -43,7 +43,8 @@ def main():
                  ("--__micro_step", "copy_pulse_internal_h")]:
         run(*args, succeeds=False)
 
-    with tempfile.TemporaryDirectory(prefix="everparse-api-") as directory:
+    with tempfile.TemporaryDirectory(
+            prefix="out.api-", dir=pathlib.Path(__file__).resolve().parent) as directory:
         root = pathlib.Path(directory)
         source = root / "ApiChoice.3d"
         source.write_text(
@@ -149,25 +150,26 @@ def main():
             assert not (output / "EverParsePulse.h").exists()
 
         for api in ["pulse", "lowstar"]:
-            output = root / f"{api}-static-ownership"
-            output.mkdir()
-            options = ["--api", api, "--input_stream", "static", "--odir", output]
-            run(*options, "--makefile", "gmake", source)
-            makefile = (output / "EverParse.Makefile").read_text()
-            companion = output / "EverParseStreamPrimitives.h"
-            assert f"copy_everparse_h {companion.name}" in makefile
-            header_set = next(line for line in makefile.splitlines()
-                              if line.startswith("EVERPARSE_ALL_H_FILES"))
-            assert companion.name in header_set
-            run(*options, "--__micro_step", "copy_everparse_h", companion.name,
-                "--no_clang_format")
-            assert companion.is_file()
-            assert not (output / "EverParse.h").exists()
-            previous = companion.stat().st_mtime_ns
-            run(*options, "--__micro_step", "copy_everparse_h", "EverParse.h",
-                "--no_clang_format")
-            assert (output / "EverParse.h").is_file()
-            assert companion.stat().st_mtime_ns == previous
+            for backend in ["extern", "static"]:
+                output = root / f"{api}-{backend}-ownership"
+                output.mkdir()
+                options = ["--api", api, "--input_stream", backend, "--odir", output]
+                run(*options, "--makefile", "gmake", source)
+                makefile = (output / "EverParse.Makefile").read_text()
+                companion = output / "EverParseStreamPrimitives.h"
+                assert f"copy_everparse_h {companion.name}" in makefile
+                header_set = next(line for line in makefile.splitlines()
+                                  if line.startswith("EVERPARSE_ALL_H_FILES"))
+                assert companion.name in header_set
+                run(*options, "--__micro_step", "copy_everparse_h", companion.name,
+                    "--no_clang_format")
+                assert companion.is_file()
+                assert not (output / "EverParse.h").exists()
+                previous = companion.stat().st_mtime_ns
+                run(*options, "--__micro_step", "copy_everparse_h", "EverParse.h",
+                    "--no_clang_format")
+                assert (output / "EverParse.h").is_file()
+                assert companion.stat().st_mtime_ns == previous
 
         # Weak hashes require no extraction, and must reject another API
         # even when its grammar and tool versions are identical.

@@ -76,7 +76,7 @@ pulse-corpus-test: pulse-test pulse-test-negative pulse-cleanup-test pulse-inpla
 	pulse-comments-test pulse-renamelet-test \
 	elf-test \
 	pulse-module-name-c-test \
-	api-option-test native-c-test
+	api-option-test native-c-test boolean-abi-test
 
 pulse-subdirs-test: pulse-z3-testgen-test pulse-z3-testgen-probe-test \
 	pulse-subdirs
@@ -92,6 +92,11 @@ native-c-test:
 	$(PYTHON) native_c_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"
 
 .PHONY: native-c-test
+
+boolean-abi-test:
+	$(PYTHON) boolean_abi_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"
+
+.PHONY: boolean-abi-test
 
 # Subdirectories with their own build. Only those already ported to --api pulse are
 # listed; the rest were copied from share/everparse/tests/3d/lowstar and still drive the Low*
