@@ -3,6 +3,7 @@ module OS = OS
 
 type rule_type =
   | EverParse
+  | EverParseVerify
   | EverParseGroup of list string
   | CC
   | Nop (* to simulate multiple-target rules *)
@@ -26,6 +27,11 @@ let mk_rule_operand (mtype: HashingOptions.makefile_type) (op: string) : Tot str
   | HashingOptions.MakefileGMake -> OS.replace_backslashes op // GNU Make uses `/` even on Windows
   | _ -> op
 
+let native_runtime_unit api input_stream_binding : Tot string =
+  let home = "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" `OS.concat` "krml" in
+  let home = if api = HashingOptions.ApiPulse then home else home `OS.concat` "lowstar" in
+  home `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) `OS.concat` "EverParse.cui"
+
 let print_make_rule
   mtype
   everparse_h
@@ -37,7 +43,11 @@ let print_make_rule
 =
   let pulse = api = HashingOptions.ApiPulse in
   let deps = match r.ty with
-    | EverParse | EverParseGroup _ -> r.from @ [makefile]
+    | EverParse | EverParseVerify | EverParseGroup _ ->
+      r.from @ [makefile; "$(EVERPARSE_HOME)/bin/everparse-3d.exe"]
+      @ (match r.ty with
+         | EverParseVerify -> [native_runtime_unit api input_stream_binding]
+         | _ -> [])
     | _ -> r.from
   in
   let outputs = r.to :: (match r.ty with EverParseGroup others -> others | _ -> []) in
@@ -53,7 +63,7 @@ let print_make_rule
   | _ ->
     let cmd =
       match r.ty with
-      | EverParse | EverParseGroup _ -> Printf.sprintf "$(EVERPARSE_CMD) --api %s --odir %s" (HashingOptions.string_of_api api) output_dir
+      | EverParse | EverParseVerify | EverParseGroup _ -> Printf.sprintf "$(EVERPARSE_CMD) --api %s --odir %s" (HashingOptions.string_of_api api) output_dir
       | CC ->
         let iopt = match mtype with
           | HashingOptions.MakefileGMake -> "-I"
@@ -116,7 +126,7 @@ let produce_config_fst_file_rule ()
       args = "--__micro_step emit_config"
     } in
     let fst_checked_rule = {
-      ty = EverParse;
+      ty = EverParseVerify;
       from = [fst_file_name];
       to =  checked_file_name;
       args = Printf.sprintf "--__micro_step verify %s" fst_file_name;
@@ -158,8 +168,8 @@ let produce_external_api_fsti_checked_rule
   else
     let external_api_fsti = mk_filename modul "ExternalAPI.fsti" in
     [{
-      ty = EverParse;
-       from = external_api_fsti :: (maybe_external_types_fsti_checked g modul `List.Tot.append` List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
+      ty = EverParseVerify;
+      from = external_api_fsti :: (maybe_external_types_fsti_checked g modul `List.Tot.append` List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
        to = mk_filename modul "ExternalAPI.fsti.checked";
        args = Printf.sprintf "--__micro_step verify %s" external_api_fsti;
      }]
@@ -172,7 +182,7 @@ let produce_external_types_fsti_checked_rule
   else
     let external_types_fsti = mk_filename modul "ExternalTypes.fsti" in 
     [{
-       ty = EverParse;
+       ty = EverParseVerify;
        from = external_types_fsti :: List.Tot.map (fun m -> mk_filename m "ExternalTypes.fsti.checked") (Deps.dependencies g modul);
        to = mk_filename modul "ExternalTypes.fsti.checked";
        args = Printf.sprintf "--__micro_step verify %s" external_types_fsti;
@@ -199,7 +209,7 @@ let produce_fsti_checked_rule
 : Tot rule_t
 = let fsti = mk_filename modul "fsti" in
   {
-    ty = EverParse;
+    ty = EverParseVerify;
     from = fsti :: (external_deps g modul `List.Tot.append` List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
     to = mk_filename modul "fsti.checked";
     args = Printf.sprintf "--__micro_step verify %s" fsti;
@@ -211,7 +221,7 @@ let produce_fst_checked_rule
 : FStar.All.ML rule_t
 = let fst = mk_filename modul "fst" in
   {
-    ty = EverParse;
+    ty = EverParseVerify;
     from = add_cfg_file_dep "fst.checked" (fst :: mk_filename modul "fsti.checked" :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
     to = mk_filename modul "fst.checked";
     args = Printf.sprintf "--__micro_step verify %s" fst;
@@ -339,11 +349,7 @@ let produce_h_rules
   let all_files = Deps.collect_and_sort_dependencies_from_graph g [file] in
   let modul = Options.module_name file in
   let to = mk_filename modul "c" in
-  let runtime =
-    let home = "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" `OS.concat` "krml" in
-    let home = if Options.uses_pulse_api () then home else home `OS.concat` "lowstar" in
-    home `OS.concat` (HashingOptions.string_of_input_stream_binding (Options.get_input_stream_binding ())) `OS.concat` "EverParse.cui"
-  in
+  let runtime = native_runtime_unit (Options.get_api ()) (Options.get_input_stream_binding ()) in
   let copyright = mk_input_filename (Printf.sprintf "%s.3d.copyright.txt" (Options.module_name file)) in
   {
     ty = EverParseGroup

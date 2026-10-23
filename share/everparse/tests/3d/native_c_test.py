@@ -19,12 +19,13 @@ def main():
             f"FSTAR_EXE={fstar}", "KRML_EXE=everparse-no-karamel",
         ]
 
-        def build():
+        def build(extra=()):
             result = subprocess.run(
-                command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                command + list(extra), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
             )
             if result.returncode:
                 raise AssertionError(result.stdout)
+            return result.stdout
 
         def snapshot():
             return {
@@ -40,6 +41,21 @@ def main():
         before = snapshot()
         build()
         assert before == snapshot(), "A no-op build rewrote generated artifacts"
+
+        runtime = home / "lib/everparse/3d/krml/buffer/EverParse.cui"
+        log = build(["-W", str(runtime)])
+        for name in ("Constants", "Point", "TPoint", "Test"):
+            for suffix in ("fst", "fsti"):
+                source = output / f"{name}.{suffix}"
+                assert any(
+                    line.startswith("Running: ") and " --cache_checked_modules " in line
+                    and line.endswith(f" {source}")
+                    for line in log.splitlines()
+                ), \
+                    f"A runtime update did not reverify {name}.{suffix}:\n{log}"
+        before = snapshot()
+        build()
+        assert before == snapshot(), "A runtime rebuild did not settle to a no-op"
 
         for missing in ("Point.cui", "Test.h", "Test.c"):
             before = snapshot()
