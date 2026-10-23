@@ -2,8 +2,8 @@
 
 #include "BF.h"
 
-inline uint8_t
-BfValidateCoreBf2bis(
+static inline uint8_t
+ValidateCoreBf2bis(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -213,8 +213,8 @@ BfValidateCoreBf2bis(
   return resultAfterBitfield0;
 }
 
-inline uint8_t
-BfValidateCoreBf3(
+static inline uint8_t
+ValidateCoreBf3(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -427,8 +427,8 @@ BfValidateCoreBf3(
   return resultAfterBitfield0;
 }
 
-uint8_t
-BfValidateCoreDummy(
+static uint8_t
+ValidateCoreDummy(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -448,7 +448,7 @@ BfValidateCoreDummy(
   /* Validating field emp2 */
   size_t p = *SlPos;
   uint64_t fieldStartDummy = (uint64_t)p;
-  uint8_t resultAfterDummy = BfValidateCoreBf2bis(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+  uint8_t resultAfterDummy = ValidateCoreBf2bis(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
   uint8_t resultAfteremp2;
   size_t p1;
   uint64_t fieldStartDummy1;
@@ -474,7 +474,7 @@ BfValidateCoreDummy(
     /* Validating field emp3 */
     p1 = *SlPos;
     fieldStartDummy1 = (uint64_t)p1;
-    resultAfterDummy1 = BfValidateCoreBf3(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
+    resultAfterDummy1 = ValidateCoreBf3(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
     if (resultAfterDummy1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAfterDummy1;
@@ -513,7 +513,7 @@ BfValidateDummy(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = BfValidateCoreDummy(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreDummy(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

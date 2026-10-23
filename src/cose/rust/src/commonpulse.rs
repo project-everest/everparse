@@ -32,7 +32,7 @@ pub fn create_sig(
     let sig_struct: crate::coseformat::sig_structure =
         crate::coseformat::sig_structure
         {
-            context: crate::coseformat::evercddl_int_ugly_tags::Inr,
+            context: crate::coseformat::either__uint64_t_uint64_t_tags::Inr,
             body_protected: phdr,
             _x0:
             crate::coseformat::either__·COSE_Format_empty_or_serialized_map····Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t··_·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·::Inr
@@ -74,11 +74,16 @@ pub fn mk_phdrs <'a>(
         crate::coseformat::header_map
         {
             intkey1:
-            crate::coseformat::option__COSE_Format_evercddl_label_ugly::Some
-            { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
+            crate::coseformat::option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t::Some
+            {
+                v:
+                crate::coseformat::either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t::Inl
+                { v: alg· }
+            },
             intkey2:
             crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
-            intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
+            intkey3:
+            crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int::None,
             intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
             _x0:
             crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
@@ -120,11 +125,16 @@ pub fn sign1 <'a>(
             crate::coseformat::header_map
             {
                 intkey1:
-                crate::coseformat::option__COSE_Format_evercddl_label_ugly::Some
-                { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
+                crate::coseformat::option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t::Some
+                {
+                    v:
+                    crate::coseformat::either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t::Inl
+                    { v: alg· }
+                },
                 intkey2:
                 crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
-                intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
+                intkey3:
+                crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int::None,
                 intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
                 _x0:
                 crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
@@ -177,10 +187,12 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
     let uhdr: crate::coseformat::header_map =
         crate::coseformat::header_map
         {
-            intkey1: crate::coseformat::option__COSE_Format_evercddl_label_ugly::None,
+            intkey1:
+            crate::coseformat::option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t::None,
             intkey2:
             crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
-            intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
+            intkey3:
+            crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int::None,
             intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
             _x0:
             crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
@@ -212,11 +224,16 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
             crate::coseformat::header_map
             {
                 intkey1:
-                crate::coseformat::option__COSE_Format_evercddl_label_ugly::Some
-                { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
+                crate::coseformat::option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t::Some
+                {
+                    v:
+                    crate::coseformat::either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice·uint8_t::Inl
+                    { v: alg· }
+                },
                 intkey2:
                 crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label::None,
-                intkey3: crate::coseformat::option__COSE_Format_aux_env29_type_1_ugly::None,
+                intkey3:
+                crate::coseformat::option__FStar_Pervasives_either__Pulse_Lib_Slice_slice·uint8_t_COSE_Format_evercddl_int::None,
                 intkey4: crate::coseformat::option__Pulse_Lib_Slice_slice·uint8_t::None,
                 _x0:
                 crate::coseformat::either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_FStar_Pervasives_either__·Pulse_Lib_Slice_slice·uint8_t···FStar_Pervasives_Native_option__···_·FStar_Pervasives_Native_option__·····FStar_Pervasives_Native_option__···::Inr
@@ -273,7 +290,7 @@ pub fn verify_sig(
     let sig_struct: crate::coseformat::sig_structure =
         crate::coseformat::sig_structure
         {
-            context: crate::coseformat::evercddl_int_ugly_tags::Inr,
+            context: crate::coseformat::either__uint64_t_uint64_t_tags::Inr,
             body_protected: phdr,
             _x0:
             crate::coseformat::either__·COSE_Format_empty_or_serialized_map····Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t··_·Pulse_Lib_Slice_slice·uint8_t···Pulse_Lib_Slice_slice·uint8_t·::Inr

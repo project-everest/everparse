@@ -147,9 +147,10 @@ CUSTARD_OUTPUT_PREFIX := $(if $(OUTPUT_DIRECTORY),$(OUTPUT_DIRECTORY)/,)
 
 CUSTARD = $(RUNLIM) $(FSTAR_EXE) $(SIL) $(FSTAR_OPTIONS) $(CUSTARD_FLAGS)
 
-# The karamel backends write a single .krml holding one karamel file per F*
-# module; the others write into $(OUTPUT_DIRECTORY) and are tracked by a stamp.
-CUSTARD_KRML := $(CUSTARD_OUTPUT_PREFIX)Custard.krml
+# Custard writes JSON; KaRaMeL selects its JSON reader by the .json extension
+# (.krml selects the legacy OCaml Marshal reader). The file holds one karamel
+# file per F* module; the other backends are tracked by a stamp.
+CUSTARD_KRML := $(CUSTARD_OUTPUT_PREFIX)Custard.json
 CUSTARD_STAMP := $(CUSTARD_OUTPUT_PREFIX).custard.stamp
 
 # The makefiles are a prerequisite because the roots, the backend and the
@@ -192,9 +193,9 @@ endif
 
 clean-krml:
 ifneq (,$(OUTPUT_DIRECTORY))
-	rm -f $(OUTPUT_DIRECTORY)/*.krml
+	rm -f $(OUTPUT_DIRECTORY)/*.krml $(OUTPUT_DIRECTORY)/Custard.json
 endif
-	rm -f *.krml
+	rm -f *.krml Custard.json
 
 .PHONY: clean-krml
 

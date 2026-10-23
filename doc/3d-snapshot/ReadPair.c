@@ -2,8 +2,8 @@
 
 #include "ReadPair.h"
 
-uint8_t
-ReadPairValidateCorePair(
+static uint8_t
+ValidateCorePair(
   uint32_t *X,
   uint32_t *Y,
   uint8_t *Ctxt,
@@ -212,7 +212,7 @@ ReadPairValidatePair(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ReadPairValidateCorePair(X, Y, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCorePair(X, Y, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

@@ -2,8 +2,8 @@
 
 #include "ColoredPoint.h"
 
-uint8_t
-ColoredPointValidateCoreColoredPoint1(
+static uint8_t
+ValidateCoreColoredPoint1(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -90,7 +90,7 @@ ColoredPointValidateColoredPoint1(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ColoredPointValidateCoreColoredPoint1(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreColoredPoint1(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -99,8 +99,8 @@ ColoredPointValidateColoredPoint1(
     + position;
 }
 
-uint8_t
-ColoredPointValidateCoreColoredPoint2(
+static uint8_t
+ValidateCoreColoredPoint2(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -187,7 +187,7 @@ ColoredPointValidateColoredPoint2(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = ColoredPointValidateCoreColoredPoint2(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreColoredPoint2(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return

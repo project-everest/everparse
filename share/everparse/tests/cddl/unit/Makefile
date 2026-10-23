@@ -74,7 +74,7 @@ KRML_OPTS += -warn-error @4@6
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
-$(OUTPUT_DIRECTORY)/%.krml: $(OUTPUT_DIRECTORY)/%.fst.checked $(ALL_CHECKED_FILES)
+$(OUTPUT_DIRECTORY)/%.json: $(OUTPUT_DIRECTORY)/%.fst.checked $(ALL_CHECKED_FILES) $(CUSTARD_MAKEFILES)
 	$(call msg, "CUSTARD", $*)
 	$(Q)$(CUSTARD) --custard_entry_module $* $(OUTPUT_DIRECTORY)/$*.fst -o $@
 
@@ -85,7 +85,7 @@ $(OUTPUT_DIRECTORY)/%.krml: $(OUTPUT_DIRECTORY)/%.fst.checked $(ALL_CHECKED_FILE
 # written once per .cddl into the shared output directory, each run keeping
 # only the subset its own module happened to reach.  Drivers that call the
 # CBOR API directly include the library's own CBORDet.h instead.
-$(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml
+$(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.json
 	$(KRML) -fnoshort-enums \
 	 -bundle '$*=*' \
 	 -skip-makefiles \

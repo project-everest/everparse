@@ -1958,17 +1958,22 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
      Pulse vmatch tag-helpers (typed at [enum_key <n>_enum]) can reference it. *)
         let ienum = i in
 	w ienum "[@LT.Norm] inline_for_extraction %slet %s_enum : LP.enum %s %s =\n" "noextract " n n (compile_type repr_t);
-	w ienum "  [@inline_let] let e = [\n";
+	(* F* keeps let-bound variables opaque in verification conditions, so
+	   [assert_norm] cannot unfold [e]: state the facts on the literal. *)
+	let lit = Buffer.create 256 in
+	Buffer.add_string lit "[\n";
 	List.iter (function
 	  | EnumFieldSimple (x, i) ->
-		  w ienum "    %s, %d%s;\n" (String.capitalize_ascii x) i int_z
+		  Buffer.add_string lit (sprintf "    %s, %d%s;\n" (String.capitalize_ascii x) i int_z)
 		| _ -> ()) fl;
-	w ienum "  ] in\n";
+	Buffer.add_string lit "  ]";
+	let lit = Buffer.contents lit in
+	w ienum "  [@inline_let] let e = %s in\n" lit;
 	w ienum "  [@inline_let] let _ =\n";
-	w ienum "    assert_norm (L.noRepeats (LP.list_map fst e))\n";
+	w ienum "    assert_norm (L.noRepeats (LP.list_map fst %s))\n" lit;
         w ienum "  in\n";
         w ienum "  [@inline_let] let _ = \n";
-	w ienum "    assert_norm (L.noRepeats (LP.list_map snd e))\n";
+	w ienum "    assert_norm (L.noRepeats (LP.list_map snd %s))\n" lit;
 	w ienum "  in e\n\n";
 
   (* Used in select() *)

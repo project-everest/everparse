@@ -111,7 +111,7 @@ void bench_serialize_sig_struct(EVP_PKEY *pkey) {
         .context = 1,
         .body_protected = c.protected0,
         ._x0 = {
-            .tag = COSE_Format_Inr,
+            .tag = FStar_Pervasives_Inr,
             .case_Inr = {
                 ._1 = aad,
                 ._2 = payload,
@@ -139,7 +139,7 @@ void bench_ed25519_sign(EVP_PKEY *pkey) {
         .context = 1,
         .body_protected = {},
         ._x0 = {
-            .tag = COSE_Format_Inr,
+            .tag = FStar_Pervasives_Inr,
             .case_Inr = {
                 ._1 = { .len = 0, .elt = (uint8_t[]) {} },
                 ._2 = payload,
@@ -169,7 +169,7 @@ void bench_ed25519_verify(EVP_PKEY *pkey) {
         .context = 1,
         .body_protected = {},
         ._x0 = {
-            .tag = COSE_Format_Inr,
+            .tag = FStar_Pervasives_Inr,
             .case_Inr = {
                 ._1 = { .len = 0, .elt = (uint8_t[]) {} },
                 ._2 = payload,

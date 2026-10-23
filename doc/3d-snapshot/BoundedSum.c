@@ -2,8 +2,8 @@
 
 #include "BoundedSum.h"
 
-uint8_t
-BoundedSumValidateCoreBoundedSum(
+static uint8_t
+ValidateCoreBoundedSum(
   uint32_t Bound,
   uint8_t *Ctxt,
   void
@@ -206,7 +206,7 @@ BoundedSumValidateBoundedSum(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = BoundedSumValidateCoreBoundedSum(Bound, Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreBoundedSum(Bound, Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
@@ -215,8 +215,8 @@ BoundedSumValidateBoundedSum(
     + position;
 }
 
-uint8_t
-BoundedSumValidateCoreMySum(
+static uint8_t
+ValidateCoreMySum(
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -310,13 +310,7 @@ BoundedSumValidateCoreMySum(
     /* Validating field sum */
     p2 = *SlPos;
     fieldStartmySum = (uint64_t)p2;
-    resultAftermySum =
-      BoundedSumValidateCoreBoundedSum(bound,
-        Ctxt,
-        ErrorHandlerFn,
-        SlBase,
-        SlLen,
-        SlPos);
+    resultAftermySum = ValidateCoreBoundedSum(bound, Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
     if (resultAftermySum == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
     {
       return resultAftermySum;
@@ -355,7 +349,7 @@ BoundedSumValidateMySum(
   size_t len = (size_t)Length;
   size_t initial = (size_t)Start;
   size_t cursor = initial;
-  uint8_t status = BoundedSumValidateCoreMySum(Ctxt, Handler, Input, len, &cursor);
+  uint8_t status = ValidateCoreMySum(Ctxt, Handler, Input, len, &cursor);
   size_t final = cursor;
   uint64_t position = (uint64_t)final;
   return
