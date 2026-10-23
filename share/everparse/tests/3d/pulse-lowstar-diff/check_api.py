@@ -11,15 +11,12 @@ VALIDATOR = re.compile(r"\b(uint(?:8|64)_t)\s+(\w*Validate\w*)\s*\(")
 WRAPPER = re.compile(r"\b(BOOLEAN|bool)\s+(\w*Check\w*)\s*\(([^;]*)\);")
 PULSE_INTERNAL = re.compile(r"EVERPARSEPULSEINTERNAL_|EverParsePulseInternal")
 
-# Under --api lowstar, 3d emits the Pulse-native worker as
-# `validate_<reserved_prefix>core_<root>` (InterpreterTarget.pulse_worker_name),
-# which KaRaMeL renders as `<Module>ValidateCore<Root>`, and wraps it in a
-# public adapter returning the legacy uint64_t result. The worker is tagged
-# KrmlPrivate, so the old extraction hid it in internal/ -- which this script
-# deliberately does not glob. Custard ignores KrmlPrivate (see the comment in
-# ../lowstar/Makefile), so the worker now sits in the public header, where its
-# uint8_t result must not be mistaken for a wrong-API public validator.
+# Older extraction exposed the Pulse worker next to the public uint64_t
+# adapter. Native Custard keeps it private and preserves its F* name.
+# Runtime constants may normalize to literals, so their names alone cannot
+# distinguish a native Lowstar implementation from a legacy one.
 LOWSTAR_WORKER = re.compile(r"Validate_*Core")
+LOWSTAR_NATIVE_WORKER = re.compile(r"\buint8_t\s+\w+_validate_+core_+\w+\s*\(")
 
 
 def check_api(api, directory):
@@ -55,7 +52,8 @@ def check_api(api, directory):
             source += internal.read_text()
         if "EverParsePulseInternal.h" in source or "EverParsePulseInternal.h" in header.read_text():
             raise ValueError(f"{header}: obsolete separate Pulse support header; regenerate this output")
-        if bool(PULSE_INTERNAL.search(source)) != (api == "lowstar"):
+        lowstar = bool(PULSE_INTERNAL.search(source) or LOWSTAR_NATIVE_WORKER.search(source))
+        if lowstar != (api == "lowstar"):
             raise ValueError(f"{header}: not generated with --api {api}; regenerate this output")
 
 

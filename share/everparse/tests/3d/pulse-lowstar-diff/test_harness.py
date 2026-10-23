@@ -70,13 +70,23 @@ class ApiTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not generated with --api lowstar"):
                 check_api("lowstar", directory)
 
+    def test_native_lowstar_worker_identifies_inlined_runtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            header = directory / "Example.h"
+            header.write_text("uint64_t ExampleValidateT(void);")
+            (directory / "Example.c").write_text(
+                "static uint8_t Example_validate____core__T(void) { return 0; }\n"
+                "uint64_t ExampleValidateT(void) { "
+                "return Example_validate____core__T(); }\n")
+            check_api("lowstar", directory)
+            header.write_text("uint8_t ExampleValidateT(void);")
+            with self.assertRaisesRegex(ValueError, "not generated with --api pulse"):
+                check_api("pulse", directory)
+
     def test_lowstar_pulse_native_worker_in_public_header_is_accepted(self):
-        # Custard ignores KrmlPrivate, so the --api lowstar worker
-        # (`<Module>ValidateCore<Root>`, Pulse-native hence uint8_t) is emitted
-        # into the public header next to the uint64_t adapter instead of into
-        # internal/. Only the adapter is the public API, so the worker must not
-        # count as a wrong-API validator -- but a genuinely wrong public
-        # validator still must.
+        # Older output exposes the uint8_t worker next to the uint64_t adapter.
+        # Ignore that worker, but still reject a wrong public validator.
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
             header = directory / "Example.h"
