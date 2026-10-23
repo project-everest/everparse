@@ -30,7 +30,7 @@ let everparse_h_home input_stream_binding =
 
 let everparse_static_headers input_stream_binding out_dir =
   match input_stream_binding with
-  | HashingOptions.InputStreamStatic _ ->
+  | HashingOptions.InputStreamStatic _ | HashingOptions.InputStreamExtern _ ->
     [filename_concat out_dir "EverParseStreamPrimitives.h"]
   | _ -> []
 

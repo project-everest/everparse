@@ -13,6 +13,7 @@ module SZ = FStar.SizeT
    which cannot depend on the interpreter, can still be unfolded by it. *)
 let specialize_backend = ()
 
+[@@FStar.Attributes.rename_let "EVERPARSE_APP_CTXT"; FStar.Attributes.custard_no_unfold]
 let app_ctxt = AppCtxt.app_ctxt
 
 (* The error-handler callback type.

@@ -200,8 +200,13 @@ class ExtractionProfileTests(unittest.TestCase):
             self.assertNotIn("EverParseStreamOf", declarations["functions"])
             for signature in declarations["functions"].values():
                 self.assertEqual(signature["linkage"], "static inline")
+        for profile in ("extern", "lowstar/extern"):
+            declarations = inventory(companion(profile))
+            self.assertTrue(declarations["functions"])
+            self.assertTrue(all(s["linkage"] == "extern"
+                                for s in declarations["functions"].values()))
         with self.assertRaises(ValueError):
-            companion("extern")
+            companion("buffer")
 
     def test_profile_options_cannot_import_other_runtime_metadata(self):
         with tempfile.TemporaryDirectory() as directory:

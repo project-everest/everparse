@@ -12,7 +12,7 @@ CUSTARD_HEADER_JOBS ?= 4
 PROFILES := buffer extern static lowstar/buffer lowstar/extern lowstar/static
 HEADER_FILES := $(addsuffix /EverParse.h,$(addprefix $(KRML_DIR)/,$(PROFILES)))
 CUI_FILES := $(HEADER_FILES:.h=.cui)
-COMPANION_FILES := $(addsuffix /EverParseStreamPrimitives.h,$(addprefix $(KRML_DIR)/,static lowstar/static))
+COMPANION_FILES := $(addsuffix /EverParseStreamPrimitives.h,$(addprefix $(KRML_DIR)/,extern static lowstar/extern lowstar/static))
 RUNTIME_HEADER_SETTINGS := $(KRML_DIR)/.runtime-header-settings
 
 $(RUNTIME_HEADER_SETTINGS): FORCE

@@ -31,8 +31,12 @@ module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 
+[@@FStar.Attributes.custard_extern "EVERPARSE_COPY_BUFFER_T"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val copy_buffer_t : Type0
 
+[@@FStar.Attributes.rename_let "EverParseStreamOf"; FStar.Attributes.custard_declare_in_c_header]
 assume val stream_of : copy_buffer_t -> AP.ptr U8.t
+[@@FStar.Attributes.rename_let "EverParseStreamLen"; FStar.Attributes.custard_declare_in_c_header]
 assume val stream_len : copy_buffer_t -> SZ.t
+[@@FStar.Attributes.rename_let "EverParseStreamPos"; FStar.Attributes.custard_declare_in_c_header]
 assume val stream_pos : copy_buffer_t -> R.ref SZ.t

@@ -7,8 +7,10 @@ module R = Pulse.Lib.Reference
 module U64 = FStar.UInt64
 module B = EverParse3d.CAbi.Boolean
 
+[@@FStar.Attributes.rename_let "EVERPARSE_INPUT_BUFFER"; FStar.Attributes.custard_no_unfold]
 let input_buffer = Pulse.Lib.ArrayPtr.ptr FStar.UInt8.t
 
+[@@FStar.Attributes.rename_let "EverParseDefaultErrorHandler"; FStar.Attributes.CInline]
 fn default_error_handler
   (typename_s fieldname reason: string)
   (error_code: U64.t) (context: R.ref P.error_frame)

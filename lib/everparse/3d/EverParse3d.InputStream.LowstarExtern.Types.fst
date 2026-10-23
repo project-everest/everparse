@@ -11,13 +11,16 @@ module B = EverParse3d.CAbi.Boolean
 
 // Abstract client ABI types and ghost model, as in the old extern Base.fsti.
 // The position indexing storage is ghost, NOT a client position-query API.
+[@@FStar.Attributes.custard_extern "EVERPARSE_EXTRA_T"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val extra_t : Type0
+[@@FStar.Attributes.custard_extern "EVERPARSE_INPUT_STREAM_BASE"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val input_stream_base : Type0
 assume val get_all (base: input_stream_base)
   : GTot (s: Seq.seq U8.t { Seq.length s < E.position_limit })
 assume val storage (base: input_stream_base) (position: nat) : slprop
 
 // Preserve this named record during extraction as EVERPARSE_INPUT_BUFFER.
+[@@FStar.Attributes.rename_let "EVERPARSE_INPUT_BUFFER"]
 noeq type input_buffer = {
   base: input_stream_base;
   has_length: B.t;
@@ -65,10 +68,12 @@ let pts_to_inst : I.input_stream_pts_to base_t len_t pos_t = {
   is_prefix_of = stream_is_prefix_of;
 }
 
+[@@FStar.Attributes.rename_let "EverParseMakeInputBuffer"; FStar.Attributes.CInline]
 inline_for_extraction
 let make_input_buffer (base: input_stream_base) : base_t =
   { base = base; has_length = B.of_bool false; length = 0UL }
 
+[@@FStar.Attributes.rename_let "EverParseMakeInputBufferWithLength"; FStar.Attributes.CInline]
 inline_for_extraction
 let make_input_buffer_with_length (base: input_stream_base) (length: U64.t)
   : base_t = { base = base; has_length = B.of_bool true; length = length }

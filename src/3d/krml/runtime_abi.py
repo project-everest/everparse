@@ -251,7 +251,7 @@ def check_headers(directory):
     for profile in contract["profiles"]:
         path = directory / profile["directory"] / "EverParse.h"
         text = path.read_text()
-        if profile["static_hooks"]:
+        if profile["stream"] != "buffer":
             companion = path.with_name("EverParseStreamPrimitives.h")
             # KaRaMeL's reference header has the prototypes in the main file.
             if '"EverParseStreamPrimitives.h"' in text:

@@ -97,6 +97,7 @@ ensures stream_pts_to base len pos contents v ** pure (v `seq_is_suffix_of` cont
 
    It stays truthful under truncation: truncating withholds bytes from the
    view but consumes nothing, so [|contents| - |v|] is unchanged. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamGetPosition"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_get_position :
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
@@ -177,6 +178,7 @@ ensures stream_pts_to base len pos contents v **
   SZ.uint64_to_sizet (U64.sub (U64.sub len 1uL) abs)
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamHas"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_has :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -233,6 +235,7 @@ ensures stream_pts_to base len pos contents v **
      The out-of-range case is left underspecified instead -- the validators
      never reach it, so an existing client stays correct whatever it answers
      there, as long as it does not read out of bounds to decide. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamHasAt"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_has_at :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -297,6 +300,7 @@ ensures stream_pts_to base len pos contents v **
    used to parse a leaf integer, so `n` is at most 8 and the copy is free; in
    exchange the C signature carries no aliasing obligation and the separation
    logic postcondition stays a plain points-to. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamReadBytes"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_read_bytes :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -401,6 +405,7 @@ fn stream_read
   res
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamSkip"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_skip :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -442,6 +447,7 @@ ensures exists* v' .
   fold (stream_pts_to base len pos contents v');
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamEmpty"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_empty :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -691,6 +697,7 @@ module R = Pulse.Lib.Reference
 module AB = EverParse3d.Actions.Base
 open EverParse3d.State
 
+[@@FStar.Attributes.rename_let "EVERPARSE____PUINT8"; FStar.Attributes.custard_no_unfold]
 noextract
 inline_for_extraction
 let ___PUINT8 = AP.ptr U8.t
@@ -698,6 +705,7 @@ let ___PUINT8 = AP.ptr U8.t
 (* As for the stream primitives, the origin and the truncation bound are absent
    from the assumed C prototype: EverParseStreamPeep is unchanged. The client
    context is threaded, as it is to every other assumed primitive. *)
+[@@FStar.Attributes.custard_extern "EverParseFieldPtrAfterImpl"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val field_ptr_after_impl
   (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)

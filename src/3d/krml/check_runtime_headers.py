@@ -72,7 +72,7 @@ def check(args):
         output.mkdir(parents=True, exist_ok=True)
         header_dir = args.headers / directory
         shutil.copyfile(header_dir / "EverParse.h", output / "EverParse.h")
-        if profile["static_hooks"] and (header_dir / "EverParseStreamPrimitives.h").exists():
+        if (header_dir / "EverParseStreamPrimitives.h").exists():
             shutil.copyfile(header_dir / "EverParseStreamPrimitives.h",
                             output / "EverParseStreamPrimitives.h")
         windows = os.name == "nt" or os.environ.get("OS") == "Windows_NT"

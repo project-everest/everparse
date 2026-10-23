@@ -10,6 +10,7 @@ module EverParse3d.Actions.ErrorHandler.Extern
 module I = EverParse3d.InputStream.Base
 module E = EverParse3d.InputStream.Extern.Types
 
+[@@FStar.Attributes.rename_let "EVERPARSE_ERROR_HANDLER"; FStar.Attributes.custard_no_unfold]
 let error_handler = I.error_handler_arrow E.base_t E.len_t E.pos_t
 
 (* [noextract_to "krml"] + [unfold]: this is the identity, and it must leave no

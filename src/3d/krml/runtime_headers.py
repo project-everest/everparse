@@ -29,9 +29,11 @@ def c_name(name):
 
 
 def companion(profile):
-    hooks = PROFILES[profile]["static_hooks"]
-    if not hooks:
+    selected = PROFILES[profile]
+    if selected["stream"] == "buffer":
         raise ValueError("This profile has no static client hooks: " + profile)
+    hooks = PROFILES[("lowstar/" if selected["api"] == "lowstar" else "") + "static"]["static_hooks"]
+    linkage = "static inline" if selected["stream"] == "static" else "extern"
     abi = json.loads((HERE / "runtime-abi.json").read_text())["profiles"][profile]
     lines = [
         "/* Generated from the runtime ABI contract. Client supplies the bodies. */",
@@ -53,7 +55,7 @@ def companion(profile):
         if any("EVERPARSE_INPUT_BUFFER" in t or "EVERPARSE_ERROR_FRAME" in t
                for t in types):
             raise ValueError("Early static hook depends on a generated record: " + name)
-        lines.append("static inline " + signature["return"] + " " + name
+        lines.append(linkage + " " + signature["return"] + " " + name
                      + "(" + ", ".join(signature["parameters"]) + ");")
     lines += ["", "#ifdef __cplusplus", "}", "#endif", "", "#endif", ""]
     return "\n".join(lines)
@@ -179,10 +181,10 @@ def profile_config(profile):
                      "error_probe_failed")
     }
     error_names["error_reason_of_result"] = error_prefix + "ErrorReasonOfResult"
-    names["ErrorCode"] = error_names
-    names["CAbi.Public"] = {
+    names["CAbi.ErrorCode" + ("Lowstar" if lowstar else "Pulse")] = error_names | {
         "error_code_is_range_okay": error_prefix + "IsRangeOkay",
     }
+    names["CAbi.Public"] = {}
     foreign = {}
     external_types = {}
     include = "EverParseEndianness.h" if lowstar else "EverParsePulseEndianness.h"
@@ -270,12 +272,6 @@ def extract(args):
             continue
         module = source.stem.removeprefix(PREFIX)
         text = source.read_text()
-        if module in names:
-            # Raw is an interface-only module; the other annotated modules
-            # have implementations and must not duplicate interface attributes.
-            if source.suffix == ".fst" or module == "InputStream.LowstarExtern.Raw":
-                text = annotate(text, names[module], preserved.get(module, ()),
-                                foreign.get(module, ()), profile["static_hooks"])
         target = source_dir / source.name
         if not target.exists() or target.read_text() != text:
             target.write_text(text)
