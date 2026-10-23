@@ -6,10 +6,13 @@
 # check verifies/extracts the O(1) >2^32 counter fixture, reuses the original
 # extern/static clients for Read/Peep assertions, and exercises scoped probe
 # views through extern, native Pulse buffer, and Low* ABI buffer instances.
+# Extraction uses Custard direct C, the canonical runtime sources/shared
+# .checked cache, and the selected runtime EverParse.cui (no KaRaMeL).
+# Generated units must leave copied runtime headers unchanged.
 # The native specialization batch also rejects new shared callback headers.
 # check32 requires real -m32 support; it never silently substitutes a size model.
 # native-probe runs the existing native Z3-generated probe harness in both modes.
-# Standalone artifacts/logs stay in _build/; native-probe uses upstream outputs.
+# Each standalone case refreshes its _build/ directory; native-probe uses upstream outputs.
 PYTHON ?= python3
 JOBS ?= 16
 ROOT := $(realpath ../../../../..)

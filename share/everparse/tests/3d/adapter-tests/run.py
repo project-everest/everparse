@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import re
 from pathlib import Path
 import shlex
 import shutil
@@ -15,7 +14,7 @@ ROOT = HERE.parents[4]
 TESTS = ROOT / "share/everparse/tests/3d/lowstar"
 BUILD = HERE / "_build"
 FSTAR = os.environ.get("FSTAR_EXE", str(ROOT / "opt/FStar/out/bin/fstar.exe"))
-KRML = os.environ.get("KRML_EXE", str(ROOT / "opt/karamel/out/bin/krml"))
+RUNTIME = ROOT / "lib/everparse/3d"
 CC = shlex.split(os.environ.get("CC", "cc"))
 SANITIZE = os.environ.get("SANITIZE", "0") == "1"
 
@@ -36,27 +35,44 @@ def run(args, out, echo=False):
 
 def output(name):
     out = BUILD / name
+    if out.exists():
+        shutil.rmtree(out)
     out.mkdir(parents=True, exist_ok=True)
     return out
 
 
-def check_no_runtime_header(log):
-    headers = re.findall(r"KaRaMeL: wrote out \.h files for (.*)", log)
-    if not headers or any("EverParse" in line.split(", ") for line in headers):
-        raise AssertionError("lowstar extraction must not emit EverParse.h")
-    if "EverParsePulseInternal.h" in log:
-        raise AssertionError("lowstar extraction emitted an obsolete support header")
+def runtime_profile(api, stream):
+    return RUNTIME / "krml" / ("lowstar" if api == "lowstar" else "") / stream
+
+
+def check_artifacts(out, modules, api, stream):
+    for module in modules:
+        for suffix in (".c", ".h", ".cui"):
+            artifact = out / (module + suffix)
+            if not artifact.is_file() or artifact.stat().st_size == 0:
+                raise AssertionError(f"missing direct-C artifact: {artifact}")
+    profile = runtime_profile(api, stream)
+    for name in ("EverParse.h", "EverParseStreamPrimitives.h"):
+        original = profile / name
+        if original.is_file() and (out / name).read_bytes() != original.read_bytes():
+            raise AssertionError(f"{out / name}: runtime header must be copied unchanged")
+    for artifact in out.rglob("*"):
+        if artifact.name in ("EverParse.c", "EverParse.cui",
+                             "EverParsePulseInternal.h", "EverParsePrivate.h",
+                             "EverParsePrivate.c", "SHOULDNOTBETHERE.h",
+                             "SHOULDNOTBETHERE.c"):
+            raise AssertionError(f"client extraction emitted a runtime-owned artifact: {artifact}")
 
 
 def generate(name, grammar, api="lowstar", stream="buffer", extra_grammars=()):
     out = output(name)
     args = [ROOT / "bin/everparse-3d.exe", "--api", api, "--input_stream", stream,
-            "--fstar", FSTAR, "--karamel", KRML, "--batch", "--odir", out]
+            "--fstar", FSTAR, "--batch", "--odir", out]
     if stream != "buffer":
         args += ["--input_stream_include", "EverParseStream.h"]
-    log = run(args + [grammar] + list(extra_grammars), out)
-    if api == "lowstar":
-        check_no_runtime_header(log)
+    run(args + [grammar] + list(extra_grammars), out)
+    check_artifacts(out, [Path(path).stem for path in (grammar, *extra_grammars)],
+                    api, stream)
     return out
 
 
@@ -78,57 +94,34 @@ def large(bits32=False):
     out = output("large")
     flags = shlex.split(os.environ.get("EVERPARSE_FSTAR_OPTIONS", ""))
     flags += ["--include", ROOT / "lib/everparse/lowparse",
-             "--include", ROOT / "lib/everparse/3d", "--include", HERE,
+             "--include", RUNTIME, "--include", RUNTIME / ".checked",
+             "--include", HERE, "--include", out,
              "--cache_checked_modules", "--cache_dir", out,
-             "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar",
+             "--already_cached", "PulseCore,Pulse,Prims,FStar,LowStar,LowParse,EverParse3d.*",
              "--warn_error", "@241"]
     z3_version = os.environ.get("EVERPARSE_Z3_VERSION")
     if z3_version is not None:
         flags = ["--z3version", z3_version] + flags
     run([FSTAR] + flags + [HERE / "LargeExtern.fsti"], out)
     run([FSTAR] + flags + [HERE / "LargeExtern.fst"], out)
-    # Extract with Custard, not the old --codegen krml. This client is linked
-    # against the Custard-extracted runtime (krml/extracted/Custard.krml), and
-    # the two extractors disagree about erased arguments -- Custard drops them
-    # outright, the old one passes units for KaRaMeL to remove later -- so
-    # mixing them makes KaRaMeL reject the call sites on arity. See the comment
-    # on fstar_extract_args in src/3d/ocaml/Batch.ml.
-    run([FSTAR] + flags + ["--codegen", "KrmlC",
-                           "--custard_split",
+    profile = runtime_profile("lowstar", "extern")
+    run([FSTAR] + flags + ["--codegen", "C",
+                           "--custard_unit", "LargeExtern",
+                           "--custard_link", profile / "EverParse.cui",
+                           "--custard_monomorphize_types", "true",
                            "--custard_entry_module", "LargeExtern",
                            "--odir", out, HERE / "LargeExtern.fst",
-                           "-o", out / "LargeExtern.krml"], out)
-    api = ["EverParse3d.Actions.Common", "EverParse3d.Prelude.StaticHeader",
-           "EverParse3d.ErrorCode", "EverParse3d.Lowstar.Public",
-           "EverParse3d.Lowstar.SupportExtern",
-           "EverParse3d.Actions.ErrorHandler.LowstarExtern",
-           "EverParse3d.InputStream.LowstarExtern",
-           "EverParse3d.InputStream.LowstarExtern.Types",
-           "EverParse3d.InputStream.LowstarExtern.Raw",
-           "EverParse3d.CopyBuffer.LowstarExtern"]
-    log = run([KRML, "-skip-makefiles", "-skip-compilation", "-tmpdir", out,
-         "-add-include", '"EverParseStream.h"',
-         "-add-include", '"EverParse.h"',
-         "-library", "Prims,LowParse.*,EverParse3d.*,Pulse.*",
-         "-static-header", "Prims,LowParse.*,EverParse3d.*,Pulse.*",
-         "-warn-error", "-9@4-20-26", "-fnoreturn-else", "-fparentheses",
-         "-fcurly-braces", "-fmicrosoft", "-fno-shadow",
-         "-header", ROOT / "lib/everparse/3d/noheader.txt", "-minimal", "-fextern-c",
-         "-finitialize-locals", "no", "-no-inline-type-abbrev",
-         "EverParse3d.Actions.ErrorHandler.LowstarExtern.error_handler"]
-        + sorted((ROOT / "lib/everparse/3d/krml/extracted").glob("*.krml"))
-        + [out / "LargeExtern.krml",
-           "-bundle", "Prims,FStar.*,LowStar.*[rename=SHOULDNOTBETHERE]",
-           "-bundle", "+".join(api) + "=" + ",".join(api)
-           + "[rename=EverParse,rename-prefix]",
-           "-bundle", "EverParse3d.ErrorCode"
-           "[rename=EverParsePulseInternal,rename-prefix]",
-           "-bundle", "Prims,LowParse.*,EverParse3d.*,Pulse.*"
-           "[rename=EverParsePrivate]"], out)
-    check_no_runtime_header(log)
-    for header in [ROOT / "lib/everparse/3d/krml/lowstar/extern/EverParse.h",
-                   ROOT / "lib/everparse/3d/EverParseEndianness.h"]:
+                           "-o", out / "LargeExtern.c"], out)
+    if (out / "EverParse.h").exists():
+        raise AssertionError("client extraction emitted the runtime-owned EverParse.h")
+    header = out / "LargeExtern.h"
+    header.write_text('#include "EverParseStream.h"\n' + header.read_text())
+    for header in [profile / "EverParse.h", RUNTIME / "EverParseEndianness.h"]:
         shutil.copy2(header, out)
+    companion = profile / "EverParseStreamPrimitives.h"
+    if companion.is_file():
+        shutil.copy2(companion, out)
+    check_artifacts(out, ["LargeExtern"], "lowstar", "extern")
     compile_run(out, [out / "LargeExtern.c", HERE / "large.c"],
                 [TESTS / "extern/src"], name="check32" if bits32 else "check",
                 bits32=bits32)

@@ -74,15 +74,18 @@ fn scan_worker (extra: B.extra_t)
   }
 }
 
+[@@FStar.Attributes.rename_let "LargeExternNoRead"]
 let no_read (extra: B.extra_t) =
   AD.adapt_no_read #_ #_ #_ #_ #parser #state_dict_empty #false #false
     (scan_worker extra)
 
+[@@FStar.Attributes.rename_let "LargeExternSkip"]
 let skip (extra: B.extra_t) =
   AD.adapt_read #_ #_ #_ #_ #parser #state_dict_empty #false #false
     (A.validate_drop #B.base_t #B.len_t #B.pos_t #B.input_stream_extern #extra
       (scan_worker extra))
 
+[@@FStar.Attributes.rename_let "LargeExternDrain"]
 let drain (extra: B.extra_t) =
   AD.adapt_read #_ #_ #_ #_ #P.parse_all_bytes #state_dict_empty #false #false
     (A.validate_all_bytes #B.base_t #B.len_t #B.pos_t #B.input_stream_extern #extra)
