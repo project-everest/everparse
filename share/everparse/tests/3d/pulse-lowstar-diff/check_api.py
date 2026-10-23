@@ -8,6 +8,7 @@ import sys
 
 
 VALIDATOR = re.compile(r"\b(uint(?:8|64)_t)\s+(\w*Validate\w*)\s*\(")
+WRAPPER = re.compile(r"\b(BOOLEAN|bool)\s+(\w*Check\w*)\s*\(([^;]*)\);")
 PULSE_INTERNAL = re.compile(r"EVERPARSEPULSEINTERNAL_|EverParsePulseInternal")
 
 # Under --api lowstar, 3d emits the Pulse-native worker as
@@ -26,6 +27,12 @@ def check_api(api, directory):
     validators = []
     for header in sorted(directory.glob("*.h")):
         source = header.read_text()
+        boolean = "BOOLEAN" if api == "lowstar" else "bool"
+        for result, _, parameters in WRAPPER.findall(source):
+            if result != "BOOLEAN":
+                raise ValueError(f"{header}: expected BOOLEAN wrapper results")
+            if any(ty != boolean for ty in re.findall(r"\b(BOOLEAN|bool)\b", parameters)):
+                raise ValueError(f"{header}: expected {api} Boolean parameters ({boolean})")
         types = [
             ty
             for ty, name in VALIDATOR.findall(source)

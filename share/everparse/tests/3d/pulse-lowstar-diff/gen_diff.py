@@ -12,7 +12,7 @@ import sys
 import os
 import glob
 
-SIG_RE = re.compile(r'^BOOLEAN\s+(\w+)\s*\((.*?)\);', re.S | re.M)
+SIG_RE = re.compile(r'^(?:BOOLEAN|bool)\s+(\w+)\s*\((.*?)\);', re.S | re.M)
 
 
 def parse_params(s):
@@ -26,6 +26,9 @@ def parse_params(s):
         if ty.endswith('*'):
             stars = ty[len(ty.rstrip('*')):] + stars
             ty = ty.rstrip('*').strip()
+        # Only the Boolean representation differs between the public APIs.
+        if ty in ('BOOLEAN', 'bool'):
+            ty = 'HX_API_BOOL'
         out.append((ty + stars, name))
     return out
 
@@ -47,10 +50,10 @@ def collect(dirname):
 # Must match HX_NARGS in harness.h.
 NARGS = 8
 
-SCALAR = {'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'BOOLEAN'}
+SCALAR = {'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'HX_API_BOOL'}
 OUTPTR = {'uint8_t*': 'uint8_t', 'uint16_t*': 'uint16_t',
           'uint32_t*': 'uint32_t', 'uint64_t*': 'uint64_t',
-          'BOOLEAN*': 'BOOLEAN'}
+          'HX_API_BOOL*': 'HX_API_BOOL'}
 
 
 LIT_RE = re.compile(r'0[xX][0-9A-Fa-f]+|\b[0-9]+\b')
@@ -125,11 +128,14 @@ def gen(entries, out, srcdir):
             raise SystemExit(
                 '%s: %d scalar args + %d out-parameters exceed HX_NARGS=%d; '
                 'raise HX_NARGS in harness.h' % (fn, nscal, nout, NARGS))
-        w('static BOOLEAN call_%s(const uint64_t *A, uint8_t *buf, uint32_t len, char *d) {\n' % fn)
+        w('static HX_API_BOOL call_%s(const uint64_t *A, uint8_t *buf, uint32_t len, char *d) {\n' % fn)
         args, post, na, ncb, no = [], [], 0, 0, 0
         for ty, name in body:
             if ty in SCALAR:
-                w('  %s a_%s = (%s)A[%d];\n' % (ty, name, ty, na))
+                # Compare the same logical input across both representations;
+                # boolean_abi_test.py separately exercises noncanonical bytes.
+                value = '!!A[%d]' % na if ty == 'HX_API_BOOL' else 'A[%d]' % na
+                w('  %s a_%s = (%s)%s;\n' % (ty, name, ty, value))
                 args.append('a_' + name)
                 post.append(('in', 'a_' + name))
                 na += 1
@@ -146,7 +152,10 @@ def gen(entries, out, srcdir):
                 # bottom, so that adding an out-parameter does not renumber the
                 # scalar arguments; the check above keeps the two from meeting.
                 base = OUTPTR[ty]
-                w('  %s i_%s = (%s)A[%d];\n' % (base, name, base, NARGS - 1 - no))
+                value = 'A[%d]' % (NARGS - 1 - no)
+                if base == 'HX_API_BOOL':
+                    value = '!!' + value
+                w('  %s i_%s = (%s)%s;\n' % (base, name, base, value))
                 w('  %s o_%s = i_%s;\n' % (base, name, name))
                 args.append('&o_' + name)
                 post.append(('out', 'o_' + name, 'i_' + name))
@@ -178,7 +187,7 @@ def gen(entries, out, srcdir):
             else:
                 raise SystemExit('unhandled type %r in %s' % (ty, fn))
         w('  (void)A;\n')
-        w('  BOOLEAN r = %s(%s);\n' % (fn, ', '.join(args + ['buf', 'len'])))
+        w('  HX_API_BOOL r = %s(%s);\n' % (fn, ', '.join(args + ['buf', 'len'])))
         w('  if (d) { int n = 0;\n')
         for entry in post:
             kind, var = entry[0], entry[1]

@@ -91,7 +91,7 @@ mkdir -p "$WORK"
 
 # EverParse.h is not copied into every output directory, so fall back to the
 # batch output of the corresponding tree, which always has one.
-$CC $CFLAGS -I "$HERE" -I "$LO" -I "$SUBROOT_LO" -I "$SUBROOT_LO/src" \
+$CC $CFLAGS -DHX_API_LOWSTAR -I "$HERE" -I "$LO" -I "$SUBROOT_LO" -I "$SUBROOT_LO/src" \
     -I "$EVERPARSE_HOME/lib/everparse/3d" -I "$EVERPARSE_HOME/lib/everparse/3d/krml/lowstar/buffer" \
     -I "$LO_ROOT/out.batch" \
     -o "$WORK/lo" "$WORK/driver.c" "$HERE/harness.c" \

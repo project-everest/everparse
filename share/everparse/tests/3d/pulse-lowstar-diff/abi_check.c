@@ -23,6 +23,17 @@
    can be compiled against both. It is never run. */
 
 #include "Bitfields0.h"
+#include "BoolSwitchWrapper.h"
+
+#ifdef HX_API_LOWSTAR
+typedef BOOLEAN API_BOOL;
+#else
+typedef bool API_BOOL;
+#endif
+
+/* Scalar Bool differs by API; wrapper results remain BOOLEAN in both.
+   A function-pointer assignment rejects otherwise implicit conversions. */
+BOOLEAN (*EverParseAbiCheckBool)(API_BOOL, uint8_t *, uint32_t) = BoolSwitchCheckT;
 
 extern EVERPARSE_ERROR_HANDLER EverParseAbiCheckHandler;
 
