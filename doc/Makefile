@@ -4,8 +4,9 @@
 all: html 3d
 
 EVERPARSE_HOME?=$(realpath ..)
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") --complete_wrappers
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --complete_wrappers
 3D_EXCLUDE=ConstColor.3d
 3D_CONFIG=Arch.3d.config
 3D_FILES_WITH_CONFIG=PointArch_32_64.3d
