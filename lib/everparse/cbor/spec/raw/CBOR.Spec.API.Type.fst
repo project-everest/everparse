@@ -105,3 +105,5 @@ let unpack_precedes c = DM.unpack_precedes c
 let cbor_map_depth c = DM.cbor_map_depth c
 
 let cbor_map_key_depth c = DM.cbor_map_key_depth c
+
+let cbor_map_length_bounded n c = DM.cbor_map_length_bounded n c

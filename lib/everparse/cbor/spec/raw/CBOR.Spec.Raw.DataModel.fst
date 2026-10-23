@@ -524,3 +524,5 @@ let size_unpack #order #compare x =
 let cbor_map_depth x = map_depth x
 
 let cbor_map_key_depth x = map_key_depth x
+
+let cbor_map_length_bounded n x = map_length_bounded n x

@@ -347,3 +347,102 @@ let mk_cbor_map_depth x =
 let mk_cbor_map_key_depth x =
   mk_cbor_equiv' x;
   map_key_depth_raw_equiv x (mk_cbor x)
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+let rec map_length_bounded_raw_equiv_le
+  (n: nat)
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires (
+    raw_equiv x1 x2 /\
+    R.holds_on_raw_data_item R.valid_raw_data_item_elem x1 /\
+    R.holds_on_raw_data_item R.valid_raw_data_item_elem x2 /\
+    R.map_length_bounded n x2
+  ))
+  (ensures R.map_length_bounded n x1)
+  (decreases raw_data_item_size x1 + raw_data_item_size x2)
+= equiv_eq basic_data_model x1 x2;
+  if x1 = x2
+  then ()
+  else begin
+    raw_data_item_size_eq x1;
+    raw_data_item_size_eq x2;
+    valid_eq' basic_data_model x1;
+    valid_eq' basic_data_model x2;
+    R.holds_on_raw_data_item_eq R.valid_raw_data_item_elem x1;
+    R.holds_on_raw_data_item_eq R.valid_raw_data_item_elem x2;
+    R.holds_on_raw_data_item_eq (R.map_length_bounded_elem n) x1;
+    R.holds_on_raw_data_item_eq (R.map_length_bounded_elem n) x2;
+    R.raw_equiv_eq_valid x1 x2;
+    match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      array_map_length_bounded_raw_equiv_le n v1 v2
+    | Tagged _ v1, Tagged _ v2 ->
+      map_length_bounded_raw_equiv_le n v1 v2
+    | Map _ v1, Map _ v2 ->
+      mk_cbor_equiv x1 x2;
+      mk_cbor_eq x1;
+      mk_cbor_eq x2;
+      map_map_length_bounded_raw_equiv_le n v1 v2
+    | _ -> ()
+  end
+
+and array_map_length_bounded_raw_equiv_le
+  (n: nat)
+  (x1 x2: list raw_data_item)
+: Lemma
+  (requires (
+    U.list_for_all2 raw_equiv x1 x2 /\
+    List.Tot.for_all (R.holds_on_raw_data_item R.valid_raw_data_item_elem) x1 /\
+    List.Tot.for_all (R.holds_on_raw_data_item R.valid_raw_data_item_elem) x2 /\
+    List.Tot.for_all (R.holds_on_raw_data_item (R.map_length_bounded_elem n)) x2
+  ))
+  (ensures List.Tot.for_all (R.holds_on_raw_data_item (R.map_length_bounded_elem n)) x1)
+  (decreases 1 + U.list_sum raw_data_item_size x1 + U.list_sum raw_data_item_size x2)
+= match x1, x2 with
+  | a1 :: q1, a2 :: q2 ->
+    raw_data_item_size_eq a1;
+    raw_data_item_size_eq a2;
+    map_length_bounded_raw_equiv_le n a1 a2;
+    array_map_length_bounded_raw_equiv_le n q1 q2
+  | _ -> ()
+
+and map_map_length_bounded_raw_equiv_le
+  (n: nat)
+  (v1 v2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (U.setoid_assoc_eq raw_equiv raw_equiv v2) v1 /\
+    List.Tot.for_all (U.holds_on_pair (R.holds_on_raw_data_item R.valid_raw_data_item_elem)) v1 /\
+    List.Tot.for_all (U.holds_on_pair (R.holds_on_raw_data_item R.valid_raw_data_item_elem)) v2 /\
+    List.Tot.for_all (U.holds_on_pair (R.holds_on_raw_data_item (R.map_length_bounded_elem n))) v2
+  ))
+  (ensures List.Tot.for_all (U.holds_on_pair (R.holds_on_raw_data_item (R.map_length_bounded_elem n))) v1)
+  (decreases 1 + U.list_sum (U.pair_sum raw_data_item_size raw_data_item_size) v1 + U.list_sum (U.pair_sum raw_data_item_size raw_data_item_size) v2)
+= match v1 with
+  | [] -> ()
+  | (k1, w1) :: q1 ->
+    raw_data_item_size_eq k1;
+    raw_data_item_size_eq w1;
+    let Some w2 = U.list_setoid_assoc raw_equiv k1 v2 in
+    let Some k2 = U.list_setoid_assoc_mem raw_equiv k1 v2 in
+    U.list_sum_memP (U.pair_sum raw_data_item_size raw_data_item_size) v2 (k2, w2);
+    List.Tot.for_all_mem (U.holds_on_pair (R.holds_on_raw_data_item R.valid_raw_data_item_elem)) v2;
+    List.Tot.for_all_mem (U.holds_on_pair (R.holds_on_raw_data_item (R.map_length_bounded_elem n))) v2;
+    map_length_bounded_raw_equiv_le n k1 k2;
+    map_length_bounded_raw_equiv_le n w1 w2;
+    map_map_length_bounded_raw_equiv_le n q1 v2
+
+#pop-options
+
+let mk_cbor_map_length_bounded n x =
+  mk_cbor_equiv' x;
+  let x' : raw_data_item = mk_cbor x in
+  R.raw_data_item_sorted_optimal_valid RF.deterministically_encoded_cbor_map_key_order x';
+  R.raw_equiv_sym x x';
+  valid_eq' basic_data_model x;
+  valid_eq' basic_data_model x';
+  Classical.move_requires (map_length_bounded_raw_equiv_le n x) x';
+  Classical.move_requires (map_length_bounded_raw_equiv_le n x') x

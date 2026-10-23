@@ -45,6 +45,10 @@ val jump_recursive_step_count_leaf (_: unit) :
 
 val validate_raw_data_item (_: unit) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
 
+val validate_raw_data_item_map_length_bounded (n: SZ.t) : validator #(LowParse.Spec.Combinators.parse_filter_refine (map_length_bounded (SZ.v n))) #(LowParse.Spec.Combinators.parse_filter_kind parse_raw_data_item_kind) (LowParse.Spec.Combinators.parse_filter parse_raw_data_item (map_length_bounded (SZ.v n)))
+
+val validate_raw_data_item_bounded (map_depth_bound: SZ.t) (map_length_bound: SZ.t) : validator #(LowParse.Spec.Combinators.parse_filter_refine (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))) #(LowParse.Spec.Combinators.parse_filter_kind parse_raw_data_item_kind) (LowParse.Spec.Combinators.parse_filter parse_raw_data_item (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound)))
+
 val jump_raw_data_item (_: unit) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
 
 inline_for_extraction
