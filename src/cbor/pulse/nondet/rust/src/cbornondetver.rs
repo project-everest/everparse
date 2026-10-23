@@ -20,15 +20,16 @@ pub fn cbor_nondet_parse <'a>(
     <'a>
 { crate::cbornondetveraux::cbor_nondet_parse(map_key_bound, strict_check, input) }
 
-pub fn cbor_nondet_validate_map_length_bounded(
+pub fn cbor_nondet_parse_map_length_bounded <'a>(
     map_length_bound: usize,
     map_key_bound: crate::cbornondetveraux::option__size_t,
     strict_check: bool,
-    input: &[u8]
+    input: &'a [u8]
 ) ->
-    usize
+    crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
 {
-    crate::cbornondetveraux::cbor_nondet_validate_map_length_bounded(
+    crate::cbornondetveraux::cbor_nondet_parse_map_length_bounded(
         map_length_bound,
         map_key_bound,
         strict_check,
@@ -36,14 +37,15 @@ pub fn cbor_nondet_validate_map_length_bounded(
     )
 }
 
-pub fn cbor_nondet_validate_bounded(
+pub fn cbor_nondet_parse_bounded <'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
-    input: &[u8]
+    input: &'a [u8]
 ) ->
-    usize
+    crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
 {
-    crate::cbornondetveraux::cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, input)
+    crate::cbornondetveraux::cbor_nondet_parse_bounded(map_depth_bound, map_length_bound, input)
 }
 
 pub fn cbor_nondet_size(x: crate::cbornondetveraux::cbor_raw, bound: usize) -> usize

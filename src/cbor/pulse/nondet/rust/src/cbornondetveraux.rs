@@ -5480,7 +5480,7 @@ pub(crate) fn cbor_nondet_parse <'a>(
     }
 }
 
-pub(crate) fn cbor_nondet_validate_map_length_bounded(
+fn cbor_nondet_validate_map_length_bounded(
     map_length_bound: usize,
     map_key_bound: option__size_t,
     strict_check: bool,
@@ -5491,13 +5491,60 @@ pub(crate) fn cbor_nondet_validate_map_length_bounded(
     cbor_validate_nondet_map_length_bounded(map_length_bound, map_key_bound, strict_check, input)
 }
 
-pub(crate) fn cbor_nondet_validate_bounded(
-    map_depth_bound: usize,
+pub(crate) fn cbor_nondet_parse_map_length_bounded <'a>(
     map_length_bound: usize,
-    input: &[u8]
+    map_key_bound: option__size_t,
+    strict_check: bool,
+    input: &'a [u8]
 ) ->
+    option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    let len: usize =
+        cbor_nondet_validate_map_length_bounded(
+            map_length_bound,
+            map_key_bound,
+            strict_check,
+            input
+        );
+    if len == 0usize
+    { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
+    else
+    {
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
+        let inl: &[u8] = _letpattern.0;
+        let inr: &[u8] = _letpattern.1;
+        let resl: cbor_raw = cbor_nondet_parse_valid(inl, len);
+        option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+        { v: (resl,inr) }
+    }
+}
+
+fn cbor_nondet_validate_bounded(map_depth_bound: usize, map_length_bound: usize, input: &[u8]) ->
     usize
 { cbor_validate_nondet_bounded(map_depth_bound, map_length_bound, input) }
+
+pub(crate) fn cbor_nondet_parse_bounded <'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &'a [u8]
+) ->
+    option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    let len: usize = cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, input);
+    if len == 0usize
+    { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
+    else
+    {
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
+        let inl: &[u8] = _letpattern.0;
+        let inr: &[u8] = _letpattern.1;
+        let resl: cbor_raw = cbor_nondet_parse_valid(inl, len);
+        option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+        { v: (resl,inr) }
+    }
+}
 
 pub(crate) fn cbor_nondet_size(x: cbor_raw, bound: usize) -> usize { cbor_size(x, bound) }
 
