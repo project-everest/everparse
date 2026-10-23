@@ -9,13 +9,13 @@ INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 FSTAR_OPTIONS += --warn_error -342
 
-# Whole-program extraction of the Pulse 3d runtime, to the JSON that
+# Whole-program extraction of the Pulse 3d runtime, to the .krml that
 # header.Makefile turns into EverParse.h and that `everparse-3d.exe --pulse` passes to
 # KaRaMeL alongside the generated modules (see all_everparse_krmls in
 # src/3d/ocaml/Batch.ml, which simply globs $(LIB_3D_HOME)/krml/extracted).
 #
 # This Makefile and EverParse3d.Krml.Roots.fst are build machinery only: they
-# live here in src/, but the extracted JSON is written to
+# live here in src/, but the extracted .krml is written to
 # $(LIB_3D_HOME)/krml/extracted, where everparse-3d.exe looks for it.
 #
 # Custard eliminates dead code by reachability from the roots, and a karamel
@@ -191,7 +191,8 @@ extract-krml: $(CUSTARD_KRML)
 
 .PHONY: extract-krml
 
-# common.Makefile's clean-krml leaves the directory behind. Drop the lot.
+# common.Makefile's clean-krml only removes $(OUTPUT_DIRECTORY)/*.krml, which
+# leaves the directory behind. Drop the lot.
 clean-extracted:
 	rm -rf $(OUTPUT_DIRECTORY)
 

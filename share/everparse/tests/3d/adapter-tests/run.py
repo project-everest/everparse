@@ -87,7 +87,7 @@ def large(bits32=False):
     run([FSTAR] + flags + [HERE / "LargeExtern.fsti"], out)
     run([FSTAR] + flags + [HERE / "LargeExtern.fst"], out)
     # Extract with Custard, not the old --codegen krml. This client is linked
-    # against the Custard-extracted runtime (krml/extracted/Custard.json), and
+    # against the Custard-extracted runtime (krml/extracted/Custard.krml), and
     # the two extractors disagree about erased arguments -- Custard drops them
     # outright, the old one passes units for KaRaMeL to remove later -- so
     # mixing them makes KaRaMeL reject the call sites on arity. See the comment
@@ -96,7 +96,7 @@ def large(bits32=False):
                            "--custard_split",
                            "--custard_entry_module", "LargeExtern",
                            "--odir", out, HERE / "LargeExtern.fst",
-                           "-o", out / "LargeExtern.json"], out)
+                           "-o", out / "LargeExtern.krml"], out)
     api = ["EverParse3d.Actions.Common", "EverParse3d.Prelude.StaticHeader",
            "EverParse3d.ErrorCode", "EverParse3d.Lowstar.Public",
            "EverParse3d.Lowstar.SupportExtern",
@@ -115,8 +115,8 @@ def large(bits32=False):
          "-header", ROOT / "lib/everparse/3d/noheader.txt", "-minimal", "-fextern-c",
          "-finitialize-locals", "no", "-no-inline-type-abbrev",
          "EverParse3d.Actions.ErrorHandler.LowstarExtern.error_handler"]
-        + [ROOT / "lib/everparse/3d/krml/extracted/Custard.json"]
-        + [out / "LargeExtern.json",
+        + sorted((ROOT / "lib/everparse/3d/krml/extracted").glob("*.krml"))
+        + [out / "LargeExtern.krml",
            "-bundle", "Prims,FStar.*,LowStar.*[rename=SHOULDNOTBETHERE]",
            "-bundle", "+".join(api) + "=" + ",".join(api)
            + "[rename=EverParse,rename-prefix]",

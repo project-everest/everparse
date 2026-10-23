@@ -27,13 +27,13 @@ include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 LIB_3D_HOME := $(EVERPARSE_HOME)/lib/everparse/3d
 
 # This Makefile is build machinery only and lives in src/, but the headers are
-# written next to the extracted JSON, under $(LIB_3D_HOME)/krml, where
+# written next to the extracted .krml, under $(LIB_3D_HOME)/krml, where
 # everparse-3d.exe looks for them.
 KRML_DIR := $(LIB_3D_HOME)/krml
 
 BACKENDS := buffer extern static
 
-KRML_FILES := $(KRML_DIR)/extracted/Custard.json
+KRML_FILES := $(wildcard $(KRML_DIR)/extracted/*.krml)
 
 # The bundle's API modules: those whose declarations stay public and so land in
 # EverParse.h. Only the selected backend's module is listed, because each of

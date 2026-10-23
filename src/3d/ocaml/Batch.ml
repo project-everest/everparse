@@ -97,7 +97,7 @@ let fstar_modul_of_filename fst =
   String.concat "." (List.map String.capitalize_ascii (String.split_on_char '.' basename))
 
 (* Custard is a whole-program extractor: it starts from the roots and follows
-   reachability, so each generated module's JSON holds not only that module
+   reachability, so each generated module's .krml holds not only that module
    but everything it uses -- the EverParse3d runtime, LowParse, the Pulse
    library. KaRaMeL then drops all of that again, because call_krml passes
    `-library Prims,LowParse.\*,EverParse3d.\*,Pulse.\*`, leaving the `extern`
@@ -118,14 +118,14 @@ let fstar_modul_of_filename fst =
    The config module is rooted in every extraction, not just its own. Its
    compile-time flags are `assume val`s, so a client only ever pulls in the
    flags it happens to mention. KaRaMeL keeps a single copy of each file when
-   several JSON files describe it, so a client that uses no flag at all would
+   several .krml files describe it, so a client that uses no flag at all would
    otherwise be free to shadow the complete version with an empty one. Rooting
    the module everywhere makes all the copies identical. *)
 let fstar_extract_args krmllib input_stream_binding out_dir fst =
   let modul = fstar_modul_of_filename fst in
   let krml_file =
     filename_concat out_dir
-      (Printf.sprintf "%s.json" (String.concat "_" (String.split_on_char '.' modul)))
+      (Printf.sprintf "%s.krml" (String.concat "_" (String.split_on_char '.' modul)))
   in
   let config_entry_module =
     match Options.config_module_name () with
@@ -225,7 +225,7 @@ let verify_and_extract_module
 
 let is_krml
       filename
-  = Filename.check_suffix filename ".json"
+  = Filename.check_suffix filename "krml"
 
 let krml_args0 = OS.getenv_array "EVERPARSE_KRML_OPTIONS"
 
@@ -266,10 +266,10 @@ let remove_fst_and_krml_files
       Printf.sprintf "%s.Types.fst.checked" root_name;
       Printf.sprintf "%s.fst.checked" root_name;
       Printf.sprintf "%s.fsti.checked" root_name;
-      Printf.sprintf "%s_Types.json" root_name;
-      Printf.sprintf "%s_ExternalAPI.json" root_name;
-      Printf.sprintf "%s_ExternalTypes.json" root_name;
-      Printf.sprintf "%s.json" root_name;
+      Printf.sprintf "%s_Types.krml" root_name;
+      Printf.sprintf "%s_ExternalAPI.krml" root_name;
+      Printf.sprintf "%s_ExternalTypes.krml" root_name;
+      Printf.sprintf "%s.krml" root_name;
     ]
 
 (* The KaRaMeL bundle backing the pre-generated runtime header: LowParse,
@@ -304,18 +304,18 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
 
   let types_krml modul =
     if has_types modul
-    then [filename_concat out_dir (Printf.sprintf "%s_Types.json" modul)]
+    then [filename_concat out_dir (Printf.sprintf "%s_Types.krml" modul)]
     else []
   in
 
   let external_types_krml modul =
     if has_external_types modul
-    then [filename_concat out_dir (Printf.sprintf "%s_ExternalTypes.json" modul)]
+    then [filename_concat out_dir (Printf.sprintf "%s_ExternalTypes.krml" modul)]
     else [] in
 
   let external_api_krml modul =
     if has_external_api modul
-    then [filename_concat out_dir (Printf.sprintf "%s_ExternalAPI.json" modul)]
+    then [filename_concat out_dir (Printf.sprintf "%s_ExternalAPI.krml" modul)]
     else [] in
 
   let external_types_lib_args modul =
@@ -346,7 +346,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                      (fun accu (_, modul) ->
                        let l =
                          (types_krml modul)@
-			 (external_types_krml modul)@(external_api_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.json" modul) ::
+			 (external_types_krml modul)@(external_api_krml modul)@(filename_concat out_dir (Printf.sprintf "%s.krml" modul) ::
                                                     accu)
                        in
 
@@ -374,7 +374,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
   let krml_files =
     match Options.config_module_name () with
     | None -> krml_files
-    | Some m -> filename_concat out_dir (Printf.sprintf "%s.json" m) :: krml_files
+    | Some m -> filename_concat out_dir (Printf.sprintf "%s.krml" m) :: krml_files
   in
   let external_types_lib_args = List.fold_left (fun accu (_, modul) ->
                                     accu @ (external_types_lib_args modul)) [] files_and_modules in
@@ -625,7 +625,7 @@ let produce_c_files
     : unit
   =
   let krml_args = krml_args input_stream_binding emit_output_types_defs add_include skip_c_makefiles out_dir files_and_modules in
-  (* if M.Types exists, then bundle M.Types.json and EverParse into M *)
+  (* if M.Types exists, then bundle M.Types.krml and EverParse into M *)
   let krml_args =
     let files_and_modules_with_types =
       List.filter
@@ -1056,7 +1056,7 @@ let postprocess_fst
       (files_and_modules: (string * string) list)
     : unit
   =
-  (* produce the .checked and .json files.
+  (* produce the .checked and .krml files.
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module fstar_exe input_stream_binding out_dir) files_and_modules;
   (* produce the .c and .h files and format them *)
