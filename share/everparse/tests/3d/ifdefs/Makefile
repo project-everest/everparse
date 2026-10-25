@@ -63,6 +63,7 @@ endif
 
 # Specify the behavior of the default rule
 world: $(EVERPARSE_OUTPUT_DIR)/CompileTimeIf.o $(EVERPARSE_OUTPUT_DIR)/AnonNestedStructIfDefs.o $(EVERPARSE_ALL_C_FILES) batch
+	python3 check.py $(EVERPARSE_OUTPUT_DIR) $(EVERPARSE_BATCH_OUTPUT_DIR)
 
 #######################################################
 # Also test batch mode

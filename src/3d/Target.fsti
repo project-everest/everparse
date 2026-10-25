@@ -419,6 +419,7 @@ val maybe_mname_prefix (mname:string) (i:A.ident) : string
 val print_ident (i:A.ident) : string
 val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_boolean_inst_args : unit -> ML string
+val contains_compile_time_flag : expr -> ML bool
 val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string

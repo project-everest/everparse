@@ -360,6 +360,19 @@ let print_boolean_inst_args () : ML string =
   then " #bool #EverParse3d.Boolean.boolean_bool"
   else " #EverParse3d.CAbi.Boolean.t #EverParse3d.Boolean.boolean_byte"
 
+let contains_compile_time_flag (e:expr) : ML bool =
+  let cfg = Options.config_module_name () in
+  let rec contains (e:expr) : ML bool =
+    match fst e with
+    | Identifier i -> Some? i.v.modul_name && i.v.modul_name = cfg
+    | App _ es -> contains_list es
+    | _ -> false
+  and contains_list (es:list expr) : ML bool =
+    match es with
+    | [] -> false
+    | e::es -> if contains e then true else contains_list es in
+  contains e
+
 let rec print_expr (mname:string) (e:expr) : ML string =
   match fst e with
   | Constant c ->
@@ -383,9 +396,7 @@ let rec print_expr (mname:string) (e:expr) : ML string =
   | App (BitwiseNot _) [e1] ->
     Printf.sprintf "(%s %s)" (print_op (App?.hd (fst e))) (print_expr mname e1)
   | App IfThenElse [e1;e2;e3] ->
-    Printf.sprintf
-      "(if %s then %s else %s)"
-      (print_expr mname e1) (print_expr mname e2) (print_expr mname e3)
+    print_conditional mname e1 (print_expr mname e2) (print_expr mname e3)
   | App (BitFieldOf i order) [e1;e2;e3] ->
     Printf.sprintf
       "(%s %s %s %s)"
@@ -395,6 +406,18 @@ let rec print_expr (mname:string) (e:expr) : ML string =
     print_op op
   | App op es ->
     Printf.sprintf "(%s %s)" (print_op op) (String.concat " " (print_exprs mname es))
+
+and print_conditional (mname:string) (e:expr) (yes no:string) : ML string =
+  (* Custard requires each preprocessor flag to be a whole if condition. *)
+  if contains_compile_time_flag e then
+    match fst e with
+    | App And [a;b] ->
+      print_conditional mname a (print_conditional mname b yes no) no
+    | App Or [a;b] ->
+      print_conditional mname a yes (print_conditional mname b yes no)
+    | App Not [a] -> print_conditional mname a no yes
+    | _ -> Printf.sprintf "(if %s then %s else %s)" (print_expr mname e) yes no
+  else Printf.sprintf "(if %s then %s else %s)" (print_expr mname e) yes no
 
 and print_exprs (mname:string) (es:list expr) : ML (list string) =
   match es with

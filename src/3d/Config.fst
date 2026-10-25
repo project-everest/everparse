@@ -19,8 +19,8 @@ let emit_config_as_fstar_module (module_name:string) (c:config) =
   let flags = 
     List.map 
       (fun flag -> Printf.sprintf
-        "[@@ CIfDef; FStar.Attributes.rename_let \"%s\"]\nassume\nval ___%s : bool"
-        flag flag)
+        "[@@ FStar.Attributes.custard_c_ifdef \"defined(%s)\"; FStar.Attributes.rename_let \"%s\"]\nassume\nval ___%s : bool"
+        flag flag flag)
       c.compile_time_flags.flags
   in
   let assumes = String.concat "\n\n" flags in
