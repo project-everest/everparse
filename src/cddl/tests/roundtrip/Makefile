@@ -7,19 +7,21 @@
 
 all: test
 
-EVERPARSE_SRC_PATH := $(realpath ../../..)
-include $(EVERPARSE_SRC_PATH)/windows.Makefile
+EVERPARSE_HOME := $(realpath ../../../..)
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 ODIR := _output
 
 FSTAR_EXE ?= fstar.exe
 
-# evercddl.lib (handwritten + extracted) lives under $EVERPARSE_HOME/lib;
-# fstar.lib lives under the F* installation. `fstar.exe --ocamlenv` prepends
-# the latter to OCAMLPATH for us.
+# evercddl.lib (handwritten + extracted) is installed into ./evercddl by
+# src/cddl/tool/Makefile, as part of building everparse-cddl.exe; fstar.lib lives under
+# the F* installation. `fstar.exe --ocamlenv` prepends the latter to OCAMLPATH
+# for us.
+EVERCDDL_LIB_PREFIX := $(EVERPARSE_HOME)/src/cddl/tests/roundtrip/evercddl
 ifeq ($(OS),Windows_NT)
-export OCAMLPATH := $(EVERPARSE_SRC_PATH)/../lib;$(OCAMLPATH)
+export OCAMLPATH := $(EVERCDDL_LIB_PREFIX)/lib;$(OCAMLPATH)
 else
-export OCAMLPATH := $(EVERPARSE_SRC_PATH)/../lib:$(OCAMLPATH)
+export OCAMLPATH := $(EVERCDDL_LIB_PREFIX)/lib:$(OCAMLPATH)
 endif
 
 GEN := ocaml/_build/default/gen_fst/Main.exe
@@ -30,9 +32,9 @@ MNAME_dpe          := RoundtripDpe
 MNAME_cose_sign    := RoundtripCoseSign
 MNAME_cose_encrypt := RoundtripCoseEncrypt
 
-CDDLS_dpe          := $(EVERPARSE_SRC_PATH)/cddl/tests/dpe/dpe.cddl       $(EVERPARSE_SRC_PATH)/cddl/tests/dpe/dpe_postlude.cddl
-CDDLS_cose_sign    := $(EVERPARSE_SRC_PATH)/cose/cose-sign.cddl           $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
-CDDLS_cose_encrypt := $(EVERPARSE_SRC_PATH)/cose/cose-encrypt.cddl        $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
+CDDLS_dpe          := $(EVERPARSE_HOME)/share/everparse/tests/cddl/dpe/dpe.cddl       $(EVERPARSE_HOME)/share/everparse/tests/cddl/dpe/dpe_postlude.cddl
+CDDLS_cose_sign    := $(EVERPARSE_HOME)/src/cose/cose-sign.cddl           $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
+CDDLS_cose_encrypt := $(EVERPARSE_HOME)/src/cose/cose-encrypt.cddl        $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
 
 $(GEN): ocaml/dune-project ocaml/gen_fst/dune ocaml/gen_fst/Main.ml
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build gen_fst/Main.exe

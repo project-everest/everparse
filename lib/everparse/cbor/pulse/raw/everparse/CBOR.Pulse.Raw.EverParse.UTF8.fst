@@ -1,0 +1,170 @@
+module CBOR.Pulse.Raw.EverParse.UTF8
+friend CBOR.Spec.Raw.Format.UTF8
+friend CBOR.Spec.API.UTF8
+include CBOR.Spec.API.UTF8
+open Pulse.Lib.Pervasives
+open CBOR.Spec.Constants
+open CBOR.Spec.Raw.EverParse
+open LowParse.Pulse.Combinators
+open LowParse.Pulse.SeqBytes
+module U8 = FStar.UInt8
+module S = Pulse.Lib.Slice
+module SZ = FStar.SizeT
+#lang-pulse
+
+open CBOR.Spec.Raw.Format.UTF8
+
+inline_for_extraction
+let utf8_f1 : U8.t = 0xF1uy
+
+inline_for_extraction
+let utf8_f4 : U8.t = 0xF4uy
+
+let impl_fetch_utf8_correct_postcond
+  (i: SZ.t)
+  (v: Seq.seq U8.t)
+  (vcont: bool)
+  (res: SZ.t)
+: Tot prop
+= 
+  SZ.v i < Seq.length v /\
+  begin match fetch (Seq.slice v (SZ.v i) (Seq.length v)) with
+  | Success vres -> vcont == true /\ SZ.v res == SZ.v i + vres
+  | _ -> vcont == false /\ res == i
+  end
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let u8_in_80_BF
+  (x: U8.t)
+: Tot bool
+= U8.lte 0x80uy x && U8.lte x 0xBFuy
+
+#push-options "--z3rlimit 20"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_fetch_utf8_correct
+  (s: S.slice U8.t)
+  (len: SZ.t { len == S.len s })
+  (pi: ref SZ.t)
+  (pcont: ref bool)
+  (#i: Ghost.erased SZ.t)
+  (#p: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+    (pts_to s #p v ** pts_to pi i ** pts_to pcont true ** pure (SZ.v i < Seq.length v))
+ensures
+    (exists* vcont res . pts_to s #p v ** pts_to pi res ** pts_to pcont vcont **
+      pure (
+        impl_fetch_utf8_correct_postcond i v vcont res
+      )
+    )
+{
+  S.pts_to_len s;
+  let i = !pi;
+  let byte1 = S.op_Dot_Lparen_Rparen s i;
+  let i1 : SZ.t = (SZ.add i 1sz);
+  if (U8.lte byte1 0x7Fuy) {
+    pi := i1;
+  } else if (i1 = len) {
+    pcont := false;
+  } else {
+    assert (pure (SZ.v i1 <= SZ.v len));
+    assert (pure (~ (SZ.v i1 == SZ.v len)));
+    assert (pure (SZ.v i1 < Seq.length v));
+    let byte2 = S.op_Dot_Lparen_Rparen s i1;
+    let i2 : SZ.t = SZ.add i1 1sz;
+    if (U8.lte 0xC2uy byte1 && U8.lte byte1 0xDFuy && u8_in_80_BF byte2) {
+       pi := i2;
+    } else if (i2 = len) {
+      pcont := false
+    } else {
+      assert (pure (SZ.v i2 <= SZ.v len));
+      assert (pure (~ (SZ.v i2 == SZ.v len)));
+      assert (pure (SZ.v i2 < Seq.length v));
+      let byte3 = S.op_Dot_Lparen_Rparen s i2;
+      let i3 : SZ.t = SZ.add i2 1sz;
+      if (not (u8_in_80_BF byte3)) {
+         pcont := false
+      } else if (byte1 = 0xE0uy) {
+        if (U8.lte 0xA0uy byte2 && U8.lte byte2 0xBFuy) {
+           pi := i3;
+        } else {
+          pcont := false
+        }
+      } else if (byte1 = 0xEDuy) {
+        if (U8.lte 0x80uy byte2 && U8.lte byte2 0x9Fuy) {
+           pi := i3;
+        } else {
+          pcont := false
+        }
+      } else if (U8.lte 0xE1uy byte1 && U8.lte byte1 0xEFuy && u8_in_80_BF byte2) {
+        pi := i3;
+      } else if (i3 = len) {
+        pcont := false
+      } else {
+        assert (pure (SZ.v i3 <= SZ.v len));
+        assert (pure (~ (SZ.v i3 == SZ.v len)));
+        assert (pure (SZ.v i3 < Seq.length v));
+        let byte4 = S.op_Dot_Lparen_Rparen s i3;
+        let i4 = SZ.add i3 1sz;
+        if (not (u8_in_80_BF byte4)) {
+           pcont := false
+        } else if (byte1 = 0xF0uy && U8.lte 0x90uy byte2 && U8.lte byte2 0xBFuy) {
+          assert (pure (fetch (Seq.slice v (SZ.v i) (Seq.length v)) == Success 4));
+          pi := i4;
+        } else if (U8.lte utf8_f1 byte1 && U8.lt byte1 utf8_f4 && u8_in_80_BF byte2) {
+          assert (pure (fetch (Seq.slice v (SZ.v i) (Seq.length v)) == Success 4));
+          pi := i4;
+        } else if (byte1 = utf8_f4 && U8.lte 0x80uy byte2 && U8.lte byte2 0x8Fuy) {
+          assert (pure (fetch (Seq.slice v (SZ.v i) (Seq.length v)) == Success 4));
+          pi := i4;
+        } else {
+          pcont := false
+        }
+      }
+    }
+  }
+}
+
+#pop-options
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+
+fn impl_correct
+  (s: S.slice U8.t)
+  (#p: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+    (pts_to s #p v)
+returns res: bool
+ensures
+    (pts_to s #p v ** pure (res == correct v))
+{
+  S.pts_to_len s;
+  let mut pres = true;
+  let mut pi = 0sz;
+  let len = S.len s;
+  Seq.slice_length v;
+  while (
+    let res = !pres;
+    let i = !pi;
+    (res && SZ.lt i len)
+  ) invariant exists* res i .
+    pts_to s #p v **
+    pts_to pres res **
+    pts_to pi i **
+    pure (
+      SZ.v i <= Seq.length v /\
+      correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v)))
+    )
+    decreases %[(if !pres then 1 else 0); (SZ.v len - SZ.v (!pi))] // fstar2 only
+  {
+    impl_fetch_utf8_correct s len pi pres;
+    ()
+  };
+  !pres
+}
+
+#pop-options

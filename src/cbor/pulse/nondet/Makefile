@@ -21,8 +21,17 @@ c.snapshot: target_dir=../c
 rust.snapshot: source_dir=rust-extracted
 rust.snapshot: target_dir=../rust/src
 
+local_everparse_home := $(realpath ../../../..)
+ifeq ($(OS),Windows_NT)
+  local_everparse_home := $(shell cygpath -m $(local_everparse_home))
+endif
+
+# The public C headers are snapshotted into the shared include directory
+# rather than next to the C sources (see snapshot.Makefile).
+header_dir := $(local_everparse_home)/include/everparse
+
 %.snapshot:
-	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) $(subst .,,$(suffix $@))
+	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) header_dir=$(header_dir) $(subst .,,$(suffix $@))
 	+$(MAKE) $(basename $@).do
 
 .PHONY: %.snapshot snapshot
@@ -33,7 +42,7 @@ c.test-snapshot: target_dir=../c
 test-snapshot: c.test-snapshot
 
 %.test-snapshot:
-	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) $(subst .,,$(suffix $@))
+	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) header_dir=$(header_dir) $(subst .,,$(suffix $@))
 
 .PHONY: %.test-snapshot test-snapshot
 

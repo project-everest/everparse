@@ -180,10 +180,7 @@ let get_z3_diff_test _ =
   | None -> None
   | Some s -> let [p1; p2] = String.split [','] s in Some (p1, p2)
 
-let z3_executable () =
-  match !_z3_executable with
-  | None -> "z3"
-  | Some z3 -> z3
+let z3_executable () = !_z3_executable
 
 let get_save_z3_transcript () = !_save_z3_transcript
 
@@ -220,14 +217,9 @@ let get_z3_skip_c_initializers () : ML bool =
 let get_use_error_handler_macro () : ML bool =
   !use_error_handler_macro
 
-let uses_pulse_backend () : ML bool =
-  match get_api () with
-  | ApiLegacyLowstar -> false
-  | ApiPulse | ApiLowstar -> true
-
 let uses_pulse_api () : ML bool =
   match get_api () with
-  | ApiLegacyLowstar | ApiLowstar -> false
+  | ApiLowstar -> false
   | ApiPulse -> true
 
 let pulse_backend_module () : ML string =
@@ -251,9 +243,6 @@ let get_z3_use_ptr () : ML bool =
 let get_fstar_exe () : ML string =
   match !fstar_exe with
   | None ->
-    begin match OS.getenv_opt "FSTAR_EXE" with
-    | Some s -> s
-    | None ->
       let opt_fstar = OS.concat (OS.concat (OS.concat (OS.concat (OS.concat OS.everparse_home "opt") "FStar") "out") "bin") "fstar.exe" in
       if OS.file_exists opt_fstar
       then opt_fstar
@@ -262,5 +251,14 @@ let get_fstar_exe () : ML string =
         if OS.file_exists fstar_exe
         then fstar_exe
         else "fstar.exe"
-    end
   | Some s -> s
+
+let get_karamel_exe () : ML string =
+  match !karamel_exe with
+  | Some s -> s
+  | None ->
+      let krml = if OS.is_windows () then "krml.exe" else "krml" in
+      let opt_krml = OS.concat (OS.concat (OS.concat (OS.concat (OS.concat OS.everparse_home "opt") "karamel") "out") "bin") krml in
+      if OS.file_exists opt_krml
+      then opt_krml
+      else OS.concat (OS.concat OS.everparse_home "bin") krml

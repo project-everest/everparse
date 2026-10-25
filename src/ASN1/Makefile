@@ -1,77 +1,38 @@
 all: verify compile
 
-EVERPARSE_HOME ?= ../..
+EVERPARSE_HOME = $(realpath ../..)
 
-LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
+LOWPARSE_HOME = $(EVERPARSE_HOME)/lib/everparse/lowparse
 
-EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+INCLUDE_PATHS += $(LOWPARSE_HOME)
 
-INCLUDE_PATH = $(LOWPARSE_HOME)
+ALREADY_CACHED := *,-ASN1,
 
-FSTAR_OPTIONS += --cache_checked_modules --ext optimize_let_vc \
-		--already_cached *,-ASN1Test,-ASN1 \
-		--cmi \
-	        --odir ocaml/extracted \
-		$(addprefix --include ,$(INCLUDE_PATH)) \
-		$(OTHERFLAGS)
+OUTPUT_DIRECTORY := ocaml/extracted
 
+NOT_INCLUDED = ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.bak*)
 
-FSTAR_EXE ?= fstar.exe
+FSTAR_FILES := $(filter-out $(NOT_INCLUDED),$(wildcard *.fst *.fsti))
 
-FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
+clean_rules += ocaml.clean evaluation.clean clean-files
 
-NOT_INCLUDED=ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1Test.fst $(wildcard ASN1.bak*)
+# Whole-program extraction.  ASN1.X509 and ASN1.CRL are what ocaml/ASN1_Parser.ml
+# calls into; everything else is reached from them.
+CUSTARD_ENTRY_MODULES := ASN1.X509
+CUSTARD_ENTRY_MODULES += ASN1.CRL
+CUSTARD_ROOTS := ASN1.CRL.fst
 
-ALL_SOURCE_FILES = $(filter-out $(NOT_INCLUDED), $(wildcard *.fst *.fsti))
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
-.depend: $(ALL_SOURCE_FILES) Makefile
-	$(FSTAR) --dep full --extract '* -Prims -FStar -LowParse.Low -ASN1Test -ASN1.Low' $(ALL_SOURCE_FILES) --output_deps_to $@
+FSTAR_OPTIONS += --ext optimize_let_vc
 
-depend: .depend
+extract: $(CUSTARD_STAMP)
 
-ifeq (,$(filter clean,$(MAKECMDGOALS)))
--include .depend
-endif
-
-$(ALL_CHECKED_FILES): %.checked:
-	$(FSTAR) $<
-	@touch -c $@
-
-verify: $(ALL_CHECKED_FILES)
-	echo $*
-
-extract: $(ALL_ML_FILES)
-
-%.fst-in %.fsti-in:
-	@echo $(FSTAR_OPTIONS)
-
-ocaml/extracted/%.ml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml --extract_module $(basename $(notdir $(subst .checked,,$<)))
-
-ocaml/%.krml:
-	$(FSTAR) --codegen krml $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
-	touch $@
-
-krml.rsp: $(ALL_KRML_FILES)
-	for f in $^ ; do echo $$f ; done > $@.tmp
-	mv $@.tmp $@
-
-Test.c: krml.rsp
-	$(KRML_EXE) -fstar $(FSTAR_EXE) \
-	  -bundle 'ASN1Test=ASN1Test.\*,Prims,FStar.\*,C.\*,C,LowStar.\*,LowParse.\*' \
-	  -no-prefix ASN1Test \
-	  -skip-makefiles \
-	  -skip-compilation \
-	  -o $@ \
-	  @$^
-
-# test: ASN1Test.c # test.exe
-#	cat $^
+.PHONY: extract
 
 compile: evaluation/ASN1_Parser.exe
 
-evaluation/ASN1_Parser.exe: $(ALL_ML_FILES)
+evaluation/ASN1_Parser.exe: $(CUSTARD_STAMP)
 	$(MAKE) -C ocaml
 	cp ocaml/_build/default/ASN1_Parser.exe evaluation/
 	chmod +w $@
@@ -83,7 +44,7 @@ eval: compile
 	$(MAKE) -C evaluation
 
 clean-files:
-	-rm -rf *.checked *.krml .depend *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
+	-rm -rf *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
 
 .PHONY: clean-files
 
@@ -92,6 +53,4 @@ clean-files:
 
 .PHONY: %.clean
 
-clean: ocaml.clean evaluation.clean clean-files
-
-.PHONY: all verify clean depend compile test eval
+.PHONY: all compile test eval

@@ -8,7 +8,6 @@ open LowParse.Tot.Combinators
 open LowParse.Tot.Int
 open LowParse.Tot.List
 
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32

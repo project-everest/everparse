@@ -1,8 +1,9 @@
 module ASN1.X509
-#push-options "--split_queries no --fuel 2 --ifuel 0"
+#push-options " --fuel 2 --ifuel 0"
 
 module U32 = FStar.UInt32
 module List = FStar.List.Tot
+module Seq = FStar.Seq
 
 open ASN1.Base
 open ASN1.Syntax
@@ -345,7 +346,7 @@ let iPAddressChoice
 
 let iPAddressFamily
 = asn1_sequence [
-    "addressFamily" *^ (PLAIN ^: (mk_restricted_field asn1_octetstring (fun s -> let l = Bytes.length s in 2 <= l && l <= 3)));
+    "addressFamily" *^ (PLAIN ^: (mk_restricted_field asn1_octetstring (fun s -> let l = Seq.length s in 2 <= l && l <= 3)));
     "ipAddressChoice" *^ (PLAIN ^: iPAddressChoice)]
     (_ by (seq_tac ()))
 
@@ -594,15 +595,7 @@ open ASN1.Spec.Interpreter
 let x509_certificate_parser = asn1_as_parser x509_certificate
 
 
-[@@normalize_for_extraction [delta;
-                             zeta;
-                             iota;
-                             primops]]
 let parse_cert (b:bytes) = x509_certificate_parser b
 
-[@@normalize_for_extraction [delta;
-                             zeta;
-                             iota;
-                             primops]]
 let dparse_cert (b:bytes) = dasn1_as_parser x509_certificate b
 #show-options

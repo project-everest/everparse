@@ -82,7 +82,8 @@ This data format is very similar to a C type description, where
 as little-endian; with the addition of the ``entrypoint`` keyword,
 which tells 3d to expose the validator for the type to the final user.
 
-Once we run ``3d`` with this file, we obtain several files:
+Once we run ``bin/everparse-3d.exe --batch HelloWorld.3d`` with this file,
+we obtain several files:
 
 * ``HelloWorld.c`` and ``HelloWorld.h``, which contain the actual verified
   validators;
@@ -143,25 +144,26 @@ There can be multiple definitions marked ``entrypoint`` in a given
 
 .. note::
 
-  ``3d --api lowstar`` uses verified Pulse adapters while preserving the
-  Low\* C API described here, including direct validator calls, packed
-  results, error callbacks, and copy-buffer projections. The original
-  implementation remains the default, ``--api legacy_lowstar``.
-  ``--no_api`` restores that default; the former ``--pulse`` option is no
-  longer accepted. ``--api`` selects the implementation and C API, while
+  ``--api lowstar`` is the default, and ``--no_api`` restores it; the former
+  ``--pulse`` option is no longer accepted. It uses verified Pulse adapters
+  to preserve the
+  Low\*-compatible C API described here, including direct validator calls,
+  packed results, error callbacks, and copy-buffer projections.
+  ``everparse-3d.exe --api pulse`` instead exposes the native Pulse API.
+  ``--api`` selects the implementation and C API, while
   ``--input_stream`` independently selects ``buffer``, ``extern`` or ``static``.
   See :ref:`the --api option <3d-api-option>` for the runtime headers required
   by each selection, including when using ``--no_copy_everparse_h``.
 
   The entrypoint API is also the same under the native Pulse API:
-  ``3d --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
+  ``everparse-3d.exe --api pulse`` generates a ``ModuleWrapper.h`` declaring the very same
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
 
   ``ModuleWrapper.h`` includes ``EverParsePulseEndianness.h`` instead of
   ``EverParseEndianness.h``; its named ``EVERPARSE_ERROR_*`` kinds use the
   same numbers (see :ref:`sec-error-handling-pulse`).
-  ``3d --api pulse`` accordingly writes two
+  ``everparse-3d.exe --api pulse --batch`` accordingly writes two
   extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
   into the output directory alongside the ones listed above, unless
   ``--no_copy_everparse_h`` is specified. Finally, the
@@ -712,6 +714,11 @@ on a ``casetype`` allows one to model the layout of a C union.
 Note, the ``aligned`` attribute is not allowed on typedefs, enums, or other kinds
 of 3d declarations.
 
+Note also that every struct or casetype embedded by value in the fields of an
+``aligned`` type must itself be ``aligned``. Otherwise, 3d would lay the embedded
+type out without padding while a C compiler would pad it, and the generated
+static assertions would not compile. 3d rejects such specifications.
+
 Variable-length Types
 ......................
 
@@ -908,7 +915,7 @@ definitions for those flags. Here is a sample config file:
 
 .. literalinclude:: Arch.3d.config
 
-Then, one can invoke ``3d.exe --config Arch.3d.config
+Then, one can invoke ``everparse-3d.exe --config Arch.3d.config
 PointArch_32_64.3d --batch``, which produces the following C code as
 output.
 
@@ -1507,8 +1514,7 @@ addresses and sizes remain ``uint64_t`` in particular.
   (the default) under ``--api pulse``. A ``probe`` declaration combined with
   ``--input_stream extern`` or ``--input_stream static`` is rejected with
   *"Probes are only supported by the buffer backend under --api pulse"*.
-  ``--api legacy_lowstar`` and ``--api lowstar`` have no such restriction
-  for field probes.
+  ``--api lowstar`` has no such restriction for field probes.
 
   ``EVERPARSE_COPY_BUFFER_T`` on its own --- as a type parameter, or as the
   parameter of an ``extern`` action --- is *not* restricted, and works with
@@ -1525,11 +1531,12 @@ What changes is the small set of projections the client provides on
 
   extern size_t  *EverParseStreamPos(EVERPARSE_COPY_BUFFER_T buf);
 
-So, relative to the default backend, ``EverParseStreamLen`` returns a
+So, relative to ``--api lowstar``, ``EverParseStreamLen`` returns a
 ``size_t`` rather than a ``uint64_t``, and there is a third function to
 implement. ``EverParseStreamPos`` must return a pointer to a ``size_t`` cell
 that belongs to the copy buffer: Pulse validators carry their read position
-*inside* the input stream, whereas Low\* validators take it as an argument.
+*inside* the input stream, whereas the Low\*-compatible validators of
+``--api lowstar`` take it as an argument.
 The contract is:
 
   * The cell must remain live and writable for as long as the copy buffer
@@ -2127,7 +2134,7 @@ Error handling
 When a validator fails, EverParse supports invoking a user-provided
 callback with contextual information about the failure.
 
-With ``--api legacy_lowstar`` or ``--api lowstar``, an error handling callback
+With ``--api lowstar``, an error handling callback
 is a C procedure with the following seven-argument signature:
 
 .. code-block:: c
@@ -2149,7 +2156,7 @@ containing the client's stream ``base``, a ``has_length`` flag and a
 ``uint64_t length``.
 
 The signature above, and the error codes listed below, describe
-``--api legacy_lowstar`` and ``--api lowstar``. Under ``--api pulse`` the
+``--api lowstar``. Under ``--api pulse`` the
 signature differs but the
 named error kinds retain the same numbers; see :ref:`sec-error-handling-pulse`.
 
@@ -2272,12 +2279,13 @@ Three points deserve attention:
     the supplied origin to obtain the position relative to this validation.
 
   * ``StartPosition`` --- the trailing argument, and the one that carries
-    the same meaning as under the default backend --- is the offset from
+    the same meaning as under ``--api lowstar`` --- is the offset from
     the start of the input of the beginning of the field ``f``. It is what
     a handler should report.
 
 **The error codes.** ``<Mod>Wrapper.h`` defines ``EVERPARSE_ERROR_*``
-constants under ``--api pulse`` with the same kind numbers as Low*.
+constants under ``--api pulse`` with the same kind numbers as
+``--api lowstar``.
 The validator still returns a byte, not a packed position/error value.
 The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
@@ -2294,7 +2302,7 @@ In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
 ``--api pulse`` (the packed ``EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED``
 constant also exists in the Low\*-compatible runtime headers).
-Comparisons against the error-kind macros common to all three APIs keep
+Comparisons against the error-kind macros common to both APIs keep
 the same meaning. Earlier Pulse releases used 1
 for action failure and 5, 6, 7 for constraint, padding, and probe failures.
 Clients that hardcoded those Pulse-specific numbers must update them;

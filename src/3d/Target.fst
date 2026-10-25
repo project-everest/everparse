@@ -183,6 +183,16 @@ let print_ident (i:A.ident) =
 let print_maybe_qualified_ident (mname:string) (i:A.ident) =
   Printf.sprintf "%s%s" (maybe_mname_prefix mname i) (print_ident i)
 
+(* 3D's assumed types -- `extern type` and the output types -- are defined in C,
+   either by the client or by the FILE_OutputTypesDefs.h that 3D emits itself.
+   Custard would otherwise give each one a definition of its own (`typedef
+   struct OPTR_s OPTR;`), which conflicts with the real one. The attribute says
+   "the target declares this", and names it as C already spells it: print_ident
+   prefixes uppercase identifiers with `___` to keep them out of F*'s
+   constructor namespace, and that prefix is an F* artifact. *)
+let print_custard_extern_attr (i:A.ident) =
+  Printf.sprintf "[@@FStar.Attributes.custard_extern \"%s\"]\n" i.A.v.A.name
+
 let print_field_id_name (i:A.ident) =
   let open A in
   match i.v.modul_name with
@@ -445,18 +455,14 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       //exactly like the validators, so we must apply it to the same
       //compile-time boolean the rest of the generated code uses.
       let ueh = if Options.get_use_error_handler_macro () then "false" else "true" in
-      if Options.uses_pulse_backend ()
-      then
-        (* Probes are supported for the `buffer` backend only, so the probe
-           monad's type class instances are always the buffer ones. *)
-        Printf.sprintf
-          "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer unit true false %s)"
-          (Options.pulse_inst ())
-          ueh
-      else
-        Printf.sprintf "(probe_m_unit %s)" ueh
+      (* Probes are supported for the `buffer` backend only, so the probe
+         monad's type class instances are always the buffer ones. *)
+      Printf.sprintf
+        "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer unit true false %s)"
+        (Options.pulse_inst ())
+        ueh
     else
-    if (if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T" then Options.uses_pulse_backend () else false)
+    if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T"
     then
       (* Under --api pulse the copy buffer type is an assumed abstract type, just
          as it is under Low*. Name it by its defining module rather than
@@ -503,9 +509,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_typ mname t1)
       (print_typ mname t2)
   | T_pointer t i ->
-    if Options.uses_pulse_backend ()
-    then Printf.sprintf "(Pulse.Lib.Reference.ref (%s))" (print_typ mname t)
-    else Printf.sprintf "bpointer (%s)" (print_typ mname t)
+    Printf.sprintf "(Pulse.Lib.Reference.ref (%s))" (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
@@ -554,6 +558,22 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
       (print_kind mname k)
   | PK_string ->
     "parse_string_kind"
+
+(* The modules whose [kind_...] definitions occur in [k]. The Pulse backend
+   needs them in the [delta_namespace] of the [norm] that reduces a generated
+   kind to a literal record: a base kind is either defined in the current
+   module or imported from another 3d module, and leaving any of them stuck
+   leaves the whole nest of [and_then_kind]/[glb] applications unreduced. *)
+let rec kind_modules (mname:string) (k:parser_kind) : Tot (list string) =
+  match k.pk_kind with
+  | PK_base hd ->
+    let open A in
+    [ (match hd.v.modul_name with None -> mname | Some s -> s) ]
+  | PK_list k0 _ -> kind_modules mname k0
+  | PK_and_then k1 k2
+  | PK_glb k1 k2 -> kind_modules mname k1 `List.Tot.append` kind_modules mname k2
+  | PK_filter k0 -> kind_modules mname k0
+  | _ -> []
 
 let print_params (mname:string) (params:list param) : ML string =
   String.concat " " <|
@@ -1950,14 +1970,10 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
             assert (is_output_type t);
             match t with
             | T_app id KindOutput [] ->
-              Printf.sprintf "\n\nval %s : Type0\n\n" s
+              Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr id) s
             | T_pointer bt A.UInt64 ->
               let bs = print_output_type_val tbl bt in
-              let ptr =
-                if Options.uses_pulse_backend ()
-                then "Pulse.Lib.Reference.ref"
-                else "bpointer"
-              in
+              let ptr = "Pulse.Lib.Reference.ref" in
               bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = %s %s\n\n" s ptr (print_output_type false bt))
   else ""
 #pop-options
@@ -1996,19 +2012,11 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (print_typ mname oe.oe_t)
           (Some?.v oe.oe_bitwidth)
       end in
-    if Options.uses_pulse_backend ()
-    then
-      Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
-        fn_name
-        fn_arg1_t
-        fn_arg2_t
-    else
     Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) : extern_action unit (NonTrivial output_loc)\n\n"
-        fn_name
-        fn_arg1_t
-        fn_arg2_t
+      "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
+      fn_name
+      fn_arg1_t
+      fn_arg2_t
 
 let rec base_id_of_output_expr (oe:output_expr) : A.ident =
   match oe.oe_expr with
@@ -2096,16 +2104,13 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
         (print_output_type_val tbl t)
         (print_output_type_val tbl (T_pointer t A.UInt64))
     | Extern_type i ->
-      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
     | _ -> "")) in
    let prefix =
-     if Options.uses_pulse_backend ()
-     then "open Pulse.Lib.Pervasives\n\
-           open EverParse3d.Prelude\n\
-           open EverParse3d.State\n\
-           open EverParse3d.Actions.Base\n"
-     else "open EverParse3d.Prelude\n\
-           open EverParse3d.Actions.All\n"
+     "open Pulse.Lib.Pervasives\n\
+      open EverParse3d.Prelude\n\
+      open EverParse3d.State\n\
+      open EverParse3d.Actions.Base\n"
    in
    Printf.sprintf
     "module %s.ExternalTypes\n\n%s\n%s"
@@ -2119,10 +2124,8 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      copy-buffer type class instances, which cannot be inferred from a bare
      `val`; spell them out. Probes are supported for the `buffer` backend only. *)
   let probe_inst_args =
-    if Options.uses_pulse_backend ()
-    then Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
+    Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
       (Options.pulse_inst ())
-    else ""
   in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
@@ -2138,22 +2141,14 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
-      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
     | Extern_fn f ret params false ->
-      (if Options.uses_pulse_backend ()
-       then Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
+      Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
-       else
-      Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
-        (print_ident f)
-        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
-          (print_ident i)
-          (print_typ modul t))))
-        (print_typ modul ret))
     | Extern_fn f ret params true ->
       Printf.sprintf "\n\nval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
         (print_ident f)
@@ -2184,8 +2179,6 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      then Printf.sprintf "include %s.ExternalTypes\n\n" modul
      else "" in
 
-   if Options.uses_pulse_backend ()
-   then
    Printf.sprintf
     "module %s.ExternalAPI\n\n\
      open Pulse.Lib.Pervasives\n\
@@ -2199,17 +2192,6 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      noextract let ___output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"#output\" ___output_state_slprop\n\n%s"
     modul
     (Options.pulse_backend_module ())
-    external_types_include
-    s
-   else
-   Printf.sprintf
-    "module %s.ExternalAPI\n\n\
-     open EverParse3d.Prelude\n\
-     open EverParse3d.Actions.All\n\
-     open EverParse3d.Interpreter\n\
-     %s\n\
-     noextract val output_loc : eloc\n\n%s"
-    modul
     external_types_include
     s
 

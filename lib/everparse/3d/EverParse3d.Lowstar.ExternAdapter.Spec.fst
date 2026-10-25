@@ -1,5 +1,4 @@
 module EverParse3d.Lowstar.ExternAdapter.Spec
-friend EverParse3d.Kinds
 friend EverParse3d.Prelude
 module P = EverParse3d.Prelude
 module LP = LowParse.Spec.Base

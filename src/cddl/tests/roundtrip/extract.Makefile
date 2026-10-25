@@ -21,27 +21,29 @@ ifeq (,$(OUTPUT_DIRECTORY))
 $(error OUTPUT_DIRECTORY must be set on the command line)
 endif
 
-EVERPARSE_SRC_PATH := $(realpath ../../..)
+EVERPARSE_HOME := $(realpath ../../../..)
 
-# karamel.Makefile adds krmllib paths; pulse.Makefile adds
-# PULSE_HOME/lib/pulse and sets OCAMLPATH for pulse extraction.
 INCLUDE_PATHS += \
-    $(EVERPARSE_SRC_PATH)/cbor/spec \
-    $(EVERPARSE_SRC_PATH)/cbor/pulse \
-    $(EVERPARSE_SRC_PATH)/cddl/spec \
-    $(EVERPARSE_SRC_PATH)/cddl/pulse \
-    $(EVERPARSE_SRC_PATH)/cddl/tool
+    $(EVERPARSE_HOME)/lib/everparse/cbor/spec \
+    $(EVERPARSE_HOME)/lib/everparse/cbor/pulse \
+    $(EVERPARSE_HOME)/lib/everparse/cddl/spec \
+    $(EVERPARSE_HOME)/lib/everparse/cddl/pulse \
+    $(EVERPARSE_HOME)/src/cddl/tool
 
 ALREADY_CACHED := *,-$(MNAME),
-FSTAR_DEP_OPTIONS := --extract $(MNAME)
+
+# Whole-program extraction of just this module: the checker links the result
+# against evercddl.lib, which already holds the CDDL AST, so $(MNAME) alone is
+# the public surface.
+CUSTARD_BACKEND := OCaml
+CUSTARD_ENTRY_MODULES := $(MNAME)
 FSTAR_FILES := $(OUTPUT_DIRECTORY)/$(MNAME).fst
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
-extract: $(ALL_ML_FILES)
+extract: $(CUSTARD_STAMP)
 
 .PHONY: all extract

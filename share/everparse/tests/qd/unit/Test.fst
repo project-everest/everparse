@@ -1,176 +1,99 @@
 module Test
+#lang-pulse
 
-open FStar.HyperStack.ST
-open FStar.HyperStack.IO
-open C
-open C.String
-open FStar.Bytes
-module LB = LowStar.Buffer
-module LPL = LowParse.Low.Base
+(* A client of the Pulse API that `qd -pulse` generates for unittests.rfc.
 
-(*
-val discard: bool -> ST unit
-  (requires (fun _ -> True))
-  (ensures (fun h0 _ h1 -> h0 == h1))
-let discard _ = ()
-let bprint s = discard (FStar.IO.debug_print_string (s^"\n"))
+   The rest of this suite only checks that the generated code verifies,
+   extracts and compiles. Nothing consumed it, so a generated validator,
+   jumper or accessor could have been unusable at its own interface and this
+   suite would still have been green. This is the Pulse counterpart of the
+   `employee_test` client in the deleted Low* `tests/sample`, which used
+   `employee_validator` + `accessor_employee_salary` + `read_u16`.
 
-let from_bytes (b:bytes{length b <> 0}) : StackInline (LB.buffer LPL.byte)
-  (requires (fun h0 -> True))
-  (ensures  (fun h0 buf h1 ->
-    LB.(modifies loc_none h0 h1) /\
-    LB.live h1 buf /\ LB.unused_in buf h0 /\
-    LB.length buf = length b /\
-    reveal b `Seq.equal` LB.as_seq h1 buf))
-  =
-  let h0 = FStar.HyperStack.ST.get () in
-  let lb = LB.alloca 0uy (len b) in
-  store_bytes b lb;
-  let h1 = FStar.HyperStack.ST.get () in
-  LB.(modifies_only_not_unused_in loc_none h0 h1);
-  lb
+   t8 is the interesting target: its two leading fields are variable-length
+   (`t5 y`, `t1 z<0..255>`), so reaching the fixed-width `x1` exercises the
+   generated jumpers rather than a constant offset. *)
 
-let test_open_enum () : St bool =
-  print (!$"Testing open enum parser.\n");
-  let x = T7.Body_y [
-    twobytes (0z,1z);
-    twobytes (3z,5z);
-    twobytes (2z,6z);
-    twobytes (255z,0z)
-  ] in
-  let tmp : list T1.t1 = [create 10ul 7z; create 12ul 9z] in
-  assume(T2.t2_list_bytesize tmp == 22);
-  let y = T7.Body_Unknown_tag2 33z tmp in
-  let xb = T7.t7_serializer32 x in
-  let yb = T7.t7_serializer32 y in
-  bprint ("Serialized (case Y): "^hex_of_bytes xb);
-  bprint ("Serialized (default case): "^hex_of_bytes yb);
-  match T7.t7_parser32 xb, T7.t7_parser32 yb with
-  | Some (x',r), Some (y', r') ->
-    if x = x' && r = len xb && y = y' && r' = len yb  then (
-      print (!$"Roundtrip OK.\n\n");
-      true
-    ) else (
-      print (!$"Roundtrip failed.\n\n");
-      false
-    )
-  | _ -> print (!$"failed.\n"); false
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Slice
+open LowParse.Spec.Base
 
-let test_closed_enum () : St bool =
-  print (!$"Testing closed enum parser.\n");
-  let x = T6.Body_a (twobytes (127z, 63z)) in
-  let xb = T6.t6_serializer32 x in
-  bprint ("Serialized: "^hex_of_bytes xb);
-  match T6.t6_parser32 xb with
-  | None -> print (!$"failed.\n"); false
-  | Some (x',r) ->
-    if x = x' && r = len xb then (
-      print (!$"Roundtrip OK.\n\n");
-      true
-    ) else (
-      print (!$"Roundtrip failed.\n\n");
-      false
-    )
+module S = Pulse.Lib.Slice
+module SZ = FStar.SizeT
+module U8 = FStar.UInt8
+module U16 = FStar.UInt16
+module I32 = FStar.Int32
+module A = Pulse.Lib.Array
+module PPB = LowParse.PulseParse.Base
+module LPPI = LowParse.Pulse.Int
+module LPSI = LowParse.Spec.Int
+module Trade = Pulse.Lib.Trade.Util
 
-let test_bitcoin () : St bool =
-  assume false;
-  let block = bytes_of_hex   "030000009185dbc5e60723af6b4cdcdb5ceea505bc1cf7fe85097d02000000000000000001fef45c2701088577dffd37927b20da129acce6303f2ba3116ce032b4f8a5018de2dd55c4431418cb638acc0201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff5703a7ab052f4249503130302f048fe2dd550850030f240c3900003c5b4254434368696e612e636f6d5d20e5b9b8e7a68fe4b88de59ca8e5be97e588b0e5a49a20e8808ce59ca8e8aea1e8be83e5b0912d2de4b99de6809d000000000100f90295000000001976a9142c30a6aaac6d96687291475d7d52f4b469f665a688ac000000000100000001f71c1cd429d1800080147ef63b2aa7440273d1ecdb2b0a1da01aded965e2ca8e000000006b483045022100de5bdb5a365fb16cc4057f1b1c1d9aabf130e85a9da6c184f186d0d0fbe7afd7022024321c4a53c4f5017153a666e10c65e4d790eb100fb4d66eaac8f9417699351c012102163e80de410646145142636833d8a92de4bb5c99e49bd52be5346fb1030628d4ffffffff02f05e3102000000001976a9145ca26d65ee83f441ef98b624763a305d50eb36cf88aca0860100000000001976a914838eb1034b719f9c47ab853aee63d505e4176a8388ac00000000" in
-  let open FStar.UInt32 in
-  let open FStar.Bytes in
-  let lb = from_bytes block in
-  if not (LPL.validate Block.block_validator lb (len block)) then
-    (print !$"Validator failed on Bitcoin block!\n"; false)
-  else
-    let slice = LPL.make_slice lb (len block) in
-    let pos_random = Block.accessor_block_prev_block slice 0ul in
-    let p_random = LB.sub lb pos_random 32ul in
-    bprint (" The previous block hash is: " ^(hex_of_bytes (of_buffer 32ul p_random))); true
+inline_for_extraction
+let read_u16 : PPB.leaf_reader LPSI.parse_u16 =
+  PPB.leaf_reader_of_serialized (LPPI.read_u16' ())
 
-let test_zeroarg () : St C.exit_code =
-  let b = true in
-  let b = test_closed_enum () in
-  let b = if b then test_open_enum () else false in
-  let b = if b then test_bitcoin () else false in
-  if b then C.EXIT_SUCCESS else C.EXIT_FAILURE
+(* Validate a t8, then project field x1 through the generated accessor. *)
+fn t8_read_x1
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  requires S.pts_to input #pm v
+  returns res: U16.t
+  ensures S.pts_to input #pm v
+{
+  let mut poffset = 0sz;
+  let is_valid = T8.t8_validator input poffset;
+  if is_valid {
+    let off = !poffset;
+    let input' = PPB.peek_trade_gen T8.t8_parser input 0sz off;
+    with v1. assert (PPB.pts_to_parsed T8.t8_parser input' #(pm /. 2.0R) v1);
+    let sub = T8.accessor_t8_x1 input';
+    with v2 pm2. assert (PPB.pts_to_parsed LPSI.parse_u16 sub #pm2 v2);
+    let x = read_u16 sub;
+    Trade.elim (PPB.pts_to_parsed LPSI.parse_u16 sub #pm2 v2)
+               (PPB.pts_to_parsed T8.t8_parser input' #(pm /. 2.0R) v1);
+    Trade.elim (PPB.pts_to_parsed T8.t8_parser input' #(pm /. 2.0R) v1)
+               (S.pts_to input #pm v);
+    x
+  } else {
+    0us
+  }
+}
 
-let test_bitcoin_file (filename: C.String.t) : St unit =
-  let slice = LowParse.TestLib.Low.load_file_buffer_c filename in
-    let consumed = Block.block_validator slice 0uL in
-    if LPL.is_error consumed
-    then
-      let _ = print !$"Validation failed\n" in
-      ()
-    else if LowParse.Low.Base.uint64_to_uint32 consumed = slice.LPL.len
-    then
-      let _ = print !$"Validation succeeded, everything consumed\n" in
-      ()
-    else
-      let _ = print !$"Validation succeeded, but some data left over\n" in
-      ()
+(* A well-formed t8, laid out by hand. Note the TLS presentation-syntax rule
+   that `t3 t4[8]` is 8 *bytes* (4 elements of the 2-byte t3), not 8 elements:
 
-let main
-  (argc: Int32.t)
-  (argv: LowStar.Buffer.buffer C.String.t)
-: ST C.exit_code
-    (requires (fun h ->
-      LowStar.Buffer.live h argv /\
-      Int32.v argc == LowStar.Buffer.length argv
-    ))
-    (ensures (fun _ _ _ -> True))
-= if argc `Int32.lt` 2l
-  then
-    test_zeroarg ()
-  else
-    let filename = LowStar.Buffer.index argv 1ul in
-    let _ = print filename in
-    let _ = print !$"\n" in
-    let _ = test_bitcoin_file filename in
-    C.EXIT_SUCCESS
-*)
+     0..7   t4 x   = 4 * t3, t3 = opaque[2]   (fixed, 8 bytes)
+     8      t5 y   = empty vector             (1-byte length prefix, 0x00)
+     9      t1 z   = empty vector             (1-byte length prefix, 0x00)
+     10..11 x1 : uint16  <- the field read back below
+     12..21 x2..x6 : uint16
+     22..25 x7 : uint32                                       total 26 bytes
 
-let main
-  (argc: Int32.t)
-  (argv: LowStar.Buffer.buffer C.String.t)
-: ST C.exit_code
-    (requires (fun h ->
-      LowStar.Buffer.live h argv /\
-      Int32.v argc == LowStar.Buffer.length argv
-    ))
-    (ensures (fun _ _ _ -> True))
-=
-    C.EXIT_SUCCESS
+   26 is exactly the minimum length qd computes for t8 (LINFO<t8> minLen=26). *)
+fn test ()
+  requires emp
+  returns ok: bool
+  ensures emp
+{
+  let mut arr = [| 0uy ; 26sz |];
+  let input = S.from_array arr 26sz;
+  input.(10sz) <- 0x12uy;
+  input.(11sz) <- 0x34uy;
+  let res = t8_read_x1 input;
+  S.to_array input;
+  U16.eq res 0x1234us
+}
 
-
-(*
-Old test for TLS parsers. This has been moved to mitls-fstar
-
-//module CH = QD.Parse_clientHello
-//module SH = QD.Parse_serverHello
-//module NST = QD.Parse_newSessionTicket13
-
-  let client_hello = bytes_of_hex "0303636fad80506049a41bf5d2bc6282def8541c064f7c5dfc1a22d15d1fdb63a7312053bada022607152b1f61edc26aa42ae04e47a557188d8d5618aa43fed2bfe358003e130213031301c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff010000b2000000190017000014746c7331332e636c6f7564666c6172652e636f6d000b000403000102000a000c000a001d0017001e00190018002300000016000000170000000d0030002e040305030603080708080809080a080b080408050806040105010601030302030301020103020202040205020602002b0009087f1c030303020301002d00020101003300260024001d002028f6c297892591276bf0dd77a6c1ade6b586ed955e80dc79c3bb98609f538101" in
-  let server_hello = bytes_of_hex (* record header "02000076" *) "0303f71ed30cc04779b506a9f8af668da1b5fd8f26357c12cd4ba7c214f680e14e0f20c01886bb135f6d36102340ca06c5f9b9b777438dc3dda56e747003216dcbf136130200002e00330024001d0020b4871c8695fc4be0eae36067356ee16ff5e92e756f89b2cbfe48525acd3e0c27002b00027f1c" in
-  let new_session_ticket = bytes_of_hex "0002a3002af9a838010000d08225ecc6fec0ee18c3dfef6d54a87f1d742ee5a43abbe59a3c86441dbd5ad39e69320a025e89481d3c7ee6b199bf944a8f4834b4d39da4706445ee8b0ea43b910bde77faffde5f856c906932dbe75bd60aa5f9c7b5ec47735e9f2deadf28828801ba2484b9a8cb5e7861d63840723fb9182d4db9cc1e91057949df74161360ae06b4ebf38f7611c36406808d4060d43c82888794b6c8d2a6d32aa16eafd9fd01b5fbaf7a8924d6b502f8f1898f6413845855a03e5ff7273402f85e1269d26298bd8a00512c0d8e45c005f06c200a52200008002a000400003800" in
-  print (!$"Parsing client hello... ");
-  match CH.clientHello_parser32 client_hello with
-  | None ->
-    print (!$"failed.\n");
-    C.EXIT_FAILURE
-  | Some (ch, r) ->
-    print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
-    print (!$"Parsing server hello... ");
-    match SH.serverHello_parser32 server_hello with
-    | None ->
-      print (!$"failed.\n");
-      C.EXIT_FAILURE
-    | Some (sh, r) ->
-      print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
-      print (!$"Parsing new session ticket... ");
-      match NST.newSessionTicket13_parser32 new_session_ticket with
-      | None ->
-        print (!$"failed.\n");
-	C.EXIT_FAILURE
-      | Some (nst, r) ->
-        print_string ("OK, parsed "^(FStar.UInt32.to_string r)^" bytes\n");
-        C.EXIT_SUCCESS
-*)
+(* Non-zero exit if the generated validator/jumper/accessor chain does not
+   round-trip the field we planted, so the suite fails loudly rather than
+   merely proving the code compiles. *)
+fn main ()
+  requires emp
+  returns r: I32.t
+  ensures emp
+{
+  let ok = test ();
+  if ok { 0l } else { 1l }
+}

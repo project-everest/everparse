@@ -1,6 +1,5 @@
 out.inplace-hash
 out.batch
-out.batch-interpret
 out.elf
 out.fail.batch
 out.cleanup

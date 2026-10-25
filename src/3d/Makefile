@@ -1,18 +1,54 @@
-all: 3d prelude
+all: 3d
 
-EVERPARSE_SRC_PATH=$(realpath ..)
 EVERPARSE_HOME=$(realpath ../..)
 
-FSTAR_FILES := Main.fst Version.fst
+FSTAR_FILES := Main.fst Version.fst Z3Version.fst
 FSTAR_FILES += Hashing.Hash.fst
-FSTAR_DEP_OPTIONS := --extract '* -Prims -FStar'
 OUTPUT_DIRECTORY := ocaml/generated
 
-clean_rules += clean-prelude clean-3d
+# The 3d compiler is a whole program: Main's top-level initializer is what it
+# runs, and the hand-written OCaml under ocaml/ (which realizes the
+# interface-only modules Batch, JSON, OS, Z3, ...) calls into the generated
+# code, so every definition it calls has to be a root too -- dead code
+# elimination cannot see a call from hand-written OCaml.
+CUSTARD_BACKEND := OCaml
+# The parser (ocaml/parser.mly, ocaml/lexer.mll) builds every shape of the
+# source AST, so all of Ast is public surface.
+CUSTARD_ENTRY_MODULES := Ast
+CUSTARD_ENTRIES := Main
+CUSTARD_ENTRIES += Deps.get_config
+CUSTARD_ENTRIES += HashingOptions.input_stream_include
+CUSTARD_ENTRIES += Options.config_module_name
+CUSTARD_ENTRIES += Options.get_blank_lines
+CUSTARD_ENTRIES += Options.get_goto_for_early_return
+CUSTARD_ENTRIES += Options.get_hoist_locals
+CUSTARD_ENTRIES += Options.get_init_locals
+CUSTARD_ENTRIES += Options.get_line_comments
+CUSTARD_ENTRIES += Options.get_karamel_exe
+CUSTARD_ENTRIES += Options.z3_executable
+CUSTARD_ENTRIES += Options.z3_options
+CUSTARD_ENTRIES += Version.everparse_version
+CUSTARD_ENTRIES += Z3Version.z3_version
+CUSTARD_ENTRIES += Config.config
+CUSTARD_ENTRIES += Config.config_compile_time_flags
+CUSTARD_ENTRIES += Hashing.Hash.check_all_hashes
+CUSTARD_ENTRIES += Hashing.Hash.check_inplace_hashes
+CUSTARD_ENTRIES += Hashing.Hash.hash_as_comment
+CUSTARD_ENTRIES += Hashing.Hash.hashed_files
+# The interface-only modules that ocaml/ realizes by hand. Only those that
+# declare an abstract type need to be named: a module whose declarations are
+# all values gets no generated file to begin with.
+CUSTARD_REALIZED_MODULES := Hashing_Op Hashtable Z3
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+# One file on the command line: the rest of the program is loaded on demand
+# from the names above.
+CUSTARD_ROOTS := Main.fst
 
-EVERPARSE_3D=$(EVERPARSE_HOME)/bin/3d.exe
+clean_rules += clean-3d
+
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
+
+EVERPARSE_3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe
 EVERPARSE_3D_MAIN=ocaml/_build/default/Main.exe
 
 test: demo
@@ -20,13 +56,15 @@ test: demo
 demo: all
 	+$(MAKE) -C $(EVERPARSE_HOME) 3d-unit-test
 
-.PHONY: all prelude test clean clean-3d clean-prelude 3d
-
-prelude:
-	+$(MAKE) -C prelude
+.PHONY: all test clean clean-3d 3d
 
 Version.fst:
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh > $@.tmp
+	mv $@.tmp $@
+
+Z3Version.fst: $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+	echo 'module Z3Version' > $@.tmp
+	echo 'let z3_version = "$(EVERPARSE_Z3_VERSION)"' >> $@.tmp
 	mv $@.tmp $@
 
 3d: $(EVERPARSE_3D)
@@ -36,21 +74,24 @@ $(EVERPARSE_3D): $(EVERPARSE_3D_MAIN)
 	cp $< $@
 	chmod +w $@ # because dune produces read-only executables
 
-$(EVERPARSE_3D_MAIN): $(ALL_ML_FILES) $(filter-out %~,$(wildcard ocaml/*.ml*))
+$(EVERPARSE_3D_MAIN): $(CUSTARD_STAMP) $(filter-out %~,$(wildcard ocaml/*.ml*))
 	+$(MAKE) -C ocaml
-
-clean-prelude:
-	+$(MAKE) -C prelude clean
-
-.PHONY: clean-prelude
 
 clean-3d:
 	+$(MAKE) -C ocaml clean
-	rm -rf *.checked *~ Version.fst $(EVERPARSE_HOME)/bin/3d.exe
+	rm -rf *.checked *~ Version.fst Z3Version.fst $(EVERPARSE_HOME)/bin/everparse-3d.exe
 
 .PHONY: clean-3d
 
 .PHONY: hashchk hashchk-boot hashchk-rebuild
+
+# MSBuild turns every environment variable into a global property, and
+# `OtherFlags` is the F# property holding the extra fsc command line. So the
+# OTHERFLAGS that the rest of this build uses to pass F* options (CI sets
+# OTHERFLAGS='--admit_smt_queries true') would reach fsc verbatim and fail the
+# build with "FS0243: Unrecognized option: '--admit_smt_queries'". Clear it for
+# this target only; the F* rules elsewhere still see it.
+hashchk: OTHERFLAGS :=
 
 hashchk:
 	cd hashchk && dotnet build everparse.fsproj && dotnet build everparse-hashchk.fsproj

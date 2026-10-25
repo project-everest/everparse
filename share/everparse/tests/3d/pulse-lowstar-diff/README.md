@@ -1,9 +1,9 @@
 # Low\*-compatible vs. native Pulse API differential test
 
 This suite compares `3d --api lowstar` with `3d --api pulse`: the
-Low\*-compatible and native Pulse public APIs of `lib/everparse/3d/`.
-The original Low\* implementation is compared separately in
-`src/3d/tests/pulse-lowstar-diff-tests`, using the same shared Low\*-API corpus.
+Low\*-compatible and native Pulse public APIs of `lib/everparse/3d/`. Both are
+Pulse implementations — `lowstar` is the one that exposes the Low\*-compatible
+C ABI — so this suite is unaffected by the removal of the Low\* backend.
 
 This directory asserts that, empirically, on the 3D test grammars.
 
@@ -46,20 +46,22 @@ Knobs:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `ITERS` | `20000` | fuzzer iterations per entrypoint, per backend |
-| `LO_DIR` | `share/everparse/tests/3d/lowstar/out.batch-interpret` | `--api lowstar` generated C |
-| `PU_DIR` | `share/everparse/tests/3d/out.batch-interpret.pulse` | `--api pulse` generated C |
+| `LO_DIR` | `share/everparse/tests/3d/lowstar/out.batch` | `--api lowstar` generated C |
+| `PU_DIR` | `share/everparse/tests/3d/out.pulse` | `--api pulse` generated C |
 | `SUBDIR_TESTS` | see Makefile | which sub-directory tests to compare |
 | `DIFF_PREBUILT` | `0` | set to `1` only when both ordinary corpora have already been built |
 
-The two input directories are produced by the ordinary `batch-interpret-test`
-and `pulse-batch-interpret-test` targets. By default, this Makefile invokes
+The two input directories are produced by the ordinary `batch-test` and
+`pulse-batch` targets. By default, this Makefile invokes
 the root `3d-unit-test` and `3d-pulse-test` targets first, building both complete
 corpora, including subdirectory outputs. The first target explicitly selects
 `--api lowstar`; the second explicitly selects `--api pulse`.
-No generated test code from `legacy_lowstar` is required.
 
 The enclosing `make 3d-test` already builds both corpora and passes
-`DIFF_PREBUILT=1` to avoid duplicate builds. Even in prebuilt mode, every compared
+`DIFF_PREBUILT=1` to avoid duplicate builds. The root `make
+3d-pulse-diff-prebuilt-test` runs this test alone with `DIFF_PREBUILT=1`; CI uses
+it in a separate job, over the generated `.c`/`.h` files saved by the jobs that
+build the corpora. Even in prebuilt mode, every compared
 directory is checked for the expected validator result type and Low\*-adapter
 worker references. Missing, mixed, or original-Low\* outputs fail rather
 than silently comparing the wrong implementations. Clean and rebuild a corpus
@@ -70,15 +72,29 @@ so changed input directories or `ITERS` cannot reuse an old passing trace.
 `make selftest` exercises the build wiring and wrong/missing-API rejection
 without running the verifier.
 
-We read those rather than the `batch-test`/`pulse-batch` outputs because the
-latter are built from `positive_tests`, which excludes `ActAndCheck.3d` and
-`FieldDependence0.3d`. Both targets drive an identical pipeline today and
-differ only in their file list, so taking the wider one costs nothing and buys
-coverage of the only test that exercises `:act`/`:check`.
-
 `pulse-diff` is **not** part of the shared Low\*-API corpus's `all` target:
 it also needs the native Pulse outputs. The root `make 3d-test` builds both
 trees before running this suite on Pulse-enabled Linux builds.
+
+## The `--api lowstar` worker in the public header
+
+Both modes are compiled from the same Pulse combinators; `--api lowstar` only
+wraps the result. For each entrypoint `3d` emits a Pulse-native worker named
+`validate_<reserved_prefix>core_<root>` (`InterpreterTarget.pulse_worker_name`),
+with `reserved_prefix = "___"`, and wraps it in a public adapter `validate_<root>`
+returning the legacy `uint64_t` result. KaRaMeL drops the reserved prefix and
+renders the worker as `<Module>ValidateCore<Root>` (`check_api.py` matches
+`Validate_*Core`, tolerating a prefix that survives). The worker returns
+`uint8_t`, like any Pulse validator.
+
+The worker is tagged `KrmlPrivate`, so the old per-module extraction hid it in
+`internal/`, which `check_api.py` deliberately does not glob. Custard ignores
+`KrmlPrivate` (see the comment in `../lowstar/Makefile`), so the worker now
+sits in the public header, next to the adapter. `check_api.py` therefore
+excludes those names from the `--api lowstar` result-type check:
+only the adapter is public API. A genuinely wrong public validator -- a
+`uint8_t` `<Module>Validate<Root>` in an `--api lowstar` tree -- is still
+rejected, and `test_harness.py` asserts both halves of that.
 
 ## The sub-directory tests
 

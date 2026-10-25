@@ -1,5 +1,5 @@
 #NOTE: if you want to add global F* options, you need to do the following:
-# 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
+# 1. Add them to FSTAR_OPTIONS in lib/everparse/fstar.Makefile
 # 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
 all: package-subset asn1 cbor
@@ -33,50 +33,48 @@ ifeq (,$(NO_PULSE))
 all: cddl cbor-interface
 endif
 
-EVERPARSE_SRC_PATH := $(realpath src)
+EVERPARSE_HOME := $(realpath .)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += src/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+SRC_DIRS += lib/everparse/lowparse src/ASN1 lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse lib/everparse/cddl/spec
+
+# LowParse's specification and its Pulse implementation share one directory, so
+# the two are told apart by module name: everything the Pulse implementation
+# provides is under the LowParse.Pulse and LowParse.PulseParse namespaces.
+LOWPARSE_PULSE_PATTERN := lib/everparse/lowparse/LowParse.Pulse%
 
 ifeq (,$(NO_PULSE))
-  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+  SRC_DIRS += lib/everparse/cbor/pulse lib/everparse/cbor/pulse/raw lib/everparse/cbor/pulse/raw/everparse lib/everparse/cddl/pulse src/cddl/tool
   SRC_DIRS += lib/everparse/3d
+else
+  FSTAR_FILES_EXCLUDE += $(LOWPARSE_PULSE_PATTERN)
 endif
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 ifeq (,$(NO_PULSE))
-  include $(EVERPARSE_SRC_PATH)/pulse.Makefile
+  include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
 endif
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
-$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
+$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
 
-$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
+$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
 ifeq (1,$(ADMIT_LOWPARSE))
-$(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+$(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 ifeq (1,$(ADMIT_CBOR_CDDL))
-$(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+$(filter lib/everparse/cbor/% lib/everparse/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
-lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+LOWPARSE_PULSE_CHECKED_FILES := $(filter $(LOWPARSE_PULSE_PATTERN),$(ALL_CHECKED_FILES))
+
+lowparse: $(filter-out $(LOWPARSE_PULSE_CHECKED_FILES),$(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))
-lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
+lowparse: $(LOWPARSE_PULSE_CHECKED_FILES)
 endif
-
-# lowparse needed because of .fst behind .fsti for extraction
-3d-prelude-verify: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-
-.PHONY: 3d-prelude-verify
-
-3d-prelude: 3d-prelude-verify
-	+$(MAKE) -C src/3d/prelude
-
-.PHONY: 3d-prelude
 
 3d-exe: $(NEED_Z3)
 	+$(MAKE) -C src/3d 3d
@@ -84,23 +82,27 @@ endif
 .PHONY: 3d-exe
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-pulse-prelude: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES))) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
+3d-pulse-prelude: $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
 
 .PHONY: 3d-pulse-prelude
 
 3d: 3d-pulse-prelude
 
 # The binary package ships the Pulse 3d runtime already extracted to .krml, so
-# that `3d.exe --api pulse` has nothing left to build. Hence the krml extraction is
+# that `everparse-3d.exe --api pulse` has nothing left to build. Hence the krml extraction is
 # part of the packaged subset, not just of the test targets.
 ifeq (,$(NO_PULSE))
 3d: 3d-pulse-krml
 endif
 
-3d: 3d-prelude 3d-exe
+3d: 3d-exe
+
+asn1: asn1-base lowparse
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
-asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+asn1-base: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+
+.PHONY: asn1-base
 
 quackyducky: qd-exe lowparse
 
@@ -109,53 +111,82 @@ qd-exe: $(NEED_OPAM)
 
 .PHONY: qd-exe
 
-lowparse-unit-test: lowparse
-	+$(MAKE) -C tests/lowparse
+# The --api lowstar tests, in two halves that CI runs as separate jobs:
+# the top-level corpus, and the subdirectory tests.
+3d-unit-test: 3d-unit-corpus-test 3d-unit-subdirs-test
 
-3d-unit-test: 3d $(NEED_Z3_TESTGEN)
+3d-unit-corpus-test 3d-unit-subdirs-test: 3d-unit-%-test: 3d $(NEED_Z3_TESTGEN)
 ifeq (,$(NO_PULSE))
-	+$(MAKE) -C share/everparse/tests/3d/lowstar EVERPARSE_API=lowstar
+	+$(MAKE) -C share/everparse/tests/3d/lowstar EVERPARSE_API=lowstar $*-test
 else
-	@echo "3d-unit-test requires the Pulse implementation (--api lowstar)" >&2
+	@echo "$@ requires the Pulse implementation (--api lowstar)" >&2
 	@exit 1
 endif
+
+.PHONY: 3d-unit-test 3d-unit-corpus-test 3d-unit-subdirs-test
 
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
 # KaRaMeL extraction of the Pulse 3d prelude. The resulting .krml files are
-# what 3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
+# what everparse-3d.exe --api pulse feeds to KaRaMeL alongside the generated modules, and the
 # per-backend EverParse.h it copies into the output directory.
 3d-pulse-krml: 3d-pulse-prelude
-	+$(MAKE) -C lib/everparse/3d/krml all
+	+$(MAKE) -C src/3d/krml all
 
 .PHONY: 3d-pulse-krml
 
 # The Pulse combinator backend (--api pulse): generation, F* verification,
-# KaRaMeL extraction to C, then compiling and running the C tests.
-3d-pulse-test: 3d-exe 3d-pulse-krml
-	+$(MAKE) -C share/everparse/tests/3d
+# KaRaMeL extraction to C, then compiling and running the C tests. In the same
+# two halves as 3d-unit-test.
+3d-pulse-test: 3d-pulse-corpus-test 3d-pulse-subdirs-test
 
-.PHONY: 3d-pulse-test
+3d-pulse-corpus-test 3d-pulse-subdirs-test: 3d-pulse-%-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C share/everparse/tests/3d pulse-$*-test
+
+.PHONY: 3d-pulse-test 3d-pulse-corpus-test 3d-pulse-subdirs-test
 
 3d-pulse-diff-test: 3d-pulse-test 3d-unit-test
+	+$(MAKE) 3d-pulse-diff-prebuilt-test
+
+# The differential test alone, over the outputs of 3d-unit-test and
+# 3d-pulse-test, which must already be there: CI builds them in other jobs.
+# It needs only a C compiler and Python, not F*.
+3d-pulse-diff-prebuilt-test:
 	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff DIFF_PREBUILT=1
 
-.PHONY: 3d-pulse-diff-test
+.PHONY: 3d-pulse-diff-test 3d-pulse-diff-prebuilt-test
 
-3d-lowstar-diff-test: 3d 3d-pulse-krml
-	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests
+# Extern/static adapter, scoped probe-view and O(1) >2^32 counter regressions,
+# exercised against both Pulse backends (--api lowstar and --api pulse). These
+# were salvaged from the deleted legacy differential gate, which was the only
+# thing that ever ran them. EVERPARSE_TEST_32BIT=1 adds the -m32 fixtures; they
+# need real multilib support (gcc-multilib on Ubuntu) and fail hard without it,
+# which is why they are opt-in.
+3d-adapter-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check-prebuilt
+ifeq (1,$(EVERPARSE_TEST_32BIT))
+	+$(MAKE) -C share/everparse/tests/3d/adapter-tests check32-prebuilt
+endif
 
-.PHONY: 3d-lowstar-diff-test
+.PHONY: 3d-adapter-test
+
+# The standalone F# hash checker, checking hashes produced by 3d with both
+# APIs. The 3d tests in share/everparse/tests/3d check those hashes with 3d
+# itself only.
+3d-hashchk-test: 3d-exe 3d-pulse-krml
+	+$(MAKE) -C src/3d/tests
+
+.PHONY: 3d-hashchk-test
 
 3d-test: 3d-doc-test
 
 ifeq (,$(NO_PULSE))
-3d-test: 3d-unit-test 3d-pulse-test
+3d-test: 3d-unit-test 3d-pulse-test 3d-hashchk-test
 
 ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
-3d-test: 3d-pulse-diff-test 3d-lowstar-diff-test
+3d-test: 3d-pulse-diff-test 3d-adapter-test
 endif
 endif
 
@@ -164,32 +195,21 @@ endif
 asn1-test: asn1
 	+$(MAKE) -C src/ASN1 test
 
-lowparse-bitfields-test: lowparse
-	+$(MAKE) -C tests/bitfields
-
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test: lowparse
 	+$(MAKE) -C share/everparse/tests/lowparse
-#	+$(MAKE) -C tests/pulse # TODO: move it into `share/everparse/tests/lowparse` and re-enable it
 else
 lowparse-pulse-test:
 endif
 
 .PHONY: lowparse-pulse-test
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
+lowparse-test: lowparse-pulse-test
 
-quackyducky-lowstar-test: quackyducky
-	+$(MAKE) -C tests
-
-.PHONY: quackyducky-lowstar-test
-
-quackyducky-pulse-test: quackyducky
+quackyducky-test: quackyducky
 	+$(MAKE) -C share/everparse/tests/qd
 
-.PHONY: quackyducky-pulse-test
-
-quackyducky-test: quackyducky-lowstar-test quackyducky-pulse-test
+.PHONY: quackyducky-test
 
 test: all lowparse-test quackyducky-test asn1-test cbor-test cddl-test
 
@@ -212,10 +232,10 @@ submodules:
 
 .PHONY: submodules
 
-cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
+cbor-interface: $(filter-out lib/everparse/cbor/spec/raw/%,$(filter lib/everparse/cbor/spec/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))
-cbor-interface: $(filter-out src/cbor/pulse/raw/%,$(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES)))
+cbor-interface: $(filter-out lib/everparse/cbor/pulse/raw/%,$(filter lib/everparse/cbor/pulse/%,$(ALL_CHECKED_FILES)))
 endif
 
 .PHONY: cbor-interface
@@ -238,10 +258,10 @@ endif
 
 .PHONY: cbor-det-common-vertest
 
-cbor-verify-aux: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter lib/everparse/cbor/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cbor-verify-aux: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter lib/everparse/cbor/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 .PHONY: cbor-verify-aux
@@ -249,7 +269,7 @@ endif
 # The byte_slice seam (CBOR.Pulse.Raw.Slice) has two backend implementations,
 # slice-c and slice-rust, that share a module name and so cannot be checked in a
 # single dependency scan; each lives in its own directory with its own Makefile
-# (mirroring src/cbor/pulse/raw) and is excluded from SRC_DIRS and the global
+# (mirroring lib/everparse/cbor/pulse/raw) and is excluded from SRC_DIRS and the global
 # checked-file cache. `cbor-verify` is the full verification rule: cbor-verify-aux
 # (the whole CBOR closure, including the shared CBOR.Pulse.Raw.Slice.fsti.checked)
 # plus each backend's CBOR.Pulse.Raw.Slice.fst.checked, built by delegating to the
@@ -266,10 +286,10 @@ endif
 # independent targets and may run in parallel with each other under -j.
 ifeq (,$(NO_PULSE))
 cbor-verify-slice-c: cbor-verify-aux
-	+$(MAKE) -C src/cbor/pulse/raw/slice-c
+	+$(MAKE) -C lib/everparse/cbor/pulse/raw/slice-c
 
 cbor-verify-slice-rust: cbor-verify-aux
-	+$(MAKE) -C src/cbor/pulse/raw/slice-rust
+	+$(MAKE) -C lib/everparse/cbor/pulse/raw/slice-rust
 
 cbor-verify: cbor-verify-aux cbor-verify-slice-c cbor-verify-slice-rust
 else
@@ -280,17 +300,17 @@ endif
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+cbor-extract-pre: cbor-verify $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES))
 
 .PHONY: cbor-extract-pre
 
 cbor-extract-krml: cbor-extract-pre
-	+$(MAKE) -C src/cbor extract-krml
+	+$(MAKE) -C lib/everparse/cbor extract-krml
 
 .PHONY: cbor-extract-krml
 
 cbor-test-snapshot: cbor-extract-krml
-	+$(MAKE) -C src/cbor test-snapshot
+	+$(MAKE) -C lib/everparse/cbor test-snapshot
 else
 cbor-test-snapshot: cbor-verify
 endif
@@ -300,7 +320,7 @@ endif
 # This rule is incompatible with `cbor` and `cbor-test-snapshot`
 ifeq (,$(NO_PULSE))
 cbor-snapshot: cbor-extract-krml
-	+$(MAKE) -C src/cbor snapshot
+	+$(MAKE) -C lib/everparse/cbor snapshot
 else
 cbor-snapshot:
 endif
@@ -317,10 +337,10 @@ cbor-test-extracted: cbor-test-unverified cbor-test-verified
 
 cbor-test: cbor-test-extracted cbor-test-snapshot
 
-cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
+cddl-spec: $(filter lib/everparse/cddl/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
+cddl-pulse: cddl-spec $(filter lib/everparse/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
 # cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
 cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
@@ -337,12 +357,23 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 
 ifeq (,$(NO_PULSE))
 cddl-unit-tests: cddl
-	+$(MAKE) -C src/cddl test
+	+$(MAKE) -C lib/everparse/cddl test
 else
 cddl-unit-tests:
 endif
 
 .PHONY: cddl-unit-tests
+
+# The roundtrip test uses the EverCDDL OCaml library installed by cddl-tool,
+# so it stays next to the tool, under src/cddl/tests.
+ifeq (,$(NO_PULSE))
+cddl-roundtrip-test: cddl
+	+$(MAKE) -C src/cddl/tests/roundtrip
+else
+cddl-roundtrip-test:
+endif
+
+.PHONY: cddl-roundtrip-test
 
 ifeq (,$(NO_PULSE))
 cose-extract-krml: cddl-tool
@@ -366,7 +397,7 @@ cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
 
-cddl-test: cddl cddl-unit-tests
+cddl-test: cddl cddl-unit-tests cddl-roundtrip-test
 
 .PHONY: cddl-test
 
@@ -384,16 +415,17 @@ clean-3d:
 	+$(MAKE) -C src/3d clean
 
 clean-lowparse:
-	+$(MAKE) -C src/lowparse clean
+	+$(MAKE) -C lib/everparse/lowparse clean
 
 clean-quackyducky:
 	+$(MAKE) -C src/qd clean
 
 clean-cbor-verify:
-	+$(MAKE) -C src/cbor clean-verify
+	+$(MAKE) -C lib/everparse/cbor clean-verify
 
 clean-cddl:
-	+$(MAKE) -C src/cddl clean
+	+$(MAKE) -C lib/everparse/cddl clean
+	+$(MAKE) -C src/cddl/tests/roundtrip clean
 
 .PHONY: clean-cbor-verify
 
@@ -408,22 +440,23 @@ clean-cose-test:
 .PHONY: clean-cose-test
 
 clean-tests:
-	+$(MAKE) -C tests clean
+	+$(MAKE) -C share/everparse/tests/lowparse clean
 
 .PHONY: clean-tests
 
 clean-3d-tests:
 	+$(MAKE) -C share/everparse/tests/3d/lowstar clean
 	+$(MAKE) -C share/everparse/tests/3d/pulse-lowstar-diff clean
-	+$(MAKE) -C src/3d/tests/pulse-lowstar-diff-tests clean
+	+$(MAKE) -C src/3d/tests clean
 
 .PHONY: clean-3d-tests
 
-# The Pulse prelude and its test corpus. Neither is reachable from clean-3d or
-# clean-3d-tests: src/3d/Makefile cleans the Low* prelude in src/3d/prelude,
-# and the Low*-API corpus is in share/everparse/tests/3d/lowstar.
+# The 3d prelude and its test corpus. Neither is reachable from clean-3d,
+# which only cleans src/3d itself, nor from clean-3d-tests, which covers the
+# Low*-API corpus in share/everparse/tests/3d/lowstar.
 clean-3d-pulse-prelude:
 	+$(MAKE) -C lib/everparse/3d clean
+	+$(MAKE) -C src/3d/krml clean
 
 .PHONY: clean-3d-pulse-prelude
 
@@ -439,7 +472,7 @@ clean-doc:
 
 clean: $(clean_rules)
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 
 release package package-noversion nuget-noversion everparse:
 	+$(MAKE) -f package.Makefile $@
@@ -447,4 +480,9 @@ release package package-noversion nuget-noversion everparse:
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 
 lowparse-fstar-test:
-	+$(MAKE) -C src/lowparse fstar-test
+	+$(MAKE) -C lib/everparse/lowparse fstar-test
+
+install:
+	+$(MAKE) -f install.Makefile
+
+.PHONY: install

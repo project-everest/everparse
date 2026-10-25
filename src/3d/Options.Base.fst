@@ -128,6 +128,8 @@ let _emit_smt_encoding : ref bool = alloc false
 
 let fstar_exe : ref (option (valid_string always_valid)) = alloc None
 
+let karamel_exe : ref (option vstring) = alloc None
+
 let _z3_diff_test: ref (option (valid_string valid_equate_types)) = alloc None
 
 let _z3_test : ref (option vstring) = alloc None
@@ -156,7 +158,6 @@ let z3_skip_c_initializers: ref bool = alloc false
 let use_error_handler_macro : ref bool = alloc false
 
 let valid_api : string -> Tot bool = function
-  | "legacy_lowstar"
   | "lowstar"
   | "pulse" -> true
   | _ -> false
@@ -166,9 +167,8 @@ let _api : ref (option (valid_string valid_api)) = alloc None
 let get_api () : ML api_t =
   match !_api with
   | None
-  | Some "legacy_lowstar" -> ApiLegacyLowstar
-  | Some "pulse" -> ApiPulse
   | Some "lowstar" -> ApiLowstar
+  | Some "pulse" -> ApiPulse
 
 let char_le (c1 c2: FStar.Char.char) : Tot bool =
   FStar.Char.int_of_char c1 <= FStar.Char.int_of_char c2
@@ -389,6 +389,9 @@ let display_usage_1 (options: ref (list cmd_option)) : ML unit =
     ;
   FStar.IO.print_string (Printf.sprintf "\nCurrent options are:%s\n" (compute_current_options options []))
 
+let _ : nonempty ((unit -> ML unit) & (list string -> ML string) & list fstar_opt) =
+  nonempty_intro ((fun _ -> ()), (fun _ -> ""), [])
+
 let (display_usage_2, compute_options_2, fstar_options) =
   let options : ref (list cmd_option) = alloc [] in
   let display_usage () = display_usage_1 options in
@@ -401,12 +404,13 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format" (OptBool _clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid _clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "clang_format_use_custom_config" (OptBool clang_format_use_custom_config) "Skip copying .clang-format from EverParse, use existing one instead" ["batch"; "clang_format"];
-    CmdOption "cleanup" (OptBool _cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
+    CmdOption "cleanup" (OptBool _cleanup) "Remove *.fst*, generated *.json and krml-args.rsp (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name _config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "complete_wrappers" (OptBool complete_wrappers) "In addition to the usual entrypoint wrappers, generate `Complete' wrappers that also check that the validator consumed the whole input buffer (--input_stream buffer only)" [];
     CmdOption "emit_output_types_defs" (OptBool _emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool _emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
+    CmdOption "karamel" (OptStringOption "executable" always_valid karamel_exe) "The KaRaMeL executable to run (default: automatically located in the source tree or binary package)" [];
     CmdOption "blank_lines" (OptBool blank_lines) "Insert blank lines between declaration blocks for readability in generated C code (--batch only)" ["batch"];
     CmdOption "goto_for_early_return" (OptBool goto_for_early_return) "Use goto for early return in generated C code (--batch only)" ["batch"];
     CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];
@@ -414,7 +418,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "init_locals" (OptStringOption "c23|c99|c89" valid_init_locals init_locals) "Initialize all local variable declarations with zero values" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding _input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid _input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
-    CmdOption "no_copy_everparse_h" (OptBool _no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
+    CmdOption "no_copy_everparse_h" (OptBool _no_copy_everparse_h) "Do not copy EverParse.h or the other prelude headers into the output directory; with --makefile, generate no rules for them either" [];
     CmdOption "debug" (OptBool _debug) "Emit a lot of debugging output" [];
     CmdFStarOption (('h', "help", Getopt.ZeroArgs (fun _ -> display_usage (); exit 0)), "Show this help message");
     CmdOption "json" (OptBool _json) "Dump the AST in JSON format" [];
@@ -432,12 +436,12 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_branch_depth" (OptStringOption "nb" always_valid _z3_branch_depth) "enumerate branch choices up to depth nb (default 0)" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types _z3_diff_test) "produce differential tests for two parsers" [];
     CmdOption "z3_flight_name" (OptStringOption "ident ([0-9A-Za-z_]*" valid_flight_name z3_flight_name) "C test case number <n> will be called witness<ident><n>" [];
-    CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid _z3_executable) "z3 executable for test case generation (default `z3`; does not affect verification of generated F* code)" [];
+    CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid _z3_executable) "Z3 executable for test case generation and verification of generated F* code (default: automatically located for both)" [];
     CmdOption "z3_options" (OptStringOption "'options to z3'" always_valid _z3_options) "command-line options to pass to z3 for test case generation (does not affect verification of generated F* code)" [];
     CmdOption "z3_skip_testcases_c" (OptBool no_produce_testcases_c) "skip generating test cases to <output directory>/testcases.c" [];
     CmdOption "z3_skip_c_initializers" (OptBool z3_skip_c_initializers) "Do not use C field initializers for test cases" [];
     CmdOption "use_error_handler_macro" (OptBool use_error_handler_macro) "Use the C macro `EverParse3dErrorHandlerMacro` instead of the dynamic error handler" [];
-    CmdOption "api" (OptStringOption "legacy_lowstar|pulse|lowstar" valid_api _api) "Select the implementation and C API (default legacy_lowstar)" [];
+    CmdOption "api" (OptStringOption "pulse|lowstar" valid_api _api) "Select the implementation and C API (default lowstar)" [];
     CmdOption "z3_test" (OptStringOption "parser name" always_valid _z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode _z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
     CmdOption "z3_use_ptr" (OptBool use_ptr_for_probe) "use pointers rather than array indices for probes" [];

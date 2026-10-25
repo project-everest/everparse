@@ -1,0 +1,18 @@
+// A type with an 'aligned' qualifier must not embed a type that does not
+// itself have an 'aligned' qualifier: 3d would lay NotAligned out packed,
+// whereas the C compiler pads it, and the generated AutoStaticAssertions.c
+// would then fail to compile.
+
+typedef struct _NotAligned
+{
+   UINT8  n1;
+   UINT16 n2;
+} NotAligned;
+
+aligned
+entrypoint
+typedef struct _Aligned
+{
+   UINT8      a1;
+   NotAligned a2;
+} Aligned;

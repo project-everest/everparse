@@ -3,8 +3,7 @@
     "options": [
     ],
     "include_dirs": [
-      "../../src/lowparse",
-      "../../src/lowparse/pulse",
+      "../../lib/everparse/lowparse",
       "./prelude"
     ]
   }

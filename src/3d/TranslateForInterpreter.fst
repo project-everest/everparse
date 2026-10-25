@@ -78,6 +78,10 @@ let add_parser_kind_is_constant_size (genv:global_env) (id:A.ident) (is_constant
 
 /// gensym (top-level effect, safe to ignore)
 #push-options "--warn_error -272"
+
+let _ : nonempty (option string -> ML ident) =
+  nonempty_intro (fun _ -> failwith "")
+
 let gen_ident : option string -> ML ident =
   let ctr : ref int = alloc 0 in
   let next base_name_opt : ML _ =

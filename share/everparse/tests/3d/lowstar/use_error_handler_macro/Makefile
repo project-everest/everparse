@@ -15,10 +15,10 @@ all: world
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
 export EVERPARSE_HOME
 
-FSTAR_EXE ?= fstar.exe
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 # The option under test plus an --add_include so the user-provided
 # macro definition is visible from all generated .c/.h files.
@@ -38,7 +38,7 @@ everparse_makefile=$(EVERPARSE_OUTPUT_DIR)/EverParse.Makefile
 $(EVERPARSE_OUTPUT_DIR):
 	mkdir -p $@
 
-$(everparse_makefile): Makefile $(wildcard src/*.3d) $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): Makefile $(wildcard src/*.3d) $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/Test.3d
 	cp $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h $(EVERPARSE_OUTPUT_DIR)/
 

@@ -22,10 +22,10 @@ export EVERPARSE_HOME
 
 # Path to either the 3d executable or the everparse.sh or
 # everparse.cmd script from the EverParse binary package
-FSTAR_EXE ?= $(EVERPARSE_HOME)/fstar.sh
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --api $(EVERPARSE_API) --fstar $(FSTAR_EXE)
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 # Options passed to EverParse.  See probe_error_handler_macro for the
 # rationale: --use_error_handler_macro makes the generated validators
@@ -61,7 +61,7 @@ $(EVERPARSE_OUTPUT_DIR):
 # Generate the Makefile if any .3d file is modified.  Also copy the
 # handwritten error-handler macro header into the output directory so
 # the generated (--add_include'd) code can find it.
-$(everparse_makefile): GNUmakefile $(wildcard src/*.3d) $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h $(EVERPARSE_OUTPUT_DIR)
+$(everparse_makefile): GNUmakefile $(wildcard src/*.3d) $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h | $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/SpecializeABC.3d
 	cp $(EVERPARSE_INPUT_DIR)/MyErrorHandlerMacro.h $(EVERPARSE_OUTPUT_DIR)/
 

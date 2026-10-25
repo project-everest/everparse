@@ -3,10 +3,10 @@
     "options": [],
     "include_dirs": [
       "./_output",
-      "../../../src/cbor/spec",
-      "../../../src/cbor/pulse",
-      "../../../src/cddl/pulse",
-      "../../../src/cddl/spec",
+      "../../../lib/everparse/cbor/spec",
+      "../../../lib/everparse/cbor/pulse",
+      "../../../lib/everparse/cddl/pulse",
+      "../../../lib/everparse/cddl/spec",
       "../../../src/cddl/tool"
     ]
   }

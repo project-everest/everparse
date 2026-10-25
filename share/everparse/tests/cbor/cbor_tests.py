@@ -59,9 +59,12 @@ except AttributeError:
     try:
         FrozenDict = cbor2.FrozenDict       # type: ignore[attr-defined]
     except AttributeError:
-        FrozenDict = frozenset  # placeholder, will not be reached on supported versions
-        sys.stderr.write("FATAL: cbor2.frozendict / cbor2.FrozenDict not found\n")
-        raise SystemExit(2)
+        try:
+            FrozenDict = frozendict         # type: ignore[name-defined]  # Python 3.15+ builtin
+        except NameError:
+            sys.stderr.write("FATAL: neither cbor2.frozendict, cbor2.FrozenDict "
+                             "nor builtin frozendict found\n")
+            raise SystemExit(2)
 
 
 # ----------------------------------------------------------------------------

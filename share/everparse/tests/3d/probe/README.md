@@ -18,7 +18,7 @@ subdirectory.
 
 The files `EverParse.h` and `EverParseEndianness.h` are static files
 that are part of the EverParse binary package, in
-`src/3d/prelude/buffer` and `src/3d` respectively.
+`src/3d/prelude/buffer` and `lib/everparse/3d` respectively.
 
 # Linux
 

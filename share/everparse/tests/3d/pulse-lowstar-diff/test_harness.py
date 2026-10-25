@@ -35,6 +35,27 @@ class ApiTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not generated with --api lowstar"):
                 check_api("lowstar", directory)
 
+    def test_lowstar_pulse_native_worker_in_public_header_is_accepted(self):
+        # Custard ignores KrmlPrivate, so the --api lowstar worker
+        # (`<Module>ValidateCore<Root>`, Pulse-native hence uint8_t) is emitted
+        # into the public header next to the uint64_t adapter instead of into
+        # internal/. Only the adapter is the public API, so the worker must not
+        # count as a wrong-API validator -- but a genuinely wrong public
+        # validator still must.
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            header = directory / "Example.h"
+            header.write_text(
+                "uint8_t\nExampleValidateCoreT(void);\n"
+                "uint64_t\nExampleValidateT(void);\n")
+            (directory / "Example.c").write_text("EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS")
+            check_api("lowstar", directory)
+            header.write_text(
+                "uint8_t\nExampleValidateCoreT(void);\n"
+                "uint8_t\nExampleValidateT(void);\n")
+            with self.assertRaisesRegex(ValueError, "validator results"):
+                check_api("lowstar", directory)
+
     def test_missing_empty_and_mixed_outputs_fail(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)

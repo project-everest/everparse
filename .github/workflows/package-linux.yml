@@ -32,7 +32,7 @@ jobs:
             everparse
           name: everparse
 
-  test:
+  test-standalone:
     needs: build
     runs-on: ubuntu-22.04
     steps:
@@ -41,12 +41,15 @@ jobs:
         with:
           name: everparse
           path: ${{ github.workspace }}/test
+      - name: Restore permissions
+        run: |
+          chmod +x ${{ github.workspace }}/test/bin/* ${{ github.workspace }}/test/lib/fstar/z3-*/bin/*
       - name: Check out repo
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
             share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
+            share/everparse/tests/cddl/demo/test.cddl
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse (--api lowstar)
         run: |
@@ -72,4 +75,50 @@ jobs:
           bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
-          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+          ${{ github.workspace }}/test/bin/everparse-cddl.exe ${{ github.workspace }}/everparse/share/everparse/tests/cddl/demo/test.cddl
+
+  # The shared test suite, split into parts of comparable length, as in
+  # package-macos.yml.
+  test-share:
+    name: test-share (${{ matrix.part }})
+    needs: build
+    # The Z3 5.1.0 binary bundled in the package needs glibc >= 2.38.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: 3d-corpus
+            args: -C 3d pulse-corpus-test
+          - part: 3d-subdirs
+            args: -C 3d pulse-subdirs-test
+          - part: other
+            args: cbor.do cddl.do lowparse.do qd.do
+    steps:
+      - name: Download and extract artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse
+          path: ${{ github.workspace }}/test
+      - name: Restore permissions
+        run: |
+          chmod +x ${{ github.workspace }}/test/bin/* ${{ github.workspace }}/test/lib/fstar/z3-*/bin/*
+      - name: Check out shared tests
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            share/everparse/tests
+          path: ${{ github.workspace }}/everparse
+      - name: Test shared suite
+        working-directory: everparse/share/everparse/tests
+        run: |
+          make -j$(nproc) -k EVERPARSE_HOME="${{ github.workspace }}/test" ${{ matrix.args }}
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [test-standalone, test-share]
+    if: always()
+    steps:
+      - run: exit 1
+        if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
+      - run: exit 0

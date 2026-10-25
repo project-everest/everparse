@@ -1,5 +1,4 @@
 module EverParse3d.Lowstar.ExternAdapter
-friend EverParse3d.Kinds
 friend EverParse3d.Prelude
 friend EverParse3d.Actions.Base
 friend EverParse3d.Lowstar.ExternAdapter.Spec

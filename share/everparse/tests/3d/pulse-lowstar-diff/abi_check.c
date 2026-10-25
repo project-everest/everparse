@@ -11,7 +11,7 @@
    and the generated prototypes spell the function-pointer type out in full.
    The typedef is recovered by instantiating the abbreviation at each
    backend's stream types in EverParse3d.Actions.ErrorHandler.<Backend>; see
-   lib/everparse/3d/krml/header.Makefile. This file checks that the typedef
+   src/3d/krml/header.Makefile. This file checks that the typedef
    really is present and really does match: it names the typedef and then
    passes a value of that type to a generated validator, so any drift is a
    compile error.

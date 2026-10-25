@@ -1,20 +1,36 @@
 all: verify extract-all
 
-EVERPARSE_SRC_PATH ?= $(realpath ../../../../src)
-LOWPARSE_PULSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse/pulse
+all: arith
 
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse $(LOWPARSE_PULSE_HOME)
+arith:
+	+$(MAKE) -C $@
+
+.PHONY: arith
+
+EVERPARSE_HOME ?= $(realpath ../../../..)
+LOWPARSE_HOME ?= $(EVERPARSE_HOME)/lib/everparse/lowparse
+
+INCLUDE_PATHS += $(LOWPARSE_HOME)
 ALREADY_CACHED := *,-LowParseTestLib,-LowParseExample,
 OTHERFLAGS += --warn_error +272
 
 OUTPUT_DIRECTORY := _output
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice'
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/everparse.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+EXAMPLES=Example3 ExampleConstInt32le Example5 Example7 Example8 Example9 Example10 Example11 Example12
+
+# One whole-program extraction covering every example, then one karamel run per
+# example to package it.  A bundle is packaging, not reachability, so each
+# example module has to be its own root.
+CUSTARD_BACKEND := KrmlC
+CUSTARD_ENTRY_MODULES := $(addprefix LowParse,$(EXAMPLES))
+CUSTARD_ROOTS := LowParseExample3.fst
+
+clean_rules += clean-tests clean-arith
+
+include $(EVERPARSE_HOME)/lib/everparse/everparse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 
@@ -31,19 +47,26 @@ KRML_OPTS += -skip-compilation
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
-EXAMPLES=Example3 ExampleConstInt32le Example5 Example7 Example8 Example9 Example10 Example11 Example12
-
 extract-all: $(EXAMPLES)
 
 $(EXAMPLES): %: verify %/a.out
 
-%/a.out: $(ALL_KRML_FILES)
-	$(KRML) -bundle 'LowParse$*=*[rename=LowParse$*]' -no-prefix 'LowParse$*' \
+%/a.out: $(CUSTARD_KRML)
+	$(KRML) -bundle 'LowParse$*=*,Prims,Custard.\*[rename=LowParse$*]' -no-prefix 'LowParse$*' \
 		-warn-error '@2' -tmpdir $* $^ -o $@
 	$(CC) -I $(local_curdir) -o $@ $*/LowParse$*.c
 	./$@
 
-clean:
+clean-tests:
 	rm -rf $(OUTPUT_DIRECTORY) $(addsuffix /, $(EXAMPLES)) .depend
+
+.PHONY: clean-tests
+
+clean-arith:
+	+$(MAKE) -C arith clean
+
+.PHONY: clean-arith
+
+clean: clean-tests clean-arith
 
 .PHONY: all extract-all clean $(EXAMPLES)

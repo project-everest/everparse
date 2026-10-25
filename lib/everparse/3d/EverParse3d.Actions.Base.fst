@@ -1,6 +1,5 @@
 module EverParse3d.Actions.Base
 #lang-pulse
-friend EverParse3d.Kinds
 friend EverParse3d.Prelude
 open EverParse3d.ErrorCode
 open EverParse3d.Prelude
@@ -229,18 +228,16 @@ let leaf_reader
 
 (* Several combinators below tag their local bindings with `rename_let`, so that
    the extracted C names the temporaries after the 3D field they come from
-   rather than `res_key`, `val_key`, ... This mirrors what the Low* prelude does
-   in src/3d/prelude/EverParse3d.Actions.Base.fst. The names used are:
+   rather than `res_key`, `val_key`, ... The names used are:
 
      <field>                    the value read by the leaf reader
      <field>ConstraintIsOk      the result of a refinement check
      action_success_<field>     the boolean returned by an action
      resultAfter<field>         the result of validating <field>
 
-   The last one is spelled `positionAfter<field>` in Low*, where a validator
-   returns the position it stopped at. Pulse validators keep the position in the
-   `sl_pos` reference and return an error code instead, so the Low* name would
-   be misleading here.
+   Pulse validators keep the current position in the `sl_pos` reference and
+   return an error code rather than the position they stopped at, hence
+   `resultAfter` rather than `positionAfter`.
 
    `name` is a parameter of these combinators, so the attribute only becomes a
    string literal once the combinator is inlined into 3D-generated code; this
@@ -1069,12 +1066,15 @@ fn validate_nlist
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
     parse_list_consumes_all p v1;
     seq_is_suffix_of_refl v1;
+    LP.parser_kind_prop_equiv k p; // fstar2 only
     let mut res = validator_success;
     let mut stop = false;
+    let mut pmeasure = Ghost.hide (Seq.length v1); // fstar2 only
     while (not !stop)
-    invariant exists* vres vstop vcur v_ctxt' extra' .
+    invariant exists* vres vstop vcur v_ctxt' extra' vmeasure .
       pts_to res vres **
       pts_to stop vstop **
+      pts_to pmeasure vmeasure **
       pts_to ctxt v_ctxt' **
       I.pts_to tb tl tp contents1 vcur **
       forevery_state extra_state extra' **
@@ -1086,8 +1086,10 @@ fn validate_nlist
         (vres =!= validator_success ==> vstop == true) /\
         (vres == validator_success ==>
           (Some? (LP.parse (LPL.parse_list p) v1) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
-        (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0)
+        (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0) /\
+        Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
       )
+      decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
     {
       with vcur. assert (I.pts_to tb tl tp contents1 vcur);
       with extra'. assert (forevery_state extra_state extra');
@@ -1098,6 +1100,7 @@ fn validate_nlist
         LPL.parse_list_eq' p vcur;
         let r = v ctxt error_handler_fn tb tl tp extra' contents1 vcur;
         with vcur'. assert (I.pts_to tb tl tp contents1 vcur');
+        pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
         seq_is_suffix_of_trans vcur' vcur v1;
         if (r = validator_success) {
           ()
@@ -2642,12 +2645,15 @@ fn validate_list
 {
   parse_list_consumes_all p v_sl;
   seq_is_suffix_of_refl (Ghost.reveal v_sl);
+  LP.parser_kind_prop_equiv k p; // fstar2 only
   let mut res = validator_success;
   let mut stop = false;
+  let mut pmeasure = Ghost.hide (Seq.length (Ghost.reveal v_sl)); // fstar2 only
   while (not !stop)
-  invariant exists* vres vstop vcur v_ctxt' extra' .
+  invariant exists* vres vstop vcur v_ctxt' extra' vmeasure .
     pts_to res vres **
     pts_to stop vstop **
+    pts_to pmeasure vmeasure **
     pts_to ctxt v_ctxt' **
     I.pts_to sl_base sl_len sl_pos contents_sl vcur **
     forevery_state extra_state extra' **
@@ -2659,8 +2665,10 @@ fn validate_list
       (vres =!= validator_success ==> vstop == true) /\
       (vres == validator_success ==>
         (Some? (LP.parse (LPL.parse_list p) v_sl) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
-      (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0)
+      (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0) /\
+      Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
     )
+    decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
   {
     with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
     with extra'. assert (forevery_state extra_state extra');
@@ -2671,6 +2679,7 @@ fn validate_list
       LPL.parse_list_eq' p vcur;
       let r = v ctxt error_handler_fn sl_base sl_len sl_pos extra' contents_sl vcur;
       with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
+      pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
       seq_is_suffix_of_trans vcur' vcur v_sl;
       if (r = validator_success) {
         ()
@@ -2720,6 +2729,60 @@ let list_up_to_done
 = Some? (LP.parse q v_sl) /\
   snd (Some?.v (LP.parse q v_sl)) == Seq.length v_sl - Seq.length vcur
 
+(* After a leaf reader consumed some input from [vcur], the remaining input
+   [vcur'] is still a suffix of the original input [v_sl]. Stated separately to
+   keep this reasoning out of the large VC of the loop body below. *)
+let leaf_read_is_suffix_of
+  (#k: LP.parser_kind) (#t: Type) (p: LP.parser k t) (v_sl vcur vcur': Seq.seq LP.byte)
+: Lemma
+  (requires (
+    vcur `I.seq_is_suffix_of` v_sl /\
+    begin match LP.parse p vcur with
+    | None -> False
+    | Some (_, len) -> vcur' == Seq.slice vcur len (Seq.length vcur)
+    end
+  ))
+  (ensures (
+    vcur' `I.seq_is_suffix_of` vcur /\
+    vcur' `I.seq_is_suffix_of` v_sl /\
+    Seq.length vcur' <= Seq.length vcur
+  ))
+= let Some (_, len) = LP.parse p vcur in
+  seq_slice_is_suffix_of vcur len;
+  seq_is_suffix_of_trans vcur' vcur v_sl
+
+(* One successful iteration of the loop below: [x] was read from the front of
+   [vcur], leaving [vcur']. *)
+let list_up_to_step
+  (#k: LP.parser_kind) (#t: Type)
+  (cond: (t -> GTot bool))
+  (p: LP.parser k t { k.LP.parser_kind_subkind <> Some LP.ParserConsumesAll })
+  (prf: LUT.consumes_if_not_cond cond p)
+  (v_sl vcur vcur': Seq.seq LP.byte)
+  (x: t)
+: Lemma
+  (requires (
+    vcur `I.seq_is_suffix_of` v_sl /\
+    list_up_to_ongoing (LUT.parse_list_up_to cond p prf) v_sl vcur /\
+    begin match LP.parse p vcur with
+    | None -> False
+    | Some (y, len) -> x == y /\ vcur' == Seq.slice vcur len (Seq.length vcur)
+    end
+  ))
+  (ensures (
+    if cond x
+    then list_up_to_done (LUT.parse_list_up_to cond p prf) v_sl vcur'
+    else list_up_to_ongoing (LUT.parse_list_up_to cond p prf) v_sl vcur'
+  ))
+= let q = LUT.parse_list_up_to cond p prf in
+  LUT.parse_list_up_to_eq cond p prf vcur;
+  let Some (_, len) = LP.parse p vcur in
+  if cond x then ()
+  else match LP.parse q vcur' with
+  | None -> assert (None? (LP.parse q vcur))
+  | Some ((y, z), consumed') ->
+    assert (LP.parse q vcur == Some ((x :: y, z), len + consumed'))
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction noextract
@@ -2753,13 +2816,16 @@ fn validate_list_up_to
   (v_sl: _)
 {
   seq_is_suffix_of_refl (Ghost.reveal v_sl);
+  LP.parser_kind_prop_equiv k p; // fstar2 only
   let mut res = validator_success;
   let mut stop = false;
   let mut pos = inst.scan_zero;
+  let mut pmeasure = Ghost.hide (Seq.length (Ghost.reveal v_sl)); // fstar2 only
   while (not !stop)
-  invariant exists* vres vstop vpos vcur v_ctxt' extra' .
+  invariant exists* vres vstop vpos vcur v_ctxt' extra' vmeasure .
     pts_to res vres **
     pts_to stop vstop **
+    pts_to pmeasure vmeasure **
     pts_to pos vpos **
     pts_to ctxt v_ctxt' **
     I.pts_to sl_base sl_len sl_pos contents_sl vcur **
@@ -2774,8 +2840,10 @@ fn validate_list_up_to
       (vres == validator_success ==>
         (if vstop
          then list_up_to_done (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur
-         else list_up_to_ongoing (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur))
+         else list_up_to_ongoing (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur)) /\
+      Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
     )
+    decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
   {
     with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
     with extra'. assert (forevery_state extra_state extra');
@@ -2785,8 +2853,9 @@ fn validate_list_up_to
     if (r0 = validator_success) {
       let x = r sl_base sl_len sl_pos contents_sl vcur;
       with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
-      seq_slice_is_suffix_of vcur (Seq.length vcur - Seq.length vcur');
-      seq_is_suffix_of_trans vcur' vcur v_sl;
+      pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
+      leaf_read_is_suffix_of p v_sl vcur vcur';
+      list_up_to_step (cond_string_up_to terminator) p prf v_sl vcur vcur' x;
       if (x = terminator) {
         stop := true;
       } else {
@@ -2923,7 +2992,7 @@ let parse_nlist_size_not_multiple
   = let sq' = Seq.slice sq 0 (U32.v n) in
     LowParse.Spec.List.list_length_constant_size_parser_correct p sq';
     let Some (l, _) = LP.parse (parse_nlist n n_is_const p) sq in
-    assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low);
+    assert (U32.v n == FStar.List.Tot.length l `Prims.op_Star` k.LP.parser_kind_low);
     FStar.Math.Lemmas.cancel_mul_mod (FStar.List.Tot.length l) k.LP.parser_kind_low;
     assert (U32.v n % k.LP.parser_kind_low == 0)
   in

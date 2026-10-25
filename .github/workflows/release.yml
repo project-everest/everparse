@@ -76,7 +76,7 @@ jobs:
           eval $(opam env)
           export FSTAR_TAG=
           # ^ no tag in source package
-          make -skj$(nproc) package-src ADMIT=1
+          make -skj$(nproc) package-src ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=/dev/null
 
       - name: Save
         if: steps.check-cache.outputs.cache-hit != 'true'
@@ -124,7 +124,7 @@ jobs:
           git config --local user.name "Dzomo, the Everest Yak"
           git config --local user.email "dzomo@users.noreply.github.com"
           make -C opt release
-          git add opt/fstar-deps.opam.locked opt/karamel-deps.opam.locked opt/pulse-deps.opam.locked opt/everparse-deps.opam.locked
+          git add opt/fstar-deps.opam.locked opt/karamel-deps.opam.locked opt/everparse-deps.opam.locked
           git mv opt/release.Makefile{.disabled,}
           git commit -m 'Use frozen opam packages'
 
@@ -218,7 +218,7 @@ jobs:
         with:
           sparse-checkout: |
             share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
+            share/everparse/tests/cddl/demo/test.cddl
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse (--api lowstar)
         run: |
@@ -244,7 +244,7 @@ jobs:
           bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
-          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+          ${{ github.workspace }}/test/bin/everparse-cddl.exe ${{ github.workspace }}/everparse/share/everparse/tests/cddl/demo/test.cddl
       - name: Upload test artifact
         uses: actions/upload-artifact@v4
         with:
@@ -258,6 +258,44 @@ jobs:
         with:
           path: everparse/share/everparse/tests/3d/Comments*
           name: everparse-test-pulse-macos
+
+  test-share-macos:
+    if: ${{ !inputs.only_build_3d }}
+    needs: build-macos
+    runs-on: macos-latest
+    steps:
+      - name: Install Homebrew tools
+        run: |
+          brew install bash gnu-getopt make gnu-time coreutils
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-macos
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+      - name: Populate environment
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+      - name: Check out shared tests
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            share/everparse/tests
+          path: ${{ github.workspace }}/everparse
+      - name: Test shared suite
+        working-directory: everparse/share/everparse/tests
+        run: |
+          gmake -j$(nproc) -k EVERPARSE_HOME="${{ github.workspace }}/test"
 
   build-linux:
     if: ${{ !inputs.only_build_3d }}
@@ -318,7 +356,7 @@ jobs:
         with:
           sparse-checkout: |
             share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
+            share/everparse/tests/cddl/demo/test.cddl
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse (--api lowstar)
         run: |
@@ -344,7 +382,7 @@ jobs:
           bash ${{ github.workspace }}/test/everparse.sh --api pulse ${{ github.workspace }}/everparse/share/everparse/tests/3d/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf-pulse --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
-          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+          ${{ github.workspace }}/test/bin/everparse-cddl.exe ${{ github.workspace }}/everparse/share/everparse/tests/cddl/demo/test.cddl
       - name: Upload test artifact
         uses: actions/upload-artifact@v4
         with:
@@ -358,6 +396,42 @@ jobs:
         with:
           path: everparse/share/everparse/tests/3d/Comments*
           name: everparse-test-pulse-linux
+
+  test-share-linux:
+    if: ${{ !inputs.only_build_3d }}
+    needs: build-linux
+    # The Z3 5.1.0 binary bundled in the package needs glibc >= 2.38.
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-linux
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+      - name: Populate environment
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+      - name: Check out shared tests
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            share/everparse/tests
+          path: ${{ github.workspace }}/everparse
+      - name: Test shared suite
+        working-directory: everparse/share/everparse/tests
+        run: |
+          make -j$(nproc) -k EVERPARSE_HOME="${{ github.workspace }}/test"
 
   build-windows:
     runs-on: windows-2025
@@ -431,7 +505,7 @@ jobs:
         with:
           sparse-checkout: |
             share/everparse/tests/3d
-            src/cddl/tests/demo/test.cddl
+            share/everparse/tests/cddl/demo/test.cddl
           path: ${{ github.workspace }}\everparse
       - name: Test EverParse (--api lowstar)
         shell: cmd
@@ -718,7 +792,7 @@ jobs:
         with:
           ocaml-compiler: 5
       - name: Set-up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: everparse/src/3d/hashchk/global.json
       - name: Everparse CI
@@ -763,7 +837,7 @@ jobs:
   push-tag:
     runs-on: ubuntu-latest
     if: ${{ !cancelled() && !failure() }}
-    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker, ci-linux, ci-macos, test-windows]
+    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker, ci-linux, ci-macos, test-windows, test-share-macos, test-share-linux]
     steps:
       - name: Set up git
         run: |

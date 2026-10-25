@@ -14,7 +14,9 @@
    limitations under the License.
 *)
 module EverParse3d.Prelude
-friend EverParse3d.Kinds
+include EverParse3d.Prelude.StaticHeader
+include EverParse3d.Kinds
+open FStar.Range
 module BF = LowParse.BitFields
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
@@ -171,7 +173,6 @@ let parse_all_bytes =
   parse_all_bytes'
 
 ////////////////////////////////////////////////////////////////////////////////
-module B32 = FStar.Bytes
 let t_at_most (n:U32.t) (t:Type) = t & all_bytes
 inline_for_extraction noextract
 let parse_t_at_most n #nz #wk #k #t p

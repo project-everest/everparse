@@ -19,7 +19,6 @@ module RefineCStruct
   and generates refining blocks to relate the C types to the
   original record types. 
 *)
-open FStar.Mul
 open FStar.List.Tot
 open Ast
 open FStar.All

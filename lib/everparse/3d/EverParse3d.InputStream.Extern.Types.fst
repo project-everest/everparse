@@ -19,8 +19,7 @@ module I = EverParse3d.InputStream.Base
 (* The client-supplied per-invocation context, `EVERPARSE_EXTRA_T`. The 3D
    frontend passes it into the generated wrapper, which threads it down to the
    primitives below. It is abstract here so that KaRaMeL emits it as a real C
-   parameter, matching the Low* prelude
-   (`src/3d/prelude/extern/EverParse3d.InputStream.Extern.Base.fsti`). *)
+   parameter. *)
 assume val extra_t : Type0
 
 assume val input_stream_base : Type0

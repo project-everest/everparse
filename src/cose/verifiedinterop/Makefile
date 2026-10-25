@@ -2,11 +2,10 @@ all: extract
 
 .PHONY: all
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
-EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
+EVERPARSE_HOME = $(realpath ../../..)
 OUTPUT_DIRECTORY := _output
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_HOME)/lib/everparse/cbor/spec $(EVERPARSE_HOME)/lib/everparse/cddl/spec $(EVERPARSE_HOME)/src/cddl/tool $(EVERPARSE_HOME)/lib/everparse/cbor/pulse $(EVERPARSE_HOME)/lib/everparse/cddl/pulse $(OUTPUT_DIRECTORY)
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
 ifeq (1,$(ADMIT))
@@ -15,43 +14,63 @@ else
 CDDL_ADMIT :=
 endif
 
-$(OUTPUT): ../cose-sign.cddl $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
+$(OUTPUT): ../cose-sign.cddl $(EVERPARSE_HOME)/lib/everparse/cddl/spec/postlude.cddl
+	$(EVERPARSE_HOME)/bin/everparse-cddl.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3 "$(Z3_EXE)") $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 ALREADY_CACHED := *,-COSE,-Abort,-EverCrypt
 FSTAR_OPTIONS += --warn_error -342 # noextract
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 FSTAR_FILES := $(OUTPUT) $(wildcard *.fst *.fsti)
+
+# Whole-program extraction.  Every module a -bundle below names has to be a
+# root: a bundle is packaging, not reachability.  [Prims] and Custard's own
+# support modules join the [fstar] bundle, and the two abstract CBOR types are
+# declared external because the -add-include'd CBORDetType.h defines them.
+CUSTARD_BACKEND := KrmlC
+CUSTARD_ENTRY_MODULES := COSE.EverCrypt
+CUSTARD_ENTRY_MODULES += COSE.Format
+CUSTARD_ENTRY_MODULES += Abort
+CUSTARD_ENTRY_MODULES += EverCrypt.Ed25519
+CUSTARD_ENTRY_MODULES += CBOR.Spec.Constants
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Type
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.C
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Dummy
+CUSTARD_ROOTS := COSE.EverCrypt.fst
+CUSTARD_EXTERN_TYPES := CBOR.Pulse.API.Det.Type.cbor_det_t
+CUSTARD_EXTERN_TYPES += CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t
 
 clean_rules += clean-output
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
+include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
 KRML_OPTS += -warn-error @4@6
 
 KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 # internal/COSE_Format.h is unavoidable because Pulse.Lib.Slice.len is used in both COSE.Format and COSE.EverCrypt
+# The [fstar] bundle used to collect the externs (EverCrypt, the CBOR
+# serializer helpers) into internal/fstar.h.  Custard emits each of them in
+# the file of the module that declares it, so the bundle is empty now and
+# karamel writes no such header: the externs are declared where they are used.
 BASE_C_FILES=COSE_EverCrypt.c COSE_EverCrypt.h COSE_Format.c COSE_Format.h CBORDetAPI.h
 INTERNAL_C_FILES=COSE_Format.h
 C_FILES=$(BASE_C_FILES) $(addprefix internal/,$(INTERNAL_C_FILES))
 
 .PHONY: extract-krml
-extract-krml: $(ALL_KRML_FILES)
+extract-krml: $(CUSTARD_KRML)
 
 .PHONY: extract
-extract: extract-krml
-	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
+extract: $(CUSTARD_KRML)
+	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*,Prims,Custard.\*[rename=fstar]' \
+		-skip-makefiles \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+CBOR.Pulse.API.Det.Dummy=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
-		-skip-linking $(ALL_KRML_FILES) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
+		-skip-linking $(CUSTARD_KRML) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_HOME)/include/everparse -header noheader.txt
 
 %.diff: extract
 	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)

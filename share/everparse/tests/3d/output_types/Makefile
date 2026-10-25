@@ -1,7 +1,8 @@
-EVERPARSE_HOME ?= $(realpath ../../../..)
+EVERPARSE_HOME ?= $(realpath ../../../../..)
+include $(EVERPARSE_HOME)/lib/everparse/windows.Makefile
 export EVERPARSE_HOME
-FSTAR_EXE ?= fstar.exe
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --api pulse
+include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 SOURCE_FILES=TPoint.3d AnonStruct.3d AnonUnion.3d
 
 all: interpret modules modules_batch
@@ -30,10 +31,8 @@ interpret: $(SOURCE_FILES) TPoint.out AnonUnion.out AnonStruct.out ExternVector.
 	$(CC) -o ExternVector.out/test3 -I ExternVector.out -I . $(addprefix ExternVector.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
 	./ExternVector.out/test3
 
-EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
+INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse
 
 FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 

@@ -1,0 +1,116 @@
+module CBOR.Pulse.Raw.Util
+open Pulse.Lib.Pervasives
+
+// FIXME: this file is VERY brittle
+
+let perm_div (p1 p2: perm) : Tot perm = p1 /. p2
+
+let perm_mul (p1 p2: perm) : Tot perm = p1 *. p2
+
+#push-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.nl_arith_repr native --z3rlimit 16"
+
+#restart-solver
+
+let perm_mul_assoc
+  (p1 p2 p3: perm)
+: Lemma
+  (ensures (p1 `perm_mul` (p2 `perm_mul` p3) == (p1 `perm_mul` p2) `perm_mul` p3))
+  [SMTPatOr [
+    [SMTPat (p1 `perm_mul` (p2 `perm_mul` p3))];
+    [SMTPat ((p1 `perm_mul` p2) `perm_mul` p3)];
+  ]]
+= ()
+
+let perm_1_l
+  (p: perm)
+: Lemma
+  (1.0R `perm_mul` p == p)
+= ()
+
+let half_mul (a b: real) : Lemma
+  ((a *. b) /. 2.0R == a *. (b /. 2.0R))
+= ()
+
+#pop-options
+
+// With smt.arith.nl=true, Z3 5.1.0 may not terminate (regardless of the rlimit)
+// on the following lemmas, whereas they are linear or follow
+// from Z3's own axiom for real division.
+#push-options "--z3cliopt smt.arith.nl=false --smtencoding.elim_box true --smtencoding.nl_arith_repr native --z3rlimit 16"
+
+#restart-solver
+
+let perm_mul_div (a b: perm) : Lemma
+  (a `perm_mul` (b `perm_div` a) == b)
+= let q : perm = b `perm_div` a in
+  assert (a `perm_mul` q == b)
+
+let half_add (x: real) : Lemma
+  (x /. 2.0R +. x /. 2.0R == x)
+= ()
+
+#pop-options
+
+// With the default (boxwrap) encoding of non-linear real arithmetic, this
+// follows from half_mul and half_add by congruence, so Z3 5.1.0 does not need
+// to do non-linear real arithmetic (on which it may not terminate.)
+#push-options "--z3rlimit 16"
+let perm_mul_half_add
+  (pm ip: perm)
+: Lemma
+  (pm `perm_mul` (ip /. 2.0R) +. (pm `perm_mul` ip) /. 2.0R == pm `perm_mul` ip)
+= half_mul pm ip;
+  half_add (pm `perm_mul` ip)
+#pop-options
+
+#push-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.nl_arith_repr native --z3rlimit 16"
+
+#restart-solver
+
+let perm_half_mult
+  (pm ip: perm)
+: Lemma
+  (pm *. (ip /. 2.0R) +. pm *. (ip /. 2.0R) == pm *. ip)
+= ()
+
+let half_mul_l (a b: real) : Lemma
+  ((a *. b) /. 2.0R == (a /. 2.0R) *. b)
+= ()
+
+let perm_mul_add_l (a b c: real) : Lemma
+  ((a +. b) *. c == a *. c +. b *. c)
+= ()
+
+#pop-options // F* #3782, though it's fixed now
+
+// Operations on option types
+
+// inline_for_extraction
+let eq_Some_true
+  (x: option bool)
+: Pure bool
+  (requires True)
+  (ensures fun b -> b == (x = Some true))
+= match x with
+  | Some b -> b
+  | _ -> false
+
+// inline_for_extraction
+let eq_Some_false
+  (x: option bool)
+: Pure bool
+  (requires True)
+  (ensures fun b -> b == (x = Some false))
+= match x with
+  | Some b -> not b
+  | _ -> false
+
+// inline_for_extraction
+let eq_Some_0sz
+  (x:option FStar.SizeT.t)
+: Pure bool
+  (requires True)
+  (ensures fun b -> b == (x = Some 0sz))
+= match x with
+  | Some y -> y = 0sz
+  | _ -> false

@@ -1,26 +1,32 @@
 # EverCBOR benchmark/conformance tests.
 #
-# Compiles share/everparse/tests/cbor/cbor_tests.c twice — once against the
-# non-deterministic snapshot, once against the deterministic snapshot —
-# and runs each of the two resulting binaries.
+# Compiles share/everparse/tests/cbor/cbor_tests.c three times — once against
+# the non-deterministic snapshot, once against the deterministic snapshot,
+# and once more against the non-deterministic snapshot but validating with
+# cbor_nondet_parse_bounded (map depth <= MAP_DEPTH_BOUND, map length <=
+# MAP_LENGTH_BOUND) — and runs each of the three resulting binaries.
+# Comparing the timings of the "nondet" and "bounded" runs measures the cost
+# of the bounded validator; the validation complexity tests at the end of the
+# suite illustrate inputs on which the unbounded validator is quadratic or
+# exponential.
 #
 # A Python harness (cbor_tests.py) then re-validates the artefacts written
 # by the C binaries against the cbor2 library, exercising cross-language
 # conformance.
 #
-# Finally, a Rust integration-test crate (cbor_tests_rust/) re-validates
-# the same artefacts through the Rust extractions of the EverCBOR det and
-# nondet APIs, confirming that the Rust implementations behave identically
-# to the C ones (parse acceptance/rejection match, and for valid encodings
-# the Rust serializer produces the same bytes the C serializer wrote).
+# The artefacts written to out/ are also re-validated against the Rust
+# extractions of the EverCBOR det and nondet APIs by the src/cbor/tests_rust
+# crate, run from the toplevel nofstar.Makefile (cbor-rust-shared-test).
 #
-# Override the snapshot locations on the command line if needed:
+# Override the EverCBOR locations on the command line if needed:
 #
-#   make EVERCBOR_NONDET_PATH=/path/to/nondet/c \
-#        EVERCBOR_DET_PATH=/path/to/det/c
+#   make EVERCBOR_INCLUDE_PATH=/path/to/include/everparse \
+#        EVERCBOR_LIB_PATH=/path/to/lib/everparse
 #
-# The snapshot directory must contain the corresponding header(s) and
-# pre-built object file (CBORNondet.o or CBORDet.o, plus its dependencies).
+# The public headers (CBORNondet.h, CBORDet.h and the types they pull in)
+# live together in include/everparse, which EVERCBOR_INCLUDE_PATH points at,
+# and the pre-built object files (CBORNondet.o and CBORDet.o) live together
+# in lib/everparse, which EVERCBOR_LIB_PATH points at.
 
 ifeq ($(OS),Windows_NT)
   local_curdir := $(shell cygpath -m $(CURDIR))
@@ -28,9 +34,10 @@ else
   local_curdir := $(CURDIR)
 endif
 
-# Default snapshot locations: the in-tree C extractions.
-EVERCBOR_NONDET_PATH ?= $(local_curdir)/../../../../src/cbor/pulse/nondet/c
-EVERCBOR_DET_PATH    ?= $(local_curdir)/../../../../src/cbor/pulse/det/c
+# Default locations: the in-tree EverParse installation.
+EVERPARSE_HOME        ?= $(local_curdir)/../../../..
+EVERCBOR_INCLUDE_PATH ?= $(EVERPARSE_HOME)/include/everparse
+EVERCBOR_LIB_PATH     ?= $(EVERPARSE_HOME)/lib/everparse
 
 # Number of iterations for benchmarking. Override on the command line to make
 # timing measurements more reliable, e.g. BENCH_ITERATIONS=1000.
@@ -41,19 +48,25 @@ BENCH_ITERATIONS ?= 10000
 # smaller default keeps total runtime in the same ballpark).
 PYTHON_ITERATIONS ?= 1000
 
+# Bounds for the bounded-validation variant. They must be large enough for
+# every valid test of the suite to be accepted.
+MAP_DEPTH_BOUND  ?= 16
+MAP_LENGTH_BOUND ?= 64
+
 CC      ?= cc
 CFLAGS  ?= -O2 -Wall
 
-# The non-deterministic snapshot ships only CBORNondet.o.
-NONDET_OBJS = $(EVERCBOR_NONDET_PATH)/CBORNondet.o
+# The non-deterministic variant links against CBORNondet.o only.
+NONDET_OBJS = $(EVERCBOR_LIB_PATH)/CBORNondet.o
 
-# The deterministic snapshot ships only CBORDet.o
-DET_OBJS    = $(EVERCBOR_DET_PATH)/CBORDet.o
+# The deterministic variant links against CBORDet.o only.
+DET_OBJS    = $(EVERCBOR_LIB_PATH)/CBORDet.o
 
 SRC = $(local_curdir)/cbor_tests.c
 
-NONDET_BIN = cbor_tests_nondet.exe
-DET_BIN    = cbor_tests_det.exe
+NONDET_BIN  = cbor_tests_nondet.exe
+DET_BIN     = cbor_tests_det.exe
+BOUNDED_BIN = cbor_tests_bounded.exe
 
 # Directory into which the C binaries write artefact files for the
 # Python harness to consume.
@@ -72,31 +85,39 @@ PY_SRC        := $(local_curdir)/cbor_tests.py
 # decoder flags). 6.0.x is the first family with that codebase.
 CBOR2_REQ    ?= cbor2>=6.0,<7
 
-.PHONY: all build run run-nondet run-det run-python run-rust clean
-.PHONY: build-nondet build-det venv
+.PHONY: all build run run-nondet run-det run-python clean
+.PHONY: build-nondet build-det build-bounded venv
 
 all: run
 
-build: build-nondet build-det
+build: build-nondet build-det build-bounded
 
-build-nondet: $(NONDET_BIN)
-build-det:    $(DET_BIN)
+build-nondet:  $(NONDET_BIN)
+build-det:     $(DET_BIN)
+build-bounded: $(BOUNDED_BIN)
 
 $(NONDET_BIN): $(SRC) $(NONDET_OBJS)
 	$(CC) $(CFLAGS) -DEVERCBOR_NONDET -DBENCH_ITERATIONS=$(BENCH_ITERATIONS) \
-	    -I $(EVERCBOR_NONDET_PATH) \
+	    -I $(EVERCBOR_INCLUDE_PATH) \
+	    -o $@ $(SRC) $(NONDET_OBJS)
+
+$(BOUNDED_BIN): $(SRC) $(NONDET_OBJS)
+	$(CC) $(CFLAGS) -DEVERCBOR_NONDET -DEVERCBOR_NONDET_BOUNDED \
+	    -DMAP_DEPTH_BOUND=$(MAP_DEPTH_BOUND) -DMAP_LENGTH_BOUND=$(MAP_LENGTH_BOUND) \
+	    -DBENCH_ITERATIONS=$(BENCH_ITERATIONS) \
+	    -I $(EVERCBOR_INCLUDE_PATH) \
 	    -o $@ $(SRC) $(NONDET_OBJS)
 
 $(DET_BIN): $(SRC) $(DET_OBJS)
 	$(CC) $(CFLAGS) -DEVERCBOR_DET -DBENCH_ITERATIONS=$(BENCH_ITERATIONS) \
-	    -I $(EVERCBOR_DET_PATH) \
+	    -I $(EVERCBOR_INCLUDE_PATH) \
 	    -o $@ $(SRC) $(DET_OBJS)
 
-run: run-c run-python run-rust
+run: run-c run-python
 
 # Composite C-only run target. Useful if you want only the EverCBOR side
-# without the Python or Rust cross-language harnesses.
-run-c: run-nondet run-det
+# without the Python cross-language harness.
+run-c: run-nondet run-det run-bounded
 .PHONY: run-c
 
 run-nondet: $(NONDET_BIN)
@@ -104,6 +125,11 @@ run-nondet: $(NONDET_BIN)
 
 run-det: $(DET_BIN)
 	CBOR_TEST_OUT_DIR=$(OUT_DIR) ./$(DET_BIN)
+
+run-bounded: $(BOUNDED_BIN)
+	CBOR_TEST_OUT_DIR=$(OUT_DIR) ./$(BOUNDED_BIN)
+
+.PHONY: run-bounded
 
 # Build (or refresh) the virtual environment containing the Python cbor2
 # library used by the cross-language harness. The sentinel is the venv's
@@ -121,14 +147,6 @@ venv: $(VENV_PYTHON)
 run-python: run-nondet run-det $(VENV_PYTHON) $(PY_SRC)
 	$(VENV_PYTHON) $(PY_SRC) --out-dir $(OUT_DIR) --iterations $(PYTHON_ITERATIONS)
 
-# Run the Rust conformance suite against the C-emitted artefacts. Depends
-# on the C runs so that the artefacts exist on disk first.
-RUST_DIR = $(local_curdir)/cbor_tests_rust
-CARGO   ?= cargo
-run-rust: run-nondet run-det
-	cd $(RUST_DIR) && CBOR_TEST_OUT_DIR=$(OUT_DIR) $(CARGO) test --release
-
 clean:
-	rm -f $(NONDET_BIN) $(DET_BIN)
+	rm -f $(NONDET_BIN) $(DET_BIN) $(BOUNDED_BIN)
 	rm -rf $(OUT_DIR) $(VENV_DIR)
-	rm -rf $(RUST_DIR)/target $(RUST_DIR)/Cargo.lock

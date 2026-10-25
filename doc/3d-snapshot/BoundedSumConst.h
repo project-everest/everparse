@@ -12,10 +12,19 @@ extern "C" {
 uint64_t
 BoundedSumConstValidateBoundedSum(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*Handler)(
+    PRIMS_STRING x0,
+    PRIMS_STRING x1,
+    PRIMS_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
+  uint64_t Length,
+  uint64_t Start
 );
 
 #if defined(__cplusplus)

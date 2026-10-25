@@ -3,7 +3,7 @@
 
 module Wrapper
 
-let everparse_version = Version.everparse_version
+let everparse_version = EverParseVersion.version_everparse_version
 
 let everparse_filename =
   let suffix =
@@ -13,10 +13,10 @@ let everparse_filename =
     then "Windows_NT_x86_64.zip"
     else failwith "everparse_filename: Cannot determine OS platform"
   in
-  "everparse_" ^ everparse_version ^ "_" ^ suffix
+  "everparse_" + everparse_version + "_" + suffix
 
 let everparse_url =
-  "https://github.com/" ^ PackageHashes.everparse_repo ^ "/releases/download/" ^ everparse_version ^ "/" ^ everparse_filename
+  "https://github.com/" + PackageHashes.everparse_repo + "/releases/download/" + everparse_version + "/" + everparse_filename
 
 (* Update the hashes below when upgrading to a new binary package *)
 let everparse_hash =
@@ -61,32 +61,32 @@ let main _ =
     let everparse_home = System.Environment.GetEnvironmentVariable("EVERPARSE_HOME")
     if (everparse_home = null) then
        System.Console.WriteLine "EVERPARSE_HOME not defined"
-       let dirname = "everparse-" ^ everparse_version
+       let dirname = "everparse-" + everparse_version
        if System.IO.Directory.Exists(dirname) then
-         System.Console.WriteLine ("Using existing " ^ dirname ^ " subdirectory")
+         System.Console.WriteLine ("Using existing " + dirname + " subdirectory")
        else
-         System.Console.WriteLine (dirname ^ " subdirectory not found")
+         System.Console.WriteLine (dirname + " subdirectory not found")
          use wc = new System.Net.WebClient ()
          if System.IO.File.Exists(everparse_filename) then
-           System.Console.WriteLine ("Found binary package " ^ everparse_filename)
+           System.Console.WriteLine ("Found binary package " + everparse_filename)
          else
-           System.Console.WriteLine ("Binary package not found. Downloading from " ^ everparse_url)
+           System.Console.WriteLine ("Binary package not found. Downloading from " + everparse_url)
            System.Console.WriteLine "You are trying to call the EverParse/3d inplace hash checker with an unsupported EverParse/3d option. The only supported option is --check_inplace_hash . Do you want to try downloading a full EverParse binary package from GitHub Releases and running it? (y/N)" // please download and use a full EverParse binary package from https://github.com/project-everest/everparse/releases"
            if System.Convert.ToChar(System.Console.Read()).ToString() <> "y" then
              exit 1
-           System.Console.WriteLine ("Downloading from " ^ everparse_url)
+           System.Console.WriteLine ("Downloading from " + everparse_url)
            wc.DownloadFile(everparse_url, everparse_filename)
          let s = hash_file everparse_filename
-         System.Console.WriteLine ("Expected hash: " ^ everparse_hash)
-         System.Console.WriteLine ("Found hash: " ^ s)
+         System.Console.WriteLine ("Expected hash: " + everparse_hash)
+         System.Console.WriteLine ("Found hash: " + s)
          if s <> everparse_hash then
            System.Console.WriteLine ("Failed to download EverParse: hash mismatch")
            exit 1
-         System.Console.WriteLine ("Unpacking " ^ everparse_filename)
+         System.Console.WriteLine ("Unpacking " + everparse_filename)
          everparse_unpack dirname
        dirname
     else
-      System.Console.WriteLine ("Using EverParse from EVERPARSE_HOME = " ^ everparse_home)
+      System.Console.WriteLine ("Using EverParse from EVERPARSE_HOME = " + everparse_home)
       everparse_home
   let argv = System.Environment.GetCommandLineArgs()
   let args = System.ArraySegment(argv, 1, argv.Length - 1)

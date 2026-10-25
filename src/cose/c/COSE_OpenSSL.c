@@ -10,7 +10,7 @@ void COSE_OpenSSL_openssl_error_msg(const char *msg) {
 #define check(cond) { if (!(cond)) { fprintf(stderr, "failed: %s\n", #cond); abort(); } }
 #define openssl_check(cond) { if (!(cond)) { COSE_OpenSSL_openssl_error_msg(#cond); abort(); } }
 
-const COSE_Format_evercddl_int_tags signature1 = 1;
+const FStar_Pervasives_either__uint64_t_uint64_t_tags signature1 = FStar_Pervasives_Inr;
 
 static
 bstr mk_sig_structure(COSE_Format_empty_or_serialized_map protected_headers,
@@ -19,10 +19,10 @@ bstr mk_sig_structure(COSE_Format_empty_or_serialized_map protected_headers,
         .context = signature1,
         .body_protected = protected_headers,
         ._x0 = {
-            .tag = COSE_Format_Inr,
+            .tag = FStar_Pervasives_Inr,
             .case_Inr = {
-                .fst = aad,
-                .snd = payload,
+                ._1 = aad,
+                ._2 = payload,
             },
         },
     };
@@ -43,19 +43,19 @@ COSE_Format_header_map COSE_OpenSSL_empty_sig_headers() {
         .intkey3 = { .tag = FStar_Pervasives_Native_None },
         .intkey4 = { .tag = FStar_Pervasives_Native_None },
         ._x0 = {
-            .tag = COSE_Format_Inr,
+            .tag = FStar_Pervasives_Inr,
             .case_Inr = {
-                .tag = COSE_Format_Inr,
+                .tag = FStar_Pervasives_Inr,
                 .case_Inr = {
-                    .fst = { .tag = FStar_Pervasives_Native_None },
-                    .snd = { .tag = FStar_Pervasives_Native_None },
+                    ._1 = FStar_Pervasives_Native_None,
+                    ._2 = FStar_Pervasives_Native_None,
                 },
             }
         },
         ._x1 = {
-            .tag = COSE_Format_Inl,
+            .tag = FStar_Pervasives_Inl,
             .case_Inl = {
-                .elt = (K___COSE_Format_evercddl_label_COSE_Format_values[]) {},
+                .elt = (FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t[]) {},
                 .len = 0,
             },
         },
@@ -82,10 +82,10 @@ bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
         COSE_Format_header_map protected_headers,
         COSE_Format_header_map unprotected_headers,
         bstr aad, bstr payload) {
-    protected_headers.intkey1 = (FStar_Pervasives_Native_option__COSE_Format_evercddl_label_ugly) {
+    protected_headers.intkey1 = (FStar_Pervasives_Native_option__FStar_Pervasives_either__COSE_Format_evercddl_int_Pulse_Lib_Slice_slice__uint8_t) {
         .tag = FStar_Pervasives_Native_Some,
         .v = {
-            .tag = COSE_Format_Inl,
+            .tag = FStar_Pervasives_Inl,
             .case_Inl = { // I just hope this is -8 (COSE_ALGORITHM_EDDSA)
                 .tag = COSE_Format_Mkevercddl_int1,
                 .case_Mkevercddl_int1 = 7,
@@ -104,7 +104,7 @@ bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
     COSE_Format_cose_sign1 c = {
         .protected0 = protected_headers_,
         .unprotected = unprotected_headers,
-        .payload = { .tag = COSE_Format_Inl, .case_Inl = payload },
+        .payload = { .tag = FStar_Pervasives_Inl, .v = payload },
         .signature = sig,
     };
 
@@ -133,17 +133,18 @@ bool COSE_OpenSSL_validate(EVP_PKEY *signing_key, bstr tbs, bstr sig) {
 }
 
 bstr COSE_OpenSSL_verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
-    FStar_Pervasives_Native_option___COSE_Format_cose_sign1_tagged___Pulse_Lib_Slice_slice__uint8_t_ parsed_msg =
+    FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__COSE_Format_cose_sign1_Pulse_Lib_Slice_slice__uint8_t
+    parsed_msg =
         COSE_Format_validate_and_parse_cose_sign1_tagged(msg);
     check(parsed_msg.tag);
 
-    check(parsed_msg.v.fst.payload.tag == COSE_Format_Inl); // detached payload not supported
-    bstr payload = parsed_msg.v.fst.payload.case_Inl;
+    check(parsed_msg.v._1.payload.tag == FStar_Pervasives_Inl); // detached payload not supported
+    bstr payload = parsed_msg.v._1.payload.v;
 
-    bstr sig = parsed_msg.v.fst.signature;
+    bstr sig = parsed_msg.v._1.signature;
     
     COSE_Format_empty_or_serialized_map protected_headers =
-        parsed_msg.v.fst.protected0;
+        parsed_msg.v._1.protected0;
     // TODO check algorithm
   
     bstr sig_structure = mk_sig_structure(protected_headers, aad, payload);

@@ -45,11 +45,16 @@ val copy_clang_format
   (out_dir: string)
 : ML unit
 
+(* [only] names, by basename, the prelude headers this run is responsible for;
+   [] means all of them. The generated EverParse.Makefile gives each header a
+   rule of its own and has that rule name its own file, so that no two rules
+   ever write the same file. *)
 val copy_everparse_h
   (clang_format: bool)
   (clang_format_executable: string)
   (_: input_stream_binding_t)
   (out_dir: string)
+  (only: list string)
 : ML unit
 
 

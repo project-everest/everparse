@@ -262,18 +262,25 @@ ensures exists* v' .
      them; the strong-prefix property makes the rest irrelevant. *)
   let sub = AP.split b p0;
   Seq.lemma_eq_elim (Seq.slice contents (SZ.v p0) (Seq.length contents)) v;
-  let res = r sub;
+  (* The position is advanced *before* the value is read, although the read
+     does not depend on it, so that this function's last statement is the read
+     itself. A caller binds the result under a `rename_let` naming it after
+     the 3D field it belongs to; if anything ran after the read, the result
+     would be bound here first and the caller's binding would be a copy of
+     that one, which copy propagation resolves in favour of this name rather
+     than the caller's. *)
+  pos := m;
   LP.parse_strong_prefix p v (Seq.slice v 0 (SZ.v n));
   (* [AP.join] is ghost, so restoring the whole buffer costs nothing at run
      time. *)
-  AP.join b sub;
   Seq.lemma_eq_elim
     (Seq.append (Seq.slice contents 0 (SZ.v p0)) (Seq.slice contents (SZ.v p0) (Seq.length contents)))
     contents;
-  pos := m;
   Seq.lemma_eq_elim
     (Seq.slice contents (SZ.v m) (SZ.v len))
     (Seq.slice v (SZ.v n) (Seq.length v));
+  let res = r sub;
+  AP.join b sub;
   fold (stream_pts_to b len pos contents (Seq.slice contents (SZ.v m) (SZ.v len)));
   res
 }

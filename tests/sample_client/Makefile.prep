@@ -1,5 +1,0 @@
-PREFIX="Sample.AutoGen_"
-EVERPARSE_HOME=../..
-
-$(PREFIX)color.fst: sample_rfc.txt
-	$(EVERPARSE_HOME)/qd -prefix $(PREFIX) $^

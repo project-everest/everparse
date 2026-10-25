@@ -235,8 +235,6 @@ let emit_fstar_code_for_interpreter (en:env)
        generated code actually uses. [I] was not one of them: nothing emitted
        refers to [EverParse3d.InputStream.Base]. *)
     let module_prefix =
-      if Options.uses_pulse_backend ()
-      then
        FStar.Printf.sprintf "module %s\n\
                              open Pulse.Lib.Pervasives\n\
                              open EverParse3d.Prelude\n\
@@ -251,17 +249,6 @@ let emit_fstar_code_for_interpreter (en:env)
                              #set-options \"--fuel 0 --ifuel 0 --z3rlimit 32 --ext optimize_let_vc\"\n"
                              modul maybe_open_external_api
                              (Options.pulse_backend_module ())
-      else
-       FStar.Printf.sprintf "module %s\n\
-                             open EverParse3d.Prelude\n\
-                             open EverParse3d.Actions.All\n\
-                             open EverParse3d.Interpreter\n\
-                             %s\n\
-                             module T = FStar.Tactics\n\
-                             module A = EverParse3d.Actions.All\n\
-                             module P = EverParse3d.Prelude\n\
-                             #set-options \"--fuel 0 --ifuel 0 --ext optimize_let_vc\"\n"
-                             modul maybe_open_external_api
     in
 
     let fst_file =
@@ -576,13 +563,9 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    if Options.uses_pulse_backend ()
-    then
-      (* KaRaMeL emits no makefiles under --api pulse; use EverParse's own, which
-         needs neither krmllib's headers nor libkrmllib.a. *)
-      OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
-    else
-      OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
+    (* KaRaMeL emits no makefiles under the Pulse backend; use EverParse's own,
+       which needs neither krmllib's headers nor libkrmllib.a. *)
+    OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
   end
 
 let build_and_run_test_exe
@@ -708,29 +691,9 @@ let produce_and_postprocess_c
     modul
     dep_files_and_modules
 
-(* TEMPORARY. In --api pulse mode, Pulse's extraction encodes every reference
-   dereference as an access at the distinguished index C._zero_for_deref, which
-   KaRaMeL rewrites back into `*r`. KaRaMeL provides that marker as a builtin,
-   but only if no input file is named C (karamel/lib/Builtin.ml, `prepare`). So
-   a 3d module named C makes KaRaMeL skip the builtin and then fail on the
-   dangling reference, with a fatal Warning 2 mentioning C._zero_for_deref,
-   which gives the user no clue as to the actual cause. Reject the name up
-   front instead. To be removed once the marker is fixed upstream. *)
-let check_no_reserved_module_name (files: list string) : ML unit =
-  if Options.uses_pulse_backend ()
-  then
-    List.iter
-      (fun file ->
-        if OS.extension (OS.basename file) = ".3d" &&
-           OS.remove_extension (OS.basename file) = "C"
-        then raise (Error "A 3d module cannot be named C in --api pulse mode, because the name collides with KaRaMeL's builtin C module. Please rename it.\n")
-      )
-      files
-
 let go () : ML unit =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
   let cmd_line_files = Options.parse_cmd_line() in
-  let _ = check_no_reserved_module_name cmd_line_files in
   let cfg_opt = Deps.get_config () in
   (* Special mode: --check_inplace_hashes *)
   let inplace_hashes = Options.check_inplace_hashes () in
@@ -752,12 +715,15 @@ let go () : ML unit =
   else
   if micro_step = Some HashingOptions.MicroStepCopyEverParseH
   then
-  (* Special mode: --__micro_step copy_everparse_h *)
+  (* Special mode: --__micro_step copy_everparse_h [<header> ...]
+     The header names, if any, select which prelude headers to copy; the
+     generated EverParse.Makefile names one per rule. *)
     let _ = Batch.copy_everparse_h
       (Options.get_clang_format ())
       (Options.get_clang_format_executable ())
       (Options.get_input_stream_binding ())
       (Options.output_dir ())
+      cmd_line_files
     in
     exit 0
   else
@@ -821,7 +787,6 @@ let go () : ML unit =
     then List.Tot.rev cmd_line_files (* files are accumulated in reverse on the command line *)
     else Deps.collect_and_sort_dependencies cmd_line_files
   in
-  let _ = check_no_reserved_module_name all_files in
   let all_files_and_modules = List.map (fun file -> (file, Options.module_name file)) all_files in
   (* Special mode: --emit_smt_encoding *)
   if Options.get_emit_smt_encoding ()

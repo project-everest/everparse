@@ -8,12 +8,13 @@ _build
 *.cmx
 *.cmxa
 *.krml
+Custard.json
 tests/unit/*
 **/out
-bin/qd.exe
-bin/3d.exe
-bin/cddl.exe
-lib/evercddl
+bin/everparse-qd.exe
+bin/everparse-3d.exe
+bin/everparse-cddl.exe
+src/cddl/tests/roundtrip/evercddl
 .depend.rsp
 
 # package.sh creates there
@@ -31,3 +32,6 @@ nuget_package
 .opam
 .opam.tmp
 opam-env.Makefile
+
+# Python bytecode caches, from the test scripts under share/everparse/tests
+__pycache__/

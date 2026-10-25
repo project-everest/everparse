@@ -1,4 +1,0 @@
-struct {
-	uint16 group_name;
-	uint8 public_key<1..2^16-1>;
-} key_share;

@@ -1,11 +1,9 @@
 all: CBORDetTest
 
-EVERPARSE_SRC_PATH = $(realpath ../../../../..)
+EVERPARSE_HOME = $(realpath ../../../../../..)
 
-#EVERPARSE_LIB_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)/lib/evercbor
-#EVERPARSE_INCLUDE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)/include/evercbor
-EVERPARSE_LIB_PATH = $(realpath ..)
-EVERPARSE_INCLUDE_PATH = $(realpath ..)
+EVERPARSE_LIB_PATH = $(EVERPARSE_HOME)/lib/everparse
+EVERPARSE_INCLUDE_PATH = $(EVERPARSE_HOME)/include/everparse
 
 CFLAGS += -Werror -I $(EVERPARSE_INCLUDE_PATH)
 

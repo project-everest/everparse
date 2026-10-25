@@ -20,6 +20,34 @@ pub fn cbor_nondet_parse <'a>(
     <'a>
 { crate::cbornondetveraux::cbor_nondet_parse(map_key_bound, strict_check, input) }
 
+pub fn cbor_nondet_parse_map_length_bounded <'a>(
+    map_length_bound: usize,
+    map_key_bound: crate::cbornondetveraux::option__size_t,
+    strict_check: bool,
+    input: &'a [u8]
+) ->
+    crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    crate::cbornondetveraux::cbor_nondet_parse_map_length_bounded(
+        map_length_bound,
+        map_key_bound,
+        strict_check,
+        input
+    )
+}
+
+pub fn cbor_nondet_parse_bounded <'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &'a [u8]
+) ->
+    crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    crate::cbornondetveraux::cbor_nondet_parse_bounded(map_depth_bound, map_length_bound, input)
+}
+
 pub fn cbor_nondet_size(x: crate::cbornondetveraux::cbor_raw, bound: usize) -> usize
 { crate::cbornondetveraux::cbor_nondet_size(x, bound) }
 
@@ -61,14 +89,14 @@ pub fn cbor_nondet_mk_int64 <'a>(ty: cbor_nondet_int_kind, v: u64) ->
     { crate::cbornondetveraux::cbor_nondet_mk_neg_int64(v) }
 }
 
+pub fn cbor_impl_utf8_correct(s: &[u8]) -> bool { crate::cbornondetveraux::impl_correct(s) }
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum cbor_nondet_string_kind
 {
     ByteString,
     TextString
 }
-
-pub fn cbor_impl_utf8_correct(s: &[u8]) -> bool { crate::cbornondetveraux::impl_correct(s) }
 
 pub fn cbor_nondet_mk_string <'a>(ty: cbor_nondet_string_kind, s: &'a [u8]) ->
     crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -209,15 +237,9 @@ pub fn cbor_nondet_destruct <'a>(c: crate::cbornondetveraux::cbor_raw <'a>) ->
         cbor_nondet_view::String { kind: k, payload: s }
     }
     else if ty == crate::cbornondetveraux::cbor_major_type_array
-    {
-        let res: crate::cbornondetveraux::cbor_raw = c;
-        cbor_nondet_view::Array { _0: res }
-    }
+    { cbor_nondet_view::Array { _0: c } }
     else if ty == crate::cbornondetveraux::cbor_major_type_map
-    {
-        let res: crate::cbornondetveraux::cbor_raw = c;
-        cbor_nondet_view::Map { _0: res }
-    }
+    { cbor_nondet_view::Map { _0: c } }
     else if ty == crate::cbornondetveraux::cbor_major_type_tagged
     {
         let tag: u64 = crate::cbornondetveraux::cbor_nondet_get_tagged_tag(c);
