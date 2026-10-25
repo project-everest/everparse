@@ -1,0 +1,131 @@
+module FStarC.Syntax.CheckLN
+
+open FStarC.Effect
+open FStarC.Syntax.Syntax
+module SS = FStarC.Syntax.Subst
+module L = FStarC.List
+
+(* Computes the binding amount of a pattern.
+Anywhere where this is defined already? *)
+let rec pat_depth (p:pat) : ML int =
+  match p.v with
+  | Pat_constant _ -> 0
+  | Pat_cons (p, _us_opt, ps) ->
+     L.fold_left (fun d (p, _) -> d + pat_depth p) 0 ps
+  | Pat_var _ -> 1
+  | Pat_dot_term _ -> 0
+
+(* Checks if, at most, n indices escape from a term *)
+let rec is_ln' (n:int) (t:term) : ML bool =
+  match (SS.compress t).n with
+  | Tm_bvar bv -> bv.index < n
+
+  | Tm_type _
+  | Tm_name _
+  | Tm_constant _
+  | Tm_fvar _ -> true
+
+  (* Should really be an fvar, but being conservative here *)
+  | Tm_uinst (t, us) ->
+    is_ln' n t &&
+    is_ln'_univs n us
+
+  | Tm_abs {b;body;rc_opt} ->
+    is_ln'_binders n [b] &&
+    is_ln' (n + 1) body
+
+  | Tm_arrow {b;comp} ->
+    is_ln'_binders n [b] &&
+    is_ln'_comp (n + 1) comp
+
+  | Tm_refine {b;phi} ->
+    is_ln'_bv n b &&
+    is_ln' (n+1) phi
+
+  | Tm_app {hd; arg} ->
+    is_ln' n hd &&
+    (let (t, aq) = arg in is_ln' n t)
+
+  | Tm_match {scrutinee; ret_opt; brs; rc_opt} ->
+    is_ln' n scrutinee &&
+    (match ret_opt with
+     | None -> true
+     | Some (b, asc) -> is_ln'_binder n b && is_ln'_ascription (n + 1) asc) &&
+    // TODO: check pats
+    L.for_all (fun (p, _, t) -> is_ln' (n + pat_depth p) t) brs
+
+  | Tm_ascribed {tm; asc} ->
+    is_ln' n tm &&
+    is_ln'_ascription n asc
+
+  | Tm_meta {tm} ->
+    is_ln' n tm
+
+  | Tm_let {lbs; body} ->
+    is_ln'_letbindings n lbs &&
+    is_ln' (n + L.length (snd lbs)) body
+
+  | _ -> true
+
+and is_ln'_letbindings (n:int) (lbs : letbindings) : ML bool =
+  let isrec, lbs = lbs in
+  L.for_all (fun lb -> is_ln'_letbinding n lb) lbs
+
+and is_ln'_letbinding (n:int) (lb : letbinding) : ML bool =
+  let {lbunivs; lbtyp; lbdef} = lb in
+  let nu = List.length lbunivs in
+  is_ln' (n+nu) lbtyp &&
+  is_ln' (n+nu) lbdef
+
+and is_ln'_binders (n:int) (bs : list binder) : ML bool =
+  match bs with
+  | [] -> true
+  | b::bs ->
+    is_ln'_binder n b && is_ln'_binders (n+1) bs
+
+and is_ln'_binder (n:int) (b:binder) : ML bool =
+  is_ln'_bv n b.binder_bv
+
+and is_ln'_bv (n:int) (bv:bv) : ML bool =
+  is_ln' n bv.sort
+
+and is_ln'_comp (n:int) (c:comp) : ML bool =
+  match c.n with
+  | Comp ct -> is_ln'_comp_typ n ct
+
+and is_ln'_comp_typ (n:nat) (ct:comp_typ) : ML bool =
+  is_ln' n ct.result_typ &&
+  L.for_all (is_ln'_flag n) ct.flags
+
+and is_ln'_flag (n:nat) (f:cflag) : ML bool =
+  match f with
+  | SMTPAT t -> is_ln' n t
+  | DECREASES (Decreases_lex ts) -> L.for_all (is_ln' n) ts
+  | DECREASES (Decreases_wf (rel, e)) -> is_ln' n rel && is_ln' n e
+  | _ -> true
+
+and is_ln'_ascription (n:nat) (asc:ascription) : ML bool =
+  let tc, tacopt, _ = asc in
+  (match tc with
+   | Inl t -> is_ln' n t
+   | Inr c -> is_ln'_comp n c) &&
+  (match tacopt with
+   | None -> true
+   | Some tac -> is_ln' n tac)
+
+and is_ln'_univ (n:nat) (u : universe) : ML bool =
+  match SS.compress_univ u with
+  | U_zero -> true
+  | U_succ u -> is_ln'_univ n u
+  | U_max us -> L.for_all (is_ln'_univ n) us
+  | U_unif _ -> true // we're conservative with returning false since that would be an error
+  | U_bvar i -> i < n
+  | U_name _ -> true
+  | U_unknown -> true
+
+and is_ln'_univs (n:nat) (us : list universe) : ML bool =
+  L.for_all (is_ln'_univ n) us
+
+(* Checks if a term is locally nameless *)
+let is_ln (t:term) : ML bool =
+  is_ln' 0 t
