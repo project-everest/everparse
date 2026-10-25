@@ -124,7 +124,7 @@ jobs:
           git config --local user.name "Dzomo, the Everest Yak"
           git config --local user.email "dzomo@users.noreply.github.com"
           make -C opt release
-          git add opt/fstar-deps.opam.locked opt/karamel-deps.opam.locked opt/pulse-deps.opam.locked opt/everparse-deps.opam.locked
+          git add opt/fstar-deps.opam.locked opt/karamel-deps.opam.locked opt/everparse-deps.opam.locked
           git mv opt/release.Makefile{.disabled,}
           git commit -m 'Use frozen opam packages'
 
