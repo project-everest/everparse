@@ -177,10 +177,6 @@ let produce_unit
     prerr_endline ("Missing runtime unit " ^ runtime_cui ^ "; rebuild the 3D runtime headers.");
     exit 1
   end;
-  if OS.getenv_array "EVERPARSE_KRML_OPTIONS" <> [] then begin
-    prerr_endline "EVERPARSE_KRML_OPTIONS: not implemented yet for Custard direct-to-C extraction";
-    exit 1
-  end;
   let module_file suffix = filename_concat out_dir (modul ^ suffix) in
   let auxiliary_modules =
     List.filter_map
