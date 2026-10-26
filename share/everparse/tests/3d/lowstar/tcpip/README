@@ -52,8 +52,8 @@ around the TCP/IP protocol.
    * UDP.fst.checked, UDP.fsti.checked: binary intermediate files
      recording object cache for F* verification
 
-   * UDP.krml: binary intermediate file recording KaRaMeL intermediate
-     AST code for extraction from F* to C
+   * UDP.cui: Custard compilation unit for direct-C extraction and
+     reuse by other generated units
 
    For TCP, where the validator for TCP options populates a parse tree
    with C data structures, we also generate the following additional

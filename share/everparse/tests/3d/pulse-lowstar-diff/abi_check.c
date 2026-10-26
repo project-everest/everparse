@@ -5,14 +5,9 @@
    EverParse3d.Lowstar.ErrorHandler.Buffer; the native Pulse API uses the
    byte-status callback from EverParse3d.Actions.ErrorHandler.Buffer.
 
-   Under `--api pulse` the abbreviation is parameterized by the input stream types
-   (the Pulse prelude is built once and instantiated through a typeclass) and
-   KaRaMeL has no parameterized typedefs, so it is inlined at every use site
-   and the generated prototypes spell the function-pointer type out in full.
-   The typedef is recovered by instantiating the abbreviation at each
-   backend's stream types in EverParse3d.Actions.ErrorHandler.<Backend>; see
-   src/3d/krml/header.Makefile. This file checks that the typedef
-   really is present and really does match: it names the typedef and then
+   Custard runtime header generation exports the error-handler typedef
+   specialized to each API and input stream; see src/3d/krml/header.Makefile.
+   This file checks that the typedef is present and matches: it names it and
    passes a value of that type to a generated validator, so any drift is a
    compile error.
 
