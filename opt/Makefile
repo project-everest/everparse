@@ -5,7 +5,7 @@ git-clone:
 
 include hashes.Makefile
 
-EVERPARSE_OPAM_FILES_DEFAULT = fstar-deps.opam everparse-deps.opam
+EVERPARSE_OPAM_FILES_DEFAULT = fstar-deps.opam karamel-deps.opam everparse-deps.opam
 EVERPARSE_OPAM_FILES := $(EVERPARSE_OPAM_FILES_DEFAULT)
 
 # Include specific options on release branches (e.g. EVERPARSE_OPAM_FILES)

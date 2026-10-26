@@ -12,6 +12,15 @@ extern "C" {
 #include "CBORNondetType.h"
 #include <everparse/CBORNondet.h>
 
+bool
+CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
+  size_t map_length_bound,
+  size_t d,
+  size_t n,
+  CBOR_Pulse_Raw_Slice_byte_slice input,
+  size_t *poffset
+);
+
 #define FStar_Pervasives_Native_None 0
 #define FStar_Pervasives_Native_Some 1
 

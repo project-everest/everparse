@@ -1,8 +1,14 @@
 # EverCBOR benchmark/conformance tests.
 #
-# Compiles share/everparse/tests/cbor/cbor_tests.c twice — once against the
-# non-deterministic snapshot, once against the deterministic snapshot —
-# and runs each of the two resulting binaries.
+# Compiles share/everparse/tests/cbor/cbor_tests.c three times — once against
+# the non-deterministic snapshot, once against the deterministic snapshot,
+# and once more against the non-deterministic snapshot but validating with
+# cbor_nondet_parse_bounded (map depth <= MAP_DEPTH_BOUND, map length <=
+# MAP_LENGTH_BOUND) — and runs each of the three resulting binaries.
+# Comparing the timings of the "nondet" and "bounded" runs measures the cost
+# of the bounded validator; the validation complexity tests at the end of the
+# suite illustrate inputs on which the unbounded validator is quadratic or
+# exponential.
 #
 # A Python harness (cbor_tests.py) then re-validates the artefacts written
 # by the C binaries against the cbor2 library, exercising cross-language
@@ -42,6 +48,11 @@ BENCH_ITERATIONS ?= 10000
 # smaller default keeps total runtime in the same ballpark).
 PYTHON_ITERATIONS ?= 1000
 
+# Bounds for the bounded-validation variant. They must be large enough for
+# every valid test of the suite to be accepted.
+MAP_DEPTH_BOUND  ?= 16
+MAP_LENGTH_BOUND ?= 64
+
 CC      ?= cc
 CFLAGS  ?= -O2 -Wall
 
@@ -53,8 +64,9 @@ DET_OBJS    = $(EVERCBOR_LIB_PATH)/CBORDet.o
 
 SRC = $(local_curdir)/cbor_tests.c
 
-NONDET_BIN = cbor_tests_nondet.exe
-DET_BIN    = cbor_tests_det.exe
+NONDET_BIN  = cbor_tests_nondet.exe
+DET_BIN     = cbor_tests_det.exe
+BOUNDED_BIN = cbor_tests_bounded.exe
 
 # Directory into which the C binaries write artefact files for the
 # Python harness to consume.
@@ -74,17 +86,25 @@ PY_SRC        := $(local_curdir)/cbor_tests.py
 CBOR2_REQ    ?= cbor2>=6.0,<7
 
 .PHONY: all build run run-nondet run-det run-python clean
-.PHONY: build-nondet build-det venv
+.PHONY: build-nondet build-det build-bounded venv
 
 all: run
 
-build: build-nondet build-det
+build: build-nondet build-det build-bounded
 
-build-nondet: $(NONDET_BIN)
-build-det:    $(DET_BIN)
+build-nondet:  $(NONDET_BIN)
+build-det:     $(DET_BIN)
+build-bounded: $(BOUNDED_BIN)
 
 $(NONDET_BIN): $(SRC) $(NONDET_OBJS)
 	$(CC) $(CFLAGS) -DEVERCBOR_NONDET -DBENCH_ITERATIONS=$(BENCH_ITERATIONS) \
+	    -I $(EVERCBOR_INCLUDE_PATH) \
+	    -o $@ $(SRC) $(NONDET_OBJS)
+
+$(BOUNDED_BIN): $(SRC) $(NONDET_OBJS)
+	$(CC) $(CFLAGS) -DEVERCBOR_NONDET -DEVERCBOR_NONDET_BOUNDED \
+	    -DMAP_DEPTH_BOUND=$(MAP_DEPTH_BOUND) -DMAP_LENGTH_BOUND=$(MAP_LENGTH_BOUND) \
+	    -DBENCH_ITERATIONS=$(BENCH_ITERATIONS) \
 	    -I $(EVERCBOR_INCLUDE_PATH) \
 	    -o $@ $(SRC) $(NONDET_OBJS)
 
@@ -97,7 +117,7 @@ run: run-c run-python
 
 # Composite C-only run target. Useful if you want only the EverCBOR side
 # without the Python cross-language harness.
-run-c: run-nondet run-det
+run-c: run-nondet run-det run-bounded
 .PHONY: run-c
 
 run-nondet: $(NONDET_BIN)
@@ -105,6 +125,11 @@ run-nondet: $(NONDET_BIN)
 
 run-det: $(DET_BIN)
 	CBOR_TEST_OUT_DIR=$(OUT_DIR) ./$(DET_BIN)
+
+run-bounded: $(BOUNDED_BIN)
+	CBOR_TEST_OUT_DIR=$(OUT_DIR) ./$(BOUNDED_BIN)
+
+.PHONY: run-bounded
 
 # Build (or refresh) the virtual environment containing the Python cbor2
 # library used by the cross-language harness. The sentinel is the venv's
@@ -123,5 +148,5 @@ run-python: run-nondet run-det $(VENV_PYTHON) $(PY_SRC)
 	$(VENV_PYTHON) $(PY_SRC) --out-dir $(OUT_DIR) --iterations $(PYTHON_ITERATIONS)
 
 clean:
-	rm -f $(NONDET_BIN) $(DET_BIN)
+	rm -f $(NONDET_BIN) $(DET_BIN) $(BOUNDED_BIN)
 	rm -rf $(OUT_DIR) $(VENV_DIR)
