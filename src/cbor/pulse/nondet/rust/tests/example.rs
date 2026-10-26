@@ -3,6 +3,53 @@ use cborrs_nondet::cbornondet::CborNondetIntKind::*;
 use cborrs_nondet::cbornondet::CborNondetView::*;
 
 #[test]
+fn parse_bounded()
+{
+    let input = [0xa1, 0x00, 0xa1, 0x01, 0x02, 0xff];
+    let parsed: Option<(CborNondet<'_>, &[u8])> =
+        cbor_nondet_parse_bounded(2, 1, &input);
+    let (object, rem) = parsed.unwrap();
+    let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
+    assert!(cbor_nondet_get_map_length(map) == 1);
+    assert_eq!(rem, &input[5..]);
+    assert!(cbor_nondet_parse_bounded(1, 1, &input).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 0, &input).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 1, &input[..4]).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 1, &[]).is_none());
+    assert!(cbor_nondet_parse_bounded(0, 0, &[0x00]).is_some());
+    assert!(cbor_nondet_parse_bounded(1, 0, &[0xa0]).is_some());
+
+    let nested_map = [0xa1, 0x00, 0xa2, 0x01, 0x02, 0x03, 0x04];
+    assert!(cbor_nondet_parse_bounded(2, 1, &nested_map).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 2, &nested_map).is_some());
+}
+
+#[test]
+fn parse_map_length_bounded()
+{
+    let input = [0xa1, 0x00, 0xa1, 0x01, 0x02, 0xff];
+    for map_key_bound in [None, Some(1)] {
+        let parsed: Option<(CborNondet<'_>, &[u8])> =
+            cbor_nondet_parse_map_length_bounded(1, map_key_bound, false, &input);
+        let (object, rem) = parsed.unwrap();
+        let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
+        assert!(cbor_nondet_get_map_length(map) == 1);
+        assert_eq!(rem, &input[5..]);
+        assert!(cbor_nondet_parse_map_length_bounded(0, map_key_bound, false, &input).is_none());
+        assert!(cbor_nondet_parse_map_length_bounded(1, map_key_bound, false, &input[..4]).is_none());
+        assert!(cbor_nondet_parse_map_length_bounded(1, map_key_bound, false, &[]).is_none());
+        assert!(cbor_nondet_parse_map_length_bounded(0, map_key_bound, false, &[0xa0]).is_some());
+    }
+
+    let duplicate_keys = [0xa2, 0x00, 0x01, 0x00, 0x02];
+    assert!(cbor_nondet_parse_map_length_bounded(2, None, true, &duplicate_keys).is_none());
+
+    let nested_map = [0xa1, 0x00, 0xa2, 0x01, 0x02, 0x03, 0x04];
+    assert!(cbor_nondet_parse_map_length_bounded(1, None, false, &nested_map).is_none());
+    assert!(cbor_nondet_parse_map_length_bounded(2, None, false, &nested_map).is_some());
+}
+
+#[test]
 fn test()
 {
     // Constructs 3 map entries: ("foo" -> 18), ("bar" -> -1-42), (1729 -> "quux")
