@@ -43,7 +43,7 @@ def main():
         build()
         assert before == snapshot(), "A no-op build rewrote generated artifacts"
 
-        runtime = home / "lib/everparse/3d/krml/buffer/EverParse.cui"
+        runtime = home / "lib/everparse/3d/runtime/buffer/EverParse.cui"
         log = build(["-W", str(runtime)])
         for name in ("Constants", "Point", "TPoint", "Test"):
             for suffix in ("fst", "fsti"):

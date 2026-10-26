@@ -6,7 +6,7 @@
    byte-status callback from EverParse3d.Actions.ErrorHandler.Buffer.
 
    Custard runtime header generation exports the error-handler typedef
-   specialized to each API and input stream; see src/3d/krml/header.Makefile.
+   specialized to each API and input stream; see src/3d/runtime/header.Makefile.
    This file checks that the typedef is present and matches: it names it and
    passes a value of that type to a generated validator, so any drift is a
    compile error.

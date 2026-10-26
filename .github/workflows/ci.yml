@@ -204,7 +204,7 @@ jobs:
       - name: Save generated C code
         if: matrix.diff-input
         run: |
-          docker exec $container /bin/bash -c "find share/everparse/tests/3d lib/everparse/3d/krml -path share/everparse/tests/3d/pulse-lowstar-diff -prune -o \( -name '*.c' -o -name '*.h' \) -print0 | tar -c --null -T -" | gzip > 3d-c-${{ matrix.part }}.tgz
+          docker exec $container /bin/bash -c "find share/everparse/tests/3d lib/everparse/3d/runtime -path share/everparse/tests/3d/pulse-lowstar-diff -prune -o \( -name '*.c' -o -name '*.h' \) -print0 | tar -c --null -T -" | gzip > 3d-c-${{ matrix.part }}.tgz
       - name: Upload generated C code as artifact
         if: matrix.diff-input
         uses: actions/upload-artifact@v4

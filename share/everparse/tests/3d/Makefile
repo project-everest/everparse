@@ -52,7 +52,7 @@ VERIFY_DIR=out.pulse.verify
 
 # The exact set of files --cleanup is expected to leave behind. This is now
 # literally the Low* set from share/everparse/tests/3d/lowstar: as there, the runtime is a shipped
-# library (lib/everparse/3d/krml/<backend>/EverParse.h), so --no_copy_everparse_h
+# library (lib/everparse/3d/runtime/<backend>/EverParse.h), so --no_copy_everparse_h
 # leaves no EverParse.h behind -- and there is no EverParse.c and no internal/
 # directory either.
 positive_tests_nosuffix := $(basename $(positive_tests))

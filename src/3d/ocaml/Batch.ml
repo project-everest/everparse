@@ -14,17 +14,17 @@ let pulse_makefile_basic =
 let cl_wrapper () = filename_concat lib_3d_home "cl-wrapper.cmd"
 
 (* The directory holding the pre-generated EverParse.h for this backend.
-   See src/3d/krml/header.Makefile. *)
+   See src/3d/runtime/header.Makefile. *)
 let pulse_actions_c_home input_stream_binding =
   filename_concat
-    (filename_concat lib_3d_home "krml")
+    (filename_concat lib_3d_home "runtime")
     (string_of_input_stream_binding input_stream_binding)
 
 let lowstar_api () = Options_Base.get_api () = HashingOptions.ApiLowstar
 
 let everparse_h_home input_stream_binding =
   if lowstar_api () then
-    filename_concat (filename_concat lib_3d_home "krml/lowstar")
+    filename_concat (filename_concat lib_3d_home "runtime/lowstar")
       (string_of_input_stream_binding input_stream_binding)
   else pulse_actions_c_home input_stream_binding
 
@@ -506,8 +506,8 @@ let copy_everparse_h_raw
       let wanted name = only = [] || List.mem name only in
       let dest_everparse_h = filename_concat out_dir "EverParse.h" in
       (* Each API ships a pre-generated, backend-specific EverParse.h: pulse
-         from lib/everparse/3d/krml/<backend>, lowstar from
-         lib/everparse/3d/krml/lowstar/<backend>. Validator extraction imports
+         from lib/everparse/3d/runtime/<backend>, lowstar from
+         lib/everparse/3d/runtime/lowstar/<backend>. Validator extraction imports
          its CUI and does not write this shared header. *)
       let everparse_h_source = filename_concat (everparse_h_home input_stream_binding) "EverParse.h" in
       if wanted "EverParse.h" && (lowstar_api () || file_exists everparse_h_source)

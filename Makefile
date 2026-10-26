@@ -129,7 +129,7 @@ endif
 
 # Generate the six runtime headers and CUIs for direct-C extraction.
 3d-runtime: 3d-pulse-prelude
-	+$(MAKE) -C src/3d/krml all
+	+$(MAKE) -C src/3d/runtime all
 
 3d-pulse-krml: 3d-runtime
 
@@ -171,7 +171,7 @@ endif
 .PHONY: 3d-adapter-test
 
 3d-runtime-header-test: 3d-runtime
-	+$(MAKE) -C src/3d/krml -f header.Makefile check-headers
+	+$(MAKE) -C src/3d/runtime -f header.Makefile check-headers
 
 .PHONY: 3d-runtime-header-test
 
@@ -460,7 +460,7 @@ clean-3d-tests:
 # Low*-API corpus in share/everparse/tests/3d/lowstar.
 clean-3d-pulse-prelude:
 	+$(MAKE) -C lib/everparse/3d clean
-	+$(MAKE) -C src/3d/krml clean
+	+$(MAKE) -C src/3d/runtime clean
 
 .PHONY: clean-3d-pulse-prelude
 

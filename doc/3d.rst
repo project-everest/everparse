@@ -329,7 +329,7 @@ Options are treated from left to right:
   C clients need no signature changes. Private workers still use byte-sized
   statuses and mutable cursors; they are not part of the public API.
   Its self-contained ``EverParse.h`` is generated from the Pulse library in
-  ``lib/everparse/3d/krml/lowstar/<backend>/``. It includes both the public
+  ``lib/everparse/3d/runtime/lowstar/<backend>/``. It includes both the public
   packed-result helpers and separately named internal byte-status helpers;
   no separate ``EverParsePulseInternal.h`` is needed. During
   per-parser extraction, KaRaMeL uses the shipped runtime without emitting
@@ -641,8 +641,8 @@ Options are treated from left to right:
   C include path. With ``--no_copy_everparse_h``, instead use the runtime
   directory matching both ``--api`` and ``--input_stream``:
 
-  * ``lowstar``: ``lib/everparse/3d/krml/lowstar/<input_stream_format>``
-  * ``pulse``: ``lib/everparse/3d/krml/<input_stream_format>``
+  * ``lowstar``: ``lib/everparse/3d/runtime/lowstar/<input_stream_format>``
+  * ``pulse``: ``lib/everparse/3d/runtime/<input_stream_format>``
 
   These paths are relative to the EverParse package or repository. Also
   include ``lib/everparse/3d`` for ``EverParseEndianness.h`` and, under

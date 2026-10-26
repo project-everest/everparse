@@ -138,12 +138,12 @@ def main():
             options = ["--api", "lowstar", "--input_stream", backend, "--odir", output]
             run(*options, "--makefile", "gmake", "--no_copy_everparse_h", source)
             makefile = (output / "EverParse.Makefile").read_text()
-            assert f"lib/everparse/3d/krml/lowstar/{backend}" in makefile
+            assert f"lib/everparse/3d/runtime/lowstar/{backend}" in makefile
             assert "src/3d/prelude/" not in makefile
             assert "EverParsePulseInternal.h" not in makefile
             assert not (output / "EverParse.h").exists()
             run(*options, "--__micro_step", "copy_everparse_h", "--no_clang_format")
-            expected = home / f"lib/everparse/3d/krml/lowstar/{backend}/EverParse.h"
+            expected = home / f"lib/everparse/3d/runtime/lowstar/{backend}/EverParse.h"
             assert (output / "EverParse.h").read_bytes() == expected.read_bytes()
             assert (output / "EverParseEndianness.h").is_file()
             assert not (output / "EverParsePulseInternal.h").exists()

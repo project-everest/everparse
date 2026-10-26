@@ -27,7 +27,7 @@ module EverParse3d.Actions.ErrorHandler.Buffer
 
    This module is an API module of the `EverParse` bundle, whose rename-prefix
    plus -fmicrosoft turn `error_handler` into `EVERPARSE_ERROR_HANDLER`. See
-   src/3d/krml/header.Makefile.
+   src/3d/runtime/header.Makefile.
 
    It holds nothing else: the bundle makes a whole module public at a time, and
    only one of the ErrorHandler modules may be public per backend, or the two

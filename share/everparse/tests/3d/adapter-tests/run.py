@@ -42,7 +42,7 @@ def output(name):
 
 
 def runtime_profile(api, stream):
-    return RUNTIME / "krml" / ("lowstar" if api == "lowstar" else "") / stream
+    return RUNTIME / "runtime" / ("lowstar" if api == "lowstar" else "") / stream
 
 
 def check_artifacts(out, modules, api, stream):
