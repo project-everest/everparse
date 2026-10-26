@@ -55,7 +55,7 @@ demo: all
 
 .PHONY: all test clean clean-3d 3d
 
-Version.fst:
+Version.fst: version.sh
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh > $@.tmp
 	mv $@.tmp $@
 
