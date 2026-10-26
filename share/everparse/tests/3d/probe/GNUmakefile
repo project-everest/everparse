@@ -23,7 +23,7 @@ export EVERPARSE_HOME
 # Path to either the 3d executable or the everparse.sh or
 # everparse.cmd script from the EverParse binary package
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 # Options passed to EverParse
 EVERPARSE_OPTIONS=
@@ -32,7 +32,7 @@ EVERPARSE_OPTIONS=
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)
 
 # Output directory for .c/.h files as well as temporary files (.fst,
-# .krml, etc.)
+# .checked, .cui, etc.)
 EVERPARSE_OUTPUT_DIR=obj
 
 # Input directory containing .3d (and auxiliary .3d.copyright.txt)
@@ -77,10 +77,8 @@ all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o $(EVERPARSE_
 
 CFLAGS += -Wall
 
-# Under --api pulse, EverParse.h is not copied from the prelude at the start of
-# the pipeline: KaRaMeL emits it, carrying the bundled runtime, at the same
-# time as the generated .c files. The wrapper headers include it, so it has
-# to be an explicit prerequisite here, or a parallel build races.
+# The wrapper headers include the copied runtime EverParse.h, so it must be
+# an explicit prerequisite here to avoid a parallel build race.
 $(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/ProbeWrapper.h $(EVERPARSE_OUTPUT_DIR)/EverParse.h
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 

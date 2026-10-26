@@ -24,11 +24,11 @@ export EVERPARSE_HOME
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package; followed by arguments
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 EVERPARSE_CMD=$(EVERPARSE_EXE) --config $(EVERPARSE_INPUT_DIR)/CompileTimeIfFlags.3d.config
 
 # Output directory for .c/.h files as well as temporary files (.fst,
-# .krml, etc.)
+# .checked, .cui, etc.)
 EVERPARSE_OUTPUT_DIR=obj
 
 # Input directory containing .3d (and auxiliary .3d.copyright.txt)

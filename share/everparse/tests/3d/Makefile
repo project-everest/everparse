@@ -20,7 +20,7 @@ export EVERPARSE_HOME
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 CC ?= cc
 CXX ?= c++
@@ -203,7 +203,7 @@ elf-test: ELF.3d
 	$(CXX) -o $(ELF_DIR)/elf-test -I $(ELF_DIR) $(addprefix $(ELF_DIR)/, ELF.c ELFWrapper.c) TestELF.cpp
 
 # --cleanup must leave behind exactly the C artifacts and nothing else: no .fst,
-# .checked, .krml, .cui or Custard staging files.
+# .checked, .cui or Custard staging files.
 pulse-cleanup-test:
 	mkdir -p $(CLEANUP_DIR)
 	env EVERPARSE_FSTAR_OPTIONS='$(EVERPARSE_FSTAR_OPTIONS) --admit_smt_queries true' $(3D) --odir $(CLEANUP_DIR) --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
@@ -297,14 +297,10 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 	      $(3D) --odir out.fail.pulse --__micro_step verify $$f || exit 1 ; \
 	    done ) >$@.out 2>$@.err
 
-# A 3d module named C used to be rejected up front: KaRaMeL suppresses its
-# builtin C module -- which supplies the _zero_for_deref marker that Pulse
-# extraction emits for every reference dereference -- as soon as an input file
-# is named C, and the run then died on a dangling C._zero_for_deref. Pulse now
-# emits Pulse.Lib.Pervasives._zero_for_deref, whose implementation is among the
-# inputs, so the name is fine again. Check it end to end, through KaRaMeL.
+# A 3D module named C must extract successfully without colliding with
+# compiler runtime definitions. Check it end to end through Custard.
 # This cannot be expressed as an ordinary test in $(batch_tests), because the
-# whole point is the module name, and EverParse.h is generated per batch.
+# whole point is the module name.
 .PHONY: pulse-module-name-c-test
 pulse-module-name-c-test:
 	rm -rf out.modname.pulse && mkdir -p out.modname.pulse

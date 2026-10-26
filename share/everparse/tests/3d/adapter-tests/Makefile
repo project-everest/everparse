@@ -7,7 +7,7 @@
 # extern/static clients for Read/Peep assertions, and exercises scoped probe
 # views through extern, native Pulse buffer, and Low* ABI buffer instances.
 # Extraction uses Custard direct C, the canonical runtime sources/shared
-# .checked cache, and the selected runtime EverParse.cui (no KaRaMeL).
+# .checked cache, and the selected runtime EverParse.cui.
 # Generated units must leave copied runtime headers unchanged.
 # The native specialization batch also rejects new shared callback headers.
 # check32 requires real -m32 support; it never silently substitutes a size model.
@@ -25,7 +25,7 @@ export FSTAR_EXE Z3_EXE
 all: check
 
 runtime:
-	+$(MAKE) -C $(ROOT) -j$(JOBS) 3d-pulse-krml
+	+$(MAKE) -C $(ROOT) -j$(JOBS) 3d-runtime
 
 check: runtime
 	$(PYTHON) run.py all
@@ -41,7 +41,7 @@ large large32 extern static probes:
 	$(PYTHON) run.py $@
 
 # Entry points for the root `3d-adapter-test` target. That target already
-# provides the runtime through its own 3d-pulse-krml prerequisite, so these skip
+# provides the runtime through its own 3d-runtime prerequisite, so these skip
 # the `runtime` rule above; re-entering the root Makefile from here would
 # recurse into the very target that invoked us.
 .PHONY: check-prebuilt check32-prebuilt
