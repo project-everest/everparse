@@ -1,20 +1,21 @@
 """Check native CUI reuse, incremental builds, and grouped-output repair."""
 
 import pathlib
+import shlex
 import subprocess
 import sys
 import tempfile
 
 
 def main():
-    executable, fstar = sys.argv[1:]
+    executable, fstar, make = sys.argv[1:]
     home = pathlib.Path(executable).resolve().parent.parent
     fixture = pathlib.Path(__file__).resolve().parent / "modules"
 
     with tempfile.TemporaryDirectory(prefix="everparse-native-") as directory:
         output = pathlib.Path(directory)
-        command = [
-            "make", "-s", "-j4", "-C", str(fixture), "world",
+        command = shlex.split(make) + [
+            "-s", "-j4", "-C", str(fixture), "world",
             f"EVERPARSE_HOME={home}", f"EVERPARSE_OUTPUT_DIR={output}",
             f"FSTAR_EXE={fstar}", "KRML_EXE=everparse-no-karamel",
         ]

@@ -89,7 +89,7 @@ api-option-test:
 .PHONY: api-option-test
 
 native-c-test:
-	$(PYTHON) native_c_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"
+	$(PYTHON) native_c_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)" "$(MAKE)"
 
 .PHONY: native-c-test
 

@@ -6,8 +6,10 @@
 
 #ifdef TEST_LOWSTAR
 typedef BOOLEAN API_BOOL;
+typedef uint64_t API_LEN;
 #else
 typedef bool API_BOOL;
+typedef size_t API_LEN;
 #endif
 
 typedef struct {
@@ -23,7 +25,7 @@ static unsigned calls[5];
 uint8_t *EverParseStreamOf(EVERPARSE_COPY_BUFFER_T cb) {
   return ((copy_buffer *)cb)->data;
 }
-size_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T cb) {
+API_LEN EverParseStreamLen(EVERPARSE_COPY_BUFFER_T cb) {
   return ((copy_buffer *)cb)->len;
 }
 size_t *EverParseStreamPos(EVERPARSE_COPY_BUFFER_T cb) {
