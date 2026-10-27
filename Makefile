@@ -56,9 +56,9 @@ ifeq (,$(NO_PULSE))
 endif
 include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
 
-$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
+$(FSTAR_DEP_FILE): $(NEED_FSTAR)
 
-$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
+$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3)
 
 ifeq (1,$(ADMIT_LOWPARSE))
 $(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
@@ -200,7 +200,7 @@ asn1-test: asn1
 	+$(MAKE) -C src/ASN1 test
 
 ifeq (,$(NO_PULSE))
-lowparse-pulse-test: lowparse
+lowparse-pulse-test: lowparse $(NEED_KRML)
 	+$(MAKE) -C share/everparse/tests/lowparse
 else
 lowparse-pulse-test:
@@ -210,7 +210,7 @@ endif
 
 lowparse-test: lowparse-pulse-test
 
-quackyducky-test: quackyducky
+quackyducky-test: quackyducky $(NEED_KRML)
 	+$(MAKE) -C share/everparse/tests/qd
 
 .PHONY: quackyducky-test
@@ -245,7 +245,7 @@ endif
 .PHONY: cbor-interface
 
 ifeq (,$(NO_PULSE))
-cbor-det-c-vertest: cbor cbor-interface
+cbor-det-c-vertest: cbor cbor-interface $(NEED_KRML)
 	+$(MAKE) -C src/cbor/pulse/det/vertest/c
 else
 cbor-det-c-vertest:
@@ -254,7 +254,7 @@ endif
 .PHONY: cbor-det-c-vertest
 
 ifeq (,$(NO_PULSE))
-cbor-det-common-vertest: cbor cbor-interface
+cbor-det-common-vertest: cbor cbor-interface $(NEED_KRML)
 	+$(MAKE) -C src/cbor/pulse/det/vertest/common
 else
 cbor-det-common-vertest:
@@ -313,7 +313,7 @@ cbor-extract-krml: cbor-extract-pre
 
 .PHONY: cbor-extract-krml
 
-cbor-test-snapshot: cbor-extract-krml
+cbor-test-snapshot: cbor-extract-krml $(NEED_KRML)
 	+$(MAKE) -C lib/everparse/cbor test-snapshot
 else
 cbor-test-snapshot: cbor-verify
@@ -323,7 +323,7 @@ endif
 
 # This rule is incompatible with `cbor` and `cbor-test-snapshot`
 ifeq (,$(NO_PULSE))
-cbor-snapshot: cbor-extract-krml
+cbor-snapshot: cbor-extract-krml $(NEED_KRML)
 	+$(MAKE) -C lib/everparse/cbor snapshot
 else
 cbor-snapshot:
@@ -360,7 +360,7 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 .PHONY: cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 ifeq (,$(NO_PULSE))
-cddl-unit-tests: cddl
+cddl-unit-tests: cddl $(NEED_KRML)
 	+$(MAKE) -C lib/everparse/cddl test
 else
 cddl-unit-tests:
@@ -383,11 +383,11 @@ ifeq (,$(NO_PULSE))
 cose-extract-krml: cddl-tool
 	+$(MAKE) -C src/cose extract-krml
 
-cose-extract-test: cose-extract-krml cbor
+cose-extract-test: cose-extract-krml cbor $(NEED_KRML)
 	+$(MAKE) -C src/cose test-extract
 
 # This rule is incompatible with cose-extract-test
-cose-snapshot: cose-extract-krml cbor
+cose-snapshot: cose-extract-krml cbor $(NEED_KRML)
 	+$(MAKE) -C src/cose snapshot
 else
 cose-extract-krml:
