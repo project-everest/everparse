@@ -253,7 +253,7 @@ def check_headers(directory):
         text = path.read_text()
         if profile["stream"] != "buffer":
             companion = path.with_name("EverParseStreamPrimitives.h")
-            # KaRaMeL's reference header has the prototypes in the main file.
+            # The reference ABI includes these prototypes in the main header.
             if '"EverParseStreamPrimitives.h"' in text:
                 text += "\n" + companion.read_text()
         errors = compare_abi(reference[profile["directory"]], inventory(text))

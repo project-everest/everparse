@@ -210,7 +210,7 @@ let probe_m
    otherwise).  This is the probe-monad counterpart of the branch used
    by `EverParse3d.Actions.Base.validate_with_error_handler`, and is
    what lets the probe combinators drop the function-pointer argument
-   (it becomes `unit`, erased by KaRaMeL) under
+   (it becomes `unit`, erased during extraction) under
    `--use_error_handler_macro`.
 
    As in the validators, the macro is passed in as an argument rather

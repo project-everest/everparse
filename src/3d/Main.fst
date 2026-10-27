@@ -563,7 +563,7 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    (* Native extraction needs neither krmllib nor generated makefiles. *)
+    (* Compile native C with EverParse's standalone build rules. *)
     OS.run_cmd "make" ["-C"; out_dir; "-f"; Batch.pulse_makefile_basic; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
   end
 

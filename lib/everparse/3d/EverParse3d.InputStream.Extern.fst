@@ -23,10 +23,9 @@ open Pulse.Lib.Pervasives
                legal and must be distinguishable from it.)
 
    A [has_length: bool] / [length: pos_t] pair would express the same thing,
-   but is not an option here: [len_t] is passed
-   by value to every validator, and a struct would be monomorphized by KaRaMeL
-   into whichever *generated* module used it first -- the very thing the
-   [trunc_t] design in EverParse3d.InputStream.Base exists to avoid.
+   but would require an aggregate type in every validator's C signature.
+   The scalar encoding also matches the [trunc_t] design in
+   EverParse3d.InputStream.Base.
 
    Consequently truncation is a pure computation on [len_t] -- there is no
    `EverParseStreamTruncate` primitive for the client to implement -- and
@@ -804,10 +803,8 @@ let all_states (d: state_dict) : slprop =
 
 (* `noextract` as well as `inline_for_extraction`: its only caller,
    `field_ptr_after_with_setter` below, is itself noextract and inlined into
-   the generated validators. Without `noextract` KaRaMeL must materialise a
-   real definition for it -- which, now that this module is public (an API of
-   the EverParse bundle), would resurrect EverParse.c just for this one
-   function. *)
+   the generated validators. Keep this helper out of standalone extraction;
+   it is not part of the public runtime API. *)
 noextract
 inline_for_extraction
 fn field_ptr_after_with_setter_impl

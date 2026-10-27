@@ -29,7 +29,7 @@ module EverParse3d.Interpreter
         to the parser denotation of `t`.
 
    Partially evaluating `as_validator` at a concrete `t` yields an EverParse
-   validator specialized to `t`, which KaRaMeL extracts to C (an instance of
+   validator specialized to `t`, which Custard extracts to C (an instance of
    the 1st Futamura projection).
 
    Differences with the Low* interpreter:

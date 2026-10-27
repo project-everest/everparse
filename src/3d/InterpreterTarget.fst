@@ -72,7 +72,7 @@ let pulse_typ_probe_args () : ML string =
 (* The client context (`EVERPARSE_EXTRA_T`) that the extern/static backends
    thread down to the stream primitives. The generated validator binds it so
    that `EverParse3d.Util.solve_from_ctx` can resolve it inside the body, and
-   so that KaRaMeL emits it as the validator's first C parameter. The buffer
+   so that Custard emits it as the validator's first C parameter. The buffer
    backend has no context (`extra_t = unit`),
    so nothing is emitted and the binder erases. *)
 let pulse_extra_binder () : ML string =

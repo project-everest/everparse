@@ -50,15 +50,11 @@ class input_stream_pts_to (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type =
    because [input_stream_inst] below must mention it, and Actions.Common
    depends on this module.
 
-   NOTE: this arrow must have exactly as many binders as the C function-pointer
-   type it extracts to. Ghost binders would be extracted by F* as extra [unit]
-   parameters of the type abbreviation, whereas Pulse drops them at application
-   sites and KaRaMeL drops them when emitting C; the resulting arity mismatch
-   makes KaRaMeL's Low* checker reject every generated validator as soon as the
-   abbreviation is preserved with -no-inline-type-abbrev (which is what gives
-   it the name EVERPARSE_ERROR_HANDLER). Hence the error handler is given
-   permission on the application context only: callers keep (and frame) their
-   permission on the input stream across the call.
+   Keep this arrow's binders aligned with the C function-pointer signature
+   preserved as EVERPARSE_ERROR_HANDLER, without extra ghost-only parameters.
+   The error handler receives permission on the application context only:
+   callers keep (and frame) their permission on the input stream across the
+   call.
 *)
 let error_handler_arrow
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
@@ -113,13 +109,11 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   (* The error-handler callback type, carried as a member rather than named
      directly as [error_handler_arrow base_t len_t pos_t].
 
-     KaRaMeL has no parameterized typedefs: it inlines such an abbreviation at
-     every use site, so a generated validator's prototype would spell the whole
-     function-pointer type out instead of naming EVERPARSE_ERROR_HANDLER, as the
-     Low* backend does. Carrying the type as a member lets each backend supply
-     its own 0-ary alias -- which KaRaMeL can preserve, and the `EverParse`
-     bundle can rename -- while [error_handler_arrow_of_t] keeps it
-     interchangeable with the arrow type for the few places that call a handler.
+     Carrying the type as a member lets each backend supply a monomorphic
+     alias that Custard preserves as EVERPARSE_ERROR_HANDLER, rather than
+     spelling the whole function-pointer type in validator prototypes.
+     [error_handler_arrow_of_t] keeps it interchangeable with the arrow type
+     for the few places that call a handler.
      See EverParse3d.Actions.ErrorHandler.Buffer. *)
   [@@@FStar.Tactics.Typeclasses.no_method]
   error_handler_t: Type0;
@@ -330,9 +324,8 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
       pts_to base len pos contents Seq.empty));
 
   (* [truncate] conceptually returns a whole (base, len, pos) triple, but
-     returning one would extract to a C struct that KaRaMeL monomorphizes into
-     whichever *generated* module happens to use it first, and then has to
-     share through an `internal/` header. Instead each instance names the one
+     returning one would introduce an aggregate return type shared by
+     generated validators. Instead each instance names the one
      component it actually modifies -- [trunc_t] -- and recovers the other two
      from the original stream through the projections below. Both backends set
      [trunc_t = len_t] -- neither re-bases anything, and truncating only
