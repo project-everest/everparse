@@ -581,15 +581,15 @@ typedef struct CBOR_Spec_Raw_EverParse_initial_byte_t_s
 }
 CBOR_Spec_Raw_EverParse_initial_byte_t;
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS (24U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS ((uint8_t)24U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_UNASSIGNED_MIN (28U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_UNASSIGNED_MIN ((uint8_t)28U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS (25U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS ((uint8_t)25U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS (26U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS ((uint8_t)26U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS (27U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS ((uint8_t)27U)
 
 #define CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue 0
 #define CBOR_Spec_Raw_EverParse_LongArgumentU8 1
@@ -1931,27 +1931,28 @@ CBOR_Pulse_Raw_Insert_cbor_raw_map_insert(
 {
   size_t poff = (size_t)0U;
   CBOR_Pulse_Raw_Insert_cbor_raw_map_insert_result pres = CBOR_Pulse_Raw_Insert_CInProgress;
-  size_t off0 = poff;
-  bool sw0;
-  switch (pres)
-  {
-    case CBOR_Pulse_Raw_Insert_CInProgress:
-      {
-        sw0 = true;
-        break;
-      }
-    default:
-      {
-        sw0 = false;
-      }
-  }
-  bool cond = sw0 && off0 < off2;
-  while (cond)
+  while (true)
   {
     size_t off = poff;
-    CBOR_Pulse_Raw_Slice_byte_slice out2kv = Pulse_Lib_Slice_split__uint8_t(out, off)._2;
+    bool sw;
+    switch (pres)
+    {
+      case CBOR_Pulse_Raw_Insert_CInProgress:
+        {
+          sw = true;
+          break;
+        }
+      default:
+        {
+          sw = false;
+        }
+    }
+    if (!(sw && off < off2))
+      break;
+    size_t off0 = poff;
+    CBOR_Pulse_Raw_Slice_byte_slice out2kv = Pulse_Lib_Slice_split__uint8_t(out, off0)._2;
     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
-    scrut0 = Pulse_Lib_Slice_split__uint8_t(out2kv, off2 - off);
+    scrut0 = Pulse_Lib_Slice_split__uint8_t(out2kv, off2 - off0);
     CBOR_Pulse_Raw_Slice_byte_slice out2 = scrut0._1;
     CBOR_Pulse_Raw_Slice_byte_slice
     outk = Pulse_Lib_Slice_split__uint8_t(scrut0._2, off3 - off2)._1;
@@ -1961,13 +1962,13 @@ CBOR_Pulse_Raw_Insert_cbor_raw_map_insert(
     CBOR_Pulse_Raw_Slice_byte_slice outvq = scrut._2;
     int16_t c = CBOR_Pulse_Raw_Compare_Bytes_lex_compare_bytes(scrut._1, outk);
     if (c < 0)
-      poff = off + (offk + CBOR_Pulse_Raw_Format_Parse_cbor_jump(outvq, (size_t)0U));
+      poff = off0 + (offk + CBOR_Pulse_Raw_Format_Parse_cbor_jump(outvq, (size_t)0U));
     else if (c > 0)
     {
-      if (!(off2 - off == (size_t)0U || off2 - off == Pulse_Lib_Slice_len__uint8_t(out2kv)))
+      if (!(off2 - off0 == (size_t)0U || off2 - off0 == Pulse_Lib_Slice_len__uint8_t(out2kv)))
       {
         size_t pn = Pulse_Lib_Slice_len__uint8_t(out2kv);
-        size_t pl = off2 - off;
+        size_t pl = off2 - off0;
         while (pl > (size_t)0U)
         {
           size_t l = pl;
@@ -1989,10 +1990,10 @@ CBOR_Pulse_Raw_Insert_cbor_raw_map_insert(
             size_t j = pj;
             size_t idx = pidx;
             size_t idx_;
-            if (idx - (size_t)0U >= Pulse_Lib_Slice_len__uint8_t(out2kv) - (off2 - off))
-              idx_ = idx - (Pulse_Lib_Slice_len__uint8_t(out2kv) - (off2 - off));
+            if (idx - (size_t)0U >= Pulse_Lib_Slice_len__uint8_t(out2kv) - (off2 - off0))
+              idx_ = idx - (Pulse_Lib_Slice_len__uint8_t(out2kv) - (off2 - off0));
             else
-              idx_ = idx + (off2 - off - (size_t)0U);
+              idx_ = idx + (off2 - off0 - (size_t)0U);
             size_t j_ = j + (size_t)1U;
             Pulse_Lib_Slice_op_Array_Assignment__uint8_t(out2kv,
               idx,
@@ -2008,21 +2009,6 @@ CBOR_Pulse_Raw_Insert_cbor_raw_map_insert(
     }
     else
       pres = CBOR_Pulse_Raw_Insert_CFailure;
-    size_t off0 = poff;
-    bool sw;
-    switch (pres)
-    {
-      case CBOR_Pulse_Raw_Insert_CInProgress:
-        {
-          sw = true;
-          break;
-        }
-      default:
-        {
-          sw = false;
-        }
-    }
-    cond = sw && off0 < off2;
   }
   switch (pres)
   {
@@ -4766,42 +4752,45 @@ CBOR_Pulse_API_Det_Common_cbor_raw_sort_aux(
       size_t pi1 = (size_t)0U;
       size_t pi2 = len_half;
       bool pres = true;
-      size_t i10 = pi1;
-      size_t i20 = pi2;
-      bool res20 = pres;
-      bool
-      cond =
-        res20 && !(i10 == i20 || i20 == Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(a));
-      while (cond)
+      while (true)
       {
         size_t i1 = pi1;
-        cbor_map_entry
-        x1 = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i1);
         size_t i20 = pi2;
+        bool res2 = pres;
+        if
+        (
+          !(res2 &&
+            !(i1 == i20 || i20 == Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(a)))
+        )
+          break;
+        size_t i10 = pi1;
+        cbor_map_entry
+        x1 = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i10);
+        size_t i2 = pi2;
         int16_t
         comp =
           CBOR_Pulse_API_Det_Common_cbor_map_entry_raw_compare(x1,
-            Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i20));
+            Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i2));
         if (comp == 0)
           pres = false;
         else if (comp < 0)
-          pi1 = i1 + (size_t)1U;
+          pi1 = i10 + (size_t)1U;
         else
         {
-          size_t i2_ = i20 + (size_t)1U;
+          size_t i2_ = i2 + (size_t)1U;
           Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
           ac1 =
             Pulse_Lib_Slice_split__CBOR_Pulse_Raw_Type_cbor_map_entry(Pulse_Lib_Slice_split__CBOR_Pulse_Raw_Type_cbor_map_entry(a,
                 i2_)._1,
-              i1)._2;
+              i10)._2;
           if
           (
-            !(i20 - i1 == (size_t)0U ||
-              i20 - i1 == Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1))
+            !(i2 - i10 == (size_t)0U ||
+              i2 - i10 == Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1))
           )
           {
             size_t pn = Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1);
-            size_t pl = i20 - i1;
+            size_t pl = i2 - i10;
             while (pl > (size_t)0U)
             {
               size_t l = pl;
@@ -4827,13 +4816,13 @@ CBOR_Pulse_API_Det_Common_cbor_raw_sort_aux(
                 if
                 (
                   idx - (size_t)0U >=
-                    Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1) - (i20 - i1)
+                    Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1) - (i2 - i10)
                 )
                   idx_ =
                     idx -
-                      (Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1) - (i20 - i1));
+                      (Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1) - (i2 - i10));
                 else
-                  idx_ = idx + (i20 - i1 - (size_t)0U);
+                  idx_ = idx + (i2 - i10 - (size_t)0U);
                 size_t j_ = j + (size_t)1U;
                 Pulse_Lib_Slice_op_Array_Assignment__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1,
                   idx,
@@ -4847,14 +4836,9 @@ CBOR_Pulse_API_Det_Common_cbor_raw_sort_aux(
               pi = i + (size_t)1U;
             }
           }
-          pi1 = i1 + (size_t)1U;
+          pi1 = i10 + (size_t)1U;
           pi2 = i2_;
         }
-        size_t i10 = pi1;
-        size_t i2 = pi2;
-        bool res2 = pres;
-        cond =
-          res2 && !(i10 == i2 || i2 == Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(a));
       }
       return pres;
     }

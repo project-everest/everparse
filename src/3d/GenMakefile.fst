@@ -3,6 +3,8 @@ module OS = OS
 
 type rule_type =
   | EverParse
+  | EverParseVerify
+  | EverParseGroup of list string
   | CC
   | Nop (* to simulate multiple-target rules *)
 
@@ -25,6 +27,11 @@ let mk_rule_operand (mtype: HashingOptions.makefile_type) (op: string) : Tot str
   | HashingOptions.MakefileGMake -> OS.replace_backslashes op // GNU Make uses `/` even on Windows
   | _ -> op
 
+let native_runtime_unit api input_stream_binding : Tot string =
+  let home = "$(EVERPARSE_HOME)" `OS.concat` "lib" `OS.concat` "everparse" `OS.concat` "3d" `OS.concat` "runtime" in
+  let home = if api = HashingOptions.ApiPulse then home else home `OS.concat` "lowstar" in
+  home `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) `OS.concat` "EverParse.cui"
+
 let print_make_rule
   mtype
   everparse_h
@@ -36,16 +43,27 @@ let print_make_rule
 =
   let pulse = api = HashingOptions.ApiPulse in
   let deps = match r.ty with
-    | EverParse -> r.from @ [makefile]
+    | EverParse | EverParseVerify | EverParseGroup _ ->
+      r.from @ [makefile; "$(EVERPARSE_HOME)/bin/everparse-3d.exe"]
+      @ (match r.ty with
+         | EverParseVerify -> [native_runtime_unit api input_stream_binding]
+         | _ -> [])
     | _ -> r.from
   in
-  let rule = Printf.sprintf "%s : %s\n" (mk_rule_operand mtype r.to) (String.concat " " (List.Tot.map (mk_rule_operand mtype) deps)) in
+  let outputs = r.to :: (match r.ty with EverParseGroup others -> others | _ -> []) in
+  let separator = match mtype, r.ty with
+    | HashingOptions.MakefileGMake, EverParseGroup _ -> "&:"
+    | _ -> ":"
+  in
+  let rule = Printf.sprintf "%s %s %s\n"
+    (String.concat " " (List.Tot.map (mk_rule_operand mtype) outputs))
+    separator (String.concat " " (List.Tot.map (mk_rule_operand mtype) deps)) in
   match r.ty with
   | Nop -> Printf.sprintf "%s\n" rule
   | _ ->
     let cmd =
       match r.ty with
-      | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --api %s --odir %s" (HashingOptions.string_of_api api) output_dir
+      | EverParse | EverParseVerify | EverParseGroup _ -> Printf.sprintf "$(EVERPARSE_CMD) --api %s --odir %s" (HashingOptions.string_of_api api) output_dir
       | CC ->
         let iopt = match mtype with
           | HashingOptions.MakefileGMake -> "-I"
@@ -59,12 +77,12 @@ let print_make_rule
             (* With --no_copy_everparse_h the client compiles against a prebuilt
                EverParse.h rather than a copy in the output directory, so the
                include path has to name the runtime matching the API and
-               backend: krml/<backend> for --api pulse, krml/lowstar/<backend>
+               backend: runtime/<backend> for --api pulse, runtime/lowstar/<backend>
                for --api lowstar. lib_3d_home still supplies
                EverParsePulse{,Endianness}.h and EverParseEndianness.h. *)
             let ddd_actions_home =
-              let krml = lib_3d_home `OS.concat` "krml" in
-              let runtime = if pulse then krml else krml `OS.concat` "lowstar" in
+              let runtime_home = lib_3d_home `OS.concat` "runtime" in
+              let runtime = if pulse then runtime_home else runtime_home `OS.concat` "lowstar" in
               runtime `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding)
             in
             Printf.sprintf "%s %s %s %s" iopt lib_3d_home iopt ddd_actions_home
@@ -101,7 +119,6 @@ let produce_config_fst_file_rule ()
   | Some module_name, Some cfg_file_name ->
     let fst_file_name = mk_filename module_name "fst" in
     let checked_file_name = mk_filename module_name "fst.checked" in
-    let krml_file_name = mk_filename module_name "krml" in
     let fst_rule = {
       ty = EverParse;
       from = [cfg_file_name];
@@ -109,18 +126,12 @@ let produce_config_fst_file_rule ()
       args = "--__micro_step emit_config"
     } in
     let fst_checked_rule = {
-      ty = EverParse;
+      ty = EverParseVerify;
       from = [fst_file_name];
       to =  checked_file_name;
       args = Printf.sprintf "--__micro_step verify %s" fst_file_name;
     } in
-    let krml_rule = {
-      ty = EverParse;
-      from = [checked_file_name];
-      to =  krml_file_name;
-      args = Printf.sprintf "--__micro_step extract %s" fst_file_name;        
-    } in
-    [fst_rule; fst_checked_rule; krml_rule]
+    [fst_rule; fst_checked_rule]
   | _ -> []
 
 let has_external_types_fsti
@@ -157,8 +168,8 @@ let produce_external_api_fsti_checked_rule
   else
     let external_api_fsti = mk_filename modul "ExternalAPI.fsti" in
     [{
-       ty = EverParse;
-       from = external_api_fsti :: (maybe_external_types_fsti_checked g modul `List.Tot.append` List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
+      ty = EverParseVerify;
+      from = external_api_fsti :: (maybe_external_types_fsti_checked g modul `List.Tot.append` List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
        to = mk_filename modul "ExternalAPI.fsti.checked";
        args = Printf.sprintf "--__micro_step verify %s" external_api_fsti;
      }]
@@ -171,7 +182,7 @@ let produce_external_types_fsti_checked_rule
   else
     let external_types_fsti = mk_filename modul "ExternalTypes.fsti" in 
     [{
-       ty = EverParse;
+       ty = EverParseVerify;
        from = external_types_fsti :: List.Tot.map (fun m -> mk_filename m "ExternalTypes.fsti.checked") (Deps.dependencies g modul);
        to = mk_filename modul "ExternalTypes.fsti.checked";
        args = Printf.sprintf "--__micro_step verify %s" external_types_fsti;
@@ -198,7 +209,7 @@ let produce_fsti_checked_rule
 : Tot rule_t
 = let fsti = mk_filename modul "fsti" in
   {
-    ty = EverParse;
+    ty = EverParseVerify;
     from = fsti :: (external_deps g modul `List.Tot.append` List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
     to = mk_filename modul "fsti.checked";
     args = Printf.sprintf "--__micro_step verify %s" fsti;
@@ -210,64 +221,10 @@ let produce_fst_checked_rule
 : FStar.All.ML rule_t
 = let fst = mk_filename modul "fst" in
   {
-    ty = EverParse;
+    ty = EverParseVerify;
     from = add_cfg_file_dep "fst.checked" (fst :: mk_filename modul "fsti.checked" :: List.Tot.map (fun m -> mk_filename m "fsti.checked") (Deps.dependencies g modul));
     to = mk_filename modul "fst.checked";
     args = Printf.sprintf "--__micro_step verify %s" fst;
-  }
-
-let produce_external_types_krml_rule
-  (g: Deps.dep_graph)
-  (modul: string)
-: list rule_t
-= if not (has_external_types_fsti g modul) then []
-  else
-    let external_types_fsti_checked = mk_filename modul "ExternalTypes.fsti.checked" in 
-    [{
-       ty = EverParse;
-       from = external_types_fsti_checked :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
-       to = mk_filename (Printf.sprintf "%s_ExternalTypes" modul) "krml";
-       args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "ExternalTypes.fsti");
-     }]
-
-let produce_external_api_krml_rule
-  (g: Deps.dep_graph)
-  (modul: string)
-: list rule_t
-= if not (has_external_api_fsti g modul) then []
-  else
-    let external_api_fsti_checked = mk_filename modul "ExternalAPI.fsti.checked" in 
-    [{
-       ty = EverParse;
-       from = external_api_fsti_checked :: List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul);
-       to = mk_filename (Printf.sprintf "%s_ExternalAPI" modul) "krml";
-       args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "ExternalAPI.fsti");
-     }]
-
-let produce_krml_rule
-  (g: Deps.dep_graph)
-  (modul: string)
-: FStar.All.ML rule_t
-=
-  {
-    ty = EverParse;
-    from = add_cfg_file_dep "fst.checked" 
-            (mk_filename modul "fst.checked" :: 
-              List.Tot.map (fun m -> mk_filename m "fst.checked") (Deps.dependencies g modul));
-    to = mk_filename modul "krml";
-    args = Printf.sprintf "--__micro_step extract %s" (mk_filename modul "fst");
-  }
-
-let produce_nop_rule
-  (from: list string)
-  (to: string)
-: Tot rule_t
-=
-  {
-    ty = Nop;
-    from = from;
-    to = to;
-    args = "";
   }
 
 let maybe_external_typedefs_h
@@ -343,31 +300,14 @@ let produce_fst_rules
   in
   (* produce the actual rules *)
     {
-      ty = EverParse;
+      ty = EverParseGroup (other_fst `List.Tot.append` produced_c);
       from =
         (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
         (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [mk_input_filename (Printf.sprintf "%s.copyright.txt" file)] else []) `List.Tot.append`
         [mk_input_filename file];
       to = first_fst;
       args = Printf.sprintf "--no_batch %s" (mk_input_filename file);
-    } ::
-    List.Tot.map (produce_nop_rule [first_fst]) (other_fst `List.Tot.append` produced_c)
-
-let maybe_external_api_krml
-  (g: Deps.dep_graph)
-  (m: string)
-: Tot (list string)
-= if has_external_api_fsti g m
-  then [mk_filename (Printf.sprintf "%s_ExternalAPI" m) "krml"]
-  else []
-
-let maybe_external_types_krml
-  (g: Deps.dep_graph)
-  (m: string)
-: Tot (list string)
-= if has_external_types_fsti g m
-  then [mk_filename (Printf.sprintf "%s_ExternalTypes" m) "krml"]
-  else []
+    } :: []
 
 let maybe_external_types_h
   (g: Deps.dep_graph)
@@ -385,7 +325,7 @@ let maybe_external_api_h
   then [mk_filename (Printf.sprintf "%s_ExternalAPI" m) "h"]
   else []
 
-let maybe_krml_generated_h
+let maybe_native_generated_h
   (g: Deps.dep_graph)
   (m: string)
 : Tot (list string)
@@ -397,7 +337,7 @@ let maybe_h
   (g: Deps.dep_graph)
   (m: string)
 : Tot (list string)
-= maybe_krml_generated_h g m `List.Tot.append`
+= maybe_native_generated_h g m `List.Tot.append`
   maybe_external_typedefs_h emit_output_types_defs g m
 
 let produce_h_rules
@@ -407,30 +347,26 @@ let produce_h_rules
 : FStar.All.ML (list rule_t)
 =
   let all_files = Deps.collect_and_sort_dependencies_from_graph g [file] in
-  let to = mk_filename (Options.module_name file) "c" in
+  let modul = Options.module_name file in
+  let to = mk_filename modul "c" in
+  let runtime = native_runtime_unit (Options.get_api ()) (Options.get_input_stream_binding ()) in
   let copyright = mk_input_filename (Printf.sprintf "%s.3d.copyright.txt" (Options.module_name file)) in
   {
-    ty = EverParse;
+    ty = EverParseGroup
+      ([mk_filename modul "h"; mk_filename modul "cui"] `List.Tot.append` maybe_native_generated_h g modul);
     from =
-      add_cfg_file_dep "krml" (
+      add_cfg_file_dep "fst.checked" (
+        [runtime; mk_filename modul "fst.checked"] `List.Tot.append`
+        external_deps g modul `List.Tot.append`
         (if clang_format then [mk_filename "" "clang-format"] else []) `List.Tot.append`
         (if OS.file_exists (Printf.sprintf "%s.copyright.txt" file) then [copyright] else []) `List.Tot.append`
-        List.map (fun f -> mk_filename (Options.module_name f) "krml") all_files `List.Tot.append`
-        List.concatMap (fun f ->
-          let m = Options.module_name f in
-          maybe_external_api_krml g m `List.Tot.append`
-          maybe_external_types_krml g m
-        ) all_files
+        List.map (fun f -> mk_filename (Options.module_name f) "cui")
+          (List.filter (fun f -> Options.module_name f <> modul) all_files)
       )
       ;
-    to = to; (* IMPORTANT: relies on the fact that KaRaMeL generates .c files BEFORE .h files *)
-    args = Printf.sprintf "--__produce_c_from_existing_krml %s" (mk_input_filename file);
-  } ::
-  produce_nop_rule [to] (mk_filename (Options.module_name file) "h") ::
-  List.concatMap (fun f ->
-    let m = Options.module_name f in
-    List.Tot.map (produce_nop_rule [to]) (maybe_krml_generated_h g m)
-  ) all_files
+    to = to;
+    args = Printf.sprintf "--__produce_c_from_existing_checked %s" (mk_input_filename file);
+  } :: []
 
 let c_to_o mtype o c =
   let oflag = match mtype with
@@ -525,6 +461,12 @@ let produce_clang_format_rule
    args = "--__micro_step copy_clang_format";
   }] else []
 
+let static_prelude_headers () : FStar.All.ML (list string) =
+  match Options.get_input_stream_binding () with
+  | HashingOptions.InputStreamStatic _ | HashingOptions.InputStreamExtern _ ->
+    [mk_filename "EverParseStreamPrimitives" "h"]
+  | _ -> []
+
 let produce_everparse_h_rule
   (everparse_h: bool)
   (all_modules: list string)
@@ -566,34 +508,26 @@ let produce_everparse_h_rule
     };
   ] else []
   end `List.Tot.append`
+  (let headers = static_prelude_headers () in
+   List.Tot.map (fun header -> {
+     ty = EverParse;
+     from = [];
+     to = header;
+     args = "--__micro_step copy_everparse_h EverParseStreamPrimitives.h";
+   }) headers) `List.Tot.append`
   [
     {
       ty = EverParse;
-      (* Both APIs ship a pre-generated EverParse.h (see
-         src/3d/krml/header.Makefile), and the prelude's copy is what
-         has to end up here in either mode. KaRaMeL emits none of its own:
-         krml_args pairs -library with -static-header over the same pattern,
-         which makes KaRaMeL drop the runtime's extern declarations rather than
-         write them to a header, and produce_one_c_file extracts into a private
-         directory anyway. So this rule is the file's only writer, and it can
-         copy the file itself rather than ride on the EverParseEndianness.h
-         rule. pulse-cleanup-test checks that nothing reinstates a
-         KaRaMeL-produced one.
-
-         The prerequisites are unchanged from when this was a recipe-less Nop:
-         EverParse.h #includes EverParsePulseEndianness.h and consumers list
-         EverParse.h alone, so those have to be here, and in pulse mode the .c
-         files ride along so that a consumer waiting on the generated headers
-         waits on the whole generated output --
-         src/3d/tests/modules/Makefile's
-         `build: $(EVERPARSE_ALL_H_FILES)` relies on that. *)
+      (* Only this rule writes the shared runtime header. Waiting for native
+         units also preserves the build entrypoint based on ALL_H_FILES. *)
       from =
-        if Options.uses_pulse_api ()
+        (static_prelude_headers ()) `List.Tot.append`
+        (if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::
              mk_filename "EverParsePulseEndianness" "h" ::
              mk_filename "EverParseEndianness" "h" ::
              List.Tot.map (fun m -> mk_filename m "c") all_modules
-        else [mk_filename "EverParseEndianness" "h"];
+        else [mk_filename "EverParseEndianness" "h"]);
       to = mk_filename "EverParse" "h";
       args = "--__micro_step copy_everparse_h EverParse.h";
     }
@@ -661,9 +595,6 @@ let produce_makefile
     List.concatMap (produce_external_api_fsti_checked_rule g) all_modules `List.Tot.append`
     List.Tot.map (produce_fsti_checked_rule g) all_modules `List.Tot.append`
     List.map (produce_fst_checked_rule g) all_modules `List.Tot.append`
-    List.Tot.concatMap (produce_external_types_krml_rule g) all_modules `List.Tot.append`
-    List.Tot.concatMap (produce_external_api_krml_rule g) all_modules `List.Tot.append`
-    List.map (produce_krml_rule g) all_modules `List.Tot.append`
     List.concatMap (produce_h_rules g clang_format) all_files `List.Tot.append`
     produce_config_fst_file_rule () `List.Tot.append`
     (if save_hashes then List.map (produce_hash_rule g) all_files else [])
@@ -688,12 +619,18 @@ let write_makefile
   let makefile_final = Options.get_makefile_name () in
   let makefile_tmp = makefile_final ^ ".tmp" in
   let file = FStar.IO.open_write_file makefile_tmp in
+  (match mtype with
+   | HashingOptions.MakefileGMake ->
+     FStar.IO.write_string file
+       "ifeq (,$(filter grouped-target,$(.FEATURES)))\n$(error EverParse requires GNU Make 4.3 or newer)\nendif\n\n"
+   | _ -> ());
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding (Options.get_api ()) makefile_final) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext = "h" && everparse_h
       then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"] `List.Tot.append`
+           static_prelude_headers () `List.Tot.append`
            (* --api pulse additionally copies these two, and the generated C
               includes them, so they belong to the installable header set. *)
            (if Options.uses_pulse_api ()
@@ -727,6 +664,9 @@ let write_makefile
   write_all_ext_files "H" "h";
   write_all_ext_files "C" "c";
   write_all_ext_files "O" (oext mtype);
+  let cui_files = List.map (fun f -> mk_filename (Options.module_name f) "cui") all_files in
+  FStar.IO.write_string file (Printf.sprintf "EVERPARSE_ALL_CUI_FILES=%s\n"
+    (String.concat " " (List.Tot.map (mk_rule_operand mtype) cui_files)));
   if save_hashes then begin
     let json_files = List.map (fun f -> mk_filename (Options.module_name f) "json") all_files in
     FStar.IO.write_string file (Printf.sprintf "EVERPARSE_ALL_JSON_FILES=%s\n" (String.concat " " (List.Tot.map (mk_rule_operand mtype) json_files)))

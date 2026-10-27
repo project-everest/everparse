@@ -29,6 +29,12 @@ def main():
     assert "--api" in help_text and "pulse|lowstar" in help_text
     assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
+    for api in ["pulse", "lowstar"]:
+        for option in ["hoist_locals", "goto_for_early_return", "blank_lines",
+                       "line_comments", "init_locals"]:
+            arguments = [f"--{option}"] + (["c99"] if option == "init_locals" else [])
+            message = run("--api", api, *arguments, succeeds=False)
+            assert f"--{option}: not implemented yet" in message
     # The legacy Low* backend is gone: lowstar is the default, and
     # legacy_lowstar is rejected like any other unknown backend because
     # Options.Base.valid_api no longer accepts it.
@@ -37,7 +43,8 @@ def main():
                  ("--__micro_step", "copy_pulse_internal_h")]:
         run(*args, succeeds=False)
 
-    with tempfile.TemporaryDirectory(prefix="everparse-api-") as directory:
+    with tempfile.TemporaryDirectory(
+            prefix="out.api-", dir=pathlib.Path(__file__).resolve().parent) as directory:
         root = pathlib.Path(directory)
         source = root / "ApiChoice.3d"
         source.write_text(
@@ -98,6 +105,11 @@ def main():
             makefile = (output / "EverParse.Makefile").read_text()
             assert f"--api {options[1]}" in makefile
             assert "--pulse" not in makefile and "--no_pulse" not in makefile
+            assert "ApiChoice.cui" in makefile
+            assert "__produce_c_from_existing_checked" in makefile
+            assert "__produce_c_from_existing_krml" not in makefile
+            assert ".krml" not in makefile
+            assert " &: " in makefile
             if name == "lowstar":
                 assert "EverParsePulseInternal.h" not in makefile
                 assert "EverParsePulseEndianness.h" not in makefile
@@ -111,6 +123,14 @@ def main():
                 assert f"--api {options[1]}" in lines[index]
                 assert str(output / "EverParse.Makefile") in lines[index - 1]
 
+            run(*options, "--odir", output, "--makefile", "nmake", source)
+            nmake = (output / "EverParse.Makefile").read_text()
+            assert " &: " not in nmake and ".krml" not in nmake
+            unit_rule = next(line for line in nmake.splitlines()
+                             if "ApiChoice.cui" in line and " : " in line)
+            assert "ApiChoice.c " in unit_rule and "ApiChoice.h " in unit_rule
+            assert "__produce_c_from_existing_checked" in nmake
+
         home = pathlib.Path(executable).parent.parent
         for backend in ["buffer", "extern", "static"]:
             output = root / f"lowstar-{backend}"
@@ -118,16 +138,38 @@ def main():
             options = ["--api", "lowstar", "--input_stream", backend, "--odir", output]
             run(*options, "--makefile", "gmake", "--no_copy_everparse_h", source)
             makefile = (output / "EverParse.Makefile").read_text()
-            assert f"lib/everparse/3d/krml/lowstar/{backend}" in makefile
+            assert f"lib/everparse/3d/runtime/lowstar/{backend}" in makefile
             assert "src/3d/prelude/" not in makefile
             assert "EverParsePulseInternal.h" not in makefile
             assert not (output / "EverParse.h").exists()
             run(*options, "--__micro_step", "copy_everparse_h", "--no_clang_format")
-            expected = home / f"lib/everparse/3d/krml/lowstar/{backend}/EverParse.h"
+            expected = home / f"lib/everparse/3d/runtime/lowstar/{backend}/EverParse.h"
             assert (output / "EverParse.h").read_bytes() == expected.read_bytes()
             assert (output / "EverParseEndianness.h").is_file()
             assert not (output / "EverParsePulseInternal.h").exists()
             assert not (output / "EverParsePulse.h").exists()
+
+        for api in ["pulse", "lowstar"]:
+            for backend in ["extern", "static"]:
+                output = root / f"{api}-{backend}-ownership"
+                output.mkdir()
+                options = ["--api", api, "--input_stream", backend, "--odir", output]
+                run(*options, "--makefile", "gmake", source)
+                makefile = (output / "EverParse.Makefile").read_text()
+                companion = output / "EverParseStreamPrimitives.h"
+                assert f"copy_everparse_h {companion.name}" in makefile
+                header_set = next(line for line in makefile.splitlines()
+                                  if line.startswith("EVERPARSE_ALL_H_FILES"))
+                assert companion.name in header_set
+                run(*options, "--__micro_step", "copy_everparse_h", companion.name,
+                    "--no_clang_format")
+                assert companion.is_file()
+                assert not (output / "EverParse.h").exists()
+                previous = companion.stat().st_mtime_ns
+                run(*options, "--__micro_step", "copy_everparse_h", "EverParse.h",
+                    "--no_clang_format")
+                assert (output / "EverParse.h").is_file()
+                assert companion.stat().st_mtime_ns == previous
 
         # Weak hashes require no extraction, and must reject another API
         # even when its grammar and tool versions are identical.

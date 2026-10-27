@@ -18,7 +18,9 @@ let config_compile_time_flags (c:config) : compile_time_flags =
 let emit_config_as_fstar_module (module_name:string) (c:config) = 
   let flags = 
     List.map 
-      (Printf.sprintf "[@@ CIfDef]\nassume\nval ___%s : bool" )
+      (fun flag -> Printf.sprintf
+        "[@@ FStar.Attributes.custard_c_ifdef \"defined(%s)\"; FStar.Attributes.rename_let \"%s\"]\nassume\nval ___%s : bool"
+        flag flag flag)
       c.compile_time_flags.flags
   in
   let assumes = String.concat "\n\n" flags in

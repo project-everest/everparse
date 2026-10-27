@@ -23,10 +23,9 @@ open Pulse.Lib.Pervasives
                legal and must be distinguishable from it.)
 
    A [has_length: bool] / [length: pos_t] pair would express the same thing,
-   but is not an option here: [len_t] is passed
-   by value to every validator, and a struct would be monomorphized by KaRaMeL
-   into whichever *generated* module used it first -- the very thing the
-   [trunc_t] design in EverParse3d.InputStream.Base exists to avoid.
+   but would require an aggregate type in every validator's C signature.
+   The scalar encoding also matches the [trunc_t] design in
+   EverParse3d.InputStream.Base.
 
    Consequently truncation is a pure computation on [len_t] -- there is no
    `EverParseStreamTruncate` primitive for the client to implement -- and
@@ -49,6 +48,7 @@ open Pulse.Lib.Pervasives
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
+module B = EverParse3d.CAbi.Boolean
 module U64 = FStar.UInt64
 module I = EverParse3d.InputStream.Base
 module LP = LowParse.Spec.Base
@@ -96,6 +96,7 @@ ensures stream_pts_to base len pos contents v ** pure (v `seq_is_suffix_of` cont
 
    It stays truthful under truncation: truncating withholds bytes from the
    view but consumes nothing, so [|contents| - |v|] is unchanged. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamGetPosition"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_get_position :
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
@@ -176,6 +177,7 @@ ensures stream_pts_to base len pos contents v **
   SZ.uint64_to_sizet (U64.sub (U64.sub len 1uL) abs)
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamHas"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_has :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -183,13 +185,13 @@ assume val stream_has :
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt bool
+    stt B.t
     (requires (
       stream_pts_to_raw base pos contents v
     ))
     (ensures (fun res ->
       stream_pts_to_raw base pos contents v **
-      pure (res == true <==> SZ.v n <= Seq.length v)
+      pure (B.to_bool res == true <==> SZ.v n <= Seq.length v)
     ))
 
 (* Bounded views must *not* consult the client: it reports what the underlying
@@ -217,7 +219,7 @@ ensures stream_pts_to base len pos contents v **
     unfold (stream_pts_to base len pos contents v);
     let res = stream_has base pos n contents v;
     fold (stream_pts_to base len pos contents v);
-    res
+    B.to_bool res
   }
 }
 
@@ -232,6 +234,7 @@ ensures stream_pts_to base len pos contents v **
      The out-of-range case is left underspecified instead -- the validators
      never reach it, so an existing client stays correct whatever it answers
      there, as long as it does not read out of bounds to decide. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamHasAt"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_has_at :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -240,15 +243,15 @@ assume val stream_has_at :
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt bool
+    stt B.t
     (requires (
       stream_pts_to_raw base pos contents v
     ))
     (ensures (fun res ->
       stream_pts_to_raw base pos contents v ** pure (
       SZ.v off <= Seq.length v ==> (
-        (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-        (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+        (B.to_bool res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+        (B.to_bool res == true ==> SZ.fits (SZ.v off + SZ.v n))
       )
     )))
 
@@ -284,7 +287,7 @@ ensures stream_pts_to base len pos contents v **
     unfold (stream_pts_to base len pos contents v);
     let res = stream_has_at base pos off n contents v;
     fold (stream_pts_to base len pos contents v);
-    res
+    B.to_bool res
   }
 }
 
@@ -296,6 +299,7 @@ ensures stream_pts_to base len pos contents v **
    used to parse a leaf integer, so `n` is at most 8 and the copy is free; in
    exchange the C signature carries no aliasing obligation and the separation
    logic postcondition stays a plain points-to. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamReadBytes"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_read_bytes :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -400,6 +404,7 @@ fn stream_read
   res
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamSkip"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_skip :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -441,6 +446,7 @@ ensures exists* v' .
   fold (stream_pts_to base len pos contents v');
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamEmpty"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_empty :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -666,7 +672,7 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
 (* The error handler used when 3d is invoked with `--use_error_handler_macro`.
    Each backend provides its own; the 3D frontend passes the one matching the
    selected `--input_stream` to `validate_with_error_handler`. *)
-[@@CMacro]
+[@@CMacro; FStar.Attributes.custard_extern "EVERPARSE_ERROR_HANDLER_MACRO"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
 (* No `copy_buffer` instance: probing is unavailable for the `extern` backend,
@@ -690,6 +696,7 @@ module R = Pulse.Lib.Reference
 module AB = EverParse3d.Actions.Base
 open EverParse3d.State
 
+[@@FStar.Attributes.rename_let "EVERPARSE____PUINT8"; FStar.Attributes.custard_no_unfold]
 noextract
 inline_for_extraction
 let ___PUINT8 = AP.ptr U8.t
@@ -697,6 +704,7 @@ let ___PUINT8 = AP.ptr U8.t
 (* As for the stream primitives, the origin and the truncation bound are absent
    from the assumed C prototype: EverParseStreamPeep is unchanged. The client
    context is threaded, as it is to every other assumed primitive. *)
+[@@FStar.Attributes.custard_extern "EverParseFieldPtrAfterImpl"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val field_ptr_after_impl
   (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)
@@ -706,7 +714,7 @@ assume val field_ptr_after_impl
   (w0: Ghost.erased ___PUINT8)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-: stt bool
+: stt B.t
     (R.pts_to w #1.0R w0 ** stream_pts_to_raw sl_base sl_pos contents_sl v_sl)
     (fun _ -> exists* w' . R.pts_to w #1.0R w' ** stream_pts_to_raw sl_base sl_pos contents_sl v_sl)
 
@@ -733,7 +741,7 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
   fold (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
   rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
        as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  res
+  B.to_bool res
 }
 
 (* The client's Peep answers for the whole stream, so inside a truncated view
@@ -795,10 +803,8 @@ let all_states (d: state_dict) : slprop =
 
 (* `noextract` as well as `inline_for_extraction`: its only caller,
    `field_ptr_after_with_setter` below, is itself noextract and inlined into
-   the generated validators. Without `noextract` KaRaMeL must materialise a
-   real definition for it -- which, now that this module is public (an API of
-   the EverParse bundle), would resurrect EverParse.c just for this one
-   function. *)
+   the generated validators. Keep this helper out of standalone extraction;
+   it is not part of the public runtime API. *)
 noextract
 inline_for_extraction
 fn field_ptr_after_with_setter_impl

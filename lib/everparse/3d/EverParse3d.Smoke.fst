@@ -61,12 +61,15 @@ let smoke_static
    sure the definitions of EverParse3d.ProbeActions are really applicable by a
    client (and, in particular, that they are not hidden inside a comment). *)
 module P = EverParse3d.ProbeActions
+module Bool = EverParse3d.Boolean
 
 inline_for_extraction noextract
 let smoke_probe
-  (f: P.probe_fn_incremental #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t)
-  (init: P.init_probe_dest_t #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t)
-: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t unit false false false
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+  (f: P.probe_fn_incremental #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst)
+  (init: P.init_probe_dest_t #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst)
+: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst unit false false false
 = P.init_and_probe "smoke"
     init
     (P.seq_probe_m B.error_handler_macro "smoke" ()
@@ -78,7 +81,9 @@ let smoke_probe
 
 inline_for_extraction noextract
 fn smoke_run_probe
-  (m: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t unit false false false)
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+  (m: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst unit false false false)
   (ctxt: EverParse3d.Actions.Common.app_ctxt)
   (src: FStar.UInt64.t)
   (sz: FStar.UInt64.t)
@@ -122,6 +127,8 @@ let smoke_field_ptr_after_with_setter
 
 inline_for_extraction noextract
 let smoke_probe_then_validate
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#nz: bool) (#wk: _) (#k: EverParse3d.Kinds.parser_kind nz wk)
   (#t: Type0) (#p: EverParse3d.Prelude.parser k t)
   (d: state_dict)
@@ -130,8 +137,8 @@ let smoke_probe_then_validate
   (src: ptr_t)
   (as_u64: (ptr_t -> P.pure_external_action FStar.UInt64.t))
   (dest: B.copy_buffer_t)
-  (init: P.init_probe_dest_t #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t)
-  (probe: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t unit true false false)
+  (init: P.init_probe_dest_t #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst)
+  (probe: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst unit true false false)
   (sq: squash (forall x .
     ~ (d.state_p x /\ (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest).state_p x)))
 : A.action #B.base_t #B.len_t #B.pos_t

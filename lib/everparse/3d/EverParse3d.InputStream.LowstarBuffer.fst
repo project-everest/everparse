@@ -22,7 +22,7 @@ instance input_stream_buffer : I.input_stream_inst base_t len_t pos_t = {
   error_handler_arrow_of_t = EH.error_handler_arrow_of;
 }
 
-[@@CMacro]
+[@@CMacro; FStar.Attributes.custard_extern "EVERPARSE_ERROR_HANDLER_MACRO"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val error_handler_macro : EH.error_handler
 
 inline_for_extraction noextract

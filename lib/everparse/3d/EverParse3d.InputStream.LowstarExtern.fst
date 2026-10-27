@@ -13,6 +13,7 @@ module API = LowParse.Pulse.ArrayPtr.Int
 module Util = EverParse3d.Util
 module Raw = EverParse3d.InputStream.LowstarExtern.Raw
 module EH = EverParse3d.Actions.ErrorHandler.LowstarExtern
+module B = EverParse3d.CAbi.Boolean
 include EverParse3d.InputStream.LowstarExtern.Types
 
 ghost
@@ -60,11 +61,12 @@ ensures stream_pts_to b len pos c v **
   unfold (stream_pts_to b len pos c v);
   with current. _;
   unfold (public_pts_to b current c v);
-  let res = if b.has_length {
+  let res = if B.to_bool b.has_length {
     let cur = !pos;
     U64.lte n (U64.sub b.length cur)
   } else {
-    Raw.has b.base n
+    let available = Raw.has b.base n;
+    B.to_bool available
   };
   fold (public_pts_to b current c v);
   fold (stream_pts_to b len pos c v);
@@ -148,7 +150,7 @@ ensures stream_pts_to b len pos c Seq.empty
 {
   // Both branches update the count once. In particular, an unbounded drain
   // never calls Skip, even if EverParseEmpty returns more than SIZE_MAX.
-  if b.has_length {
+  if B.to_bool b.has_length {
     let cur = stream_get_position b len pos c v;
     unfold (stream_pts_to b len pos c v);
     with current. _;
@@ -246,7 +248,7 @@ ensures exists* c' v1 v2.
   let cur = !pos;
   let count = I.native_scan_to_u64 n;
   let limit = U64.add cur count;
-  let res = { base = b.base; has_length = true; length = limit };
+  let res = { base = b.base; has_length = B.of_bool true; length = limit };
   let c' = Ghost.hide (Seq.slice c 0 (U64.v limit));
   let v1 = Ghost.hide (Seq.slice v 0 (SZ.v n));
   let v2 = Ghost.hide (Seq.slice v (SZ.v n) (Seq.length v));
@@ -318,7 +320,7 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
 noextract inline_for_extraction
 let input_stream_static = input_stream_extern
 
-[@@CMacro]
+[@@CMacro; FStar.Attributes.custard_extern "EVERPARSE_ERROR_HANDLER_MACRO"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val error_handler_macro : EH.error_handler
 
 module AB = EverParse3d.Actions.Base

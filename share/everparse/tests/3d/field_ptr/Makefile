@@ -14,7 +14,7 @@ EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 
 EVERPARSE_OUTPUT_DIR=obj
 EVERPARSE_INPUT_DIR=src
@@ -41,10 +41,8 @@ endif
 
 all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o
 
-# Under --api pulse, EverParse.h is not copied from the prelude at the start of
-# the pipeline: KaRaMeL emits it, carrying the bundled runtime, at the same
-# time as the generated .c files. The wrapper headers include it, so it has
-# to be an explicit prerequisite here, or a parallel build races.
+# The wrapper headers include the copied runtime EverParse.h, so it must be
+# an explicit prerequisite here to avoid a parallel build race.
 $(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/TestWrapper.h $(EVERPARSE_OUTPUT_DIR)/EverParse.h
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 

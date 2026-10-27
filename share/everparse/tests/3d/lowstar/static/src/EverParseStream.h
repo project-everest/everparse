@@ -2,6 +2,7 @@
 #define __EVERPARSESTREAM
 
 #include <stdint.h>
+#include <stdio.h>
 #include "EverParseEndianness.h"
 
 struct es_cell {

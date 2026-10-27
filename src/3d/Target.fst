@@ -190,8 +190,12 @@ let print_maybe_qualified_ident (mname:string) (i:A.ident) =
    "the target declares this", and names it as C already spells it: print_ident
    prefixes uppercase identifiers with `___` to keep them out of F*'s
    constructor namespace, and that prefix is an F* artifact. *)
-let print_custard_extern_attr (i:A.ident) =
-  Printf.sprintf "[@@FStar.Attributes.custard_extern \"%s\"]\n" i.A.v.A.name
+let print_custard_extern_attr (header:option string) (i:A.ident) =
+  Printf.sprintf "[@@FStar.Attributes.custard_extern \"%s\"%s]\n"
+    (String.uppercase i.A.v.A.name)
+    (match header with
+     | None -> ""
+     | Some h -> Printf.sprintf "; FStar.Attributes.custard_c_header \"%s\"" h)
 
 let print_field_id_name (i:A.ident) =
   let open A in
@@ -346,6 +350,29 @@ let print_op_with_range ropt o =
 
 let print_op = print_op_with_range None
 
+let is_boolean_type (t:typ) : bool =
+  match t with
+  | T_app {v={name="Bool"}} _ [] -> true
+  | _ -> false
+
+let print_boolean_inst_args () : ML string =
+  if Options.uses_pulse_api ()
+  then " #bool #EverParse3d.Boolean.boolean_bool"
+  else " #EverParse3d.CAbi.Boolean.t #EverParse3d.Boolean.boolean_byte"
+
+let contains_compile_time_flag (e:expr) : ML bool =
+  let cfg = Options.config_module_name () in
+  let rec contains (e:expr) : ML bool =
+    match fst e with
+    | Identifier i -> Some? i.v.modul_name && i.v.modul_name = cfg
+    | App _ es -> contains_list es
+    | _ -> false
+  and contains_list (es:list expr) : ML bool =
+    match es with
+    | [] -> false
+    | e::es -> if contains e then true else contains_list es in
+  contains e
+
 let rec print_expr (mname:string) (e:expr) : ML string =
   match fst e with
   | Constant c ->
@@ -369,9 +396,7 @@ let rec print_expr (mname:string) (e:expr) : ML string =
   | App (BitwiseNot _) [e1] ->
     Printf.sprintf "(%s %s)" (print_op (App?.hd (fst e))) (print_expr mname e1)
   | App IfThenElse [e1;e2;e3] ->
-    Printf.sprintf
-      "(if %s then %s else %s)"
-      (print_expr mname e1) (print_expr mname e2) (print_expr mname e3)
+    print_conditional mname e1 (print_expr mname e2) (print_expr mname e3)
   | App (BitFieldOf i order) [e1;e2;e3] ->
     Printf.sprintf
       "(%s %s %s %s)"
@@ -381,6 +406,18 @@ let rec print_expr (mname:string) (e:expr) : ML string =
     print_op op
   | App op es ->
     Printf.sprintf "(%s %s)" (print_op op) (String.concat " " (print_exprs mname es))
+
+and print_conditional (mname:string) (e:expr) (yes no:string) : ML string =
+  (* Custard requires each preprocessor flag to be a whole if condition. *)
+  if contains_compile_time_flag e then
+    match fst e with
+    | App And [a;b] ->
+      print_conditional mname a (print_conditional mname b yes no) no
+    | App Or [a;b] ->
+      print_conditional mname a yes (print_conditional mname b yes no)
+    | App Not [a] -> print_conditional mname a no yes
+    | _ -> Printf.sprintf "(if %s then %s else %s)" (print_expr mname e) yes no
+  else Printf.sprintf "(if %s then %s else %s)" (print_expr mname e) yes no
 
 and print_exprs (mname:string) (es:list expr) : ML (list string) =
   match es with
@@ -458,8 +495,9 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (* Probes are supported for the `buffer` backend only, so the probe
          monad's type class instances are always the buffer ones. *)
       Printf.sprintf
-        "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer unit true false %s)"
+        "(EverParse3d.ProbeActions.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer%s unit true false %s)"
         (Options.pulse_inst ())
+        (print_boolean_inst_args ())
         ueh
     else
     if hd.v = Ast.to_ident' "EVERPARSE_COPY_BUFFER_T"
@@ -509,7 +547,15 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_typ mname t1)
       (print_typ mname t2)
   | T_pointer t i ->
-    Printf.sprintf "(Pulse.Lib.Reference.ref (%s))" (print_typ mname t)
+    let storage =
+      match t with
+      | T_app {v={name="Bool"}} _ [] ->
+        if Options.get_api () = HashingOptions.ApiLowstar
+        then "EverParse3d.CAbi.Boolean.t"
+        else print_typ mname t
+      | _ -> print_typ mname t
+    in
+    Printf.sprintf "(Pulse.Lib.Reference.ref (%s))" storage
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
@@ -867,13 +913,18 @@ let pascal_case name : ML string =
 
 let uppercase (name:string) : string = String.uppercase name
 
+let print_c_function_attr (name:string) : ML string =
+  Printf.sprintf
+    "[@@FStar.Attributes.rename_let \"%s\"; FStar.Attributes.custard_declare_in_c_header]\n"
+    (pascal_case name)
+
 let rec print_as_c_type (t:typ) : ML string =
     let open Ast in
     match t with
     | T_pointer t A.UInt64 ->
           Printf.sprintf "%s*" (print_as_c_type t)
     | T_app {v={name="Bool"}} _ [] ->
-          "BOOLEAN"
+          if Options.uses_pulse_api () then "bool" else "BOOLEAN"
     | T_app {v={name="UINT8"}} _ [] ->
           "uint8_t"
     | T_app {v={name="UINT16"}} _ [] ->
@@ -1961,7 +2012,7 @@ let rec base_output_type (t:typ) : ML A.ident =
   | T_pointer t A.UInt64 -> base_output_type t
   | _ -> failwith "Target.base_output_type called with a non-output type"
 #push-options "--fuel 1"
-let rec print_output_type_val (tbl:set) (t:typ) : ML string =
+let rec print_output_type_val (header:option string) (tbl:set) (t:typ) : ML string =
   let open A in
   if is_output_type t
   then let s = print_output_type false t in
@@ -1970,9 +2021,10 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
             assert (is_output_type t);
             match t with
             | T_app id KindOutput [] ->
-              Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr id) s
+              Printf.sprintf "\n\n%sval %s : Type0\n\n"
+                (print_custard_extern_attr header id) s
             | T_pointer bt A.UInt64 ->
-              let bs = print_output_type_val tbl bt in
+              let bs = print_output_type_val header tbl bt in
               let ptr = "Pulse.Lib.Reference.ref" in
               bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = %s %s\n\n" s ptr (print_output_type false bt))
   else ""
@@ -2012,8 +2064,17 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (print_typ mname oe.oe_t)
           (Some?.v oe.oe_bitwidth)
       end in
-    Printf.sprintf
-      "\n\nval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
+    if not (Options.uses_pulse_api ()) && is_boolean_type oe.oe_t
+    then
+      let raw_name = Ast.reserved_prefix ^ "raw_" ^ fn_name in
+      Printf.sprintf
+        "\n\n%sval %s (_:%s) (_:EverParse3d.CAbi.Boolean.t) : EverParse3d.Actions.Base.external_action ___output_state unit\n\
+         inline_for_extraction noextract\n\
+         let %s (x:%s) (value:bool) = %s x (EverParse3d.CAbi.Boolean.of_bool value)\n\n"
+        (print_c_function_attr fn_name) raw_name fn_arg1_t fn_name fn_arg1_t raw_name
+    else Printf.sprintf
+      "\n\n%sval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
+      (print_c_function_attr fn_name)
       fn_name
       fn_arg1_t
       fn_arg2_t
@@ -2066,7 +2127,16 @@ let print_out_expr_get_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
     H.insert tbl fn_name ();
     let fn_arg1_t = print_typ mname oe.oe_bt in
     let fn_res = print_typ mname oe.oe_t in  //No bitfields, we could enforce?
-    Printf.sprintf "\n\nval %s : %s -> %s\n\n" fn_name fn_arg1_t fn_res
+    if not (Options.uses_pulse_api ()) && is_boolean_type oe.oe_t
+    then
+      let raw_name = Ast.reserved_prefix ^ "raw_" ^ fn_name in
+      Printf.sprintf
+        "\n\n%sval %s : %s -> EverParse3d.CAbi.Boolean.t\n\
+         inline_for_extraction noextract\n\
+         let %s (x:%s) = EverParse3d.CAbi.Boolean.to_bool (%s x)\n\n"
+        (print_c_function_attr fn_name) raw_name fn_arg1_t fn_name fn_arg1_t raw_name
+    else Printf.sprintf "\n\n%sval %s : %s -> %s\n\n"
+      (print_c_function_attr fn_name) fn_name fn_arg1_t fn_res
 
 (*
  * C defn. for the getter for the output expression
@@ -2096,15 +2166,16 @@ let output_base_var lhs = base_id_of_output_expr lhs
 
 let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
+  let header = Some (modul ^ "_ExternalTypedefs.h") in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
     | Output_type ot ->
       let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
       Printf.sprintf "%s%s"
-        (print_output_type_val tbl t)
-        (print_output_type_val tbl (T_pointer t A.UInt64))
+        (print_output_type_val header tbl t)
+        (print_output_type_val header tbl (T_pointer t A.UInt64))
     | Extern_type i ->
-      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr header i) (print_ident i)
     | _ -> "")) in
    let prefix =
      "open Pulse.Lib.Pervasives\n\
@@ -2124,8 +2195,41 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      copy-buffer type class instances, which cannot be inferred from a bare
      `val`; spell them out. Probes are supported for the `buffer` backend only. *)
   let probe_inst_args =
-    Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
+    Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer%s"
       (Options.pulse_inst ())
+      (print_boolean_inst_args ())
+  in
+  let external_function f ret params pure =
+    let logical_type t = print_typ modul t in
+    let physical_type t =
+      if is_boolean_type t && not (Options.uses_pulse_api ())
+      then "EverParse3d.CAbi.Boolean.t"
+      else logical_type t
+    in
+    let binders (ty:typ -> ML string) : ML string = params |> List.map (fun (i, t) ->
+      Printf.sprintf "(%s:%s)" (print_ident i) (ty t)) |> String.concat " "
+    in
+    let action = if pure then "EverParse3d.ProbeActions.pure_external_action"
+                 else "EverParse3d.Actions.Base.external_action ___output_state" in
+    let adapt = not (Options.uses_pulse_api ()) &&
+      (is_boolean_type ret || List.existsb (fun (_, t) -> is_boolean_type t) params) in
+    let name = print_ident f in
+    let raw_name = if adapt then Ast.reserved_prefix ^ "raw_" ^ name else name in
+    let declaration = Printf.sprintf "\n\n%sval %s %s : %s %s\n"
+      (print_c_function_attr f.A.v.A.name) raw_name (binders physical_type)
+      action (physical_type ret)
+    in
+    if not adapt then declaration
+    else
+      let args = params |> List.map (fun (i, t) ->
+        let name = print_ident i in
+        if is_boolean_type t then Printf.sprintf "(EverParse3d.CAbi.Boolean.of_bool %s)" name
+        else name) |> String.concat " " in
+      let decode = if is_boolean_type ret then "EverParse3d.CAbi.Boolean.to_bool"
+                   else "(fun x -> x)" in
+      declaration ^ Printf.sprintf
+        "\ninline_for_extraction noextract\nlet %s %s = EverParse3d.Boolean.Actions.%s %s (%s %s)\n"
+        name (binders logical_type) (if pure then "map_pure" else "map_external") decode raw_name args
   in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
@@ -2141,35 +2245,28 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
         (if not is_get then print_out_expr_set_fstar tbl modul oe
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
-      Printf.sprintf "\n\n%sval %s : Type0\n\n" (print_custard_extern_attr i) (print_ident i)
-    | Extern_fn f ret params false ->
-      Printf.sprintf "\n\nval %s %s : EverParse3d.Actions.Base.external_action ___output_state %s\n"
-        (print_ident f)
-        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
-          (print_ident i)
-          (print_typ modul t))))
-        (print_typ modul ret)
-    | Extern_fn f ret params true ->
-      Printf.sprintf "\n\nval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
-        (print_ident f)
-        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
-          (print_ident i)
-          (print_typ modul t))))
-        (print_typ modul ret)
+      Printf.sprintf "\n\n%sval %s : Type0\n\n"
+        (print_custard_extern_attr (Some (modul ^ "_ExternalTypedefs.h")) i) (print_ident i)
+    | Extern_fn f ret params pure ->
+      external_function f ret params pure
     | Extern_probe f PQWithOffsets ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental%s\n\n" (print_ident f) probe_inst_args
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.probe_fn_incremental%s\n\n"
+        (print_c_function_attr f.A.v.A.name) (print_ident f) probe_inst_args
     | Extern_probe f (PQRead t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s%s \n\n" 
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s%s \n\n"
+              (print_c_function_attr f.A.v.A.name)
               (print_ident f)
               (print_integer_type t)
               probe_inst_args
     | Extern_probe f (PQWrite t) ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s%s \n\n" 
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.write_at_offset_%s%s \n\n"
+              (print_c_function_attr f.A.v.A.name)
               (print_ident f)
               (print_integer_type t)
               probe_inst_args
     | Extern_probe f PQInit ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.init_probe_dest_t%s \n\n" 
+      Printf.sprintf "\n\n%sval %s : EverParse3d.ProbeActions.init_probe_dest_t%s \n\n"
+              (print_c_function_attr f.A.v.A.name)
               (print_ident f)
               probe_inst_args
     | _ -> "")) in
@@ -2232,7 +2329,9 @@ let print_out_exprs_c modul (ds:decls) : ML string =
 
 
   (Printf.sprintf
-     "%s#include<stdint.h>\n\n\
+     "%s#include <stdint.h>\n\
+      #include <stdbool.h>\n\
+      #include \"EverParseEndianness.h\"\n\n\
       %s\
       %s\
       #if defined(__cplusplus)\n\
@@ -2303,6 +2402,9 @@ let print_output_types_defs (modul:string) (ds:decls) : ML string =
   Printf.sprintf
     "#ifndef __%s_OutputTypesDefs_H\n\
      #define __%s_OutputTypesDefs_H\n\n\
+     #include <stdint.h>\n\
+     #include <stdbool.h>\n\
+     #include \"EverParseEndianness.h\"\n\n\
      #if defined(__cplusplus)\n\
      extern \"C\" {\n\
      #endif\n\

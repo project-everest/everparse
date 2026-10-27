@@ -21,13 +21,6 @@ get_fstar_commit() {
     )
 }
 
-get_karamel_commit() {
-    (
-        $KRML_EXE -version | sed -n 's/KaRaMeL version: \(.\{8\}\).*/\1/p'
-    )
-}
-
 echo module Version
 echo "let everparse_version = \"$(get_everparse_version)\""
 echo "let fstar_commit = \"$(get_fstar_commit)\""
-echo "let karamel_commit = \"$(get_karamel_commit)\""

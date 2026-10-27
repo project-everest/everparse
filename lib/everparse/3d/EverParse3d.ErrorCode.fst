@@ -1,34 +1,35 @@
 module EverParse3d.ErrorCode
 module U8 = FStar.UInt8
 
-[@@CMacro]
+inline_for_extraction
 let validator_success = 0uy
 
-[@@CMacro]
+inline_for_extraction
 let validator_error_action_failed = 5uy
 
-[@ CMacro ]
+inline_for_extraction
 let validator_error_not_enough_data = 2uy
 
-[@ CMacro ]
+inline_for_extraction
 let validator_error_impossible = 3uy
 
-[@ CMacro ]
+inline_for_extraction
 let validator_error_list_size_not_multiple = 4uy
 
-[@ CMacro ]
+inline_for_extraction
 let validator_error_constraint_failed = 6uy
 
-[@ CMacro ]
+inline_for_extraction
 let validator_error_unexpected_padding = 7uy
 
-[@ CMacro ]
+inline_for_extraction
 let validator_error_probe_failed = 8uy
 
 noextract
 let is_validation_error (code:U8.t) : bool =
   code <> validator_success && code <> validator_error_action_failed
 
+inline_for_extraction
 let error_reason_of_result (code:U8.t) : string =
   match code with
   | 0uy -> "success"

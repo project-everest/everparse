@@ -1,0 +1,1352 @@
+{
+  "profiles": {
+    "buffer": {
+      "functions": {
+        "EverParseErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParseGetBitfield16": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield16MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield32": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield32MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield64": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield64MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield8": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetBitfield8MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseStreamLen": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_COPY_BUFFER_T"
+          ],
+          "return": "size_t"
+        },
+        "EverParseStreamOf": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_COPY_BUFFER_T"
+          ],
+          "return": "uint8_t *"
+        },
+        "EverParseStreamPos": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_COPY_BUFFER_T"
+          ],
+          "return": "size_t *"
+        }
+      },
+      "macros": {
+        "EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED": "( 5U )",
+        "EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6U )",
+        "EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE": "( 3U )",
+        "EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4U )",
+        "EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2U )",
+        "EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED": "( 8U )",
+        "EVERPARSE_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 7U )",
+        "EVERPARSE_VALIDATOR_SUCCESS": "( 0U )"
+      },
+      "types": {
+        "EVERPARSE_APP_CTXT": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_HANDLER": {
+          "kind": "callback",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint8_t",
+            "uint8_t *",
+            "uint8_t *",
+            "size_t",
+            "size_t *",
+            "uint64_t"
+          ],
+          "return": "void"
+        }
+      },
+      "values": {}
+    },
+    "extern": {
+      "functions": {
+        "EverParseErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParseFieldPtrAfterImpl": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "uint64_t",
+            "uint8_t * *",
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseGetBitfield16": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield16MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield32": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield32MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield64": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield64MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield8": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetBitfield8MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseStreamEmpty": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "size_t"
+        },
+        "EverParseStreamGetPosition": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseStreamHas": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseStreamHasAt": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t",
+            "size_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseStreamReadBytes": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t",
+            "uint8_t *"
+          ],
+          "return": "void"
+        },
+        "EverParseStreamSkip": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t"
+          ],
+          "return": "void"
+        }
+      },
+      "macros": {
+        "EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED": "( 5U )",
+        "EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6U )",
+        "EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE": "( 3U )",
+        "EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4U )",
+        "EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2U )",
+        "EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED": "( 8U )",
+        "EVERPARSE_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 7U )",
+        "EVERPARSE_VALIDATOR_SUCCESS": "( 0U )"
+      },
+      "types": {
+        "EVERPARSE_APP_CTXT": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_HANDLER": {
+          "kind": "callback",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint8_t",
+            "uint8_t *",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t",
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EVERPARSE____PUINT8": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        }
+      },
+      "values": {
+        "EverParseNullPtr": "uint8_t *"
+      }
+    },
+    "lowstar/buffer": {
+      "functions": {
+        "EverParseCheckConstraintOk": {
+          "linkage": "static inline",
+          "parameters": [
+            "BOOLEAN",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseDefaultErrorHandler": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "EVERPARSE_ERROR_FRAME *",
+            "EVERPARSE_INPUT_BUFFER",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EverParseErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParseGetBitfield16": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield16MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield32": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield32MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield64": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield64MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield8": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetBitfield8MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetValidatorErrorKind": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetValidatorErrorPos": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseIsError": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsSuccess": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParsePulseInternalErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParsePulseInternalIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseSetValidatorErrorKind": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseSetValidatorErrorPos": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseStreamLen": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_COPY_BUFFER_T"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseStreamOf": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_COPY_BUFFER_T"
+          ],
+          "return": "uint8_t *"
+        }
+      },
+      "macros": {
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_ACTION_FAILED": "( 5U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_IMPOSSIBLE": "( 3U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_PROBE_FAILED": "( 8U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 7U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS": "( 0U )",
+        "EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED": "( 5764607523034234880ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6917529027641081856ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_GENERIC": "( 1152921504606846976ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE": "( 3458764513820540928ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4611686018427387904ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2305843009213693952ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED": "( 9223372036854775808ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 8070450532247928832ULL )",
+        "EVERPARSE_VALIDATOR_MAX_LENGTH": "( 1152921504606846975ULL )"
+      },
+      "types": {
+        "EVERPARSE_APP_CTXT": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_FRAME": {
+          "fields": "BOOLEAN filled ; uint64_t start_pos ; EVERPARSE_STRING typename_s ; EVERPARSE_STRING fieldname ; EVERPARSE_STRING reason ; uint64_t error_code ;",
+          "kind": "record"
+        },
+        "EVERPARSE_ERROR_HANDLER": {
+          "kind": "callback",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "uint8_t *",
+            "uint8_t *",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EVERPARSE_INPUT_BUFFER": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        }
+      },
+      "values": {}
+    },
+    "lowstar/extern": {
+      "functions": {
+        "EverParseCheckConstraintOk": {
+          "linkage": "static inline",
+          "parameters": [
+            "BOOLEAN",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseDefaultErrorHandler": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "EVERPARSE_ERROR_FRAME *",
+            "EVERPARSE_INPUT_BUFFER",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EverParseEmpty": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParseGetBitfield16": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield16MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield32": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield32MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield64": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield64MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield8": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetBitfield8MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetValidatorErrorKind": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetValidatorErrorPos": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseHas": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsError": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsSuccess": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseMakeInputBuffer": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "EVERPARSE_INPUT_BUFFER"
+        },
+        "EverParseMakeInputBufferWithLength": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "EVERPARSE_INPUT_BUFFER"
+        },
+        "EverParsePeep": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "uint8_t *"
+        },
+        "EverParsePulseInternalErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParsePulseInternalIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseRead": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t",
+            "uint8_t *"
+          ],
+          "return": "uint8_t *"
+        },
+        "EverParseSetValidatorErrorKind": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseSetValidatorErrorPos": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseSkip": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EverParseStreamOf": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_COPY_BUFFER_T"
+          ],
+          "return": "EVERPARSE_INPUT_BUFFER"
+        }
+      },
+      "macros": {
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_ACTION_FAILED": "( 5U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_IMPOSSIBLE": "( 3U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_PROBE_FAILED": "( 8U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 7U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS": "( 0U )",
+        "EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED": "( 5764607523034234880ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6917529027641081856ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_GENERIC": "( 1152921504606846976ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE": "( 3458764513820540928ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4611686018427387904ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2305843009213693952ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED": "( 9223372036854775808ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 8070450532247928832ULL )",
+        "EVERPARSE_VALIDATOR_MAX_LENGTH": "( 1152921504606846975ULL )"
+      },
+      "types": {
+        "EVERPARSE_APP_CTXT": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_FRAME": {
+          "fields": "BOOLEAN filled ; uint64_t start_pos ; EVERPARSE_STRING typename_s ; EVERPARSE_STRING fieldname ; EVERPARSE_STRING reason ; uint64_t error_code ;",
+          "kind": "record"
+        },
+        "EVERPARSE_ERROR_HANDLER": {
+          "kind": "callback",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "uint8_t *",
+            "EVERPARSE_INPUT_BUFFER",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EVERPARSE_INPUT_BUFFER": {
+          "fields": "EVERPARSE_INPUT_STREAM_BASE base ; BOOLEAN has_length ; uint64_t length ;",
+          "kind": "record"
+        },
+        "EVERPARSE_BASE_T": {
+          "kind": "alias",
+          "type": "EVERPARSE_INPUT_BUFFER"
+        }
+      },
+      "values": {}
+    },
+    "lowstar/static": {
+      "functions": {
+        "EverParseCheckConstraintOk": {
+          "linkage": "static inline",
+          "parameters": [
+            "BOOLEAN",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseDefaultErrorHandler": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "EVERPARSE_ERROR_FRAME *",
+            "EVERPARSE_INPUT_BUFFER",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EverParseEmpty": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParseGetBitfield16": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield16MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield32": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield32MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield64": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield64MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield8": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetBitfield8MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetValidatorErrorKind": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetValidatorErrorPos": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseHas": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsError": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseIsSuccess": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseMakeInputBuffer": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "EVERPARSE_INPUT_BUFFER"
+        },
+        "EverParseMakeInputBufferWithLength": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "EVERPARSE_INPUT_BUFFER"
+        },
+        "EverParsePeep": {
+          "linkage": "static",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "uint8_t *"
+        },
+        "EverParsePulseInternalErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParsePulseInternalIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseRead": {
+          "linkage": "static",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t",
+            "uint8_t *"
+          ],
+          "return": "uint8_t *"
+        },
+        "EverParseSetValidatorErrorKind": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseSetValidatorErrorPos": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseSkip": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EverParseStreamOf": {
+          "linkage": "extern",
+          "parameters": [
+            "EVERPARSE_COPY_BUFFER_T"
+          ],
+          "return": "EVERPARSE_INPUT_BUFFER"
+        }
+      },
+      "macros": {
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_ACTION_FAILED": "( 5U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_IMPOSSIBLE": "( 3U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_PROBE_FAILED": "( 8U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 7U )",
+        "EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS": "( 0U )",
+        "EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED": "( 5764607523034234880ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6917529027641081856ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_GENERIC": "( 1152921504606846976ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE": "( 3458764513820540928ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4611686018427387904ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2305843009213693952ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED": "( 9223372036854775808ULL )",
+        "EVERPARSE_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 8070450532247928832ULL )",
+        "EVERPARSE_VALIDATOR_MAX_LENGTH": "( 1152921504606846975ULL )"
+      },
+      "types": {
+        "EVERPARSE_APP_CTXT": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_FRAME": {
+          "fields": "BOOLEAN filled ; uint64_t start_pos ; EVERPARSE_STRING typename_s ; EVERPARSE_STRING fieldname ; EVERPARSE_STRING reason ; uint64_t error_code ;",
+          "kind": "record"
+        },
+        "EVERPARSE_ERROR_HANDLER": {
+          "kind": "callback",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "uint8_t *",
+            "EVERPARSE_INPUT_BUFFER",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EVERPARSE_INPUT_BUFFER": {
+          "fields": "EVERPARSE_INPUT_STREAM_BASE base ; BOOLEAN has_length ; uint64_t length ;",
+          "kind": "record"
+        },
+        "EVERPARSE_BASE_T": {
+          "kind": "alias",
+          "type": "EVERPARSE_INPUT_BUFFER"
+        }
+      },
+      "values": {}
+    },
+    "static": {
+      "functions": {
+        "EverParseErrorReasonOfResult": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t"
+          ],
+          "return": "EVERPARSE_STRING"
+        },
+        "EverParseFieldPtrAfterImpl": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "uint64_t",
+            "uint8_t * *",
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseGetBitfield16": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield16MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint16_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint16_t"
+        },
+        "EverParseGetBitfield32": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield32MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint32_t"
+        },
+        "EverParseGetBitfield64": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield64MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint64_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseGetBitfield8": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseGetBitfield8MsbFirst": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint8_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "uint8_t"
+        },
+        "EverParseIsRangeOkay": {
+          "linkage": "static inline",
+          "parameters": [
+            "uint32_t",
+            "uint32_t",
+            "uint32_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseStreamEmpty": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "size_t"
+        },
+        "EverParseStreamGetPosition": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_INPUT_STREAM_BASE"
+          ],
+          "return": "uint64_t"
+        },
+        "EverParseStreamHas": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseStreamHasAt": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t",
+            "size_t"
+          ],
+          "return": "BOOLEAN"
+        },
+        "EverParseStreamReadBytes": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t",
+            "uint8_t *"
+          ],
+          "return": "void"
+        },
+        "EverParseStreamSkip": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_EXTRA_T",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "size_t"
+          ],
+          "return": "void"
+        }
+      },
+      "macros": {
+        "EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED": "( 5U )",
+        "EVERPARSE_VALIDATOR_ERROR_CONSTRAINT_FAILED": "( 6U )",
+        "EVERPARSE_VALIDATOR_ERROR_IMPOSSIBLE": "( 3U )",
+        "EVERPARSE_VALIDATOR_ERROR_LIST_SIZE_NOT_MULTIPLE": "( 4U )",
+        "EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA": "( 2U )",
+        "EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED": "( 8U )",
+        "EVERPARSE_VALIDATOR_ERROR_UNEXPECTED_PADDING": "( 7U )",
+        "EVERPARSE_VALIDATOR_SUCCESS": "( 0U )"
+      },
+      "types": {
+        "EVERPARSE_APP_CTXT": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_HANDLER": {
+          "kind": "callback",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint8_t",
+            "uint8_t *",
+            "EVERPARSE_INPUT_STREAM_BASE",
+            "uint64_t",
+            "uint64_t",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
+        "EVERPARSE____PUINT8": {
+          "kind": "alias",
+          "type": "uint8_t *"
+        }
+      },
+      "values": {
+        "EverParseNullPtr": "uint8_t *"
+      }
+    }
+  },
+  "schema": 1
+}

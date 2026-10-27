@@ -13,26 +13,18 @@ module SZ = FStar.SizeT
    which cannot depend on the interpreter, can still be unfolded by it. *)
 let specialize_backend = ()
 
+[@@FStar.Attributes.rename_let "EVERPARSE_APP_CTXT"; FStar.Attributes.custard_no_unfold]
 let app_ctxt = AppCtxt.app_ctxt
 
 (* The error-handler callback type.
 
-   This is the instance's [error_handler_t] member rather than the arrow type
-   itself, so that it extracts to a 0-ary, per-backend alias that KaRaMeL can
-   preserve as EVERPARSE_ERROR_HANDLER. See EverParse3d.InputStream.Base for
-   why, and [I.error_handler_arrow] for the shape it is equal to.
+   Each instance supplies a monomorphic [error_handler_t] alias that Custard
+   preserves as EVERPARSE_ERROR_HANDLER. See EverParse3d.InputStream.Base and
+   [I.error_handler_arrow] for the corresponding function-pointer signature.
 
-   [unfold]: this is a *generic* projection out of the instance. If a
-   declaration survives to extraction, KaRaMeL gets an unrepresentable type
-   (`void *`) which, under the `EverParse` bundle's rename-prefix, additionally
-   steals the C name from the backend alias it is supposed to resolve to.
-   Unfolding it at each use site is what lets extraction resolve the
-   projection to that alias.
-
-   [noextract_to "krml"]: `unfold` removes it from every use site, but F* still
-   emits a declaration for it, which extracts as an opaque `any`; KaRaMeL drops
-   its (now unused) type parameters and turns it into a 0-ary
-   `typedef void *`, stealing the C name from the backend alias. *)
+   This generic projection is unfolded at use sites and excluded from
+   standalone extraction, leaving the selected backend's alias as the public
+   C typedef. *)
 [@@noextract_to "krml"]
 unfold
 let error_handler

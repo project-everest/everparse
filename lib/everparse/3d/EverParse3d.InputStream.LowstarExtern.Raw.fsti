@@ -5,22 +5,26 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module AP = Pulse.Lib.ArrayPtr
 module Util = EverParse3d.Util
+module B = EverParse3d.CAbi.Boolean
 
 // Trusted client boundary: the five old C primitives. All position arguments
 // and sequences are erased; only extra, raw base, U64 count and dst reach C.
+[@@FStar.Attributes.custard_extern "EverParseHas"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 val has (#[Util.solve_from_ctx ()] extra: extra_t)
   (b: input_stream_base) (n: U64.t) (#pos: Ghost.erased nat)
-  : stt bool
+  : stt B.t
     (storage b pos ** pure (pos <= Seq.length (get_all b)))
     (fun r -> storage b pos **
-      pure (r == true <==> U64.v n <= Seq.length (get_all b) - pos))
+      pure (B.to_bool r == true <==> U64.v n <= Seq.length (get_all b) - pos))
 
+[@@FStar.Attributes.custard_extern "EverParseSkip"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 val skip (#[Util.solve_from_ctx ()] extra: extra_t)
   (b: input_stream_base) (n: U64.t) (#pos: Ghost.erased nat)
   : stt unit
     (storage b pos ** pure (pos + U64.v n <= Seq.length (get_all b)))
     (fun _ -> storage b (pos + U64.v n))
 
+[@@FStar.Attributes.custard_extern "EverParseEmpty"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 val empty (#[Util.solve_from_ctx ()] extra: extra_t)
   (b: input_stream_base) (#pos: Ghost.erased nat)
   : stt U64.t
@@ -34,6 +38,7 @@ val empty (#[Util.solve_from_ctx ()] extra: extra_t)
 val read_loan (b: input_stream_base) (pos: nat)
   (n: U64.t) (dst result: AP.ptr U8.t) : slprop
 
+[@@FStar.Attributes.custard_extern "EverParseRead"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 val read (#[Util.solve_from_ctx ()] extra: extra_t)
   (b: input_stream_base) (n: U64.t) (dst: AP.ptr U8.t)
   (#pos: Ghost.erased (p: nat { p + U64.v n <= Seq.length (get_all b) }))
@@ -61,6 +66,7 @@ val restore_read (b: input_stream_base) (n: U64.t)
 val peep_loan (b: input_stream_base) (pos: nat)
   (n: U64.t) (result: AP.ptr U8.t) : slprop
 
+[@@FStar.Attributes.custard_extern "EverParsePeep"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 val peep (#[Util.solve_from_ctx ()] extra: extra_t)
   (b: input_stream_base) (n: U64.t)
   (#pos: Ghost.erased (p: nat { p + U64.v n <= Seq.length (get_all b) }))

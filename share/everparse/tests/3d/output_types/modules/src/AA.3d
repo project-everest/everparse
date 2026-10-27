@@ -13,6 +13,5 @@ typedef struct _OTRIPLE {
   UINT32 thd;
 } OTRIPLE;
 
-/* FIXME: krml refuses to generate empty .c files, so I need to detect that at the exit of Batch.process_one_c_file */
 export
 typedef UINT32 dummy_aa;

@@ -3,8 +3,8 @@
 # Same .3d inputs, but generated against the Pulse combinator backend
 # (lib/everparse/3d) with --api pulse, and verified with F*.
 #
-# --batch runs the whole pipeline: generation, F* verification, F* extraction
-# to .krml and KaRaMeL extraction to C. The generated C is then compiled with
+# --batch runs generation, F* verification, and Custard direct-C extraction.
+# The generated C is then compiled with
 # -Wall -Wextra -Werror through EverParse's own lib/everparse/3d/Makefile.basic,
 # and the
 # C++ driver test.cpp is linked against it and run.
@@ -20,7 +20,7 @@ export EVERPARSE_HOME
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 PYTHON ?= python3
 
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 CC ?= cc
 CXX ?= c++
@@ -40,7 +40,7 @@ endif
 positive_tests := $(filter-out $(wildcard FAIL*.3d) $(addsuffix .3d,$(exclude_modules)),$(wildcard *.3d))
 negative_tests := $(wildcard FAIL*.3d)
 
-# Tests whose generated code does not yet survive KaRaMeL extraction under
+# Tests whose generated code does not yet survive Custard C extraction under
 # --api pulse. They still go through generation and F* verification, but not the C
 # stages. (Currently empty: all tests extract.)
 no_extract_tests :=
@@ -50,11 +50,11 @@ verify_only_tests := $(filter $(no_extract_tests),$(positive_tests))
 
 VERIFY_DIR=out.pulse.verify
 
-# The exact set of files --cleanup is expected to leave behind. As in the
-# Low* tests in share/everparse/tests/3d/lowstar, the runtime is a shipped
-# library (lib/everparse/3d/krml/<backend>/EverParse.h), so --no_copy_everparse_h
+# The exact set of files --cleanup is expected to leave behind. This is now
+# literally the Low* set from share/everparse/tests/3d/lowstar: as there, the runtime is a shipped
+# library (lib/everparse/3d/runtime/<backend>/EverParse.h), so --no_copy_everparse_h
 # leaves no EverParse.h behind -- and there is no EverParse.c and no internal/
-# directory either (unlike the Low* ELF cross-module validator).
+# directory either.
 positive_tests_nosuffix := $(basename $(positive_tests))
 modules_or_wrappers := $(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions := $(addsuffix StaticAssertions.c, TestFieldPtr Align)
@@ -76,7 +76,7 @@ pulse-corpus-test: pulse-test pulse-test-negative pulse-cleanup-test pulse-inpla
 	pulse-comments-test pulse-renamelet-test \
 	elf-test \
 	pulse-module-name-c-test \
-	api-option-test
+	api-option-test native-c-test boolean-abi-test
 
 pulse-subdirs-test: pulse-z3-testgen-test pulse-z3-testgen-probe-test \
 	pulse-subdirs
@@ -87,6 +87,16 @@ api-option-test:
 	$(PYTHON) api_option_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"
 
 .PHONY: api-option-test
+
+native-c-test:
+	$(PYTHON) native_c_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)" "$(MAKE)"
+
+.PHONY: native-c-test
+
+boolean-abi-test:
+	$(PYTHON) boolean_abi_test.py "$(EVERPARSE_HOME)/bin/everparse-3d.exe" "$(FSTAR_EXE)"
+
+.PHONY: boolean-abi-test
 
 # Subdirectories with their own build. Only those already ported to --api pulse are
 # listed; the rest were copied from share/everparse/tests/3d/lowstar and still drive the Low*
@@ -149,7 +159,7 @@ $(pulse_subdirs):
 .PHONY: pulse-cleanup-test pulse-inplace-hash-test elf-test pulse-z3-testgen-test pulse-z3-testgen-probe-test
 .PHONY: pulse-comments-test pulse-renamelet-test
 
-# Generation, F* verification and KaRaMeL extraction to C, in one go, then a
+# Generation, F* verification and Custard extraction to C, in one go, then a
 # second pass checking that regenerating the sources yields the same strong
 # hashes as the ones just saved.
 pulse-batch:
@@ -157,7 +167,7 @@ pulse-batch:
 	$(3D) --odir $(OUT_DIR) --batch --save_hashes $(batch_tests)
 	$(3D) --odir $(OUT_DIR) --batch --check_hashes strong $(batch_tests)
 
-# Compile everything KaRaMeL produced, to check the generated C is well-formed
+# Compile everything Custard produced, to check the generated C is well-formed
 # and that the wrappers agree with the validators' ABI. We go through the
 # lib/everparse/3d/Makefile.basic, so that the generated code is held to the
 # same -Wall -Wextra -Werror standard as in share/everparse/tests/3d/lowstar. USER_TARGET=test has
@@ -193,10 +203,10 @@ elf-test: ELF.3d
 	$(CXX) -o $(ELF_DIR)/elf-test -I $(ELF_DIR) $(addprefix $(ELF_DIR)/, ELF.c ELFWrapper.c) TestELF.cpp
 
 # --cleanup must leave behind exactly the C artifacts and nothing else: no .fst,
-# .checked, .krml or KaRaMeL scratch files.
+# .checked, .cui or Custard staging files.
 pulse-cleanup-test:
 	mkdir -p $(CLEANUP_DIR)
-	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir $(CLEANUP_DIR) --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
+	env EVERPARSE_FSTAR_OPTIONS='$(EVERPARSE_FSTAR_OPTIONS) --admit_smt_queries true' $(3D) --odir $(CLEANUP_DIR) --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
 	test "$$(ls $(CLEANUP_DIR) | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 echo-clean-out-files:
@@ -208,7 +218,7 @@ echo-out-files:
 .PHONY: echo-clean-out-files echo-out-files
 
 # Compile-time comments must survive extraction. Under --api pulse they go through
-# Pulse.Lib.Comment, which KaRaMeL renders as EComment/EStandaloneComment; while
+# Pulse.Lib.Comment, which Custard renders as C comments; while
 # Pulse had no comment support they were silently dropped, and nothing here
 # noticed, because every other Comments.3d test only compares hashes of the .3d
 # source. So check one comment of each kind that the combinator library emits,
@@ -225,7 +235,7 @@ echo-out-files:
 #                                  read and the constraint test.
 #
 # T_with_comment (the .3d source comments themselves) is deliberately not
-# checked: the interpreter carries those strings as runtime values, so KaRaMeL
+# checked: the interpreter carries those strings as runtime values, so Custard
 # cannot turn them into literals, and Low* drops them too.
 pulse-comments-test: pulse-batch
 	grep -q '/\* Validating field b \*/' $(OUT_DIR)/Comments.c
@@ -238,7 +248,7 @@ pulse-comments-test: pulse-batch
 # local bindings with `rename_let`, so that the extracted C names temporaries
 # after the 3D field they come from. The attribute is only resolved once the
 # combinator has been inlined into the generated code, so this checks the whole
-# chain (Pulse binder-attribute substitution, F* extraction, KaRaMeL).
+# chain (Pulse binder-attribute substitution and Custard C extraction).
 #
 # `positionAfter<field>` in Low* is `resultAfter<field>` here: a Pulse validator
 # returns an error code and keeps the position in a reference.
@@ -287,14 +297,10 @@ pulse-test-negative: $(addsuffix .negtest,$(negative_tests))
 	      $(3D) --odir out.fail.pulse --__micro_step verify $$f || exit 1 ; \
 	    done ) >$@.out 2>$@.err
 
-# A 3d module named C used to be rejected up front: KaRaMeL suppresses its
-# builtin C module -- which supplies the _zero_for_deref marker that Pulse
-# extraction emits for every reference dereference -- as soon as an input file
-# is named C, and the run then died on a dangling C._zero_for_deref. Pulse now
-# emits Pulse.Lib.Pervasives._zero_for_deref, whose implementation is among the
-# inputs, so the name is fine again. Check it end to end, through KaRaMeL.
+# A 3D module named C must extract successfully without colliding with
+# compiler runtime definitions. Check it end to end through Custard.
 # This cannot be expressed as an ordinary test in $(batch_tests), because the
-# whole point is the module name, and EverParse.h is generated per batch.
+# whole point is the module name.
 .PHONY: pulse-module-name-c-test
 pulse-module-name-c-test:
 	rm -rf out.modname.pulse && mkdir -p out.modname.pulse

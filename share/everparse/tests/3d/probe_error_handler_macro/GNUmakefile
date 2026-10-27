@@ -23,7 +23,7 @@ export EVERPARSE_HOME
 # Path to either the 3d executable or the everparse.sh or
 # everparse.cmd script from the EverParse binary package
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") --api pulse $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 # Options passed to EverParse.
 #
@@ -38,7 +38,7 @@ EVERPARSE_OPTIONS=--use_error_handler_macro --add_include '"MyErrorHandlerMacro.
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)
 
 # Output directory for .c/.h files as well as temporary files (.fst,
-# .krml, etc.)
+# .checked, .cui, etc.)
 EVERPARSE_OUTPUT_DIR=obj
 
 # Input directory containing .3d (and auxiliary .3d.copyright.txt)
@@ -86,10 +86,8 @@ all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o $(EVERPARSE_
 
 CFLAGS += -Wall
 
-# Under --api pulse, EverParse.h is not copied from the prelude at the start of
-# the pipeline: KaRaMeL emits it, carrying the bundled runtime, at the same
-# time as the generated .c files. The wrapper headers include it, so it has
-# to be an explicit prerequisite here, or a parallel build races.
+# The wrapper headers include the copied runtime EverParse.h, so it must be
+# an explicit prerequisite here to avoid a parallel build race.
 $(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/ProbeWrapper.h $(EVERPARSE_OUTPUT_DIR)/EverParse.h
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
@@ -108,7 +106,7 @@ test: $(EVERPARSE_OUTPUT_DIR)/test.exe
 # Test case generation      #
 #############################
 
-$(EVERPARSE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d
+$(EVERPARSE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d GNUmakefile $(EVERPARSE_HOME)/bin/everparse-3d.exe
 	$(EVERPARSE_CMD) --no_batch --odir $(EVERPARSE_OUTPUT_DIR) $< --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
 	test -f $@
 
@@ -149,7 +147,7 @@ testgen: $(EVERPARSE_OUTPUT_DIR)/testgen.exe
 # differential witnesses and the harness emits validator calls.
 DIFF_OUTPUT_DIR=obj.difftest
 
-$(DIFF_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d $(EVERPARSE_ALL_H_FILES)
+$(DIFF_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d GNUmakefile $(EVERPARSE_HOME)/bin/everparse-3d.exe $(EVERPARSE_ALL_H_FILES)
 	mkdir -p $(DIFF_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --no_batch --odir $(DIFF_OUTPUT_DIR) $< --z3_diff_test Probe._namedPlain,Probe._namedPlainVariant --z3_witnesses 3 --z3_branch_depth 3
 	test -f $@
@@ -168,7 +166,7 @@ difftest: $(DIFF_OUTPUT_DIR)/testcases.o
 # argument.
 CHECKER_OUTPUT_DIR=obj.checkertest
 
-$(CHECKER_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d $(EVERPARSE_ALL_H_FILES)
+$(CHECKER_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d GNUmakefile $(EVERPARSE_HOME)/bin/everparse-3d.exe $(EVERPARSE_ALL_H_FILES)
 	mkdir -p $(CHECKER_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --no_batch --odir $(CHECKER_OUTPUT_DIR) $< --test_checker Probe._test1
 	test -f $@
@@ -190,7 +188,7 @@ checkertest: $(CHECKER_OUTPUT_DIR)/testcases.o
 # probe` types under the macro.
 EPROBE_OUTPUT_DIR=obj.eprobetest
 
-$(EPROBE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d $(EVERPARSE_ALL_H_FILES)
+$(EPROBE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d GNUmakefile $(EVERPARSE_HOME)/bin/everparse-3d.exe $(EVERPARSE_ALL_H_FILES)
 	mkdir -p $(EPROBE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --no_batch --odir $(EPROBE_OUTPUT_DIR) $< --z3_test Probe._test2 --z3_witnesses 3 --z3_branch_depth 3
 	test -f $@

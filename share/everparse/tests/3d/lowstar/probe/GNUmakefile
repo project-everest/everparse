@@ -25,7 +25,7 @@ export EVERPARSE_HOME
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 # Options passed to EverParse
 EVERPARSE_OPTIONS=
@@ -34,7 +34,7 @@ EVERPARSE_OPTIONS=
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)
 
 # Output directory for .c/.h files as well as temporary files (.fst,
-# .krml, etc.)
+# .checked, .cui, etc.)
 EVERPARSE_OUTPUT_DIR=obj
 
 # Input directory containing .3d (and auxiliary .3d.copyright.txt)
@@ -97,7 +97,7 @@ test: $(EVERPARSE_OUTPUT_DIR)/test.exe
 # Test case generation      #
 #############################
 
-$(EVERPARSE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d
+$(EVERPARSE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d GNUmakefile $(EVERPARSE_HOME)/bin/everparse-3d.exe
 	$(EVERPARSE_CMD) --no_batch --odir $(EVERPARSE_OUTPUT_DIR) $< --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
 	test -f $@
 

@@ -29,7 +29,7 @@ module EverParse3d.Interpreter
         to the parser denotation of `t`.
 
    Partially evaluating `as_validator` at a concrete `t` yields an EverParse
-   validator specialized to `t`, which KaRaMeL extracts to C (an instance of
+   validator specialized to `t`, which Custard extracts to C (an instance of
    the 1st Futamura projection).
 
    Differences with the Low* interpreter:
@@ -71,6 +71,7 @@ module T = FStar.Tactics
 module I = EverParse3d.InputStream.Base
 module CP = EverParse3d.CopyBuffer
 module PA = EverParse3d.ProbeActions
+module Bool = EverParse3d.Boolean
 open Pulse.Lib.Pervasives
 open EverParse3d.State
 open EverParse3d.Actions.Common
@@ -415,48 +416,52 @@ type atomic_probe_action
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
   (inst: I.input_stream_inst base_t len_t pos_t)
   (cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+  (boolean_t: Type0)
+  (boolean_inst: Bool.boolean_repr boolean_t)
   : Type0 -> Type u#1 =
   | Atomic_probe_and_copy :
       bytes_to_read : U64.t ->
-      probe_fn: PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      probe_fn: PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst ->
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_and_read :
       #t:Type0 ->
       #sz:U64.t { sz <> 0uL } ->
-      reader : PA.probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t sz ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t
+      reader : PA.probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst t sz ->
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t
   | Atomic_probe_write_at_offset :
       #t:Type0 ->
       #sz:U64.t { sz <> 0uL } ->
       v:t ->
-      writer : PA.write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t sz ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      writer : PA.write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst t sz ->
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_call_pure :
       #t:Type0 ->
       f:PA.pure_external_action t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t
   | Atomic_probe_skip_read:
       n:U64.t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_skip_write:
       n:U64.t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_return:
       #t:Type0 ->
       v:t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t
   | Atomic_probe_fail:
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
 
 [@@specialize]
 let atomic_probe_action_as_probe_m
       (#copy_buffer_t #base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
       (#cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool) (#t:Type0)
       (error_handler_macro: error_handler #base_t #len_t #pos_t #inst)
-      (p:atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t)
-: PA.probe_m #_ #_ #_ #_ #inst #cbinst t true false use_error_handler
+      (p:atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t)
+: PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst t true false use_error_handler
 = match p with
   | Atomic_probe_and_copy bytes_to_read probe_fn_incremental ->
     PA.probe_fn_incremental_as_probe_m probe_fn_incremental bytes_to_read
@@ -481,47 +486,51 @@ type probe_action
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
   (inst: I.input_stream_inst base_t len_t pos_t)
   (cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+  (boolean_t: Type0)
+  (boolean_inst: Bool.boolean_repr boolean_t)
   (use_error_handler:bool)
   : bool -> Type u#1 =
   | Probe_action_atomic :
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_var :
-      PA.probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_seq:
       detail:string ->
-      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_let:
       #t:Type0 ->
       detail:string ->
-      m1: atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t ->
-      m2: (t -> probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false) ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      m1: atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t ->
+      m2: (t -> probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false) ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_ite:
       cond:bool ->
-      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_array:
       bytes_len:U64.t ->
-      element_probe:probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      element_probe:probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_copy_init_sz:
-      probe_fn:PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      probe_fn:PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
 
 [@@specialize]
 let rec probe_action_as_probe_m
       (#copy_buffer_t #base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
       (#cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool) (#maybe_zero:bool)
       (error_handler_macro: error_handler #base_t #len_t #pos_t #inst)
-      (p:probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler maybe_zero)
-: Tot (PA.probe_m #_ #_ #_ #_ #inst #cbinst unit true maybe_zero use_error_handler)
+      (p:probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler maybe_zero)
+: Tot (PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true maybe_zero use_error_handler)
       (decreases p)
 = match p with
   | Probe_action_atomic a ->
@@ -533,7 +542,7 @@ let rec probe_action_as_probe_m
       (probe_action_as_probe_m error_handler_macro m1)
       (probe_action_as_probe_m error_handler_macro m2)
   | Probe_action_let detail m1 m2 ->
-    let k x : PA.probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler =
+    let k x : PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler =
       probe_action_as_probe_m error_handler_macro (m2 x)
     in
     PA.bind_probe_m error_handler_macro detail ()
@@ -663,6 +672,15 @@ type atomic_action
       _:squash (state_dict_weaken_prop (state_dict_singleton name (pts_to x #1.0R)) d) ->
       atomic_action base_t len_t pos_t inst d use_error_handler false false a
 
+  | Action_deref_map:
+      #a:Type0 ->
+      #b:Type0 ->
+      decode:(a -> Tot b) ->
+      name:Ghost.erased string ->
+      x:ref a ->
+      _:squash (state_dict_weaken_prop (state_dict_singleton name (pts_to x #1.0R)) d) ->
+      atomic_action base_t len_t pos_t inst d use_error_handler false false b
+
   | Action_assignment:
       #a:Type0 ->
       name:Ghost.erased string ->
@@ -711,6 +729,8 @@ let atomic_action_as_action
       A.action_weaken (A.action_field_ptr_after (Some?.v f) name sz write_to) d sq'
     | Action_deref name x sq ->
       A.action_weaken (A.action_deref name x) d sq
+    | Action_deref_map decode name x sq ->
+      A.action_weaken (A.action_deref_map decode name x) d sq
     | Action_assignment name x rhs sq ->
       A.action_weaken (A.action_assignment name x rhs) d sq
     | Action_call c ->
@@ -1414,15 +1434,17 @@ let t_probe_then_validate
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst #boolean_t #boolean_inst unit true mz use_error_handler)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
@@ -1454,15 +1476,17 @@ let t_probe_then_validate_alt
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst use_error_handler mz)
+      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst boolean_t boolean_inst use_error_handler mz)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
@@ -1497,15 +1521,17 @@ let t_probe_then_validate_gen
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst #boolean_t #boolean_inst unit true mz use_error_handler)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
@@ -1543,15 +1569,17 @@ let t_probe_then_validate_alt_gen
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst use_error_handler mz)
+      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst boolean_t boolean_inst use_error_handler mz)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)

@@ -3521,15 +3521,16 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                       1]
                       =
                           [j0; 1usize];
-                      let
-                      j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                      =
-                          (&pj)[0usize];
-                      let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                      let mut cond: bool = ! is_empty;
                       while
-                      cond
+                      true
                       {
+                          let
+                          j:
+                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                          =
+                              (&pj)[0usize];
+                          let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                          if ! ! is_empty { break };
                           let chd: crate::cbordetveraux::cbor_map_entry =
                               crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                           let k: crate::cbordetveraux::cbor_raw =
@@ -3852,15 +3853,7 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                               let i: u64 = (&remaining)[0usize];
                               let i·: u64 = i.wrapping_sub(1u64);
                               (&mut remaining)[0usize] = i·
-                          };
-                          let
-                          j1:
-                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                          =
-                              (&pj)[0usize];
-                          let is_empty0: bool =
-                              crate::cbordetver::cbor_det_map_iterator_is_empty(j1);
-                          cond = ! is_empty0
+                          }
                       };
                       crate::cbordetveraux::impl_map_group_result::MGOK
                   },
@@ -4966,13 +4959,14 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                 let mut pi: [usize; 1] =
                                                                     [0usize; 1usize];
                                                                 let slen: usize = c14.len();
-                                                                let res2: bool = (&pres)[0usize];
-                                                                let i: usize = (&pi)[0usize];
-                                                                let mut cond: bool =
-                                                                    res2 && i < slen;
                                                                 while
-                                                                cond
+                                                                true
                                                                 {
+                                                                    let res2: bool =
+                                                                        (&pres)[0usize];
+                                                                    let i: usize = (&pi)[0usize];
+                                                                    if ! (res2 && i < slen)
+                                                                    { break };
                                                                     let i0: usize = (&pi)[0usize];
                                                                     let x: aux_env29_type_1 =
                                                                         c14[i0];
@@ -4990,11 +4984,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                         (&mut pi)[0usize] = i·
                                                                     }
                                                                     else
-                                                                    { (&mut pres)[0usize] = false };
-                                                                    let res21: bool =
-                                                                        (&pres)[0usize];
-                                                                    let i1: usize = (&pi)[0usize];
-                                                                    cond = res21 && i1 < slen
+                                                                    { (&mut pres)[0usize] = false }
                                                                 };
                                                                 (&pres)[0usize]
                                                             },
@@ -5019,22 +5009,22 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                         [c23; 1usize];
                                                                     let mut pres: [bool; 1] =
                                                                         [true; 1usize];
-                                                                    let
-                                                                    c4:
-                                                                    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1
-                                                                    =
-                                                                        (&pc)[0usize];
-                                                                    let em1: bool =
-                                                                        crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                            c4.cddl_array_iterator_contents
-                                                                        );
-                                                                    let res2: bool =
-                                                                        (&pres)[0usize];
-                                                                    let mut cond: bool =
-                                                                        res2 && ! em1;
                                                                     while
-                                                                    cond
+                                                                    true
                                                                     {
+                                                                        let
+                                                                        c4:
+                                                                        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1
+                                                                        =
+                                                                            (&pc)[0usize];
+                                                                        let em1: bool =
+                                                                            crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                                                c4.cddl_array_iterator_contents
+                                                                            );
+                                                                        let res2: bool =
+                                                                            (&pres)[0usize];
+                                                                        if ! (res2 && ! em1)
+                                                                        { break };
                                                                         let
                                                                         i:
                                                                         array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1
@@ -5107,19 +5097,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                         {
                                                                             (&mut pres)[0usize] =
                                                                                 false
-                                                                        };
-                                                                        let
-                                                                        c40:
-                                                                        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1
-                                                                        =
-                                                                            (&pc)[0usize];
-                                                                        let em10: bool =
-                                                                            crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                c40.cddl_array_iterator_contents
-                                                                            );
-                                                                        let res21: bool =
-                                                                            (&pres)[0usize];
-                                                                        cond = res21 && ! em10
+                                                                        }
                                                                     };
                                                                     let ret: bool = (&pres)[0usize];
                                                                     if ret { ret } else { ret }
@@ -5270,12 +5248,12 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                               [c11; 1usize];
                           let em0: bool = c11.len() == 0usize;
                           let mut pem: [bool; 1] = [em0; 1usize];
-                          let __anf1: bool = (&pres)[0usize];
-                          let __anf0: bool = (&pem)[0usize];
-                          let mut cond: bool = __anf1 && ! __anf0;
                           while
-                          cond
+                          true
                           {
+                              let __anf1: bool = (&pres)[0usize];
+                              let __anf0: bool = (&pem)[0usize];
+                              if ! (__anf1 && ! __anf0) { break };
                               let count: u64 = (&pcount)[0usize];
                               if count == 18446744073709551615u64
                               { (&mut pres)[0usize] = false }
@@ -5462,10 +5440,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                           }
                                       }
                                   }
-                              };
-                              let __anf10: bool = (&pres)[0usize];
-                              let __anf00: bool = (&pem)[0usize];
-                              cond = __anf10 && ! __anf00
+                              }
                           };
                           (&pres)[0usize]
                       },
@@ -5489,17 +5464,17 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                           =
                               [c21.cddl_map_iterator_contents; 1usize];
                           let mut pres1: [bool; 1] = [true; 1usize];
-                          let
-                          j:
-                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                          =
-                              (&pj)[0usize];
-                          let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                          let res: bool = (&pres1)[0usize];
-                          let mut cond: bool = res && ! test;
                           while
-                          cond
+                          true
                           {
+                              let
+                              j:
+                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                              =
+                                  (&pj)[0usize];
+                              let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                              let res: bool = (&pres1)[0usize];
+                              if ! (res && ! test) { break };
                               let elt: crate::cbordetveraux::cbor_map_entry =
                                   crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                               let elt_key: crate::cbordetveraux::cbor_raw =
@@ -5516,25 +5491,16 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                           (c21.cddl_map_iterator_impl_validate2)(elt_value);
                                       (&mut pres1)[0usize] = ! test_value
                                   }
-                              };
-                              let
-                              j0:
-                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                              =
-                                  (&pj)[0usize];
-                              let test0: bool =
-                                  crate::cbordetver::cbor_det_map_iterator_is_empty(j0);
-                              let res0: bool = (&pres1)[0usize];
-                              cond = res0 && ! test0
+                              }
                           };
                           let em0: bool = (&pres1)[0usize];
                           let mut pem: [bool; 1] = [em0; 1usize];
-                          let __anf1: bool = (&pres)[0usize];
-                          let __anf0: bool = (&pem)[0usize];
-                          let mut cond0: bool = __anf1 && ! __anf0;
                           while
-                          cond0
+                          true
                           {
+                              let __anf1: bool = (&pres)[0usize];
+                              let __anf0: bool = (&pem)[0usize];
+                              if ! (__anf1 && ! __anf0) { break };
                               let count: u64 = (&pcount)[0usize];
                               if count == 18446744073709551615u64
                               { (&mut pres)[0usize] = false }
@@ -5590,7 +5556,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                   let hd_value_res: crate::cbordetveraux::cbor_raw =
                                       (i.cddl_map_iterator_impl_parse2)(hd_value);
                                   let
-                                  j0:
+                                  j:
                                   crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
                                   =
                                       (&pj1)[0usize];
@@ -5600,7 +5566,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                   =
                                       map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw
                                       {
-                                          cddl_map_iterator_contents: j0,
+                                          cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
                                           i.cddl_map_iterator_impl_validate1,
                                           cddl_map_iterator_impl_parse1:
@@ -5638,7 +5604,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                       else
                                       {
                                           let
-                                          res0:
+                                          res:
                                           crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
                                           =
                                               crate::cbordetver::cbor_det_parse(out1·);
@@ -5646,7 +5612,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                           ock:
                                           crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
                                           =
-                                              match res0
+                                              match res
                                               {
                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
                                                   =>
@@ -5763,22 +5729,22 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                               1usize];
                                                                       let mut pres2: [bool; 1] =
                                                                           [true; 1usize];
-                                                                      let
-                                                                      j1:
-                                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                      =
-                                                                          (&pj2)[0usize];
-                                                                      let test0: bool =
-                                                                          crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                              j1
-                                                                          );
-                                                                      let res3: bool =
-                                                                          (&pres2)[0usize];
-                                                                      let mut cond1: bool =
-                                                                          res3 && ! test0;
                                                                       while
-                                                                      cond1
+                                                                      true
                                                                       {
+                                                                          let
+                                                                          j1:
+                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                                                          =
+                                                                              (&pj2)[0usize];
+                                                                          let test: bool =
+                                                                              crate::cbordetver::cbor_det_map_iterator_is_empty(
+                                                                                  j1
+                                                                              );
+                                                                          let res3: bool =
+                                                                              (&pres2)[0usize];
+                                                                          if ! (res3 && ! test)
+                                                                          { break };
                                                                           let
                                                                           elt:
                                                                           crate::cbordetveraux::cbor_map_entry
@@ -5821,19 +5787,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                                   (&mut pres2)[0usize] =
                                                                                       ! test_value
                                                                               }
-                                                                          };
-                                                                          let
-                                                                          j10:
-                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                          =
-                                                                              (&pj2)[0usize];
-                                                                          let test1: bool =
-                                                                              crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                                  j10
-                                                                              );
-                                                                          let res30: bool =
-                                                                              (&pres2)[0usize];
-                                                                          cond1 = res30 && ! test1
+                                                                          }
                                                                       };
                                                                       let __anf10: bool =
                                                                           (&pres2)[0usize];
@@ -5853,10 +5807,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                           }
                                       }
                                   }
-                              };
-                              let __anf10: bool = (&pres)[0usize];
-                              let __anf00: bool = (&pem)[0usize];
-                              cond0 = __anf10 && ! __anf00
+                              }
                           };
                           (&pres)[0usize]
                       },
@@ -5973,14 +5924,14 @@ pub fn is_empty_iterate_map_evercddl_label_and_values(
     let mut pj: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
         [i.cddl_map_iterator_contents; 1usize];
     let mut pres: [bool; 1] = [true; 1usize];
-    let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-        (&pj)[0usize];
-    let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-    let res: bool = (&pres)[0usize];
-    let mut cond: bool = res && ! test;
     while
-    cond
+    true
     {
+        let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+            (&pj)[0usize];
+        let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+        let res: bool = (&pres)[0usize];
+        if ! (res && ! test) { break };
         let elt: crate::cbordetveraux::cbor_map_entry =
             crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
         let elt_key: crate::cbordetveraux::cbor_raw =
@@ -5996,12 +5947,7 @@ pub fn is_empty_iterate_map_evercddl_label_and_values(
                 let test_value: bool = (i.cddl_map_iterator_impl_validate2)(elt_value);
                 (&mut pres)[0usize] = ! test_value
             }
-        };
-        let j0: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-            (&pj)[0usize];
-        let test0: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j0);
-        let res0: bool = (&pres)[0usize];
-        cond = res0 && ! test0
+        }
     };
     (&pres)[0usize]
 }
@@ -6356,12 +6302,12 @@ serialize_cose_keyset(c: cose_keyset, out: &mut [u8]) ->
                   let mut pres: [bool; 1] = [true; 1usize];
                   let mut pi: [usize; 1] = [0usize; 1usize];
                   let slen: usize = c1.len();
-                  let res: bool = (&pres)[0usize];
-                  let i: usize = (&pi)[0usize];
-                  let mut cond: bool = res && i < slen;
                   while
-                  cond
+                  true
                   {
+                      let res: bool = (&pres)[0usize];
+                      let i: usize = (&pi)[0usize];
+                      if ! (res && i < slen) { break };
                       let i0: usize = (&pi)[0usize];
                       let x: cose_key_generic = c1[i0];
                       let res0: bool = aux_env30_serialize_1(x, out, &mut pcount, &mut psize);
@@ -6371,10 +6317,7 @@ serialize_cose_keyset(c: cose_keyset, out: &mut [u8]) ->
                           (&mut pi)[0usize] = i·
                       }
                       else
-                      { (&mut pres)[0usize] = false };
-                      let res1: bool = (&pres)[0usize];
-                      let i1: usize = (&pi)[0usize];
-                      cond = res1 && i1 < slen
+                      { (&mut pres)[0usize] = false }
                   };
                   (&pres)[0usize]
               },
@@ -6398,20 +6341,20 @@ serialize_cose_keyset(c: cose_keyset, out: &mut [u8]) ->
                       =
                           [c2; 1usize];
                       let mut pres: [bool; 1] = [true; 1usize];
-                      let
-                      c1:
-                      array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_key_generic
-                      =
-                          (&pc)[0usize];
-                      let em1: bool =
-                          crate::cbordetver::cbor_det_array_iterator_is_empty(
-                              c1.cddl_array_iterator_contents
-                          );
-                      let res: bool = (&pres)[0usize];
-                      let mut cond: bool = res && ! em1;
                       while
-                      cond
+                      true
                       {
+                          let
+                          c1:
+                          array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_key_generic
+                          =
+                              (&pc)[0usize];
+                          let em1: bool =
+                              crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                  c1.cddl_array_iterator_contents
+                              );
+                          let res: bool = (&pres)[0usize];
+                          if ! (res && ! em1) { break };
                           let
                           i:
                           array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_key_generic
@@ -6455,18 +6398,7 @@ serialize_cose_keyset(c: cose_keyset, out: &mut [u8]) ->
                               );
                           let x: cose_key_generic = (i.cddl_array_iterator_impl_parse)(tri);
                           let res0: bool = aux_env30_serialize_1(x, out, &mut pcount, &mut psize);
-                          if ! res0 { (&mut pres)[0usize] = false };
-                          let
-                          c10:
-                          array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_key_generic
-                          =
-                              (&pc)[0usize];
-                          let em10: bool =
-                              crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                  c10.cddl_array_iterator_contents
-                              );
-                          let res1: bool = (&pres)[0usize];
-                          cond = res1 && ! em10
+                          if ! res0 { (&mut pres)[0usize] = false }
                       };
                       let ret: bool = (&pres)[0usize];
                       if ret { ret } else { ret }
@@ -6969,15 +6901,16 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                       1]
                       =
                           [j0; 1usize];
-                      let
-                      j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                      =
-                          (&pj)[0usize];
-                      let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                      let mut cond: bool = ! is_empty;
                       while
-                      cond
+                      true
                       {
+                          let
+                          j:
+                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                          =
+                              (&pj)[0usize];
+                          let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                          if ! ! is_empty { break };
                           let chd: crate::cbordetveraux::cbor_map_entry =
                               crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                           let k: crate::cbordetveraux::cbor_raw =
@@ -7156,15 +7089,7 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                               let i: u64 = (&remaining)[0usize];
                               let i·: u64 = i.wrapping_sub(1u64);
                               (&mut remaining)[0usize] = i·
-                          };
-                          let
-                          j1:
-                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                          =
-                              (&pj)[0usize];
-                          let is_empty0: bool =
-                              crate::cbordetver::cbor_det_map_iterator_is_empty(j1);
-                          cond = ! is_empty0
+                          }
                       };
                       crate::cbordetveraux::impl_map_group_result::MGOK
                   },
@@ -7879,12 +7804,12 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                               [c11; 1usize];
                           let em0: bool = c11.len() == 0usize;
                           let mut pem: [bool; 1] = [em0; 1usize];
-                          let __anf1: bool = (&pres)[0usize];
-                          let __anf0: bool = (&pem)[0usize];
-                          let mut cond: bool = __anf1 && ! __anf0;
                           while
-                          cond
+                          true
                           {
+                              let __anf1: bool = (&pres)[0usize];
+                              let __anf0: bool = (&pem)[0usize];
+                              if ! (__anf1 && ! __anf0) { break };
                               let count: u64 = (&pcount)[0usize];
                               if count == 18446744073709551615u64
                               { (&mut pres)[0usize] = false }
@@ -8071,10 +7996,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                           }
                                       }
                                   }
-                              };
-                              let __anf10: bool = (&pres)[0usize];
-                              let __anf00: bool = (&pem)[0usize];
-                              cond = __anf10 && ! __anf00
+                              }
                           };
                           (&pres)[0usize]
                       },
@@ -8098,17 +8020,17 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                           =
                               [c21.cddl_map_iterator_contents; 1usize];
                           let mut pres1: [bool; 1] = [true; 1usize];
-                          let
-                          j:
-                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                          =
-                              (&pj)[0usize];
-                          let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                          let res: bool = (&pres1)[0usize];
-                          let mut cond: bool = res && ! test;
                           while
-                          cond
+                          true
                           {
+                              let
+                              j:
+                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                              =
+                                  (&pj)[0usize];
+                              let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                              let res: bool = (&pres1)[0usize];
+                              if ! (res && ! test) { break };
                               let elt: crate::cbordetveraux::cbor_map_entry =
                                   crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                               let elt_key: crate::cbordetveraux::cbor_raw =
@@ -8125,25 +8047,16 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                           (c21.cddl_map_iterator_impl_validate2)(elt_value);
                                       (&mut pres1)[0usize] = ! test_value
                                   }
-                              };
-                              let
-                              j0:
-                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                              =
-                                  (&pj)[0usize];
-                              let test0: bool =
-                                  crate::cbordetver::cbor_det_map_iterator_is_empty(j0);
-                              let res0: bool = (&pres1)[0usize];
-                              cond = res0 && ! test0
+                              }
                           };
                           let em0: bool = (&pres1)[0usize];
                           let mut pem: [bool; 1] = [em0; 1usize];
-                          let __anf1: bool = (&pres)[0usize];
-                          let __anf0: bool = (&pem)[0usize];
-                          let mut cond0: bool = __anf1 && ! __anf0;
                           while
-                          cond0
+                          true
                           {
+                              let __anf1: bool = (&pres)[0usize];
+                              let __anf0: bool = (&pem)[0usize];
+                              if ! (__anf1 && ! __anf0) { break };
                               let count: u64 = (&pcount)[0usize];
                               if count == 18446744073709551615u64
                               { (&mut pres)[0usize] = false }
@@ -8199,7 +8112,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                   let hd_value_res: crate::cbordetveraux::cbor_raw =
                                       (i.cddl_map_iterator_impl_parse2)(hd_value);
                                   let
-                                  j0:
+                                  j:
                                   crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
                                   =
                                       (&pj1)[0usize];
@@ -8209,7 +8122,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                   =
                                       map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw
                                       {
-                                          cddl_map_iterator_contents: j0,
+                                          cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
                                           i.cddl_map_iterator_impl_validate1,
                                           cddl_map_iterator_impl_parse1:
@@ -8247,7 +8160,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                       else
                                       {
                                           let
-                                          res0:
+                                          res:
                                           crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
                                           =
                                               crate::cbordetver::cbor_det_parse(out1·);
@@ -8255,7 +8168,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                           ock:
                                           crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
                                           =
-                                              match res0
+                                              match res
                                               {
                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
                                                   =>
@@ -8372,22 +8285,22 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                                               1usize];
                                                                       let mut pres2: [bool; 1] =
                                                                           [true; 1usize];
-                                                                      let
-                                                                      j1:
-                                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                      =
-                                                                          (&pj2)[0usize];
-                                                                      let test0: bool =
-                                                                          crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                              j1
-                                                                          );
-                                                                      let res3: bool =
-                                                                          (&pres2)[0usize];
-                                                                      let mut cond1: bool =
-                                                                          res3 && ! test0;
                                                                       while
-                                                                      cond1
+                                                                      true
                                                                       {
+                                                                          let
+                                                                          j1:
+                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                                                          =
+                                                                              (&pj2)[0usize];
+                                                                          let test: bool =
+                                                                              crate::cbordetver::cbor_det_map_iterator_is_empty(
+                                                                                  j1
+                                                                              );
+                                                                          let res3: bool =
+                                                                              (&pres2)[0usize];
+                                                                          if ! (res3 && ! test)
+                                                                          { break };
                                                                           let
                                                                           elt:
                                                                           crate::cbordetveraux::cbor_map_entry
@@ -8430,19 +8343,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                                                   (&mut pres2)[0usize] =
                                                                                       ! test_value
                                                                               }
-                                                                          };
-                                                                          let
-                                                                          j10:
-                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                          =
-                                                                              (&pj2)[0usize];
-                                                                          let test1: bool =
-                                                                              crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                                  j10
-                                                                              );
-                                                                          let res30: bool =
-                                                                              (&pres2)[0usize];
-                                                                          cond1 = res30 && ! test1
+                                                                          }
                                                                       };
                                                                       let __anf10: bool =
                                                                           (&pres2)[0usize];
@@ -8462,10 +8363,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                           }
                                       }
                                   }
-                              };
-                              let __anf10: bool = (&pres)[0usize];
-                              let __anf00: bool = (&pem)[0usize];
-                              cond0 = __anf10 && ! __anf00
+                              }
                           };
                           (&pres)[0usize]
                       },
@@ -9708,15 +9606,16 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                       1]
                       =
                           [j0; 1usize];
-                      let
-                      j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                      =
-                          (&pj)[0usize];
-                      let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                      let mut cond: bool = ! is_empty;
                       while
-                      cond
+                      true
                       {
+                          let
+                          j:
+                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                          =
+                              (&pj)[0usize];
+                          let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                          if ! ! is_empty { break };
                           let chd: crate::cbordetveraux::cbor_map_entry =
                               crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                           let k: crate::cbordetveraux::cbor_raw =
@@ -10070,15 +9969,7 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                               let i: u64 = (&remaining)[0usize];
                               let i·: u64 = i.wrapping_sub(1u64);
                               (&mut remaining)[0usize] = i·
-                          };
-                          let
-                          j1:
-                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                          =
-                              (&pj)[0usize];
-                          let is_empty0: bool =
-                              crate::cbordetver::cbor_det_map_iterator_is_empty(j1);
-                          cond = ! is_empty0
+                          }
                       };
                       crate::cbordetveraux::impl_map_group_result::MGOK
                   },
@@ -11544,15 +11435,19 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                                     [0usize; 1usize];
                                                                                 let slen: usize =
                                                                                     c16.len();
-                                                                                let res2: bool =
-                                                                                    (&pres)[0usize];
-                                                                                let i: usize =
-                                                                                    (&pi)[0usize];
-                                                                                let mut cond: bool =
-                                                                                    res2 && i < slen;
                                                                                 while
-                                                                                cond
+                                                                                true
                                                                                 {
+                                                                                    let res2: bool =
+                                                                                        (&pres)[0usize];
+                                                                                    let i: usize =
+                                                                                        (&pi)[0usize];
+                                                                                    if
+                                                                                    !
+                                                                                    (res2
+                                                                                    &&
+                                                                                    i < slen)
+                                                                                    { break };
                                                                                     let i0: usize =
                                                                                         (&pi)[0usize];
                                                                                     let
@@ -11586,17 +11481,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                                     {
                                                                                         (&mut pres)[0usize] =
                                                                                             false
-                                                                                    };
-                                                                                    let
-                                                                                    res21: bool
-                                                                                    =
-                                                                                        (&pres)[0usize];
-                                                                                    let i1: usize =
-                                                                                        (&pi)[0usize];
-                                                                                    cond =
-                                                                                        res21
-                                                                                        &&
-                                                                                        i1 < slen
+                                                                                    }
                                                                                 };
                                                                                 (&pres)[0usize]
                                                                             },
@@ -11627,26 +11512,30 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                                     =
                                                                                         [true;
                                                                                             1usize];
-                                                                                    let
-                                                                                    c4:
-                                                                                    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label
-                                                                                    =
-                                                                                        (&pc)[0usize];
-                                                                                    let em1: bool =
-                                                                                        crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                            c4.cddl_array_iterator_contents
-                                                                                        );
-                                                                                    let res2: bool =
-                                                                                        (&pres)[0usize];
-                                                                                    let
-                                                                                    mut cond: bool
-                                                                                    =
-                                                                                        res2
-                                                                                        &&
-                                                                                        ! em1;
                                                                                     while
-                                                                                    cond
+                                                                                    true
                                                                                     {
+                                                                                        let
+                                                                                        c4:
+                                                                                        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label
+                                                                                        =
+                                                                                            (&pc)[0usize];
+                                                                                        let
+                                                                                        em1: bool
+                                                                                        =
+                                                                                            crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                                                                c4.cddl_array_iterator_contents
+                                                                                            );
+                                                                                        let
+                                                                                        res2: bool
+                                                                                        =
+                                                                                            (&pres)[0usize];
+                                                                                        if
+                                                                                        !
+                                                                                        (res2
+                                                                                        &&
+                                                                                        ! em1)
+                                                                                        { break };
                                                                                         let
                                                                                         i:
                                                                                         array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label
@@ -11735,26 +11624,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                                             (&mut
                                                                                             pres)[0usize] =
                                                                                                 false
-                                                                                        };
-                                                                                        let
-                                                                                        c40:
-                                                                                        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_evercddl_label
-                                                                                        =
-                                                                                            (&pc)[0usize];
-                                                                                        let
-                                                                                        em10: bool
-                                                                                        =
-                                                                                            crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                                c40.cddl_array_iterator_contents
-                                                                                            );
-                                                                                        let
-                                                                                        res21: bool
-                                                                                        =
-                                                                                            (&pres)[0usize];
-                                                                                        cond =
-                                                                                            res21
-                                                                                            &&
-                                                                                            ! em10
+                                                                                        }
                                                                                     };
                                                                                     let ret: bool =
                                                                                         (&pres)[0usize];
@@ -12612,12 +12482,12 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                               [c11; 1usize];
                           let em0: bool = c11.len() == 0usize;
                           let mut pem: [bool; 1] = [em0; 1usize];
-                          let __anf1: bool = (&pres)[0usize];
-                          let __anf0: bool = (&pem)[0usize];
-                          let mut cond: bool = __anf1 && ! __anf0;
                           while
-                          cond
+                          true
                           {
+                              let __anf1: bool = (&pres)[0usize];
+                              let __anf0: bool = (&pem)[0usize];
+                              if ! (__anf1 && ! __anf0) { break };
                               let count: u64 = (&pcount)[0usize];
                               if count == 18446744073709551615u64
                               { (&mut pres)[0usize] = false }
@@ -12804,10 +12674,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                           }
                                       }
                                   }
-                              };
-                              let __anf10: bool = (&pres)[0usize];
-                              let __anf00: bool = (&pem)[0usize];
-                              cond = __anf10 && ! __anf00
+                              }
                           };
                           (&pres)[0usize]
                       },
@@ -12831,17 +12698,17 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                           =
                               [c21.cddl_map_iterator_contents; 1usize];
                           let mut pres1: [bool; 1] = [true; 1usize];
-                          let
-                          j:
-                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                          =
-                              (&pj)[0usize];
-                          let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                          let res: bool = (&pres1)[0usize];
-                          let mut cond: bool = res && ! test;
                           while
-                          cond
+                          true
                           {
+                              let
+                              j:
+                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                              =
+                                  (&pj)[0usize];
+                              let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                              let res: bool = (&pres1)[0usize];
+                              if ! (res && ! test) { break };
                               let elt: crate::cbordetveraux::cbor_map_entry =
                                   crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                               let elt_key: crate::cbordetveraux::cbor_raw =
@@ -12858,25 +12725,16 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                           (c21.cddl_map_iterator_impl_validate2)(elt_value);
                                       (&mut pres1)[0usize] = ! test_value
                                   }
-                              };
-                              let
-                              j0:
-                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                              =
-                                  (&pj)[0usize];
-                              let test0: bool =
-                                  crate::cbordetver::cbor_det_map_iterator_is_empty(j0);
-                              let res0: bool = (&pres1)[0usize];
-                              cond = res0 && ! test0
+                              }
                           };
                           let em0: bool = (&pres1)[0usize];
                           let mut pem: [bool; 1] = [em0; 1usize];
-                          let __anf1: bool = (&pres)[0usize];
-                          let __anf0: bool = (&pem)[0usize];
-                          let mut cond0: bool = __anf1 && ! __anf0;
                           while
-                          cond0
+                          true
                           {
+                              let __anf1: bool = (&pres)[0usize];
+                              let __anf0: bool = (&pem)[0usize];
+                              if ! (__anf1 && ! __anf0) { break };
                               let count: u64 = (&pcount)[0usize];
                               if count == 18446744073709551615u64
                               { (&mut pres)[0usize] = false }
@@ -12932,7 +12790,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                   let hd_value_res: crate::cbordetveraux::cbor_raw =
                                       (i.cddl_map_iterator_impl_parse2)(hd_value);
                                   let
-                                  j0:
+                                  j:
                                   crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
                                   =
                                       (&pj1)[0usize];
@@ -12942,7 +12800,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                   =
                                       map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_CBOR_Pulse_Raw_Type_cbor_raw
                                       {
-                                          cddl_map_iterator_contents: j0,
+                                          cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
                                           i.cddl_map_iterator_impl_validate1,
                                           cddl_map_iterator_impl_parse1:
@@ -12980,7 +12838,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                       else
                                       {
                                           let
-                                          res0:
+                                          res:
                                           crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
                                           =
                                               crate::cbordetver::cbor_det_parse(out1·);
@@ -12988,7 +12846,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                           ock:
                                           crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
                                           =
-                                              match res0
+                                              match res
                                               {
                                                   crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
                                                   =>
@@ -13105,22 +12963,22 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                               1usize];
                                                                       let mut pres2: [bool; 1] =
                                                                           [true; 1usize];
-                                                                      let
-                                                                      j1:
-                                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                      =
-                                                                          (&pj2)[0usize];
-                                                                      let test0: bool =
-                                                                          crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                              j1
-                                                                          );
-                                                                      let res3: bool =
-                                                                          (&pres2)[0usize];
-                                                                      let mut cond1: bool =
-                                                                          res3 && ! test0;
                                                                       while
-                                                                      cond1
+                                                                      true
                                                                       {
+                                                                          let
+                                                                          j1:
+                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                                                          =
+                                                                              (&pj2)[0usize];
+                                                                          let test: bool =
+                                                                              crate::cbordetver::cbor_det_map_iterator_is_empty(
+                                                                                  j1
+                                                                              );
+                                                                          let res3: bool =
+                                                                              (&pres2)[0usize];
+                                                                          if ! (res3 && ! test)
+                                                                          { break };
                                                                           let
                                                                           elt:
                                                                           crate::cbordetveraux::cbor_map_entry
@@ -13163,19 +13021,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                                   (&mut pres2)[0usize] =
                                                                                       ! test_value
                                                                               }
-                                                                          };
-                                                                          let
-                                                                          j10:
-                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                          =
-                                                                              (&pj2)[0usize];
-                                                                          let test1: bool =
-                                                                              crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                                  j10
-                                                                              );
-                                                                          let res30: bool =
-                                                                              (&pres2)[0usize];
-                                                                          cond1 = res30 && ! test1
+                                                                          }
                                                                       };
                                                                       let __anf10: bool =
                                                                           (&pres2)[0usize];
@@ -13195,10 +13041,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                           }
                                       }
                                   }
-                              };
-                              let __anf10: bool = (&pres)[0usize];
-                              let __anf00: bool = (&pem)[0usize];
-                              cond0 = __anf10 && ! __anf00
+                              }
                           };
                           (&pres)[0usize]
                       },
@@ -16411,12 +16254,12 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                                       let mut pres: [bool; 1] = [true; 1usize];
                                       let mut pi: [usize; 1] = [0usize; 1usize];
                                       let slen: usize = c12.len();
-                                      let res: bool = (&pres)[0usize];
-                                      let i: usize = (&pi)[0usize];
-                                      let mut cond: bool = res && i < slen;
                                       while
-                                      cond
+                                      true
                                       {
+                                          let res: bool = (&pres)[0usize];
+                                          let i: usize = (&pi)[0usize];
+                                          if ! (res && i < slen) { break };
                                           let i0: usize = (&pi)[0usize];
                                           let x: cose_signature = c12[i0];
                                           let res0: bool =
@@ -16432,10 +16275,7 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                                               (&mut pi)[0usize] = i·
                                           }
                                           else
-                                          { (&mut pres)[0usize] = false };
-                                          let res2: bool = (&pres)[0usize];
-                                          let i1: usize = (&pi)[0usize];
-                                          cond = res2 && i1 < slen
+                                          { (&mut pres)[0usize] = false }
                                       };
                                       (&pres)[0usize]
                                   },
@@ -16459,20 +16299,20 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                                           =
                                               [c22; 1usize];
                                           let mut pres: [bool; 1] = [true; 1usize];
-                                          let
-                                          c3:
-                                          array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_signature
-                                          =
-                                              (&pc)[0usize];
-                                          let em1: bool =
-                                              crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                  c3.cddl_array_iterator_contents
-                                              );
-                                          let res: bool = (&pres)[0usize];
-                                          let mut cond: bool = res && ! em1;
                                           while
-                                          cond
+                                          true
                                           {
+                                              let
+                                              c3:
+                                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_signature
+                                              =
+                                                  (&pc)[0usize];
+                                              let em1: bool =
+                                                  crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                      c3.cddl_array_iterator_contents
+                                                  );
+                                              let res: bool = (&pres)[0usize];
+                                              if ! (res && ! em1) { break };
                                               let
                                               i:
                                               array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_signature
@@ -16531,18 +16371,7 @@ serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
                                                       &mut pcount1,
                                                       &mut psize1
                                                   );
-                                              if ! res0 { (&mut pres)[0usize] = false };
-                                              let
-                                              c30:
-                                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_cose_signature
-                                              =
-                                                  (&pc)[0usize];
-                                              let em10: bool =
-                                                  crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                      c30.cddl_array_iterator_contents
-                                                  );
-                                              let res2: bool = (&pres)[0usize];
-                                              cond = res2 && ! em10
+                                              if ! res0 { (&mut pres)[0usize] = false }
                                           };
                                           let ret: bool = (&pres)[0usize];
                                           if ret { ret } else { ret }

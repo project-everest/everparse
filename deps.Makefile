@@ -29,14 +29,13 @@ endif
 NEED_KRML :=
 ifneq (1,$(EVERPARSE_USE_KRML_EXE))
 ifeq ($(OS),Windows_NT)
-export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml.exe
 else
-export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml
 endif
 NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
 ifeq (,$(KRML_EXE))
-# TODO: fix Karamel to not require KRML_HOME set
 $(error "Inconsistent setup: EVERPARSE_USE_KRML_EXE set but KRML_EXE not set")
 endif
 endif
@@ -97,7 +96,7 @@ $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
 
 ifeq (,$(filter install clean distclean $(clean_rules),$(MAKECMDGOALS)))
-opam-env.Makefile: $(NEED_OPAM_DIR)
+opam-env.Makefile: $(NEED_OPAM_DIR) $(EVERPARSE_OPT_PATH)/opam-env.sh
 	rm -rf $@.tmp
 	$(EVERPARSE_OPT_PATH)/opam-env.sh > $@.tmp
 	echo >> $@.tmp
@@ -122,7 +121,7 @@ ifneq (,$(wildcard $(EVERPARSE_OPT_PATH)/.prebuilt))
 # So the stamps below must be taken at face value, no matter how their mtimes
 # compare: a rebuild could only fail. This cannot mask a stale image, because
 # the image is keyed on the contents of opt/hashes.Makefile and the Dockerfile.
-$(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/karamel/Makefile \
+$(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile \
 $(EVERPARSE_OPT_PATH)/opam.done $(EVERPARSE_OPT_PATH)/FStar.done \
 $(EVERPARSE_OPT_PATH)/karamel.done $(EVERPARSE_OPT_PATH)/z3: ;
 
@@ -131,19 +130,16 @@ else
 $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/Makefile
 
-$(EVERPARSE_OPT_PATH)/karamel/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) karamel/Makefile
+$(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile: $(EVERPARSE_OPT_PATH)/FStar/Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/karamel/Makefile
 
-$(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/karamel/Makefile
+$(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(if $(NEED_KRML),$(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile)
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam.done
 
 $(EVERPARSE_OPT_PATH)/FStar.done: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
 	rm -f $@
-	rm -rf $(EVERPARSE_OPT_PATH)/FStar/karamel
-	mkdir -p $(EVERPARSE_OPT_PATH)/FStar/karamel
-	echo install: > $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile
-	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=$(KRML_EXE)
-	rm -rf $(EVERPARSE_OPT_PATH)/FStar/karamel
+# Source packages install KaRaMeL unconditionally; deps builds it separately.
+	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar -o install_karamel ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=$(KRML_EXE)
 	touch $@
 
 $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
@@ -154,14 +150,14 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	mv $@.tmp $@
 	touch $@
 
-$(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_OPAM)
+$(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile $(NEED_OPAM)
 	rm -f $@
 ifeq ($(OS),Windows_NT)
-	rm -f "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe"
+	rm -f "$(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml.exe"
 endif
-	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel LOWSTAR=false
+	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar/karamel LOWSTAR=false
 ifeq ($(OS),Windows_NT)
-	mv "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe"
+	mv "$(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml.exe"
 endif
 	touch $@
 

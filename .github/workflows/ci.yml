@@ -169,7 +169,7 @@ jobs:
             targets: 3d-pulse-subdirs-test
             diff-input: true
           - part: misc
-            targets: 3d-hashchk-test 3d-doc-test 3d-adapter-test
+            targets: 3d-hashchk-test 3d-doc-test 3d-adapter-test 3d-runtime-header-test
             test-32bit: true
     steps:
       - uses: actions/checkout@master
@@ -197,14 +197,14 @@ jobs:
         if: matrix.test-32bit
         run: |
           docker exec --user root "$container" /bin/bash -c \
-            "apt-get update && apt-get install --yes --no-install-recommends gcc-multilib"
+            "apt-get update && apt-get install --yes --no-install-recommends gcc-multilib g++-multilib"
       - name: Test 3D
         run: |
           docker exec -e EVERPARSE_TEST_32BIT=${{ matrix.test-32bit && '1' || '' }} "$container" bash .github/ci-make.sh -kj"$(nproc)" ${{ matrix.targets }} ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1 ARGS='--inventory-source filesystem'
       - name: Save generated C code
         if: matrix.diff-input
         run: |
-          docker exec $container /bin/bash -c "find share/everparse/tests/3d lib/everparse/3d/krml -path share/everparse/tests/3d/pulse-lowstar-diff -prune -o \( -name '*.c' -o -name '*.h' \) -print0 | tar -c --null -T -" | gzip > 3d-c-${{ matrix.part }}.tgz
+          docker exec $container /bin/bash -c "find share/everparse/tests/3d lib/everparse/3d/runtime -path share/everparse/tests/3d/pulse-lowstar-diff -prune -o \( -name '*.c' -o -name '*.h' \) -print0 | tar -c --null -T -" | gzip > 3d-c-${{ matrix.part }}.tgz
       - name: Upload generated C code as artifact
         if: matrix.diff-input
         uses: actions/upload-artifact@v4

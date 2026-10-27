@@ -4,7 +4,7 @@ open Pulse.Lib.Pervasives
 
 (* The [buffer] backend: an input stream is a byte array [b] of length [len],
    together with a reference [pos] holding the number of bytes consumed so far.
-   All three are passed as separate arguments, so that KaRaMeL extracts them as
+   All three are passed as separate arguments, so that Custard extracts them as
    three C arguments instead of a struct. *)
 
 module AP = Pulse.Lib.ArrayPtr
@@ -317,14 +317,14 @@ instance input_stream_buffer : I.input_stream_inst base_t len_t pos_t = {
 (* The error handler used when 3d is invoked with `--use_error_handler_macro`.
    Each backend provides its own; the 3D frontend passes the one matching the
    selected `--input_stream` to `validate_with_error_handler`. *)
-[@@CMacro]
+[@@CMacro; FStar.Attributes.custard_extern "EVERPARSE_ERROR_HANDLER_MACRO"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
 (* Copy buffers, used as the destination of probe actions. Only the `buffer`
    backend provides them.
 
    As in Low*, the handle is an abstract type with assumed projections, all
-   implemented by the client in C: KaRaMeL emits them as `extern`
+   implemented by the client in C: Custard emits them as `extern`
    declarations in `EverParse.h`, and `EverParsePulseEndianness.h` gives
    `EVERPARSE_COPY_BUFFER_T` its `void *` typedef. Keeping the handle opaque
    is what lets a probe callback *repoint* it -- have `EverParseStreamOf`
@@ -333,8 +333,8 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
    the Low* backend.
 
    The four names are declared in EverParse3d.CopyBuffer.Buffer and re-exported
-   here, so that the bundle can make them -- and only them -- public. See that
-   module for why. *)
+   here, keeping the client-facing ABI separate from the stream implementation.
+   See that module for its C declaration attributes. *)
 module CBB = EverParse3d.CopyBuffer.Buffer
 
 inline_for_extraction
