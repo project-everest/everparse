@@ -309,7 +309,7 @@ Options are treated from left to right:
 
   Specifies the KaRaMeL executable used for C extraction and locating its
   support libraries. By default, EverParse uses
-  ``opt/karamel/out/bin/krml`` in the source tree or ``bin/krml`` in a binary
+  ``opt/FStar/karamel/out/bin/krml`` in the source tree or ``bin/krml`` in a binary
   package (``krml.exe`` on Windows). The ``KRML_EXE`` environment variable
   is not used by the 3d executable.
 
