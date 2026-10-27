@@ -39,13 +39,14 @@ jobs:
         with:
           repository: FStarLang/FStar
           ref: ${{ env.fstar_hash }}
+          submodules: true
 
       - name: Check cache
         id: check-cache
         uses: actions/cache/restore@v4
         with:
           path: fstar-src.tar.gz
-          key: FStar-src-${{steps.checkout.outputs.commit}}
+          key: FStar-src-with-karamel-v1-${{steps.checkout.outputs.commit}}
 
       - uses: ocaml/setup-ocaml@v3
         if: steps.check-cache.outputs.cache-hit != 'true'
@@ -73,12 +74,17 @@ jobs:
           # ^ no tag in source package
           make -skj$(nproc) package-src ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=/dev/null
 
+      - name: Check packaged KaRaMeL sources
+        run: |
+          tar -xOf fstar-src.tar.gz fstar/karamel/Makefile > /dev/null
+          tar -xOf fstar-src.tar.gz fstar/karamel/karamel.opam > /dev/null
+
       - name: Save
         if: steps.check-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: fstar-src.tar.gz
-          key: FStar-src-${{steps.checkout.outputs.commit}}
+          key: FStar-src-with-karamel-v1-${{steps.checkout.outputs.commit}}
 
       - uses: actions/upload-artifact@v4
         with:
