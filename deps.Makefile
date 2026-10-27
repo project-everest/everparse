@@ -96,7 +96,7 @@ $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
 
 ifeq (,$(filter install clean distclean $(clean_rules),$(MAKECMDGOALS)))
-opam-env.Makefile: $(NEED_OPAM_DIR)
+opam-env.Makefile: $(NEED_OPAM_DIR) $(EVERPARSE_OPT_PATH)/opam-env.sh
 	rm -rf $@.tmp
 	$(EVERPARSE_OPT_PATH)/opam-env.sh > $@.tmp
 	echo >> $@.tmp
