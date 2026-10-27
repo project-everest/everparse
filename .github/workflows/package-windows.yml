@@ -76,8 +76,8 @@ jobs:
 
       - name: Check packaged KaRaMeL sources
         run: |
-          tar -xOf fstar-src.tar.gz fstar/karamel/Makefile > /dev/null
-          tar -xOf fstar-src.tar.gz fstar/karamel/karamel.opam > /dev/null
+          tar -xOf fstar-src.tar.gz ./fstar/karamel/Makefile > /dev/null
+          tar -xOf fstar-src.tar.gz ./fstar/karamel/karamel.opam > /dev/null
 
       - name: Save
         if: steps.check-cache.outputs.cache-hit != 'true'
