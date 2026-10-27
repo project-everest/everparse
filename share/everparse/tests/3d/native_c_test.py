@@ -17,7 +17,7 @@ def main():
         command = shlex.split(make) + [
             "-s", "-j4", "-C", str(fixture), "world",
             f"EVERPARSE_HOME={home}", f"EVERPARSE_OUTPUT_DIR={output}",
-            f"FSTAR_EXE={fstar}", "KRML_EXE=everparse-no-karamel",
+            f"FSTAR_EXE={fstar}",
         ]
 
         def build(extra=()):
