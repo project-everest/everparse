@@ -1448,6 +1448,21 @@ let conformance_correct (#s: _) (k: asn1_k s) (b: bytes)
   | None, None -> ()
 #pop-options
 
+(* Round trip: for a well-formed schema, every conforming generic value is
+   recovered by the generic ANY parser from its encoding. *)
+let conforms_roundtrip (#s: _) (k: asn1_k s) (v: asn1_value)
+: Lemma
+  (requires (wf k /\ conforms k v == true))
+  (ensures (parse parse_asn1_value (asn1_value_enc v) == Some (v, Seq.length (asn1_value_enc v))))
+= let e = asn1_value_enc v in
+  conformance_correct k e;
+  parse_asn1_value_consumed' e;
+  match parse parse_asn1_value e with
+  | Some (v', n) ->
+    Seq.lemma_eq_elim (Seq.slice e 0 n) e;
+    asn1_value_enc_inj v' v
+  | None -> ()
+
 (* DER order of SET components: whenever the typed SET parser accepts some
    contents, the identifiers of the generic values in those contents are
    strictly increasing in the canonical order of tags (X.690 10.3.) *)
