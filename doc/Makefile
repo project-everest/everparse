@@ -79,7 +79,10 @@ endif
 	cp $(AUX_HEADERS) out
 	+$(MAKE) -C out -f $(EVERPARSE_HOME)/lib/everparse/3d/Makefile.basic BLACKLIST='$(3D_NOT_COMPILED)' USER_TARGET=test USER_CFLAGS='-Wno-ignored-qualifiers' test
 
-$(3D_OUT): out/%: 3d-do-tests
+# The empty recipe is required: without one, make does not re-stat these files
+# after 3d-do-tests regenerates them, so the snapshot rule below compares the
+# stale mtimes and leaves an existing 3d-snapshot/ out of date.
+$(3D_OUT): out/%: 3d-do-tests ;
 
 $(3D_SNAPSHOT): 3d-snapshot/%: out/%
 	mkdir -p 3d-snapshot
