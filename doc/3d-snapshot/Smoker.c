@@ -32,19 +32,7 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
     sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t age = (bfirst2 + (n2 * 256));
+    uint32_t age = EverParse3d_Prelude_read____UINT32(sub);
     bool ageConstraintIsOk = (age >= (uint32_t)21);
     if (ageConstraintIsOk) {
       size_t pos1 = 0;

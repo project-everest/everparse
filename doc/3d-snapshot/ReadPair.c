@@ -33,20 +33,8 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
     sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t first4 = (bfirst2 + (n2 * 256));
-    x[0] = first4;
+    uint32_t first = EverParse3d_Prelude_read____UINT32(sub);
+    x[0] = first;
     if (true) {
       resultAfter_Pair = 0;
     }
@@ -102,19 +90,7 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
       size_t m_1 = (p02 + 4);
       uint8_t *sub_1 = (sl_base + p02);
       sl_pos[0] = m_1;
-      uint8_t first_1 = sub_1[0];
-      size_t pos__1 = (((size_t)1ULL) + ((size_t)1ULL));
-      uint8_t first1_1 = sub_1[1];
-      size_t pos_1_1 = (pos__1 + 1);
-      uint8_t first2_1 = sub_1[pos__1];
-      uint8_t first3_1 = sub_1[pos_1_1];
-      uint32_t n_1 = (uint32_t)first3_1;
-      uint32_t bfirst_1 = (uint32_t)first2_1;
-      uint32_t n1_1 = (bfirst_1 + (n_1 * 256));
-      uint32_t bfirst1_1 = (uint32_t)first1_1;
-      uint32_t n2_1 = (bfirst1_1 + (n1_1 * 256));
-      uint32_t bfirst2_1 = (uint32_t)first_1;
-      uint32_t second = (bfirst2_1 + (n2_1 * 256));
+      uint32_t second = EverParse3d_Prelude_read____UINT32(sub_1);
       y[0] = second;
       if (true) {
         resultAfter_Pair1 = 0;

@@ -32,19 +32,7 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
     sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t col = (bfirst2 + (n2 * 256));
+    uint32_t col = EverParse3d_Prelude_read____UINT32(sub);
     bool colConstraintIsOk = (((col == ENUMCONSTRAINT_RED) || (col == ENUMCONSTRAINT_GREEN)) || (col == ENUMCONSTRAINT_BLUE));
     if (colConstraintIsOk) {
       /* Validating field x */
@@ -77,19 +65,7 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
         size_t m1 = (p03 + 4);
         uint8_t *sub1 = (sl_base + p03);
         sl_pos[0] = m1;
-        uint8_t first4 = sub1[0];
-        size_t pos_2 = (((size_t)1ULL) + ((size_t)1ULL));
-        uint8_t first5 = sub1[1];
-        size_t pos_3 = (pos_2 + 1);
-        uint8_t first6 = sub1[pos_2];
-        uint8_t first7 = sub1[pos_3];
-        uint32_t n3 = (uint32_t)first7;
-        uint32_t bfirst3 = (uint32_t)first6;
-        uint32_t n4 = (bfirst3 + (n3 * 256));
-        uint32_t bfirst4 = (uint32_t)first5;
-        uint32_t n5 = (bfirst4 + (n4 * 256));
-        uint32_t bfirst5 = (uint32_t)first4;
-        uint32_t x_refinement = (bfirst5 + (n5 * 256));
+        uint32_t x_refinement = EverParse3d_Prelude_read____UINT32(sub1);
         /* start: checking constraint */
         bool x_refinementConstraintIsOk = ((x_refinement == (uint32_t)0) || (col == ENUMCONSTRAINT_GREEN));
         /* end: checking constraint */

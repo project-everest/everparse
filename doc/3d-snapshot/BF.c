@@ -50,11 +50,7 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
     size_t m = (p01 + 2);
     uint8_t *sub = (sl_base + p01);
     sl_pos[0] = m;
-    uint8_t first = sub[0];
-    uint8_t first1 = sub[1];
-    uint16_t n = (uint16_t)first1;
-    uint16_t bfirst = (uint16_t)first;
-    uint16_t __bitfield_0 = (bfirst + (n * 256));
+    uint16_t __bitfield_0 = EverParse3d_Prelude_read____UINT16(sub);
     size_t p2 = sl_pos[0];
     uint64_t fieldStart_BF2bis = (uint64_t)p2;
     size_t pos1 = 0;
@@ -83,11 +79,7 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
       size_t m1 = (p03 + 2);
       uint8_t *sub1 = (sl_base + p03);
       sl_pos[0] = m1;
-      uint8_t first2 = sub1[0];
-      uint8_t first3 = sub1[1];
-      uint16_t n1 = (uint16_t)first3;
-      uint16_t bfirst1 = (uint16_t)first2;
-      uint16_t __bitfield_1 = (bfirst1 + (n1 * 256));
+      uint16_t __bitfield_1 = EverParse3d_Prelude_read____UINT16(sub1);
       bool __bitfield_1ConstraintIsOk = (EverParseGetBitfield16(__bitfield_1, 0, 12) < EverParseGetBitfield16(__bitfield_0, 0, 6));
       if (__bitfield_1ConstraintIsOk) {
         size_t pos2 = 0;
@@ -212,11 +204,7 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
     size_t m = (p01 + 2);
     uint8_t *sub = (sl_base + p01);
     sl_pos[0] = m;
-    uint8_t last = sub[1];
-    uint8_t last1 = sub[0];
-    uint16_t n = (uint16_t)last1;
-    uint16_t blast = (uint16_t)last;
-    uint16_t __bitfield_0 = (blast + (n * 256));
+    uint16_t __bitfield_0 = EverParse3d_Prelude_read____UINT16BE(sub);
     size_t p2 = sl_pos[0];
     uint64_t fieldStart_BF3 = (uint64_t)p2;
     size_t pos1 = 0;
@@ -245,11 +233,7 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
       size_t m1 = (p03 + 2);
       uint8_t *sub1 = (sl_base + p03);
       sl_pos[0] = m1;
-      uint8_t last2 = sub1[1];
-      uint8_t last3 = sub1[0];
-      uint16_t n1 = (uint16_t)last3;
-      uint16_t blast1 = (uint16_t)last2;
-      uint16_t __bitfield_1 = (blast1 + (n1 * 256));
+      uint16_t __bitfield_1 = EverParse3d_Prelude_read____UINT16BE(sub1);
       bool __bitfield_1ConstraintIsOk = (EverParseGetBitfield16MsbFirst(__bitfield_1, 0, 12) < EverParseGetBitfield16MsbFirst(__bitfield_0, 0, 6));
       if (__bitfield_1ConstraintIsOk) {
         size_t pos2 = 0;
