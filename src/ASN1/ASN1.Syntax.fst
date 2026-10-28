@@ -213,7 +213,7 @@ let integer_id = mk_constant_id 2
 
 let asn1_bounded_integer (bound : pos) = ASN1_ILC integer_id (ASN1_TERMINAL (ASN1_INTEGER bound))
 
-let asn1_integer = asn1_bounded_integer 20
+let asn1_integer = asn1_bounded_integer asn1_any_integer_bound
 
 let bitstring_id = mk_constant_id 3
 
@@ -240,7 +240,7 @@ let enumerated_id = mk_constant_id 10
 (* ENUMERATED { ... } (X.680 20) with the given admissible values; its
    contents are encoded as those of an INTEGER (X.690 8.4) *)
 let asn1_enumerated (values : list int)
-= ASN1_ILC enumerated_id (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER 20) (RESTRICT_INT_IN values))
+= ASN1_ILC enumerated_id (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER asn1_any_integer_bound) (RESTRICT_INT_IN values))
 
 let utf8string_id = mk_constant_id 12
 

@@ -906,6 +906,14 @@
   },
   {
    "impl": "asn1-rs",
+   "id": "mut/length-nonminimal/int/accept/129-octets",
+   "got": "accept",
+   "class": "bug-asn1-rs",
+   "rationale": "X.690 10.1: DER lengths use the minimal number of octets. asn1-rs 0.7.2 src/header.rs:305-306 has the minimality check commented out.",
+   "clause": "X.690 10.1"
+  },
+  {
+   "impl": "asn1-rs",
    "id": "mut/length-nonminimal/int/accept/2-64-minus-1",
    "got": "accept",
    "class": "bug-asn1-rs",
@@ -915,6 +923,14 @@
   {
    "impl": "asn1-rs",
    "id": "mut/length-nonminimal/int/accept/20-octets",
+   "got": "accept",
+   "class": "bug-asn1-rs",
+   "rationale": "X.690 10.1: DER lengths use the minimal number of octets. asn1-rs 0.7.2 src/header.rs:305-306 has the minimality check commented out.",
+   "clause": "X.690 10.1"
+  },
+  {
+   "impl": "asn1-rs",
+   "id": "mut/length-nonminimal/int/accept/21-octets",
    "got": "accept",
    "class": "bug-asn1-rs",
    "rationale": "X.690 10.1: DER lengths use the minimal number of octets. asn1-rs 0.7.2 src/header.rs:305-306 has the minimality check commented out.",
@@ -1666,6 +1682,14 @@
   },
   {
    "impl": "asn1-rs",
+   "id": "mut/tag-nonminimal/int/accept/129-octets",
+   "got": "accept",
+   "class": "bug-asn1-rs",
+   "rationale": "X.690 8.1.2.2: tag numbers 0..30 use the single-octet form. asn1-rs 0.7.2 src/ber/parser.rs:113-123 parse_identifier decodes the high form without checking that the number is >= 31 or minimal.",
+   "clause": "X.690 8.1.2.2"
+  },
+  {
+   "impl": "asn1-rs",
    "id": "mut/tag-nonminimal/int/accept/2-64-minus-1",
    "got": "accept",
    "class": "bug-asn1-rs",
@@ -1675,6 +1699,14 @@
   {
    "impl": "asn1-rs",
    "id": "mut/tag-nonminimal/int/accept/20-octets",
+   "got": "accept",
+   "class": "bug-asn1-rs",
+   "rationale": "X.690 8.1.2.2: tag numbers 0..30 use the single-octet form. asn1-rs 0.7.2 src/ber/parser.rs:113-123 parse_identifier decodes the high form without checking that the number is >= 31 or minimal.",
+   "clause": "X.690 8.1.2.2"
+  },
+  {
+   "impl": "asn1-rs",
+   "id": "mut/tag-nonminimal/int/accept/21-octets",
    "got": "accept",
    "class": "bug-asn1-rs",
    "rationale": "X.690 8.1.2.2: tag numbers 0..30 use the single-octet form. asn1-rs 0.7.2 src/ber/parser.rs:113-123 parse_identifier decodes the high form without checking that the number is >= 31 or minimal.",
@@ -2367,14 +2399,6 @@
    "class": "bug-asn1-rs",
    "rationale": "asn1-rs 0.7.2 src/asn1_types/oid.rs:56-60: Oid::try_from checks neither the tag nor the contents (X.690 8.19/8.20); only primitive/definite are checked (:63-68).",
    "clause": "X.690 8.19.2"
-  },
-  {
-   "impl": "asn1-rs",
-   "id": "policy/int/21-octets",
-   "got": "accept",
-   "class": "policy",
-   "rationale": "Our spec bounds INTEGER contents to 20 octets (ASN1.Syntax.asn1_integer); X.690 has no bound. Not a bug on either side.",
-   "clause": "policy: ASN1.Syntax.asn1_integer is bounded at 20 contents octets"
   },
   {
    "impl": "asn1-rs",
@@ -3555,6 +3579,14 @@
   },
   {
    "impl": "asn1tools",
+   "id": "mut/length-nonminimal/int/accept/129-octets",
+   "got": "accept",
+   "class": "bug-asn1tools",
+   "rationale": "X.690 10.1: DER lengths use the minimal number of octets. asn1tools 0.169.0 'der' codec does not check length minimality (codecs/ber.py decode_length accepts any long form).",
+   "clause": "X.690 10.1"
+  },
+  {
+   "impl": "asn1tools",
    "id": "mut/length-nonminimal/int/accept/2-64-minus-1",
    "got": "accept",
    "class": "bug-asn1tools",
@@ -3564,6 +3596,14 @@
   {
    "impl": "asn1tools",
    "id": "mut/length-nonminimal/int/accept/20-octets",
+   "got": "accept",
+   "class": "bug-asn1tools",
+   "rationale": "X.690 10.1: DER lengths use the minimal number of octets. asn1tools 0.169.0 'der' codec does not check length minimality (codecs/ber.py decode_length accepts any long form).",
+   "clause": "X.690 10.1"
+  },
+  {
+   "impl": "asn1tools",
+   "id": "mut/length-nonminimal/int/accept/21-octets",
    "got": "accept",
    "class": "bug-asn1tools",
    "rationale": "X.690 10.1: DER lengths use the minimal number of octets. asn1tools 0.169.0 'der' codec does not check length minimality (codecs/ber.py decode_length accepts any long form).",
@@ -4355,14 +4395,6 @@
   },
   {
    "impl": "asn1tools",
-   "id": "policy/int/21-octets",
-   "got": "accept",
-   "class": "policy",
-   "rationale": "Our spec bounds INTEGER contents to 20 octets (ASN1.Syntax.asn1_integer); X.690 has no bound. Not a bug on either side.",
-   "clause": "policy: ASN1.Syntax.asn1_integer is bounded at 20 contents octets"
-  },
-  {
-   "impl": "asn1tools",
    "id": "policy/oid/arc-2-32",
    "got": "accept",
    "class": "policy",
@@ -4910,6 +4942,14 @@
   },
   {
    "impl": "rasn",
+   "id": "mut/constructed-primitive/int/accept/129-octets",
+   "got": "accept",
+   "class": "bug-rasn",
+   "rationale": "X.690 8.1.2.5: the primitive/constructed bit is fixed by the type (primitive for these types and their IMPLICIT tags, DER 10.2; constructed for EXPLICIT tags, 8.14.3). rasn 0.29.0 with DecoderOptions::der() ignores the bit for them.",
+   "clause": "X.690 8.1.2.5, 10.2"
+  },
+  {
+   "impl": "rasn",
    "id": "mut/constructed-primitive/int/accept/2-64-minus-1",
    "got": "accept",
    "class": "bug-rasn",
@@ -4919,6 +4959,14 @@
   {
    "impl": "rasn",
    "id": "mut/constructed-primitive/int/accept/20-octets",
+   "got": "accept",
+   "class": "bug-rasn",
+   "rationale": "X.690 8.1.2.5: the primitive/constructed bit is fixed by the type (primitive for these types and their IMPLICIT tags, DER 10.2; constructed for EXPLICIT tags, 8.14.3). rasn 0.29.0 with DecoderOptions::der() ignores the bit for them.",
+   "clause": "X.690 8.1.2.5, 10.2"
+  },
+  {
+   "impl": "rasn",
+   "id": "mut/constructed-primitive/int/accept/21-octets",
    "got": "accept",
    "class": "bug-rasn",
    "rationale": "X.690 8.1.2.5: the primitive/constructed bit is fixed by the type (primitive for these types and their IMPLICIT tags, DER 10.2; constructed for EXPLICIT tags, 8.14.3). rasn 0.29.0 with DecoderOptions::der() ignores the bit for them.",
@@ -5470,6 +5518,14 @@
   },
   {
    "impl": "rasn",
+   "id": "mut/length-nonminimal/int/accept/129-octets",
+   "got": "accept",
+   "class": "bug-rasn",
+   "rationale": "X.690 10.1: DER lengths use the minimal number of octets. rasn 0.29.0 src/ber/de/parser.rs:206-213 accepts any long-form length, even with DecoderOptions::der().",
+   "clause": "X.690 10.1"
+  },
+  {
+   "impl": "rasn",
    "id": "mut/length-nonminimal/int/accept/2-64-minus-1",
    "got": "accept",
    "class": "bug-rasn",
@@ -5479,6 +5535,14 @@
   {
    "impl": "rasn",
    "id": "mut/length-nonminimal/int/accept/20-octets",
+   "got": "accept",
+   "class": "bug-rasn",
+   "rationale": "X.690 10.1: DER lengths use the minimal number of octets. rasn 0.29.0 src/ber/de/parser.rs:206-213 accepts any long-form length, even with DecoderOptions::der().",
+   "clause": "X.690 10.1"
+  },
+  {
+   "impl": "rasn",
+   "id": "mut/length-nonminimal/int/accept/21-octets",
    "got": "accept",
    "class": "bug-rasn",
    "rationale": "X.690 10.1: DER lengths use the minimal number of octets. rasn 0.29.0 src/ber/de/parser.rs:206-213 accepts any long-form length, even with DecoderOptions::der().",
@@ -6222,6 +6286,14 @@
   },
   {
    "impl": "rasn",
+   "id": "mut/tag-nonminimal/int/accept/129-octets",
+   "got": "accept",
+   "class": "bug-rasn",
+   "rationale": "X.690 8.1.2.2: tag numbers 0..30 use the single-octet form. rasn 0.29.0 src/ber/de/parser.rs:145-146 decodes the high form (base128_number, :176) without checking that the number is >= 31 or minimal.",
+   "clause": "X.690 8.1.2.2"
+  },
+  {
+   "impl": "rasn",
    "id": "mut/tag-nonminimal/int/accept/2-64-minus-1",
    "got": "accept",
    "class": "bug-rasn",
@@ -6231,6 +6303,14 @@
   {
    "impl": "rasn",
    "id": "mut/tag-nonminimal/int/accept/20-octets",
+   "got": "accept",
+   "class": "bug-rasn",
+   "rationale": "X.690 8.1.2.2: tag numbers 0..30 use the single-octet form. rasn 0.29.0 src/ber/de/parser.rs:145-146 decodes the high form (base128_number, :176) without checking that the number is >= 31 or minimal.",
+   "clause": "X.690 8.1.2.2"
+  },
+  {
+   "impl": "rasn",
+   "id": "mut/tag-nonminimal/int/accept/21-octets",
    "got": "accept",
    "class": "bug-rasn",
    "rationale": "X.690 8.1.2.2: tag numbers 0..30 use the single-octet form. rasn 0.29.0 src/ber/de/parser.rs:145-146 decodes the high form (base128_number, :176) without checking that the number is >= 31 or minimal.",
@@ -6819,14 +6899,6 @@
    "class": "bug-rasn",
    "rationale": "X.690 8.19.2: subidentifiers must not start with 0x80. rasn 0.29.0 does not check this.",
    "clause": "X.690 8.19.2"
-  },
-  {
-   "impl": "rasn",
-   "id": "policy/int/21-octets",
-   "got": "accept",
-   "class": "policy",
-   "rationale": "Our spec bounds INTEGER contents to 20 octets (ASN1.Syntax.asn1_integer); X.690 has no bound. Not a bug on either side.",
-   "clause": "policy: ASN1.Syntax.asn1_integer is bounded at 20 contents octets"
   },
   {
    "impl": "rasn",

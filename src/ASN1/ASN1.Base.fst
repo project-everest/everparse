@@ -255,6 +255,7 @@ let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
 // Ref: X.680 8.4 Table 1
 // Universal types with a DER content parser. ENUMERATED (10) has the
 // same content encoding as INTEGER (X.690 8.4)
+inline_for_extraction
 let asn1_any_integer_bound : pos = 4294967295
 
 let asn1_universal_terminal (v : asn1_id_value_t) : option asn1_terminal_k =

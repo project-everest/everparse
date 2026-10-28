@@ -58,8 +58,7 @@ Our parser agrees with every expected verdict.
 
 The remaining entries are not bugs:
 
-* `policy` (5): our parser bounds INTEGER contents to 20 octets and OID arcs
-  to 32 bits.
+* `policy` (2): our parser bounds OID arcs to 32 bits.
 * `ambiguity` (13):
   * leap seconds (`utc/accept/161231235960Z`, `tod/accept/235960`,
     `utc/reject/250101120060Z`);

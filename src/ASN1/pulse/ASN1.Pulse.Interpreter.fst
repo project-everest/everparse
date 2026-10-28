@@ -75,7 +75,7 @@ let rec twins_of (#i: _) (ls: asn1_gen_items_l i)
 [@@asn1_pulse_attr]
 let rec supported_terminal (k: asn1_terminal_k) : Tot bool (decreases k) =
   match k with
-  | ASN1_INTEGER bound -> bound < 65536
+  | ASN1_INTEGER bound -> bound < 18446744073709551615
   | ASN1_PREFIXED_TERMINAL _ k' -> supported_terminal k'
   | _ -> true
 
@@ -87,7 +87,7 @@ let supported_default (k: asn1_terminal_k) : Tot bool =
 let supported_restriction (k: asn1_terminal_k) (r: asn1_restriction k) : Tot bool =
   match k with
   | ASN1_BOOLEAN -> RESTRICT_IN? r
-  | ASN1_INTEGER bound -> bound < 65536 && Rs.int_restriction_ok r
+  | ASN1_INTEGER bound -> bound < 18446744073709551615 && Rs.int_restriction_ok r
   | ASN1_OCTETSTRING -> Rs.size_restriction_ok r
   | _ -> false
 
@@ -284,8 +284,7 @@ let validate_restricted ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) 
   | ASN1_BOOLEAN ->
     Rs.validate_boolean_in (RESTRICT_IN?.values r)
   | ASN1_INTEGER bound ->
-    SZ.fits_at_least_16 bound;
-    Rs.validate_integer_restricted (SZ.uint_to_t bound) r
+    Rs.validate_integer_restricted (U64.uint_to_t bound) r
   | ASN1_OCTETSTRING -> Rs.validate_octetstring_size r)
   in vf vinput vpoffset #voffset #vpm #vv
 
@@ -308,8 +307,7 @@ let rec validate_terminal ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k
   (match k with
   | ASN1_BOOLEAN -> Term.validate_boolean
   | ASN1_INTEGER bound ->
-    SZ.fits_at_least_16 bound;
-    Term.validate_integer (SZ.uint_to_t bound)
+    Term.validate_integer (U64.uint_to_t bound)
   | ASN1_BITSTRING -> Term.validate_bitstring
   | ASN1_OCTETSTRING -> Term.validate_octetstring
   | ASN1_UTF8STRING -> Term.validate_utf8

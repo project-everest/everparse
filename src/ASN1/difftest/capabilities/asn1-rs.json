@@ -193,10 +193,6 @@
    "status": "unsupported",
    "source": "asn1-rs 0.7.2 has no constraint support (no schema compiler; derive has no range attribute)"
   },
-  "policy.integer-bound": {
-   "status": "supported",
-   "source": "asn1-rs Integer is arbitrary-length; differences are classified 'policy'"
-  },
   "policy.oid-arc-bound": {
    "status": "supported",
    "source": "asn1-rs Oid arcs are arbitrary-length; differences are classified 'policy'"

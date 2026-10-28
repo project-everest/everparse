@@ -184,7 +184,7 @@ serious ones:
 * All three: non-minimal lengths; unsorted SET OF; DEFAULT values encoded
   explicitly.
 
-The `policy` entries are our 20-octet INTEGER bound and our 32-bit OID arcs.
+The `policy` entries are our 32-bit OID arcs.
 The `ambiguity` entries are leap seconds, BMPString surrogates, and the
 AlgId table constraint, which the plain `ANY DEFINED BY` schema cannot
 express.

@@ -193,10 +193,6 @@
    "status": "supported",
    "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
   },
-  "policy.integer-bound": {
-   "status": "supported",
-   "source": "rasn Integer is arbitrary-precision; differences are classified 'policy'"
-  },
   "policy.oid-arc-bound": {
    "status": "supported",
    "source": "rasn OID arcs are u32; differences are classified 'policy'"

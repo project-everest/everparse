@@ -193,10 +193,6 @@
    "status": "supported",
    "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
   },
-  "policy.integer-bound": {
-   "status": "supported",
-   "source": "Python int is unbounded; differences are classified 'policy'"
-  },
   "policy.oid-arc-bound": {
    "status": "supported",
    "source": "Python int arcs are unbounded; differences are classified 'policy'"

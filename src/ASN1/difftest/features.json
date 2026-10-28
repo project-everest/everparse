@@ -48,7 +48,6 @@
   "CHARACTER STRING",
   "SIZE",
   "value-constraint",
-  "policy.integer-bound",
   "policy.oid-arc-bound"
  ]
 }

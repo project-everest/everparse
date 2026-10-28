@@ -12,6 +12,8 @@ open ASN1.Spec.Interpreter
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
+module SCmp = LowParse.Pulse.SizeComparison
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module LPS = LowParse.Pulse.Base
@@ -87,14 +89,16 @@ let validate_octetstring
     (LPS.validate_weaken asn1_weak_parser_kind (LSB.validate_seq_all_bytes ()))
     #asn1_weak_parser_kind (asn1_terminal_as_parser ASN1_OCTETSTRING)
 
-(* INTEGER (bounded): the content is the whole input *)
+(* INTEGER (bounded): the content is the whole input. The bound is a
+   64-bit integer, compared without assuming anything about the width
+   of size_t beyond 16 bits *)
 
 #push-options "--z3rlimit 32"
 
 inline_for_extraction
 fn validate_integer
-  (bound: SZ.t { SZ.v bound > 0 })
-: LPS.validator #(asn1_terminal_t (ASN1_INTEGER (SZ.v bound))) #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_INTEGER (SZ.v bound)))
+  (bound: U64.t { U64.v bound > 0 /\ U64.v bound < 18446744073709551615 })
+: LPS.validator #(asn1_terminal_t (ASN1_INTEGER (U64.v bound))) #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_INTEGER (U64.v bound)))
 =
   (input: slice byte)
   (poffset: R.ref SZ.t)
@@ -106,7 +110,8 @@ fn validate_integer
   pts_to_len input;
   let len = S.len input;
   let n = SZ.sub len off;
-  if (SZ.gt n bound || n = 0sz) {
+  let big = SCmp.u64_lte_sizet (U64.add bound 1UL) n;
+  if (big || n = 0sz) {
     false
   } else if (n = 1sz) {
     poffset := len;

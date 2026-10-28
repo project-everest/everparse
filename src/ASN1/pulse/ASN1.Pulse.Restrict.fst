@@ -18,6 +18,7 @@ open ASN1.Spec.Content.INTEGER
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
+module SCmp = LowParse.Pulse.SizeComparison
 module R = Pulse.Lib.Reference
 module S = Pulse.Lib.Slice
 module E = FStar.Endianness
@@ -223,11 +224,11 @@ let snoc_slice (v: bytes) (i: nat { i < Seq.length v }) : Lemma
 
 inline_for_extraction
 fn check_integer_restricted
-  (bound: SZ.t)
+  (bound: U64.t { U64.v bound < 18446744073709551615 })
   (f: Ghost.erased (int -> bool))
   (chk: (bool -> bool -> U64.t -> bool))
   (chk_ok: squash (forall neg big mag x . int_view_ok neg big mag x ==> chk neg big mag == Ghost.reveal f x))
-: C.slice_checker (int_accept (SZ.v bound) f)
+: C.slice_checker (int_accept (U64.v bound) f)
 =
   (s: S.slice byte)
   (#pm: perm)
@@ -235,7 +236,8 @@ fn check_integer_restricted
 {
   pts_to_len s;
   let n = S.len s;
-  if (SZ.gt n bound || n = 0sz) {
+  let big = SCmp.u64_lte_sizet (U64.add bound 1UL) n;
+  if (big || n = 0sz) {
     false
   } else {
     let c0 = s.(0sz);
@@ -361,17 +363,17 @@ let int_chk_ok (bound: pos) (r: asn1_restriction (ASN1_INTEGER bound) { int_rest
 
 inline_for_extraction
 [@@asn1_restrict_attr]
-let validate_integer_restricted (bound: SZ.t { SZ.v bound > 0 }) (r: asn1_restriction (ASN1_INTEGER (SZ.v bound)) { int_restriction_ok r })
+let validate_integer_restricted (bound: U64.t { U64.v bound > 0 /\ U64.v bound < 18446744073709551615 }) (r: asn1_restriction (ASN1_INTEGER (U64.v bound)) { int_restriction_ok r })
 : LPS.validator
-    #(asn1_content_t (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER (SZ.v bound)) r))
+    #(asn1_content_t (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER (U64.v bound)) r))
     #asn1_weak_parser_kind
-    (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER (SZ.v bound)) r))
-= int_chk_ok (SZ.v bound) r;
+    (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER (U64.v bound)) r))
+= int_chk_ok (U64.v bound) r;
   Term.validate_all_bytes_pred
-    (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER (SZ.v bound)) r))
-    (int_accept (SZ.v bound) (int_pred r))
+    (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL (ASN1_INTEGER (U64.v bound)) r))
+    (int_accept (U64.v bound) (int_pred r))
     (check_integer_restricted bound (int_pred r) (int_check r) ())
-    (int_restricted_pred (SZ.v bound) r)
+    (int_restricted_pred (U64.v bound) r)
 
 (* OCTET STRING sizes *)
 
