@@ -2287,6 +2287,10 @@ Three points deserve attention:
 constants under ``--api pulse`` with the same kind numbers as
 ``--api lowstar``.
 The validator still returns a byte, not a packed position/error value.
+The runtime ``EverParse.h`` also names these byte-sized codes
+``EVERPARSE_STATUS_SUCCESS`` and ``EVERPARSE_STATUS_ERROR_*``, under both
+APIs; under ``--api lowstar``, ``EVERPARSE_VALIDATOR_*`` remain the packed
+64-bit codes.
 The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
   - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)

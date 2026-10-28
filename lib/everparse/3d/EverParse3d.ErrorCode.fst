@@ -1,28 +1,32 @@
 module EverParse3d.ErrorCode
 module U8 = FStar.UInt8
 
-inline_for_extraction
+// The 8-bit validator status codes, common to all runtime profiles. Not
+// inline_for_extraction: extracted once into the runtime EverParse.h as
+// macros, which generated validators refer to by name.
+
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_SUCCESS"]
 let validator_success = 0uy
 
-inline_for_extraction
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_ACTION_FAILED"]
 let validator_error_action_failed = 5uy
 
-inline_for_extraction
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA"]
 let validator_error_not_enough_data = 2uy
 
-inline_for_extraction
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_IMPOSSIBLE"]
 let validator_error_impossible = 3uy
 
-inline_for_extraction
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_LIST_SIZE_NOT_MULTIPLE"]
 let validator_error_list_size_not_multiple = 4uy
 
-inline_for_extraction
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED"]
 let validator_error_constraint_failed = 6uy
 
-inline_for_extraction
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_UNEXPECTED_PADDING"]
 let validator_error_unexpected_padding = 7uy
 
-inline_for_extraction
+[@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_PROBE_FAILED"]
 let validator_error_probe_failed = 8uy
 
 noextract

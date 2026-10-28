@@ -65,7 +65,7 @@ class RuntimeContractTests(unittest.TestCase):
 class InventoryTests(unittest.TestCase):
     def test_function_bodies_do_not_enter_the_inventory(self):
         result = inventory("""
-          #define EVERPARSE_VALIDATOR_SUCCESS (0U)
+          #define EVERPARSE_STATUS_SUCCESS (0U)
           static inline BOOLEAN EverParseTest(uint32_t size, uint32_t access) {
             if (size >= access) { return 1; } else { return 0; }
           }
@@ -79,7 +79,7 @@ class InventoryTests(unittest.TestCase):
             result["functions"]["EverParseRead"]["parameters"],
             ["void *", "uint64_t"],
         )
-        self.assertEqual(result["macros"]["EVERPARSE_VALIDATOR_SUCCESS"], "( 0U )")
+        self.assertEqual(result["macros"]["EVERPARSE_STATUS_SUCCESS"], "( 0U )")
 
     def test_types_and_values(self):
         result = inventory("""

@@ -94,16 +94,15 @@ def profile_config(profile):
         "Actions.ErrorHandler." + backend: {"error_handler"},
     }
     error_prefix = "EverParsePulseInternal" if lowstar else "EverParse"
-    macro_prefix = "EVERPARSEPULSEINTERNAL_" if lowstar else "EVERPARSE_"
-    error_names = {
-        "validator_" + name: macro_prefix + "VALIDATOR_" + name.upper()
+    names["ErrorCode"] = {
+        "validator_" + name: "EVERPARSE_STATUS_" + name.upper()
         for name in ("success", "error_action_failed", "error_not_enough_data",
                      "error_impossible", "error_list_size_not_multiple",
                      "error_constraint_failed", "error_unexpected_padding",
                      "error_probe_failed")
     }
-    error_names["error_reason_of_result"] = error_prefix + "ErrorReasonOfResult"
-    names["CAbi.ErrorCode" + ("Lowstar" if lowstar else "Pulse")] = error_names | {
+    names["CAbi.ErrorCode" + ("Lowstar" if lowstar else "Pulse")] = {
+        "error_reason_of_result": error_prefix + "ErrorReasonOfResult",
         "error_code_is_range_okay": error_prefix + "IsRangeOkay",
     }
     names["CAbi.Public"] = {}
