@@ -21,13 +21,13 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
   uint8_t resultAftercol;
   if (hasBytes) {
     pos = (p0 + 4);
-    resultAftercol = 0;
+    resultAftercol = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAftercol = 2;
+    resultAftercol = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_enum_constraint;
-  if (resultAftercol == 0) {
+  if (resultAftercol == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
@@ -53,13 +53,13 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
       uint8_t resultAfterx_refinement;
       if (hasBytes1) {
         pos1 = (p02 + 4);
-        resultAfterx_refinement = 0;
+        resultAfterx_refinement = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfterx_refinement = 2;
+        resultAfterx_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
       uint8_t resultAfter_enum_constraint_1;
-      if (resultAfterx_refinement == 0) {
+      if (resultAfterx_refinement == EVERPARSE_STATUS_SUCCESS) {
         /* reading field_value */
         size_t p03 = sl_pos[0];
         size_t m1 = (p03 + 4);
@@ -70,16 +70,16 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
         bool x_refinementConstraintIsOk = ((x_refinement == (uint32_t)0) || (col == ENUMCONSTRAINT_GREEN));
         /* end: checking constraint */
         if (x_refinementConstraintIsOk) {
-          resultAfter_enum_constraint_1 = 0;
+          resultAfter_enum_constraint_1 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          resultAfter_enum_constraint_1 = 6;
+          resultAfter_enum_constraint_1 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
         }
       }
       else {
         resultAfter_enum_constraint_1 = resultAfterx_refinement;
       }
-      if (resultAfter_enum_constraint_1 == 0) {
+      if (resultAfter_enum_constraint_1 == EVERPARSE_STATUS_SUCCESS) {
         resultAfter_enum_constraint = resultAfter_enum_constraint_1;
       }
       else {
@@ -95,13 +95,13 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
       }
     }
     else {
-      resultAfter_enum_constraint = 6;
+      resultAfter_enum_constraint = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
     resultAfter_enum_constraint = resultAftercol;
   }
-  if (resultAfter_enum_constraint == 0) {
+  if (resultAfter_enum_constraint == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_enum_constraint;
   }
   else {

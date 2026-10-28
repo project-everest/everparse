@@ -23,13 +23,13 @@ static uint8_t BoundedSumConst_validate____core__boundedSum(EVERPARSE_APP_CTXT c
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + 4);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfterleft;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     resultAfterleft = res;
   }
   else {
@@ -43,7 +43,7 @@ static uint8_t BoundedSumConst_validate____core__boundedSum(EVERPARSE_APP_CTXT c
     (void)(error_handler_fn("_boundedSum", "left", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfterleft = res;
   }
-  if (resultAfterleft == 0) {
+  if (resultAfterleft == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
@@ -67,13 +67,13 @@ static uint8_t BoundedSumConst_validate____core__boundedSum(EVERPARSE_APP_CTXT c
     uint8_t resultAfterright_refinement;
     if (hasBytes1) {
       pos1 = (p02 + 4);
-      resultAfterright_refinement = 0;
+      resultAfterright_refinement = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfterright_refinement = 2;
+      resultAfterright_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_boundedSum;
-    if (resultAfterright_refinement == 0) {
+    if (resultAfterright_refinement == EVERPARSE_STATUS_SUCCESS) {
       /* reading field_value */
       size_t p03 = sl_pos[0];
       size_t m1 = (p03 + 4);
@@ -84,16 +84,16 @@ static uint8_t BoundedSumConst_validate____core__boundedSum(EVERPARSE_APP_CTXT c
       bool right_refinementConstraintIsOk = ((left <= (uint32_t)42) && (right_refinement <= ((uint32_t)42 - left)));
       /* end: checking constraint */
       if (right_refinementConstraintIsOk) {
-        resultAfter_boundedSum = 0;
+        resultAfter_boundedSum = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_boundedSum = 6;
+        resultAfter_boundedSum = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
       }
     }
     else {
       resultAfter_boundedSum = resultAfterright_refinement;
     }
-    if (resultAfter_boundedSum == 0) {
+    if (resultAfter_boundedSum == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_boundedSum;
     }
     else {

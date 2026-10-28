@@ -23,13 +23,13 @@ static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + 4);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfterlesser;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     resultAfterlesser = res;
   }
   else {
@@ -43,7 +43,7 @@ static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt
     (void)(error_handler_fn("_orderedPair", "lesser", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfterlesser = res;
   }
-  if (resultAfterlesser == 0) {
+  if (resultAfterlesser == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
@@ -67,13 +67,13 @@ static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt
     uint8_t resultAftergreater_refinement;
     if (hasBytes1) {
       pos1 = (p02 + 4);
-      resultAftergreater_refinement = 0;
+      resultAftergreater_refinement = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAftergreater_refinement = 2;
+      resultAftergreater_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_orderedPair;
-    if (resultAftergreater_refinement == 0) {
+    if (resultAftergreater_refinement == EVERPARSE_STATUS_SUCCESS) {
       /* reading field_value */
       size_t p03 = sl_pos[0];
       size_t m1 = (p03 + 4);
@@ -84,16 +84,16 @@ static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt
       bool greater_refinementConstraintIsOk = (lesser <= greater_refinement);
       /* end: checking constraint */
       if (greater_refinementConstraintIsOk) {
-        resultAfter_orderedPair = 0;
+        resultAfter_orderedPair = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_orderedPair = 6;
+        resultAfter_orderedPair = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
       }
     }
     else {
       resultAfter_orderedPair = resultAftergreater_refinement;
     }
-    if (resultAfter_orderedPair == 0) {
+    if (resultAfter_orderedPair == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_orderedPair;
     }
     else {

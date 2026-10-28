@@ -170,13 +170,13 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
     uint8_t res;
     if (hasBytes) {
       pos = (p0 + 1);
-      res = 0;
+      res = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      res = 2;
+      res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t res1;
-    if (res == 0) {
+    if (res == EVERPARSE_STATUS_SUCCESS) {
       res1 = res;
     }
     else {
@@ -190,11 +190,11 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       (void)(error_handler_fn("_UNION", "case0", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
       res1 = res;
     }
-    if (res1 == 0) {
+    if (res1 == EVERPARSE_STATUS_SUCCESS) {
       size_t p2 = sl_pos[0];
       size_t p_ = (p2 + pos);
       sl_pos[0] = p_;
-      return 0;
+      return EVERPARSE_STATUS_SUCCESS;
     }
     else {
       return res1;
@@ -222,13 +222,13 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       uint8_t res_1;
       if (hasBytes_1) {
         pos_1 = (p0_1 + 2);
-        res_1 = 0;
+        res_1 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        res_1 = 2;
+        res_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
       uint8_t res1_1;
-      if (res_1 == 0) {
+      if (res_1 == EVERPARSE_STATUS_SUCCESS) {
         res1_1 = res_1;
       }
       else {
@@ -242,11 +242,11 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
         (void)(error_handler_fn("_UNION", "case1", EverParse3d_ErrorCode_error_reason_of_result(res_1), _ct2, ctxt, sl_base, start_pos_1));
         res1_1 = res_1;
       }
-      if (res1_1 == 0) {
+      if (res1_1 == EVERPARSE_STATUS_SUCCESS) {
         size_t p2_1 = sl_pos[0];
         size_t p__1 = (p2_1 + pos_1);
         sl_pos[0] = p__1;
-        return 0;
+        return EVERPARSE_STATUS_SUCCESS;
       }
       else {
         return res1_1;
@@ -273,13 +273,13 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       uint8_t res_2;
       if (hasBytes_2) {
         pos_2 = (p0_2 + 4);
-        res_2 = 0;
+        res_2 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        res_2 = 2;
+        res_2 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
       uint8_t res1_2;
-      if (res_2 == 0) {
+      if (res_2 == EVERPARSE_STATUS_SUCCESS) {
         res1_2 = res_2;
       }
       else {
@@ -293,11 +293,11 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
         (void)(error_handler_fn("_UNION", "other", EverParse3d_ErrorCode_error_reason_of_result(res_2), _ct3, ctxt, sl_base, start_pos_2));
         res1_2 = res_2;
       }
-      if (res1_2 == 0) {
+      if (res1_2 == EVERPARSE_STATUS_SUCCESS) {
         size_t p2_2 = sl_pos[0];
         size_t p__2 = (p2_2 + pos_2);
         sl_pos[0] = p__2;
-        return 0;
+        return EVERPARSE_STATUS_SUCCESS;
       }
       else {
         return res1_2;
@@ -326,13 +326,13 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + 1);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAftertag;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     resultAftertag = res;
   }
   else {
@@ -346,7 +346,7 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
     (void)(error_handler_fn("_TLV", "tag", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAftertag = res;
   }
-  if (resultAftertag == 0) {
+  if (resultAftertag == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 1);
     uint8_t *sub = (sl_base + p01);
@@ -369,13 +369,13 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
     uint8_t resultAfterlength;
     if (hasBytes1) {
       pos1 = (p02 + 4);
-      resultAfterlength = 0;
+      resultAfterlength = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfterlength = 2;
+      resultAfterlength = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_TLV;
-    if (resultAfterlength == 0) {
+    if (resultAfterlength == EVERPARSE_STATUS_SUCCESS) {
       size_t p03 = sl_pos[0];
       size_t m1 = (p03 + 4);
       uint8_t *sub1 = (sl_base + p03);
@@ -392,12 +392,12 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
         bool hasBytes2 = (n_sz <= avail);
         uint8_t resultAfter_TLV_1;
         if (!(hasBytes2)) {
-          resultAfter_TLV_1 = 2;
+          resultAfter_TLV_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
         }
         else {
           size_t p6 = sl_pos[0];
           size_t tr = (p6 + n_sz);
-          uint8_t res1 = 0;
+          uint8_t res1 = EVERPARSE_STATUS_SUCCESS;
           bool stop = false;
           while (!(stop)) {
             size_t p7 = sl_pos[0];
@@ -411,7 +411,7 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
               uint64_t fieldStart_TLV2 = (uint64_t)p8;
               uint8_t resultAfter_TLV_2 = SpecializeDep1_validate____core__UNION(tag, ctxt, error_handler_fn, sl_base, tr, sl_pos);
               uint8_t r;
-              if (resultAfter_TLV_2 == 0) {
+              if (resultAfter_TLV_2 == EVERPARSE_STATUS_SUCCESS) {
                 r = resultAfter_TLV_2;
               }
               else {
@@ -425,20 +425,20 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
                 (void)(error_handler_fn("_TLV", "payload.element", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_TLV_2), _ct3, ctxt, sl_base, fieldStart_TLV2));
                 r = resultAfter_TLV_2;
               }
-              if (!(r == 0)) {
+              if (!(r == EVERPARSE_STATUS_SUCCESS)) {
                 res1 = r;
                 stop = true;
               }
             }
           }
-          if (res1 == 0) {
+          if (res1 == EVERPARSE_STATUS_SUCCESS) {
             resultAfter_TLV_1 = res1;
           }
           else {
             resultAfter_TLV_1 = res1;
           }
         }
-        if (resultAfter_TLV_1 == 0) {
+        if (resultAfter_TLV_1 == EVERPARSE_STATUS_SUCCESS) {
           resultAfter_TLV = resultAfter_TLV_1;
         }
         else {
@@ -454,13 +454,13 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
         }
       }
       else {
-        resultAfter_TLV = 6;
+        resultAfter_TLV = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
       }
     }
     else {
       resultAfter_TLV = resultAfterlength;
     }
-    if (resultAfter_TLV == 0) {
+    if (resultAfter_TLV == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_TLV;
     }
     else {
@@ -506,13 +506,13 @@ static inline uint8_t SpecializeDep1_validate____core____specialized_WRAPPER_32(
     uint8_t resultAftertlv;
     if (hasBytes) {
       pos = (p0 + 4);
-      resultAftertlv = 0;
+      resultAftertlv = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAftertlv = 2;
+      resultAftertlv = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter___specialized_WRAPPER_32_1;
-    if (resultAftertlv == 0) {
+    if (resultAftertlv == EVERPARSE_STATUS_SUCCESS) {
       size_t p01 = sl_pos[0];
       size_t m = (p01 + 4);
       uint8_t *sub = (sl_base + p01);
@@ -544,52 +544,59 @@ static inline uint8_t SpecializeDep1_validate____core____specialized_WRAPPER_32(
         size_t len = (size_t)(EverParseStreamLen(___Output));
         size_t cursor = 0;
         uint8_t res = SpecializeDep1_validate____core__TLV((___Len - (uint16_t)5), ctxt, error_handler_fn, base, len, &cursor);
-        action_success_tlv = (res == 0);
+        action_success_tlv = (res == EVERPARSE_STATUS_SUCCESS);
       }
       else {
-        (void)(error_handler_fn("___specialized_WRAPPER_32", "tlv", EverParse3d_ErrorCode_error_reason_of_result(8), (uint64_t)8, ctxt, sl_base, fieldStarttlv));
+        uint64_t _ct1;
+        if ((EVERPARSE_STATUS_ERROR_PROBE_FAILED == 0) || ((EVERPARSE_STATUS_ERROR_PROBE_FAILED >= 2) && (EVERPARSE_STATUS_ERROR_PROBE_FAILED <= 8))) {
+          _ct1 = (uint64_t)EVERPARSE_STATUS_ERROR_PROBE_FAILED;
+        }
+        else {
+          _ct1 = 15;
+        }
+        (void)(error_handler_fn("___specialized_WRAPPER_32", "tlv", EverParse3d_ErrorCode_error_reason_of_result(EVERPARSE_STATUS_ERROR_PROBE_FAILED), _ct1, ctxt, sl_base, fieldStarttlv));
         action_success_tlv = false;
       }
       if (action_success_tlv) {
-        resultAfter___specialized_WRAPPER_32_1 = 0;
+        resultAfter___specialized_WRAPPER_32_1 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter___specialized_WRAPPER_32_1 = 5;
+        resultAfter___specialized_WRAPPER_32_1 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
       }
     }
     else {
       resultAfter___specialized_WRAPPER_32_1 = resultAftertlv;
     }
-    if (resultAfter___specialized_WRAPPER_32_1 == 0) {
+    if (resultAfter___specialized_WRAPPER_32_1 == EVERPARSE_STATUS_SUCCESS) {
       resultAfter___specialized_WRAPPER_32 = resultAfter___specialized_WRAPPER_32_1;
     }
     else {
-      uint64_t _ct1;
+      uint64_t _ct2;
       if ((resultAfter___specialized_WRAPPER_32_1 == 0) || ((resultAfter___specialized_WRAPPER_32_1 >= 2) && (resultAfter___specialized_WRAPPER_32_1 <= 8))) {
-        _ct1 = (uint64_t)resultAfter___specialized_WRAPPER_32_1;
+        _ct2 = (uint64_t)resultAfter___specialized_WRAPPER_32_1;
       }
       else {
-        _ct1 = 15;
+        _ct2 = 15;
       }
-      (void)(error_handler_fn("___specialized_WRAPPER_32", "tlv", EverParse3d_ErrorCode_error_reason_of_result(resultAfter___specialized_WRAPPER_32_1), _ct1, ctxt, sl_base, fieldStart___specialized_WRAPPER_321));
+      (void)(error_handler_fn("___specialized_WRAPPER_32", "tlv", EverParse3d_ErrorCode_error_reason_of_result(resultAfter___specialized_WRAPPER_32_1), _ct2, ctxt, sl_base, fieldStart___specialized_WRAPPER_321));
       resultAfter___specialized_WRAPPER_32 = resultAfter___specialized_WRAPPER_32_1;
     }
   }
   else {
-    resultAfter___specialized_WRAPPER_32 = 6;
+    resultAfter___specialized_WRAPPER_32 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
   }
-  if (resultAfter___specialized_WRAPPER_32 == 0) {
+  if (resultAfter___specialized_WRAPPER_32 == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter___specialized_WRAPPER_32;
   }
   else {
-    uint64_t _ct2;
+    uint64_t _ct3;
     if ((resultAfter___specialized_WRAPPER_32 == 0) || ((resultAfter___specialized_WRAPPER_32 >= 2) && (resultAfter___specialized_WRAPPER_32 <= 8))) {
-      _ct2 = (uint64_t)resultAfter___specialized_WRAPPER_32;
+      _ct3 = (uint64_t)resultAfter___specialized_WRAPPER_32;
     }
     else {
-      _ct2 = 15;
+      _ct3 = 15;
     }
-    (void)(error_handler_fn("___specialized_WRAPPER_32", "__precondition", EverParse3d_ErrorCode_error_reason_of_result(resultAfter___specialized_WRAPPER_32), _ct2, ctxt, sl_base, fieldStart___specialized_WRAPPER_32));
+    (void)(error_handler_fn("___specialized_WRAPPER_32", "__precondition", EverParse3d_ErrorCode_error_reason_of_result(resultAfter___specialized_WRAPPER_32), _ct3, ctxt, sl_base, fieldStart___specialized_WRAPPER_32));
     return resultAfter___specialized_WRAPPER_32;
   }
 }
@@ -620,13 +627,13 @@ static inline uint8_t SpecializeDep1_validate____core__WRAPPER(void (*___probe_t
     uint8_t resultAftertlv;
     if (hasBytes) {
       pos = (p0 + 8);
-      resultAftertlv = 0;
+      resultAftertlv = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAftertlv = 2;
+      resultAftertlv = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_WRAPPER_1;
-    if (resultAftertlv == 0) {
+    if (resultAftertlv == EVERPARSE_STATUS_SUCCESS) {
       size_t p01 = sl_pos[0];
       size_t m = (p01 + 8);
       uint8_t *sub = (sl_base + p01);
@@ -657,52 +664,59 @@ static inline uint8_t SpecializeDep1_validate____core__WRAPPER(void (*___probe_t
         size_t len = (size_t)(EverParseStreamLen(___Output));
         size_t cursor = 0;
         uint8_t res = SpecializeDep1_validate____core__TLV((___Len - (uint16_t)5), ctxt, error_handler_fn, base, len, &cursor);
-        action_success_tlv = (res == 0);
+        action_success_tlv = (res == EVERPARSE_STATUS_SUCCESS);
       }
       else {
-        (void)(error_handler_fn("_WRAPPER", "tlv", EverParse3d_ErrorCode_error_reason_of_result(8), (uint64_t)8, ctxt, sl_base, fieldStarttlv));
+        uint64_t _ct1;
+        if ((EVERPARSE_STATUS_ERROR_PROBE_FAILED == 0) || ((EVERPARSE_STATUS_ERROR_PROBE_FAILED >= 2) && (EVERPARSE_STATUS_ERROR_PROBE_FAILED <= 8))) {
+          _ct1 = (uint64_t)EVERPARSE_STATUS_ERROR_PROBE_FAILED;
+        }
+        else {
+          _ct1 = 15;
+        }
+        (void)(error_handler_fn("_WRAPPER", "tlv", EverParse3d_ErrorCode_error_reason_of_result(EVERPARSE_STATUS_ERROR_PROBE_FAILED), _ct1, ctxt, sl_base, fieldStarttlv));
         action_success_tlv = false;
       }
       if (action_success_tlv) {
-        resultAfter_WRAPPER_1 = 0;
+        resultAfter_WRAPPER_1 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_WRAPPER_1 = 5;
+        resultAfter_WRAPPER_1 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
       }
     }
     else {
       resultAfter_WRAPPER_1 = resultAftertlv;
     }
-    if (resultAfter_WRAPPER_1 == 0) {
+    if (resultAfter_WRAPPER_1 == EVERPARSE_STATUS_SUCCESS) {
       resultAfter_WRAPPER = resultAfter_WRAPPER_1;
     }
     else {
-      uint64_t _ct1;
+      uint64_t _ct2;
       if ((resultAfter_WRAPPER_1 == 0) || ((resultAfter_WRAPPER_1 >= 2) && (resultAfter_WRAPPER_1 <= 8))) {
-        _ct1 = (uint64_t)resultAfter_WRAPPER_1;
+        _ct2 = (uint64_t)resultAfter_WRAPPER_1;
       }
       else {
-        _ct1 = 15;
+        _ct2 = 15;
       }
-      (void)(error_handler_fn("_WRAPPER", "tlv", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_WRAPPER_1), _ct1, ctxt, sl_base, fieldStart_WRAPPER1));
+      (void)(error_handler_fn("_WRAPPER", "tlv", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_WRAPPER_1), _ct2, ctxt, sl_base, fieldStart_WRAPPER1));
       resultAfter_WRAPPER = resultAfter_WRAPPER_1;
     }
   }
   else {
-    resultAfter_WRAPPER = 6;
+    resultAfter_WRAPPER = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
   }
-  if (resultAfter_WRAPPER == 0) {
+  if (resultAfter_WRAPPER == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_WRAPPER;
   }
   else {
-    uint64_t _ct2;
+    uint64_t _ct3;
     if ((resultAfter_WRAPPER == 0) || ((resultAfter_WRAPPER >= 2) && (resultAfter_WRAPPER <= 8))) {
-      _ct2 = (uint64_t)resultAfter_WRAPPER;
+      _ct3 = (uint64_t)resultAfter_WRAPPER;
     }
     else {
-      _ct2 = 15;
+      _ct3 = 15;
     }
-    (void)(error_handler_fn("_WRAPPER", "__precondition", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_WRAPPER), _ct2, ctxt, sl_base, fieldStart_WRAPPER));
+    (void)(error_handler_fn("_WRAPPER", "__precondition", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_WRAPPER), _ct3, ctxt, sl_base, fieldStart_WRAPPER));
     return resultAfter_WRAPPER;
   }
 }
@@ -734,7 +748,7 @@ static uint8_t SpecializeDep1_validate____core__ENTRY(bool ___Requestor32, uint1
     size_t p = sl_pos[0];
     uint64_t fieldStart_ENTRY = (uint64_t)p;
     uint8_t resultAfter_ENTRY = SpecializeDep1_validate____core____specialized_WRAPPER_32(___Len, ___Output, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter_ENTRY == 0) {
+    if (resultAfter_ENTRY == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_ENTRY;
     }
     else {
@@ -755,7 +769,7 @@ static uint8_t SpecializeDep1_validate____core__ENTRY(bool ___Requestor32, uint1
       size_t p_1 = sl_pos[0];
       uint64_t fieldStart_ENTRY_1 = (uint64_t)p_1;
       uint8_t resultAfter_ENTRY_1 = SpecializeDep1_validate____core__WRAPPER(SpecializeDep1____ENTRY____probe__WRAPPER_0_TLV, ___Len, ___Output, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-      if (resultAfter_ENTRY_1 == 0) {
+      if (resultAfter_ENTRY_1 == EVERPARSE_STATUS_SUCCESS) {
         return resultAfter_ENTRY_1;
       }
       else {
@@ -775,29 +789,30 @@ static uint8_t SpecializeDep1_validate____core__ENTRY(bool ___Requestor32, uint1
       size_t p_2 = sl_pos[0];
       uint64_t view_start = (uint64_t)p_2;
       uint64_t start_pos = (view_start + (uint64_t)pos);
-      uint8_t res;
-      if (((uint8_t)3U) == ((uint8_t)0U)) {
-        res = 3;
+      uint8_t res = EVERPARSE_STATUS_ERROR_IMPOSSIBLE;
+      uint8_t res1;
+      if (res == EVERPARSE_STATUS_SUCCESS) {
+        res1 = res;
       }
       else {
         uint64_t _ct3;
-        if ((((uint8_t)3U) == ((uint8_t)0U)) || ((((uint8_t)3U) >= ((uint8_t)2U)) && (((uint8_t)3U) <= ((uint8_t)8U)))) {
-          _ct3 = (uint64_t)3;
+        if ((res == 0) || ((res >= 2) && (res <= 8))) {
+          _ct3 = (uint64_t)res;
         }
         else {
           _ct3 = 15;
         }
-        (void)(error_handler_fn("_ENTRY", "_x_14", EverParse3d_ErrorCode_error_reason_of_result(3), _ct3, ctxt, sl_base, start_pos));
-        res = 3;
+        (void)(error_handler_fn("_ENTRY", "_x_14", EverParse3d_ErrorCode_error_reason_of_result(res), _ct3, ctxt, sl_base, start_pos));
+        res1 = res;
       }
-      if (res == 0) {
+      if (res1 == EVERPARSE_STATUS_SUCCESS) {
         size_t p1 = sl_pos[0];
         size_t p_ = (p1 + pos);
         sl_pos[0] = p_;
-        return 0;
+        return EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        return res;
+        return res1;
       }
     }
   }

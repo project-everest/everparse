@@ -21,13 +21,13 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
   uint8_t resultAfterage;
   if (hasBytes) {
     pos = (p0 + 4);
-    resultAfterage = 0;
+    resultAfterage = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfterage = 2;
+    resultAfterage = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_smoker;
-  if (resultAfterage == 0) {
+  if (resultAfterage == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
@@ -55,13 +55,13 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
       uint8_t res;
       if (hasBytes1) {
         pos1 = (p02 + 1);
-        res = 0;
+        res = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        res = 2;
+        res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
       uint8_t res1;
-      if (res == 0) {
+      if (res == EVERPARSE_STATUS_SUCCESS) {
         res1 = res;
       }
       else {
@@ -75,24 +75,24 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
         (void)(error_handler_fn("_smoker", "cigarettesConsumed", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
         res1 = res;
       }
-      if (res1 == 0) {
+      if (res1 == EVERPARSE_STATUS_SUCCESS) {
         size_t p4 = sl_pos[0];
         size_t p_ = (p4 + pos1);
         sl_pos[0] = p_;
-        resultAfter_smoker = 0;
+        resultAfter_smoker = EVERPARSE_STATUS_SUCCESS;
       }
       else {
         resultAfter_smoker = res1;
       }
     }
     else {
-      resultAfter_smoker = 6;
+      resultAfter_smoker = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
     resultAfter_smoker = resultAfterage;
   }
-  if (resultAfter_smoker == 0) {
+  if (resultAfter_smoker == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_smoker;
   }
   else {

@@ -26,13 +26,13 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
     uint8_t res;
     if (hasBytes) {
       pos = (p0 + 1);
-      res = 0;
+      res = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      res = 2;
+      res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t res1;
-    if (res == 0) {
+    if (res == EVERPARSE_STATUS_SUCCESS) {
       res1 = res;
     }
     else {
@@ -46,11 +46,11 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
       (void)(error_handler_fn("_int_payload", "value8", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
       res1 = res;
     }
-    if (res1 == 0) {
+    if (res1 == EVERPARSE_STATUS_SUCCESS) {
       size_t p2 = sl_pos[0];
       size_t p_ = (p2 + pos);
       sl_pos[0] = p_;
-      return 0;
+      return EVERPARSE_STATUS_SUCCESS;
     }
     else {
       return res1;
@@ -78,13 +78,13 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
       uint8_t res_1;
       if (hasBytes_1) {
         pos_1 = (p0_1 + 2);
-        res_1 = 0;
+        res_1 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        res_1 = 2;
+        res_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
       uint8_t res1_1;
-      if (res_1 == 0) {
+      if (res_1 == EVERPARSE_STATUS_SUCCESS) {
         res1_1 = res_1;
       }
       else {
@@ -98,11 +98,11 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
         (void)(error_handler_fn("_int_payload", "value16", EverParse3d_ErrorCode_error_reason_of_result(res_1), _ct2, ctxt, sl_base, start_pos_1));
         res1_1 = res_1;
       }
-      if (res1_1 == 0) {
+      if (res1_1 == EVERPARSE_STATUS_SUCCESS) {
         size_t p2_1 = sl_pos[0];
         size_t p__1 = (p2_1 + pos_1);
         sl_pos[0] = p__1;
-        return 0;
+        return EVERPARSE_STATUS_SUCCESS;
       }
       else {
         return res1_1;
@@ -130,13 +130,13 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
         uint8_t res_2;
         if (hasBytes_2) {
           pos_2 = (p0_2 + 4);
-          res_2 = 0;
+          res_2 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          res_2 = 2;
+          res_2 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
         }
         uint8_t res1_2;
-        if (res_2 == 0) {
+        if (res_2 == EVERPARSE_STATUS_SUCCESS) {
           res1_2 = res_2;
         }
         else {
@@ -150,11 +150,11 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
           (void)(error_handler_fn("_int_payload", "value32", EverParse3d_ErrorCode_error_reason_of_result(res_2), _ct3, ctxt, sl_base, start_pos_2));
           res1_2 = res_2;
         }
-        if (res1_2 == 0) {
+        if (res1_2 == EVERPARSE_STATUS_SUCCESS) {
           size_t p2_2 = sl_pos[0];
           size_t p__2 = (p2_2 + pos_2);
           sl_pos[0] = p__2;
-          return 0;
+          return EVERPARSE_STATUS_SUCCESS;
         }
         else {
           return res1_2;
@@ -165,29 +165,30 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
         size_t p_3 = sl_pos[0];
         uint64_t view_start_3 = (uint64_t)p_3;
         uint64_t start_pos_3 = (view_start_3 + (uint64_t)pos_3);
-        uint8_t res_3;
-        if (((uint8_t)3U) == ((uint8_t)0U)) {
-          res_3 = 3;
+        uint8_t res_3 = EVERPARSE_STATUS_ERROR_IMPOSSIBLE;
+        uint8_t res1_3;
+        if (res_3 == EVERPARSE_STATUS_SUCCESS) {
+          res1_3 = res_3;
         }
         else {
           uint64_t _ct4;
-          if ((((uint8_t)3U) == ((uint8_t)0U)) || ((((uint8_t)3U) >= ((uint8_t)2U)) && (((uint8_t)3U) <= ((uint8_t)8U)))) {
-            _ct4 = (uint64_t)3;
+          if ((res_3 == 0) || ((res_3 >= 2) && (res_3 <= 8))) {
+            _ct4 = (uint64_t)res_3;
           }
           else {
             _ct4 = 15;
           }
-          (void)(error_handler_fn("_int_payload", "_x_17", EverParse3d_ErrorCode_error_reason_of_result(3), _ct4, ctxt, sl_base, start_pos_3));
-          res_3 = 3;
+          (void)(error_handler_fn("_int_payload", "_x_17", EverParse3d_ErrorCode_error_reason_of_result(res_3), _ct4, ctxt, sl_base, start_pos_3));
+          res1_3 = res_3;
         }
-        if (res_3 == 0) {
+        if (res1_3 == EVERPARSE_STATUS_SUCCESS) {
           size_t p1_3 = sl_pos[0];
           size_t p__3 = (p1_3 + pos_3);
           sl_pos[0] = p__3;
-          return 0;
+          return EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          return res_3;
+          return res1_3;
         }
       }
     }
@@ -214,13 +215,13 @@ static uint8_t TaggedUnion_validate____core__integer(EVERPARSE_APP_CTXT ctxt, EV
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + 4);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAftersize;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     resultAftersize = res;
   }
   else {
@@ -234,7 +235,7 @@ static uint8_t TaggedUnion_validate____core__integer(EVERPARSE_APP_CTXT ctxt, EV
     (void)(error_handler_fn("_integer", "size", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAftersize = res;
   }
-  if (resultAftersize == 0) {
+  if (resultAftersize == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
@@ -244,7 +245,7 @@ static uint8_t TaggedUnion_validate____core__integer(EVERPARSE_APP_CTXT ctxt, EV
     size_t p2 = sl_pos[0];
     uint64_t fieldStart_integer = (uint64_t)p2;
     uint8_t resultAfter_integer = TaggedUnion_validate____core__int_payload(size, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter_integer == 0) {
+    if (resultAfter_integer == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_integer;
     }
     else {

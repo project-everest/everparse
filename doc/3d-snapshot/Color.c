@@ -22,13 +22,13 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
   uint8_t resultAftercol_refinement;
   if (hasBytes) {
     pos = (p0 + 4);
-    resultAftercol_refinement = 0;
+    resultAftercol_refinement = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAftercol_refinement = 2;
+    resultAftercol_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_coloredPoint;
-  if (resultAftercol_refinement == 0) {
+  if (resultAftercol_refinement == EVERPARSE_STATUS_SUCCESS) {
     /* reading field_value */
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 4);
@@ -39,17 +39,17 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
     bool col_refinementConstraintIsOk = ((COLOR_RED == col_refinement) || ((COLOR_GREEN == col_refinement) || (COLOR_BLUE == col_refinement)));
     /* end: checking constraint */
     if (col_refinementConstraintIsOk) {
-      resultAfter_coloredPoint = 0;
+      resultAfter_coloredPoint = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfter_coloredPoint = 6;
+      resultAfter_coloredPoint = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
     resultAfter_coloredPoint = resultAftercol_refinement;
   }
   uint8_t resultAftercol_refinement1;
-  if (resultAfter_coloredPoint == 0) {
+  if (resultAfter_coloredPoint == EVERPARSE_STATUS_SUCCESS) {
     resultAftercol_refinement1 = resultAfter_coloredPoint;
   }
   else {
@@ -63,7 +63,7 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
     (void)(error_handler_fn("_coloredPoint", "col.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_coloredPoint), _ct1, ctxt, sl_base, fieldStart_coloredPoint));
     resultAftercol_refinement1 = resultAfter_coloredPoint;
   }
-  if (resultAftercol_refinement1 == 0) {
+  if (resultAftercol_refinement1 == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     uint64_t fieldStart_coloredPoint1 = (uint64_t)p2;
     size_t pos1 = 0;
@@ -80,22 +80,22 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
     uint8_t res;
     if (hasBytes1) {
       pos1 = (p01_1 + (size_t)8);
-      res = 0;
+      res = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      res = 2;
+      res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_coloredPoint1;
-    if (res == 0) {
+    if (res == EVERPARSE_STATUS_SUCCESS) {
       size_t p4 = sl_pos[0];
       size_t p_ = (p4 + pos1);
       sl_pos[0] = p_;
-      resultAfter_coloredPoint1 = 0;
+      resultAfter_coloredPoint1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
       resultAfter_coloredPoint1 = res;
     }
-    if (resultAfter_coloredPoint1 == 0) {
+    if (resultAfter_coloredPoint1 == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_coloredPoint1;
     }
     else {

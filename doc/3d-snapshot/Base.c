@@ -23,12 +23,12 @@ static uint8_t Base_validate____core____ULONG(EVERPARSE_APP_CTXT ctxt, EVERPARSE
   uint8_t res;
   if (hasBytes) {
     pos[0] = (p0 + 4);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     return res;
   }
   else {
@@ -51,7 +51,7 @@ uint64_t BaseValidateUlong(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8
   size_t lookahead = 0;
   uint8_t status = Base_validate____core____ULONG(ctxt, handler, input, len, &cursor, &lookahead);
   uint64_t position;
-  if (status == 0) {
+  if (status == EVERPARSE_STATUS_SUCCESS) {
     position = (start + (uint64_t)lookahead);
   }
   else {
@@ -84,22 +84,22 @@ static uint8_t Base_validate____core__Pair(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ER
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)8);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_Pair;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_Pair = 0;
+    resultAfter_Pair = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_Pair = res;
   }
-  if (resultAfter_Pair == 0) {
+  if (resultAfter_Pair == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_Pair;
   }
   else {

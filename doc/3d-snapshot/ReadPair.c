@@ -22,13 +22,13 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
   uint8_t resultAfterfirst;
   if (hasBytes) {
     pos = (p0 + 4);
-    resultAfterfirst = 0;
+    resultAfterfirst = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfterfirst = 2;
+    resultAfterfirst = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_Pair;
-  if (resultAfterfirst == 0) {
+  if (resultAfterfirst == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 4);
     uint8_t *sub = (sl_base + p01);
@@ -36,17 +36,17 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
     uint32_t first = EverParse3d_Prelude_read____UINT32(sub);
     x[0] = first;
     if (true) {
-      resultAfter_Pair = 0;
+      resultAfter_Pair = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfter_Pair = 5;
+      resultAfter_Pair = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
     }
   }
   else {
     resultAfter_Pair = resultAfterfirst;
   }
   uint8_t resultAfterfirst1;
-  if (resultAfter_Pair == 0) {
+  if (resultAfter_Pair == EVERPARSE_STATUS_SUCCESS) {
     resultAfterfirst1 = resultAfter_Pair;
   }
   else {
@@ -60,7 +60,7 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
     (void)(error_handler_fn("_Pair", "first", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_Pair), _ct1, ctxt, sl_base, fieldStart_Pair));
     resultAfterfirst1 = resultAfter_Pair;
   }
-  if (resultAfterfirst1 == 0) {
+  if (resultAfterfirst1 == EVERPARSE_STATUS_SUCCESS) {
     /* Validating field second */
     size_t p2 = sl_pos[0];
     uint64_t fieldStart_Pair1 = (uint64_t)p2;
@@ -79,13 +79,13 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
     uint8_t resultAftersecond;
     if (hasBytes1) {
       pos1 = (p01_1 + 4);
-      resultAftersecond = 0;
+      resultAftersecond = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAftersecond = 2;
+      resultAftersecond = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_Pair1;
-    if (resultAftersecond == 0) {
+    if (resultAftersecond == EVERPARSE_STATUS_SUCCESS) {
       size_t p02 = sl_pos[0];
       size_t m_1 = (p02 + 4);
       uint8_t *sub_1 = (sl_base + p02);
@@ -93,16 +93,16 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
       uint32_t second = EverParse3d_Prelude_read____UINT32(sub_1);
       y[0] = second;
       if (true) {
-        resultAfter_Pair1 = 0;
+        resultAfter_Pair1 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_Pair1 = 5;
+        resultAfter_Pair1 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
       }
     }
     else {
       resultAfter_Pair1 = resultAftersecond;
     }
-    if (resultAfter_Pair1 == 0) {
+    if (resultAfter_Pair1 == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_Pair1;
     }
     else {

@@ -22,23 +22,23 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)10);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_T;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_T = 0;
+    resultAfter_T = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_T = res;
   }
   uint8_t resultAfterf1;
-  if (resultAfter_T == 0) {
+  if (resultAfter_T == EVERPARSE_STATUS_SUCCESS) {
     resultAfterf1 = resultAfter_T;
   }
   else {
@@ -52,7 +52,7 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
     (void)(error_handler_fn("_T", "f1", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_T), _ct1, ctxt, sl_base, fieldStart_T));
     resultAfterf1 = resultAfter_T;
   }
-  if (resultAfterf1 == 0) {
+  if (resultAfterf1 == EVERPARSE_STATUS_SUCCESS) {
     /* Validating field f2 */
     size_t p2_1 = sl_pos[0];
     uint64_t fieldStart_T1 = (uint64_t)p2_1;
@@ -74,23 +74,23 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
     uint8_t res1;
     if (hasBytes1) {
       pos1 = (p01 + (size_t)20);
-      res1 = 0;
+      res1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      res1 = 2;
+      res1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_T1;
-    if (res1 == 0) {
+    if (res1 == EVERPARSE_STATUS_SUCCESS) {
       size_t p6 = sl_pos[0];
       size_t p__1 = (p6 + pos1);
       sl_pos[0] = p__1;
-      resultAfter_T1 = 0;
+      resultAfter_T1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
       resultAfter_T1 = res1;
     }
     uint8_t resultAfterf2;
-    if (resultAfter_T1 == 0) {
+    if (resultAfter_T1 == EVERPARSE_STATUS_SUCCESS) {
       resultAfterf2 = resultAfter_T1;
     }
     else {
@@ -105,21 +105,21 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
       resultAfterf2 = resultAfter_T1;
     }
     uint8_t resultAfter_T2;
-    if (resultAfterf2 == 0) {
+    if (resultAfterf2 == EVERPARSE_STATUS_SUCCESS) {
       size_t start_pos_sz = (size_t)fieldStartf2;
       uint8_t *hd = (sl_base + start_pos_sz);
       out[0] = hd;
       if (true) {
-        resultAfter_T2 = 0;
+        resultAfter_T2 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_T2 = 5;
+        resultAfter_T2 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
       }
     }
     else {
       resultAfter_T2 = resultAfterf2;
     }
-    if (resultAfter_T2 == 0) {
+    if (resultAfter_T2 == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_T2;
     }
     else {
@@ -173,23 +173,23 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)10);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_TAct;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_TAct = 0;
+    resultAfter_TAct = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_TAct = res;
   }
   uint8_t resultAfterf1;
-  if (resultAfter_TAct == 0) {
+  if (resultAfter_TAct == EVERPARSE_STATUS_SUCCESS) {
     resultAfterf1 = resultAfter_TAct;
   }
   else {
@@ -203,7 +203,7 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
     (void)(error_handler_fn("_TAct", "f1", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_TAct), _ct1, ctxt, sl_base, fieldStart_TAct));
     resultAfterf1 = resultAfter_TAct;
   }
-  if (resultAfterf1 == 0) {
+  if (resultAfterf1 == EVERPARSE_STATUS_SUCCESS) {
     /* Validating field f2 */
     size_t p2_1 = sl_pos[0];
     uint64_t fieldStart_TAct1 = (uint64_t)p2_1;
@@ -225,23 +225,23 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
     uint8_t res1;
     if (hasBytes1) {
       pos1 = (p01 + (size_t)20);
-      res1 = 0;
+      res1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      res1 = 2;
+      res1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_TAct1;
-    if (res1 == 0) {
+    if (res1 == EVERPARSE_STATUS_SUCCESS) {
       size_t p6 = sl_pos[0];
       size_t p__1 = (p6 + pos1);
       sl_pos[0] = p__1;
-      resultAfter_TAct1 = 0;
+      resultAfter_TAct1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
       resultAfter_TAct1 = res1;
     }
     uint8_t resultAfterf2;
-    if (resultAfter_TAct1 == 0) {
+    if (resultAfter_TAct1 == EVERPARSE_STATUS_SUCCESS) {
       resultAfterf2 = resultAfter_TAct1;
     }
     else {
@@ -256,21 +256,21 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
       resultAfterf2 = resultAfter_TAct1;
     }
     uint8_t resultAfter_TAct2;
-    if (resultAfterf2 == 0) {
+    if (resultAfterf2 == EVERPARSE_STATUS_SUCCESS) {
       size_t start_pos_sz = (size_t)fieldStartf2;
       uint8_t *hd = (sl_base + start_pos_sz);
       out[0] = hd;
       if (true) {
-        resultAfter_TAct2 = 0;
+        resultAfter_TAct2 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_TAct2 = 5;
+        resultAfter_TAct2 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
       }
     }
     else {
       resultAfter_TAct2 = resultAfterf2;
     }
-    if (resultAfter_TAct2 == 0) {
+    if (resultAfter_TAct2 == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_TAct2;
     }
     else {

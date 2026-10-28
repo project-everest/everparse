@@ -20,22 +20,22 @@ static uint8_t HelloWorld_validate____core__point(EVERPARSE_APP_CTXT ctxt, EVERP
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)4);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_point;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_point = 0;
+    resultAfter_point = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_point = res;
   }
-  if (resultAfter_point == 0) {
+  if (resultAfter_point == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_point;
   }
   else {

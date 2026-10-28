@@ -25,13 +25,13 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + 2);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter__bitfield_0;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     resultAfter__bitfield_0 = res;
   }
   else {
@@ -45,7 +45,7 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
     (void)(error_handler_fn("_BF2bis", "__bitfield_0", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfter__bitfield_0 = res;
   }
-  if (resultAfter__bitfield_0 == 0) {
+  if (resultAfter__bitfield_0 == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 2);
     uint8_t *sub = (sl_base + p01);
@@ -68,13 +68,13 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
     uint8_t resultAfter__bitfield_1;
     if (hasBytes1) {
       pos1 = (p02 + 2);
-      resultAfter__bitfield_1 = 0;
+      resultAfter__bitfield_1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfter__bitfield_1 = 2;
+      resultAfter__bitfield_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_BF2bis;
-    if (resultAfter__bitfield_1 == 0) {
+    if (resultAfter__bitfield_1 == EVERPARSE_STATUS_SUCCESS) {
       size_t p03 = sl_pos[0];
       size_t m1 = (p03 + 2);
       uint8_t *sub1 = (sl_base + p03);
@@ -102,13 +102,13 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
         uint8_t res1;
         if (hasBytes2) {
           pos2 = (p04 + 1);
-          res1 = 0;
+          res1 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          res1 = 2;
+          res1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
         }
         uint8_t res2;
-        if (res1 == 0) {
+        if (res1 == EVERPARSE_STATUS_SUCCESS) {
           res2 = res1;
         }
         else {
@@ -122,24 +122,24 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
           (void)(error_handler_fn("_BF2bis", "z", EverParse3d_ErrorCode_error_reason_of_result(res1), _ct2, ctxt, sl_base, start_pos1));
           res2 = res1;
         }
-        if (res2 == 0) {
+        if (res2 == EVERPARSE_STATUS_SUCCESS) {
           size_t p6 = sl_pos[0];
           size_t p_ = (p6 + pos2);
           sl_pos[0] = p_;
-          resultAfter_BF2bis = 0;
+          resultAfter_BF2bis = EVERPARSE_STATUS_SUCCESS;
         }
         else {
           resultAfter_BF2bis = res2;
         }
       }
       else {
-        resultAfter_BF2bis = 6;
+        resultAfter_BF2bis = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
       }
     }
     else {
       resultAfter_BF2bis = resultAfter__bitfield_1;
     }
-    if (resultAfter_BF2bis == 0) {
+    if (resultAfter_BF2bis == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_BF2bis;
     }
     else {
@@ -179,13 +179,13 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + 2);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter__bitfield_0;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     resultAfter__bitfield_0 = res;
   }
   else {
@@ -199,7 +199,7 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
     (void)(error_handler_fn("_BF3", "__bitfield_0", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfter__bitfield_0 = res;
   }
-  if (resultAfter__bitfield_0 == 0) {
+  if (resultAfter__bitfield_0 == EVERPARSE_STATUS_SUCCESS) {
     size_t p01 = sl_pos[0];
     size_t m = (p01 + 2);
     uint8_t *sub = (sl_base + p01);
@@ -222,13 +222,13 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
     uint8_t resultAfter__bitfield_1;
     if (hasBytes1) {
       pos1 = (p02 + 2);
-      resultAfter__bitfield_1 = 0;
+      resultAfter__bitfield_1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfter__bitfield_1 = 2;
+      resultAfter__bitfield_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t resultAfter_BF3;
-    if (resultAfter__bitfield_1 == 0) {
+    if (resultAfter__bitfield_1 == EVERPARSE_STATUS_SUCCESS) {
       size_t p03 = sl_pos[0];
       size_t m1 = (p03 + 2);
       uint8_t *sub1 = (sl_base + p03);
@@ -256,13 +256,13 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
         uint8_t res1;
         if (hasBytes2) {
           pos2 = (p04 + 1);
-          res1 = 0;
+          res1 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          res1 = 2;
+          res1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
         }
         uint8_t res2;
-        if (res1 == 0) {
+        if (res1 == EVERPARSE_STATUS_SUCCESS) {
           res2 = res1;
         }
         else {
@@ -276,24 +276,24 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
           (void)(error_handler_fn("_BF3", "z", EverParse3d_ErrorCode_error_reason_of_result(res1), _ct2, ctxt, sl_base, start_pos1));
           res2 = res1;
         }
-        if (res2 == 0) {
+        if (res2 == EVERPARSE_STATUS_SUCCESS) {
           size_t p6 = sl_pos[0];
           size_t p_ = (p6 + pos2);
           sl_pos[0] = p_;
-          resultAfter_BF3 = 0;
+          resultAfter_BF3 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
           resultAfter_BF3 = res2;
         }
       }
       else {
-        resultAfter_BF3 = 6;
+        resultAfter_BF3 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
       }
     }
     else {
       resultAfter_BF3 = resultAfter__bitfield_1;
     }
-    if (resultAfter_BF3 == 0) {
+    if (resultAfter_BF3 == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_BF3;
     }
     else {
@@ -319,7 +319,7 @@ static uint8_t BF_validate____core__dummy(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERR
   uint64_t fieldStart_dummy = (uint64_t)p;
   uint8_t resultAfter_dummy = BF_validate____core__BF2bis(ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
   uint8_t resultAfteremp2;
-  if (resultAfter_dummy == 0) {
+  if (resultAfter_dummy == EVERPARSE_STATUS_SUCCESS) {
     resultAfteremp2 = resultAfter_dummy;
   }
   else {
@@ -333,12 +333,12 @@ static uint8_t BF_validate____core__dummy(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERR
     (void)(error_handler_fn("_dummy", "emp2", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_dummy), _ct1, ctxt, sl_base, fieldStart_dummy));
     resultAfteremp2 = resultAfter_dummy;
   }
-  if (resultAfteremp2 == 0) {
+  if (resultAfteremp2 == EVERPARSE_STATUS_SUCCESS) {
     /* Validating field emp3 */
     size_t p1 = sl_pos[0];
     uint64_t fieldStart_dummy1 = (uint64_t)p1;
     uint8_t resultAfter_dummy1 = BF_validate____core__BF3(ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter_dummy1 == 0) {
+    if (resultAfter_dummy1 == EVERPARSE_STATUS_SUCCESS) {
       return resultAfter_dummy1;
     }
     else {

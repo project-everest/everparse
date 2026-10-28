@@ -21,22 +21,22 @@ static uint8_t Triangle2_validate____core__triangle(EVERPARSE_APP_CTXT ctxt, EVE
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)12);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_triangle;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_triangle = 0;
+    resultAfter_triangle = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_triangle = res;
   }
-  if (resultAfter_triangle == 0) {
+  if (resultAfter_triangle == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_triangle;
   }
   else {

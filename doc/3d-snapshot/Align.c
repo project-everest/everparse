@@ -20,22 +20,22 @@ static uint8_t Align_validate____core__coloredPoint1(EVERPARSE_APP_CTXT ctxt, EV
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)6);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_coloredPoint1;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_coloredPoint1 = 0;
+    resultAfter_coloredPoint1 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_coloredPoint1 = res;
   }
-  if (resultAfter_coloredPoint1 == 0) {
+  if (resultAfter_coloredPoint1 == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_coloredPoint1;
   }
   else {

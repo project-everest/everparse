@@ -21,22 +21,22 @@ static uint8_t Derived_validate____core__Triple(EVERPARSE_APP_CTXT ctxt, EVERPAR
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)12);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_Triple;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_Triple = 0;
+    resultAfter_Triple = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_Triple = res;
   }
-  if (resultAfter_Triple == 0) {
+  if (resultAfter_Triple == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_Triple;
   }
   else {
@@ -85,22 +85,22 @@ static uint8_t Derived_validate____core__Quad(EVERPARSE_APP_CTXT ctxt, EVERPARSE
   uint8_t res;
   if (hasBytes) {
     pos = (p0 + (size_t)16);
-    res = 0;
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t resultAfter_Quad;
-  if (res == 0) {
+  if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t p2 = sl_pos[0];
     size_t p_ = (p2 + pos);
     sl_pos[0] = p_;
-    resultAfter_Quad = 0;
+    resultAfter_Quad = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     resultAfter_Quad = res;
   }
-  if (resultAfter_Quad == 0) {
+  if (resultAfter_Quad == EVERPARSE_STATUS_SUCCESS) {
     return resultAfter_Quad;
   }
   else {
