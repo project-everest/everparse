@@ -39,42 +39,14 @@ static uint8_t Triangle_validate____core__triangle(EVERPARSE_APP_CTXT ctxt, EVER
     return resultAfter_triangle;
   }
   else {
-    const char * _ct1;
-    if (resultAfter_triangle == 0) {
-      _ct1 = "success";
-    }
-    else if (resultAfter_triangle == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (resultAfter_triangle == 3) {
-      _ct1 = "impossible";
-    }
-    else if (resultAfter_triangle == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (resultAfter_triangle == 5) {
-      _ct1 = "action failed";
-    }
-    else if (resultAfter_triangle == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (resultAfter_triangle == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (resultAfter_triangle == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((resultAfter_triangle == 0) || ((resultAfter_triangle >= 2) && (resultAfter_triangle <= 8))) {
-      _ct2 = (uint64_t)resultAfter_triangle;
+      _ct1 = (uint64_t)resultAfter_triangle;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_triangle", "a", _ct1, _ct2, ctxt, sl_base, fieldStart_triangle));
+    (void)(error_handler_fn("_triangle", "a", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_triangle), _ct1, ctxt, sl_base, fieldStart_triangle));
     return resultAfter_triangle;
   }
 }

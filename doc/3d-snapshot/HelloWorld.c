@@ -39,42 +39,14 @@ static uint8_t HelloWorld_validate____core__point(EVERPARSE_APP_CTXT ctxt, EVERP
     return resultAfter_point;
   }
   else {
-    const char * _ct1;
-    if (resultAfter_point == 0) {
-      _ct1 = "success";
-    }
-    else if (resultAfter_point == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (resultAfter_point == 3) {
-      _ct1 = "impossible";
-    }
-    else if (resultAfter_point == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (resultAfter_point == 5) {
-      _ct1 = "action failed";
-    }
-    else if (resultAfter_point == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (resultAfter_point == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (resultAfter_point == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((resultAfter_point == 0) || ((resultAfter_point >= 2) && (resultAfter_point <= 8))) {
-      _ct2 = (uint64_t)resultAfter_point;
+      _ct1 = (uint64_t)resultAfter_point;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_point", "x", _ct1, _ct2, ctxt, sl_base, fieldStart_point));
+    (void)(error_handler_fn("_point", "x", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_point), _ct1, ctxt, sl_base, fieldStart_point));
     return resultAfter_point;
   }
 }

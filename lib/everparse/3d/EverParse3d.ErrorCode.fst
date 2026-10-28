@@ -29,7 +29,9 @@ noextract
 let is_validation_error (code:U8.t) : bool =
   code <> validator_success && code <> validator_error_action_failed
 
-inline_for_extraction
+// Not inline_for_extraction: extracted once into the runtime EverParse.h as a
+// static inline function, rather than duplicated at every validator call site.
+[@@FStar.Attributes.CInline]
 let error_reason_of_result (code:U8.t) : string =
   match code with
   | 0uy -> "success"

@@ -34,42 +34,14 @@ static uint8_t BoundedSum_validate____core__boundedSum(uint32_t bound, EVERPARSE
     resultAfterleft = res;
   }
   else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
+      _ct1 = (uint64_t)res;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_boundedSum", "left", _ct1, _ct2, ctxt, sl_base, start_pos));
+    (void)(error_handler_fn("_boundedSum", "left", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfterleft = res;
   }
   if (resultAfterleft == 0) {
@@ -150,42 +122,14 @@ static uint8_t BoundedSum_validate____core__boundedSum(uint32_t bound, EVERPARSE
       return resultAfter_boundedSum;
     }
     else {
-      const char * _ct3;
-      if (resultAfter_boundedSum == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAfter_boundedSum == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAfter_boundedSum == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAfter_boundedSum == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAfter_boundedSum == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAfter_boundedSum == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAfter_boundedSum == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAfter_boundedSum == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
+      uint64_t _ct2;
       if ((resultAfter_boundedSum == 0) || ((resultAfter_boundedSum >= 2) && (resultAfter_boundedSum <= 8))) {
-        _ct4 = (uint64_t)resultAfter_boundedSum;
+        _ct2 = (uint64_t)resultAfter_boundedSum;
       }
       else {
-        _ct4 = 15;
+        _ct2 = 15;
       }
-      (void)(error_handler_fn("_boundedSum", "right.refinement", _ct3, _ct4, ctxt, sl_base, fieldStart_boundedSum));
+      (void)(error_handler_fn("_boundedSum", "right.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_boundedSum), _ct2, ctxt, sl_base, fieldStart_boundedSum));
       return resultAfter_boundedSum;
     }
   }
@@ -240,42 +184,14 @@ static uint8_t BoundedSum_validate____core_mySum(EVERPARSE_APP_CTXT ctxt, EVERPA
     resultAfterbound = res;
   }
   else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
+      _ct1 = (uint64_t)res;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("mySum", "bound", _ct1, _ct2, ctxt, sl_base, start_pos));
+    (void)(error_handler_fn("mySum", "bound", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfterbound = res;
   }
   if (resultAfterbound == 0) {
@@ -304,42 +220,14 @@ static uint8_t BoundedSum_validate____core_mySum(EVERPARSE_APP_CTXT ctxt, EVERPA
       return resultAftermySum;
     }
     else {
-      const char * _ct3;
-      if (resultAftermySum == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAftermySum == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAftermySum == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAftermySum == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAftermySum == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAftermySum == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAftermySum == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAftermySum == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
+      uint64_t _ct2;
       if ((resultAftermySum == 0) || ((resultAftermySum >= 2) && (resultAftermySum <= 8))) {
-        _ct4 = (uint64_t)resultAftermySum;
+        _ct2 = (uint64_t)resultAftermySum;
       }
       else {
-        _ct4 = 15;
+        _ct2 = 15;
       }
-      (void)(error_handler_fn("mySum", "sum", _ct3, _ct4, ctxt, sl_base, fieldStartmySum));
+      (void)(error_handler_fn("mySum", "sum", EverParse3d_ErrorCode_error_reason_of_result(resultAftermySum), _ct2, ctxt, sl_base, fieldStartmySum));
       return resultAftermySum;
     }
   }

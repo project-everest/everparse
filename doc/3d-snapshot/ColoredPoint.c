@@ -40,42 +40,14 @@ static uint8_t ColoredPoint_validate____core__coloredPoint1(EVERPARSE_APP_CTXT c
     return resultAfter_coloredPoint1;
   }
   else {
-    const char * _ct1;
-    if (resultAfter_coloredPoint1 == 0) {
-      _ct1 = "success";
-    }
-    else if (resultAfter_coloredPoint1 == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (resultAfter_coloredPoint1 == 3) {
-      _ct1 = "impossible";
-    }
-    else if (resultAfter_coloredPoint1 == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (resultAfter_coloredPoint1 == 5) {
-      _ct1 = "action failed";
-    }
-    else if (resultAfter_coloredPoint1 == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (resultAfter_coloredPoint1 == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (resultAfter_coloredPoint1 == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((resultAfter_coloredPoint1 == 0) || ((resultAfter_coloredPoint1 >= 2) && (resultAfter_coloredPoint1 <= 8))) {
-      _ct2 = (uint64_t)resultAfter_coloredPoint1;
+      _ct1 = (uint64_t)resultAfter_coloredPoint1;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_coloredPoint1", "color", _ct1, _ct2, ctxt, sl_base, fieldStart_coloredPoint1));
+    (void)(error_handler_fn("_coloredPoint1", "color", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_coloredPoint1), _ct1, ctxt, sl_base, fieldStart_coloredPoint1));
     return resultAfter_coloredPoint1;
   }
 }
@@ -132,42 +104,14 @@ static uint8_t ColoredPoint_validate____core__coloredPoint2(EVERPARSE_APP_CTXT c
     return resultAfter_coloredPoint2;
   }
   else {
-    const char * _ct1;
-    if (resultAfter_coloredPoint2 == 0) {
-      _ct1 = "success";
-    }
-    else if (resultAfter_coloredPoint2 == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (resultAfter_coloredPoint2 == 3) {
-      _ct1 = "impossible";
-    }
-    else if (resultAfter_coloredPoint2 == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (resultAfter_coloredPoint2 == 5) {
-      _ct1 = "action failed";
-    }
-    else if (resultAfter_coloredPoint2 == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (resultAfter_coloredPoint2 == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (resultAfter_coloredPoint2 == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((resultAfter_coloredPoint2 == 0) || ((resultAfter_coloredPoint2 >= 2) && (resultAfter_coloredPoint2 <= 8))) {
-      _ct2 = (uint64_t)resultAfter_coloredPoint2;
+      _ct1 = (uint64_t)resultAfter_coloredPoint2;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_coloredPoint2", "pt", _ct1, _ct2, ctxt, sl_base, fieldStart_coloredPoint2));
+    (void)(error_handler_fn("_coloredPoint2", "pt", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_coloredPoint2), _ct1, ctxt, sl_base, fieldStart_coloredPoint2));
     return resultAfter_coloredPoint2;
   }
 }

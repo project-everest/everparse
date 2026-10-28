@@ -107,42 +107,14 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
         resultAfter_enum_constraint = resultAfter_enum_constraint_1;
       }
       else {
-        const char * _ct1;
-        if (resultAfter_enum_constraint_1 == 0) {
-          _ct1 = "success";
-        }
-        else if (resultAfter_enum_constraint_1 == 2) {
-          _ct1 = "not enough data";
-        }
-        else if (resultAfter_enum_constraint_1 == 3) {
-          _ct1 = "impossible";
-        }
-        else if (resultAfter_enum_constraint_1 == 4) {
-          _ct1 = "list size not multiple of element size";
-        }
-        else if (resultAfter_enum_constraint_1 == 5) {
-          _ct1 = "action failed";
-        }
-        else if (resultAfter_enum_constraint_1 == 6) {
-          _ct1 = "constraint failed";
-        }
-        else if (resultAfter_enum_constraint_1 == 7) {
-          _ct1 = "unexpected padding";
-        }
-        else if (resultAfter_enum_constraint_1 == 8) {
-          _ct1 = "probe failed";
-        }
-        else {
-          _ct1 = "unspecified";
-        }
-        uint64_t _ct2;
+        uint64_t _ct1;
         if ((resultAfter_enum_constraint_1 == 0) || ((resultAfter_enum_constraint_1 >= 2) && (resultAfter_enum_constraint_1 <= 8))) {
-          _ct2 = (uint64_t)resultAfter_enum_constraint_1;
+          _ct1 = (uint64_t)resultAfter_enum_constraint_1;
         }
         else {
-          _ct2 = 15;
+          _ct1 = 15;
         }
-        (void)(error_handler_fn("_enum_constraint", "x.refinement", _ct1, _ct2, ctxt, sl_base, fieldStart_enum_constraint1));
+        (void)(error_handler_fn("_enum_constraint", "x.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_enum_constraint_1), _ct1, ctxt, sl_base, fieldStart_enum_constraint1));
         resultAfter_enum_constraint = resultAfter_enum_constraint_1;
       }
     }
@@ -157,42 +129,14 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
     return resultAfter_enum_constraint;
   }
   else {
-    const char * _ct3;
-    if (resultAfter_enum_constraint == 0) {
-      _ct3 = "success";
-    }
-    else if (resultAfter_enum_constraint == 2) {
-      _ct3 = "not enough data";
-    }
-    else if (resultAfter_enum_constraint == 3) {
-      _ct3 = "impossible";
-    }
-    else if (resultAfter_enum_constraint == 4) {
-      _ct3 = "list size not multiple of element size";
-    }
-    else if (resultAfter_enum_constraint == 5) {
-      _ct3 = "action failed";
-    }
-    else if (resultAfter_enum_constraint == 6) {
-      _ct3 = "constraint failed";
-    }
-    else if (resultAfter_enum_constraint == 7) {
-      _ct3 = "unexpected padding";
-    }
-    else if (resultAfter_enum_constraint == 8) {
-      _ct3 = "probe failed";
-    }
-    else {
-      _ct3 = "unspecified";
-    }
-    uint64_t _ct4;
+    uint64_t _ct2;
     if ((resultAfter_enum_constraint == 0) || ((resultAfter_enum_constraint >= 2) && (resultAfter_enum_constraint <= 8))) {
-      _ct4 = (uint64_t)resultAfter_enum_constraint;
+      _ct2 = (uint64_t)resultAfter_enum_constraint;
     }
     else {
-      _ct4 = 15;
+      _ct2 = 15;
     }
-    (void)(error_handler_fn("_enum_constraint", "col", _ct3, _ct4, ctxt, sl_base, fieldStart_enum_constraint));
+    (void)(error_handler_fn("_enum_constraint", "col", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_enum_constraint), _ct2, ctxt, sl_base, fieldStart_enum_constraint));
     return resultAfter_enum_constraint;
   }
 }

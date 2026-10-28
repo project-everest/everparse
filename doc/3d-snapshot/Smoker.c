@@ -77,42 +77,14 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
         res1 = res;
       }
       else {
-        const char * _ct1;
-        if (res == 0) {
-          _ct1 = "success";
-        }
-        else if (res == 2) {
-          _ct1 = "not enough data";
-        }
-        else if (res == 3) {
-          _ct1 = "impossible";
-        }
-        else if (res == 4) {
-          _ct1 = "list size not multiple of element size";
-        }
-        else if (res == 5) {
-          _ct1 = "action failed";
-        }
-        else if (res == 6) {
-          _ct1 = "constraint failed";
-        }
-        else if (res == 7) {
-          _ct1 = "unexpected padding";
-        }
-        else if (res == 8) {
-          _ct1 = "probe failed";
-        }
-        else {
-          _ct1 = "unspecified";
-        }
-        uint64_t _ct2;
+        uint64_t _ct1;
         if ((res == 0) || ((res >= 2) && (res <= 8))) {
-          _ct2 = (uint64_t)res;
+          _ct1 = (uint64_t)res;
         }
         else {
-          _ct2 = 15;
+          _ct1 = 15;
         }
-        (void)(error_handler_fn("_smoker", "cigarettesConsumed", _ct1, _ct2, ctxt, sl_base, start_pos));
+        (void)(error_handler_fn("_smoker", "cigarettesConsumed", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
         res1 = res;
       }
       if (res1 == 0) {
@@ -136,42 +108,14 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
     return resultAfter_smoker;
   }
   else {
-    const char * _ct3;
-    if (resultAfter_smoker == 0) {
-      _ct3 = "success";
-    }
-    else if (resultAfter_smoker == 2) {
-      _ct3 = "not enough data";
-    }
-    else if (resultAfter_smoker == 3) {
-      _ct3 = "impossible";
-    }
-    else if (resultAfter_smoker == 4) {
-      _ct3 = "list size not multiple of element size";
-    }
-    else if (resultAfter_smoker == 5) {
-      _ct3 = "action failed";
-    }
-    else if (resultAfter_smoker == 6) {
-      _ct3 = "constraint failed";
-    }
-    else if (resultAfter_smoker == 7) {
-      _ct3 = "unexpected padding";
-    }
-    else if (resultAfter_smoker == 8) {
-      _ct3 = "probe failed";
-    }
-    else {
-      _ct3 = "unspecified";
-    }
-    uint64_t _ct4;
+    uint64_t _ct2;
     if ((resultAfter_smoker == 0) || ((resultAfter_smoker >= 2) && (resultAfter_smoker <= 8))) {
-      _ct4 = (uint64_t)resultAfter_smoker;
+      _ct2 = (uint64_t)resultAfter_smoker;
     }
     else {
-      _ct4 = 15;
+      _ct2 = 15;
     }
-    (void)(error_handler_fn("_smoker", "age", _ct3, _ct4, ctxt, sl_base, fieldStart_smoker));
+    (void)(error_handler_fn("_smoker", "age", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_smoker), _ct2, ctxt, sl_base, fieldStart_smoker));
     return resultAfter_smoker;
   }
 }

@@ -35,42 +35,14 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
     resultAfter__bitfield_0 = res;
   }
   else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
+      _ct1 = (uint64_t)res;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_BF2bis", "__bitfield_0", _ct1, _ct2, ctxt, sl_base, start_pos));
+    (void)(error_handler_fn("_BF2bis", "__bitfield_0", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfter__bitfield_0 = res;
   }
   if (resultAfter__bitfield_0 == 0) {
@@ -148,42 +120,14 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
           res2 = res1;
         }
         else {
-          const char * _ct3;
-          if (res1 == 0) {
-            _ct3 = "success";
-          }
-          else if (res1 == 2) {
-            _ct3 = "not enough data";
-          }
-          else if (res1 == 3) {
-            _ct3 = "impossible";
-          }
-          else if (res1 == 4) {
-            _ct3 = "list size not multiple of element size";
-          }
-          else if (res1 == 5) {
-            _ct3 = "action failed";
-          }
-          else if (res1 == 6) {
-            _ct3 = "constraint failed";
-          }
-          else if (res1 == 7) {
-            _ct3 = "unexpected padding";
-          }
-          else if (res1 == 8) {
-            _ct3 = "probe failed";
-          }
-          else {
-            _ct3 = "unspecified";
-          }
-          uint64_t _ct4;
+          uint64_t _ct2;
           if ((res1 == 0) || ((res1 >= 2) && (res1 <= 8))) {
-            _ct4 = (uint64_t)res1;
+            _ct2 = (uint64_t)res1;
           }
           else {
-            _ct4 = 15;
+            _ct2 = 15;
           }
-          (void)(error_handler_fn("_BF2bis", "z", _ct3, _ct4, ctxt, sl_base, start_pos1));
+          (void)(error_handler_fn("_BF2bis", "z", EverParse3d_ErrorCode_error_reason_of_result(res1), _ct2, ctxt, sl_base, start_pos1));
           res2 = res1;
         }
         if (res2 == 0) {
@@ -207,42 +151,14 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
       return resultAfter_BF2bis;
     }
     else {
-      const char * _ct5;
-      if (resultAfter_BF2bis == 0) {
-        _ct5 = "success";
-      }
-      else if (resultAfter_BF2bis == 2) {
-        _ct5 = "not enough data";
-      }
-      else if (resultAfter_BF2bis == 3) {
-        _ct5 = "impossible";
-      }
-      else if (resultAfter_BF2bis == 4) {
-        _ct5 = "list size not multiple of element size";
-      }
-      else if (resultAfter_BF2bis == 5) {
-        _ct5 = "action failed";
-      }
-      else if (resultAfter_BF2bis == 6) {
-        _ct5 = "constraint failed";
-      }
-      else if (resultAfter_BF2bis == 7) {
-        _ct5 = "unexpected padding";
-      }
-      else if (resultAfter_BF2bis == 8) {
-        _ct5 = "probe failed";
-      }
-      else {
-        _ct5 = "unspecified";
-      }
-      uint64_t _ct6;
+      uint64_t _ct3;
       if ((resultAfter_BF2bis == 0) || ((resultAfter_BF2bis >= 2) && (resultAfter_BF2bis <= 8))) {
-        _ct6 = (uint64_t)resultAfter_BF2bis;
+        _ct3 = (uint64_t)resultAfter_BF2bis;
       }
       else {
-        _ct6 = 15;
+        _ct3 = 15;
       }
-      (void)(error_handler_fn("_BF2bis", "__bitfield_1", _ct5, _ct6, ctxt, sl_base, fieldStart_BF2bis));
+      (void)(error_handler_fn("_BF2bis", "__bitfield_1", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_BF2bis), _ct3, ctxt, sl_base, fieldStart_BF2bis));
       return resultAfter_BF2bis;
     }
   }
@@ -281,42 +197,14 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
     resultAfter__bitfield_0 = res;
   }
   else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
+      _ct1 = (uint64_t)res;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_BF3", "__bitfield_0", _ct1, _ct2, ctxt, sl_base, start_pos));
+    (void)(error_handler_fn("_BF3", "__bitfield_0", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
     resultAfter__bitfield_0 = res;
   }
   if (resultAfter__bitfield_0 == 0) {
@@ -394,42 +282,14 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
           res2 = res1;
         }
         else {
-          const char * _ct3;
-          if (res1 == 0) {
-            _ct3 = "success";
-          }
-          else if (res1 == 2) {
-            _ct3 = "not enough data";
-          }
-          else if (res1 == 3) {
-            _ct3 = "impossible";
-          }
-          else if (res1 == 4) {
-            _ct3 = "list size not multiple of element size";
-          }
-          else if (res1 == 5) {
-            _ct3 = "action failed";
-          }
-          else if (res1 == 6) {
-            _ct3 = "constraint failed";
-          }
-          else if (res1 == 7) {
-            _ct3 = "unexpected padding";
-          }
-          else if (res1 == 8) {
-            _ct3 = "probe failed";
-          }
-          else {
-            _ct3 = "unspecified";
-          }
-          uint64_t _ct4;
+          uint64_t _ct2;
           if ((res1 == 0) || ((res1 >= 2) && (res1 <= 8))) {
-            _ct4 = (uint64_t)res1;
+            _ct2 = (uint64_t)res1;
           }
           else {
-            _ct4 = 15;
+            _ct2 = 15;
           }
-          (void)(error_handler_fn("_BF3", "z", _ct3, _ct4, ctxt, sl_base, start_pos1));
+          (void)(error_handler_fn("_BF3", "z", EverParse3d_ErrorCode_error_reason_of_result(res1), _ct2, ctxt, sl_base, start_pos1));
           res2 = res1;
         }
         if (res2 == 0) {
@@ -453,42 +313,14 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
       return resultAfter_BF3;
     }
     else {
-      const char * _ct5;
-      if (resultAfter_BF3 == 0) {
-        _ct5 = "success";
-      }
-      else if (resultAfter_BF3 == 2) {
-        _ct5 = "not enough data";
-      }
-      else if (resultAfter_BF3 == 3) {
-        _ct5 = "impossible";
-      }
-      else if (resultAfter_BF3 == 4) {
-        _ct5 = "list size not multiple of element size";
-      }
-      else if (resultAfter_BF3 == 5) {
-        _ct5 = "action failed";
-      }
-      else if (resultAfter_BF3 == 6) {
-        _ct5 = "constraint failed";
-      }
-      else if (resultAfter_BF3 == 7) {
-        _ct5 = "unexpected padding";
-      }
-      else if (resultAfter_BF3 == 8) {
-        _ct5 = "probe failed";
-      }
-      else {
-        _ct5 = "unspecified";
-      }
-      uint64_t _ct6;
+      uint64_t _ct3;
       if ((resultAfter_BF3 == 0) || ((resultAfter_BF3 >= 2) && (resultAfter_BF3 <= 8))) {
-        _ct6 = (uint64_t)resultAfter_BF3;
+        _ct3 = (uint64_t)resultAfter_BF3;
       }
       else {
-        _ct6 = 15;
+        _ct3 = 15;
       }
-      (void)(error_handler_fn("_BF3", "__bitfield_1", _ct5, _ct6, ctxt, sl_base, fieldStart_BF3));
+      (void)(error_handler_fn("_BF3", "__bitfield_1", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_BF3), _ct3, ctxt, sl_base, fieldStart_BF3));
       return resultAfter_BF3;
     }
   }
@@ -507,42 +339,14 @@ static uint8_t BF_validate____core__dummy(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERR
     resultAfteremp2 = resultAfter_dummy;
   }
   else {
-    const char * _ct1;
-    if (resultAfter_dummy == 0) {
-      _ct1 = "success";
-    }
-    else if (resultAfter_dummy == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (resultAfter_dummy == 3) {
-      _ct1 = "impossible";
-    }
-    else if (resultAfter_dummy == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (resultAfter_dummy == 5) {
-      _ct1 = "action failed";
-    }
-    else if (resultAfter_dummy == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (resultAfter_dummy == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (resultAfter_dummy == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
+    uint64_t _ct1;
     if ((resultAfter_dummy == 0) || ((resultAfter_dummy >= 2) && (resultAfter_dummy <= 8))) {
-      _ct2 = (uint64_t)resultAfter_dummy;
+      _ct1 = (uint64_t)resultAfter_dummy;
     }
     else {
-      _ct2 = 15;
+      _ct1 = 15;
     }
-    (void)(error_handler_fn("_dummy", "emp2", _ct1, _ct2, ctxt, sl_base, fieldStart_dummy));
+    (void)(error_handler_fn("_dummy", "emp2", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_dummy), _ct1, ctxt, sl_base, fieldStart_dummy));
     resultAfteremp2 = resultAfter_dummy;
   }
   if (resultAfteremp2 == 0) {
@@ -554,42 +358,14 @@ static uint8_t BF_validate____core__dummy(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERR
       return resultAfter_dummy1;
     }
     else {
-      const char * _ct3;
-      if (resultAfter_dummy1 == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAfter_dummy1 == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAfter_dummy1 == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAfter_dummy1 == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAfter_dummy1 == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAfter_dummy1 == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAfter_dummy1 == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAfter_dummy1 == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
+      uint64_t _ct2;
       if ((resultAfter_dummy1 == 0) || ((resultAfter_dummy1 >= 2) && (resultAfter_dummy1 <= 8))) {
-        _ct4 = (uint64_t)resultAfter_dummy1;
+        _ct2 = (uint64_t)resultAfter_dummy1;
       }
       else {
-        _ct4 = 15;
+        _ct2 = 15;
       }
-      (void)(error_handler_fn("_dummy", "emp3", _ct3, _ct4, ctxt, sl_base, fieldStart_dummy1));
+      (void)(error_handler_fn("_dummy", "emp3", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_dummy1), _ct2, ctxt, sl_base, fieldStart_dummy1));
       return resultAfter_dummy1;
     }
   }
