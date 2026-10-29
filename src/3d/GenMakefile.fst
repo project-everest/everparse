@@ -482,9 +482,8 @@ let produce_everparse_h_rule
     };
   ] `List.Tot.append`
   (* In --api pulse mode the copy_everparse_h micro-step also copies
-     EverParsePulseEndianness.h (included by EverParse.h) and EverParsePulse.h
-     (included by every <Mod>Wrapper.c). They need their own rules, otherwise
-     make cannot repair them.
+     EverParsePulse.h (included by every <Mod>Wrapper.c). It needs its own
+     rule, otherwise make cannot repair it.
 
      Each rule names the headers its own run is responsible for, so that no two
      rules ever write the same file. These rules used to be chained instead,
@@ -494,12 +493,6 @@ let produce_everparse_h_rule
      rewriting it, which is exactly what it did. *)
   begin if Options.uses_pulse_api ()
   then [
-    {
-      ty = EverParse;
-      from = [];
-      to = mk_filename "EverParsePulseEndianness" "h";
-      args = "--__micro_step copy_everparse_h EverParsePulseEndianness.h";
-    };
     {
       ty = EverParse;
       from = [];
@@ -524,7 +517,6 @@ let produce_everparse_h_rule
         (static_prelude_headers ()) `List.Tot.append`
         (if Options.uses_pulse_api ()
         then mk_filename "EverParsePulse" "h" ::
-             mk_filename "EverParsePulseEndianness" "h" ::
              mk_filename "EverParseEndianness" "h" ::
              List.Tot.map (fun m -> mk_filename m "c") all_modules
         else [mk_filename "EverParseEndianness" "h"]);
@@ -631,10 +623,10 @@ let write_makefile
       begin if ext = "h" && everparse_h
       then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"] `List.Tot.append`
            static_prelude_headers () `List.Tot.append`
-           (* --api pulse additionally copies these two, and the generated C
-              includes them, so they belong to the installable header set. *)
+           (* --api pulse additionally copies this one, and the generated C
+              includes it, so it belongs to the installable header set. *)
            (if Options.uses_pulse_api ()
-            then [mk_filename "EverParsePulse" "h"; mk_filename "EverParsePulseEndianness" "h"]
+            then [mk_filename "EverParsePulse" "h"]
             else [])
       else []
       end `List.Tot.append`

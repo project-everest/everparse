@@ -1847,9 +1847,8 @@ let print_c_entry
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
-      (if Options.uses_pulse_api ()
-       then "EverParsePulseEndianness.h\"\n#include \"EverParse.h"
-       else "EverParseEndianness.h")
+      ("EverParseEndianness.h" ^
+       (if Options.uses_pulse_api () then "\"\n#include \"EverParse.h" else ""))
       (error_code_macros ())
       external_defs_includes
       (signatures |> List.filter (fun s -> s <> "") |> String.concat "\n\n")

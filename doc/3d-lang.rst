@@ -160,11 +160,11 @@ There can be multiple definitions marked ``entrypoint`` in a given
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
 
-  ``ModuleWrapper.h`` includes ``EverParsePulseEndianness.h`` instead of
-  ``EverParseEndianness.h``; its named ``EVERPARSE_ERROR_*`` kinds use the
-  same numbers (see :ref:`sec-error-handling-pulse`).
-  ``everparse-3d.exe --api pulse --batch`` accordingly writes two
-  extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
+  ``ModuleWrapper.h`` additionally includes ``EverParse.h``; its named
+  ``EVERPARSE_ERROR_*`` kinds use the same numbers (see
+  :ref:`sec-error-handling-pulse`).
+  ``everparse-3d.exe --api pulse --batch`` also writes an
+  extra header, ``EverParsePulse.h``,
   into the output directory alongside the ones listed above, unless
   ``--no_copy_everparse_h`` is specified. Finally, the
   client primitives that ``--input_stream`` and ``extern`` specifications

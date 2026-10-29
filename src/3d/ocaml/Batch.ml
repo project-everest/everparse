@@ -411,13 +411,11 @@ let collect_files
         List.fold_left collect_file accu
           (everparse_static_headers (Options.get_input_stream_binding ()) out_dir)
       in
-      (* --api pulse copies two more headers into out_dir; treat them like the
+      (* --api pulse copies one more header into out_dir; treat it like the
          others (clang-format, cleanup, ...). *)
       let accu =
         if Options.uses_pulse_api ()
-        then
-          let accu = collect_file accu (filename_concat out_dir "EverParsePulse.h") in
-          collect_file accu (filename_concat out_dir "EverParsePulseEndianness.h")
+        then collect_file accu (filename_concat out_dir "EverParsePulse.h")
         else accu
       in
       accu
@@ -523,10 +521,6 @@ let copy_everparse_h_raw
         let everparse_pulse_h_source = filename_concat lib_3d_home "EverParsePulse.h" in
         if wanted "EverParsePulse.h" && file_exists everparse_pulse_h_source
         then copy everparse_pulse_h_source (filename_concat out_dir "EverParsePulse.h")
-        ;
-        let everparse_pulse_endianness_h_source = filename_concat lib_3d_home "EverParsePulseEndianness.h" in
-        if wanted "EverParsePulseEndianness.h" && file_exists everparse_pulse_endianness_h_source
-        then copy everparse_pulse_endianness_h_source (filename_concat out_dir "EverParsePulseEndianness.h")
       end;
       let everparse_endianness_source = (filename_concat lib_3d_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
       if wanted "EverParseEndianness.h" && file_exists everparse_endianness_source
@@ -536,7 +530,6 @@ let everparse_pulse_headers out_dir =
   if Options.uses_pulse_api ()
   then [
       filename_concat out_dir "EverParsePulse.h";
-      filename_concat out_dir "EverParsePulseEndianness.h";
     ]
   else []
 

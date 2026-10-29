@@ -110,9 +110,9 @@ def main():
             assert "__produce_c_from_existing_krml" not in makefile
             assert ".krml" not in makefile
             assert " &: " in makefile
+            assert "EverParsePulseEndianness.h" not in makefile
             if name == "lowstar":
                 assert "EverParsePulseInternal.h" not in makefile
-                assert "EverParsePulseEndianness.h" not in makefile
             lines = makefile.splitlines()
             recipes = [
                 index for index, line in enumerate(lines)

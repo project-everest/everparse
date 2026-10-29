@@ -109,7 +109,7 @@ def profile_config(profile):
     names["CAbi.Public"] = {}
     foreign = {}
     external_types = {}
-    include = "EverParseEndianness.h" if lowstar else "EverParsePulseEndianness.h"
+    include = "EverParseEndianness.h"
     copy_module = "CopyBuffer." + backend
     external_types[("CopyBuffer.Buffer" if not lowstar else copy_module)
                    + ".copy_buffer_t"] = "EVERPARSE_COPY_BUFFER_T"

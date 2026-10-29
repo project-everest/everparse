@@ -328,7 +328,7 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
    As in Low*, the handle is an abstract type with assumed projections, all
    implemented by the client in C: Custard emits them as `extern`
-   declarations in `EverParse.h`, and `EverParsePulseEndianness.h` gives
+   declarations in `EverParse.h`, and `EverParseEndianness.h` gives
    `EVERPARSE_COPY_BUFFER_T` its `void *` typedef. Keeping the handle opaque
    is what lets a probe callback *repoint* it -- have `EverParseStreamOf`
    return a different pointer after the probe -- rather than copy into it.
