@@ -72,7 +72,23 @@ let prel_emp (t: Type0) (u: Type) (_: perm) (_: t) (_: u) : slprop = emp
 let asn1_small_int_rel (bound: pos) (_: perm) (x: I64.t) (y: asn1_integer_t bound) : slprop = pure (I64.v x == y)
 
 (* INTEGER contents of at most 8 octets always fit in 64 bits *)
+inline_for_extraction
 let small_integer (bound: pos) : bool = bound <= 8
+
+(* The representation type of a bounded INTEGER. It matches on the bound
+   directly, rather than branching on `small_integer bound`: Custard computes
+   a type-level function applied to a schema with Beta, Iota and Zeta only,
+   so neither primitive comparisons nor a function call in the scrutinee
+   would reduce. *)
+let integer_impl_t (bound: pos) : Type0 =
+  match bound with
+  | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 -> I64.t
+  | _ -> asn1_int_impl
+
+let integer_impl_t_eq (bound: pos)
+: Lemma (integer_impl_t bound == (if small_integer bound then I64.t else asn1_int_impl))
+  [SMTPat (integer_impl_t bound)]
+= ()
 
 let asn1_int_rel (bound: pos) (pm: perm) (x: asn1_int_impl) (y: asn1_integer_t bound) : slprop =
   match x with
@@ -86,7 +102,7 @@ let rec asn1_terminal_impl_t (k: asn1_terminal_k) : Tot Type0 (decreases k) =
   match k with
   | ASN1_BOOLEAN -> bool
   | ASN1_NULL -> unit
-  | ASN1_INTEGER bound -> if small_integer bound then I64.t else asn1_int_impl
+  | ASN1_INTEGER bound -> integer_impl_t bound
   | ASN1_BITSTRING -> asn1_bitstring_impl
   | ASN1_PREFIXED_TERMINAL _ k' -> asn1_terminal_impl_t k'
   | ASN1_OCTETSTRING

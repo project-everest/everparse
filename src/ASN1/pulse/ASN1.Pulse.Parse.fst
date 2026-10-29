@@ -387,3 +387,24 @@ fn parse_big_integer (bound: pos)
     res
   }
 }
+
+(* Restrictions: the representation of a refined value is that of the
+   underlying value *)
+
+let prel_refine (#t: Type0) (#u: Type) (r: prel t u) (f: u -> bool) : prel t (LowParse.Spec.Combinators.parse_filter_refine f) =
+  fun pm x y -> r pm x y
+
+inline_for_extraction
+fn parse_filter
+  (#t: Type0) (#u: Type0) (#r: prel t u)
+  (#k: Ghost.erased SB.parser_kind) (#p: LowParse.Tot.Base.parser k u)
+  (f: aparser #t #u r #(Ghost.reveal k) p)
+  (g: u -> bool)
+: aparser #t #(LowParse.Spec.Combinators.parse_filter_refine g) (prel_refine #t #u r g) #(LowParse.Spec.Combinators.parse_filter_kind k) (LowParse.Tot.Combinators.parse_filter p g)
+= (input: _) (#pm: _) (#w: _) (#v: _)
+{
+  LowParse.Tot.Combinators.parse_filter_eq p g w;
+  let res = f input #pm #w #(Ghost.hide (Ghost.reveal v <: u));
+  rewrite each (r pm res (Ghost.reveal v <: u)) as (prel_refine r g pm res v);
+  res
+}

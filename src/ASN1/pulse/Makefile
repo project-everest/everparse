@@ -144,6 +144,13 @@ test-corpus-%: $(C_OUTPUT_DIR)/corpus_%.exe $(SPEC_RUNNER) $(EVALUATION_DIR)/dat
 
 test-corpus: $(addprefix test-corpus-,$(CORPUS_TESTS))
 
+# Zero-copy parsers (ASN1.Pulse.Parser) on hand-written encodings
+$(C_OUTPUT_DIR)/parse_test.exe: $(C_OUTPUT_DIR)/ASN1.Pulse.ParseTest.c test/parse_test.c
+	$(CC) $(TEST_CFLAGS) -I $(C_OUTPUT_DIR) -o $@ $< test/parse_test.c
+
+test-parse: $(C_OUTPUT_DIR)/parse_test.exe
+	$<
+
 # Deeply nested ANY (constant stack: run with a 64 KiB stack limit)
 DEEP_ANY_DEPTH := 4000
 test-deep-any: $(C_OUTPUT_DIR)/test_Any_AnyT.exe
@@ -157,5 +164,5 @@ stack-check: $(C_OUTPUT_DIR)/ASN1.Pulse.X509.c test/stack.py
 	python3 test/stack.py --budget $(STACK_BUDGET) $(C_OUTPUT_DIR)/stack.ci \
 	  ASN1_Pulse_X509_validate_certificate ASN1_Pulse_X509_validate_crl
 
-.PRECIOUS: $(C_OUTPUT_DIR)/%.c $(C_OUTPUT_DIR)/%.h $(C_OUTPUT_DIR)/test_%.exe $(C_OUTPUT_DIR)/corpus_%.exe
-.PHONY: test test-oracle test-corpus test-deep-any stack-check FORCE
+.PRECIOUS: $(C_OUTPUT_DIR)/%.c $(C_OUTPUT_DIR)/%.h $(C_OUTPUT_DIR)/test_%.exe $(C_OUTPUT_DIR)/corpus_%.exe $(C_OUTPUT_DIR)/parse_test.exe
+.PHONY: test test-oracle test-parse test-corpus test-deep-any stack-check FORCE
