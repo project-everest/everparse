@@ -241,6 +241,8 @@ let leaf_reader
      <field>ConstraintIsOk      the result of a refinement check
      actionSuccess<Field>       the boolean returned by an action
      fieldStart<Field>          the position at which <field> starts
+     offsetIn<Field>            the offset reached by the non-consuming validator
+                                of <field>, relative to the stream position
      resultAfter<Field>         the result of validating <field>
 
    The leaf validators and the input stream operations similarly name their
@@ -458,7 +460,7 @@ fn validate_dep_pair_with_refinement_and_action'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   let [@@@rename_let ("fieldStart" ^ pascal_case name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name1)] pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
@@ -612,7 +614,7 @@ fn validate_filter
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
@@ -667,7 +669,7 @@ fn validate_filter_with_action
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
   let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
@@ -1847,7 +1849,7 @@ fn validate_dep_pair
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name1)] pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
@@ -1897,7 +1899,7 @@ fn validate_dep_pair_with_action
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
   let field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let "scanOffset"] pos = inst.scan_zero;
   let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let val_key = r1 "" sl_base sl_len sl_pos _ _;
@@ -1952,7 +1954,7 @@ fn validate_dep_pair_with_refinement'
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name1)] pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
@@ -2088,7 +2090,7 @@ fn validate_with_dep_action
   (v_sl: _)
 {
   let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
   let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res = validator_success) {
     let [@@@rename_let ("" ^ camel_case name)] field_value = r name sl_base sl_len sl_pos _ _;
@@ -2429,7 +2431,7 @@ fn validate_drop
   (contents_sl: _)
   (v_sl: _)
 {
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let "scanOffset"] pos = inst.scan_zero;
   let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl inst.scan_zero;
   if (res = validator_success) {
     let bytesConsumed = !pos;
@@ -2873,7 +2875,7 @@ fn validate_list_up_to
   LP.parser_kind_prop_equiv k p; // fstar2 only
   let mut res = validator_success;
   let mut stop = false;
-  let mut pos = inst.scan_zero;
+  let mut [@@@rename_let "elementOffset"] pos = inst.scan_zero;
   let mut pmeasure = Ghost.hide (Seq.length (Ghost.reveal v_sl)); // fstar2 only
   while (not !stop)
   invariant exists* vres vstop vpos vcur v_ctxt' extra' vmeasure .
