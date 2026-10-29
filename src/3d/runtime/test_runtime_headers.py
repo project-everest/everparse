@@ -146,10 +146,10 @@ class InventoryTests(unittest.TestCase):
                               ("static", "static inline"))
             for name in p["extern_values"]:
                 self.assertIn(name, abi["values"])
+            self.assertIn("BOOLEAN filled", abi["types"]["EVERPARSE_ERROR_FRAME"]["fields"])
             if p["api"] == "lowstar":
                 self.assertEqual(abi["functions"]["EverParseIsError"]["return"],
                                  "BOOLEAN")
-                self.assertIn("BOOLEAN filled", abi["types"]["EVERPARSE_ERROR_FRAME"]["fields"])
             if p["api"] == "lowstar" and p["stream"] != "buffer":
                 self.assertIn("BOOLEAN has_length",
                               abi["types"]["EVERPARSE_INPUT_BUFFER"]["fields"])

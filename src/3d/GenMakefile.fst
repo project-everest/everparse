@@ -79,7 +79,7 @@ let print_make_rule
                include path has to name the runtime matching the API and
                backend: runtime/<backend> for --api pulse, runtime/lowstar/<backend>
                for --api lowstar. lib_3d_home still supplies
-               EverParsePulse{,Endianness}.h and EverParseEndianness.h. *)
+               EverParseEndianness.h. *)
             let ddd_actions_home =
               let runtime_home = lib_3d_home `OS.concat` "runtime" in
               let runtime = if pulse then runtime_home else runtime_home `OS.concat` "lowstar" in
@@ -481,26 +481,12 @@ let produce_everparse_h_rule
       args = "--__micro_step copy_everparse_h EverParseEndianness.h";
     };
   ] `List.Tot.append`
-  (* In --api pulse mode the copy_everparse_h micro-step also copies
-     EverParsePulse.h (included by every <Mod>Wrapper.c). It needs its own
-     rule, otherwise make cannot repair it.
-
-     Each rule names the headers its own run is responsible for, so that no two
+  (* Each rule names the headers its own run is responsible for, so that no two
      rules ever write the same file. These rules used to be chained instead,
      with every run re-copying every header. That kept two runs from overlapping
      but did nothing about their *consumers*: once the first link finished, make
      was free to compile against EverParseEndianness.h while the second link was
      rewriting it, which is exactly what it did. *)
-  begin if Options.uses_pulse_api ()
-  then [
-    {
-      ty = EverParse;
-      from = [];
-      to = mk_filename "EverParsePulse" "h";
-      args = "--__micro_step copy_everparse_h EverParsePulse.h";
-    };
-  ] else []
-  end `List.Tot.append`
   (let headers = static_prelude_headers () in
    List.Tot.map (fun header -> {
      ty = EverParse;
@@ -516,8 +502,7 @@ let produce_everparse_h_rule
       from =
         (static_prelude_headers ()) `List.Tot.append`
         (if Options.uses_pulse_api ()
-        then mk_filename "EverParsePulse" "h" ::
-             mk_filename "EverParseEndianness" "h" ::
+        then mk_filename "EverParseEndianness" "h" ::
              List.Tot.map (fun m -> mk_filename m "c") all_modules
         else [mk_filename "EverParseEndianness" "h"]);
       to = mk_filename "EverParse" "h";
@@ -622,12 +607,7 @@ let write_makefile
     let ln =
       begin if ext = "h" && everparse_h
       then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"] `List.Tot.append`
-           static_prelude_headers () `List.Tot.append`
-           (* --api pulse additionally copies this one, and the generated C
-              includes it, so it belongs to the installable header set. *)
-           (if Options.uses_pulse_api ()
-            then [mk_filename "EverParsePulse" "h"]
-            else [])
+           static_prelude_headers ()
       else []
       end `List.Tot.append`
       begin if ext <> "h"

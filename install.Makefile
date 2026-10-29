@@ -30,7 +30,7 @@ install-quackyducky:
 	install -d $(PREFIX)/bin
 	install -m 755 bin/everparse-qd.exe $(PREFIX)/bin
 
-# EverParseEndianness.h, EverParsePulse{,Endianness}.h, noheader.txt,
+# EverParseEndianness.h, noheader.txt,
 # copyright.txt, .clang-format and Makefile.basic are the 3d runtime support
 # proper: they are checked-in sources needed by every API and backend. The rest
 # of lib/everparse/3d is the Pulse combinator library, which only exists when

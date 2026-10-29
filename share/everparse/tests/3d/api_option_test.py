@@ -77,12 +77,12 @@ def main():
         assert "Pulse.Lib.Pervasives" in (
             root / "pulse" / "ApiChoice.fst"
         ).read_text()
-        assert "EverParsePulse.h" in (
+        assert "_Static_assert(sizeof(size_t)" in (
             root / "pulse" / "ApiChoiceWrapper.c"
         ).read_text()
         # --api lowstar is Pulse-implemented too, but exposes the Low*-compatible
         # C ABI rather than the native Pulse one.
-        assert "EverParsePulse.h" not in (
+        assert "_Static_assert(sizeof(size_t)" not in (
             root / "lowstar" / "ApiChoiceWrapper.c"
         ).read_text()
         assert "Pulse.Lib.Pervasives" in (

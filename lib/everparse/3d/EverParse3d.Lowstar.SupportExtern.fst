@@ -2,7 +2,7 @@ module EverParse3d.Lowstar.SupportExtern
 open Pulse.Lib.Pervasives
 #lang-pulse
 
-module P = EverParse3d.Lowstar.Public
+module P = EverParse3d.CAbi.ErrorFrame
 module T = EverParse3d.InputStream.LowstarExtern.Types
 module R = Pulse.Lib.Reference
 module U64 = FStar.UInt64

@@ -61,11 +61,6 @@ int main(void)
       }
     }
   }
-#ifdef LOWSTAR
-  assert(is_error(EVERPARSE_VALIDATOR_ERROR_GENERIC) == 1);
-  assert(is_success(0) == 1);
-  assert(check_constraint((BOOLEAN)255, 7) == 7);
-  assert(is_error(check_constraint((BOOLEAN)0, 7)) == 1);
   EVERPARSE_ERROR_FRAME frame;
   assert(sizeof(frame.filled) == sizeof(BOOLEAN));
   uint8_t *filled = &frame.filled;
@@ -88,6 +83,36 @@ int main(void)
   CHECK_FRAME_FIELD(reason);
   CHECK_FRAME_FIELD(error_code);
 #undef CHECK_FRAME_FIELD
+#ifdef LOWSTAR
+  EVERPARSE_INPUT_BUFFER input;
+  memset(&input, 0, sizeof(input));
+#define FIRST_ERROR EVERPARSE_VALIDATOR_ERROR_GENERIC
+#define SECOND_ERROR EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED
+#else
+  uint8_t *input = NULL;
+#define FIRST_ERROR EVERPARSE_STATUS_ERROR_IMPOSSIBLE
+#define SECOND_ERROR EVERPARSE_STATUS_ERROR_PROBE_FAILED
+#endif
+  memset(&frame, 0, sizeof(frame));
+  EverParseDefaultErrorHandler("T", "f", "first", FIRST_ERROR,
+                              &frame, input, 17);
+  assert(frame.filled == 1);
+  assert(frame.start_pos == 17);
+  assert(frame.error_code == FIRST_ERROR);
+  assert(strcmp(frame.reason, "first") == 0);
+  frame.filled = (BOOLEAN)255;
+  EverParseDefaultErrorHandler("U", "g", "second", SECOND_ERROR,
+                              &frame, input, 99);
+  assert(frame.filled == (BOOLEAN)255);
+  assert(frame.start_pos == 17);
+  assert(strcmp(frame.reason, "first") == 0);
+#undef FIRST_ERROR
+#undef SECOND_ERROR
+#ifdef LOWSTAR
+  assert(is_error(EVERPARSE_VALIDATOR_ERROR_GENERIC) == 1);
+  assert(is_success(0) == 1);
+  assert(check_constraint((BOOLEAN)255, 7) == 7);
+  assert(is_error(check_constraint((BOOLEAN)0, 7)) == 1);
   for (uint64_t kind = 0; kind < 16; ++kind)
   {
     uint64_t error = EverParseSetValidatorErrorKind(0, kind);
@@ -95,20 +120,6 @@ int main(void)
     assert(EverParseGetValidatorErrorKind(error) == kind);
     assert(EverParseGetValidatorErrorPos(error) == EVERPARSE_VALIDATOR_MAX_LENGTH);
   }
-  EVERPARSE_INPUT_BUFFER input;
-  memset(&input, 0, sizeof(input));
-  memset(&frame, 0, sizeof(frame));
-  EverParseDefaultErrorHandler("T", "f", "first", EVERPARSE_VALIDATOR_ERROR_GENERIC,
-                              &frame, input, 17);
-  assert(frame.filled == 1);
-  assert(frame.start_pos == 17);
-  assert(strcmp(frame.reason, "first") == 0);
-  frame.filled = (BOOLEAN)255;
-  EverParseDefaultErrorHandler("U", "g", "second", EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED,
-                              &frame, input, 99);
-  assert(frame.filled == (BOOLEAN)255);
-  assert(frame.start_pos == 17);
-  assert(strcmp(frame.reason, "first") == 0);
 #ifdef EXTERN
   EVERPARSE_INPUT_BUFFER buffer = EverParseMakeInputBufferWithLength(0, 7);
   assert(sizeof(buffer.has_length) == sizeof(BOOLEAN));

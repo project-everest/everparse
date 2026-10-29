@@ -107,6 +107,9 @@ def profile_config(profile):
         "error_code_is_range_okay": error_prefix + "IsRangeOkay",
     }
     names["CAbi.Public"] = {}
+    names["CAbi.ErrorFrame"] = {"error_frame": "EVERPARSE_ERROR_FRAME"}
+    if not lowstar:
+        names["CAbi.ErrorFramePulse"] = {"default_error_handler": "EverParseDefaultErrorHandler"}
     foreign = {}
     external_types = {}
     include = "EverParseEndianness.h"
@@ -166,7 +169,6 @@ def profile_config(profile):
                 "error_constraint_failed", "error_unexpected_padding", "error_probe_failed",
             )
         })
-        names["Lowstar.Public"]["error_frame"] = "EVERPARSE_ERROR_FRAME"
         names["CAbi.Public"].update({
             name: c_name(name)
             for name in ("is_error", "is_success", "is_range_okay", "check_constraint_ok")

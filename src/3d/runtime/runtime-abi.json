@@ -2,6 +2,19 @@
   "profiles": {
     "buffer": {
       "functions": {
+        "EverParseDefaultErrorHandler": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "EVERPARSE_ERROR_FRAME *",
+            "uint8_t *",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
         "EverParseErrorReasonOfResult": {
           "linkage": "static inline",
           "parameters": [
@@ -127,6 +140,10 @@
           "kind": "alias",
           "type": "uint8_t *"
         },
+        "EVERPARSE_ERROR_FRAME": {
+          "fields": "BOOLEAN filled ; uint64_t start_pos ; EVERPARSE_STRING typename_s ; EVERPARSE_STRING fieldname ; EVERPARSE_STRING reason ; uint64_t error_code ;",
+          "kind": "record"
+        },
         "EVERPARSE_ERROR_HANDLER": {
           "kind": "callback",
           "parameters": [
@@ -147,6 +164,19 @@
     },
     "extern": {
       "functions": {
+        "EverParseDefaultErrorHandler": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "EVERPARSE_ERROR_FRAME *",
+            "uint8_t *",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
         "EverParseErrorReasonOfResult": {
           "linkage": "static inline",
           "parameters": [
@@ -313,6 +343,10 @@
         "EVERPARSE_APP_CTXT": {
           "kind": "alias",
           "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_FRAME": {
+          "fields": "BOOLEAN filled ; uint64_t start_pos ; EVERPARSE_STRING typename_s ; EVERPARSE_STRING fieldname ; EVERPARSE_STRING reason ; uint64_t error_code ;",
+          "kind": "record"
         },
         "EVERPARSE_ERROR_HANDLER": {
           "kind": "callback",
@@ -1156,6 +1190,19 @@
     },
     "static": {
       "functions": {
+        "EverParseDefaultErrorHandler": {
+          "linkage": "static inline",
+          "parameters": [
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "EVERPARSE_STRING",
+            "uint64_t",
+            "EVERPARSE_ERROR_FRAME *",
+            "uint8_t *",
+            "uint64_t"
+          ],
+          "return": "void"
+        },
         "EverParseErrorReasonOfResult": {
           "linkage": "static inline",
           "parameters": [
@@ -1322,6 +1369,10 @@
         "EVERPARSE_APP_CTXT": {
           "kind": "alias",
           "type": "uint8_t *"
+        },
+        "EVERPARSE_ERROR_FRAME": {
+          "fields": "BOOLEAN filled ; uint64_t start_pos ; EVERPARSE_STRING typename_s ; EVERPARSE_STRING fieldname ; EVERPARSE_STRING reason ; uint64_t error_code ;",
+          "kind": "record"
         },
         "EVERPARSE_ERROR_HANDLER": {
           "kind": "callback",
