@@ -200,7 +200,7 @@ let rec asn1_content_impl_t (k: asn1_content_k) : Tot Type0 (decreases k) =
     | Some fb -> asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (asn1_terminal_impl_t key_k & asn1_items_impl_t (Mkdtuple2?._2 fb))))
     end
 
-and asn1_adb_suffix_impl_t (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fbt: option Type0) : Tot Type0 (decreases ls) =
+and asn1_adb_suffix_impl_t (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fbt: option Type0) : Tot Type0 (decreases ls) =
   match ls with
   | [] ->
     begin match fbt with
@@ -263,41 +263,41 @@ let rec asn1_content_rel (k: asn1_content_k) (pm: perm) (x: asn1_content_impl_t 
     | None ->
       asn1_items_any_rel prefix
         #(asn1_adb_suffix_impl_t key_k ls None)
-        #(make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls))
+        #(make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls))
         (asn1_adb_rel key_k ls)
         pm x y
     | Some fb ->
       let fbt = asn1_terminal_impl_t key_k & asn1_items_impl_t (dsnd fb) in
       asn1_items_any_rel prefix
         #(asn1_adb_suffix_impl_t key_k ls (Some fbt))
-        #(make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core (dsnd fb)))
+        #(make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core (dsnd fb)))
         (asn1_adb_fb_rel key_k ls fbt (asn1_sequence_t_core (dsnd fb))
           (fun pm (z: asn1_terminal_impl_t key_k & asn1_items_impl_t (dsnd fb)) key (v: asn1_sequence_t_core (dsnd fb)) ->
             asn1_terminal_rel key_k pm (fst z) key ** asn1_items_rel (dsnd fb) pm (snd z) v))
         pm x y
     end
 
-and asn1_adb_rel (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
-  (pm: perm) (x: asn1_adb_suffix_impl_t key_k ls None) (y: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls))
+and asn1_adb_rel (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pm: perm) (x: asn1_adb_suffix_impl_t key_k ls None) (y: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls))
 : Tot slprop (decreases ls)
 = match ls with
   | [] -> pure False
   | [(key', it)] ->
     let (| key, v |) = y in
-    if key = key'
+    if key = key_of_lit key_k key'
     then asn1_items_rel (dsnd it) pm x v
     else pure False
   | (key', it) :: tl ->
     let (| key, v |) = y in
     let x' : either (asn1_items_impl_t (dsnd it)) (asn1_adb_suffix_impl_t key_k tl None) = x in
     begin match x' with
-    | Inl a -> if key = key' then asn1_items_rel (dsnd it) pm a v else pure False
-    | Inr b -> if key = key' then pure False else asn1_adb_rel key_k tl pm b (| key, v |)
+    | Inl a -> if key = key_of_lit key_k key' then asn1_items_rel (dsnd it) pm a v else pure False
+    | Inr b -> if key = key_of_lit key_k key' then pure False else asn1_adb_rel key_k tl pm b (| key, v |)
     end
 
-and asn1_adb_fb_rel (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+and asn1_adb_fb_rel (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (fbt: Type0) (fbs: Type) (fbr: perm -> fbt -> asn1_terminal_t key_k -> fbs -> slprop)
-  (pm: perm) (x: asn1_adb_suffix_impl_t key_k ls (Some fbt)) (y: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) fbs)
+  (pm: perm) (x: asn1_adb_suffix_impl_t key_k ls (Some fbt)) (y: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) fbs)
 : Tot slprop (decreases ls)
 = match ls with
   | [] ->
@@ -307,15 +307,15 @@ and asn1_adb_fb_rel (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & 
     let (| key, v |) = y in
     let x' : either (asn1_items_impl_t (dsnd it)) fbt = x in
     begin match x' with
-    | Inl a -> if key = key' then asn1_items_rel (dsnd it) pm a v else pure False
-    | Inr b -> if key = key' then pure False else fbr pm b key v
+    | Inl a -> if key = key_of_lit key_k key' then asn1_items_rel (dsnd it) pm a v else pure False
+    | Inr b -> if key = key_of_lit key_k key' then pure False else fbr pm b key v
     end
   | (key', it) :: tl ->
     let (| key, v |) = y in
     let x' : either (asn1_items_impl_t (dsnd it)) (asn1_adb_suffix_impl_t key_k tl (Some fbt)) = x in
     begin match x' with
-    | Inl a -> if key = key' then asn1_items_rel (dsnd it) pm a v else pure False
-    | Inr b -> if key = key' then pure False else asn1_adb_fb_rel key_k tl fbt fbs fbr pm b (| key, v |)
+    | Inl a -> if key = key_of_lit key_k key' then asn1_items_rel (dsnd it) pm a v else pure False
+    | Inr b -> if key = key_of_lit key_k key' then pure False else asn1_adb_fb_rel key_k tl fbt fbs fbr pm b (| key, v |)
     end
 
 and asn1_lc_rel (lc: list (asn1_id_t & asn1_content_k)) (pm: perm) (x: asn1_lc_impl_t lc) (y: make_gen_choice_type (asn1_lc_t lc)) : Tot slprop (decreases lc) =

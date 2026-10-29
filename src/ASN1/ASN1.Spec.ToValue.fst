@@ -77,17 +77,17 @@ let rec content_to_value (id: asn1_id_t) (k: asn1_content_k) (x: asn1_content_t 
   | ASN1_ANY_DEFINED_BY _ prefix kid key_k ls ofb _ _ ->
     begin match ofb with
     | None ->
-      let sfx (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls)) : Tot (list asn1_value) =
+      let sfx (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls)) : Tot (list asn1_value) =
         let (| key, y |) = s in
-        terminal_to_value kid key_k key :: ls_to_values ls key y
+        terminal_to_value kid key_k key :: ls_to_values (key_of_lit key_k) ls key y
       in
       mk_cons id (items_any_to_values prefix sfx x)
     | Some fb ->
       let (| _, fbitems |) = fb in
-      let sfx (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core fbitems)) : Tot (list asn1_value) =
+      let sfx (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core fbitems)) : Tot (list asn1_value) =
         let (| key, y |) = s in
         terminal_to_value kid key_k key ::
-        ls_fb_to_values ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y
+        ls_fb_to_values (key_of_lit key_k) ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y
       in
       mk_cons id (items_any_to_values prefix sfx x)
     end
@@ -114,23 +114,23 @@ and choice_to_value (lc: list (asn1_id_t & asn1_content_k)) (id: asn1_id_t) (y: 
     then content_to_value id c y
     else choice_to_value tl id y
 
-and ls_to_values (#t: eqtype) (ls: list (t & asn1_gen_items_lk)) (key: t) (y: idlookup_t key (asn1_any_t_core t ls)) : Tot (list asn1_value) (decreases %[ls; 0]) =
+and ls_to_values (#lt #t: eqtype) (f: lt -> Tot t) (ls: list (lt & asn1_gen_items_lk)) (key: t) (y: idlookup_t key (asn1_any_t_core t f ls)) : Tot (list asn1_value) (decreases %[ls; 0]) =
   match ls with
   | [] -> false_elim ()
   | (key', it) :: tl ->
     let (| _, items |) = it in
-    if key = key'
+    if key = f key'
     then items_to_values items y
-    else ls_to_values tl key y
+    else ls_to_values f tl key y
 
-and ls_fb_to_values (#t: eqtype) (ls: list (t & asn1_gen_items_lk)) (fb: Type) (fbf: fb -> Tot (list asn1_value)) (key: t) (y: idlookup_with_fallback_t key (asn1_any_t_core t ls) fb) : Tot (list asn1_value) (decreases %[ls; 0]) =
+and ls_fb_to_values (#lt #t: eqtype) (f: lt -> Tot t) (ls: list (lt & asn1_gen_items_lk)) (fb: Type) (fbf: fb -> Tot (list asn1_value)) (key: t) (y: idlookup_with_fallback_t key (asn1_any_t_core t f ls) fb) : Tot (list asn1_value) (decreases %[ls; 0]) =
   match ls with
   | [] -> fbf y
   | (key', it) :: tl ->
     let (| _, items |) = it in
-    if key = key'
+    if key = f key'
     then items_to_values items y
-    else ls_fb_to_values tl fb fbf key y
+    else ls_fb_to_values f tl fb fbf key y
 
 and dec_to_values (#s: _) (#d: _) (dk: asn1_decorated_k s d) (x: asn1_decorated_t_core dk) : Tot (list asn1_value) (decreases %[dk; 0]) =
   match dk with

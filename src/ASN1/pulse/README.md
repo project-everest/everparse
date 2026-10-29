@@ -15,8 +15,12 @@ Every schema construct of the specification: all universal terminal types,
 restricted terminals (`asn1_restriction`), PREFIXED (EXPLICIT tags),
 SEQUENCE (OPTIONAL, DEFAULT for BOOLEAN and NULL), SEQUENCE OF, SET OF
 (DER ordering), SET (at most 64 components), CHOICE, ANY, ANY DEFINED BY
-(OBJECT IDENTIFIER keys, with or without a prefix, with or without a
-fallback), and the presentation types (EXTERNAL, EMBEDDED PDV, CHARACTER
+(with or without a prefix, with or without a fallback; keys of any terminal
+type except INTEGER, RELATIVE-OID and tagged terminals: OBJECT
+IDENTIFIER keys are compared subidentifier by subidentifier, other keys
+byte-for-byte against their DER content encoding, computed at extraction
+from the list-based key literals `asn1_key_lit` of `ASN1.Base`), and the
+presentation types (EXTERNAL, EMBEDDED PDV, CHARACTER
 STRING). The interpreter rejects unsupported schemas statically
 (`supported_k`), which the extraction roots discharge by normalization.
 

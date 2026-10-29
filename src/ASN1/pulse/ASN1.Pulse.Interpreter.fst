@@ -27,6 +27,8 @@ module PPFL = LowParse.PulseParse.FLData
 module SCo = LowParse.Spec.Combinators
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
+module U8 = FStar.UInt8
+module SFL = LowParse.Spec.FLData
 
 (* Definitions tagged with this attribute are unfolded when specializing
    the interpreter to a given schema. *)
@@ -91,6 +93,15 @@ let supported_restriction (k: asn1_terminal_k) (r: asn1_restriction k) : Tot boo
   | ASN1_OCTETSTRING -> Rs.size_restriction_ok r
   | _ -> false
 
+(* ANY DEFINED BY: the kinds of keys that can be compared with a constant *)
+[@@asn1_pulse_attr]
+let adb_key_supported (k: asn1_terminal_k) : Tot bool =
+  match k with
+  | ASN1_INTEGER _
+  | ASN1_RELATIVE_OID
+  | ASN1_PREFIXED_TERMINAL _ _ -> false
+  | _ -> true
+
 [@@asn1_pulse_attr]
 let rec supported_content (k: asn1_content_k) : Tot bool (decreases k) =
   match k with
@@ -102,8 +113,7 @@ let rec supported_content (k: asn1_content_k) : Tot bool (decreases k) =
   | ASN1_SET _ items _ -> supported_items items && items_len items <= 64
   | ASN1_PREFIXED k' -> supported_k k'
   | ASN1_ANY_DEFINED_BY _ prefix _ key_k ls ofb _ _ ->
-    (* Only OBJECT IDENTIFIER keys, as in X.509 *)
-    supported_items prefix && ASN1_OID? key_k && supported_ls ls &&
+    supported_items prefix && adb_key_supported key_k && supported_ls ls &&
     (match ofb with None -> true | Some fb -> supported_items (dsnd fb))
 
 and supported_k (#s: _) (k: asn1_k s) : Tot bool (decreases k) =
@@ -249,6 +259,103 @@ let validate_key_eq (key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k)) (x: a
     Classical.forall_intro (ADB.oid_filter_consumed x);
     validate_ext_consumed (validate_subids_eq (oid_enc x)) (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (ADB.key_eq x))
 
+(* ANY DEFINED BY: equality of other keys with a constant, on their DER
+   content encoding, computed at extraction time from the key literal *)
+
+[@@asn1_pulse_attr]
+let rec char_list_bytes (#p: U8.t -> Tot bool) ([@@@FStar.Attributes.monomorphize] l: list (b: LowParse.Bytes.byte { p b })) : Tot (list U8.t) (decreases l) =
+  match l with
+  | [] -> []
+  | c :: q -> (c <: U8.t) :: char_list_bytes q
+
+let rec char_list_bytes_correct (#p: U8.t -> Tot bool) (l: list (b: LowParse.Bytes.byte { p b }))
+: Lemma (Seq.seq_of_list (char_list_bytes l) == ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #p) l)
+  (decreases l)
+= match l with
+  | [] ->
+    assert_norm (char_list_bytes #p [] == []);
+    assert_norm (ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #p) [] == Seq.empty);
+    Seq.lemma_seq_of_list_induction #U8.t [];
+    Seq.lemma_eq_elim (Seq.seq_of_list #U8.t []) Seq.empty
+  | c :: q ->
+    char_list_bytes_correct q;
+    assert_norm (char_list_bytes (c :: q) == (c <: U8.t) :: char_list_bytes q);
+    assert_norm (ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #p) (c :: q) == ASN1.Spec.Content.Enc.byte_enc #p c `Seq.append` ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #p) q);
+    assert_norm (ASN1.Spec.Content.Enc.byte_enc #p c == Seq.create 1 (c <: U8.t));
+    Seq.lemma_seq_of_list_induction ((c <: U8.t) :: char_list_bytes q);
+    Seq.lemma_eq_elim (Seq.cons (c <: U8.t) (Seq.seq_of_list (char_list_bytes q))) (Seq.append (Seq.create 1 (c <: U8.t)) (Seq.seq_of_list (char_list_bytes q)))
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let key_enc_list (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) }) (x: asn1_key_lit k) : Tot (list U8.t) =
+  match k with
+  | ASN1_BOOLEAN -> let x : bool = x in [if x then 0xFFuy else 0x00uy]
+  | ASN1_NULL -> []
+  | ASN1_BITSTRING -> let x : asn1_bitstring_lit = x in fst x :: snd x
+  | ASN1_PRINTABLESTRING -> let x : asn1_printablestring_t = x in char_list_bytes x
+  | ASN1_IA5STRING -> let x : asn1_ia5string_t = x in char_list_bytes x
+  | ASN1_VISIBLESTRING -> let x : asn1_visiblestring_t = x in char_list_bytes x
+  | ASN1_NUMERICSTRING -> let x : asn1_numericstring_t = x in char_list_bytes x
+  | _ -> let x : list U8.t = x in x
+
+#push-options "--z3rlimit 32 --fuel 2 --ifuel 2"
+let key_enc_list_correct (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) }) (x: asn1_key_lit k)
+: Lemma (Seq.seq_of_list (key_enc_list k x) == ASN1.Spec.Content.Enc.leaf_enc k (key_of_lit k x))
+= match k with
+  | ASN1_BOOLEAN ->
+    let x : bool = x in
+    let c = if x then 0xFFuy else 0x00uy in
+    Seq.lemma_seq_of_list_induction [c];
+    Seq.lemma_seq_of_list_induction #U8.t [];
+    Seq.lemma_eq_elim (Seq.seq_of_list [c]) (Seq.create 1 c)
+  | ASN1_NULL ->
+    Seq.lemma_seq_of_list_induction #U8.t [];
+    Seq.lemma_eq_elim (Seq.seq_of_list #U8.t []) Seq.empty
+  | ASN1_BITSTRING ->
+    let x : asn1_bitstring_lit = x in
+    Seq.lemma_seq_of_list_induction (fst x :: snd x)
+  | ASN1_PRINTABLESTRING ->
+    let x' : asn1_printablestring_t = x in
+    char_list_bytes_correct #is_printable_char x';
+    assert_norm (key_enc_list ASN1_PRINTABLESTRING x == char_list_bytes #is_printable_char x');
+    assert_norm (ASN1.Spec.Content.Enc.leaf_enc ASN1_PRINTABLESTRING (key_of_lit ASN1_PRINTABLESTRING x) == ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #is_printable_char) x')
+  | ASN1_IA5STRING ->
+    let x' : asn1_ia5string_t = x in
+    char_list_bytes_correct #is_ia5_char x';
+    assert_norm (key_enc_list ASN1_IA5STRING x == char_list_bytes #is_ia5_char x');
+    assert_norm (ASN1.Spec.Content.Enc.leaf_enc ASN1_IA5STRING (key_of_lit ASN1_IA5STRING x) == ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #is_ia5_char) x')
+  | ASN1_VISIBLESTRING ->
+    let x' : asn1_visiblestring_t = x in
+    char_list_bytes_correct #is_visible_char x';
+    assert_norm (key_enc_list ASN1_VISIBLESTRING x == char_list_bytes #is_visible_char x');
+    assert_norm (ASN1.Spec.Content.Enc.leaf_enc ASN1_VISIBLESTRING (key_of_lit ASN1_VISIBLESTRING x) == ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #is_visible_char) x')
+  | ASN1_NUMERICSTRING ->
+    let x' : asn1_numericstring_t = x in
+    char_list_bytes_correct #is_numeric_char x';
+    assert_norm (key_enc_list ASN1_NUMERICSTRING x == char_list_bytes #is_numeric_char x');
+    assert_norm (ASN1.Spec.Content.Enc.leaf_enc ASN1_NUMERICSTRING (key_of_lit ASN1_NUMERICSTRING x) == ASN1.Spec.Content.Enc.list_enc (ASN1.Spec.Content.Enc.byte_enc #is_numeric_char) x')
+  | _ -> ()
+#pop-options
+
+[@@asn1_pulse_attr]
+let rec validate_bytes_eq ([@@@FStar.Attributes.monomorphize] l: list U8.t)
+: Tot (LPS.validator #_ #(SCo.parse_filter_kind asn1_weak_parser_kind) (ADB.bytes_eq_p l))
+  (decreases l)
+= match l with
+  | [] -> ADB.validate_bytes_eq_nil ()
+  | h :: tl -> ADB.validate_bytes_eq_cons h tl (validate_bytes_eq tl)
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let validate_key_eq_fl (key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k)) (x: asn1_key_lit key_k) (l: SZ.t)
+: Tot (LPS.validator #_ #(SFL.parse_fldata_kind (SZ.v l) (SCo.parse_filter_kind asn1_weak_parser_kind)) (ADB.key_eq_fldata key_k (key_of_lit key_k x) (SZ.v l)))
+= match key_k with
+  | ASN1_OID -> PPFL.validate_fldata (validate_key_eq key_k () x) l
+  | _ ->
+    key_enc_list_correct key_k x;
+    Classical.forall_intro (ADB.key_lit_fldata_consumed key_k (key_of_lit key_k x) (key_enc_list key_k x) (SZ.v l));
+    validate_ext_consumed (PPFL.validate_fldata (validate_bytes_eq (key_enc_list key_k x)) l) (ADB.key_eq_fldata key_k (key_of_lit key_k x) (SZ.v l))
+
 (* The interpreter *)
 
 (* The recursive validators below take the arguments of `LPS.validator`
@@ -364,7 +471,7 @@ let rec validate_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) 
   | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
     begin match prefix with
     | ASN1_GEN_ITEMS_NIL ->
-      let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+      let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
       begin match ofb with
       | None ->
         Classical.forall_intro (ADB.adb_content_none kid key_k ls pf pf');
@@ -384,7 +491,7 @@ let rec validate_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) 
           (asn1_content_as_parser k)
       end
     | ASN1_GEN_ITEMS_CONS _ _ _ _ _ ->
-      let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+      let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
       begin match ofb with
       | None ->
         Classical.forall_intro (ADB.adb_prefix_content_none ipd prefix kid key_k ls pf pf');
@@ -432,49 +539,49 @@ let rec validate_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) 
     end)
   in vf vinput vpoffset #voffset #vpm #vv
 
-and validate_disp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k))
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (u': squash (supported_ls ls)) (l: SZ.t)
+and validate_disp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k))
+  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (supported_ls ls)) (l: SZ.t)
   (vinput: slice byte) (vpoffset: R.ref SZ.t) (#voffset: Ghost.erased SZ.t) (#vpm: perm) (#vv: Ghost.erased bytes)
-: Tot (vres #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (SZ.v l)) vinput vpoffset voffset vpm vv)
+: Tot (vres #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (SZ.v l)) vinput vpoffset voffset vpm vv)
   (decreases %[ls; 1])
-= [@inline_let] let vf : LPS.validator #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (SZ.v l)) =
+= [@inline_let] let vf : LPS.validator #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (SZ.v l)) =
   (match ls with
   | [] ->
     Classical.forall_intro (ADB.choice_disp_nil key_k (SZ.v l));
-    validate_fail (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (SZ.v l)) ()
+    validate_fail (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (SZ.v l)) ()
   | (x, y) :: tl ->
-    Classical.forall_intro (ADB.choice_disp_cons key_k x (ADB.adb_fb y) (asn1_ls_as_parser (asn1_terminal_t key_k) tl) (SZ.v l));
+    Classical.forall_intro (ADB.choice_disp_cons key_k (key_of_lit key_k x) (ADB.adb_fb y) (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) tl) (SZ.v l));
     ADB.validate_try_else
-      (PPFL.validate_fldata (validate_key_eq key_k () x) l)
+      (validate_key_eq_fl key_k () x l)
       (LPS.validate_ext (validate_seq (dsnd y) () None) #asn1_weak_parser_kind (Mkgenparser?.p (ADB.adb_fb y)))
       (validate_disp key_k () tl () l)
-      (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (SZ.v l)))
+      (ADB.choice_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (SZ.v l)))
   in vf vinput vpoffset #voffset #vpm #vv
 
-and validate_disp_fb ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k))
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (u': squash (supported_ls ls))
+and validate_disp_fb ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k))
+  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (supported_ls ls))
   ([@@@FStar.Attributes.monomorphize] fb: asn1_gen_items_lk)
   (kt: Ghost.erased asn1_content_k)
   (u'': squash (ls << Ghost.reveal kt /\ fb << Ghost.reveal kt /\ supported_items (dsnd fb)))
   (l: SZ.t)
   (vinput: slice byte) (vpoffset: R.ref SZ.t) (#voffset: Ghost.erased SZ.t) (#vpm: perm) (#vv: Ghost.erased bytes)
-: Tot (vres #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (ADB.adb_fb fb) (SZ.v l)) vinput vpoffset voffset vpm vv)
+: Tot (vres #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (ADB.adb_fb fb) (SZ.v l)) vinput vpoffset voffset vpm vv)
   (decreases %[Ghost.reveal kt; 1; ls])
-= [@inline_let] let vf : LPS.validator #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (ADB.adb_fb fb) (SZ.v l)) =
+= [@inline_let] let vf : LPS.validator #_ #(ADB.disp_kind (SZ.v l)) (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (ADB.adb_fb fb) (SZ.v l)) =
   (match ls with
   | [] ->
     Classical.forall_intro (ADB.choice_fb_disp_nil key_k (ADB.adb_fb fb) (SZ.v l));
     ADB.validate_then_consumed
       (PPFL.validate_fldata (validate_terminal key_k ()) l)
       (LPS.validate_ext (validate_seq (dsnd fb) () None) #asn1_weak_parser_kind (Mkgenparser?.p (ADB.adb_fb fb)))
-      (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (ADB.adb_fb fb) (SZ.v l))
+      (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (ADB.adb_fb fb) (SZ.v l))
   | (x, y) :: tl ->
-    Classical.forall_intro (ADB.choice_fb_disp_cons key_k x (ADB.adb_fb y) (asn1_ls_as_parser (asn1_terminal_t key_k) tl) (ADB.adb_fb fb) (SZ.v l));
+    Classical.forall_intro (ADB.choice_fb_disp_cons key_k (key_of_lit key_k x) (ADB.adb_fb y) (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) tl) (ADB.adb_fb fb) (SZ.v l));
     ADB.validate_try_else
-      (PPFL.validate_fldata (validate_key_eq key_k () x) l)
+      (validate_key_eq_fl key_k () x l)
       (LPS.validate_ext (validate_seq (dsnd y) () None) #asn1_weak_parser_kind (Mkgenparser?.p (ADB.adb_fb y)))
       (validate_disp_fb key_k () tl () fb kt () l)
-      (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (ADB.adb_fb fb) (SZ.v l)))
+      (ADB.choice_fb_disp_p key_k (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (ADB.adb_fb fb) (SZ.v l)))
   in vf vinput vpoffset #voffset #vpm #vv
 
 and validate_k (#[@@@FStar.Attributes.monomorphize] s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (u: squash (supported_k k))

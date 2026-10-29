@@ -222,6 +222,87 @@ let parse_adbP : aparser #(asn1_impl_t adbP) #(asn1_t adbP) (asn1_rel adbP) #asn
 let parse_adbF : aparser #(asn1_impl_t adbF) #(asn1_t adbF) (asn1_rel adbF) #asn1_strong_parser_kind (asn1_as_parser adbF) =
   fun input #pm #w #v -> parse_k adbF (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
+(* ANY DEFINED BY with keys other than OBJECT IDENTIFIER: the key is
+   compared byte-for-byte with its DER content encoding *)
+
+(* SEQUENCE { k OCTET STRING, p ANY DEFINED BY k OPTIONAL }
+   with 'AA'H -> NULL, 'AABB'H -> INTEGER, and a fallback *)
+noextract
+let adbO = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) ASN1.Syntax.octetstring_id ASN1_OCTETSTRING
+  [([0xAAuy], params_null); ([0xAAuy; 0xBBuy], params_int)] (Some params_any)
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+(* SEQUENCE { v INTEGER, k BOOLEAN, p ANY DEFINED BY k }
+   with TRUE -> INTEGER, FALSE -> NULL, no fallback *)
+noextract
+let adbB = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l ["v" *^ (PLAIN ^: ASN1.Syntax.asn1_integer)]) ASN1.Syntax.boolean_id ASN1_BOOLEAN
+  [(true, params_int); (false, params_null)] None
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+(* SEQUENCE { k PrintableString, p ANY DEFINED BY k }
+   with "ab" -> INTEGER, "a" -> NULL, no fallback *)
+noextract
+let adbS = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) ASN1.Syntax.printablestring_id ASN1_PRINTABLESTRING
+  [([0x61uy; 0x62uy], params_int); ([0x61uy], params_null)] None
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbO : aparser #(asn1_impl_t adbO) #(asn1_t adbO) (asn1_rel adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
+  fun input #pm #w #v -> parse_k adbO (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbB : aparser #(asn1_impl_t adbB) #(asn1_t adbB) (asn1_rel adbB) #asn1_strong_parser_kind (asn1_as_parser adbB) =
+  fun input #pm #w #v -> parse_k adbB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbS : aparser #(asn1_impl_t adbS) #(asn1_t adbS) (asn1_rel adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
+  fun input #pm #w #v -> parse_k adbS (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbO : LowParse.Pulse.Base.validator #(asn1_t adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
+  validate_k adbO (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbB : LowParse.Pulse.Base.validator #(asn1_t adbB) #asn1_strong_parser_kind (asn1_as_parser adbB) =
+  validate_k adbB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbS : LowParse.Pulse.Base.validator #(asn1_t adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
+  validate_k adbS (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
 (* Extraction roots: right-to-left writers for the same types (ANY DEFINED BY
    is not supported by the writers) *)
 

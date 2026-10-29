@@ -250,6 +250,110 @@ let rec asn1_terminal_t (k : asn1_terminal_k) : eqtype =
   | ASN1_DATE_TIME -> asn1_date_time_t
   | ASN1_PREFIXED_TERMINAL _ k -> asn1_terminal_t k
 
+(* Literals for the keys of ANY DEFINED BY. `asn1_bytes` is abstract, so a
+   constant of a type based on it does not reduce to a literal that the
+   Pulse validators could compare with the input. So, the keys of the
+   supported cases of ANY DEFINED BY are given as lists of bytes instead,
+   and mapped to their values by `key_of_lit`. Kinds not based on
+   `asn1_bytes` use their own values. *)
+
+let asn1_bitstring_lit_wf (unused : U8.t) (b : asn1_bytes) : prop =
+  0 <= U8.v unused /\ U8.v unused <= 7 /\
+  (let _ = pow2_le (U8.v unused) in
+   (U8.v unused = 0) \/
+   ((U8.v unused > 0) /\ Seq.length b > 0 /\
+    FStar.UInt.mod (U8.v (Seq.index b ((Seq.length b) - 1))) (pow2 (U8.v unused)) = 0))
+
+type asn1_bitstring_lit = (x : (U8.t & list U8.t) { asn1_bitstring_lit_wf (fst x) (Seq.seq_of_list (snd x)) })
+
+type asn1_bytes_lit (p : asn1_bytes -> Tot bool) = (l : list U8.t { p (Seq.seq_of_list l) })
+
+let asn1_bytes_any (b : asn1_bytes) : Tot bool = true
+
+let rec asn1_key_lit (k : asn1_terminal_k) : eqtype =
+  match k with
+  | ASN1_BITSTRING -> asn1_bitstring_lit
+  | ASN1_OCTETSTRING
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR -> asn1_bytes_lit asn1_bytes_any
+  | ASN1_UTF8STRING -> asn1_bytes_lit LowParse.Spec.UTF8.correct
+  | ASN1_BMPSTRING -> asn1_bytes_lit is_valid_bmp
+  | ASN1_UNIVERSALSTRING -> asn1_bytes_lit is_valid_universal
+  | ASN1_OID_IRI -> asn1_bytes_lit is_valid_oid_iri
+  | ASN1_RELATIVE_OID_IRI -> asn1_bytes_lit is_valid_relative_oid_iri
+  | ASN1_UTCTIME -> asn1_bytes_lit is_valid_ASN1UTCTIME
+  | ASN1_GENERALIZEDTIME -> asn1_bytes_lit is_valid_ASN1GENERALIZEDTIME
+  | ASN1_DATE -> asn1_bytes_lit is_valid_ASN1DATE
+  | ASN1_TIME_OF_DAY -> asn1_bytes_lit is_valid_ASN1TIMEOFDAY
+  | ASN1_DATE_TIME -> asn1_bytes_lit is_valid_ASN1DATETIME
+  | ASN1_PREFIXED_TERMINAL _ k -> asn1_key_lit k
+  | _ -> asn1_terminal_t k
+
+#push-options "--fuel 2 --ifuel 2"
+let rec key_of_lit (k : asn1_terminal_k) (x : asn1_key_lit k) : Tot (asn1_terminal_t k) (decreases k) =
+  match k with
+  | ASN1_PREFIXED_TERMINAL id' k' ->
+    assert_norm (asn1_key_lit (ASN1_PREFIXED_TERMINAL id' k') == asn1_key_lit k');
+    assert_norm (asn1_terminal_t (ASN1_PREFIXED_TERMINAL id' k') == asn1_terminal_t k');
+    let x' : asn1_key_lit k' = coerce_eq #(asn1_key_lit k) #(asn1_key_lit k') () x in
+    coerce_eq #(asn1_terminal_t k') #(asn1_terminal_t k) () (key_of_lit k' x')
+  | ASN1_BITSTRING ->
+    let x : asn1_bitstring_lit = x in
+    BYTES_WITH_UNUSEDBITS (fst x) (Seq.seq_of_list (snd x))
+  | ASN1_OCTETSTRING
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR
+  | ASN1_UTF8STRING
+  | ASN1_BMPSTRING
+  | ASN1_UNIVERSALSTRING
+  | ASN1_OID_IRI
+  | ASN1_RELATIVE_OID_IRI
+  | ASN1_UTCTIME
+  | ASN1_GENERALIZEDTIME
+  | ASN1_DATE
+  | ASN1_TIME_OF_DAY
+  | ASN1_DATE_TIME -> Seq.seq_of_list #U8.t x
+  | _ -> x
+
+let rec key_of_lit_inj (k : asn1_terminal_k) (x1 x2 : asn1_key_lit k)
+: Lemma (requires (key_of_lit k x1 == key_of_lit k x2)) (ensures (x1 == x2)) (decreases k)
+= match k with
+  | ASN1_PREFIXED_TERMINAL id' k' ->
+    assert_norm (asn1_key_lit (ASN1_PREFIXED_TERMINAL id' k') == asn1_key_lit k');
+    key_of_lit_inj k' (coerce_eq #(asn1_key_lit k) #(asn1_key_lit k') () x1) (coerce_eq #(asn1_key_lit k) #(asn1_key_lit k') () x2)
+  | ASN1_BITSTRING ->
+    let x1 : asn1_bitstring_lit = x1 in
+    let x2 : asn1_bitstring_lit = x2 in
+    Seq.lemma_list_seq_bij (snd x1);
+    Seq.lemma_list_seq_bij (snd x2)
+  | ASN1_OCTETSTRING
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR
+  | ASN1_UTF8STRING
+  | ASN1_BMPSTRING
+  | ASN1_UNIVERSALSTRING
+  | ASN1_OID_IRI
+  | ASN1_RELATIVE_OID_IRI
+  | ASN1_UTCTIME
+  | ASN1_GENERALIZEDTIME
+  | ASN1_DATE
+  | ASN1_TIME_OF_DAY
+  | ASN1_DATE_TIME ->
+    Seq.lemma_list_seq_bij #U8.t x1;
+    Seq.lemma_list_seq_bij #U8.t x2
+  | _ -> ()
+
+#pop-options
+
 // Generic ASN.1 values (for ANY)
 
 // Ref: X.680 8.4 Table 1
@@ -449,7 +553,7 @@ type asn1_content_k : Type =
              prefix:asn1_gen_items_l id_decs_prefix ->
              id : asn1_id_t ->
              key_k : asn1_terminal_k ->
-             supported : list (asn1_terminal_t key_k & asn1_gen_items_lk) -> 
+             supported : list (asn1_key_lit key_k & asn1_gen_items_lk) -> 
              fallback : option asn1_gen_items_lk ->
              pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton id) id_decs_prefix) ->
              pf_sup : squash (List.noRepeats (List.map fst supported)) -> 
@@ -592,16 +696,16 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
   | ASN1_ANY_DEFINED_BY id_decs_prefix prefix id key_k ls ofb pf_wf pf_sup -> 
     let suffix_t =
       (match ofb with
-      | None -> make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls)
-      | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core (dsnd fb))) in
+      | None -> make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls)
+      | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core (dsnd fb))) in
     asn1_sequence_any_t_core prefix suffix_t
 
-and asn1_any_t_core (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (list (t & Type)) (decreases ls) =
+and asn1_any_t_core (#lt : eqtype) (t : eqtype) (f : lt -> Tot t) (ls : list (lt & asn1_gen_items_lk)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    (x, asn1_sequence_t_core (dsnd y)) :: asn1_any_t_core t tl
+    (f x, asn1_sequence_t_core (dsnd y)) :: asn1_any_t_core t f tl
 
 and asn1_lc_t (lc : list (asn1_id_t & asn1_content_k)) : Tot (list (asn1_id_t & Type)) (decreases lc) =
   match lc with
@@ -668,12 +772,12 @@ let rec asn1_sequence_t_core_equiv' (items:list asn1_gen_item_k)
     | hd::tl -> asn1_sequence_t_core_equiv' tl
 
 
-let rec asn1_any_t (t : eqtype) (ls : list (t & asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
+let rec asn1_any_t (#lt : eqtype) (t : eqtype) (f : lt -> Tot t) (ls : list (lt & asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    (x, asn1_sequence_t (dfst y)) :: asn1_any_t _ tl
+    (f x, asn1_sequence_t (dfst y)) :: asn1_any_t _ f tl
 
 let t_lk_as_t_k #t (ls:list (t & asn1_gen_items_lk))
   : list (t & asn1_gen_items_k)
@@ -683,21 +787,21 @@ let t_k_as_t_lk #t (ls:list (t & asn1_gen_items_k))
   : list (t & asn1_gen_items_lk)
   = List.map (fun (t, k) -> t, k_as_lk k) ls
 
-let rec asn1_any_t_equiv (#t:eqtype) (ls:list (t & asn1_gen_items_lk))
-  : Lemma (ensures asn1_any_t_core t ls == asn1_any_t t (t_lk_as_t_k ls))
+let rec asn1_any_t_equiv (#lt #t:eqtype) (f : lt -> Tot t) (ls:list (lt & asn1_gen_items_lk))
+  : Lemma (ensures asn1_any_t_core t f ls == asn1_any_t t f (t_lk_as_t_k ls))
    = match ls with
      | [] -> ()
      | hd::tl ->
        let x,y = hd in
-       asn1_any_t_equiv tl; asn1_sequence_t_core_equiv (dsnd y)
+       asn1_any_t_equiv f tl; asn1_sequence_t_core_equiv (dsnd y)
 
-let rec asn1_any_t_equiv' (#t:eqtype) (ls:list (t & asn1_gen_items_k))
-  : Lemma (ensures asn1_any_t_core t (t_k_as_t_lk ls) == asn1_any_t t ls)
+let rec asn1_any_t_equiv' (#lt #t:eqtype) (f : lt -> Tot t) (ls:list (lt & asn1_gen_items_k))
+  : Lemma (ensures asn1_any_t_core t f (t_k_as_t_lk ls) == asn1_any_t t f ls)
    = match ls with
      | [] -> ()
      | hd::tl ->
        let x,y = hd in
-       asn1_any_t_equiv' tl; asn1_sequence_t_core_equiv' (dfst y)
+       asn1_any_t_equiv' f tl; asn1_sequence_t_core_equiv' (dfst y)
 
 
 let rec asn1_sequence_any_t (items : list asn1_gen_item_k) (suffix_t : Type) : Tot Type (decreases items) =

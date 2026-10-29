@@ -63,7 +63,12 @@ let rec heads_tails_count
     let x' : set_elem_t its = x in
     match x with
     | Inl _ ->
-      assert (elem_comp its x' == 0)
+      assert (elem_comp its x' == 0);
+      assert (tails l == tails q);
+      let prf (i: nat) : Lemma (count_comp tl (tails l) i == count_comp (hd :: tl) l (i + 1))
+      = assert (count_comp its l (i + 1) == (if elem_comp its x' = i + 1 then 1 else 0) + count_comp its q (i + 1))
+      in
+      Classical.forall_intro prf
     | Inr y ->
       assert (elem_comp its x' == 1 + elem_comp tl y);
       assert (tails l == y :: tails q);

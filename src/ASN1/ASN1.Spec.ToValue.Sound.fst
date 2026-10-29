@@ -1080,44 +1080,44 @@ let weak_payload_fb_unfold
 let ls_hd (#t: eqtype) (x: t) (y: asn1_gen_items_lk) : Tot (t & gen_parser asn1_weak_parser_kind) =
   (x, Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd y))))
 
-let ls_as_parser_cons (t: eqtype) (x: t) (y: asn1_gen_items_lk) (tl: list (t & asn1_gen_items_lk))
-: Lemma (asn1_ls_as_parser t ((x, y) :: tl) == ls_hd x y :: asn1_ls_as_parser t tl)
-= assert (asn1_ls_as_parser t ((x, y) :: tl) == ls_hd x y :: asn1_ls_as_parser t tl)
+let ls_as_parser_cons (#lt: eqtype) (t: eqtype) (f: lt -> Tot t) (x: lt) (y: asn1_gen_items_lk) (tl: list (lt & asn1_gen_items_lk))
+: Lemma (asn1_ls_as_parser t f ((x, y) :: tl) == ls_hd (f x) y :: asn1_ls_as_parser t f tl)
+= assert (asn1_ls_as_parser t f ((x, y) :: tl) == ls_hd (f x) y :: asn1_ls_as_parser t f tl)
     by (FStar.Tactics.norm [delta_only [`%asn1_ls_as_parser; `%ls_hd]; zeta; iota]; FStar.Tactics.smt ())
 
-let ls_payload_step (t: eqtype) (x: t) (y: asn1_gen_items_lk) (tl: list (t & asn1_gen_items_lk)) (key: t) (b: bytes)
+let ls_payload_step (#lt: eqtype) (t: eqtype) (f: lt -> Tot t) (x: lt) (y: asn1_gen_items_lk) (tl: list (lt & asn1_gen_items_lk)) (key: t) (b: bytes)
 : Lemma
-  (requires (key <> x))
+  (requires (key <> f x))
   (ensures (
-    match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t ((x, y) :: tl)) key) b, parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t tl) key) b with
-    | Some (v, n), Some (v', n') -> n == n' /\ ls_to_values ((x, y) :: tl) (dfst v) (dsnd v) == ls_to_values tl (dfst v') (dsnd v')
+    match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t f ((x, y) :: tl)) key) b, parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t f tl) key) b with
+    | Some (v, n), Some (v', n') -> n == n' /\ ls_to_values f ((x, y) :: tl) (dfst v) (dsnd v) == ls_to_values f tl (dfst v') (dsnd v')
     | None, None -> True
     | _ -> False))
-= let hdp = ls_hd x y in
-  ls_as_parser_cons t x y tl;
-  weak_payload_unfold hdp (asn1_ls_as_parser t tl) key b;
-  match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t tl) key) b with
+= let hdp = ls_hd (f x) y in
+  ls_as_parser_cons t f x y tl;
+  weak_payload_unfold hdp (asn1_ls_as_parser t f tl) key b;
+  match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t f tl) key) b with
   | Some (v', _) ->
     let (| i, z |) = v' in
-    assert (lemma_choice_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t tl)) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_cast]; zeta; iota]; FStar.Tactics.smt ())
+    assert (lemma_choice_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t f tl)) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_cast]; zeta; iota]; FStar.Tactics.smt ())
   | None -> ()
 
-let rec ls_payload_v (t: eqtype) (ls: list (t & asn1_gen_items_lk)) (key: t) (b: bytes)
+let rec ls_payload_v (#lt: eqtype) (t: eqtype) (f: lt -> Tot t) (ls: list (lt & asn1_gen_items_lk)) (key: t) (b: bytes)
 : Lemma
   (requires (ls_esound ls))
-  (ensures (match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t ls) key) b with
-    | Some (v, n) -> Seq.slice b 0 n == asn1_value_list_enc (ls_to_values ls (dfst v) (dsnd v))
+  (ensures (match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t f ls) key) b with
+    | Some (v, n) -> Seq.slice b 0 n == asn1_value_list_enc (ls_to_values f ls (dfst v) (dsnd v))
     | None -> True))
   (decreases ls)
-= let lp = asn1_ls_as_parser t ls in
+= let lp = asn1_ls_as_parser t f ls in
   match ls with
   | [] -> ()
   | (x, y) :: tl ->
-    if key = x
+    if key = f x
     then begin
       let items = dsnd y in
       let p = make_asn1_sequence_parser (asn1_sequence_as_parser items) in
-      ls_as_parser_cons t x y tl;
+      ls_as_parser_cons t f x y tl;
       parse_synth_eq p (attach_tag lp key) b;
       seq_parser_esound (asn1_sequence_as_parser items);
       match parse p b with
@@ -1125,8 +1125,8 @@ let rec ls_payload_v (t: eqtype) (ls: list (t & asn1_gen_items_lk)) (key: t) (b:
       | None -> ()
     end
     else begin
-      ls_payload_v t tl key b;
-      ls_payload_step t x y tl key b
+      ls_payload_v t f tl key b;
+      ls_payload_step t f x y tl key b
     end
 #pop-options
 
@@ -1137,31 +1137,31 @@ let fb_values (fb: asn1_gen_items_lk) (z: asn1_sequence_t_core (dsnd fb)) : Tot 
   items_to_values (dsnd fb) z
 
 #push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
-let ls_fb_payload_step (t: eqtype) (x: t) (y: asn1_gen_items_lk) (tl: list (t & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (key: t) (b: bytes)
+let ls_fb_payload_step (#lt: eqtype) (t: eqtype) (f: lt -> Tot t) (x: lt) (y: asn1_gen_items_lk) (tl: list (lt & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (key: t) (b: bytes)
 : Lemma
-  (requires (key <> x))
+  (requires (key <> f x))
   (ensures (
-    match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t ((x, y) :: tl)) (fb_gp fb) key) b, parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t tl) (fb_gp fb) key) b with
-    | Some (v, n), Some (v', n') -> n == n' /\ ls_fb_to_values ((x, y) :: tl) _ (fb_values fb) (dfst v) (dsnd v) == ls_fb_to_values tl _ (fb_values fb) (dfst v') (dsnd v')
+    match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t f ((x, y) :: tl)) (fb_gp fb) key) b, parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t f tl) (fb_gp fb) key) b with
+    | Some (v, n), Some (v', n') -> n == n' /\ ls_fb_to_values f ((x, y) :: tl) _ (fb_values fb) (dfst v) (dsnd v) == ls_fb_to_values f tl _ (fb_values fb) (dfst v') (dsnd v')
     | None, None -> True
     | _ -> False))
-= let hdp = ls_hd x y in
-  ls_as_parser_cons t x y tl;
-  weak_payload_fb_unfold hdp (asn1_ls_as_parser t tl) (fb_gp fb) key b;
-  match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t tl) (fb_gp fb) key) b with
+= let hdp = ls_hd (f x) y in
+  ls_as_parser_cons t f x y tl;
+  weak_payload_fb_unfold hdp (asn1_ls_as_parser t f tl) (fb_gp fb) key b;
+  match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t f tl) (fb_gp fb) key) b with
   | Some (v', _) ->
     let (| i, z |) = v' in
-    assert (lemma_choice_with_fallback_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t tl)) (Mkgenparser?.t (fb_gp fb)) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_with_fallback_cast]; zeta; iota]; FStar.Tactics.smt ())
+    assert (lemma_choice_with_fallback_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t f tl)) (Mkgenparser?.t (fb_gp fb)) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_with_fallback_cast]; zeta; iota]; FStar.Tactics.smt ())
   | None -> ()
 
-let rec ls_fb_payload_v (t: eqtype) (ls: list (t & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (key: t) (b: bytes)
+let rec ls_fb_payload_v (#lt: eqtype) (t: eqtype) (f: lt -> Tot t) (ls: list (lt & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (key: t) (b: bytes)
 : Lemma
   (requires (ls_esound ls /\ items_esound (asn1_sequence_as_parser (dsnd fb))))
-  (ensures (match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t ls) (fb_gp fb) key) b with
-    | Some (v, n) -> Seq.slice b 0 n == asn1_value_list_enc (ls_fb_to_values ls _ (fb_values fb) (dfst v) (dsnd v))
+  (ensures (match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t f ls) (fb_gp fb) key) b with
+    | Some (v, n) -> Seq.slice b 0 n == asn1_value_list_enc (ls_fb_to_values f ls _ (fb_values fb) (dfst v) (dsnd v))
     | None -> True))
   (decreases ls)
-= let lp = asn1_ls_as_parser t ls in
+= let lp = asn1_ls_as_parser t f ls in
   match ls with
   | [] ->
     let p = make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd fb)) in
@@ -1172,11 +1172,11 @@ let rec ls_fb_payload_v (t: eqtype) (ls: list (t & asn1_gen_items_lk)) (fb: asn1
     | None -> ()
     end
   | (x, y) :: tl ->
-    if key = x
+    if key = f x
     then begin
       let items = dsnd y in
       let p = make_asn1_sequence_parser (asn1_sequence_as_parser items) in
-      ls_as_parser_cons t x y tl;
+      ls_as_parser_cons t f x y tl;
       parse_synth_eq p (attach_tag_with_fallback lp (fb_gp fb) key) b;
       seq_parser_esound (asn1_sequence_as_parser items);
       match parse p b with
@@ -1184,8 +1184,8 @@ let rec ls_fb_payload_v (t: eqtype) (ls: list (t & asn1_gen_items_lk)) (fb: asn1
       | None -> ()
     end
     else begin
-      ls_fb_payload_v t tl fb key b;
-      ls_fb_payload_step t x y tl fb key b
+      ls_fb_payload_v t f tl fb key b;
+      ls_fb_payload_step t f x y tl fb key b
     end
 #pop-options
 
@@ -1197,15 +1197,15 @@ let adb_key_p (kid: asn1_id_t) (key_k: asn1_terminal_k) =
 let adb_key_fp (kid: asn1_id_t) (key_k: asn1_terminal_k) =
   parse_asn1_ILC_twin kid #(ASN1_TERMINAL key_k) (asn1_terminal_as_parser key_k)
 
-let adb_sv (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
-  (s: make_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) ls)))
+let adb_sv (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (s: make_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)))
 : GTot (list asn1_value)
-= terminal_to_value kid key_k (dfst s) :: ls_to_values ls (dfst s) (dsnd s)
+= terminal_to_value kid key_k (dfst s) :: ls_to_values (key_of_lit key_k) ls (dfst s) (dsnd s)
 
-let adb_fb_sv (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-  (s: make_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) ls)) (Mkgenparser?.t (fb_gp fb)))
+let adb_fb_sv (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (s: make_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) (Mkgenparser?.t (fb_gp fb)))
 : GTot (list asn1_value)
-= terminal_to_value kid key_k (dfst s) :: ls_fb_to_values ls _ (fb_values fb) (dfst s) (dsnd s)
+= terminal_to_value kid key_k (dfst s) :: ls_fb_to_values (key_of_lit key_k) ls _ (fb_values fb) (dfst s) (dsnd s)
 
 let adb_key_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (b: bytes)
 : Lemma
@@ -1232,74 +1232,74 @@ let adb_key_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (id: asn1_id_t) (b
   | None -> ()
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 1"
-let adb_suffix_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (b: bytes)
+let adb_suffix_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (b: bytes)
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls))
-  (ensures (match parse (make_gen_choice_weak_parser (adb_key_p kid key_k) (asn1_ls_as_parser (asn1_terminal_t key_k) ls)) b with
+  (ensures (match parse (make_gen_choice_weak_parser (adb_key_p kid key_k) (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) b with
     | Some (v, n) -> Seq.slice b 0 n == asn1_value_list_enc (adb_sv kid key_k ls v)
     | None -> True))
-= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   parse_tagged_union_eq (adb_key_p kid key_k) (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) b;
   adb_key_at kid key_k b;
   match parse (adb_key_p kid key_k) b with
   | None -> ()
   | Some (key, c1) ->
     let b1 = Seq.slice b c1 (Seq.length b) in
-    ls_payload_v (asn1_terminal_t key_k) ls key b1;
+    ls_payload_v (asn1_terminal_t key_k) (key_of_lit key_k) ls key b1;
     match parse (make_gen_choice_weak_payload_parser lp key) b1 with
     | None -> ()
     | Some (_, n2) -> slice_split b c1 n2
 
-let adb_suffix_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (id: asn1_id_t) (b: bytes)
+let adb_suffix_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (id: asn1_id_t) (b: bytes)
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls))
-  (ensures (match parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) ls))) b with
+  (ensures (match parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) b with
     | Some (v, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_sv kid key_k ls v)
     | None -> True))
-= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   parse_tagged_union_eq (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) b;
   adb_key_twin_at kid key_k id b;
   match parse (adb_key_fp kid key_k id) b with
   | None -> ()
   | Some (key, c1) ->
     let b1 = Seq.slice b c1 (Seq.length b) in
-    ls_payload_v (asn1_terminal_t key_k) ls key b1;
+    ls_payload_v (asn1_terminal_t key_k) (key_of_lit key_k) ls key b1;
     match parse (make_gen_choice_weak_payload_parser lp key) b1 with
     | None -> ()
     | Some (_, n2) -> id_append_split (asn1_id_enc id) b c1 n2
 
-let adb_fb_suffix_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (b: bytes)
+let adb_fb_suffix_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (b: bytes)
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls /\ items_esound (asn1_sequence_as_parser (dsnd fb))))
-  (ensures (match parse (make_gen_choice_with_fallback_weak_parser (adb_key_p kid key_k) (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (fb_gp fb)) b with
+  (ensures (match parse (make_gen_choice_with_fallback_weak_parser (adb_key_p kid key_k) (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (fb_gp fb)) b with
     | Some (v, n) -> Seq.slice b 0 n == asn1_value_list_enc (adb_fb_sv kid key_k ls fb v)
     | None -> True))
-= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   parse_tagged_union_eq (adb_key_p kid key_k) (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (fb_gp fb)) b;
   adb_key_at kid key_k b;
   match parse (adb_key_p kid key_k) b with
   | None -> ()
   | Some (key, c1) ->
     let b1 = Seq.slice b c1 (Seq.length b) in
-    ls_fb_payload_v (asn1_terminal_t key_k) ls fb key b1;
+    ls_fb_payload_v (asn1_terminal_t key_k) (key_of_lit key_k) ls fb key b1;
     match parse (make_gen_choice_with_fallback_weak_payload_parser lp (fb_gp fb) key) b1 with
     | None -> ()
     | Some (_, n2) -> slice_split b c1 n2
 
-let adb_fb_suffix_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (id: asn1_id_t) (b: bytes)
+let adb_fb_suffix_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (id: asn1_id_t) (b: bytes)
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls /\ items_esound (asn1_sequence_as_parser (dsnd fb))))
-  (ensures (match parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (fb_gp fb))) b with
+  (ensures (match parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (fb_gp fb))) b with
     | Some (v, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_fb_sv kid key_k ls fb v)
     | None -> True))
-= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   parse_tagged_union_eq (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (fb_gp fb)) b;
   adb_key_twin_at kid key_k id b;
   match parse (adb_key_fp kid key_k id) b with
   | None -> ()
   | Some (key, c1) ->
     let b1 = Seq.slice b c1 (Seq.length b) in
-    ls_fb_payload_v (asn1_terminal_t key_k) ls fb key b1;
+    ls_fb_payload_v (asn1_terminal_t key_k) (key_of_lit key_k) ls fb key b1;
     match parse (make_gen_choice_with_fallback_weak_payload_parser lp (fb_gp fb) key) b1 with
     | None -> ()
     | Some (_, n2) -> id_append_split (asn1_id_enc id) b c1 n2
@@ -1310,37 +1310,37 @@ let adb_fb_suffix_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (a
 #push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
 let adb_content_value (id: asn1_id_t)
   (idp: id_decs) (prefix: asn1_gen_items_l idp) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) idp))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
   (x: asn1_content_t (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls None pf pf'))
 : Lemma
   (content_to_value id (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls None pf pf') x ==
     mk_cons id (any_values (asn1_sequence_as_parser prefix) (adb_sv kid key_k ls) x))
-= let clo (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls)) : Tot (list asn1_value) =
+= let clo (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls)) : Tot (list asn1_value) =
     let (| key, y |) = s in
-    terminal_to_value kid key_k key :: ls_to_values ls key y
+    terminal_to_value kid key_k key :: ls_to_values (key_of_lit key_k) ls key y
   in
   assert (content_to_value id (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls None pf pf') x ==
-    mk_cons id (items_any_to_values prefix (fun (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls)) -> (let (| key, y |) = s in terminal_to_value kid key_k key :: ls_to_values ls key y) <: list asn1_value) x))
+    mk_cons id (items_any_to_values prefix (fun (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls)) -> (let (| key, y |) = s in terminal_to_value kid key_k key :: ls_to_values (key_of_lit key_k) ls key y) <: list asn1_value) x))
     by (FStar.Tactics.norm [delta_only [`%content_to_value]; zeta; iota]; FStar.Tactics.trefl ());
   items_any_values prefix clo x;
   any_values_ext (asn1_sequence_as_parser prefix) clo (adb_sv kid key_k ls) x
 #pop-options
 
-let rec ls_fb_to_values_ext (#t: eqtype) (ls: list (t & asn1_gen_items_lk)) (fb: Type) (f1 f2: fb -> Tot (list asn1_value)) (key: t) (y: idlookup_with_fallback_t key (asn1_any_t_core t ls) fb)
+let rec ls_fb_to_values_ext (#lt #t: eqtype) (f: lt -> Tot t) (ls: list (lt & asn1_gen_items_lk)) (fb: Type) (f1 f2: fb -> Tot (list asn1_value)) (key: t) (y: idlookup_with_fallback_t key (asn1_any_t_core t f ls) fb)
 : Lemma
   (requires (forall z. f1 z == f2 z))
-  (ensures (ls_fb_to_values ls fb f1 key y == ls_fb_to_values ls fb f2 key y))
+  (ensures (ls_fb_to_values f ls fb f1 key y == ls_fb_to_values f ls fb f2 key y))
   (decreases ls)
 = match ls with
   | [] -> ()
-  | (key', _) :: tl -> if key = key' then () else ls_fb_to_values_ext tl fb f1 f2 key y
+  | (key', _) :: tl -> if key = f key' then () else ls_fb_to_values_ext f tl fb f1 f2 key y
 
 #push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
 let adb_fb_content_value (id: asn1_id_t)
   (idp: id_decs) (prefix: asn1_gen_items_l idp) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (fbids: id_decs {asn1_sequence_k_wf fbids}) (fbitems: asn1_gen_items_l fbids)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) idp))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
@@ -1348,18 +1348,18 @@ let adb_fb_content_value (id: asn1_id_t)
 : Lemma
   (content_to_value id (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls (Some (| fbids, fbitems |)) pf pf') x ==
     mk_cons id (any_values (asn1_sequence_as_parser prefix) (adb_fb_sv kid key_k ls (| fbids, fbitems |)) x))
-= let clo (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core fbitems)) : Tot (list asn1_value) =
+= let clo (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core fbitems)) : Tot (list asn1_value) =
     let (| key, y |) = s in
     terminal_to_value kid key_k key ::
-    ls_fb_to_values ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y
+    ls_fb_to_values (key_of_lit key_k) ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y
   in
   assert (content_to_value id (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls (Some (| fbids, fbitems |)) pf pf') x ==
-    mk_cons id (items_any_to_values prefix (fun (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core fbitems)) -> (let (| key, y |) = s in terminal_to_value kid key_k key :: ls_fb_to_values ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y) <: list asn1_value) x))
+    mk_cons id (items_any_to_values prefix (fun (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core fbitems)) -> (let (| key, y |) = s in terminal_to_value kid key_k key :: ls_fb_to_values (key_of_lit key_k) ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y) <: list asn1_value) x))
     by (FStar.Tactics.norm [delta_only [`%content_to_value]; zeta; iota]; FStar.Tactics.trefl ());
   items_any_values prefix clo x;
-  let prf (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core fbitems))
+  let prf (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core fbitems))
   : Lemma (clo s == adb_fb_sv kid key_k ls (| fbids, fbitems |) s)
-  = ls_fb_to_values_ext ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) (fb_values (| fbids, fbitems |)) (dfst s) (dsnd s)
+  = ls_fb_to_values_ext (key_of_lit key_k) ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) (fb_values (| fbids, fbitems |)) (dfst s) (dsnd s)
   in
   Classical.forall_intro prf;
   any_values_ext (asn1_sequence_as_parser prefix) clo (adb_fb_sv kid key_k ls (| fbids, fbitems |)) x
@@ -1370,10 +1370,10 @@ let adb_fb_content_value (id: asn1_id_t)
 let any_enc (its: list gen_decorated_parser_twin) (#t: Type) (sv: t -> GTot (list asn1_value)) (x: asn1_sequence_any_t (List.map Mkgendcparser?.d its) t) : GTot bytes =
   asn1_value_list_enc (any_values its sv x)
 
-let adb_lp (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) =
-  asn1_ls_as_parser (asn1_terminal_t key_k) ls
+let adb_lp (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) =
+  asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls
 
-let adb_sfx (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+let adb_sfx (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
 : Tot (parser_twin asn1_weak_parser_kind (make_gen_choice_type (extract_types (adb_lp key_k ls))))
 = assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
   Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type (extract_types (adb_lp key_k ls)))
@@ -1381,7 +1381,7 @@ let adb_sfx (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t
     (let _ = make_gen_choice_weak_parser_twin_and_then_cases_injective (adb_key_fp kid key_k) (adb_lp key_k ls) in
      fun id -> weaken asn1_weak_parser_kind (make_gen_choice_weak_parser_twin (adb_key_fp kid key_k) (adb_lp key_k ls) id))
 
-let adb_fb_sfx (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let adb_fb_sfx (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
 : Tot (parser_twin asn1_weak_parser_kind (make_gen_choice_type_with_fallback (extract_types (adb_lp key_k ls)) (Mkgenparser?.t (fb_gp fb))))
 = assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
   Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type_with_fallback (extract_types (adb_lp key_k ls)) (Mkgenparser?.t (fb_gp fb)))
@@ -1390,7 +1390,7 @@ let adb_fb_sfx (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_termina
      fun id -> weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser_twin (adb_key_fp kid key_k) (adb_lp key_k ls) (fb_gp fb) id))
 
 #push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
-let adb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+let adb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls))
   (ensures (sfx_esound (adb_sfx kid key_k ls) (adb_sv kid key_k ls)))
@@ -1402,14 +1402,14 @@ let adb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_ter
   let prf2 (id: asn1_id_t) (b: bytes) : Lemma (match parse (Mkparsertwin?.fp (adb_sfx kid key_k ls) id) b with
     | Some (x, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_sv kid key_k ls x)
     | None -> True)
-  = assert (parse (Mkparsertwin?.fp (adb_sfx kid key_k ls) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) ls)))) b)
+  = assert (parse (Mkparsertwin?.fp (adb_sfx kid key_k ls) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)))) b)
       by (FStar.Tactics.norm [delta_only [`%adb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_weak_parser_twin; `%adb_lp]; zeta; iota]; FStar.Tactics.trefl ());
     adb_suffix_twin_at kid key_k ls id b
   in
   Classical.forall_intro prf1;
   Classical.forall_intro_2 prf2
 
-let adb_fb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let adb_fb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls /\ items_esound (asn1_sequence_as_parser (dsnd fb))))
   (ensures (sfx_esound (adb_fb_sfx kid key_k ls fb) (adb_fb_sv kid key_k ls fb)))
@@ -1421,7 +1421,7 @@ let adb_fb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_
   let prf2 (id: asn1_id_t) (b: bytes) : Lemma (match parse (Mkparsertwin?.fp (adb_fb_sfx kid key_k ls fb) id) b with
     | Some (x, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_fb_sv kid key_k ls fb x)
     | None -> True)
-  = assert (parse (Mkparsertwin?.fp (adb_fb_sfx kid key_k ls fb) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) ls) (fb_gp fb)))) b)
+  = assert (parse (Mkparsertwin?.fp (adb_fb_sfx kid key_k ls fb) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (fb_gp fb)))) b)
       by (FStar.Tactics.norm [delta_only [`%adb_fb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_with_fallback_weak_parser_twin; `%adb_lp]; zeta; iota]; FStar.Tactics.trefl ());
     adb_fb_suffix_twin_at kid key_k ls fb id b
   in
@@ -1432,7 +1432,7 @@ let adb_fb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_
 #push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
 let adb_content_esound (id: asn1_id_t)
   (idp: id_decs) (prefix: asn1_gen_items_l idp) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) idp))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
 : Lemma
@@ -1448,7 +1448,7 @@ let adb_content_esound (id: asn1_id_t)
 
 let adb_fb_content_esound (id: asn1_id_t)
   (idp: id_decs) (prefix: asn1_gen_items_l idp) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (fbids: id_decs {asn1_sequence_k_wf fbids}) (fbitems: asn1_gen_items_l fbids)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) idp))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))

@@ -2,6 +2,11 @@
 #include "ASN1.Pulse.ParseTest.h"
 #include <stdio.h>
 #define SL(a) ((Pulse_Lib_Slice_slice__uint8){ .elt = (a), .len = sizeof(a) })
+static int valid(bool (*f)(Pulse_Lib_Slice_slice__uint8, size_t *), Pulse_Lib_Slice_slice__uint8 s) {
+  size_t off = 0;
+  return f(s, &off) && off == s.len;
+}
+#define VALID(f, a) valid(f, SL(a))
 int main(void) {
   int fails = 0;
   uint8_t i1[] = {0x02, 0x02, 0xff, 0x7f}; /* -129 */
@@ -112,6 +117,63 @@ int main(void) {
       || af.val.Inr.val.Inr._1.len != 2 || af.val.Inr.val.Inr._1.elt != f4 + 4
       || af.val.Inr.val.Inr._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8
       || af.val.Inr.val.Inr._2.val.Some.len != 3 || af.val.Inr.val.Inr._2.val.Some.elt != f4 + 6) { printf("adbF 1.2.5 any\n"); fails++; }
+  /* ANY DEFINED BY with non-OID keys, compared byte-for-byte */
+  /* OCTET STRING keys: 'AA'H -> NULL, 'AABB'H -> INTEGER, fallback OPTIONAL ANY */
+  uint8_t ko1[] = {0x30, 0x05, 0x04, 0x01, 0xaa, 0x05, 0x00};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbO, ko1)) { printf("adbO valid AA\n"); fails++; }
+  af = ASN1_Pulse_ParseTest_parse_adbO(SL(ko1));
+  if (af.tag != FSTAR_PERVASIVES_INL__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT) { printf("adbO AA\n"); fails++; }
+  uint8_t ko2[] = {0x30, 0x07, 0x04, 0x02, 0xaa, 0xbb, 0x02, 0x01, 0x07};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbO, ko2)) { printf("adbO valid AABB\n"); fails++; }
+  af = ASN1_Pulse_ParseTest_parse_adbO(SL(ko2));
+  if (af.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT
+      || af.val.Inr.tag != FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI
+      || af.val.Inr.val.Inl.val.Small != 7) { printf("adbO AABB\n"); fails++; }
+  uint8_t ko3[] = {0x30, 0x04, 0x04, 0x02, 0xaa, 0x00}; /* 'AA00'H: a strict extension of 'AA'H, so the fallback */
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbO, ko3)) { printf("adbO valid AA00\n"); fails++; }
+  af = ASN1_Pulse_ParseTest_parse_adbO(SL(ko3));
+  if (af.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT
+      || af.val.Inr.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI
+      || af.val.Inr.val.Inr._1.len != 2 || af.val.Inr.val.Inr._1.elt != ko3 + 4
+      || af.val.Inr.val.Inr._2.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8) { printf("adbO AA00\n"); fails++; }
+  uint8_t ko4[] = {0x30, 0x06, 0x04, 0x01, 0xbb, 0x01, 0x01, 0xff};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbO, ko4)) { printf("adbO valid BB\n"); fails++; }
+  af = ASN1_Pulse_ParseTest_parse_adbO(SL(ko4));
+  if (af.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT
+      || af.val.Inr.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI
+      || af.val.Inr.val.Inr._1.len != 1 || af.val.Inr.val.Inr._1.elt != ko4 + 4
+      || af.val.Inr.val.Inr._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8
+      || af.val.Inr.val.Inr._2.val.Some.len != 3 || af.val.Inr.val.Inr._2.val.Some.elt != ko4 + 5) { printf("adbO BB\n"); fails++; }
+  uint8_t ko5[] = {0x30, 0x06, 0x04, 0x02, 0xaa, 0xbb, 0x05, 0x00}; /* 'AABB'H requires an INTEGER */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbO, ko5)) { printf("adbO invalid AABB NULL\n"); fails++; }
+  uint8_t ko6[] = {0x30, 0x03, 0x04, 0x01, 0xaa}; /* 'AA'H requires a NULL */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbO, ko6)) { printf("adbO invalid AA\n"); fails++; }
+  /* BOOLEAN keys after an INTEGER prefix: TRUE -> INTEGER, FALSE -> NULL */
+  uint8_t kb1[] = {0x30, 0x09, 0x02, 0x01, 0x05, 0x01, 0x01, 0xff, 0x02, 0x01, 0x07};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbB, kb1)) { printf("adbB valid TRUE\n"); fails++; }
+  FStar_Pervasives_Native_tuple2__asn1_int_impl_either_asn1_int_impl_unit akb = ASN1_Pulse_ParseTest_parse_adbB(SL(kb1));
+  if (akb._1.val.Small != 5 || akb._2.tag != FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_UNIT || akb._2.val.Inl.val.Small != 7) { printf("adbB TRUE\n"); fails++; }
+  uint8_t kb2[] = {0x30, 0x08, 0x02, 0x01, 0x05, 0x01, 0x01, 0x00, 0x05, 0x00};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbB, kb2)) { printf("adbB valid FALSE\n"); fails++; }
+  akb = ASN1_Pulse_ParseTest_parse_adbB(SL(kb2));
+  if (akb._1.val.Small != 5 || akb._2.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_UNIT) { printf("adbB FALSE\n"); fails++; }
+  uint8_t kb3[] = {0x30, 0x08, 0x02, 0x01, 0x05, 0x01, 0x01, 0xff, 0x05, 0x00};
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbB, kb3)) { printf("adbB invalid TRUE NULL\n"); fails++; }
+  uint8_t kb4[] = {0x30, 0x08, 0x02, 0x01, 0x05, 0x01, 0x01, 0x01, 0x05, 0x00}; /* not DER */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbB, kb4)) { printf("adbB invalid BER TRUE\n"); fails++; }
+  /* PrintableString keys: "akb" -> INTEGER, "a" -> NULL, no fallback */
+  uint8_t kp1[] = {0x30, 0x07, 0x13, 0x02, 0x61, 0x62, 0x02, 0x01, 0x07};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbS, kp1)) { printf("adbS valid akb\n"); fails++; }
+  FStar_Pervasives_either__asn1_int_impl_unit aks = ASN1_Pulse_ParseTest_parse_adbS(SL(kp1));
+  if (aks.tag != FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_UNIT || aks.val.Inl.val.Small != 7) { printf("adbS akb\n"); fails++; }
+  uint8_t kp2[] = {0x30, 0x05, 0x13, 0x01, 0x61, 0x05, 0x00};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbS, kp2)) { printf("adbS valid a\n"); fails++; }
+  aks = ASN1_Pulse_ParseTest_parse_adbS(SL(kp2));
+  if (aks.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_UNIT) { printf("adbS a\n"); fails++; }
+  uint8_t kp3[] = {0x30, 0x05, 0x13, 0x01, 0x62, 0x05, 0x00}; /* unknown key, no fallback */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbS, kp3)) { printf("adbS invalid b\n"); fails++; }
+  uint8_t kp4[] = {0x30, 0x06, 0x13, 0x02, 0x61, 0x62, 0x05, 0x00};
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbS, kp4)) { printf("adbS invalid akb NULL\n"); fails++; }
   /* AlgorithmIdentifier from the difftest schemas */
   uint8_t g1[] = {0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
   FStar_Pervasives_either__unit_tuple2_slice_uint8_option_slice_uint8 ag = ASN1_Pulse_ParseTest_parse_algId(SL(g1));

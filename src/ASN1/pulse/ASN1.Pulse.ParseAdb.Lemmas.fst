@@ -206,17 +206,17 @@ let ptu_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (#data_t: Type)
     end
 #pop-options
 
-let sfx_none_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+let sfx_none_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
 : Lemma (sfx_shaped (ADB.adb_sfx_none kid key_k ls))
-= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   let aux (w: bytes) : Lemma (sfx_shaped_at (ADB.adb_sfx_none kid key_k ls) w) =
     ptu_shaped kid key_k (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) w
   in
   Classical.forall_intro aux
 
-let sfx_some_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let sfx_some_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
 : Lemma (sfx_shaped (ADB.adb_sfx_some kid key_k ls fb))
-= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+= let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   let aux (w: bytes) : Lemma (sfx_shaped_at (ADB.adb_sfx_some kid key_k ls fb) w) =
     ptu_shaped kid key_k (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (ADB.adb_fb fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (ADB.adb_fb fb)) w
   in
@@ -273,24 +273,24 @@ let sfx_layout (kid: asn1_id_t) (key_k: asn1_terminal_k) (#data_t: Type)
 
 (* The payload, selected by the key *)
 
-let ady (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) : Type =
-  make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) ls)
+let ady (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) : Type =
+  make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls)
 
-let lp_of (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) =
-  asn1_ls_as_parser (asn1_terminal_t key_k) ls
+let lp_of (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) =
+  asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls
 
-let pl_parsed (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (wp: bytes) (v: ady key_k ls) : prop =
+let pl_parsed (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (wp: bytes) (v: ady key_k ls) : prop =
   match parse (make_gen_choice_weak_payload_parser (lp_of key_k ls) (dfst v)) wp with
   | Some (v', n) -> (v' <: ady key_k ls) == v /\ n == Seq.length wp
   | None -> False
 
-let ady_head_val (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk))
-  (v: ady key_k ((x, y) :: tl)) (sq: squash (dfst v == x))
+let ady_head_val (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (v: ady key_k ((x, y) :: tl)) (sq: squash (dfst v == key_of_lit key_k x))
 : Tot (asn1_sequence_t_core (dsnd y))
 = dsnd v
 
-let ady_tail_val (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk))
-  (v: ady key_k ((x, y) :: tl)) (sq: squash (dfst v <> x))
+let ady_tail_val (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (v: ady key_k ((x, y) :: tl)) (sq: squash (dfst v <> key_of_lit key_k x))
 : Tot (ady key_k tl)
 = (| dfst v, dsnd v |)
 
@@ -299,40 +299,40 @@ let pl_nil (key_k: asn1_terminal_k) (wp: bytes) (v: ady key_k [])
 = ()
 
 #push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
-let pl_head (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+let pl_head (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (wp: bytes) (v: ady key_k ((x, y) :: tl))
 : Lemma
-  (requires pl_parsed key_k ((x, y) :: tl) wp v /\ dfst v == x)
+  (requires pl_parsed key_k ((x, y) :: tl) wp v /\ dfst v == key_of_lit key_k x)
   (ensures P.parsed #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE y)) wp (ady_head_val x y tl v ()))
 = let t = asn1_terminal_t key_k in
-  let lp = asn1_ls_as_parser t ((x, y) :: tl) in
+  let lp = asn1_ls_as_parser t (key_of_lit key_k) ((x, y) :: tl) in
   let p = make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd y)) in
-  TS.ls_as_parser_cons t x y tl;
-  parse_synth_eq p (attach_tag lp x) wp
+  TS.ls_as_parser_cons t (key_of_lit key_k) x y tl;
+  parse_synth_eq p (attach_tag lp (key_of_lit key_k x)) wp
 
-let pl_tail (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+let pl_tail (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (wp: bytes) (v: ady key_k ((x, y) :: tl))
 : Lemma
-  (requires pl_parsed key_k ((x, y) :: tl) wp v /\ dfst v <> x)
+  (requires pl_parsed key_k ((x, y) :: tl) wp v /\ dfst v <> key_of_lit key_k x)
   (ensures pl_parsed key_k tl wp (ady_tail_val x y tl v ()))
 = let t = asn1_terminal_t key_k in
-  let hdp = TS.ls_hd x y in
+  let hdp = TS.ls_hd (key_of_lit key_k x) y in
   let key = dfst v in
-  TS.ls_as_parser_cons t x y tl;
-  TS.weak_payload_unfold hdp (asn1_ls_as_parser t tl) key wp;
-  match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t tl) key) wp with
+  TS.ls_as_parser_cons t (key_of_lit key_k) x y tl;
+  TS.weak_payload_unfold hdp (asn1_ls_as_parser t (key_of_lit key_k) tl) key wp;
+  match parse (make_gen_choice_weak_payload_parser (asn1_ls_as_parser t (key_of_lit key_k) tl) key) wp with
   | Some (v', _) ->
     let (| i, z |) = v' in
-    assert (lemma_choice_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t tl)) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_cast]; zeta; iota]; FStar.Tactics.smt ())
+    assert (lemma_choice_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t (key_of_lit key_k) tl)) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_cast]; zeta; iota]; FStar.Tactics.smt ())
   | None -> ()
 #pop-options
 
 (* The payload, with a fallback *)
 
-let ady_fb (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) : Type =
-  make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core (dsnd fb))
+let ady_fb (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) : Type =
+  make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core (dsnd fb))
 
-let pl_fb_parsed (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (wp: bytes) (v: ady_fb key_k ls fb) : prop =
+let pl_fb_parsed (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (wp: bytes) (v: ady_fb key_k ls fb) : prop =
   match parse (make_gen_choice_with_fallback_weak_payload_parser (lp_of key_k ls) (ADB.adb_fb fb) (dfst v)) wp with
   | Some (v', n) -> (v' <: ady_fb key_k ls fb) == v /\ n == Seq.length wp
   | None -> False
@@ -341,13 +341,13 @@ let ady_fb_nil_val (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (v: ady_fb 
 : Tot (asn1_sequence_t_core (dsnd fb))
 = dsnd v
 
-let ady_fb_head_val (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-  (v: ady_fb key_k ((x, y) :: tl) fb) (sq: squash (dfst v == x))
+let ady_fb_head_val (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (v: ady_fb key_k ((x, y) :: tl) fb) (sq: squash (dfst v == key_of_lit key_k x))
 : Tot (asn1_sequence_t_core (dsnd y))
 = dsnd v
 
-let ady_fb_tail_val (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-  (v: ady_fb key_k ((x, y) :: tl) fb) (sq: squash (dfst v <> x))
+let ady_fb_tail_val (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (v: ady_fb key_k ((x, y) :: tl) fb) (sq: squash (dfst v <> key_of_lit key_k x))
 : Tot (ady_fb key_k tl fb)
 = (| dfst v, dsnd v |)
 
@@ -357,36 +357,36 @@ let pl_fb_nil (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (wp: bytes) (v: 
   (requires pl_fb_parsed key_k [] fb wp v)
   (ensures P.parsed #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE fb)) wp (ady_fb_nil_val fb v))
 = let t = asn1_terminal_t key_k in
-  let lp = asn1_ls_as_parser t [] in
+  let lp = asn1_ls_as_parser t (key_of_lit key_k) [] in
   let p = make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd fb)) in
   parse_synth_eq p (attach_tag_with_fallback lp (ADB.adb_fb fb) (dfst v)) wp
 
-let pl_fb_head (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let pl_fb_head (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (wp: bytes) (v: ady_fb key_k ((x, y) :: tl) fb)
 : Lemma
-  (requires pl_fb_parsed key_k ((x, y) :: tl) fb wp v /\ dfst v == x)
+  (requires pl_fb_parsed key_k ((x, y) :: tl) fb wp v /\ dfst v == key_of_lit key_k x)
   (ensures P.parsed #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE y)) wp (ady_fb_head_val x y tl fb v ()))
 = let t = asn1_terminal_t key_k in
-  let lp = asn1_ls_as_parser t ((x, y) :: tl) in
+  let lp = asn1_ls_as_parser t (key_of_lit key_k) ((x, y) :: tl) in
   let p = make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd y)) in
-  TS.ls_as_parser_cons t x y tl;
-  parse_synth_eq p (attach_tag_with_fallback lp (ADB.adb_fb fb) x) wp
+  TS.ls_as_parser_cons t (key_of_lit key_k) x y tl;
+  parse_synth_eq p (attach_tag_with_fallback lp (ADB.adb_fb fb) (key_of_lit key_k x)) wp
 
-let pl_fb_tail (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let pl_fb_tail (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (wp: bytes) (v: ady_fb key_k ((x, y) :: tl) fb)
 : Lemma
-  (requires pl_fb_parsed key_k ((x, y) :: tl) fb wp v /\ dfst v <> x)
+  (requires pl_fb_parsed key_k ((x, y) :: tl) fb wp v /\ dfst v <> key_of_lit key_k x)
   (ensures pl_fb_parsed key_k tl fb wp (ady_fb_tail_val x y tl fb v ()))
 = let t = asn1_terminal_t key_k in
-  let hdp = TS.ls_hd x y in
+  let hdp = TS.ls_hd (key_of_lit key_k x) y in
   let key = dfst v in
   let gfb = ADB.adb_fb fb in
-  TS.ls_as_parser_cons t x y tl;
-  TS.weak_payload_fb_unfold hdp (asn1_ls_as_parser t tl) gfb key wp;
-  match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t tl) gfb key) wp with
+  TS.ls_as_parser_cons t (key_of_lit key_k) x y tl;
+  TS.weak_payload_fb_unfold hdp (asn1_ls_as_parser t (key_of_lit key_k) tl) gfb key wp;
+  match parse (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser t (key_of_lit key_k) tl) gfb key) wp with
   | Some (v', _) ->
     let (| i, z |) = v' in
-    assert (lemma_choice_with_fallback_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t tl)) (Mkgenparser?.t gfb) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_with_fallback_cast]; zeta; iota]; FStar.Tactics.smt ())
+    assert (lemma_choice_with_fallback_cast (fst hdp, Mkgenparser?.t (snd hdp)) (extract_types (asn1_ls_as_parser t (key_of_lit key_k) tl)) (Mkgenparser?.t gfb) key (| i, z |) == (| i, z |)) by (FStar.Tactics.norm [delta_only [`%lemma_choice_with_fallback_cast]; zeta; iota]; FStar.Tactics.smt ())
   | None -> ()
 #pop-options
 
@@ -404,14 +404,14 @@ let layout_post (key_k: asn1_terminal_k) (key: asn1_terminal_t key_k) (q: bytes 
       P.parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (Seq.slice w (c1 + c2) n) key /\
       q (Seq.slice w n (Seq.length w))
 
-let sfx_none_layout (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (w: bytes) (v: ady key_k ls)
+let sfx_none_layout (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (w: bytes) (v: ady key_k ls)
 : Lemma
   (requires P.parsed #asn1_weak_parser_kind (Mkparsertwin?.p (ADB.adb_sfx_none kid key_k ls)) w v)
   (ensures layout_post key_k (dfst v) (fun wp -> pl_parsed key_k ls wp v) w)
 = let lp = lp_of key_k ls in
   sfx_layout kid key_k (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) w v
 
-let sfx_some_layout (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (w: bytes) (v: ady_fb key_k ls fb)
+let sfx_some_layout (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (w: bytes) (v: ady_fb key_k ls fb)
 : Lemma
   (requires P.parsed #asn1_weak_parser_kind (Mkparsertwin?.p (ADB.adb_sfx_some kid key_k ls fb)) w v)
   (ensures layout_post key_k (dfst v) (fun wp -> pl_fb_parsed key_k ls fb wp v) w)
@@ -425,4 +425,12 @@ let key_check (key_k: asn1_terminal_k) (x key: asn1_terminal_t key_k) (wk: bytes
   (requires P.parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk key)
   (ensures (Some? (SB.parse (SC.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (ADB.key_eq x)) (Seq.slice wk 0 (Seq.length wk))) <==> key = x))
 = Seq.lemma_eq_elim wk (Seq.slice wk 0 (Seq.length wk));
+  SC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (ADB.key_eq x) wk
+
+let key_check_fl (key_k: asn1_terminal_k) (x key: asn1_terminal_t key_k) (wk: bytes)
+: Lemma
+  (requires P.parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk key)
+  (ensures (Some? (SB.parse (ADB.key_eq_fldata key_k x (Seq.length wk)) (Seq.slice wk 0 (Seq.length wk))) <==> key = x))
+= Seq.lemma_eq_elim wk (Seq.slice wk 0 (Seq.length wk));
+  ADB.fldata_eq (SC.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (ADB.key_eq x)) (Seq.length wk) (Seq.slice wk 0 (Seq.length wk));
   SC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (ADB.key_eq x) wk

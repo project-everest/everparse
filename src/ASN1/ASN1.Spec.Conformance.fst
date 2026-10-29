@@ -1257,13 +1257,13 @@ let value_sound () : Lemma (sound parse_asn1_value /\ sound_twin parse_asn1_valu
 #push-options "--z3rlimit 128 --fuel 1 --ifuel 1"
 let any_content_sound (id: asn1_id_t)
   (idp: id_decs) (prefix: asn1_gen_items_l idp) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (ofb: option asn1_gen_items_lk)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (ofb: option asn1_gen_items_lk)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) idp))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
 : Lemma
   (requires (CONSTRUCTED? id.f /\
     items_sound (asn1_sequence_as_parser prefix) /\ wf_terminal kid key_k /\
-    weak_entries_ok (asn1_ls_as_parser (asn1_terminal_t key_k) ls) /\
+    weak_entries_ok (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) /\
     (match ofb with None -> True | Some gitems -> items_sound (asn1_sequence_as_parser (dsnd gitems)))))
   (ensures (content_sound id (asn1_content_as_parser (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls ofb pf pf'))))
 = let itemtwins = asn1_sequence_as_parser prefix in
@@ -1274,7 +1274,7 @@ let any_content_sound (id: asn1_id_t)
   let key_p = parse_asn1_ILC kid #(ASN1_TERMINAL key_k) tp in
   let _ = parser_asn1_ILC_twin_case_injective kid #(ASN1_TERMINAL key_k) tp in
   let key_fp = parse_asn1_ILC_twin kid #(ASN1_TERMINAL key_k) tp in
-  let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+  let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   match ofb with
   | None ->
     Classical.forall_intro (weak_choice_sound key_p supported_p);
@@ -1328,14 +1328,14 @@ let rec content_lemma (id: asn1_id_t) (k: asn1_content_k)
     content_sound_single id (asn1_as_parser k')
   | ASN1_ANY_DEFINED_BY idp prefix kid key_k ls ofb pf pf' ->
     items_lemma prefix;
-    ls_lemma (asn1_terminal_t key_k) ls;
+    ls_lemma (asn1_terminal_t key_k) (key_of_lit key_k) ls;
     (match ofb with None -> () | Some gitems -> items_lemma (dsnd gitems));
     any_content_sound id idp prefix kid key_k ls ofb pf pf'
 
-and ls_lemma (t: eqtype) (ls: list (t & asn1_gen_items_lk))
+and ls_lemma (#lt: eqtype) (t: eqtype) (f: lt -> Tot t) (ls: list (lt & asn1_gen_items_lk))
 : Lemma
   (requires (wf_ls ls))
-  (ensures (weak_entries_ok (asn1_ls_as_parser t ls)))
+  (ensures (weak_entries_ok (asn1_ls_as_parser t f ls)))
   (decreases ls)
 = match ls with
   | [] -> ()
@@ -1343,7 +1343,7 @@ and ls_lemma (t: eqtype) (ls: list (t & asn1_gen_items_lk))
     let (_, y) = h in
     items_lemma (dsnd y);
     seq_parser_sound (asn1_sequence_as_parser (dsnd y));
-    ls_lemma t tl
+    ls_lemma t f tl
 
 and lc_lemma (lc: list (asn1_id_t & asn1_content_k))
 : Lemma

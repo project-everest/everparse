@@ -39,13 +39,13 @@ let sares (#i: _) (ls: asn1_gen_items_l i) (#sfxi: Type0) (#sfxs: Type) (sfxr: p
     (S.pts_to input #pm w ** pure (seqa_parsed_core ls sfx w v /\ AL.sfx_shaped sfx))
     (fun res -> asn1_items_any_rel ls sfxr pm res v ** Trade.trade (asn1_items_any_rel ls sfxr pm res v) (S.pts_to input #pm w))
 
-let ndres (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+let ndres (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (kc pin: S.slice U8.t) (pm: perm) (wk wp: Ghost.erased SB.bytes) (v: Ghost.erased (AL.ady key_k ls)) : Type
 = stt (asn1_adb_suffix_impl_t key_k ls None)
     (S.pts_to kc #pm wk ** S.pts_to pin #pm wp ** pure (parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk (dfst (Ghost.reveal v)) /\ AL.pl_parsed key_k ls wp v))
     (fun res -> asn1_adb_rel key_k ls pm res v ** Trade.trade (asn1_adb_rel key_k ls pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
 
-let fdres (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let fdres (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (kc pin: S.slice U8.t) (pm: perm) (wk wp: Ghost.erased SB.bytes) (v: Ghost.erased (AL.ady_fb key_k ls fb)) : Type
 = stt (asn1_adb_suffix_impl_t key_k ls (Some (fbt key_k fb)))
     (S.pts_to kc #pm wk ** S.pts_to pin #pm wp ** pure (parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk (dfst (Ghost.reveal v)) /\ AL.pl_fb_parsed key_k ls fb wp v))
@@ -64,7 +64,7 @@ let rec psupported_content (k: asn1_content_k) : Tot bool (decreases k) =
   | ASN1_SET_OF _ k' -> psupported_k k'
   | ASN1_SET _ items _ -> psupported_items items && items_canon items
   | ASN1_ANY_DEFINED_BY _ prefix _ key_k ls ofb _ _ ->
-    psupported_items prefix && ASN1_OID? key_k && psupported_ls ls &&
+    psupported_items prefix && adb_key_supported key_k && psupported_ls ls &&
     (match ofb with None -> true | Some fb -> psupported_items (dsnd fb))
   | _ -> false
 
@@ -229,8 +229,8 @@ and parse_seqa (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.
       (fun input #pm #w #v -> parse_seqa tl () sfxr sfx psfx input #pm #w #v))
   in vf input #pm #w #v
 
-and parse_ndisp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k))
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (u': squash (psupported_ls ls))
+and parse_ndisp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k))
+  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (psupported_ls ls))
   (kc pin: S.slice U8.t) (#pm: perm) (#wk #wp: Ghost.erased SB.bytes) (#v: Ghost.erased (AL.ady key_k ls))
 : Tot (ndres key_k ls kc pin pm wk wp v)
   (decreases %[ls; 1])
@@ -245,8 +245,8 @@ and parse_ndisp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: 
       (fun kc pin #pm #wk #wp #v -> parse_ndisp key_k () (hd2 :: tl2) () kc pin #pm #wk #wp #v))
   in vf kc pin #pm #wk #wp #v
 
-and parse_fdisp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k))
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (u': squash (psupported_ls ls))
+and parse_fdisp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k))
+  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (psupported_ls ls))
   ([@@@FStar.Attributes.monomorphize] fb: asn1_gen_items_lk)
   (kt: Ghost.erased asn1_content_k)
   (u'': squash (ls << Ghost.reveal kt /\ fb << Ghost.reveal kt /\ psupported_items (dsnd fb)))

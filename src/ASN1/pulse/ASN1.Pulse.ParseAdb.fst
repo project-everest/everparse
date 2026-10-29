@@ -319,39 +319,39 @@ fn sfx_split
 
 (* Dispatching on the key, without a fallback *)
 
-let pl_single (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (wp: SB.bytes) (v: AL.ady key_k [(x, y)])
-: Lemma (requires AL.pl_parsed key_k [(x, y)] wp v) (ensures dfst v == x)
-= if dfst v <> x
+let pl_single (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (wp: SB.bytes) (v: AL.ady key_k [(x, y)])
+: Lemma (requires AL.pl_parsed key_k [(x, y)] wp v) (ensures dfst v == key_of_lit key_k x)
+= if dfst v <> key_of_lit key_k x
   then begin
     AL.pl_tail x y [] wp v;
     AL.pl_nil key_k wp (AL.ady_tail_val x y [] v ())
   end
 
-let adb_rel_single_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (pm: perm)
-  (r: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady key_k [(x, y)]) (sq: squash (dfst v == x))
+let adb_rel_single_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (pm: perm)
+  (r: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady key_k [(x, y)]) (sq: squash (dfst v == key_of_lit key_k x))
 : Lemma (asn1_adb_rel key_k [(x, y)] pm r v == asn1_items_rel (dsnd y) pm r (AL.ady_head_val x y [] v ()))
-= assert_norm (asn1_adb_rel key_k [(x, y)] pm r v == (let (| key, v |) = v in if key = x then asn1_items_rel (dsnd y) pm r v else pure False))
+= assert_norm (asn1_adb_rel key_k [(x, y)] pm r v == (let (| key, v |) = v in if key = key_of_lit key_k x then asn1_items_rel (dsnd y) pm r v else pure False))
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
-let adb_rel_cons_inl_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk))
-  (pm: perm) (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady key_k ((x, y) :: hd2 :: tl2)) (sq: squash (dfst v == x))
+let adb_rel_cons_inl_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pm: perm) (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady key_k ((x, y) :: hd2 :: tl2)) (sq: squash (dfst v == key_of_lit key_k x))
 : Lemma (asn1_adb_rel key_k ((x, y) :: hd2 :: tl2) pm (Inl #_ #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) a) v ==
     asn1_items_rel (dsnd y) pm a (AL.ady_head_val x y (hd2 :: tl2) v ()))
 = ()
 
 #pop-options
 
-let adb_rel_cons_inr_aux (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk))
-  (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) (key: asn1_terminal_t key_k) (w: idlookup_t key (asn1_any_t_core (asn1_terminal_t key_k) ((x, y) :: hd2 :: tl2)))
+let adb_rel_cons_inr_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) (key: asn1_terminal_t key_k) (w: idlookup_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ((x, y) :: hd2 :: tl2)))
 : Lemma (asn1_adb_rel key_k ((x, y) :: hd2 :: tl2) pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) b) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ==
-    (if key = x then pure False else asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
+    (if key = key_of_lit key_k x then pure False else asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
 = assert (asn1_adb_rel key_k ((x, y) :: hd2 :: tl2) pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) b) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ==
-    (if key = x then pure False else asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
+    (if key = key_of_lit key_k x then pure False else asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
   by (T.norm [delta_only [`%asn1_adb_rel; `%AL.ady_tail_val]; zeta; iota]; T.trefl ())
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
-let adb_rel_cons_inr_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk))
-  (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) (v: AL.ady key_k ((x, y) :: hd2 :: tl2)) (sq: squash (dfst v <> x))
+let adb_rel_cons_inr_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) (v: AL.ady key_k ((x, y) :: hd2 :: tl2)) (sq: squash (dfst v <> key_of_lit key_k x))
 : Lemma (asn1_adb_rel key_k ((x, y) :: hd2 :: tl2) pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) b) v ==
     asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val x y (hd2 :: tl2) v ()))
 = let (| key, w |) = v in
@@ -359,7 +359,7 @@ let adb_rel_cons_inr_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y:
 #pop-options
 
 inline_for_extraction
-let ndisp (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) : Type =
+let ndisp (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) : Type =
   (kc: S.slice U8.t) ->
   (pin: S.slice U8.t) ->
   (#pm: perm) ->
@@ -384,7 +384,7 @@ fn ndisp_nil (key_k: asn1_terminal_k)
 }
 
 inline_for_extraction
-fn ndisp_single (key_k: asn1_terminal_k) (x: Ghost.erased (asn1_terminal_t key_k)) (y: Ghost.erased asn1_gen_items_lk)
+fn ndisp_single (key_k: asn1_terminal_k) (x: Ghost.erased (asn1_key_lit key_k)) (y: Ghost.erased asn1_gen_items_lk)
   (pitems: items_parser y)
 : ndisp key_k [(Ghost.reveal x, Ghost.reveal y)]
 = (kc: _) (pin: _) (#pm: _) (#wk: _) (#wp: _) (#v: _)
@@ -403,17 +403,17 @@ fn ndisp_single (key_k: asn1_terminal_k) (x: Ghost.erased (asn1_terminal_t key_k
 (* `hd2` and `tl2` are not erased: Custard must reduce
    `asn1_adb_suffix_impl_t key_k (hd2 :: tl2) _` by matching on them. *)
 inline_for_extraction
-fn ndisp_cons (key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k)) (x: asn1_terminal_t key_k) (y: Ghost.erased asn1_gen_items_lk)
-  (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+fn ndisp_cons (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) (x: asn1_key_lit key_k) (y: Ghost.erased asn1_gen_items_lk)
+  (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pitems: items_parser y)
   (ptail: ndisp key_k (hd2 :: tl2))
 : ndisp key_k ((x, Ghost.reveal y) :: hd2 :: tl2)
 = (kc: _) (pin: _) (#pm: _) (#wk: _) (#wp: _) (#v: _)
 {
   S.pts_to_len kc;
-  AL.key_check key_k x (dfst v) wk;
+  AL.key_check_fl key_k (key_of_lit key_k x) (dfst v) wk;
   let mut poff = 0sz;
-  let ok = In.validate_key_eq key_k () x kc poff;
+  let ok = In.validate_key_eq_fl key_k () x (S.len kc) kc poff;
   if ok {
     AL.pl_head x y (hd2 :: tl2) wp v;
     let r = pitems pin #pm #wp #(AL.ady_head_val x y (hd2 :: tl2) v ());
@@ -447,11 +447,11 @@ let fbr (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) : perm -> fbt key_k fb 
   fun pm (z: asn1_terminal_impl_t key_k & asn1_items_impl_t (Mkdtuple2?._2 fb)) key (v: asn1_sequence_t_core (dsnd fb)) ->
     asn1_terminal_rel key_k pm (fst z) key ** asn1_items_rel (dsnd fb) pm (snd z) v
 
-let afb_rel (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) =
+let afb_rel (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) =
   asn1_adb_fb_rel key_k ls (fbt key_k fb) (fbs fb) (fbr key_k fb)
 
 let afb_rel_nil_aux (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (pm: perm)
-  (rk: asn1_terminal_impl_t key_k) (ri: asn1_items_impl_t (Mkdtuple2?._2 fb)) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) []) (asn1_sequence_t_core (dsnd fb)))
+  (rk: asn1_terminal_impl_t key_k) (ri: asn1_items_impl_t (Mkdtuple2?._2 fb)) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) []) (asn1_sequence_t_core (dsnd fb)))
 : Lemma (afb_rel key_k [] fb pm (rk, ri) ((| key, w |) <: AL.ady_fb key_k [] fb) ==
     (asn1_terminal_rel key_k pm rk key ** asn1_items_rel (dsnd fb) pm ri (AL.ady_fb_nil_val fb ((| key, w |) <: AL.ady_fb key_k [] fb))))
 = assert (afb_rel key_k [] fb pm (rk, ri) ((| key, w |) <: AL.ady_fb key_k [] fb) ==
@@ -465,59 +465,59 @@ let afb_rel_nil_eq (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (pm: perm)
 = let (| key, w |) = v in
   afb_rel_nil_aux fb pm rk ri key w
 
-let afb_rel_single_inl_aux (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm) (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) [(x, y)]) (asn1_sequence_t_core (dsnd fb)))
-: Lemma (afb_rel key_k [(x, y)] fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) a) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False))
-= assert (afb_rel key_k [(x, y)] fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) a) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False))
+let afb_rel_single_inl_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm) (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) [(x, y)]) (asn1_sequence_t_core (dsnd fb)))
+: Lemma (afb_rel key_k [(x, y)] fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) a) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = key_of_lit key_k x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False))
+= assert (afb_rel key_k [(x, y)] fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) a) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = key_of_lit key_k x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False))
   by (T.norm [delta_only [`%afb_rel; `%asn1_adb_fb_rel; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val]; zeta; iota]; T.trefl ())
 
-let afb_rel_single_inr_aux (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm) (b: fbt key_k fb) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) [(x, y)]) (asn1_sequence_t_core (dsnd fb)))
-: Lemma (afb_rel key_k [(x, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) b) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = x then pure False else fbr key_k fb pm b key (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()))))
-= assert (afb_rel key_k [(x, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) b) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = x then pure False else fbr key_k fb pm b key (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()))))
+let afb_rel_single_inr_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm) (b: fbt key_k fb) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) [(x, y)]) (asn1_sequence_t_core (dsnd fb)))
+: Lemma (afb_rel key_k [(x, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) b) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = key_of_lit key_k x then pure False else fbr key_k fb pm b key (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()))))
+= assert (afb_rel key_k [(x, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) b) ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) == (if key = key_of_lit key_k x then pure False else fbr key_k fb pm b key (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()))))
   by (T.norm [delta_only [`%afb_rel; `%asn1_adb_fb_rel; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val; `%AL.ady_fb_nil_val]; zeta; iota]; T.trefl ())
 
-let afb_rel_cons_inl_aux (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm) (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) ((x, y) :: hd2 :: tl2)) (asn1_sequence_t_core (dsnd fb)))
-: Lemma (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) a) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False))
-= assert (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) a) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False))
+let afb_rel_cons_inl_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm) (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ((x, y) :: hd2 :: tl2)) (asn1_sequence_t_core (dsnd fb)))
+: Lemma (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) a) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = key_of_lit key_k x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False))
+= assert (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) a) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = key_of_lit key_k x then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False))
   by (T.norm [delta_only [`%afb_rel; `%asn1_adb_fb_rel; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val]; zeta; iota]; T.trefl ())
 
-let afb_rel_cons_inr_aux (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) ((x, y) :: hd2 :: tl2)) (asn1_sequence_t_core (dsnd fb)))
-: Lemma (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) b) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = x then pure False else afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
-= assert (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) b) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = x then pure False else afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
+let afb_rel_cons_inr_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ((x, y) :: hd2 :: tl2)) (asn1_sequence_t_core (dsnd fb)))
+: Lemma (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) b) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = key_of_lit key_k x then pure False else afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
+= assert (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) b) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = key_of_lit key_k x then pure False else afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
   by (T.norm [delta_only [`%afb_rel; `%asn1_adb_fb_rel; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val]; zeta; iota]; T.trefl ())
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
-let afb_rel_single_inl_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
-  (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady_fb key_k [(x, y)] fb) (sq: squash (dfst v == x))
+let afb_rel_single_inl_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
+  (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady_fb key_k [(x, y)] fb) (sq: squash (dfst v == key_of_lit key_k x))
 : Lemma (afb_rel key_k [(x, y)] fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) a) v == asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y [] fb v ()))
 = let (| key, w |) = v in
   afb_rel_single_inl_aux x y fb pm a key w
 
-let afb_rel_single_inr_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
-  (b: fbt key_k fb) (v: AL.ady_fb key_k [(x, y)] fb) (sq: squash (dfst v <> x))
+let afb_rel_single_inr_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
+  (b: fbt key_k fb) (v: AL.ady_fb key_k [(x, y)] fb) (sq: squash (dfst v <> key_of_lit key_k x))
 : Lemma (afb_rel key_k [(x, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(fbt key_k fb) b) v == fbr key_k fb pm b (dfst v) (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val x y [] fb v ())))
 = let (| key, w |) = v in
   afb_rel_single_inr_aux x y fb pm b key w
 
-let afb_rel_cons_inl_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm)
-  (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) (sq: squash (dfst v == x))
+let afb_rel_cons_inl_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm)
+  (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) (sq: squash (dfst v == key_of_lit key_k x))
 : Lemma (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) a) v == asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb v ()))
 = let (| key, w |) = v in
   afb_rel_cons_inl_aux x y hd2 tl2 fb pm a key w
 
-let afb_rel_cons_inr_eq (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm)
-  (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) (v: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) (sq: squash (dfst v <> x))
+let afb_rel_cons_inr_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm)
+  (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) (v: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) (sq: squash (dfst v <> key_of_lit key_k x))
 : Lemma (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) b) v == afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb v ()))
 = let (| key, w |) = v in
   afb_rel_cons_inr_aux x y hd2 tl2 fb pm b key w
 
-let dfst_fb_tail_val (#key_k: asn1_terminal_k) (x: asn1_terminal_t key_k) (y: asn1_gen_items_lk) (tl: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-  (v: AL.ady_fb key_k ((x, y) :: tl) fb) (sq: squash (dfst v <> x))
+let dfst_fb_tail_val (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (v: AL.ady_fb key_k ((x, y) :: tl) fb) (sq: squash (dfst v <> key_of_lit key_k x))
 : Lemma (dfst (AL.ady_fb_tail_val x y tl fb v ()) == dfst v)
 = ()
 #pop-options
 
 inline_for_extraction
-let fdisp (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) : Type =
+let fdisp (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) : Type =
   (kc: S.slice U8.t) ->
   (pin: S.slice U8.t) ->
   (#pm: perm) ->
@@ -570,16 +570,16 @@ fn fdisp_nil (key_k: asn1_terminal_k) (fb: Ghost.erased asn1_gen_items_lk)
 #push-options "--z3rlimit 64"
 
 inline_for_extraction
-fn fdisp_single (key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k)) (x: asn1_terminal_t key_k) (y: Ghost.erased asn1_gen_items_lk) (fb: Ghost.erased asn1_gen_items_lk)
+fn fdisp_single (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) (x: asn1_key_lit key_k) (y: Ghost.erased asn1_gen_items_lk) (fb: Ghost.erased asn1_gen_items_lk)
   (pitems: items_parser y)
   (pkey: key_parser key_k) (pfb: items_parser fb)
 : fdisp key_k [(x, Ghost.reveal y)] fb
 = (kc: _) (pin: _) (#pm: _) (#wk: _) (#wp: _) (#v: _)
 {
   S.pts_to_len kc;
-  AL.key_check key_k x (dfst v) wk;
+  AL.key_check_fl key_k (key_of_lit key_k x) (dfst v) wk;
   let mut poff = 0sz;
-  let ok = In.validate_key_eq key_k () x kc poff;
+  let ok = In.validate_key_eq_fl key_k () x (S.len kc) kc poff;
   if ok {
     AL.pl_fb_head x y [] fb wp v;
     let r = pitems pin #pm #wp #(AL.ady_fb_head_val x y [] fb v ());
@@ -601,17 +601,17 @@ fn fdisp_single (key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k)) (x: asn1_
 }
 
 inline_for_extraction
-fn fdisp_cons (key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k)) (x: asn1_terminal_t key_k) (y: Ghost.erased asn1_gen_items_lk)
-  (hd2: asn1_terminal_t key_k & asn1_gen_items_lk) (tl2: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: Ghost.erased asn1_gen_items_lk)
+fn fdisp_cons (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) (x: asn1_key_lit key_k) (y: Ghost.erased asn1_gen_items_lk)
+  (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: Ghost.erased asn1_gen_items_lk)
   (pitems: items_parser y)
   (ptail: fdisp key_k (hd2 :: tl2) fb)
 : fdisp key_k ((x, Ghost.reveal y) :: hd2 :: tl2) fb
 = (kc: _) (pin: _) (#pm: _) (#wk: _) (#wp: _) (#v: _)
 {
   S.pts_to_len kc;
-  AL.key_check key_k x (dfst v) wk;
+  AL.key_check_fl key_k (key_of_lit key_k x) (dfst v) wk;
   let mut poff = 0sz;
-  let ok = In.validate_key_eq key_k () x kc poff;
+  let ok = In.validate_key_eq_fl key_k () x (S.len kc) kc poff;
   if ok {
     AL.pl_fb_head x y (hd2 :: tl2) fb wp v;
     let r = pitems pin #pm #wp #(AL.ady_fb_head_val x y (hd2 :: tl2) fb v ());
@@ -635,24 +635,24 @@ fn fdisp_cons (key_k: asn1_terminal_k) (u: squash (ASN1_OID? key_k)) (x: asn1_te
 
 (* The suffix parsers *)
 
-let sfx_none (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+let sfx_none (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
 : Tot (parser_twin asn1_weak_parser_kind (AL.ady key_k ls))
 = ADB.adb_sfx_none kid key_k ls
 
-let sfx_some (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let sfx_some (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
 : Tot (parser_twin asn1_weak_parser_kind (AL.ady_fb key_k ls fb))
 = ADB.adb_sfx_some kid key_k ls fb
 
 inline_for_extraction
-let sfx_none_aparser (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) : Type =
+let sfx_none_aparser (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) : Type =
   aparser #(asn1_adb_suffix_impl_t key_k ls None) #(AL.ady key_k ls) (asn1_adb_rel key_k ls) #asn1_weak_parser_kind (Mkparsertwin?.p (sfx_none kid key_k ls))
 
 inline_for_extraction
-let sfx_some_aparser (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) : Type =
+let sfx_some_aparser (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) : Type =
   aparser #(asn1_adb_suffix_impl_t key_k ls (Some (fbt key_k fb))) #(AL.ady_fb key_k ls fb) (afb_rel key_k ls fb) #asn1_weak_parser_kind (Mkparsertwin?.p (sfx_some kid key_k ls fb))
 
 inline_for_extraction
-fn sfx_none_parser (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_terminal_k) (ls: Ghost.erased (list (asn1_terminal_t key_k & asn1_gen_items_lk)))
+fn sfx_none_parser (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_terminal_k) (ls: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk)))
   (disp: ndisp key_k ls)
 : sfx_none_aparser kid key_k ls
 = (input: _) (#pm: _) (#w: _) (#v: _)
@@ -666,7 +666,7 @@ fn sfx_none_parser (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_termi
 }
 
 inline_for_extraction
-fn sfx_some_parser (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_terminal_k) (ls: Ghost.erased (list (asn1_terminal_t key_k & asn1_gen_items_lk))) (fb: Ghost.erased asn1_gen_items_lk)
+fn sfx_some_parser (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_terminal_k) (ls: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (fb: Ghost.erased asn1_gen_items_lk)
   (disp: fdisp key_k ls fb)
 : sfx_some_aparser kid key_k ls fb
 = (input: _) (#pm: _) (#w: _) (#v: _)
@@ -682,14 +682,14 @@ fn sfx_some_parser (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_termi
 (* The top-level ANY DEFINED BY content parsers *)
 
 let adb_k_none (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
 : Tot asn1_content_k
 = ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls None pf pf'
 
 let adb_k_some (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
 : Tot asn1_content_k
@@ -698,7 +698,7 @@ let adb_k_some (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (k
 #push-options "--z3rlimit 64"
 
 let adb_content_none (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
   (w: SB.bytes) (v: asn1_sequence_any_t_core prefix (AL.ady key_k ls))
@@ -713,7 +713,7 @@ let adb_content_none (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id
   AL.sfx_none_shaped kid key_k ls
 
 let adb_content_some (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
   (w: SB.bytes) (v: asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb))
@@ -730,7 +730,7 @@ let adb_content_some (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id
 #pop-options
 
 let adb_rel_none_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
   (pm: perm) (x: asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls None)) (y: asn1_sequence_any_t_core prefix (AL.ady key_k ls))
@@ -739,7 +739,7 @@ let adb_rel_none_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_
     by (T.norm [delta_only [`%adb_k_none; `%asn1_content_rel]; zeta; iota]; T.trefl ())
 
 let adb_rel_some_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
   (pm: perm) (x: asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (fbt key_k fb)))) (y: asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb))
@@ -749,7 +749,7 @@ let adb_rel_some_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_
 
 inline_for_extraction
 let adb_none_aparser (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk))
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
 : Type
@@ -758,7 +758,7 @@ let adb_none_aparser (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id
 
 inline_for_extraction
 let adb_some_aparser (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
-  (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
 : Type
@@ -767,7 +767,7 @@ let adb_some_aparser (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id
 
 inline_for_extraction
 fn adb_none_parser (ipd: Ghost.erased id_decs) (prefix: Ghost.erased (asn1_gen_items_l ipd)) (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_terminal_k)
-  (ls: Ghost.erased (list (asn1_terminal_t key_k & asn1_gen_items_lk)))
+  (ls: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk)))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton (Ghost.reveal kid)) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst (Ghost.reveal ls))))
   (pp: saparser prefix (asn1_adb_rel key_k ls) (sfx_none kid key_k ls))
@@ -784,7 +784,7 @@ fn adb_none_parser (ipd: Ghost.erased id_decs) (prefix: Ghost.erased (asn1_gen_i
 
 inline_for_extraction
 fn adb_some_parser (ipd: Ghost.erased id_decs) (prefix: Ghost.erased (asn1_gen_items_l ipd)) (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_terminal_k)
-  (ls: Ghost.erased (list (asn1_terminal_t key_k & asn1_gen_items_lk))) (fb: Ghost.erased asn1_gen_items_lk)
+  (ls: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (fb: Ghost.erased asn1_gen_items_lk)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton (Ghost.reveal kid)) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst (Ghost.reveal ls))))
   (pp: saparser prefix (afb_rel key_k ls fb) (sfx_some kid key_k ls fb))

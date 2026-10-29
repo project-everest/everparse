@@ -330,7 +330,7 @@ let rec content_lemma (id: asn1_id_t) (k: asn1_content_k)
     prefixed_content_esound id k'
   | ASN1_ANY_DEFINED_BY idp prefix kid key_k ls ofb pf pf' ->
     items_lemma prefix;
-    ls_lemma (asn1_terminal_t key_k) ls;
+    ls_lemma (asn1_key_lit key_k) ls;
     begin match ofb with
     | None -> adb_content_esound id idp prefix kid key_k ls pf pf'
     | Some fb ->

@@ -76,17 +76,17 @@ let auto_asn1_sequence_t_core_equiv' (items:list asn1_gen_item_k)
   [SMTPat (asn1_sequence_t items)]
 = asn1_sequence_t_core_equiv' items
 
-let auto_asn1_any_t_equiv (#t:eqtype) (ls:list (t & asn1_gen_items_lk))
+let auto_asn1_any_t_equiv (#lt #t:eqtype) (f: lt -> Tot t) (ls:list (lt & asn1_gen_items_lk))
 : Lemma
-  (ensures asn1_any_t_core t ls == asn1_any_t t (t_lk_as_t_k ls))
-  [SMTPat (asn1_any_t_core t ls)]
-= asn1_any_t_equiv ls
+  (ensures asn1_any_t_core t f ls == asn1_any_t t f (t_lk_as_t_k ls))
+  [SMTPat (asn1_any_t_core t f ls)]
+= asn1_any_t_equiv f ls
 
-let auto_asn1_any_t_equiv' (#t:eqtype) (ls:list (t & asn1_gen_items_k))
+let auto_asn1_any_t_equiv' (#lt #t:eqtype) (f: lt -> Tot t) (ls:list (lt & asn1_gen_items_k))
 : Lemma
-  (ensures asn1_any_t_core t (t_k_as_t_lk ls) == asn1_any_t t ls)
-  [SMTPat (asn1_any_t t ls)]
-= asn1_any_t_equiv' ls
+  (ensures asn1_any_t_core t f (t_k_as_t_lk ls) == asn1_any_t t f ls)
+  [SMTPat (asn1_any_t t f ls)]
+= asn1_any_t_equiv' f ls
 
 let auto_asn1_sequence_any_t_equiv #id_decs (items : asn1_gen_items_l id_decs) (suffix_t : Type)
 : Lemma
@@ -160,7 +160,7 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
     in
     let key_p = Mkparsertwin?.p key_p_twin in
     let key_fp = Mkparsertwin?.fp key_p_twin in
-    let supported_p = dasn1_ls_as_parser (asn1_terminal_t key_k) ls in
+    let supported_p = dasn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
     (match ofb with
     | None -> 
       assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
@@ -184,12 +184,12 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin) 
 
-and dasn1_ls_as_parser (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
+and dasn1_ls_as_parser (#lt : eqtype) (t : eqtype) (f : lt -> Tot t) (ls : list (lt & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t f ls == extract_types lp}) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    (x, Mkgenparser _ (make_asn1_sequence_parser (dasn1_sequence_as_parser (dsnd y)))) :: (dasn1_ls_as_parser t tl)
+    (f x, Mkgenparser _ (make_asn1_sequence_parser (dasn1_sequence_as_parser (dsnd y)))) :: (dasn1_ls_as_parser t f tl)
 
 and dasn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {asn1_lc_t lc == extract_types lp})  (decreases lc) =
   match lc with
@@ -302,7 +302,7 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
     in
     let key_p = Mkparsertwin?.p key_p_twin in
     let key_fp = Mkparsertwin?.fp key_p_twin in
-    let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+    let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
     (match ofb with
     | None -> 
       assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
@@ -322,12 +322,12 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin) 
 
-and asn1_ls_as_parser (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
+and asn1_ls_as_parser (#lt : eqtype) (t : eqtype) (f : lt -> Tot t) (ls : list (lt & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t f ls == extract_types lp}) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    (x, Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd y)))) :: (asn1_ls_as_parser t tl)
+    (f x, Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd y)))) :: (asn1_ls_as_parser t f tl)
 
 and asn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {asn1_lc_t lc == extract_types lp})  (decreases lc) =
   match lc with

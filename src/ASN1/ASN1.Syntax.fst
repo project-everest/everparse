@@ -70,7 +70,7 @@ let rec asn1_content_k_wf (c : asn1_content_k) : Tot bool (decreases c)
      | None -> true
      | Some fb -> asn1_gen_items_l_wf (dsnd fb))
 
-and asn1_supported_wf (key_k : asn1_terminal_k) (l : list (asn1_terminal_t key_k & asn1_gen_items_lk)) : Tot bool (decreases l)
+and asn1_supported_wf (key_k : asn1_terminal_k) (l : list (asn1_key_lit key_k & asn1_gen_items_lk)) : Tot bool (decreases l)
 = match l with
   | [] -> true
   | (_, gitems) :: tl -> asn1_gen_items_l_wf (dsnd gitems) && asn1_supported_wf key_k tl
