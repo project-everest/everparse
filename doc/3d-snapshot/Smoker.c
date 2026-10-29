@@ -4,107 +4,93 @@
 static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_smoker = (uint64_t)p;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartSmoker = (uint64_t)currentPosition;
   size_t pos = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeAge = pos;
+  size_t positionBeforeAge = sl_pos[0];
+  size_t bytesRemainingBeforeAge = (sl_len - positionBeforeAge);
+  bool hasBytesForAge;
+  if (offsetBeforeAge <= bytesRemainingBeforeAge) {
+    hasBytesForAge = (4 <= (bytesRemainingBeforeAge - offsetBeforeAge));
   }
   else {
-    hasBytes = false;
+    hasBytesForAge = false;
   }
-  uint8_t resultAfterage;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    resultAfterage = EVERPARSE_STATUS_SUCCESS;
+  uint8_t resultAfterAge;
+  if (hasBytesForAge) {
+    pos = (offsetBeforeAge + 4);
+    resultAfterAge = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfterage = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+    resultAfterAge = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_smoker;
-  if (resultAfterage == EVERPARSE_STATUS_SUCCESS) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint32_t age = EverParse3d_Prelude_read____UINT32(sub);
+  uint8_t resultAfterSmoker;
+  if (resultAfterAge == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfAge = sl_pos[0];
+    size_t positionAfterAge = (positionOfAge + 4);
+    uint8_t *bytesOfAge = (sl_base + positionOfAge);
+    sl_pos[0] = positionAfterAge;
+    uint32_t age = EverParse3d_Prelude_read____UINT32(bytesOfAge);
     bool ageConstraintIsOk = (age >= (uint32_t)21);
     if (ageConstraintIsOk) {
       size_t pos1 = 0;
       /* Validating field cigarettesConsumed */
-      size_t p2 = sl_pos[0];
-      uint64_t view_start = (uint64_t)p2;
-      size_t field_off = pos1;
-      uint64_t start_pos = (view_start + (uint64_t)field_off);
+      size_t currentPosition1 = sl_pos[0];
+      uint64_t streamPositionAtCigarettesConsumed = (uint64_t)currentPosition1;
+      size_t offsetOfCigarettesConsumed = pos1;
+      uint64_t startPositionOfCigarettesConsumed = (streamPositionAtCigarettesConsumed + (uint64_t)offsetOfCigarettesConsumed);
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      size_t p02 = pos1;
-      size_t p3 = sl_pos[0];
-      size_t rem1 = (sl_len - p3);
-      bool hasBytes1;
-      if (p02 <= rem1) {
-        hasBytes1 = (1 <= (rem1 - p02));
+      size_t offsetBeforeCigarettesConsumed = pos1;
+      size_t positionBeforeCigarettesConsumed = sl_pos[0];
+      size_t bytesRemainingBeforeCigarettesConsumed = (sl_len - positionBeforeCigarettesConsumed);
+      bool hasBytesForCigarettesConsumed;
+      if (offsetBeforeCigarettesConsumed <= bytesRemainingBeforeCigarettesConsumed) {
+        hasBytesForCigarettesConsumed = (1 <= (bytesRemainingBeforeCigarettesConsumed - offsetBeforeCigarettesConsumed));
       }
       else {
-        hasBytes1 = false;
+        hasBytesForCigarettesConsumed = false;
+      }
+      uint8_t resultOfCigarettesConsumed;
+      if (hasBytesForCigarettesConsumed) {
+        pos1 = (offsetBeforeCigarettesConsumed + 1);
+        resultOfCigarettesConsumed = EVERPARSE_STATUS_SUCCESS;
+      }
+      else {
+        resultOfCigarettesConsumed = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
       uint8_t res;
-      if (hasBytes1) {
-        pos1 = (p02 + 1);
-        res = EVERPARSE_STATUS_SUCCESS;
+      if (resultOfCigarettesConsumed == EVERPARSE_STATUS_SUCCESS) {
+        res = resultOfCigarettesConsumed;
       }
       else {
-        res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+        (void)(error_handler_fn("_smoker", "cigarettesConsumed", EverParse3d_ErrorCode_error_reason_of_result(resultOfCigarettesConsumed), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfCigarettesConsumed), ctxt, sl_base, startPositionOfCigarettesConsumed));
+        res = resultOfCigarettesConsumed;
       }
-      uint8_t res1;
       if (res == EVERPARSE_STATUS_SUCCESS) {
-        res1 = res;
+        size_t currentPosition2 = sl_pos[0];
+        size_t newPosition = (currentPosition2 + pos1);
+        sl_pos[0] = newPosition;
+        resultAfterSmoker = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        uint64_t _ct1;
-        if ((res == 0) || ((res >= 2) && (res <= 8))) {
-          _ct1 = (uint64_t)res;
-        }
-        else {
-          _ct1 = 15;
-        }
-        (void)(error_handler_fn("_smoker", "cigarettesConsumed", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
-        res1 = res;
-      }
-      if (res1 == EVERPARSE_STATUS_SUCCESS) {
-        size_t p4 = sl_pos[0];
-        size_t p_ = (p4 + pos1);
-        sl_pos[0] = p_;
-        resultAfter_smoker = EVERPARSE_STATUS_SUCCESS;
-      }
-      else {
-        resultAfter_smoker = res1;
+        resultAfterSmoker = res;
       }
     }
     else {
-      resultAfter_smoker = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
+      resultAfterSmoker = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
-    resultAfter_smoker = resultAfterage;
+    resultAfterSmoker = resultAfterAge;
   }
-  if (resultAfter_smoker == EVERPARSE_STATUS_SUCCESS) {
-    return resultAfter_smoker;
+  if (resultAfterSmoker == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterSmoker;
   }
   else {
-    uint64_t _ct2;
-    if ((resultAfter_smoker == 0) || ((resultAfter_smoker >= 2) && (resultAfter_smoker <= 8))) {
-      _ct2 = (uint64_t)resultAfter_smoker;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("_smoker", "age", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_smoker), _ct2, ctxt, sl_base, fieldStart_smoker));
-    return resultAfter_smoker;
+    (void)(error_handler_fn("_smoker", "age", EverParse3d_ErrorCode_error_reason_of_result(resultAfterSmoker), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterSmoker), ctxt, sl_base, fieldStartSmoker));
+    return resultAfterSmoker;
   }
 }
 
@@ -114,14 +100,7 @@ uint64_t SmokerValidateSmoker(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, ui
   size_t cursor = initial;
   uint8_t status = Smoker_validate____core__smoker(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

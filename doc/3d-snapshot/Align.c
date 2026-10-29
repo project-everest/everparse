@@ -4,50 +4,43 @@
 static uint8_t Align_validate____core__coloredPoint1(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t Align_validate____core__coloredPoint1(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_coloredPoint1 = (uint64_t)p;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartColoredPoint1 = (uint64_t)currentPosition;
   size_t pos = 0;
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = ((size_t)6 <= (rem - p0));
+  size_t offsetBeforeColor = pos;
+  size_t positionBeforeColor = sl_pos[0];
+  size_t bytesRemainingBeforeColor = (sl_len - positionBeforeColor);
+  bool hasBytesForColor;
+  if (offsetBeforeColor <= bytesRemainingBeforeColor) {
+    hasBytesForColor = ((size_t)6 <= (bytesRemainingBeforeColor - offsetBeforeColor));
   }
   else {
-    hasBytes = false;
+    hasBytesForColor = false;
   }
   uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + (size_t)6);
+  if (hasBytesForColor) {
+    pos = (offsetBeforeColor + (size_t)6);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_coloredPoint1;
+  uint8_t resultAfterColoredPoint1;
   if (res == EVERPARSE_STATUS_SUCCESS) {
-    size_t p2 = sl_pos[0];
-    size_t p_ = (p2 + pos);
-    sl_pos[0] = p_;
-    resultAfter_coloredPoint1 = EVERPARSE_STATUS_SUCCESS;
+    size_t currentPosition1 = sl_pos[0];
+    size_t newPosition = (currentPosition1 + pos);
+    sl_pos[0] = newPosition;
+    resultAfterColoredPoint1 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfter_coloredPoint1 = res;
+    resultAfterColoredPoint1 = res;
   }
-  if (resultAfter_coloredPoint1 == EVERPARSE_STATUS_SUCCESS) {
-    return resultAfter_coloredPoint1;
+  if (resultAfterColoredPoint1 == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterColoredPoint1;
   }
   else {
-    uint64_t _ct1;
-    if ((resultAfter_coloredPoint1 == 0) || ((resultAfter_coloredPoint1 >= 2) && (resultAfter_coloredPoint1 <= 8))) {
-      _ct1 = (uint64_t)resultAfter_coloredPoint1;
-    }
-    else {
-      _ct1 = 15;
-    }
-    (void)(error_handler_fn("_coloredPoint1", "color", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_coloredPoint1), _ct1, ctxt, sl_base, fieldStart_coloredPoint1));
-    return resultAfter_coloredPoint1;
+    (void)(error_handler_fn("_coloredPoint1", "color", EverParse3d_ErrorCode_error_reason_of_result(resultAfterColoredPoint1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterColoredPoint1), ctxt, sl_base, fieldStartColoredPoint1));
+    return resultAfterColoredPoint1;
   }
 }
 
@@ -57,14 +50,7 @@ uint64_t AlignValidateColoredPoint1(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handl
   size_t cursor = initial;
   uint8_t status = Align_validate____core__coloredPoint1(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

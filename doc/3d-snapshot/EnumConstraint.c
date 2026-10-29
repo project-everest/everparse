@@ -4,116 +4,102 @@
 static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_enum_constraint = (uint64_t)p;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartEnumConstraint = (uint64_t)currentPosition;
   size_t pos = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeCol = pos;
+  size_t positionBeforeCol = sl_pos[0];
+  size_t bytesRemainingBeforeCol = (sl_len - positionBeforeCol);
+  bool hasBytesForCol;
+  if (offsetBeforeCol <= bytesRemainingBeforeCol) {
+    hasBytesForCol = (4 <= (bytesRemainingBeforeCol - offsetBeforeCol));
   }
   else {
-    hasBytes = false;
+    hasBytesForCol = false;
   }
-  uint8_t resultAftercol;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    resultAftercol = EVERPARSE_STATUS_SUCCESS;
+  uint8_t resultAfterCol;
+  if (hasBytesForCol) {
+    pos = (offsetBeforeCol + 4);
+    resultAfterCol = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAftercol = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+    resultAfterCol = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_enum_constraint;
-  if (resultAftercol == EVERPARSE_STATUS_SUCCESS) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint32_t col = EverParse3d_Prelude_read____UINT32(sub);
+  uint8_t resultAfterEnumConstraint;
+  if (resultAfterCol == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfCol = sl_pos[0];
+    size_t positionAfterCol = (positionOfCol + 4);
+    uint8_t *bytesOfCol = (sl_base + positionOfCol);
+    sl_pos[0] = positionAfterCol;
+    uint32_t col = EverParse3d_Prelude_read____UINT32(bytesOfCol);
     bool colConstraintIsOk = (((col == ENUMCONSTRAINT_RED) || (col == ENUMCONSTRAINT_GREEN)) || (col == ENUMCONSTRAINT_BLUE));
     if (colConstraintIsOk) {
       /* Validating field x */
-      size_t p2 = sl_pos[0];
-      uint64_t fieldStart_enum_constraint1 = (uint64_t)p2;
+      size_t currentPosition1 = sl_pos[0];
+      uint64_t fieldStartEnumConstraint1 = (uint64_t)currentPosition1;
       size_t pos1 = 0;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      size_t p02 = pos1;
-      size_t p3 = sl_pos[0];
-      size_t rem1 = (sl_len - p3);
-      bool hasBytes1;
-      if (p02 <= rem1) {
-        hasBytes1 = (4 <= (rem1 - p02));
+      size_t offsetBeforeX_refinement = pos1;
+      size_t positionBeforeX_refinement = sl_pos[0];
+      size_t bytesRemainingBeforeX_refinement = (sl_len - positionBeforeX_refinement);
+      bool hasBytesForX_refinement;
+      if (offsetBeforeX_refinement <= bytesRemainingBeforeX_refinement) {
+        hasBytesForX_refinement = (4 <= (bytesRemainingBeforeX_refinement - offsetBeforeX_refinement));
       }
       else {
-        hasBytes1 = false;
+        hasBytesForX_refinement = false;
       }
-      uint8_t resultAfterx_refinement;
-      if (hasBytes1) {
-        pos1 = (p02 + 4);
-        resultAfterx_refinement = EVERPARSE_STATUS_SUCCESS;
+      uint8_t resultAfterX_refinement;
+      if (hasBytesForX_refinement) {
+        pos1 = (offsetBeforeX_refinement + 4);
+        resultAfterX_refinement = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfterx_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+        resultAfterX_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
-      uint8_t resultAfter_enum_constraint_1;
-      if (resultAfterx_refinement == EVERPARSE_STATUS_SUCCESS) {
+      uint8_t resultAfterEnumConstraint_1;
+      if (resultAfterX_refinement == EVERPARSE_STATUS_SUCCESS) {
         /* reading field_value */
-        size_t p03 = sl_pos[0];
-        size_t m1 = (p03 + 4);
-        uint8_t *sub1 = (sl_base + p03);
-        sl_pos[0] = m1;
-        uint32_t x_refinement = EverParse3d_Prelude_read____UINT32(sub1);
+        size_t positionOfX_refinement = sl_pos[0];
+        size_t positionAfterX_refinement = (positionOfX_refinement + 4);
+        uint8_t *bytesOfX_refinement = (sl_base + positionOfX_refinement);
+        sl_pos[0] = positionAfterX_refinement;
+        uint32_t x_refinement = EverParse3d_Prelude_read____UINT32(bytesOfX_refinement);
         /* start: checking constraint */
         bool x_refinementConstraintIsOk = ((x_refinement == (uint32_t)0) || (col == ENUMCONSTRAINT_GREEN));
         /* end: checking constraint */
         if (x_refinementConstraintIsOk) {
-          resultAfter_enum_constraint_1 = EVERPARSE_STATUS_SUCCESS;
+          resultAfterEnumConstraint_1 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          resultAfter_enum_constraint_1 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
+          resultAfterEnumConstraint_1 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
         }
       }
       else {
-        resultAfter_enum_constraint_1 = resultAfterx_refinement;
+        resultAfterEnumConstraint_1 = resultAfterX_refinement;
       }
-      if (resultAfter_enum_constraint_1 == EVERPARSE_STATUS_SUCCESS) {
-        resultAfter_enum_constraint = resultAfter_enum_constraint_1;
+      if (resultAfterEnumConstraint_1 == EVERPARSE_STATUS_SUCCESS) {
+        resultAfterEnumConstraint = resultAfterEnumConstraint_1;
       }
       else {
-        uint64_t _ct1;
-        if ((resultAfter_enum_constraint_1 == 0) || ((resultAfter_enum_constraint_1 >= 2) && (resultAfter_enum_constraint_1 <= 8))) {
-          _ct1 = (uint64_t)resultAfter_enum_constraint_1;
-        }
-        else {
-          _ct1 = 15;
-        }
-        (void)(error_handler_fn("_enum_constraint", "x.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_enum_constraint_1), _ct1, ctxt, sl_base, fieldStart_enum_constraint1));
-        resultAfter_enum_constraint = resultAfter_enum_constraint_1;
+        (void)(error_handler_fn("_enum_constraint", "x.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfterEnumConstraint_1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterEnumConstraint_1), ctxt, sl_base, fieldStartEnumConstraint1));
+        resultAfterEnumConstraint = resultAfterEnumConstraint_1;
       }
     }
     else {
-      resultAfter_enum_constraint = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
+      resultAfterEnumConstraint = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
-    resultAfter_enum_constraint = resultAftercol;
+    resultAfterEnumConstraint = resultAfterCol;
   }
-  if (resultAfter_enum_constraint == EVERPARSE_STATUS_SUCCESS) {
-    return resultAfter_enum_constraint;
+  if (resultAfterEnumConstraint == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterEnumConstraint;
   }
   else {
-    uint64_t _ct2;
-    if ((resultAfter_enum_constraint == 0) || ((resultAfter_enum_constraint >= 2) && (resultAfter_enum_constraint <= 8))) {
-      _ct2 = (uint64_t)resultAfter_enum_constraint;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("_enum_constraint", "col", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_enum_constraint), _ct2, ctxt, sl_base, fieldStart_enum_constraint));
-    return resultAfter_enum_constraint;
+    (void)(error_handler_fn("_enum_constraint", "col", EverParse3d_ErrorCode_error_reason_of_result(resultAfterEnumConstraint), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterEnumConstraint), ctxt, sl_base, fieldStartEnumConstraint));
+    return resultAfterEnumConstraint;
   }
 }
 
@@ -123,14 +109,7 @@ uint64_t EnumConstraintValidateEnumConstraint(uint8_t *ctxt, EVERPARSE_ERROR_HAN
   size_t cursor = initial;
   uint8_t status = EnumConstraint_validate____core__enum_constraint(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

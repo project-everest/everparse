@@ -8,187 +8,159 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
   if (size == (uint32_t)TAGGEDUNION_SIZE8) {
     size_t pos = 0;
     /* Validating field value8 */
-    size_t p = sl_pos[0];
-    uint64_t view_start = (uint64_t)p;
-    size_t field_off = pos;
-    uint64_t start_pos = (view_start + (uint64_t)field_off);
+    size_t currentPosition = sl_pos[0];
+    uint64_t streamPositionAtValue8 = (uint64_t)currentPosition;
+    size_t offsetOfValue8 = pos;
+    uint64_t startPositionOfValue8 = (streamPositionAtValue8 + (uint64_t)offsetOfValue8);
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    size_t p0 = pos;
-    size_t p1 = sl_pos[0];
-    size_t rem = (sl_len - p1);
-    bool hasBytes;
-    if (p0 <= rem) {
-      hasBytes = (1 <= (rem - p0));
+    size_t offsetBeforeValue8 = pos;
+    size_t positionBeforeValue8 = sl_pos[0];
+    size_t bytesRemainingBeforeValue8 = (sl_len - positionBeforeValue8);
+    bool hasBytesForValue8;
+    if (offsetBeforeValue8 <= bytesRemainingBeforeValue8) {
+      hasBytesForValue8 = (1 <= (bytesRemainingBeforeValue8 - offsetBeforeValue8));
     }
     else {
-      hasBytes = false;
+      hasBytesForValue8 = false;
+    }
+    uint8_t resultOfValue8;
+    if (hasBytesForValue8) {
+      pos = (offsetBeforeValue8 + 1);
+      resultOfValue8 = EVERPARSE_STATUS_SUCCESS;
+    }
+    else {
+      resultOfValue8 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
     uint8_t res;
-    if (hasBytes) {
-      pos = (p0 + 1);
-      res = EVERPARSE_STATUS_SUCCESS;
+    if (resultOfValue8 == EVERPARSE_STATUS_SUCCESS) {
+      res = resultOfValue8;
     }
     else {
-      res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+      (void)(error_handler_fn("_int_payload", "value8", EverParse3d_ErrorCode_error_reason_of_result(resultOfValue8), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfValue8), ctxt, sl_base, startPositionOfValue8));
+      res = resultOfValue8;
     }
-    uint8_t res1;
     if (res == EVERPARSE_STATUS_SUCCESS) {
-      res1 = res;
-    }
-    else {
-      uint64_t _ct1;
-      if ((res == 0) || ((res >= 2) && (res <= 8))) {
-        _ct1 = (uint64_t)res;
-      }
-      else {
-        _ct1 = 15;
-      }
-      (void)(error_handler_fn("_int_payload", "value8", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
-      res1 = res;
-    }
-    if (res1 == EVERPARSE_STATUS_SUCCESS) {
-      size_t p2 = sl_pos[0];
-      size_t p_ = (p2 + pos);
-      sl_pos[0] = p_;
+      size_t currentPosition1 = sl_pos[0];
+      size_t newPosition = (currentPosition1 + pos);
+      sl_pos[0] = newPosition;
       return EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      return res1;
+      return res;
     }
   }
   else {
     if (size == (uint32_t)TAGGEDUNION_SIZE16) {
       size_t pos_1 = 0;
       /* Validating field value16 */
-      size_t p_1 = sl_pos[0];
-      uint64_t view_start_1 = (uint64_t)p_1;
-      size_t field_off_1 = pos_1;
-      uint64_t start_pos_1 = (view_start_1 + (uint64_t)field_off_1);
+      size_t currentPosition_1 = sl_pos[0];
+      uint64_t streamPositionAtValue16 = (uint64_t)currentPosition_1;
+      size_t offsetOfValue16 = pos_1;
+      uint64_t startPositionOfValue16 = (streamPositionAtValue16 + (uint64_t)offsetOfValue16);
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      size_t p0_1 = pos_1;
-      size_t p1_1 = sl_pos[0];
-      size_t rem_1 = (sl_len - p1_1);
-      bool hasBytes_1;
-      if (p0_1 <= rem_1) {
-        hasBytes_1 = (2 <= (rem_1 - p0_1));
+      size_t offsetBeforeValue16 = pos_1;
+      size_t positionBeforeValue16 = sl_pos[0];
+      size_t bytesRemainingBeforeValue16 = (sl_len - positionBeforeValue16);
+      bool hasBytesForValue16;
+      if (offsetBeforeValue16 <= bytesRemainingBeforeValue16) {
+        hasBytesForValue16 = (2 <= (bytesRemainingBeforeValue16 - offsetBeforeValue16));
       }
       else {
-        hasBytes_1 = false;
+        hasBytesForValue16 = false;
+      }
+      uint8_t resultOfValue16;
+      if (hasBytesForValue16) {
+        pos_1 = (offsetBeforeValue16 + 2);
+        resultOfValue16 = EVERPARSE_STATUS_SUCCESS;
+      }
+      else {
+        resultOfValue16 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
       uint8_t res_1;
-      if (hasBytes_1) {
-        pos_1 = (p0_1 + 2);
-        res_1 = EVERPARSE_STATUS_SUCCESS;
+      if (resultOfValue16 == EVERPARSE_STATUS_SUCCESS) {
+        res_1 = resultOfValue16;
       }
       else {
-        res_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+        (void)(error_handler_fn("_int_payload", "value16", EverParse3d_ErrorCode_error_reason_of_result(resultOfValue16), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfValue16), ctxt, sl_base, startPositionOfValue16));
+        res_1 = resultOfValue16;
       }
-      uint8_t res1_1;
       if (res_1 == EVERPARSE_STATUS_SUCCESS) {
-        res1_1 = res_1;
-      }
-      else {
-        uint64_t _ct2;
-        if ((res_1 == 0) || ((res_1 >= 2) && (res_1 <= 8))) {
-          _ct2 = (uint64_t)res_1;
-        }
-        else {
-          _ct2 = 15;
-        }
-        (void)(error_handler_fn("_int_payload", "value16", EverParse3d_ErrorCode_error_reason_of_result(res_1), _ct2, ctxt, sl_base, start_pos_1));
-        res1_1 = res_1;
-      }
-      if (res1_1 == EVERPARSE_STATUS_SUCCESS) {
-        size_t p2_1 = sl_pos[0];
-        size_t p__1 = (p2_1 + pos_1);
-        sl_pos[0] = p__1;
+        size_t currentPosition1_1 = sl_pos[0];
+        size_t newPosition_1 = (currentPosition1_1 + pos_1);
+        sl_pos[0] = newPosition_1;
         return EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        return res1_1;
+        return res_1;
       }
     }
     else {
       if (size == (uint32_t)TAGGEDUNION_SIZE32) {
         size_t pos_2 = 0;
         /* Validating field value32 */
-        size_t p_2 = sl_pos[0];
-        uint64_t view_start_2 = (uint64_t)p_2;
-        size_t field_off_2 = pos_2;
-        uint64_t start_pos_2 = (view_start_2 + (uint64_t)field_off_2);
+        size_t currentPosition_2 = sl_pos[0];
+        uint64_t streamPositionAtValue32 = (uint64_t)currentPosition_2;
+        size_t offsetOfValue32 = pos_2;
+        uint64_t startPositionOfValue32 = (streamPositionAtValue32 + (uint64_t)offsetOfValue32);
         /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-        size_t p0_2 = pos_2;
-        size_t p1_2 = sl_pos[0];
-        size_t rem_2 = (sl_len - p1_2);
-        bool hasBytes_2;
-        if (p0_2 <= rem_2) {
-          hasBytes_2 = (4 <= (rem_2 - p0_2));
+        size_t offsetBeforeValue32 = pos_2;
+        size_t positionBeforeValue32 = sl_pos[0];
+        size_t bytesRemainingBeforeValue32 = (sl_len - positionBeforeValue32);
+        bool hasBytesForValue32;
+        if (offsetBeforeValue32 <= bytesRemainingBeforeValue32) {
+          hasBytesForValue32 = (4 <= (bytesRemainingBeforeValue32 - offsetBeforeValue32));
         }
         else {
-          hasBytes_2 = false;
+          hasBytesForValue32 = false;
+        }
+        uint8_t resultOfValue32;
+        if (hasBytesForValue32) {
+          pos_2 = (offsetBeforeValue32 + 4);
+          resultOfValue32 = EVERPARSE_STATUS_SUCCESS;
+        }
+        else {
+          resultOfValue32 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
         }
         uint8_t res_2;
-        if (hasBytes_2) {
-          pos_2 = (p0_2 + 4);
-          res_2 = EVERPARSE_STATUS_SUCCESS;
+        if (resultOfValue32 == EVERPARSE_STATUS_SUCCESS) {
+          res_2 = resultOfValue32;
         }
         else {
-          res_2 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+          (void)(error_handler_fn("_int_payload", "value32", EverParse3d_ErrorCode_error_reason_of_result(resultOfValue32), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfValue32), ctxt, sl_base, startPositionOfValue32));
+          res_2 = resultOfValue32;
         }
-        uint8_t res1_2;
         if (res_2 == EVERPARSE_STATUS_SUCCESS) {
-          res1_2 = res_2;
-        }
-        else {
-          uint64_t _ct3;
-          if ((res_2 == 0) || ((res_2 >= 2) && (res_2 <= 8))) {
-            _ct3 = (uint64_t)res_2;
-          }
-          else {
-            _ct3 = 15;
-          }
-          (void)(error_handler_fn("_int_payload", "value32", EverParse3d_ErrorCode_error_reason_of_result(res_2), _ct3, ctxt, sl_base, start_pos_2));
-          res1_2 = res_2;
-        }
-        if (res1_2 == EVERPARSE_STATUS_SUCCESS) {
-          size_t p2_2 = sl_pos[0];
-          size_t p__2 = (p2_2 + pos_2);
-          sl_pos[0] = p__2;
+          size_t currentPosition1_2 = sl_pos[0];
+          size_t newPosition_2 = (currentPosition1_2 + pos_2);
+          sl_pos[0] = newPosition_2;
           return EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          return res1_2;
+          return res_2;
         }
       }
       else {
         size_t pos_3 = 0;
-        size_t p_3 = sl_pos[0];
-        uint64_t view_start_3 = (uint64_t)p_3;
-        uint64_t start_pos_3 = (view_start_3 + (uint64_t)pos_3);
-        uint8_t res_3 = EVERPARSE_STATUS_ERROR_IMPOSSIBLE;
-        uint8_t res1_3;
-        if (res_3 == EVERPARSE_STATUS_SUCCESS) {
-          res1_3 = res_3;
+        size_t currentPosition_3 = sl_pos[0];
+        uint64_t streamPositionAtX17 = (uint64_t)currentPosition_3;
+        uint64_t startPositionOfX17 = (streamPositionAtX17 + (uint64_t)pos_3);
+        uint8_t resultOfX17 = EVERPARSE_STATUS_ERROR_IMPOSSIBLE;
+        uint8_t res_3;
+        if (resultOfX17 == EVERPARSE_STATUS_SUCCESS) {
+          res_3 = resultOfX17;
         }
         else {
-          uint64_t _ct4;
-          if ((res_3 == 0) || ((res_3 >= 2) && (res_3 <= 8))) {
-            _ct4 = (uint64_t)res_3;
-          }
-          else {
-            _ct4 = 15;
-          }
-          (void)(error_handler_fn("_int_payload", "_x_17", EverParse3d_ErrorCode_error_reason_of_result(res_3), _ct4, ctxt, sl_base, start_pos_3));
-          res1_3 = res_3;
+          (void)(error_handler_fn("_int_payload", "_x_17", EverParse3d_ErrorCode_error_reason_of_result(resultOfX17), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfX17), ctxt, sl_base, startPositionOfX17));
+          res_3 = resultOfX17;
         }
-        if (res1_3 == EVERPARSE_STATUS_SUCCESS) {
-          size_t p1_3 = sl_pos[0];
-          size_t p__3 = (p1_3 + pos_3);
-          sl_pos[0] = p__3;
+        if (res_3 == EVERPARSE_STATUS_SUCCESS) {
+          size_t currentPosition1_3 = sl_pos[0];
+          size_t newPosition_3 = (currentPosition1_3 + pos_3);
+          sl_pos[0] = newPosition_3;
           return EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          return res1_3;
+          return res_3;
         }
       }
     }
@@ -197,71 +169,57 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
 
 static uint8_t TaggedUnion_validate____core__integer(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t pos = 0;
-  size_t p = sl_pos[0];
-  uint64_t view_start = (uint64_t)p;
-  size_t field_off = pos;
-  uint64_t start_pos = (view_start + (uint64_t)field_off);
+  size_t currentPosition = sl_pos[0];
+  uint64_t streamPositionAtSize = (uint64_t)currentPosition;
+  size_t offsetOfSize = pos;
+  uint64_t startPositionOfSize = (streamPositionAtSize + (uint64_t)offsetOfSize);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeSize = pos;
+  size_t positionBeforeSize = sl_pos[0];
+  size_t bytesRemainingBeforeSize = (sl_len - positionBeforeSize);
+  bool hasBytesForSize;
+  if (offsetBeforeSize <= bytesRemainingBeforeSize) {
+    hasBytesForSize = (4 <= (bytesRemainingBeforeSize - offsetBeforeSize));
   }
   else {
-    hasBytes = false;
+    hasBytesForSize = false;
   }
-  uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    res = EVERPARSE_STATUS_SUCCESS;
-  }
-  else {
-    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
-  }
-  uint8_t resultAftersize;
-  if (res == EVERPARSE_STATUS_SUCCESS) {
-    resultAftersize = res;
+  uint8_t resultOfSize;
+  if (hasBytesForSize) {
+    pos = (offsetBeforeSize + 4);
+    resultOfSize = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    uint64_t _ct1;
-    if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct1 = (uint64_t)res;
-    }
-    else {
-      _ct1 = 15;
-    }
-    (void)(error_handler_fn("_integer", "size", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
-    resultAftersize = res;
+    resultOfSize = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAftersize == EVERPARSE_STATUS_SUCCESS) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint32_t size = EverParse3d_Prelude_read____UINT32(sub);
+  uint8_t resultAfterSize;
+  if (resultOfSize == EVERPARSE_STATUS_SUCCESS) {
+    resultAfterSize = resultOfSize;
+  }
+  else {
+    (void)(error_handler_fn("_integer", "size", EverParse3d_ErrorCode_error_reason_of_result(resultOfSize), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfSize), ctxt, sl_base, startPositionOfSize));
+    resultAfterSize = resultOfSize;
+  }
+  if (resultAfterSize == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfSize = sl_pos[0];
+    size_t positionAfterSize = (positionOfSize + 4);
+    uint8_t *bytesOfSize = (sl_base + positionOfSize);
+    sl_pos[0] = positionAfterSize;
+    uint32_t size = EverParse3d_Prelude_read____UINT32(bytesOfSize);
     /* Validating field payload */
-    size_t p2 = sl_pos[0];
-    uint64_t fieldStart_integer = (uint64_t)p2;
-    uint8_t resultAfter_integer = TaggedUnion_validate____core__int_payload(size, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter_integer == EVERPARSE_STATUS_SUCCESS) {
-      return resultAfter_integer;
+    size_t currentPosition1 = sl_pos[0];
+    uint64_t fieldStartInteger = (uint64_t)currentPosition1;
+    uint8_t resultAfterInteger = TaggedUnion_validate____core__int_payload(size, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
+    if (resultAfterInteger == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterInteger;
     }
     else {
-      uint64_t _ct2;
-      if ((resultAfter_integer == 0) || ((resultAfter_integer >= 2) && (resultAfter_integer <= 8))) {
-        _ct2 = (uint64_t)resultAfter_integer;
-      }
-      else {
-        _ct2 = 15;
-      }
-      (void)(error_handler_fn("_integer", "payload", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_integer), _ct2, ctxt, sl_base, fieldStart_integer));
-      return resultAfter_integer;
+      (void)(error_handler_fn("_integer", "payload", EverParse3d_ErrorCode_error_reason_of_result(resultAfterInteger), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterInteger), ctxt, sl_base, fieldStartInteger));
+      return resultAfterInteger;
     }
   }
   else {
-    return resultAftersize;
+    return resultAfterSize;
   }
 }
 
@@ -271,14 +229,7 @@ uint64_t TaggedUnionValidateInteger(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handl
   size_t cursor = initial;
   uint8_t status = TaggedUnion_validate____core__integer(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

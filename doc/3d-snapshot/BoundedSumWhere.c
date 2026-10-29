@@ -4,136 +4,115 @@
 static uint8_t BoundedSumWhere_validate____core__boundedSum(uint32_t bound, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t BoundedSumWhere_validate____core__boundedSum(uint32_t bound, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_boundedSum = (uint64_t)p;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartBoundedSum = (uint64_t)currentPosition;
   /* Validating field __precondition */
-  bool __preconditionConstraintIsOk = (bound <= (uint32_t)1729);
-  uint8_t resultAfter_boundedSum;
-  if (__preconditionConstraintIsOk) {
+  bool preconditionConstraintIsOk = (bound <= (uint32_t)1729);
+  uint8_t resultAfterBoundedSum;
+  if (preconditionConstraintIsOk) {
     size_t pos = 0;
-    size_t p1 = sl_pos[0];
-    uint64_t view_start = (uint64_t)p1;
-    size_t field_off = pos;
-    uint64_t start_pos = (view_start + (uint64_t)field_off);
+    size_t currentPosition1 = sl_pos[0];
+    uint64_t streamPositionAtLeft = (uint64_t)currentPosition1;
+    size_t offsetOfLeft = pos;
+    uint64_t startPositionOfLeft = (streamPositionAtLeft + (uint64_t)offsetOfLeft);
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t p0 = pos;
-    size_t p2 = sl_pos[0];
-    size_t rem = (sl_len - p2);
-    bool hasBytes;
-    if (p0 <= rem) {
-      hasBytes = (4 <= (rem - p0));
+    size_t offsetBeforeLeft = pos;
+    size_t positionBeforeLeft = sl_pos[0];
+    size_t bytesRemainingBeforeLeft = (sl_len - positionBeforeLeft);
+    bool hasBytesForLeft;
+    if (offsetBeforeLeft <= bytesRemainingBeforeLeft) {
+      hasBytesForLeft = (4 <= (bytesRemainingBeforeLeft - offsetBeforeLeft));
     }
     else {
-      hasBytes = false;
+      hasBytesForLeft = false;
     }
-    uint8_t res;
-    if (hasBytes) {
-      pos = (p0 + 4);
-      res = EVERPARSE_STATUS_SUCCESS;
-    }
-    else {
-      res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
-    }
-    uint8_t resultAfterleft;
-    if (res == EVERPARSE_STATUS_SUCCESS) {
-      resultAfterleft = res;
+    uint8_t resultOfLeft;
+    if (hasBytesForLeft) {
+      pos = (offsetBeforeLeft + 4);
+      resultOfLeft = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      uint64_t _ct1;
-      if ((res == 0) || ((res >= 2) && (res <= 8))) {
-        _ct1 = (uint64_t)res;
-      }
-      else {
-        _ct1 = 15;
-      }
-      (void)(error_handler_fn("_boundedSum", "left", EverParse3d_ErrorCode_error_reason_of_result(res), _ct1, ctxt, sl_base, start_pos));
-      resultAfterleft = res;
+      resultOfLeft = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    if (resultAfterleft == EVERPARSE_STATUS_SUCCESS) {
-      size_t p01 = sl_pos[0];
-      size_t m = (p01 + 4);
-      uint8_t *sub = (sl_base + p01);
-      sl_pos[0] = m;
-      uint32_t left = EverParse3d_Prelude_read____UINT32(sub);
+    uint8_t resultAfterLeft;
+    if (resultOfLeft == EVERPARSE_STATUS_SUCCESS) {
+      resultAfterLeft = resultOfLeft;
+    }
+    else {
+      (void)(error_handler_fn("_boundedSum", "left", EverParse3d_ErrorCode_error_reason_of_result(resultOfLeft), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfLeft), ctxt, sl_base, startPositionOfLeft));
+      resultAfterLeft = resultOfLeft;
+    }
+    if (resultAfterLeft == EVERPARSE_STATUS_SUCCESS) {
+      size_t positionOfLeft = sl_pos[0];
+      size_t positionAfterLeft = (positionOfLeft + 4);
+      uint8_t *bytesOfLeft = (sl_base + positionOfLeft);
+      sl_pos[0] = positionAfterLeft;
+      uint32_t left = EverParse3d_Prelude_read____UINT32(bytesOfLeft);
       /* Validating field right */
-      size_t p3 = sl_pos[0];
-      uint64_t fieldStart_boundedSum1 = (uint64_t)p3;
+      size_t currentPosition2 = sl_pos[0];
+      uint64_t fieldStartBoundedSum1 = (uint64_t)currentPosition2;
       size_t pos1 = 0;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      size_t p02 = pos1;
-      size_t p4 = sl_pos[0];
-      size_t rem1 = (sl_len - p4);
-      bool hasBytes1;
-      if (p02 <= rem1) {
-        hasBytes1 = (4 <= (rem1 - p02));
+      size_t offsetBeforeRight_refinement = pos1;
+      size_t positionBeforeRight_refinement = sl_pos[0];
+      size_t bytesRemainingBeforeRight_refinement = (sl_len - positionBeforeRight_refinement);
+      bool hasBytesForRight_refinement;
+      if (offsetBeforeRight_refinement <= bytesRemainingBeforeRight_refinement) {
+        hasBytesForRight_refinement = (4 <= (bytesRemainingBeforeRight_refinement - offsetBeforeRight_refinement));
       }
       else {
-        hasBytes1 = false;
+        hasBytesForRight_refinement = false;
       }
-      uint8_t resultAfterright_refinement;
-      if (hasBytes1) {
-        pos1 = (p02 + 4);
-        resultAfterright_refinement = EVERPARSE_STATUS_SUCCESS;
+      uint8_t resultAfterRight_refinement;
+      if (hasBytesForRight_refinement) {
+        pos1 = (offsetBeforeRight_refinement + 4);
+        resultAfterRight_refinement = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfterright_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+        resultAfterRight_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
-      uint8_t resultAfter_boundedSum_1;
-      if (resultAfterright_refinement == EVERPARSE_STATUS_SUCCESS) {
+      uint8_t resultAfterBoundedSum_1;
+      if (resultAfterRight_refinement == EVERPARSE_STATUS_SUCCESS) {
         /* reading field_value */
-        size_t p03 = sl_pos[0];
-        size_t m1 = (p03 + 4);
-        uint8_t *sub1 = (sl_base + p03);
-        sl_pos[0] = m1;
-        uint32_t right_refinement = EverParse3d_Prelude_read____UINT32(sub1);
+        size_t positionOfRight_refinement = sl_pos[0];
+        size_t positionAfterRight_refinement = (positionOfRight_refinement + 4);
+        uint8_t *bytesOfRight_refinement = (sl_base + positionOfRight_refinement);
+        sl_pos[0] = positionAfterRight_refinement;
+        uint32_t right_refinement = EverParse3d_Prelude_read____UINT32(bytesOfRight_refinement);
         /* start: checking constraint */
         bool right_refinementConstraintIsOk = ((left <= bound) && (right_refinement <= (bound - left)));
         /* end: checking constraint */
         if (right_refinementConstraintIsOk) {
-          resultAfter_boundedSum_1 = EVERPARSE_STATUS_SUCCESS;
+          resultAfterBoundedSum_1 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          resultAfter_boundedSum_1 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
+          resultAfterBoundedSum_1 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
         }
       }
       else {
-        resultAfter_boundedSum_1 = resultAfterright_refinement;
+        resultAfterBoundedSum_1 = resultAfterRight_refinement;
       }
-      if (resultAfter_boundedSum_1 == EVERPARSE_STATUS_SUCCESS) {
-        resultAfter_boundedSum = resultAfter_boundedSum_1;
+      if (resultAfterBoundedSum_1 == EVERPARSE_STATUS_SUCCESS) {
+        resultAfterBoundedSum = resultAfterBoundedSum_1;
       }
       else {
-        uint64_t _ct2;
-        if ((resultAfter_boundedSum_1 == 0) || ((resultAfter_boundedSum_1 >= 2) && (resultAfter_boundedSum_1 <= 8))) {
-          _ct2 = (uint64_t)resultAfter_boundedSum_1;
-        }
-        else {
-          _ct2 = 15;
-        }
-        (void)(error_handler_fn("_boundedSum", "right.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_boundedSum_1), _ct2, ctxt, sl_base, fieldStart_boundedSum1));
-        resultAfter_boundedSum = resultAfter_boundedSum_1;
+        (void)(error_handler_fn("_boundedSum", "right.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfterBoundedSum_1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterBoundedSum_1), ctxt, sl_base, fieldStartBoundedSum1));
+        resultAfterBoundedSum = resultAfterBoundedSum_1;
       }
     }
     else {
-      resultAfter_boundedSum = resultAfterleft;
+      resultAfterBoundedSum = resultAfterLeft;
     }
   }
   else {
-    resultAfter_boundedSum = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
+    resultAfterBoundedSum = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
   }
-  if (resultAfter_boundedSum == EVERPARSE_STATUS_SUCCESS) {
-    return resultAfter_boundedSum;
+  if (resultAfterBoundedSum == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterBoundedSum;
   }
   else {
-    uint64_t _ct3;
-    if ((resultAfter_boundedSum == 0) || ((resultAfter_boundedSum >= 2) && (resultAfter_boundedSum <= 8))) {
-      _ct3 = (uint64_t)resultAfter_boundedSum;
-    }
-    else {
-      _ct3 = 15;
-    }
-    (void)(error_handler_fn("_boundedSum", "__precondition", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_boundedSum), _ct3, ctxt, sl_base, fieldStart_boundedSum));
-    return resultAfter_boundedSum;
+    (void)(error_handler_fn("_boundedSum", "__precondition", EverParse3d_ErrorCode_error_reason_of_result(resultAfterBoundedSum), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterBoundedSum), ctxt, sl_base, fieldStartBoundedSum));
+    return resultAfterBoundedSum;
   }
 }
 
@@ -143,14 +122,7 @@ uint64_t BoundedSumWhereValidateBoundedSum(uint32_t bound, uint8_t *ctxt, EVERPA
   size_t cursor = initial;
   uint8_t status = BoundedSumWhere_validate____core__boundedSum(bound, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

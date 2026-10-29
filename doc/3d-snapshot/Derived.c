@@ -5,50 +5,43 @@ static uint8_t Derived_validate____core__Triple(EVERPARSE_APP_CTXT ctxt, EVERPAR
 static uint8_t Derived_validate____core__Quad(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t Derived_validate____core__Triple(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_Triple = (uint64_t)p;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartTriple = (uint64_t)currentPosition;
   size_t pos = 0;
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = ((size_t)12 <= (rem - p0));
+  size_t offsetBeforePair = pos;
+  size_t positionBeforePair = sl_pos[0];
+  size_t bytesRemainingBeforePair = (sl_len - positionBeforePair);
+  bool hasBytesForPair;
+  if (offsetBeforePair <= bytesRemainingBeforePair) {
+    hasBytesForPair = ((size_t)12 <= (bytesRemainingBeforePair - offsetBeforePair));
   }
   else {
-    hasBytes = false;
+    hasBytesForPair = false;
   }
   uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + (size_t)12);
+  if (hasBytesForPair) {
+    pos = (offsetBeforePair + (size_t)12);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_Triple;
+  uint8_t resultAfterTriple;
   if (res == EVERPARSE_STATUS_SUCCESS) {
-    size_t p2 = sl_pos[0];
-    size_t p_ = (p2 + pos);
-    sl_pos[0] = p_;
-    resultAfter_Triple = EVERPARSE_STATUS_SUCCESS;
+    size_t currentPosition1 = sl_pos[0];
+    size_t newPosition = (currentPosition1 + pos);
+    sl_pos[0] = newPosition;
+    resultAfterTriple = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfter_Triple = res;
+    resultAfterTriple = res;
   }
-  if (resultAfter_Triple == EVERPARSE_STATUS_SUCCESS) {
-    return resultAfter_Triple;
+  if (resultAfterTriple == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterTriple;
   }
   else {
-    uint64_t _ct1;
-    if ((resultAfter_Triple == 0) || ((resultAfter_Triple >= 2) && (resultAfter_Triple <= 8))) {
-      _ct1 = (uint64_t)resultAfter_Triple;
-    }
-    else {
-      _ct1 = 15;
-    }
-    (void)(error_handler_fn("_Triple", "pair", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_Triple), _ct1, ctxt, sl_base, fieldStart_Triple));
-    return resultAfter_Triple;
+    (void)(error_handler_fn("_Triple", "pair", EverParse3d_ErrorCode_error_reason_of_result(resultAfterTriple), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterTriple), ctxt, sl_base, fieldStartTriple));
+    return resultAfterTriple;
   }
 }
 
@@ -58,61 +51,47 @@ uint64_t DerivedValidateTriple(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, u
   size_t cursor = initial;
   uint8_t status = Derived_validate____core__Triple(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 static uint8_t Derived_validate____core__Quad(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_Quad = (uint64_t)p;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartQuad = (uint64_t)currentPosition;
   size_t pos = 0;
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = ((size_t)16 <= (rem - p0));
+  size_t offsetBefore12 = pos;
+  size_t positionBefore12 = sl_pos[0];
+  size_t bytesRemainingBefore12 = (sl_len - positionBefore12);
+  bool hasBytesFor12;
+  if (offsetBefore12 <= bytesRemainingBefore12) {
+    hasBytesFor12 = ((size_t)16 <= (bytesRemainingBefore12 - offsetBefore12));
   }
   else {
-    hasBytes = false;
+    hasBytesFor12 = false;
   }
   uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + (size_t)16);
+  if (hasBytesFor12) {
+    pos = (offsetBefore12 + (size_t)16);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
     res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_Quad;
+  uint8_t resultAfterQuad;
   if (res == EVERPARSE_STATUS_SUCCESS) {
-    size_t p2 = sl_pos[0];
-    size_t p_ = (p2 + pos);
-    sl_pos[0] = p_;
-    resultAfter_Quad = EVERPARSE_STATUS_SUCCESS;
+    size_t currentPosition1 = sl_pos[0];
+    size_t newPosition = (currentPosition1 + pos);
+    sl_pos[0] = newPosition;
+    resultAfterQuad = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfter_Quad = res;
+    resultAfterQuad = res;
   }
-  if (resultAfter_Quad == EVERPARSE_STATUS_SUCCESS) {
-    return resultAfter_Quad;
+  if (resultAfterQuad == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterQuad;
   }
   else {
-    uint64_t _ct1;
-    if ((resultAfter_Quad == 0) || ((resultAfter_Quad >= 2) && (resultAfter_Quad <= 8))) {
-      _ct1 = (uint64_t)resultAfter_Quad;
-    }
-    else {
-      _ct1 = 15;
-    }
-    (void)(error_handler_fn("_Quad", "_12", EverParse3d_ErrorCode_error_reason_of_result(resultAfter_Quad), _ct1, ctxt, sl_base, fieldStart_Quad));
-    return resultAfter_Quad;
+    (void)(error_handler_fn("_Quad", "_12", EverParse3d_ErrorCode_error_reason_of_result(resultAfterQuad), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterQuad), ctxt, sl_base, fieldStartQuad));
+    return resultAfterQuad;
   }
 }
 
@@ -122,14 +101,7 @@ uint64_t DerivedValidateQuad(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uin
   size_t cursor = initial;
   uint8_t status = Derived_validate____core__Quad(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 
