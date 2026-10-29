@@ -74,6 +74,15 @@ int main(void) {
       || lo.val.Base.tag != LOWPARSE_PULSEPARSE_ITERATOR_TYPE_SERIALIZED__UINTSIZE_SLICE_UINT8
       || lo.val.Base.val.Serialized.count != 2 || lo.val.Base.val.Serialized.payload.elt != l3 + 2
       || lo.val.Base.val.Serialized.payload.len != 7) { printf("setOfOctets\n"); fails++; }
+  /* SET { b BOOLEAN, a [0] IMPLICIT INTEGER OPTIONAL, c [1] IMPLICIT OCTET STRING } */
+  uint8_t t1[] = {0x31, 0x0a, 0x01, 0x01, 0xff, 0x80, 0x01, 0x07, 0x81, 0x02, 0xaa, 0xbb};
+  FStar_Pervasives_Native_tuple2__bool_tuple2_option_asn1_int_impl_slice_uint8 st = ASN1_Pulse_ParseTest_parse_setBAC(SL(t1));
+  if (!st._1 || st._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || st._2._1.val.Some.val.Small != 7
+      || st._2._2.len != 2 || st._2._2.elt != t1 + 10) { printf("setBAC\n"); fails++; }
+  uint8_t t2[] = {0x31, 0x07, 0x01, 0x01, 0x00, 0x81, 0x02, 0xaa, 0xbb};
+  st = ASN1_Pulse_ParseTest_parse_setBAC(SL(t2));
+  if (st._1 || st._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL
+      || st._2._2.len != 2 || st._2._2.elt != t2 + 7) { printf("setBC\n"); fails++; }
   printf(fails ? "FAIL\n" : "OK\n");
   return fails;
 }

@@ -137,3 +137,21 @@ let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_re
   zeta; iota; primops]]
 let parse_setOfOctets : aparser #(asn1_impl_t setOfOctets) #(asn1_t setOfOctets) (asn1_rel setOfOctets) #asn1_strong_parser_kind (asn1_as_parser setOfOctets) =
   fun input #pm #w #v -> parse_k setOfOctets (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+(* SET { b BOOLEAN, a [0] IMPLICIT INTEGER OPTIONAL, c [1] IMPLICIT OCTET STRING },
+   whose components are declared in canonical order *)
+noextract
+let setBAC = ASN1.Syntax.asn1_set [
+    "b" *^ (PLAIN ^: ASN1.Syntax.asn1_boolean);
+    "a" *^ (OPTION ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0) ASN1.Syntax.asn1_integer);
+    "c" *^ (PLAIN ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ASN1.Syntax.asn1_octetstring)]
+    (_ by (ASN1.Syntax.set_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_setBAC : aparser #(asn1_impl_t setBAC) #(asn1_t setBAC) (asn1_rel setBAC) #asn1_strong_parser_kind (asn1_as_parser setBAC) =
+  fun input #pm #w #v -> parse_k setBAC (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
