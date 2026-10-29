@@ -174,6 +174,37 @@ int main(void) {
   if (VALID(ASN1_Pulse_ParseTest_validate_adbS, kp3)) { printf("adbS invalid b\n"); fails++; }
   uint8_t kp4[] = {0x30, 0x06, 0x13, 0x02, 0x61, 0x62, 0x05, 0x00};
   if (VALID(ASN1_Pulse_ParseTest_validate_adbS, kp4)) { printf("adbS invalid akb NULL\n"); fails++; }
+  /* ANY DEFINED BY an INTEGER key */
+  uint8_t ki1[] = {0x30, 0x05, 0x02, 0x01, 0x01, 0x05, 0x00};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbI, ki1)) { printf("adbI valid 1\n"); fails++; }
+  FStar_Pervasives_either__unit_either_asn1_int_impl_either_unit_tuple2_asn aki = ASN1_Pulse_ParseTest_parse_adbI(SL(ki1));
+  if (aki.tag != FSTAR_PERVASIVES_INL__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN) { printf("adbI 1\n"); fails++; }
+  uint8_t ki2[] = {0x30, 0x06, 0x02, 0x01, 0xff, 0x02, 0x01, 0x07};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbI, ki2)) { printf("adbI valid -1\n"); fails++; }
+  aki = ASN1_Pulse_ParseTest_parse_adbI(SL(ki2));
+  if (aki.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN
+      || aki.val.Inr.tag != FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN1_INT_IMPL_O
+      || aki.val.Inr.val.Inl.val.Small != 7) { printf("adbI -1\n"); fails++; }
+  uint8_t ki3[] = {0x30, 0x0d, 0x02, 0x09, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0x05, 0x00};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbI, ki3)) { printf("adbI valid 2^64\n"); fails++; }
+  aki = ASN1_Pulse_ParseTest_parse_adbI(SL(ki3));
+  if (aki.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN
+      || aki.val.Inr.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN1_INT_IMPL_O
+      || aki.val.Inr.val.Inr.tag != FSTAR_PERVASIVES_INL__UNIT_TUPLE2_ASN1_INT_IMPL_OPTION_SLICE_UINT8) { printf("adbI 2^64\n"); fails++; }
+  uint8_t ki4[] = {0x30, 0x03, 0x02, 0x01, 0x02}; /* unknown key, fallback, absent */
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbI, ki4)) { printf("adbI valid 2\n"); fails++; }
+  aki = ASN1_Pulse_ParseTest_parse_adbI(SL(ki4));
+  if (aki.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN
+      || aki.val.Inr.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN1_INT_IMPL_O
+      || aki.val.Inr.val.Inr.tag != FSTAR_PERVASIVES_INR__UNIT_TUPLE2_ASN1_INT_IMPL_OPTION_SLICE_UINT8
+      || aki.val.Inr.val.Inr.val.Inr._1.val.Small != 2
+      || aki.val.Inr.val.Inr.val.Inr._2.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8) { printf("adbI 2\n"); fails++; }
+  uint8_t ki5[] = {0x30, 0x0e, 0x02, 0x09, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0x02, 0x01, 0x07}; /* 2^64 -> NULL, not INTEGER */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbI, ki5)) { printf("adbI invalid 2^64 INTEGER\n"); fails++; }
+  uint8_t ki6[] = {0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x07}; /* 1 -> NULL, not INTEGER */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbI, ki6)) { printf("adbI invalid 1 INTEGER\n"); fails++; }
+  uint8_t ki7[] = {0x30, 0x06, 0x02, 0x02, 0x00, 0x01, 0x05, 0x00}; /* non-minimal key */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbI, ki7)) { printf("adbI invalid non-minimal\n"); fails++; }
   /* AlgorithmIdentifier from the difftest schemas */
   uint8_t g1[] = {0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
   FStar_Pervasives_either__unit_tuple2_slice_uint8_option_slice_uint8 ag = ASN1_Pulse_ParseTest_parse_algId(SL(g1));

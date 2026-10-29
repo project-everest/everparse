@@ -236,6 +236,18 @@ let parse_integer_enc (bound: pos) (x: integer_in_interval bound)
 = domain_unique (domain_intro_gen x) (interval_elim bound x) x;
   assert (integer_enc bound x == serialize (serialize_untagged_bounded_integer bound) x)
 
+(* An INTEGER key literal is its own content encoding *)
+let integer_enc_of_lit (bound: pos) (l: asn1_int_lit bound)
+: Lemma (Seq.seq_of_list l == integer_enc bound (int_of_lit bound l))
+= let b = Seq.seq_of_list l in
+  let x = int_of_lit bound l in
+  int_lit_valid bound l;
+  parse_integer_enc bound x;
+  assert (parse (parse_untagged_bounded_integer bound) b == Some (x, Seq.length b));
+  LowParse.Spec.Base.parse_injective #(parse_untagged_bounded_integer_kind bound) (parse_untagged_bounded_integer bound) b (integer_enc bound x);
+  Seq.lemma_eq_elim b (Seq.slice b 0 (Seq.length b));
+  Seq.lemma_eq_elim (integer_enc bound x) (Seq.slice (integer_enc bound x) 0 (Seq.length (integer_enc bound x)))
+
 let bitstring_enc (x: asn1_bitstring_t) : Tot bytes =
   let BYTES_WITH_UNUSEDBITS u b = x in
   Seq.cons u b

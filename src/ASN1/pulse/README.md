@@ -16,10 +16,13 @@ restricted terminals (`asn1_restriction`), PREFIXED (EXPLICIT tags),
 SEQUENCE (OPTIONAL, DEFAULT for BOOLEAN and NULL), SEQUENCE OF, SET OF
 (DER ordering), SET (at most 64 components), CHOICE, ANY, ANY DEFINED BY
 (with or without a prefix, with or without a fallback; keys of any terminal
-type except INTEGER, RELATIVE-OID and tagged terminals: OBJECT
-IDENTIFIER keys are compared subidentifier by subidentifier, other keys
-byte-for-byte against their DER content encoding, computed at extraction
-from the list-based key literals `asn1_key_lit` of `ASN1.Base`), and the
+type except RELATIVE-OID and tagged terminals: OBJECT IDENTIFIER keys are
+compared subidentifier by subidentifier, other keys byte-for-byte against
+their DER content encoding, computed at extraction from the list-based key
+literals `asn1_key_lit` of `ASN1.Base`; INTEGER key literals are the
+minimal two's complement content bytes themselves, `asn1_int_lit`, so
+keys of any size are supported, built with `ASN1.Syntax.mk_int_lit` when
+the refinement is not proved automatically), and the
 presentation types (EXTERNAL, EMBEDDED PDV, CHARACTER
 STRING). The interpreter rejects unsupported schemas statically
 (`supported_k`), which the extraction roots discharge by normalization.

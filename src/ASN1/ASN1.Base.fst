@@ -270,8 +270,48 @@ type asn1_bytes_lit (p : asn1_bytes -> Tot bool) = (l : list U8.t { p (Seq.seq_o
 
 let asn1_bytes_any (b : asn1_bytes) : Tot bool = true
 
+(* INTEGER literals: the DER content bytes (minimal two's complement,
+   big-endian), so that arbitrarily large keys are supported. *)
+
+let int_lit_ok (bound : pos) (l : list U8.t) : Tot bool =
+  let n = List.length l in
+  n > 0 && n <= bound &&
+  (match l with
+   | c0 :: c1 :: _ -> not ((c0 = 0uy && c1 `U8.lt` 128uy) || (c0 = 255uy && 127uy `U8.lt` c1))
+   | _ -> true)
+
+type asn1_int_lit (bound : pos) = (l : list U8.t { int_lit_ok bound l })
+
+let int_lit_valid (bound : pos) (l : asn1_int_lit bound)
+: Lemma (valid_unsigned_repr (Seq.seq_of_list l) /\ Seq.length (Seq.seq_of_list l) <= bound)
+= match l with
+  | c0 :: tl ->
+    Seq.lemma_seq_of_list_induction l;
+    begin match tl with
+    | c1 :: _ -> Seq.lemma_seq_of_list_induction tl
+    | _ -> ()
+    end
+
+let int_of_lit (bound : pos) (l : asn1_int_lit bound) : Tot (integer_in_interval bound) =
+  int_lit_valid bound l;
+  let b = Seq.seq_of_list l in
+  mk_integer'_eq' b;
+  let r = mk_integer' b in
+  interval_intro (Seq.length b) r;
+  interval_weaken (Seq.length b) bound r;
+  r
+
+let int_of_lit_inj (bound : pos) (l1 l2 : asn1_int_lit bound)
+: Lemma (requires (int_of_lit bound l1 == int_of_lit bound l2)) (ensures (l1 == l2))
+= int_lit_valid bound l1;
+  int_lit_valid bound l2;
+  mk_integer'_inj (Seq.seq_of_list l1) (Seq.seq_of_list l2);
+  Seq.lemma_list_seq_bij l1;
+  Seq.lemma_list_seq_bij l2
+
 let rec asn1_key_lit (k : asn1_terminal_k) : eqtype =
   match k with
+  | ASN1_INTEGER bound -> asn1_int_lit bound
   | ASN1_BITSTRING -> asn1_bitstring_lit
   | ASN1_OCTETSTRING
   | ASN1_TELETEXSTRING
@@ -300,6 +340,7 @@ let rec key_of_lit (k : asn1_terminal_k) (x : asn1_key_lit k) : Tot (asn1_termin
     assert_norm (asn1_terminal_t (ASN1_PREFIXED_TERMINAL id' k') == asn1_terminal_t k');
     let x' : asn1_key_lit k' = coerce_eq #(asn1_key_lit k) #(asn1_key_lit k') () x in
     coerce_eq #(asn1_terminal_t k') #(asn1_terminal_t k) () (key_of_lit k' x')
+  | ASN1_INTEGER bound -> int_of_lit bound x
   | ASN1_BITSTRING ->
     let x : asn1_bitstring_lit = x in
     BYTES_WITH_UNUSEDBITS (fst x) (Seq.seq_of_list (snd x))
@@ -327,6 +368,7 @@ let rec key_of_lit_inj (k : asn1_terminal_k) (x1 x2 : asn1_key_lit k)
   | ASN1_PREFIXED_TERMINAL id' k' ->
     assert_norm (asn1_key_lit (ASN1_PREFIXED_TERMINAL id' k') == asn1_key_lit k');
     key_of_lit_inj k' (coerce_eq #(asn1_key_lit k) #(asn1_key_lit k') () x1) (coerce_eq #(asn1_key_lit k) #(asn1_key_lit k') () x2)
+  | ASN1_INTEGER bound -> int_of_lit_inj bound x1 x2
   | ASN1_BITSTRING ->
     let x1 : asn1_bitstring_lit = x1 in
     let x2 : asn1_bitstring_lit = x2 in

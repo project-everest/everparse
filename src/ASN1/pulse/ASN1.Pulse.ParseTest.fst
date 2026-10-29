@@ -249,6 +249,14 @@ let adbS = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []
   (_ by (ASN1.Syntax.seq_tac ()))
   (_ by (ASN1.Syntax.choice_tac ())))
 
+(* SEQUENCE { k INTEGER, p ANY DEFINED BY k OPTIONAL }
+   with 1 -> NULL, -1 -> INTEGER, 2^64 (a 9-byte key) -> NULL, and a fallback *)
+noextract
+let adbI = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) ASN1.Syntax.integer_id (ASN1_INTEGER asn1_any_integer_bound)
+  [([0x01uy], params_null); ([0xFFuy], params_int); (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x01uy; 0uy; 0uy; 0uy; 0uy; 0uy; 0uy; 0uy; 0uy] (_ by (ASN1.Syntax.wf_tac ())), params_null)] (Some params_any)
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
@@ -282,6 +290,16 @@ let parse_adbS : aparser #(asn1_impl_t adbS) #(asn1_t adbS) (asn1_rel adbS) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbI : aparser #(asn1_impl_t adbI) #(asn1_t adbI) (asn1_rel adbI) #asn1_strong_parser_kind (asn1_as_parser adbI) =
+  fun input #pm #w #v -> parse_k adbI (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_adbO : LowParse.Pulse.Base.validator #(asn1_t adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
@@ -302,6 +320,14 @@ let validate_adbB : LowParse.Pulse.Base.validator #(asn1_t adbB) #asn1_strong_pa
   zeta; iota; primops]]
 let validate_adbS : LowParse.Pulse.Base.validator #(asn1_t adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
   validate_k adbS (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbI : LowParse.Pulse.Base.validator #(asn1_t adbI) #asn1_strong_parser_kind (asn1_as_parser adbI) =
+  validate_k adbI (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
 
 (* Extraction roots: right-to-left writers for the same types (ANY DEFINED BY
    is not supported by the writers) *)

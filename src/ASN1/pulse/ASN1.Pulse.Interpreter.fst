@@ -97,7 +97,7 @@ let supported_restriction (k: asn1_terminal_k) (r: asn1_restriction k) : Tot boo
 [@@asn1_pulse_attr]
 let adb_key_supported (k: asn1_terminal_k) : Tot bool =
   match k with
-  | ASN1_INTEGER _
+  | ASN1_INTEGER _ -> supported_terminal k
   | ASN1_RELATIVE_OID
   | ASN1_PREFIXED_TERMINAL _ _ -> false
   | _ -> true
@@ -291,6 +291,7 @@ let key_enc_list (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) })
   match k with
   | ASN1_BOOLEAN -> let x : bool = x in [if x then 0xFFuy else 0x00uy]
   | ASN1_NULL -> []
+  | ASN1_INTEGER bound -> let x : asn1_int_lit bound = x in (x <: list U8.t)
   | ASN1_BITSTRING -> let x : asn1_bitstring_lit = x in fst x :: snd x
   | ASN1_PRINTABLESTRING -> let x : asn1_printablestring_t = x in char_list_bytes x
   | ASN1_IA5STRING -> let x : asn1_ia5string_t = x in char_list_bytes x
@@ -311,6 +312,8 @@ let key_enc_list_correct (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OI
   | ASN1_NULL ->
     Seq.lemma_seq_of_list_induction #U8.t [];
     Seq.lemma_eq_elim (Seq.seq_of_list #U8.t []) Seq.empty
+  | ASN1_INTEGER bound ->
+    ASN1.Spec.Content.Enc.integer_enc_of_lit bound x
   | ASN1_BITSTRING ->
     let x : asn1_bitstring_lit = x in
     Seq.lemma_seq_of_list_induction (fst x :: snd x)

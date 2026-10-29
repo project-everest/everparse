@@ -101,6 +101,10 @@ and asn1_gen_items_l_wf (#l : _) (items : asn1_gen_items_l l) : Tot bool (decrea
 noextract
 let wf_tac () = T.norm [iota;zeta;delta;primops;simplify]; T.trivial ()
 
+// for INTEGER key literals of ANY DEFINED BY: the DER content bytes
+
+let mk_int_lit (bound : pos) (l : list FStar.UInt8.t) (pf : squash (int_lit_ok bound l)) : asn1_int_lit bound = l
+
 // for OID definitions
 
 let mk_oid (l : list (UInt.uint_t 32)) : Pure (asn1_oid_t)
