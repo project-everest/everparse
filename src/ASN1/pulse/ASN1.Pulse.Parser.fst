@@ -15,6 +15,7 @@ open ASN1.Pulse.Parse
 open ASN1.Pulse.Interpreter
 open ASN1.Pulse.ParseChoice
 open ASN1.Pulse.ParseSequence
+open ASN1.Pulse.ParseSeqOf
 
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
@@ -38,6 +39,8 @@ let rec psupported_content (k: asn1_content_k) : Tot bool (decreases k) =
   | ASN1_RESTRICTED_TERMINAL _ _ -> true
   | ASN1_PREFIXED k' -> psupported_k k'
   | ASN1_SEQUENCE gitems -> psupported_items (dsnd gitems)
+  | ASN1_SEQUENCE_OF _ k' -> psupported_k k'
+  | ASN1_SET_OF _ k' -> psupported_k k'
   | _ -> false
 
 and psupported_items (#i: _) (ls: asn1_gen_items_l i) : Tot bool (decreases ls) =
@@ -160,7 +163,9 @@ let rec parse_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u:
   | ASN1_PREFIXED k' ->
     parse_ext #_ #_ #_ #_ #(asn1_as_parser k') (fun input #pm #w #v -> parse_k k' () input #pm #w #v) #asn1_weak_parser_kind (asn1_content_as_parser k)
   | ASN1_SEQUENCE gitems ->
-    seq_parser gitems (fun input #pm #w #v -> parse_items (dsnd gitems) () input #pm #w #v))
+    seq_parser gitems (fun input #pm #w #v -> parse_items (dsnd gitems) () input #pm #w #v)
+  | ASN1_SEQUENCE_OF ne k' -> seq_of_parser ne k'
+  | ASN1_SET_OF ne k' -> set_of_parser ne k')
   in vf input #pm #w #v
 
 and parse_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (psupported_items ls))

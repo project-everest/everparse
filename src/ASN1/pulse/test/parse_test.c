@@ -58,6 +58,22 @@ int main(void) {
   if (q._1.val.Small != 5 || q._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__BOOL
       || q._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8
       || q._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || q._2._2._2.val.Some.val.Small != 7) { printf("seq ad\n"); fails++; }
+  /* SEQUENCE OF INTEGER and SET OF OCTET STRING: lazy, count + payload */
+  uint8_t l1[] = {0x30, 0x09, 0x02, 0x01, 0x05, 0x02, 0x01, 0x06, 0x02, 0x01, 0x07};
+  LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_asn1_int_impl li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));
+  if (li.tag != LOWPARSE_PULSEPARSE_ITERATOR_TYPE_BASE__UINTSIZE_ASN1_INT_IMPL
+      || li.val.Base.tag != LOWPARSE_PULSEPARSE_ITERATOR_TYPE_SERIALIZED__UINTSIZE_ASN1_INT_IMPL
+      || li.val.Base.val.Serialized.count != 3 || li.val.Base.val.Serialized.payload.elt != l1 + 2
+      || li.val.Base.val.Serialized.payload.len != 9) { printf("seqOfInt\n"); fails++; }
+  uint8_t l2[] = {0x30, 0x00};
+  li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l2));
+  if (li.val.Base.val.Serialized.count != 0 || li.val.Base.val.Serialized.payload.len != 0) { printf("seqOfInt empty\n"); fails++; }
+  uint8_t l3[] = {0x31, 0x07, 0x04, 0x01, 0xaa, 0x04, 0x02, 0xaa, 0x00};
+  LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 lo = ASN1_Pulse_ParseTest_parse_setOfOctets(SL(l3));
+  if (lo.tag != LOWPARSE_PULSEPARSE_ITERATOR_TYPE_BASE__UINTSIZE_SLICE_UINT8
+      || lo.val.Base.tag != LOWPARSE_PULSEPARSE_ITERATOR_TYPE_SERIALIZED__UINTSIZE_SLICE_UINT8
+      || lo.val.Base.val.Serialized.count != 2 || lo.val.Base.val.Serialized.payload.elt != l3 + 2
+      || lo.val.Base.val.Serialized.payload.len != 7) { printf("setOfOctets\n"); fails++; }
   printf(fails ? "FAIL\n" : "OK\n");
   return fails;
 }

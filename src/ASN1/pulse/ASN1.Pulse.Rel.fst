@@ -23,9 +23,9 @@ open ASN1.Spec.Value.Enc
 module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
+module SZ = FStar.SizeT
 module I64 = FStar.Int64
 module IO = LowParse.PulseParse.Iterator.IntOps
-module IOU32 = LowParse.PulseParse.Iterator.IntOps.U32
 module It = LowParse.PulseParse.Iterator
 module ItT = LowParse.PulseParse.Iterator.Type
 module SB = LowParse.Spec.Base
@@ -165,15 +165,17 @@ let rec asn1_terminal_rel (k: asn1_terminal_k) : Tot (prel (asn1_terminal_impl_t
    - SEQUENCE, SET: nested pairs, as `asn1_sequence_t_core`
    - OPTIONAL, DEFAULT: `option` (`None` for absent / the default value)
    - CHOICE: right-nested `either`, the position encoding the alternative
-   - SEQUENCE OF, SET OF: mixed lists with 32-bit counts
+   - SEQUENCE OF, SET OF: mixed lists with `size_t` counts (a content parser
+     knows its input length fits `size_t`, and there are at most that many
+     elements; nothing bounds it by 2^32 at that level)
    - ANY: the raw TLV encoding, as a slice
    - ANY DEFINED BY: the prefix items, then a right-nested `either` over the
      supported keys (the key is implied by the position), then, if any, the
      fallback (key and items). *)
 
-let u32_ops = LowParse.PulseParse.Iterator.IntOps.U32.u32_ops
+let ml_ops = IO.sizet_ops
 
-let ml (t: Type0) : Type0 = ItT.mixed_list U32.t t
+let ml (t: Type0) : Type0 = ItT.mixed_list SZ.t t
 
 (* NOTE: the impl types use the projector `Mkdtuple2?._2` rather than `dsnd`:
    Custard reduces a type-level function by unfolding only that function, and
@@ -251,8 +253,8 @@ let rec asn1_content_rel (k: asn1_content_k) (pm: perm) (x: asn1_content_impl_t 
   | ASN1_TERMINAL k' -> asn1_terminal_rel k' pm x y
   | ASN1_SEQUENCE gitems -> asn1_items_rel (dsnd gitems) pm x y
   | ASN1_SET _ items _ -> asn1_items_rel items pm x y
-  | ASN1_SEQUENCE_OF _ k' -> It.mixed_list_match (asn1_rel k') u32_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
-  | ASN1_SET_OF _ k' -> It.mixed_list_match (asn1_rel k') u32_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
+  | ASN1_SEQUENCE_OF _ k' -> It.mixed_list_match (asn1_rel k') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
+  | ASN1_SET_OF _ k' -> It.mixed_list_match (asn1_rel k') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
   | ASN1_PREFIXED k' -> asn1_rel k' pm x y
   | ASN1_ANY_DEFINED_BY _ prefix _ key_k ls ofb _ _ ->
     begin match ofb with
@@ -400,13 +402,13 @@ let asn1_content_rel_terminal_eq (k: asn1_terminal_k) (pm: perm) (x: asn1_conten
 = ()
 
 let asn1_content_rel_seq_of_eq (ne: bool) (#s: _) (k: asn1_k s) (pm: perm) (x: asn1_content_impl_t (ASN1_SEQUENCE_OF ne k)) (y: asn1_content_t (ASN1_SEQUENCE_OF ne k))
-: Lemma (asn1_content_rel (ASN1_SEQUENCE_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) u32_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-= assert (asn1_content_rel (ASN1_SEQUENCE_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) u32_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
+: Lemma (asn1_content_rel (ASN1_SEQUENCE_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
+= assert (asn1_content_rel (ASN1_SEQUENCE_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
     by (FStar.Tactics.V2.norm [delta_only [`%asn1_content_rel]; iota; zeta]; FStar.Tactics.V2.trefl ())
 
 let asn1_content_rel_set_of_eq (ne: bool) (#s: _) (k: asn1_k s) (pm: perm) (x: asn1_content_impl_t (ASN1_SET_OF ne k)) (y: asn1_content_t (ASN1_SET_OF ne k))
-: Lemma (asn1_content_rel (ASN1_SET_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) u32_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-= assert (asn1_content_rel (ASN1_SET_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) u32_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
+: Lemma (asn1_content_rel (ASN1_SET_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
+= assert (asn1_content_rel (ASN1_SET_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
     by (FStar.Tactics.V2.norm [delta_only [`%asn1_content_rel]; iota; zeta]; FStar.Tactics.V2.trefl ())
 
 let asn1_terminal_rel_leaf_eq (k: leaf_k) (pm: perm) (x: asn1_terminal_impl_t k) (y: asn1_terminal_t k)

@@ -113,3 +113,27 @@ let parse_seqAB : aparser #(asn1_impl_t seqAB) #(asn1_t seqAB) (asn1_rel seqAB) 
   zeta; iota; primops]]
 let parse_seq : aparser #(asn1_impl_t DC.seq) #(asn1_t DC.seq) (asn1_rel DC.seq) #asn1_strong_parser_kind (asn1_as_parser DC.seq) =
   fun input #pm #w #v -> parse_k DC.seq (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+(* SEQUENCE OF INTEGER and SET OF OCTET STRING *)
+noextract
+let seqOfInt = ASN1.Syntax.asn1_sequence_of ASN1.Syntax.asn1_integer
+noextract
+let setOfOctets = ASN1.Syntax.asn1_set_of ASN1.Syntax.asn1_octetstring
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_rel seqOfInt) #asn1_strong_parser_kind (asn1_as_parser seqOfInt) =
+  fun input #pm #w #v -> parse_k seqOfInt (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_setOfOctets : aparser #(asn1_impl_t setOfOctets) #(asn1_t setOfOctets) (asn1_rel setOfOctets) #asn1_strong_parser_kind (asn1_as_parser setOfOctets) =
+  fun input #pm #w #v -> parse_k setOfOctets (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
