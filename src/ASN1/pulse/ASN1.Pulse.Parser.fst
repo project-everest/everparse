@@ -13,6 +13,7 @@ open ASN1.Spec.Value.Enc
 open ASN1.Pulse.Rel
 open ASN1.Pulse.Parse
 open ASN1.Pulse.Interpreter
+open ASN1.Pulse.ParseChoice
 
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
@@ -36,9 +37,15 @@ let rec psupported_content (k: asn1_content_k) : Tot bool (decreases k) =
   | ASN1_PREFIXED k' -> psupported_k k'
   | _ -> false
 
+and psupported_lc (lc: list (asn1_id_t & asn1_content_k)) : Tot bool (decreases lc) =
+  match lc with
+  | [] -> true
+  | (_, c) :: tl -> psupported_content c && psupported_lc tl
+
 and psupported_k (#s: _) (k: asn1_k s) : Tot bool (decreases k) =
   match k with
   | ASN1_ILC _ k' -> psupported_content k'
+  | ASN1_CHOICE_ILC lc _ -> psupported_lc lc
   | ASN1_ANY_ILC -> true
   | _ -> false
 
@@ -110,6 +117,23 @@ and parse_k (#s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (u: squash 
   (match k with
   | ASN1_ILC id k' ->
     parse_ilc id #k' #_ #_ #(asn1_content_as_parser k') (fun input #pm #w #v -> parse_content k' () input #pm #w #v)
+  | ASN1_CHOICE_ILC lc pf ->
+    choice_parser lc pf (fun id input #pm #w #v -> parse_choice lc pf () id input #pm #w #v)
   | ASN1_ANY_ILC ->
     parse_ext (parse_any ()) #asn1_strong_parser_kind (asn1_as_parser k))
   in vf input #pm #w #v
+
+and parse_choice ([@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) (u: squash (psupported_lc lc))
+  (id: asn1_id_t) (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (make_gen_choice_type (asn1_lc_t lc)))
+: Tot (cres lc pf id input pm w v)
+  (decreases lc)
+= [@inline_let] let vf : cparser lc pf =
+  (match lc with
+  | [] -> choice_nil pf
+  | [(id', c)] ->
+    choice_single id' c pf (parse_ilc id' #c #_ #_ #(asn1_content_as_parser c) (fun input #pm #w #v -> parse_content c () input #pm #w #v))
+  | (id', c) :: hd2 :: tl2 ->
+    choice_cons id' c hd2 tl2 pf
+      (parse_ilc id' #c #_ #_ #(asn1_content_as_parser c) (fun input #pm #w #v -> parse_content c () input #pm #w #v))
+      (fun id input #pm #w #v -> parse_choice (hd2 :: tl2) () () id input #pm #w #v))
+  in vf id input #pm #w #v
