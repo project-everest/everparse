@@ -223,6 +223,7 @@ ensures exists* v' .
       List.Tot.append l_done l_rem == Ghost.reveal l /\
       True
     )
+  decreases (SZ.v len_sz - SZ.v (!pi)) // fstar2 only
   {
     let ix = !pi;
     let off = !pres;
@@ -231,7 +232,7 @@ ensures exists* v' .
     with c2 l_rem . assert (SM.seq_list_match c2 l_rem (vmatch (pm *. sv)));
     serialize_nlist_append s (SZ.v ix) l_done (SZ.v len_sz - SZ.v ix) l_rem;
     SM.seq_list_match_cons_elim_trade c2 l_rem (vmatch (pm *. sv));
-    let e = S.op_Array_Access ss ix;
+    let e = S.(ss.(ix)); // fstar2 only
     with ve l_rem'.
       assert (vmatch (pm *. sv) (Seq.head c2) ve ** SM.seq_list_match (Seq.tail c2) l_rem' (vmatch (pm *. sv)));
     List.Tot.append_assoc l_done [ve] l_rem';
@@ -418,6 +419,7 @@ fn l2r_write_mixed_list
         io.v (mixed_list_length io cur_node) == io.v cur_rem
       )
     )
+    decreases (io.v (!p_remaining)) // fstar2 only
     {
       let cur = !p_node;
       let cur_off = !p_offset;
@@ -770,12 +772,14 @@ ensures exists* v' .
         SZ.v v - Seq.length (bare_serialize (serialize_nlist (SZ.v len_sz) s) (Ghost.reveal l)) == SZ.v v1 - Seq.length (bare_serialize (serialize_nlist (SZ.v len_sz - SZ.v i_v) s) l_rem)
       ))
     )
-  ) {
+  )
+  decreases %[(if !pres then 1 else 0); (SZ.v len_sz - SZ.v (!pi))] // fstar2 only
+  {
     let ix = !pi;
     SM.seq_list_match_length (vmatch (pm *. sv)) _ _;
     with c2 l_rem . assert (SM.seq_list_match c2 l_rem (vmatch (pm *. sv)));
     SM.seq_list_match_cons_elim_trade c2 l_rem (vmatch (pm *. sv));
-    let e = S.op_Array_Access ss ix;
+    let e = S.(ss.(ix)); // fstar2 only
     with ve l_rem'.
       assert (vmatch (pm *. sv) (Seq.head c2) ve ** SM.seq_list_match (Seq.tail c2) l_rem' (vmatch (pm *. sv)));
     let ni' : Ghost.erased nat = Ghost.hide (SZ.v len_sz - SZ.v ix - 1);
@@ -910,6 +914,7 @@ fn compute_remaining_size_mixed_list
         ))
       )
     )
+    decreases %[(if !p_result then 1 else 0); io.v (!p_remaining)] // fstar2 only
     {
       let cur = !p_node;
       let cur_rem = !p_remaining;

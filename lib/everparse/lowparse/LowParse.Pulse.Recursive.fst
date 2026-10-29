@@ -1442,7 +1442,9 @@ fn impl_nlist_forall_pred_recursive_strong_prefix
     ) **
     pure (
       List.Tot.for_all pr.pred v == (res && List.Tot.for_all pr.pred vi)
-    )) {
+    ))
+      decreases %[(if !pres then 1 else 0); (SZ.v (S.len (!ppi)))] // fstar2 only
+    {
     let n = !pn;
     with pi'. assert pts_to ppi pi';
     let pi = !ppi;
@@ -1492,6 +1494,8 @@ fn impl_nlist_forall_pred_recursive_strong_prefix
           )
           pi #pm vi
       );
+      pts_to_serialized_length (C.serialize_dtuple2 (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n))) pi; // fstar2 only
+      LowParse.Spec.Combinators.serialize_dtuple2_eq (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) vi; // fstar2 only
       let ph, pc = C.split_dtuple2
         (serializer_of_tot_serializer s.serialize_header)
         j
@@ -1503,6 +1507,9 @@ fn impl_nlist_forall_pred_recursive_strong_prefix
         _ _
         (PPB.pts_to_parsed_strong_prefix (L.parse_nlist (SZ.v n0) (parser_of_tot_parser (parse_recursive p))) input #pm v);
       with h c . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) ph #pm h ** pts_to_serialized (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc #pm c);
+      pts_to_serialized_length (serializer_of_tot_serializer s.serialize_header) ph; // fstar2 only
+      pts_to_serialized_length (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc; // fstar2 only
+      parser_kind_prop_equiv p.parse_header_kind p.parse_header; // fstar2 only
       List.Tot.for_all_append pr.pred (fst c) (snd c);
       synth_nlist_append_recip_inverse p.t (p.count h) (SZ.v n - 1);
       C.pts_to_serialized_synth_trade
@@ -1536,6 +1543,7 @@ fn impl_nlist_forall_pred_recursive_strong_prefix
         (PPB.pts_to_parsed_strong_prefix (L.parse_nlist (SZ.v n0) (parser_of_tot_parser (parse_recursive p))) input #pm v);
       let n' = SZ.add (SZ.sub n 1sz) count;
       pn := n';
+      assert (pure (SZ.v (S.len pc) < SZ.v (S.len pi))); // fstar2 only
       ppi := pc;
       with vi' . assert (pts_to_serialized (L.serialize_nlist (SZ.v n') (serializer_of_tot_serializer (serialize_recursive s))) pc #pm vi');
       trade_rewrite_l _ (pts_to_serialized (L.serialize_nlist (SZ.v n') (serializer_of_tot_serializer (serialize_recursive s))) pc #pm vi') _;

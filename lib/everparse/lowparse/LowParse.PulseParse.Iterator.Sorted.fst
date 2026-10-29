@@ -238,6 +238,7 @@ ensures exists* (k_val: i) (found_val: SZ.t).
       (forall (i: nat). i < io.v k_val ==> i < List.Tot.length (Ghost.reveal l) /\
         Ghost.reveal lt_spec (List.Tot.index (Ghost.reveal l) i) (Ghost.reveal y) == true)
     )
+    decreases %[(if !r_continue then 1 else 0); (io.v total_sz - io.v (!r_k))] // fstar2 only
   {
     let k_val = !r_k;
     if (io.eq k_val total_sz) {
@@ -546,7 +547,7 @@ ensures
 
 #pop-options
 
-#push-options "--z3rlimit 16000 --fuel 2 --ifuel 1 --ext no:context_pruning --z3refresh --split_queries always"
+#push-options "--z3rlimit 16000 --fuel 2 --ifuel 1 --ext no:context_pruning --z3refresh" // fstar2 only: removed --split_queries always
 
 inline_for_extraction
 ```pulse
@@ -757,12 +758,13 @@ ensures
     ) ();
     // Build the trade: result_match → original + vmatch + refs
     // Frame: halves of all refs + vmatch half + narrow trades + pure facts
-    intro (mixed_list_match vmatch io p (pm /. 4.0R) result_ml (Ghost.reveal l_result) @==>
+    intro_trade // fstar2 only: intro_trade instead of intro
+      (mixed_list_match vmatch io p (pm /. 4.0R) result_ml (Ghost.reveal l_result))
            (mixed_list_match vmatch io p pm ml (Ghost.reveal l) **
             vmatch pm_y y_elem (Ghost.reveal y) **
             (exists* v1 v2 v3 v4 vy.
-              R.pts_to r1 v1 ** R.pts_to r2 v2 ** R.pts_to r3 v3 ** R.pts_to r4 v4 ** R.pts_to ry vy)))
-      #(trade (mixed_list_match vmatch io p ((pm /. 2.0R) /. 2.0R) ml_before (list_narrow (Ghost.reveal l) (io.v io.zero - 0) (io.v k_val)))
+              R.pts_to r1 v1 ** R.pts_to r2 v2 ** R.pts_to r3 v3 ** R.pts_to r4 v4 ** R.pts_to ry vy))
+      (trade (mixed_list_match vmatch io p ((pm /. 2.0R) /. 2.0R) ml_before (list_narrow (Ghost.reveal l) (io.v io.zero - 0) (io.v k_val)))
               (mixed_list_match_n vmatch io p 0 (io.v total_sz) (pm /. 2.0R) ml (Ghost.reveal l)) **
         trade (mixed_list_match vmatch io p ((pm /. 2.0R) /. 2.0R) ml_after (list_narrow (Ghost.reveal l) (io.v k_val - 0) (io.v rest_sz)))
               (mixed_list_match_n vmatch io p 0 (io.v total_sz) (pm /. 2.0R) ml (Ghost.reveal l)) **

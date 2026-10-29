@@ -1804,7 +1804,7 @@ fn zero_copy_parse_strong_prefix_filter
   Trade.trans (vmatch res v') _ _;
   Trade.rewrite_with_trade
     (vmatch res v')
-    (LPC.vmatch_filter vmatch f res v);
+    (LPC.vmatch_filter vmatch f res (Ghost.reveal v));
   Trade.trans _ (vmatch res v') _;
   res
 }

@@ -26,6 +26,13 @@ let mixed_list_depth (#i: Type0) (#t: Type) (il: mixed_list i t) : GTot nat =
 
 module SM = Pulse.Lib.SeqMatch
 
+// fstar2 only: folding [mixed_list_match_n] on [Append] produces [l_True == (d1 << d2)]
+let nat_precedes_true_eq (a b: nat) : Lemma
+  (requires a < b)
+  (ensures (l_True == (a << b)))
+  [SMTPat (a << b)]
+= FStar.PropositionalExtensionality.apply l_True (a << b)
+
 // Helper functions for Append child offset/count arithmetic
 let append_n_before (off n cb: nat) : nat =
   if off >= cb then 0 else min n (cb - off)
@@ -2789,8 +2796,12 @@ ensures
         as (trade (base_mixed_list_match vmatch io p pm (Empty #i #t) (reveal l_narrow))
                   (base_mixed_list_match_n vmatch io p off n pm il l));
       let il' = Empty #i #t;
-      rewrite each (Empty #i #t) as il';
-      rewrite each (reveal l_narrow) as (list_narrow l (io.v off' - Ghost.reveal off) (io.v n'));
+      rewrite (base_mixed_list_match vmatch io p pm (Empty #i #t) (reveal l_narrow))
+        as (base_mixed_list_match vmatch io p pm il' (list_narrow l (io.v off' - Ghost.reveal off) (io.v n')));
+      rewrite (trade (base_mixed_list_match vmatch io p pm (Empty #i #t) (reveal l_narrow))
+                  (base_mixed_list_match_n vmatch io p off n pm il l))
+        as (trade (base_mixed_list_match vmatch io p pm il' (list_narrow l (io.v off' - Ghost.reveal off) (io.v n')))
+                  (base_mixed_list_match_n vmatch io p off n pm il l));
       il'
     }
     Singleton sp sv s -> {
@@ -2833,8 +2844,12 @@ ensures
           as (trade (base_mixed_list_match vmatch io p pm (Singleton #i #t sp sv s) (reveal l_narrow))
                     (base_mixed_list_match_n vmatch io p off n pm il l));
         let il' = Singleton #i #t sp sv s;
-        rewrite each (Singleton #i #t sp sv s) as il';
-        rewrite each (reveal l_narrow) as (list_narrow l (io.v off' - Ghost.reveal off) (io.v n'));
+        rewrite (base_mixed_list_match vmatch io p pm (Singleton #i #t sp sv s) (reveal l_narrow))
+          as (base_mixed_list_match vmatch io p pm il' (list_narrow l (io.v off' - Ghost.reveal off) (io.v n')));
+        rewrite (trade (base_mixed_list_match vmatch io p pm (Singleton #i #t sp sv s) (reveal l_narrow))
+                    (base_mixed_list_match_n vmatch io p off n pm il l))
+          as (trade (base_mixed_list_match vmatch io p pm il' (list_narrow l (io.v off' - Ghost.reveal off) (io.v n')))
+                    (base_mixed_list_match_n vmatch io p off n pm il l));
         il'
       }
     }
@@ -3706,14 +3721,15 @@ ensures (
       (c == true ==> Append? cur) /\
       (c == false ==> Base? cur)
     )
+    decreases %[(if !pcontinue then 1 else 0); mixed_list_depth (!r_node)] // fstar2 only
   {
     let node = !r_node;
     let cur_off_v = !r_off;
     let cur_n_v = !r_n;
-    with cur_pm_v _l_cur . assert (R.pts_to r_pm cur_pm_v ** mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v node _l_cur);
+    with cur_v cur_pm_v _l_cur . assert (R.pts_to r_node cur_v ** R.pts_to r_pm cur_pm_v ** mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v cur_v _l_cur);
     match node {
       Append depth cb ca tot ob bp before oa ap after sc -> {
-        rewrite (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v node _l_cur)
+        rewrite (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v cur_v _l_cur)
           as (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur);
         unfold (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur);
         with i_before i_after l1 l2 . assert (
@@ -3749,7 +3765,7 @@ ensures (
             pts_to after #(cur_pm_v *. ap) i_aft **
             mixed_list_match_n vmatch io p (append_off_after (io.v cur_off_v) (io.v oa) (io.v cb)) (append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb)) (cur_pm_v *. sc) i_aft l_aft
           );
-          intro (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_before) (cur_pm_v *. sc) ib (Ghost.reveal l_before) @==>
+          intro (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_before) (cur_pm_v *. sc) ib l_before @==>
                  mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur)
             #(pts_to before #(cur_pm_v *. bp) ib **
               pts_to after #(cur_pm_v *. ap) i_aft **
@@ -3758,29 +3774,32 @@ ensures (
                 io.v cur_off_v + io.v cur_n_v <= io.v cb + io.v ca /\
                 io.v ob + io.v cb <= io.v (mixed_list_length io ib) /\
                 io.v oa + io.v ca <= io.v (mixed_list_length io i_aft) /\
-                List.Tot.length (Ghost.reveal l_before) == append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
-                List.Tot.length (Ghost.reveal l_aft) == append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
-                _l_cur == List.Tot.append (Ghost.reveal l_before) (Ghost.reveal l_aft) /\
+                List.Tot.length l_before == append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
+                List.Tot.length l_aft == append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
+                _l_cur == List.Tot.append l_before l_aft /\ // fstar2 only
                 mixed_list_depth ib < Ghost.reveal depth /\
-                mixed_list_depth i_aft < Ghost.reveal depth))
+                mixed_list_depth i_aft < Ghost.reveal depth /\
+                io.v child_off_sz == append_off_before (io.v cur_off_v) (io.v ob) (io.v cb) /\ // fstar2 only
+                io.v child_n_before == append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\ // fstar2 only
+                io.v tot == io.v cb + io.v ca /\ io.fits (io.v tot))) // fstar2 only
             fn _ {
-              rewrite (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_before) (cur_pm_v *. sc) ib (Ghost.reveal l_before))
+              rewrite (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_before) (cur_pm_v *. sc) ib l_before)
                 as (mixed_list_match_n vmatch io p (append_off_before (io.v cur_off_v) (io.v ob) (io.v cb)) (append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb)) (cur_pm_v *. sc) ib l_before);
               rewrite (mixed_list_match_n vmatch io p (append_off_after (io.v cur_off_v) (io.v oa) (io.v cb)) (append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb)) (cur_pm_v *. sc) i_aft l_aft)
                 as (mixed_list_match_n vmatch io p (append_off_after (io.v cur_off_v) (io.v oa) (io.v cb)) (append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb)) (cur_pm_v *. sc) i_aft l_aft);
               fold (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur);
             };
           // Compose with accumulated trade
-          rewrite (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v node _l_cur)
+          rewrite (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v cur_v _l_cur)
                         (mixed_list_match_n vmatch io p off n pm il l))
             as (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur)
                       (mixed_list_match_n vmatch io p off n pm il l));
           Trade.trans
-            (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_before) (cur_pm_v *. sc) ib (Ghost.reveal l_before))
+            (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_before) (cur_pm_v *. sc) ib l_before)
             (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur)
             (mixed_list_match_n vmatch io p off n pm il l);
           // Prove list_narrow invariant for new state
-          lemma_splitAt_fst_append (io.v child_n_before) (Ghost.reveal l_before) (Ghost.reveal l_aft);
+          lemma_splitAt_fst_append (io.v child_n_before) l_before l_aft;
           list_narrow_prefix _l_cur (Ghost.reveal l) (io.v cur_n_v) (io.v child_n_before);
           // Update refs
           r_node := ib;
@@ -3806,7 +3825,7 @@ ensures (
             pts_to before #(cur_pm_v *. bp) i_bef **
             mixed_list_match_n vmatch io p (append_off_before (io.v cur_off_v) (io.v ob) (io.v cb)) (append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb)) (cur_pm_v *. sc) i_bef l_bef
           );
-          intro (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_sz) (cur_pm_v *. sc) ia (Ghost.reveal l_aft) @==>
+          intro (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_sz) (cur_pm_v *. sc) ia l_aft @==>
                  mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur)
             #(pts_to before #(cur_pm_v *. bp) i_bef **
               mixed_list_match_n vmatch io p (append_off_before (io.v cur_off_v) (io.v ob) (io.v cb)) (append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb)) (cur_pm_v *. sc) i_bef l_bef **
@@ -3815,27 +3834,30 @@ ensures (
                 io.v cur_off_v + io.v cur_n_v <= io.v cb + io.v ca /\
                 io.v ob + io.v cb <= io.v (mixed_list_length io i_bef) /\
                 io.v oa + io.v ca <= io.v (mixed_list_length io ia) /\
-                List.Tot.length (Ghost.reveal l_bef) == append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
-                List.Tot.length (Ghost.reveal l_aft) == append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
-                _l_cur == List.Tot.append (Ghost.reveal l_bef) (Ghost.reveal l_aft) /\
+                List.Tot.length l_bef == append_n_before (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
+                List.Tot.length l_aft == append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\
+                _l_cur == List.Tot.append l_bef l_aft /\ // fstar2 only
                 mixed_list_depth i_bef < Ghost.reveal depth /\
-                mixed_list_depth ia < Ghost.reveal depth))
+                mixed_list_depth ia < Ghost.reveal depth /\
+                io.v child_off_sz == append_off_after (io.v cur_off_v) (io.v oa) (io.v cb) /\ // fstar2 only
+                io.v child_n_sz == append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb) /\ // fstar2 only
+                io.v tot == io.v cb + io.v ca /\ io.fits (io.v tot))) // fstar2 only
             fn _ {
-              rewrite (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_sz) (cur_pm_v *. sc) ia (Ghost.reveal l_aft))
+              rewrite (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_sz) (cur_pm_v *. sc) ia l_aft)
                 as (mixed_list_match_n vmatch io p (append_off_after (io.v cur_off_v) (io.v oa) (io.v cb)) (append_n_after (io.v cur_off_v) (io.v cur_n_v) (io.v cb)) (cur_pm_v *. sc) ia l_aft);
               fold (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur);
             };
           // Compose with accumulated trade
-          rewrite (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v node _l_cur)
+          rewrite (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v cur_v _l_cur)
                         (mixed_list_match_n vmatch io p off n pm il l))
             as (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur)
                       (mixed_list_match_n vmatch io p off n pm il l));
           Trade.trans
-            (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_sz) (cur_pm_v *. sc) ia (Ghost.reveal l_aft))
+            (mixed_list_match_n vmatch io p (io.v child_off_sz) (io.v child_n_sz) (cur_pm_v *. sc) ia l_aft)
             (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Append #i #t depth cb ca tot ob bp before oa ap after sc) _l_cur)
             (mixed_list_match_n vmatch io p off n pm il l);
           // Prove list_narrow invariant: n_before == 0, so l_bef == [] and _l_cur == l_aft
-          List.Tot.Properties.append_l_nil (Ghost.reveal l_aft);
+          List.Tot.Properties.append_l_nil l_aft;
           // Update refs
           r_node := ia;
           r_off := child_off_sz;
@@ -3856,13 +3878,13 @@ ensures (
   let node = !r_node;
   let cur_off_v = !r_off;
   let cur_n_v = !r_n;
-  with cur_pm_v _l_fin . assert (R.pts_to r_pm cur_pm_v ** mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v node _l_fin);
+  with cur_v cur_pm_v _l_fin . assert (R.pts_to r_node cur_v ** R.pts_to r_pm cur_pm_v ** mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v cur_v _l_fin);
   // Read the accumulated ambient as a *concrete* perm (== the ghost witness
   // [cur_pm_v]); needed to call the non-ghost rescale below.
   let final_pm = !r_pm;
   match node {
     Base bi -> {
-      rewrite (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v node _l_fin)
+      rewrite (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v cur_v _l_fin)
         as (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Base bi) _l_fin);
       unfold (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Base bi) _l_fin);
       let bi' = base_mixed_list_narrow_n vmatch io p j (io.v cur_off_v) (io.v cur_n_v) cur_pm_v bi _l_fin cur_off_v cur_n_v;
@@ -3885,7 +3907,7 @@ ensures (
         (base_mixed_list_match vmatch io p cur_pm_v bi' (list_narrow _l_fin 0 (io.v cur_n_v)))
         (base_mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v bi _l_fin)
         (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Base bi) _l_fin);
-      rewrite (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v node _l_fin)
+      rewrite (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v cur_v _l_fin)
                     (mixed_list_match_n vmatch io p off n pm il l))
         as (trade (mixed_list_match_n vmatch io p (io.v cur_off_v) (io.v cur_n_v) cur_pm_v (Base bi) _l_fin)
                   (mixed_list_match_n vmatch io p off n pm il l));
@@ -4075,11 +4097,11 @@ ensures
       rewrite each x as x_val;
       rewrite (vmatch (pm *. sv) x_val y)
         as (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)));
-      intro (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)) **
-             mixed_list_match_n vmatch io p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #i #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
-             @==>
-             mixed_list_match_n vmatch io p off n pm (Base (Singleton #i #t sp sv s)) (Ghost.reveal l))
-        #(pts_to s #(pm *. sp) x_val **
+      intro_trade // fstar2 only: intro_trade instead of intro
+        (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)) **
+         mixed_list_match_n vmatch io p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #i #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+        (mixed_list_match_n vmatch io p off n pm (Base (Singleton #i #t sp sv s)) (Ghost.reveal l))
+        (pts_to s #(pm *. sp) x_val **
           pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1))
         fn _ {
           rewrite (mixed_list_match_n vmatch io p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #i #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
@@ -4105,7 +4127,7 @@ ensures
       // sl1 == Seq.slice l' off (off+n), read at position off
       FStar.SizeT.fits_lte (io.v off_sz) (SZ.v (S.len s));
       let off_ix : SZ.t = io.to_sizet off_sz;
-      let x_val = S.op_Array_Access s off_ix;
+      let x_val = S.(s.(off_ix)); // fstar2 only
       // Split head from seq_list_match
       SMU.seq_list_match_cons_elim_trade sl1 (Ghost.reveal l) (vmatch (pm *. sv));
       // Share pts_to s
@@ -4642,11 +4664,11 @@ ensures
       let res : elt_or_serialized t = EElement x_val;
       rewrite (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)))
         as (elt_or_serialized_match vmatch io p (pm *. sv) res (List.Tot.hd (Ghost.reveal l)));
-      intro (elt_or_serialized_match vmatch io p (pm *. sv) res (List.Tot.hd (Ghost.reveal l)) **
-             mixed_list_match_n vmatch io p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #i #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
-             @==>
-             mixed_list_match_n vmatch io p off n pm (Base (Singleton #i #t sp sv s)) (Ghost.reveal l))
-        #(pts_to s #(pm *. sp) x_val **
+      intro_trade // fstar2 only: intro_trade instead of intro
+        (elt_or_serialized_match vmatch io p (pm *. sv) res (List.Tot.hd (Ghost.reveal l)) **
+         mixed_list_match_n vmatch io p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #i #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+        (mixed_list_match_n vmatch io p off n pm (Base (Singleton #i #t sp sv s)) (Ghost.reveal l))
+        (pts_to s #(pm *. sp) x_val **
           pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1))
         fn _ {
           rewrite (elt_or_serialized_match vmatch io p (pm *. sv) res (List.Tot.hd (Ghost.reveal l)))
@@ -4672,7 +4694,7 @@ ensures
       SM.seq_list_match_length (vmatch (pm *. sv)) sl1 (Ghost.reveal l);
       FStar.SizeT.fits_lte (io.v off_sz) (SZ.v (S.len s));
       let off_ix : SZ.t = io.to_sizet off_sz;
-      let x_val = S.op_Array_Access s off_ix;
+      let x_val = S.(s.(off_ix)); // fstar2 only
       SMU.seq_list_match_cons_elim_trade sl1 (Ghost.reveal l) (vmatch (pm *. sv));
       S.share s;
       rewrite (S.pts_to s #((pm *. sp) /. 2.0R) l') as (S.pts_to s #((pm /. 2.0R) *. sp) l');
@@ -4880,7 +4902,8 @@ ensures
     as (iterator_match vmatch io p pm il (Ghost.reveal l));
   match il {
     IBase bi -> {
-      rewrite each il as (IBase #i #t bi);
+      rewrite (iterator_match vmatch io p pm (Ghost.reveal i_orig) (Ghost.reveal l)) // fstar2 only
+        as (iterator_match vmatch io p pm (IBase #i #t bi) (Ghost.reveal l));
       unfold (iterator_match vmatch io p pm (IBase #i #t bi) (Ghost.reveal l));
       // Now we have just: base_mixed_list_match vmatch io p pm bi l
       let len_sz = base_mixed_list_length io bi;
@@ -5005,7 +5028,8 @@ ensures
       }
     }
     IPair bi ml -> {
-      rewrite each il as (IPair #i #t bi ml);
+      rewrite (iterator_match vmatch io p pm (Ghost.reveal i_orig) (Ghost.reveal l)) // fstar2 only
+        as (iterator_match vmatch io p pm (IPair #i #t bi ml) (Ghost.reveal l));
       unfold (iterator_match vmatch io p pm (IPair #i #t bi ml) (Ghost.reveal l));
       with l1 l2 . assert (
         base_mixed_list_match vmatch io p pm bi l1 **
