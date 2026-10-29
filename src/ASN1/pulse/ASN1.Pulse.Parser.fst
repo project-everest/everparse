@@ -14,12 +14,14 @@ open ASN1.Pulse.Rel
 open ASN1.Pulse.Parse
 open ASN1.Pulse.Interpreter
 open ASN1.Pulse.ParseChoice
+open ASN1.Pulse.ParseSequence
 
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module Trade = Pulse.Lib.Trade.Util
 module SB = LowParse.Spec.Base
+module ILC = ASN1.Pulse.ILC
 
 let ares (#t: Type0) (#u: Type0) (r: prel t u) (#k: SB.parser_kind) (p: SB.parser k u)
   (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased u) : Type
@@ -35,7 +37,19 @@ let rec psupported_content (k: asn1_content_k) : Tot bool (decreases k) =
   | ASN1_TERMINAL _ -> true
   | ASN1_RESTRICTED_TERMINAL _ _ -> true
   | ASN1_PREFIXED k' -> psupported_k k'
+  | ASN1_SEQUENCE gitems -> psupported_items (dsnd gitems)
   | _ -> false
+
+and psupported_items (#i: _) (ls: asn1_gen_items_l i) : Tot bool (decreases ls) =
+  match ls with
+  | ASN1_GEN_ITEMS_NIL -> true
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl -> psupported_dec dk && psupported_items tl
+
+and psupported_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : Tot bool (decreases dk) =
+  match dk with
+  | ASN1_PLAIN_ILC k -> psupported_k k
+  | ASN1_OPTION_ILC k -> psupported_k k
+  | _ -> true
 
 and psupported_lc (lc: list (asn1_id_t & asn1_content_k)) : Tot bool (decreases lc) =
   match lc with
@@ -94,6 +108,47 @@ let rec parse_terminal ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k)
   | ASN1_DATE_TIME -> parse_slice_leaf k)
   in vf input #pm #w #v
 
+[@@asn1_pulse_attr]
+inline_for_extraction
+let parse_restricted (k: asn1_terminal_k) (r: asn1_restriction k)
+: aparser #(asn1_content_impl_t (ASN1_RESTRICTED_TERMINAL k r)) #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))
+= parse_rel_ext
+    (parse_ext (parse_filter #_ #_ #_ #_ #(asn1_terminal_as_parser k) (fun input #pm #w #v -> parse_terminal k input #pm #w #v) (restriction_pred r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)))
+    (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r))
+
+(* Whether an identifier belongs to an item *)
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let phas_id_k (#s: _) (k: asn1_k s) (id: asn1_id_t)
+: Tot (b: bool { b == Set.mem id s })
+= match k with
+  | ASN1_ILC id0 _ -> ILC.asn1_id_eq id id0
+  | ASN1_CHOICE_ILC lc _ -> has_id_lc lc id
+  | ASN1_ANY_ILC -> true
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let phas_id_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (id: asn1_id_t)
+: Tot (b: bool { b == Set.mem id s })
+= match dk with
+  | ASN1_PLAIN_ILC k -> phas_id_k k id
+  | ASN1_OPTION_ILC k -> phas_id_k k id
+  | ASN1_DEFAULT_TERMINAL id0 _ -> ILC.asn1_id_eq id id0
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 _ _ -> ILC.asn1_id_eq id id0
+
+(* Absent items *)
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let dec_absent (#s: _) (#d: _) (dk: asn1_decorated_k s d)
+: dabsent dk
+= match dk with
+  | ASN1_PLAIN_ILC k -> dec_plain_absent k
+  | ASN1_OPTION_ILC k -> dec_option_absent k
+  | ASN1_DEFAULT_TERMINAL id0 #k defv -> dec_default_absent id0 #k defv
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv -> dec_default_restricted_absent id0 #k r defv
+
 let rec parse_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u: squash (psupported_content k))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_content_t k))
 : Tot (ares (asn1_content_rel k) (asn1_content_as_parser k) input pm w v)
@@ -101,12 +156,39 @@ let rec parse_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u:
 = [@inline_let] let vf : aparser #(asn1_content_impl_t k) #(asn1_content_t k) (asn1_content_rel k) #asn1_weak_parser_kind (asn1_content_as_parser k) =
   (match k with
   | ASN1_TERMINAL k' -> parse_terminal k'
-  | ASN1_RESTRICTED_TERMINAL k' r ->
-    parse_rel_ext
-      (parse_ext (parse_filter #_ #_ #_ #_ #(asn1_terminal_as_parser k') (fun input #pm #w #v -> parse_terminal k' input #pm #w #v) (restriction_pred r)) #asn1_weak_parser_kind (asn1_content_as_parser k))
-      (asn1_content_rel k)
+  | ASN1_RESTRICTED_TERMINAL k' r -> parse_restricted k' r
   | ASN1_PREFIXED k' ->
-    parse_ext #_ #_ #_ #_ #(asn1_as_parser k') (fun input #pm #w #v -> parse_k k' () input #pm #w #v) #asn1_weak_parser_kind (asn1_content_as_parser k))
+    parse_ext #_ #_ #_ #_ #(asn1_as_parser k') (fun input #pm #w #v -> parse_k k' () input #pm #w #v) #asn1_weak_parser_kind (asn1_content_as_parser k)
+  | ASN1_SEQUENCE gitems ->
+    seq_parser gitems (fun input #pm #w #v -> parse_items (dsnd gitems) () input #pm #w #v))
+  in vf input #pm #w #v
+
+and parse_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (psupported_items ls))
+  (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_t_core ls))
+: Tot (sres ls input pm w v)
+  (decreases ls)
+= [@inline_let] let vf : sparser ls =
+  (match ls with
+  | ASN1_GEN_ITEMS_NIL -> seq_nil ()
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
+    seq_single dk (fun input #pm #w #v -> parse_dec dk () input #pm #w #v) (dec_absent dk)
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
+    seq_cons dk dk2 tl2 (phas_id_dec dk)
+      (fun input #pm #w #v -> parse_dec dk () input #pm #w #v)
+      (dec_absent dk)
+      (fun input #pm #w #v -> parse_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () input #pm #w #v))
+  in vf input #pm #w #v
+
+and parse_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) ([@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (u: squash (psupported_dec dk))
+  (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_decorated_t_core dk))
+: Tot (dres dk input pm w v)
+  (decreases dk)
+= [@inline_let] let vf : dpresent dk =
+  (match dk with
+  | ASN1_PLAIN_ILC k -> dec_plain_present k (fun input #pm #w #v -> parse_k k () input #pm #w #v)
+  | ASN1_OPTION_ILC k -> dec_option_present k (fun input #pm #w #v -> parse_k k () input #pm #w #v)
+  | ASN1_DEFAULT_TERMINAL id0 #k defv -> dec_default_present id0 #k defv (fun input #pm #w #v -> parse_terminal k input #pm #w #v)
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv -> dec_default_restricted_present id0 #k r defv (parse_restricted k r))
   in vf input #pm #w #v
 
 and parse_k (#s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (u: squash (psupported_k k))

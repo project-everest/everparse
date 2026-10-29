@@ -33,6 +33,31 @@ int main(void) {
   uint8_t c3[] = {0x80, 0x02, 9, 8};
   ch = ASN1_Pulse_ParseTest_parse_choice_(SL(c3));
   if (ch.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_EITHER_BOOL_SLICE_UINT8 || ch.val.Inr.tag != FSTAR_PERVASIVES_INR__BOOL_SLICE_UINT8 || ch.val.Inr.val.Inr.len != 2 || ch.val.Inr.val.Inr.elt != c3 + 2) { printf("choice o\n"); fails++; }
+  /* SEQUENCE { a INTEGER } and SEQUENCE { a INTEGER, b BOOLEAN } */
+  uint8_t q1[] = {0x30, 0x03, 0x02, 0x01, 0x05};
+  a = ASN1_Pulse_ParseTest_parse_seqA(SL(q1));
+  if (a.tag != ASN1_PULSE_REL_SMALL || a.val.Small != 5) { printf("seqA\n"); fails++; }
+  uint8_t q2[] = {0x30, 0x06, 0x02, 0x01, 0x05, 0x01, 0x01, 0xff};
+  FStar_Pervasives_Native_tuple2__asn1_int_impl_bool ab = ASN1_Pulse_ParseTest_parse_seqAB(SL(q2));
+  if (ab._1.tag != ASN1_PULSE_REL_SMALL || ab._1.val.Small != 5 || !ab._2) { printf("seqAB\n"); fails++; }
+  /* SEQUENCE { a INTEGER, b BOOLEAN DEFAULT FALSE,
+       c [0] IMPLICIT OCTET STRING OPTIONAL, d [1] EXPLICIT INTEGER OPTIONAL } */
+  uint8_t q3[] = {0x30, 0x03, 0x02, 0x01, 0x05};
+  FStar_Pervasives_Native_tuple2__asn1_int_impl_tuple2_option_bool_tuple2_option_s q =
+    ASN1_Pulse_ParseTest_parse_seq(SL(q3));
+  if (q._1.val.Small != 5 || q._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__BOOL
+      || q._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8
+      || q._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL) { printf("seq a\n"); fails++; }
+  uint8_t q4[] = {0x30, 0x0f, 0x02, 0x01, 0x05, 0x01, 0x01, 0xff, 0x80, 0x02, 0xaa, 0xbb, 0xa1, 0x03, 0x02, 0x01, 0x07};
+  q = ASN1_Pulse_ParseTest_parse_seq(SL(q4));
+  if (q._1.val.Small != 5 || q._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__BOOL || !q._2._1.val.Some
+      || q._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8 || q._2._2._1.val.Some.len != 2 || q._2._2._1.val.Some.elt != q4 + 10
+      || q._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || q._2._2._2.val.Some.val.Small != 7) { printf("seq abcd\n"); fails++; }
+  uint8_t q5[] = {0x30, 0x08, 0x02, 0x01, 0x05, 0xa1, 0x03, 0x02, 0x01, 0x07};
+  q = ASN1_Pulse_ParseTest_parse_seq(SL(q5));
+  if (q._1.val.Small != 5 || q._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__BOOL
+      || q._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8
+      || q._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || q._2._2._2.val.Some.val.Small != 7) { printf("seq ad\n"); fails++; }
   printf(fails ? "FAIL\n" : "OK\n");
   return fails;
 }

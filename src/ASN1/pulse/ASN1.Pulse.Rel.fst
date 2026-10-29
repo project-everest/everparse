@@ -175,11 +175,15 @@ let u32_ops = LowParse.PulseParse.Iterator.IntOps.U32.u32_ops
 
 let ml (t: Type0) : Type0 = ItT.mixed_list U32.t t
 
+(* NOTE: the impl types use the projector `Mkdtuple2?._2` rather than `dsnd`:
+   Custard reduces a type-level function by unfolding only that function, and
+   a projector applied to a constructor reduces by iota, whereas `dsnd` would
+   stay stuck and the type would extract as `any`. *)
 let rec asn1_content_impl_t (k: asn1_content_k) : Tot Type0 (decreases k) =
   match k with
   | ASN1_RESTRICTED_TERMINAL k' _ -> asn1_terminal_impl_t k'
   | ASN1_TERMINAL k' -> asn1_terminal_impl_t k'
-  | ASN1_SEQUENCE gitems -> asn1_items_impl_t (dsnd gitems)
+  | ASN1_SEQUENCE gitems -> asn1_items_impl_t (Mkdtuple2?._2 gitems)
   | ASN1_SET _ items _ -> asn1_items_impl_t items
   | ASN1_SEQUENCE_OF _ k' -> ml (asn1_impl_t k')
   | ASN1_SET_OF _ k' -> ml (asn1_impl_t k')
@@ -190,7 +194,7 @@ let rec asn1_content_impl_t (k: asn1_content_k) : Tot Type0 (decreases k) =
 and asn1_adb_fallback_impl_t (key_k: asn1_terminal_k) (ofb: option asn1_gen_items_lk) : Tot (option Type0) (decreases ofb) =
   match ofb with
   | None -> None
-  | Some fb -> Some (asn1_terminal_impl_t key_k & asn1_items_impl_t (dsnd fb))
+  | Some fb -> Some (asn1_terminal_impl_t key_k & asn1_items_impl_t (Mkdtuple2?._2 fb))
 
 and asn1_adb_suffix_impl_t (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fbt: option Type0) : Tot Type0 (decreases ls) =
   match ls with
@@ -201,10 +205,10 @@ and asn1_adb_suffix_impl_t (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t k
     end
   | [(_, it)] ->
     begin match fbt with
-    | None -> asn1_items_impl_t (dsnd it)
-    | Some t -> either (asn1_items_impl_t (dsnd it)) t
+    | None -> asn1_items_impl_t (Mkdtuple2?._2 it)
+    | Some t -> either (asn1_items_impl_t (Mkdtuple2?._2 it)) t
     end
-  | (_, it) :: tl -> either (asn1_items_impl_t (dsnd it)) (asn1_adb_suffix_impl_t key_k tl fbt)
+  | (_, it) :: tl -> either (asn1_items_impl_t (Mkdtuple2?._2 it)) (asn1_adb_suffix_impl_t key_k tl fbt)
 
 and asn1_lc_impl_t (lc: list (asn1_id_t & asn1_content_k)) : Tot Type0 (decreases lc) =
   match lc with
