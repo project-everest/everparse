@@ -250,13 +250,13 @@ pulse-comments-test: pulse-batch
 # combinator has been inlined into the generated code, so this checks the whole
 # chain (Pulse binder-attribute substitution and Custard C extraction).
 #
-# `positionAfter<field>` in Low* is `resultAfter<field>` here: a Pulse validator
+# `positionAfter<Field>` in Low* is `resultAfter<Field>` here: a Pulse validator
 # returns an error code and keeps the position in a reference.
 pulse-renamelet-test: pulse-batch
-	grep -q 'resultAfterrequestId' $(OUT_DIR)/Demo.c
+	grep -q 'resultAfterRequestId' $(OUT_DIR)/Demo.c
 	grep -q 'majorConstraintIsOk' $(OUT_DIR)/Demo.c
 	grep -q 'uint32_t major = ' $(OUT_DIR)/Demo.c
-	grep -q 'resultAfterxx' $(OUT_DIR)/TestActions1.c
+	grep -q 'resultAfterXx' $(OUT_DIR)/TestActions1.c
 	grep -q 'xxConstraintIsOk' $(OUT_DIR)/TestActions1.c
 
 # The in-place hash is embedded in the generated header, so that a consumer can
