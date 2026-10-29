@@ -173,6 +173,7 @@ let rec asn1_terminal_rel (k: asn1_terminal_k) : Tot (prel (asn1_terminal_impl_t
      supported keys (the key is implied by the position), then, if any, the
      fallback (key and items). *)
 
+inline_for_extraction
 let ml_ops = IO.sizet_ops
 
 let ml (t: Type0) : Type0 = ItT.mixed_list SZ.t t
