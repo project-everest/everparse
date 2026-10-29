@@ -225,12 +225,16 @@ let parse_boolean_enc (x: bool)
   parse_u8_spec' b;
   parser_kind_prop_equiv parse_u8_kind parse_u8
 
+(* The length is computed from `x` (`domain_intro_gen`), not by counting
+   down from `bound` (`interval_elim`) as `serialize_untagged_bounded_integer`
+   does, which would not be executable for `asn1_any_integer_bound`. *)
 let integer_enc (bound: pos) (x: integer_in_interval bound) : Tot bytes =
-  mk_bytes (interval_elim bound x) x
+  mk_bytes (domain_intro_gen x) x
 
 let parse_integer_enc (bound: pos) (x: integer_in_interval bound)
 : Lemma (parse (parse_untagged_bounded_integer bound) (integer_enc bound x) == Some (x, Seq.length (integer_enc bound x)))
-= assert (integer_enc bound x == serialize (serialize_untagged_bounded_integer bound) x)
+= domain_unique (domain_intro_gen x) (interval_elim bound x) x;
+  assert (integer_enc bound x == serialize (serialize_untagged_bounded_integer bound) x)
 
 let bitstring_enc (x: asn1_bitstring_t) : Tot bytes =
   let BYTES_WITH_UNUSEDBITS u b = x in

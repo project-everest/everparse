@@ -16,13 +16,14 @@ FSTAR_FILES := $(filter-out $(NOT_INCLUDED),$(wildcard *.fst *.fsti))
 
 clean_rules += ocaml.clean evaluation.clean difftest.clean clean-files
 
-# Whole-program extraction.  ASN1.X509, ASN1.CRL, ASN1.SetTest and
-# ASN1.DiffTest are what ocaml/ASN1_Parser.ml calls into; everything else
+# Whole-program extraction.  ASN1.X509, ASN1.CRL, ASN1.SetTest, ASN1.DiffTest
+# and ASN1.RoundTrip are what ocaml/ASN1_Parser.ml calls into; everything else
 # is reached from them.
 CUSTARD_ENTRY_MODULES := ASN1.X509
 CUSTARD_ENTRY_MODULES += ASN1.CRL
 CUSTARD_ENTRY_MODULES += ASN1.SetTest
 CUSTARD_ENTRY_MODULES += ASN1.DiffTest
+CUSTARD_ENTRY_MODULES += ASN1.RoundTrip
 CUSTARD_ROOTS := ASN1.ExtractionRoot.fst
 
 include $(EVERPARSE_HOME)/lib/everparse/common.Makefile

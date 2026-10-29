@@ -169,8 +169,22 @@ let main =
                   exit (get_failure_reason str)
                 else
                   exit 2
-      | Some (_, n) -> 
-        print_string ("parsing succeeded consuming " ^ Z.to_string n ^ " bytes\n")
+      | Some (x, n) ->
+        print_string ("parsing succeeded consuming " ^ Z.to_string n ^ " bytes\n");
+        (* Round trip through the spec serializer (ASN1.Spec.Serializer) *)
+        let enc =
+          if debugflag then None
+          else if String.equal formatname "X509" then Some (ASN1_RoundTrip.enc_cert (Obj.magic x))
+          else if String.equal formatname "CRL" then Some (ASN1_RoundTrip.enc_crl (Obj.magic x))
+          else None
+        in
+        match enc with
+        | None -> ()
+        | Some e ->
+          let consumed = lp_bytes_of_string (String.sub str 0 (Z.to_int n)) in
+          if e = consumed
+          then print_string "round trip succeeded\n"
+          else (print_string "round trip FAILED\n"; exit 8)
     with
-     _ -> print_string (filename ^ " could not be read\n"); exit 3
+     e -> print_string (filename ^ " could not be read: " ^ Printexc.to_string e ^ "\n"); exit 3
   )

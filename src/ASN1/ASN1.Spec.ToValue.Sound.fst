@@ -1,9 +1,10 @@
 module ASN1.Spec.ToValue.Sound
 
-(* Soundness of `to_value` w.r.t. the typed parsers: for every well-formed
-   schema `k`, the bytes consumed by the typed parser `asn1_as_parser k` are
-   exactly the generic encoding of the generic value of the parsed typed
-   value (`asn1_as_parser_consumed` below.) *)
+(* Soundness of `to_value` w.r.t. the typed parsers: building blocks.
+   For every well-formed schema `k`, the bytes consumed by the typed parser
+   `asn1_as_parser k` are exactly the generic encoding of the generic value
+   of the parsed typed value: see `top_lemma` in ASN1.Spec.ToValue.Main and
+   `asn1_as_parser_consumed` in ASN1.Spec.Serializer. *)
 
 open LowParse.Tot.Base
 open LowParse.Tot.Combinators
