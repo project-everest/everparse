@@ -713,6 +713,7 @@ val validate____UINT8
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler
@@ -729,6 +730,7 @@ val validate____UINT8BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler
@@ -745,6 +747,7 @@ val validate____UINT16BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler
@@ -761,6 +764,7 @@ val validate____UINT32BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler
@@ -777,6 +781,7 @@ val validate____UINT64BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler
@@ -793,6 +798,7 @@ val validate____UINT16
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler
@@ -809,6 +815,7 @@ val validate____UINT32
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler
@@ -825,6 +832,7 @@ val validate____UINT64
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler

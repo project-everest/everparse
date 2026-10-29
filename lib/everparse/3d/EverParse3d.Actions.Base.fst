@@ -206,6 +206,9 @@ let leaf_reader
   (p: parser k t)
 : Tot Type0
 =
+  (* The 3D field being read, only used to name C locals; see
+     [EverParse3d.InputStream.Base.input_stream_inst]. *)
+  (name: string) ->
   (sl_base: base_t) ->
   (sl_len: len_t) ->
   (sl_pos: pos_t) ->
@@ -229,12 +232,20 @@ let leaf_reader
 
 (* Several combinators below tag their local bindings with `rename_let`, so that
    the extracted C names the temporaries after the 3D field they come from
-   rather than `res_key`, `val_key`, ... The names used are:
+   rather than `res_key`, `val_key`, ... Following the KaRaMeL `-fmicrosoft`
+   conventions of the Low* backend, locals are camelCase and the field name is
+   recased with [camel_case] or [pascal_case] (EverParse3d.Actions.Common), so
+   that for a field `<field>` (`<Field>` once PascalCased) the names used are:
 
      <field>                    the value read by the leaf reader
      <field>ConstraintIsOk      the result of a refinement check
-     action_success_<field>     the boolean returned by an action
-     resultAfter<field>         the result of validating <field>
+     actionSuccess<Field>       the boolean returned by an action
+     fieldStart<Field>          the position at which <field> starts
+     resultAfter<Field>         the result of validating <field>
+
+   The leaf validators and the input stream operations similarly name their
+   locals after the field they are given (`offsetBefore<Field>`,
+   `positionOf<Field>`, `bytesOf<Field>`, ...).
 
    Pulse validators keep the current position in the `sl_pos` reference and
    return an error code rather than the position they stopped at, hence
@@ -271,10 +282,10 @@ fn validate_with_success_action
   (contents_sl: _)
   (v_sl: _)
 {
-  let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let [@@@rename_let ("resultAfter" ^ name)] res_validate = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_validate = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res_validate = validator_success) {
-    let [@@@rename_let ("action_success_" ^ name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (res_action) {
       validator_success
     } else {
@@ -316,10 +327,10 @@ fn validate_with_error_handler
   // start of the field, which is what the error handler must report (see
   // doc/3d-lang.rst's `StartPosition`). By the time the handler runs, sl_pos
   // has already advanced past whatever the field consumed.
-  let [@@@rename_let ("fieldStart" ^ typename)] field_start =
+  let [@@@rename_let ("fieldStart" ^ pascal_case typename)] field_start =
     I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let [@@@rename_let ("startPosition" ^ typename)] start_pos = field_start;
-  let [@@@rename_let ("resultAfter" ^ typename)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
+  let [@@@rename_let ("startPosition" ^ pascal_case typename)] start_pos = field_start;
+  let [@@@rename_let ("resultAfter" ^ pascal_case typename)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res = validator_success) { // TODO: turn this `if ... else` into a non-terminal `if (res <> validator_success)` with an `ensures` clause
     res
   } else {
@@ -393,7 +404,7 @@ fn validate_pair_slow
   (v_sl: _)
 {
   LowParse.Spec.Combinators.nondep_then_eq p1 p2 v_sl;
-  let [@@@rename_let ("resultAfter" ^ name1)] res1 = v1 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res1 = v1 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   if (res1 = validator_success) {
     v2 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _
   } else {
@@ -446,14 +457,14 @@ fn validate_dep_pair_with_refinement_and_action'
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
-  let [@@@rename_let ("fieldStart" ^ name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let mut pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
-    let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
-    let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+    let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
+    let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
     if (ok) {
-      let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+      let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
       if (res_action) {
       	 v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
       } else {
@@ -514,12 +525,12 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
-  let [@@@rename_let ("fieldStart" ^ name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   Comment.comment (normalize_term ("Validating field " ^ name1));
-  let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
-  let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+  let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
+  let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
   if (ok) {
-    let [@@@rename_let ("action_success_" ^ name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (res_action) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
@@ -602,12 +613,12 @@ fn validate_filter
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
   let mut pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
-    let [@@@rename_let name] val_key = r sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("" ^ camel_case name)] val_key = r name sl_base sl_len sl_pos _ _;
     Comment.comment (normalize_term ("start: " ^ cf));
-    let [@@@rename_let (name ^ "ConstraintIsOk")] ok = f val_key;
+    let [@@@rename_let (camel_case name ^ "ConstraintIsOk")] ok = f val_key;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
       validator_success
@@ -655,17 +666,17 @@ fn validate_filter_with_action
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
-  let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let mut pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     Comment.comment cr;
-    let [@@@rename_let name] val_key = r sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("" ^ camel_case name)] val_key = r name sl_base sl_len sl_pos _ _;
     Comment.comment (normalize_term ("start: " ^ cf));
-    let [@@@rename_let (name ^ "ConstraintIsOk")] ok = f val_key;
+    let [@@@rename_let (camel_case name ^ "ConstraintIsOk")] ok = f val_key;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
-      let [@@@rename_let ("action_success_" ^ name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+      let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
       if (res_action) {
       	validator_success
       } else {
@@ -1045,7 +1056,7 @@ fn validate_nlist
   parse_nlist_eq n n_is_const p v_sl;
   parse_fldata_eq (LPL.parse_list p) (U32.v n) v_sl;
   let n_sz = SZ.uint32_to_sizet n;
-  let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  let hasBytes = I.has "" sl_base sl_len sl_pos n_sz contents_sl v_sl;
   I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
@@ -1094,7 +1105,7 @@ fn validate_nlist
     {
       with vcur. assert (I.pts_to tb tl tp contents1 vcur);
       with extra'. assert (forevery_state extra_state extra');
-      let hasMore = I.has tb tl tp 1sz contents1 vcur;
+      let hasMore = I.has "ListElement" tb tl tp 1sz contents1 vcur;
       if (not hasMore) {
         stop := true;
       } else {
@@ -1155,7 +1166,7 @@ fn validate_t_at_most
   parse_t_at_most_eq n p v_sl;
   parse_fldata_eq (LowParse.Spec.Combinators.nondep_then p parse_all_bytes) (U32.v n) v_sl;
   let n_sz = SZ.uint32_to_sizet n;
-  let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  let hasBytes = I.has "" sl_base sl_len sl_pos n_sz contents_sl v_sl;
   I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
@@ -1223,7 +1234,7 @@ fn validate_t_exact
   parse_t_exact_eq n p v_sl;
   parse_fldata_eq p (U32.v n) v_sl;
   let n_sz = SZ.uint32_to_sizet n;
-  let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  let hasBytes = I.has "" sl_base sl_len sl_pos n_sz contents_sl v_sl;
   I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
@@ -1246,7 +1257,7 @@ fn validate_t_exact
     let res = v ctxt error_handler_fn tb tl tp extra _ _;
     if (res = validator_success) {
       with v1'. assert (I.pts_to tb tl tp contents1 v1');
-      let stillHasBytes = I.has tb tl tp 1sz contents1 v1';
+      let stillHasBytes = I.has "TrailingBytes" tb tl tp 1sz contents1 v1';
       seq_is_suffix_of_append v1' v1 v2;
       I.untruncate tb tl tp sl_base sl_len sl_pos contents1 v1' contents_sl v2;
       if (stillHasBytes) {
@@ -1278,6 +1289,7 @@ fn read_filter
        (f: (t -> bool))
     : leaf_reader #base_t #len_t #pos_t (parse_filter p f)
 =
+  (name: string)
   (sl_base: base_t)
   (sl_len: len_t)
   (sl_pos: pos_t)
@@ -1285,7 +1297,7 @@ fn read_filter
   (v_sl: Ghost.erased (Seq.seq U8.t))
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
-  let res = p32 sl_base sl_len sl_pos _ _;
+  let res = p32 name sl_base sl_len sl_pos _ _;
   assert pure (f res == true);
   res
 }
@@ -1297,6 +1309,7 @@ fn read_impos
     ()
     : leaf_reader #base_t #len_t #pos_t (parse_impos())
 =
+  (name: _)
   (sl_base: _)
   (sl_len: _)
   (sl_pos: _)
@@ -1332,7 +1345,7 @@ fn action_bind
   (v_sl: _)
   (start_pos: _)
 {
-  let [@@@rename_let name] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
+  let [@@@rename_let ("" ^ camel_case name)] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
   g resf ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
 }
 
@@ -1835,9 +1848,9 @@ fn validate_dep_pair
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
   let mut pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
-    let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
     v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   } else {
     res_key
@@ -1887,7 +1900,7 @@ fn validate_dep_pair_with_action
   let mut pos = inst.scan_zero;
   let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
-    let val_key = r1 sl_base sl_len sl_pos _ _;
+    let val_key = r1 "" sl_base sl_len sl_pos _ _;
     let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (res_action) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
@@ -1940,10 +1953,10 @@ fn validate_dep_pair_with_refinement'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   let mut pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
-    let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
-    let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+    let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
+    let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
     if (ok) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
@@ -2000,8 +2013,8 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
   Comment.comment (normalize_term ("Validating field " ^ name1));
-  let [@@@rename_let name1] val_key = r1 sl_base sl_len sl_pos _ _;
-  let [@@@rename_let (name1 ^ "ConstraintIsOk")] ok = f val_key;
+  let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
+  let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
   if (ok) {
     v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   } else {
@@ -2074,12 +2087,12 @@ fn validate_with_dep_action
   (contents_sl: _)
   (v_sl: _)
 {
-  let [@@@rename_let ("fieldStart" ^ name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let mut pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res = validator_success) {
-    let [@@@rename_let name] field_value = r sl_base sl_len sl_pos _ _;
-    let [@@@rename_let ("action_success_" ^ name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+    let [@@@rename_let ("" ^ camel_case name)] field_value = r name sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
     if (action_result) {
       validator_success
     } else {
@@ -2103,6 +2116,7 @@ fn validate_total_constant_size_no_read
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+      (name: string)
       (#nz:bool)
       (#wk: _)
       (#k:parser_kind nz wk)
@@ -2130,8 +2144,8 @@ fn validate_total_constant_size_no_read
   (v_pos: _)
 {
   LP.parser_kind_prop_equiv k p;
-  let p0 = !pos;
-  let hasBytes = I.has_at sl_base sl_len sl_pos p0 sz contents_sl v_sl;
+  let [@@@rename_let ("offsetBefore" ^ pascal_case name)] p0 = !pos;
+  let [@@@rename_let ("hasBytesFor" ^ pascal_case name)] hasBytes = I.has_at name sl_base sl_len sl_pos p0 sz contents_sl v_sl;
   if (hasBytes) {
     pos := inst.scan_add p0 sz;
     validator_success
@@ -2157,6 +2171,7 @@ fn lift_reader
       ))
 : leaf_reader #base_t #len_t #pos_t p
 =
+  (name: _)
   (sl_base: _)
   (sl_len: _)
   (sl_pos: _)
@@ -2164,7 +2179,7 @@ fn lift_reader
   (v_sl: _)
 {
   LP.parser_kind_prop_equiv k p;
-  I.read t k p r sl_base sl_len sl_pos sz contents_sl v_sl
+  I.read name t k p r sl_base sl_len sl_pos sz contents_sl v_sl
 }
 
 inline_for_extraction noextract
@@ -2172,12 +2187,13 @@ let validate____UINT8
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT8, i.e., 1 byte"
-    (validate_total_constant_size_no_read parse____UINT8 1sz ())
+    (validate_total_constant_size_no_read name parse____UINT8 1sz ())
 
 inline_for_extraction noextract
 let read____UINT8
@@ -2192,12 +2208,13 @@ let validate____UINT8BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT8BE, i.e., 1 byte"
-    (validate_total_constant_size_no_read parse____UINT8BE 1sz ())
+    (validate_total_constant_size_no_read name parse____UINT8BE 1sz ())
 
 inline_for_extraction noextract
 let read____UINT8BE
@@ -2212,12 +2229,13 @@ let validate____UINT16BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT16BE, i.e., 2 bytes"
-    (validate_total_constant_size_no_read parse____UINT16BE 2sz ())
+    (validate_total_constant_size_no_read name parse____UINT16BE 2sz ())
 
 inline_for_extraction noextract
 let read____UINT16BE
@@ -2232,12 +2250,13 @@ let validate____UINT32BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT32BE, i.e., 4 bytes"
-    (validate_total_constant_size_no_read parse____UINT32BE 4sz ())
+    (validate_total_constant_size_no_read name parse____UINT32BE 4sz ())
 
 inline_for_extraction noextract
 let read____UINT32BE
@@ -2252,12 +2271,13 @@ let validate____UINT64BE
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT64BE, i.e., 8 bytes"
-    (validate_total_constant_size_no_read parse____UINT64BE 8sz ())
+    (validate_total_constant_size_no_read name parse____UINT64BE 8sz ())
 
 inline_for_extraction noextract
 let read____UINT64BE
@@ -2272,12 +2292,13 @@ let validate____UINT16
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT16, i.e., 2 bytes"
-    (validate_total_constant_size_no_read parse____UINT16 2sz ())
+    (validate_total_constant_size_no_read name parse____UINT16 2sz ())
 
 inline_for_extraction noextract
 let read____UINT16
@@ -2292,12 +2313,13 @@ let validate____UINT32
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT32, i.e., 4 bytes"
-    (validate_total_constant_size_no_read parse____UINT32 4sz ())
+    (validate_total_constant_size_no_read name parse____UINT32 4sz ())
 
 inline_for_extraction noextract
 let read____UINT32
@@ -2312,12 +2334,13 @@ let validate____UINT64
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+  (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT64, i.e., 8 bytes"
-    (validate_total_constant_size_no_read parse____UINT64 8sz ())
+    (validate_total_constant_size_no_read name parse____UINT64 8sz ())
 
 inline_for_extraction noextract
 let read____UINT64
@@ -2333,6 +2356,7 @@ fn read_unit
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : leaf_reader #base_t #len_t #pos_t (parse_ret ())
 =
+  (name: _)
   (sl_base: _)
   (sl_len: _)
   (sl_pos: _)
@@ -2408,9 +2432,9 @@ fn validate_drop
   let mut pos = inst.scan_zero;
   let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl inst.scan_zero;
   if (res = validator_success) {
-    let consumed = !pos;
-    I.skip sl_base sl_len sl_pos consumed contents_sl v_sl;
-    seq_slice_is_suffix_of v_sl (inst.scan_v consumed);
+    let bytesConsumed = !pos;
+    I.skip sl_base sl_len sl_pos bytesConsumed contents_sl v_sl;
+    seq_slice_is_suffix_of v_sl (inst.scan_v bytesConsumed);
     validator_success
   } else {
     seq_is_suffix_of_refl (Ghost.reveal v_sl);
@@ -2432,6 +2456,7 @@ let validate_pair_total_constant_size
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+       (name: string)
        (#nz1:_)
        (#k1:parser_kind nz1 WeakKindStrongPrefix)
        (#[@@@erasable] t1:Type)
@@ -2454,6 +2479,7 @@ let validate_pair_total_constant_size
     (p1 `parse_pair` p2) extra_state false use_error_handler
 = validate_total_constant_size_no_read
     #base_t #len_t #pos_t
+    name
     (p1 `parse_pair` p2)
     (SZ.uint32_to_sizet (FStar.UInt32.uint_to_t (k1.LP.parser_kind_low + k2.LP.parser_kind_low)))
     ()
@@ -2500,7 +2526,7 @@ let validate_pair
      k1.LP.parser_kind_low + k2.LP.parser_kind_low < 4294967296
   then
     validate_with_error_handler error_handler_macro typename name1
-      (validate_drop (validate_pair_total_constant_size #base_t #len_t #pos_t #inst #_extra #nz1 #k1 #t1 #p1 #nz2 #wk2 #k2 #t2 #p2 () #extra_state #use_error_handler))
+      (validate_drop (validate_pair_total_constant_size #base_t #len_t #pos_t #inst #_extra name1 #nz1 #k1 #t1 #p1 #nz2 #wk2 #k2 #t2 #p2 () #extra_state #use_error_handler))
   else
     validate_pair_slow typename name1 k1_const v1 k2_const v2
 
@@ -2700,7 +2726,7 @@ fn validate_list
   {
     with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
     with extra'. assert (forevery_state extra_state extra');
-    let hasMore = I.has sl_base sl_len sl_pos 1sz contents_sl vcur;
+    let hasMore = I.has "ListElement" sl_base sl_len sl_pos 1sz contents_sl vcur;
     if (not hasMore) {
       stop := true;
     } else {
@@ -2733,7 +2759,7 @@ let validate_all_zeros
   (#use_error_handler:bool)
 : validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
 = validate_list
-    (validate_filter "parse_zeros" validate____UINT8 read____UINT8 is_zero "check if zero" "")
+    (validate_filter "parse_zeros" (validate____UINT8 "") read____UINT8 is_zero "check if zero" "")
 
 ////////////////////////////////////////////////////////////////////////////////
 // Lists up to a terminator (strings)
@@ -2879,7 +2905,7 @@ fn validate_list_up_to
     pos := inst.scan_zero;
     let r0 = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra' contents_sl vcur inst.scan_zero;
     if (r0 = validator_success) {
-      let x = r sl_base sl_len sl_pos contents_sl vcur;
+      let x = r "ListElement" sl_base sl_len sl_pos contents_sl vcur;
       with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
       pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
       leaf_read_is_suffix_of p v_sl vcur vcur';
@@ -2989,6 +3015,7 @@ let validate_nlist_total_constant_size_mod_ok
   in
   validate_total_constant_size_no_read
     #base_t #len_t #pos_t
+    ""
     p'
     (SZ.uint32_to_sizet n)
     ()
@@ -3464,10 +3491,10 @@ fn validate_with_error_handler_no_read
   // at all -- the non-consuming validators track their offset in the separate
   // [pos] reference, relative to the current stream position -- so the field
   // starts at [get_position sl + !pos].
-  let view_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let field_off = !pos;
-  let start_pos = U64.add_mod view_start (inst.scan_to_u64 field_off);
-  let res = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos;
+  let [@@@rename_let ("streamPositionAt" ^ pascal_case fieldname)] view_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("offsetOf" ^ pascal_case fieldname)] field_off = !pos;
+  let [@@@rename_let ("startPositionOf" ^ pascal_case fieldname)] start_pos = U64.add_mod view_start (inst.scan_to_u64 field_off);
+  let [@@@rename_let ("resultOf" ^ pascal_case fieldname)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos;
   if (res = validator_success) {
     res
   } else {

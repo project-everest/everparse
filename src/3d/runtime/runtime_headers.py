@@ -18,6 +18,7 @@ INTERNAL_ENTRIES = tuple(
     for ty in ("UINT8", "UINT8BE", "UINT16", "UINT16BE",
                "UINT32", "UINT32BE", "UINT64", "UINT64BE")
 )
+LOWSTAR_INTERNAL_ENTRIES = ("Lowstar.ErrorCode.legacy_kind",)
 CONTRACT = json.loads((HERE / "runtime-contract.json").read_text())
 PROFILES = {p["directory"]: p for p in CONTRACT["profiles"]}
 COMPANION = "EverParseStreamPrimitives.h"
@@ -221,7 +222,7 @@ def extract(args):
             extraction += ["--custard_entry", PREFIX + module + "." + name]
     # Internal helpers called by generated validators through EverParse.cui,
     # rather than duplicated in every validator.
-    for name in INTERNAL_ENTRIES:
+    for name in INTERNAL_ENTRIES + (LOWSTAR_INTERNAL_ENTRIES if profile["api"] == "lowstar" else ()):
         extraction += ["--custard_entry", PREFIX + name]
     for name, target in external_types.items():
         extraction += ["--custard_extern_type", PREFIX + name + "=" + target + "@" + include]
