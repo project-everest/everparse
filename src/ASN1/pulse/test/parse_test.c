@@ -83,6 +83,45 @@ int main(void) {
   st = ASN1_Pulse_ParseTest_parse_setBAC(SL(t2));
   if (st._1 || st._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL
       || st._2._2.len != 2 || st._2._2.elt != t2 + 7) { printf("setBC\n"); fails++; }
+  /* ANY DEFINED BY (OBJECT IDENTIFIER keys): 1.2.3 -> NULL, 1.2.4 -> INTEGER */
+  uint8_t a1[] = {0x30, 0x09, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
+  FStar_Pervasives_Native_tuple2__asn1_int_impl_either_unit_asn1_int_impl ap = ASN1_Pulse_ParseTest_parse_adbP(SL(a1));
+  if (ap._1.val.Small != 5 || ap._2.tag != FSTAR_PERVASIVES_INL__UNIT_ASN1_INT_IMPL) { printf("adbP 1.2.3\n"); fails++; }
+  uint8_t a2[] = {0x30, 0x0a, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07};
+  ap = ASN1_Pulse_ParseTest_parse_adbP(SL(a2));
+  if (ap._1.val.Small != 5 || ap._2.tag != FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL || ap._2.val.Inr.val.Small != 7) { printf("adbP 1.2.4\n"); fails++; }
+  /* ... with a fallback: an unknown OID followed by an OPTIONAL ANY */
+  uint8_t f1[] = {0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
+  FStar_Pervasives_either__unit_either_asn1_int_impl_tuple2_slice_uint8_opt af = ASN1_Pulse_ParseTest_parse_adbF(SL(f1));
+  if (af.tag != FSTAR_PERVASIVES_INL__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT) { printf("adbF 1.2.3\n"); fails++; }
+  uint8_t f2[] = {0x30, 0x07, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07};
+  af = ASN1_Pulse_ParseTest_parse_adbF(SL(f2));
+  if (af.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT
+      || af.val.Inr.tag != FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI
+      || af.val.Inr.val.Inl.val.Small != 7) { printf("adbF 1.2.4\n"); fails++; }
+  uint8_t f3[] = {0x30, 0x04, 0x06, 0x02, 0x2a, 0x05};
+  af = ASN1_Pulse_ParseTest_parse_adbF(SL(f3));
+  if (af.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT
+      || af.val.Inr.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI
+      || af.val.Inr.val.Inr._1.len != 2 || af.val.Inr.val.Inr._1.elt != f3 + 4
+      || af.val.Inr.val.Inr._2.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8) { printf("adbF 1.2.5\n"); fails++; }
+  uint8_t f4[] = {0x30, 0x07, 0x06, 0x02, 0x2a, 0x05, 0x01, 0x01, 0xff};
+  af = ASN1_Pulse_ParseTest_parse_adbF(SL(f4));
+  if (af.tag != FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT
+      || af.val.Inr.tag != FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI
+      || af.val.Inr.val.Inr._1.len != 2 || af.val.Inr.val.Inr._1.elt != f4 + 4
+      || af.val.Inr.val.Inr._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8
+      || af.val.Inr.val.Inr._2.val.Some.len != 3 || af.val.Inr.val.Inr._2.val.Some.elt != f4 + 6) { printf("adbF 1.2.5 any\n"); fails++; }
+  /* AlgorithmIdentifier from the difftest schemas */
+  uint8_t g1[] = {0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
+  FStar_Pervasives_either__unit_tuple2_slice_uint8_option_slice_uint8 ag = ASN1_Pulse_ParseTest_parse_algId(SL(g1));
+  if (ag.tag != FSTAR_PERVASIVES_INL__UNIT_TUPLE2_SLICE_UINT8_OPTION_SLICE_UINT8) { printf("algId 1.2.3\n"); fails++; }
+  uint8_t g2[] = {0x30, 0x07, 0x06, 0x02, 0x2a, 0x07, 0x02, 0x01, 0x07};
+  ag = ASN1_Pulse_ParseTest_parse_algId(SL(g2));
+  if (ag.tag != FSTAR_PERVASIVES_INR__UNIT_TUPLE2_SLICE_UINT8_OPTION_SLICE_UINT8
+      || ag.val.Inr._1.len != 2 || ag.val.Inr._1.elt != g2 + 4
+      || ag.val.Inr._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8
+      || ag.val.Inr._2.val.Some.len != 3 || ag.val.Inr._2.val.Some.elt != g2 + 6) { printf("algId other\n"); fails++; }
   printf(fails ? "FAIL\n" : "OK\n");
   return fails;
 }

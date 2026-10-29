@@ -191,12 +191,13 @@ let rec asn1_content_impl_t (k: asn1_content_k) : Tot Type0 (decreases k) =
   | ASN1_SET_OF _ k' -> ml (asn1_impl_t k')
   | ASN1_PREFIXED k' -> asn1_impl_t k'
   | ASN1_ANY_DEFINED_BY _ prefix _ key_k ls ofb _ _ ->
-    asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (asn1_adb_fallback_impl_t key_k ofb))
-
-and asn1_adb_fallback_impl_t (key_k: asn1_terminal_k) (ofb: option asn1_gen_items_lk) : Tot (option Type0) (decreases ofb) =
-  match ofb with
-  | None -> None
-  | Some fb -> Some (asn1_terminal_impl_t key_k & asn1_items_impl_t (Mkdtuple2?._2 fb))
+    (* Custard reduces only the head type function, so the fallback type is
+       computed here, and `asn1_adb_suffix_impl_t` always receives a literal
+       `None` or `Some` *)
+    begin match ofb with
+    | None -> asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls None)
+    | Some fb -> asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (asn1_terminal_impl_t key_k & asn1_items_impl_t (Mkdtuple2?._2 fb))))
+    end
 
 and asn1_adb_suffix_impl_t (key_k: asn1_terminal_k) (ls: list (asn1_terminal_t key_k & asn1_gen_items_lk)) (fbt: option Type0) : Tot Type0 (decreases ls) =
   match ls with

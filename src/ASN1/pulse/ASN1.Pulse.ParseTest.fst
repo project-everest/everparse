@@ -155,3 +155,66 @@ let setBAC = ASN1.Syntax.asn1_set [
   zeta; iota; primops]]
 let parse_setBAC : aparser #(asn1_impl_t setBAC) #(asn1_t setBAC) (asn1_rel setBAC) #asn1_strong_parser_kind (asn1_as_parser setBAC) =
   fun input #pm #w #v -> parse_k setBAC (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+(* ANY DEFINED BY (OBJECT IDENTIFIER keys) *)
+
+noextract
+let oid123 = ASN1.Syntax.mk_oid [1; 2; 3]
+noextract
+let oid124 = ASN1.Syntax.mk_oid [1; 2; 4]
+noextract
+let params_null = ASN1.Syntax.mk_gen_items ["p" *^ (PLAIN ^: ASN1.Syntax.asn1_null)] (_ by (ASN1.Syntax.seq_tac ()))
+noextract
+let params_int = ASN1.Syntax.mk_gen_items ["p" *^ (PLAIN ^: ASN1.Syntax.asn1_integer)] (_ by (ASN1.Syntax.seq_tac ()))
+noextract
+let params_any = ASN1.Syntax.mk_gen_items ["p" *^ (OPTION ^: ASN1.Syntax.asn1_any)] (_ by (ASN1.Syntax.seq_tac ()))
+
+(* SEQUENCE { v INTEGER, alg OBJECT IDENTIFIER, p ANY DEFINED BY alg }
+   with 1.2.3 -> NULL, 1.2.4 -> INTEGER, no fallback *)
+noextract
+let adbP = ASN1.Syntax.asn1_any_oid_prefix
+  ["v" *^ (PLAIN ^: ASN1.Syntax.asn1_integer)]
+  "alg"
+  [(oid123, params_null); (oid124, params_int)]
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ()))
+
+(* SEQUENCE { alg OBJECT IDENTIFIER, p ANY DEFINED BY alg OPTIONAL }
+   with 1.2.3 -> NULL, 1.2.4 -> INTEGER, and a fallback *)
+noextract
+let adbF = ASN1.Syntax.asn1_any_oid_with_fallback
+  "alg"
+  [(oid123, params_null); (oid124, params_int)]
+  params_any
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Any"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_algId : aparser #(asn1_impl_t ASN1.DiffTest.Any.algId) #(asn1_t ASN1.DiffTest.Any.algId) (asn1_rel ASN1.DiffTest.Any.algId) #asn1_strong_parser_kind (asn1_as_parser ASN1.DiffTest.Any.algId) =
+  fun input #pm #w #v -> parse_k ASN1.DiffTest.Any.algId (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbP : aparser #(asn1_impl_t adbP) #(asn1_t adbP) (asn1_rel adbP) #asn1_strong_parser_kind (asn1_as_parser adbP) =
+  fun input #pm #w #v -> parse_k adbP (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbF : aparser #(asn1_impl_t adbF) #(asn1_t adbF) (asn1_rel adbF) #asn1_strong_parser_kind (asn1_as_parser adbF) =
+  fun input #pm #w #v -> parse_k adbF (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
