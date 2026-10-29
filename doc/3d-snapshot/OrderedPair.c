@@ -4,13 +4,13 @@
 static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInLesser = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtLesser = (uint64_t)currentPosition;
-  size_t offsetOfLesser = pos;
+  size_t offsetOfLesser = offsetInLesser;
   uint64_t startPositionOfLesser = (streamPositionAtLesser + (uint64_t)offsetOfLesser);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeLesser = pos;
+  size_t offsetBeforeLesser = offsetInLesser;
   size_t positionBeforeLesser = sl_pos[0];
   size_t bytesRemainingBeforeLesser = (sl_len - positionBeforeLesser);
   bool hasBytesForLesser;
@@ -22,7 +22,7 @@ static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt
   }
   uint8_t resultOfLesser;
   if (hasBytesForLesser) {
-    pos = (offsetBeforeLesser + 4);
+    offsetInLesser = (offsetBeforeLesser + 4);
     resultOfLesser = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -45,9 +45,9 @@ static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt
     /* Validating field greater */
     size_t currentPosition1 = sl_pos[0];
     uint64_t fieldStartOrderedPair = (uint64_t)currentPosition1;
-    size_t pos1 = 0;
+    size_t offsetInGreater_refinement = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeGreater_refinement = pos1;
+    size_t offsetBeforeGreater_refinement = offsetInGreater_refinement;
     size_t positionBeforeGreater_refinement = sl_pos[0];
     size_t bytesRemainingBeforeGreater_refinement = (sl_len - positionBeforeGreater_refinement);
     bool hasBytesForGreater_refinement;
@@ -59,7 +59,7 @@ static uint8_t OrderedPair_validate____core__orderedPair(EVERPARSE_APP_CTXT ctxt
     }
     uint8_t resultAfterGreater_refinement;
     if (hasBytesForGreater_refinement) {
-      pos1 = (offsetBeforeGreater_refinement + 4);
+      offsetInGreater_refinement = (offsetBeforeGreater_refinement + 4);
       resultAfterGreater_refinement = EVERPARSE_STATUS_SUCCESS;
     }
     else {

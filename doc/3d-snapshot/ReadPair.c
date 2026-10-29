@@ -7,9 +7,9 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
   /* Validating field first */
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartPair = (uint64_t)currentPosition;
-  size_t pos = 0;
+  size_t offsetInFirst = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeFirst = pos;
+  size_t offsetBeforeFirst = offsetInFirst;
   size_t positionBeforeFirst = sl_pos[0];
   size_t bytesRemainingBeforeFirst = (sl_len - positionBeforeFirst);
   bool hasBytesForFirst;
@@ -21,7 +21,7 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
   }
   uint8_t resultAfterFirst;
   if (hasBytesForFirst) {
-    pos = (offsetBeforeFirst + 4);
+    offsetInFirst = (offsetBeforeFirst + 4);
     resultAfterFirst = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -57,9 +57,9 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
     /* Validating field second */
     size_t currentPosition1 = sl_pos[0];
     uint64_t fieldStartPair1 = (uint64_t)currentPosition1;
-    size_t pos1 = 0;
+    size_t offsetInSecond = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeSecond = pos1;
+    size_t offsetBeforeSecond = offsetInSecond;
     size_t positionBeforeSecond = sl_pos[0];
     size_t bytesRemainingBeforeSecond = (sl_len - positionBeforeSecond);
     bool hasBytesForSecond;
@@ -71,7 +71,7 @@ static uint8_t ReadPair_validate____core__Pair(uint32_t *x, uint32_t *y, EVERPAR
     }
     uint8_t resultAfterSecond;
     if (hasBytesForSecond) {
-      pos1 = (offsetBeforeSecond + 4);
+      offsetInSecond = (offsetBeforeSecond + 4);
       resultAfterSecond = EVERPARSE_STATUS_SUCCESS;
     }
     else {

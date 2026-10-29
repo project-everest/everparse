@@ -20,9 +20,9 @@ static uint8_t Probe_validate____core__NamedBothEp(EVERPARSE_APP_CTXT ctxt, EVER
 static inline uint8_t Probe_validate____core__T(uint32_t bound, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartT = (uint64_t)currentPosition;
-  size_t pos = 0;
+  size_t offsetInX = 0;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  size_t offsetBeforeX = pos;
+  size_t offsetBeforeX = offsetInX;
   size_t positionBeforeX = sl_pos[0];
   size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
   bool hasBytesForX;
@@ -34,7 +34,7 @@ static inline uint8_t Probe_validate____core__T(uint32_t bound, EVERPARSE_APP_CT
   }
   uint8_t resultAfterX;
   if (hasBytesForX) {
-    pos = (offsetBeforeX + 2);
+    offsetInX = (offsetBeforeX + 2);
     resultAfterX = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -52,9 +52,9 @@ static inline uint8_t Probe_validate____core__T(uint32_t bound, EVERPARSE_APP_CT
       /* Validating field y */
       size_t currentPosition1 = sl_pos[0];
       uint64_t fieldStartT1 = (uint64_t)currentPosition1;
-      size_t pos1 = 0;
+      size_t offsetInY_refinement = 0;
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      size_t offsetBeforeY_refinement = pos1;
+      size_t offsetBeforeY_refinement = offsetInY_refinement;
       size_t positionBeforeY_refinement = sl_pos[0];
       size_t bytesRemainingBeforeY_refinement = (sl_len - positionBeforeY_refinement);
       bool hasBytesForY_refinement;
@@ -66,7 +66,7 @@ static inline uint8_t Probe_validate____core__T(uint32_t bound, EVERPARSE_APP_CT
       }
       uint8_t resultAfterY_refinement;
       if (hasBytesForY_refinement) {
-        pos1 = (offsetBeforeY_refinement + 2);
+        offsetInY_refinement = (offsetBeforeY_refinement + 2);
         resultAfterY_refinement = EVERPARSE_STATUS_SUCCESS;
       }
       else {
@@ -118,13 +118,13 @@ static inline uint8_t Probe_validate____core__T(uint32_t bound, EVERPARSE_APP_CT
 }
 
 static uint8_t Probe_validate____core__S(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInBound = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtBound = (uint64_t)currentPosition;
-  size_t offsetOfBound = pos;
+  size_t offsetOfBound = offsetInBound;
   uint64_t startPositionOfBound = (streamPositionAtBound + (uint64_t)offsetOfBound);
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  size_t offsetBeforeBound = pos;
+  size_t offsetBeforeBound = offsetInBound;
   size_t positionBeforeBound = sl_pos[0];
   size_t bytesRemainingBeforeBound = (sl_len - positionBeforeBound);
   bool hasBytesForBound;
@@ -136,7 +136,7 @@ static uint8_t Probe_validate____core__S(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE
   }
   uint8_t resultOfBound;
   if (hasBytesForBound) {
-    pos = (offsetBeforeBound + 1);
+    offsetInBound = (offsetBeforeBound + 1);
     resultOfBound = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -160,9 +160,9 @@ static uint8_t Probe_validate____core__S(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE
     uint64_t fieldStartS = (uint64_t)currentPosition1;
     size_t currentPosition2 = sl_pos[0];
     uint64_t fieldStartTpointer = (uint64_t)currentPosition2;
-    size_t pos1 = 0;
+    size_t offsetInTpointer = 0;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    size_t offsetBeforeTpointer = pos1;
+    size_t offsetBeforeTpointer = offsetInTpointer;
     size_t positionBeforeTpointer = sl_pos[0];
     size_t bytesRemainingBeforeTpointer = (sl_len - positionBeforeTpointer);
     bool hasBytesForTpointer;
@@ -174,7 +174,7 @@ static uint8_t Probe_validate____core__S(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE
     }
     uint8_t resultAfterTpointer;
     if (hasBytesForTpointer) {
-      pos1 = (offsetBeforeTpointer + 8);
+      offsetInTpointer = (offsetBeforeTpointer + 8);
       resultAfterTpointer = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -259,14 +259,14 @@ uint64_t ProbeValidateS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVERPARSE_E
 }
 
 static uint8_t Probe_validate____core__U(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t scanOffset = 0;
   /* Validating field tag */
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtTag = (uint64_t)currentPosition;
-  size_t offsetOfTag = pos;
+  size_t offsetOfTag = scanOffset;
   uint64_t startPositionOfTag = (streamPositionAtTag + (uint64_t)offsetOfTag);
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  size_t offsetBeforeTag = pos;
+  size_t offsetBeforeTag = scanOffset;
   size_t positionBeforeTag = sl_pos[0];
   size_t bytesRemainingBeforeTag = (sl_len - positionBeforeTag);
   bool hasBytesForTag;
@@ -278,7 +278,7 @@ static uint8_t Probe_validate____core__U(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
   }
   uint8_t resultOfTag;
   if (hasBytesForTag) {
-    pos = (offsetBeforeTag + 1);
+    scanOffset = (offsetBeforeTag + 1);
     resultOfTag = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -295,7 +295,7 @@ static uint8_t Probe_validate____core__U(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
   uint8_t resultAfterTag;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterTag = EVERPARSE_STATUS_SUCCESS;
   }
@@ -307,9 +307,9 @@ static uint8_t Probe_validate____core__U(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
     uint64_t fieldStartU = (uint64_t)currentPosition1_1;
     size_t currentPosition2 = sl_pos[0];
     uint64_t fieldStartSpointer = (uint64_t)currentPosition2;
-    size_t pos1 = 0;
+    size_t offsetInSpointer = 0;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    size_t offsetBeforeSpointer = pos1;
+    size_t offsetBeforeSpointer = offsetInSpointer;
     size_t positionBeforeSpointer = sl_pos[0];
     size_t bytesRemainingBeforeSpointer = (sl_len - positionBeforeSpointer);
     bool hasBytesForSpointer;
@@ -321,7 +321,7 @@ static uint8_t Probe_validate____core__U(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
     }
     uint8_t resultAfterSpointer;
     if (hasBytesForSpointer) {
-      pos1 = (offsetBeforeSpointer + 8);
+      offsetInSpointer = (offsetBeforeSpointer + 8);
       resultAfterSpointer = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -406,13 +406,13 @@ uint64_t ProbeValidateU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T d
 }
 
 static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInTag = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtTag = (uint64_t)currentPosition;
-  size_t offsetOfTag = pos;
+  size_t offsetOfTag = offsetInTag;
   uint64_t startPositionOfTag = (streamPositionAtTag + (uint64_t)offsetOfTag);
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  size_t offsetBeforeTag = pos;
+  size_t offsetBeforeTag = offsetInTag;
   size_t positionBeforeTag = sl_pos[0];
   size_t bytesRemainingBeforeTag = (sl_len - positionBeforeTag);
   bool hasBytesForTag;
@@ -424,7 +424,7 @@ static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
   }
   uint8_t resultOfTag;
   if (hasBytesForTag) {
-    pos = (offsetBeforeTag + 1);
+    offsetInTag = (offsetBeforeTag + 1);
     resultOfTag = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -448,9 +448,9 @@ static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
     uint64_t fieldStartV = (uint64_t)currentPosition1;
     size_t currentPosition2 = sl_pos[0];
     uint64_t fieldStartSptr = (uint64_t)currentPosition2;
-    size_t pos1 = 0;
+    size_t offsetInSptr = 0;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    size_t offsetBeforeSptr = pos1;
+    size_t offsetBeforeSptr = offsetInSptr;
     size_t positionBeforeSptr = sl_pos[0];
     size_t bytesRemainingBeforeSptr = (sl_len - positionBeforeSptr);
     bool hasBytesForSptr;
@@ -462,7 +462,7 @@ static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
     }
     uint8_t resultAfterSptr;
     if (hasBytesForSptr) {
-      pos1 = (offsetBeforeSptr + 8);
+      offsetInSptr = (offsetBeforeSptr + 8);
       resultAfterSptr = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -537,9 +537,9 @@ static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
       uint64_t fieldStartV1 = (uint64_t)currentPosition3;
       size_t currentPosition4 = sl_pos[0];
       uint64_t fieldStartTptr = (uint64_t)currentPosition4;
-      size_t pos2 = 0;
+      size_t offsetInTptr = 0;
       /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-      size_t offsetBeforeTptr = pos2;
+      size_t offsetBeforeTptr = offsetInTptr;
       size_t positionBeforeTptr = sl_pos[0];
       size_t bytesRemainingBeforeTptr = (sl_len - positionBeforeTptr);
       bool hasBytesForTptr;
@@ -551,7 +551,7 @@ static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
       }
       uint8_t resultAfterTptr;
       if (hasBytesForTptr) {
-        pos2 = (offsetBeforeTptr + 8);
+        offsetInTptr = (offsetBeforeTptr + 8);
         resultAfterTptr = EVERPARSE_STATUS_SUCCESS;
       }
       else {
@@ -626,9 +626,9 @@ static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
         uint64_t fieldStartV2 = (uint64_t)currentPosition5;
         size_t currentPosition6 = sl_pos[0];
         uint64_t fieldStartT2ptr = (uint64_t)currentPosition6;
-        size_t pos3 = 0;
+        size_t offsetInT2ptr = 0;
         /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-        size_t offsetBeforeT2ptr = pos3;
+        size_t offsetBeforeT2ptr = offsetInT2ptr;
         size_t positionBeforeT2ptr = sl_pos[0];
         size_t bytesRemainingBeforeT2ptr = (sl_len - positionBeforeT2ptr);
         bool hasBytesForT2ptr;
@@ -640,7 +640,7 @@ static uint8_t Probe_validate____core__V(EVERPARSE_COPY_BUFFER_T destS, EVERPARS
         }
         uint8_t resultAfterT2ptr;
         if (hasBytesForT2ptr) {
-          pos3 = (offsetBeforeT2ptr + 8);
+          offsetInT2ptr = (offsetBeforeT2ptr + 8);
           resultAfterT2ptr = EVERPARSE_STATUS_SUCCESS;
         }
         else {
@@ -735,8 +735,8 @@ uint64_t ProbeValidateV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T d
 static uint8_t Probe_validate____core__Indirect(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartIndirect = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeFst = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeFst = scanOffset;
   size_t positionBeforeFst = sl_pos[0];
   size_t bytesRemainingBeforeFst = (sl_len - positionBeforeFst);
   bool hasBytesForFst;
@@ -748,7 +748,7 @@ static uint8_t Probe_validate____core__Indirect(EVERPARSE_APP_CTXT ctxt, EVERPAR
   }
   uint8_t res;
   if (hasBytesForFst) {
-    pos = (offsetBeforeFst + (size_t)9);
+    scanOffset = (offsetBeforeFst + (size_t)9);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -757,7 +757,7 @@ static uint8_t Probe_validate____core__Indirect(EVERPARSE_APP_CTXT ctxt, EVERPAR
   uint8_t resultAfterIndirect;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterIndirect = EVERPARSE_STATUS_SUCCESS;
   }
@@ -785,8 +785,8 @@ uint64_t ProbeValidateIndirect(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, u
 static inline uint8_t Probe_validate____core__TT(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartTt = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeFst = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeFst = scanOffset;
   size_t positionBeforeFst = sl_pos[0];
   size_t bytesRemainingBeforeFst = (sl_len - positionBeforeFst);
   bool hasBytesForFst;
@@ -798,7 +798,7 @@ static inline uint8_t Probe_validate____core__TT(EVERPARSE_APP_CTXT ctxt, EVERPA
   }
   uint8_t res;
   if (hasBytesForFst) {
-    pos = (offsetBeforeFst + (size_t)9);
+    scanOffset = (offsetBeforeFst + (size_t)9);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -807,7 +807,7 @@ static inline uint8_t Probe_validate____core__TT(EVERPARSE_APP_CTXT ctxt, EVERPA
   uint8_t resultAfterTt;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterTt = EVERPARSE_STATUS_SUCCESS;
   }
@@ -828,9 +828,9 @@ static uint8_t Probe_validate____core__I(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE
   uint64_t fieldStartI = (uint64_t)currentPosition;
   size_t currentPosition1 = sl_pos[0];
   uint64_t fieldStartTtptr = (uint64_t)currentPosition1;
-  size_t pos = 0;
+  size_t offsetInTtptr = 0;
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  size_t offsetBeforeTtptr = pos;
+  size_t offsetBeforeTtptr = offsetInTtptr;
   size_t positionBeforeTtptr = sl_pos[0];
   size_t bytesRemainingBeforeTtptr = (sl_len - positionBeforeTtptr);
   bool hasBytesForTtptr;
@@ -842,7 +842,7 @@ static uint8_t Probe_validate____core__I(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE
   }
   uint8_t resultAfterTtptr;
   if (hasBytesForTtptr) {
-    pos = (offsetBeforeTtptr + 8);
+    offsetInTtptr = (offsetBeforeTtptr + 8);
     resultAfterTtptr = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -923,14 +923,14 @@ uint64_t ProbeValidateI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVERPARSE_E
 }
 
 static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t scanOffset = 0;
   /* Validating field fst */
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtFst = (uint64_t)currentPosition;
-  size_t offsetOfFst = pos;
+  size_t offsetOfFst = scanOffset;
   uint64_t startPositionOfFst = (streamPositionAtFst + (uint64_t)offsetOfFst);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeFst = pos;
+  size_t offsetBeforeFst = scanOffset;
   size_t positionBeforeFst = sl_pos[0];
   size_t bytesRemainingBeforeFst = (sl_len - positionBeforeFst);
   bool hasBytesForFst;
@@ -942,7 +942,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
   }
   uint8_t resultOfFst;
   if (hasBytesForFst) {
-    pos = (offsetBeforeFst + 4);
+    scanOffset = (offsetBeforeFst + 4);
     resultOfFst = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -959,7 +959,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
   uint8_t resultAfterFst;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterFst = EVERPARSE_STATUS_SUCCESS;
   }
@@ -967,14 +967,14 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
     resultAfterFst = res;
   }
   if (resultAfterFst == EVERPARSE_STATUS_SUCCESS) {
-    size_t pos1 = 0;
+    size_t scanOffset1 = 0;
     /* Validating field snd */
     size_t currentPosition1_1 = sl_pos[0];
     uint64_t streamPositionAtSnd = (uint64_t)currentPosition1_1;
-    size_t offsetOfSnd = pos1;
+    size_t offsetOfSnd = scanOffset1;
     uint64_t startPositionOfSnd = (streamPositionAtSnd + (uint64_t)offsetOfSnd);
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeSnd = pos1;
+    size_t offsetBeforeSnd = scanOffset1;
     size_t positionBeforeSnd = sl_pos[0];
     size_t bytesRemainingBeforeSnd = (sl_len - positionBeforeSnd);
     bool hasBytesForSnd;
@@ -986,7 +986,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
     }
     uint8_t resultOfSnd;
     if (hasBytesForSnd) {
-      pos1 = (offsetBeforeSnd + 4);
+      scanOffset1 = (offsetBeforeSnd + 4);
       resultOfSnd = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -1003,7 +1003,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
     uint8_t resultAfterSnd;
     if (res1 == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition2 = sl_pos[0];
-      size_t newPosition_1 = (currentPosition2 + pos1);
+      size_t newPosition_1 = (currentPosition2 + scanOffset1);
       sl_pos[0] = newPosition_1;
       resultAfterSnd = EVERPARSE_STATUS_SUCCESS;
     }
@@ -1011,14 +1011,14 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
       resultAfterSnd = res1;
     }
     if (resultAfterSnd == EVERPARSE_STATUS_SUCCESS) {
-      size_t pos2 = 0;
+      size_t scanOffset2 = 0;
       /* Validating field tag */
       size_t currentPosition2_1 = sl_pos[0];
       uint64_t streamPositionAtTag = (uint64_t)currentPosition2_1;
-      size_t offsetOfTag = pos2;
+      size_t offsetOfTag = scanOffset2;
       uint64_t startPositionOfTag = (streamPositionAtTag + (uint64_t)offsetOfTag);
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      size_t offsetBeforeTag = pos2;
+      size_t offsetBeforeTag = scanOffset2;
       size_t positionBeforeTag = sl_pos[0];
       size_t bytesRemainingBeforeTag = (sl_len - positionBeforeTag);
       bool hasBytesForTag;
@@ -1030,7 +1030,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
       }
       uint8_t resultOfTag;
       if (hasBytesForTag) {
-        pos2 = (offsetBeforeTag + 1);
+        scanOffset2 = (offsetBeforeTag + 1);
         resultOfTag = EVERPARSE_STATUS_SUCCESS;
       }
       else {
@@ -1047,7 +1047,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
       uint8_t resultAfterTag;
       if (res2 == EVERPARSE_STATUS_SUCCESS) {
         size_t currentPosition3 = sl_pos[0];
-        size_t newPosition_2 = (currentPosition3 + pos2);
+        size_t newPosition_2 = (currentPosition3 + scanOffset2);
         sl_pos[0] = newPosition_2;
         resultAfterTag = EVERPARSE_STATUS_SUCCESS;
       }
@@ -1059,9 +1059,9 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
         uint64_t fieldStartMultiProbe = (uint64_t)currentPosition3_1;
         size_t currentPosition4 = sl_pos[0];
         uint64_t fieldStartTptr1 = (uint64_t)currentPosition4;
-        size_t pos3 = 0;
+        size_t offsetInTptr1 = 0;
         /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-        size_t offsetBeforeTptr1 = pos3;
+        size_t offsetBeforeTptr1 = offsetInTptr1;
         size_t positionBeforeTptr1 = sl_pos[0];
         size_t bytesRemainingBeforeTptr1 = (sl_len - positionBeforeTptr1);
         bool hasBytesForTptr1;
@@ -1073,7 +1073,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
         }
         uint8_t resultAfterTptr1;
         if (hasBytesForTptr1) {
-          pos3 = (offsetBeforeTptr1 + 8);
+          offsetInTptr1 = (offsetBeforeTptr1 + 8);
           resultAfterTptr1 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
@@ -1148,9 +1148,9 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
           uint64_t fieldStartMultiProbe1 = (uint64_t)currentPosition5;
           size_t currentPosition6 = sl_pos[0];
           uint64_t fieldStartTptr2 = (uint64_t)currentPosition6;
-          size_t pos4 = 0;
+          size_t offsetInTptr2 = 0;
           /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-          size_t offsetBeforeTptr2 = pos4;
+          size_t offsetBeforeTptr2 = offsetInTptr2;
           size_t positionBeforeTptr2 = sl_pos[0];
           size_t bytesRemainingBeforeTptr2 = (sl_len - positionBeforeTptr2);
           bool hasBytesForTptr2;
@@ -1162,7 +1162,7 @@ static uint8_t Probe_validate____core__MultiProbe(EVERPARSE_COPY_BUFFER_T destT1
           }
           uint8_t resultAfterTptr2;
           if (hasBytesForTptr2) {
-            pos4 = (offsetBeforeTptr2 + 8);
+            offsetInTptr2 = (offsetBeforeTptr2 + 8);
             resultAfterTptr2 = EVERPARSE_STATUS_SUCCESS;
           }
           else {
@@ -1259,13 +1259,13 @@ uint64_t ProbeValidateMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_
 }
 
 static uint8_t Probe_validate____core__MaybeT(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInBound = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtBound = (uint64_t)currentPosition;
-  size_t offsetOfBound = pos;
+  size_t offsetOfBound = offsetInBound;
   uint64_t startPositionOfBound = (streamPositionAtBound + (uint64_t)offsetOfBound);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeBound = pos;
+  size_t offsetBeforeBound = offsetInBound;
   size_t positionBeforeBound = sl_pos[0];
   size_t bytesRemainingBeforeBound = (sl_len - positionBeforeBound);
   bool hasBytesForBound;
@@ -1277,7 +1277,7 @@ static uint8_t Probe_validate____core__MaybeT(EVERPARSE_COPY_BUFFER_T dest, EVER
   }
   uint8_t resultOfBound;
   if (hasBytesForBound) {
-    pos = (offsetBeforeBound + 4);
+    offsetInBound = (offsetBeforeBound + 4);
     resultOfBound = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -1301,9 +1301,9 @@ static uint8_t Probe_validate____core__MaybeT(EVERPARSE_COPY_BUFFER_T dest, EVER
     uint64_t fieldStartMaybeT = (uint64_t)currentPosition1;
     size_t currentPosition2 = sl_pos[0];
     uint64_t fieldStartPtr = (uint64_t)currentPosition2;
-    size_t pos1 = 0;
+    size_t offsetInPtr = 0;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    size_t offsetBeforePtr = pos1;
+    size_t offsetBeforePtr = offsetInPtr;
     size_t positionBeforePtr = sl_pos[0];
     size_t bytesRemainingBeforePtr = (sl_len - positionBeforePtr);
     bool hasBytesForPtr;
@@ -1315,7 +1315,7 @@ static uint8_t Probe_validate____core__MaybeT(EVERPARSE_COPY_BUFFER_T dest, EVER
     }
     uint8_t resultAfterPtr;
     if (hasBytesForPtr) {
-      pos1 = (offsetBeforePtr + 8);
+      offsetInPtr = (offsetBeforePtr + 8);
       resultAfterPtr = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -1405,13 +1405,13 @@ uint64_t ProbeValidateMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVERPA
 }
 
 static uint8_t Probe_validate____core__CoercePtr(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInBound = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtBound = (uint64_t)currentPosition;
-  size_t offsetOfBound = pos;
+  size_t offsetOfBound = offsetInBound;
   uint64_t startPositionOfBound = (streamPositionAtBound + (uint64_t)offsetOfBound);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeBound = pos;
+  size_t offsetBeforeBound = offsetInBound;
   size_t positionBeforeBound = sl_pos[0];
   size_t bytesRemainingBeforeBound = (sl_len - positionBeforeBound);
   bool hasBytesForBound;
@@ -1423,7 +1423,7 @@ static uint8_t Probe_validate____core__CoercePtr(EVERPARSE_COPY_BUFFER_T dest, E
   }
   uint8_t resultOfBound;
   if (hasBytesForBound) {
-    pos = (offsetBeforeBound + 4);
+    offsetInBound = (offsetBeforeBound + 4);
     resultOfBound = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -1447,9 +1447,9 @@ static uint8_t Probe_validate____core__CoercePtr(EVERPARSE_COPY_BUFFER_T dest, E
     uint64_t fieldStartCoercePtr = (uint64_t)currentPosition1;
     size_t currentPosition2 = sl_pos[0];
     uint64_t fieldStartPtr = (uint64_t)currentPosition2;
-    size_t pos1 = 0;
+    size_t offsetInPtr = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforePtr = pos1;
+    size_t offsetBeforePtr = offsetInPtr;
     size_t positionBeforePtr = sl_pos[0];
     size_t bytesRemainingBeforePtr = (sl_len - positionBeforePtr);
     bool hasBytesForPtr;
@@ -1461,7 +1461,7 @@ static uint8_t Probe_validate____core__CoercePtr(EVERPARSE_COPY_BUFFER_T dest, E
     }
     uint8_t resultAfterPtr;
     if (hasBytesForPtr) {
-      pos1 = (offsetBeforePtr + 4);
+      offsetInPtr = (offsetBeforePtr + 4);
       resultAfterPtr = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -1549,8 +1549,8 @@ uint64_t ProbeValidateCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVE
 static uint8_t Probe_validate____core__ProbeOnly(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartProbeOnly = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeX = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeX = scanOffset;
   size_t positionBeforeX = sl_pos[0];
   size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
   bool hasBytesForX;
@@ -1562,7 +1562,7 @@ static uint8_t Probe_validate____core__ProbeOnly(EVERPARSE_APP_CTXT ctxt, EVERPA
   }
   uint8_t res;
   if (hasBytesForX) {
-    pos = (offsetBeforeX + (size_t)8);
+    scanOffset = (offsetBeforeX + (size_t)8);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -1571,7 +1571,7 @@ static uint8_t Probe_validate____core__ProbeOnly(EVERPARSE_APP_CTXT ctxt, EVERPA
   uint8_t resultAfterProbeOnly;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterProbeOnly = EVERPARSE_STATUS_SUCCESS;
   }
@@ -1599,8 +1599,8 @@ uint64_t ProbeValidateProbeOnly(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, 
 static uint8_t Probe_validate____core__BothEntrypoints(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartBothEntrypoints = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeX = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeX = scanOffset;
   size_t positionBeforeX = sl_pos[0];
   size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
   bool hasBytesForX;
@@ -1612,7 +1612,7 @@ static uint8_t Probe_validate____core__BothEntrypoints(EVERPARSE_APP_CTXT ctxt, 
   }
   uint8_t res;
   if (hasBytesForX) {
-    pos = (offsetBeforeX + (size_t)8);
+    scanOffset = (offsetBeforeX + (size_t)8);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -1621,7 +1621,7 @@ static uint8_t Probe_validate____core__BothEntrypoints(EVERPARSE_APP_CTXT ctxt, 
   uint8_t resultAfterBothEntrypoints;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterBothEntrypoints = EVERPARSE_STATUS_SUCCESS;
   }
@@ -1649,8 +1649,8 @@ uint64_t ProbeValidateBothEntrypoints(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER han
 static uint8_t Probe_validate____core__NamedPlainEp(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartNamedPlainEp = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeX = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeX = scanOffset;
   size_t positionBeforeX = sl_pos[0];
   size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
   bool hasBytesForX;
@@ -1662,7 +1662,7 @@ static uint8_t Probe_validate____core__NamedPlainEp(EVERPARSE_APP_CTXT ctxt, EVE
   }
   uint8_t res;
   if (hasBytesForX) {
-    pos = (offsetBeforeX + (size_t)8);
+    scanOffset = (offsetBeforeX + (size_t)8);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -1671,7 +1671,7 @@ static uint8_t Probe_validate____core__NamedPlainEp(EVERPARSE_APP_CTXT ctxt, EVE
   uint8_t resultAfterNamedPlainEp;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterNamedPlainEp = EVERPARSE_STATUS_SUCCESS;
   }
@@ -1699,8 +1699,8 @@ uint64_t ProbeValidateNamedPlainEp(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handle
 static uint8_t Probe_validate____core__NamedProbeEp(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartNamedProbeEp = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeX = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeX = scanOffset;
   size_t positionBeforeX = sl_pos[0];
   size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
   bool hasBytesForX;
@@ -1712,7 +1712,7 @@ static uint8_t Probe_validate____core__NamedProbeEp(EVERPARSE_APP_CTXT ctxt, EVE
   }
   uint8_t res;
   if (hasBytesForX) {
-    pos = (offsetBeforeX + (size_t)8);
+    scanOffset = (offsetBeforeX + (size_t)8);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -1721,7 +1721,7 @@ static uint8_t Probe_validate____core__NamedProbeEp(EVERPARSE_APP_CTXT ctxt, EVE
   uint8_t resultAfterNamedProbeEp;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterNamedProbeEp = EVERPARSE_STATUS_SUCCESS;
   }
@@ -1749,8 +1749,8 @@ uint64_t ProbeValidateNamedProbeEp(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handle
 static uint8_t Probe_validate____core__NamedBothEp(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartNamedBothEp = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeX = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeX = scanOffset;
   size_t positionBeforeX = sl_pos[0];
   size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
   bool hasBytesForX;
@@ -1762,7 +1762,7 @@ static uint8_t Probe_validate____core__NamedBothEp(EVERPARSE_APP_CTXT ctxt, EVER
   }
   uint8_t res;
   if (hasBytesForX) {
-    pos = (offsetBeforeX + (size_t)8);
+    scanOffset = (offsetBeforeX + (size_t)8);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -1771,7 +1771,7 @@ static uint8_t Probe_validate____core__NamedBothEp(EVERPARSE_APP_CTXT ctxt, EVER
   uint8_t resultAfterNamedBothEp;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterNamedBothEp = EVERPARSE_STATUS_SUCCESS;
   }

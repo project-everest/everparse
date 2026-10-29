@@ -6,8 +6,8 @@ static uint8_t Align_validate____core__coloredPoint1(EVERPARSE_APP_CTXT ctxt, EV
 static uint8_t Align_validate____core__coloredPoint1(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartColoredPoint1 = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeColor = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeColor = scanOffset;
   size_t positionBeforeColor = sl_pos[0];
   size_t bytesRemainingBeforeColor = (sl_len - positionBeforeColor);
   bool hasBytesForColor;
@@ -19,7 +19,7 @@ static uint8_t Align_validate____core__coloredPoint1(EVERPARSE_APP_CTXT ctxt, EV
   }
   uint8_t res;
   if (hasBytesForColor) {
-    pos = (offsetBeforeColor + (size_t)6);
+    scanOffset = (offsetBeforeColor + (size_t)6);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -28,7 +28,7 @@ static uint8_t Align_validate____core__coloredPoint1(EVERPARSE_APP_CTXT ctxt, EV
   uint8_t resultAfterColoredPoint1;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterColoredPoint1 = EVERPARSE_STATUS_SUCCESS;
   }

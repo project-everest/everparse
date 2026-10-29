@@ -150,14 +150,14 @@ static void SpecializeDep1____specialized32____probe_TLV(uint16_t ___Len, const 
 
 static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   if (tag == 0) {
-    size_t pos = 0;
+    size_t scanOffset = 0;
     /* Validating field case0 */
     size_t currentPosition = sl_pos[0];
     uint64_t streamPositionAtCase0 = (uint64_t)currentPosition;
-    size_t offsetOfCase0 = pos;
+    size_t offsetOfCase0 = scanOffset;
     uint64_t startPositionOfCase0 = (streamPositionAtCase0 + (uint64_t)offsetOfCase0);
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    size_t offsetBeforeCase0 = pos;
+    size_t offsetBeforeCase0 = scanOffset;
     size_t positionBeforeCase0 = sl_pos[0];
     size_t bytesRemainingBeforeCase0 = (sl_len - positionBeforeCase0);
     bool hasBytesForCase0;
@@ -169,7 +169,7 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
     }
     uint8_t resultOfCase0;
     if (hasBytesForCase0) {
-      pos = (offsetBeforeCase0 + 1);
+      scanOffset = (offsetBeforeCase0 + 1);
       resultOfCase0 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -185,7 +185,7 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
     }
     if (res == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition1 = sl_pos[0];
-      size_t newPosition = (currentPosition1 + pos);
+      size_t newPosition = (currentPosition1 + scanOffset);
       sl_pos[0] = newPosition;
       return EVERPARSE_STATUS_SUCCESS;
     }
@@ -195,14 +195,14 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
   }
   else {
     if (tag == 1) {
-      size_t pos_1 = 0;
+      size_t scanOffset_1 = 0;
       /* Validating field case1 */
       size_t currentPosition_1 = sl_pos[0];
       uint64_t streamPositionAtCase1 = (uint64_t)currentPosition_1;
-      size_t offsetOfCase1 = pos_1;
+      size_t offsetOfCase1 = scanOffset_1;
       uint64_t startPositionOfCase1 = (streamPositionAtCase1 + (uint64_t)offsetOfCase1);
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      size_t offsetBeforeCase1 = pos_1;
+      size_t offsetBeforeCase1 = scanOffset_1;
       size_t positionBeforeCase1 = sl_pos[0];
       size_t bytesRemainingBeforeCase1 = (sl_len - positionBeforeCase1);
       bool hasBytesForCase1;
@@ -214,7 +214,7 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       }
       uint8_t resultOfCase1;
       if (hasBytesForCase1) {
-        pos_1 = (offsetBeforeCase1 + 2);
+        scanOffset_1 = (offsetBeforeCase1 + 2);
         resultOfCase1 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
@@ -230,7 +230,7 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       }
       if (res_1 == EVERPARSE_STATUS_SUCCESS) {
         size_t currentPosition1_1 = sl_pos[0];
-        size_t newPosition_1 = (currentPosition1_1 + pos_1);
+        size_t newPosition_1 = (currentPosition1_1 + scanOffset_1);
         sl_pos[0] = newPosition_1;
         return EVERPARSE_STATUS_SUCCESS;
       }
@@ -239,14 +239,14 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       }
     }
     else {
-      size_t pos_2 = 0;
+      size_t scanOffset_2 = 0;
       /* Validating field other */
       size_t currentPosition_2 = sl_pos[0];
       uint64_t streamPositionAtOther = (uint64_t)currentPosition_2;
-      size_t offsetOfOther = pos_2;
+      size_t offsetOfOther = scanOffset_2;
       uint64_t startPositionOfOther = (streamPositionAtOther + (uint64_t)offsetOfOther);
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      size_t offsetBeforeOther = pos_2;
+      size_t offsetBeforeOther = scanOffset_2;
       size_t positionBeforeOther = sl_pos[0];
       size_t bytesRemainingBeforeOther = (sl_len - positionBeforeOther);
       bool hasBytesForOther;
@@ -258,7 +258,7 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       }
       uint8_t resultOfOther;
       if (hasBytesForOther) {
-        pos_2 = (offsetBeforeOther + 4);
+        scanOffset_2 = (offsetBeforeOther + 4);
         resultOfOther = EVERPARSE_STATUS_SUCCESS;
       }
       else {
@@ -274,7 +274,7 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
       }
       if (res_2 == EVERPARSE_STATUS_SUCCESS) {
         size_t currentPosition1_2 = sl_pos[0];
-        size_t newPosition_2 = (currentPosition1_2 + pos_2);
+        size_t newPosition_2 = (currentPosition1_2 + scanOffset_2);
         sl_pos[0] = newPosition_2;
         return EVERPARSE_STATUS_SUCCESS;
       }
@@ -286,13 +286,13 @@ static inline uint8_t SpecializeDep1_validate____core__UNION(uint8_t tag, EVERPA
 }
 
 static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInTag = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtTag = (uint64_t)currentPosition;
-  size_t offsetOfTag = pos;
+  size_t offsetOfTag = offsetInTag;
   uint64_t startPositionOfTag = (streamPositionAtTag + (uint64_t)offsetOfTag);
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  size_t offsetBeforeTag = pos;
+  size_t offsetBeforeTag = offsetInTag;
   size_t positionBeforeTag = sl_pos[0];
   size_t bytesRemainingBeforeTag = (sl_len - positionBeforeTag);
   bool hasBytesForTag;
@@ -304,7 +304,7 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
   }
   uint8_t resultOfTag;
   if (hasBytesForTag) {
-    pos = (offsetBeforeTag + 1);
+    offsetInTag = (offsetBeforeTag + 1);
     resultOfTag = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -326,9 +326,9 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
     uint8_t tag = EverParse3d_Prelude_read____UINT8(bytesOfTag);
     size_t currentPosition1 = sl_pos[0];
     uint64_t fieldStartTlv = (uint64_t)currentPosition1;
-    size_t pos1 = 0;
+    size_t offsetInLength = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeLength = pos1;
+    size_t offsetBeforeLength = offsetInLength;
     size_t positionBeforeLength = sl_pos[0];
     size_t bytesRemainingBeforeLength = (sl_len - positionBeforeLength);
     bool hasBytesForLength;
@@ -340,7 +340,7 @@ static inline uint8_t SpecializeDep1_validate____core__TLV(uint16_t ___Len, EVER
     }
     uint8_t resultAfterLength;
     if (hasBytesForLength) {
-      pos1 = (offsetBeforeLength + 4);
+      offsetInLength = (offsetBeforeLength + 4);
       resultAfterLength = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -442,9 +442,9 @@ static inline uint8_t SpecializeDep1_validate____core____specialized_WRAPPER_32(
     uint64_t fieldStartSpecializedWrapper321 = (uint64_t)currentPosition1;
     size_t currentPosition2 = sl_pos[0];
     uint64_t fieldStartTlv = (uint64_t)currentPosition2;
-    size_t pos = 0;
+    size_t offsetInTlv = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeTlv = pos;
+    size_t offsetBeforeTlv = offsetInTlv;
     size_t positionBeforeTlv = sl_pos[0];
     size_t bytesRemainingBeforeTlv = (sl_len - positionBeforeTlv);
     bool hasBytesForTlv;
@@ -456,7 +456,7 @@ static inline uint8_t SpecializeDep1_validate____core____specialized_WRAPPER_32(
     }
     uint8_t resultAfterTlv;
     if (hasBytesForTlv) {
-      pos = (offsetBeforeTlv + 4);
+      offsetInTlv = (offsetBeforeTlv + 4);
       resultAfterTlv = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -542,9 +542,9 @@ static inline uint8_t SpecializeDep1_validate____core__WRAPPER(void (*___probe_t
     uint64_t fieldStartWrapper1 = (uint64_t)currentPosition1;
     size_t currentPosition2 = sl_pos[0];
     uint64_t fieldStartTlv = (uint64_t)currentPosition2;
-    size_t pos = 0;
+    size_t offsetInTlv = 0;
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    size_t offsetBeforeTlv = pos;
+    size_t offsetBeforeTlv = offsetInTlv;
     size_t positionBeforeTlv = sl_pos[0];
     size_t bytesRemainingBeforeTlv = (sl_len - positionBeforeTlv);
     bool hasBytesForTlv;
@@ -556,7 +556,7 @@ static inline uint8_t SpecializeDep1_validate____core__WRAPPER(void (*___probe_t
     }
     uint8_t resultAfterTlv;
     if (hasBytesForTlv) {
-      pos = (offsetBeforeTlv + 8);
+      offsetInTlv = (offsetBeforeTlv + 8);
       resultAfterTlv = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -680,10 +680,10 @@ static uint8_t SpecializeDep1_validate____core__ENTRY(bool ___Requestor32, uint1
       }
     }
     else {
-      size_t pos = 0;
+      size_t scanOffset = 0;
       size_t currentPosition_2 = sl_pos[0];
       uint64_t streamPositionAtX14 = (uint64_t)currentPosition_2;
-      uint64_t startPositionOfX14 = (streamPositionAtX14 + (uint64_t)pos);
+      uint64_t startPositionOfX14 = (streamPositionAtX14 + (uint64_t)scanOffset);
       uint8_t resultOfX14 = EVERPARSE_STATUS_ERROR_IMPOSSIBLE;
       uint8_t res;
       if (resultOfX14 == EVERPARSE_STATUS_SUCCESS) {
@@ -695,7 +695,7 @@ static uint8_t SpecializeDep1_validate____core__ENTRY(bool ___Requestor32, uint1
       }
       if (res == EVERPARSE_STATUS_SUCCESS) {
         size_t currentPosition1 = sl_pos[0];
-        size_t newPosition = (currentPosition1 + pos);
+        size_t newPosition = (currentPosition1 + scanOffset);
         sl_pos[0] = newPosition;
         return EVERPARSE_STATUS_SUCCESS;
       }

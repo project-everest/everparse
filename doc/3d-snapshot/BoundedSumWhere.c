@@ -10,13 +10,13 @@ static uint8_t BoundedSumWhere_validate____core__boundedSum(uint32_t bound, EVER
   bool preconditionConstraintIsOk = (bound <= (uint32_t)1729);
   uint8_t resultAfterBoundedSum;
   if (preconditionConstraintIsOk) {
-    size_t pos = 0;
+    size_t offsetInLeft = 0;
     size_t currentPosition1 = sl_pos[0];
     uint64_t streamPositionAtLeft = (uint64_t)currentPosition1;
-    size_t offsetOfLeft = pos;
+    size_t offsetOfLeft = offsetInLeft;
     uint64_t startPositionOfLeft = (streamPositionAtLeft + (uint64_t)offsetOfLeft);
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeLeft = pos;
+    size_t offsetBeforeLeft = offsetInLeft;
     size_t positionBeforeLeft = sl_pos[0];
     size_t bytesRemainingBeforeLeft = (sl_len - positionBeforeLeft);
     bool hasBytesForLeft;
@@ -28,7 +28,7 @@ static uint8_t BoundedSumWhere_validate____core__boundedSum(uint32_t bound, EVER
     }
     uint8_t resultOfLeft;
     if (hasBytesForLeft) {
-      pos = (offsetBeforeLeft + 4);
+      offsetInLeft = (offsetBeforeLeft + 4);
       resultOfLeft = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -51,9 +51,9 @@ static uint8_t BoundedSumWhere_validate____core__boundedSum(uint32_t bound, EVER
       /* Validating field right */
       size_t currentPosition2 = sl_pos[0];
       uint64_t fieldStartBoundedSum1 = (uint64_t)currentPosition2;
-      size_t pos1 = 0;
+      size_t offsetInRight_refinement = 0;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      size_t offsetBeforeRight_refinement = pos1;
+      size_t offsetBeforeRight_refinement = offsetInRight_refinement;
       size_t positionBeforeRight_refinement = sl_pos[0];
       size_t bytesRemainingBeforeRight_refinement = (sl_len - positionBeforeRight_refinement);
       bool hasBytesForRight_refinement;
@@ -65,7 +65,7 @@ static uint8_t BoundedSumWhere_validate____core__boundedSum(uint32_t bound, EVER
       }
       uint8_t resultAfterRight_refinement;
       if (hasBytesForRight_refinement) {
-        pos1 = (offsetBeforeRight_refinement + 4);
+        offsetInRight_refinement = (offsetBeforeRight_refinement + 4);
         resultAfterRight_refinement = EVERPARSE_STATUS_SUCCESS;
       }
       else {

@@ -5,13 +5,13 @@ static uint8_t BoundedSum_validate____core__boundedSum(uint32_t bound, EVERPARSE
 static uint8_t BoundedSum_validate____core_mySum(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t BoundedSum_validate____core__boundedSum(uint32_t bound, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInLeft = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtLeft = (uint64_t)currentPosition;
-  size_t offsetOfLeft = pos;
+  size_t offsetOfLeft = offsetInLeft;
   uint64_t startPositionOfLeft = (streamPositionAtLeft + (uint64_t)offsetOfLeft);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeLeft = pos;
+  size_t offsetBeforeLeft = offsetInLeft;
   size_t positionBeforeLeft = sl_pos[0];
   size_t bytesRemainingBeforeLeft = (sl_len - positionBeforeLeft);
   bool hasBytesForLeft;
@@ -23,7 +23,7 @@ static uint8_t BoundedSum_validate____core__boundedSum(uint32_t bound, EVERPARSE
   }
   uint8_t resultOfLeft;
   if (hasBytesForLeft) {
-    pos = (offsetBeforeLeft + 4);
+    offsetInLeft = (offsetBeforeLeft + 4);
     resultOfLeft = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -46,9 +46,9 @@ static uint8_t BoundedSum_validate____core__boundedSum(uint32_t bound, EVERPARSE
     /* Validating field right */
     size_t currentPosition1 = sl_pos[0];
     uint64_t fieldStartBoundedSum = (uint64_t)currentPosition1;
-    size_t pos1 = 0;
+    size_t offsetInRight_refinement = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeRight_refinement = pos1;
+    size_t offsetBeforeRight_refinement = offsetInRight_refinement;
     size_t positionBeforeRight_refinement = sl_pos[0];
     size_t bytesRemainingBeforeRight_refinement = (sl_len - positionBeforeRight_refinement);
     bool hasBytesForRight_refinement;
@@ -60,7 +60,7 @@ static uint8_t BoundedSum_validate____core__boundedSum(uint32_t bound, EVERPARSE
     }
     uint8_t resultAfterRight_refinement;
     if (hasBytesForRight_refinement) {
-      pos1 = (offsetBeforeRight_refinement + 4);
+      offsetInRight_refinement = (offsetBeforeRight_refinement + 4);
       resultAfterRight_refinement = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -110,13 +110,13 @@ uint64_t BoundedSumValidateBoundedSum(uint32_t bound, uint8_t *ctxt, EVERPARSE_E
 }
 
 static uint8_t BoundedSum_validate____core_mySum(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInBound = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtBound = (uint64_t)currentPosition;
-  size_t offsetOfBound = pos;
+  size_t offsetOfBound = offsetInBound;
   uint64_t startPositionOfBound = (streamPositionAtBound + (uint64_t)offsetOfBound);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeBound = pos;
+  size_t offsetBeforeBound = offsetInBound;
   size_t positionBeforeBound = sl_pos[0];
   size_t bytesRemainingBeforeBound = (sl_len - positionBeforeBound);
   bool hasBytesForBound;
@@ -128,7 +128,7 @@ static uint8_t BoundedSum_validate____core_mySum(EVERPARSE_APP_CTXT ctxt, EVERPA
   }
   uint8_t resultOfBound;
   if (hasBytesForBound) {
-    pos = (offsetBeforeBound + 4);
+    offsetInBound = (offsetBeforeBound + 4);
     resultOfBound = EVERPARSE_STATUS_SUCCESS;
   }
   else {

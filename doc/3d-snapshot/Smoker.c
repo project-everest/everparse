@@ -6,9 +6,9 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
 static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartSmoker = (uint64_t)currentPosition;
-  size_t pos = 0;
+  size_t offsetInAge = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeAge = pos;
+  size_t offsetBeforeAge = offsetInAge;
   size_t positionBeforeAge = sl_pos[0];
   size_t bytesRemainingBeforeAge = (sl_len - positionBeforeAge);
   bool hasBytesForAge;
@@ -20,7 +20,7 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
   }
   uint8_t resultAfterAge;
   if (hasBytesForAge) {
-    pos = (offsetBeforeAge + 4);
+    offsetInAge = (offsetBeforeAge + 4);
     resultAfterAge = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -35,14 +35,14 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
     uint32_t age = EverParse3d_Prelude_read____UINT32(bytesOfAge);
     bool ageConstraintIsOk = (age >= (uint32_t)21);
     if (ageConstraintIsOk) {
-      size_t pos1 = 0;
+      size_t scanOffset = 0;
       /* Validating field cigarettesConsumed */
       size_t currentPosition1 = sl_pos[0];
       uint64_t streamPositionAtCigarettesConsumed = (uint64_t)currentPosition1;
-      size_t offsetOfCigarettesConsumed = pos1;
+      size_t offsetOfCigarettesConsumed = scanOffset;
       uint64_t startPositionOfCigarettesConsumed = (streamPositionAtCigarettesConsumed + (uint64_t)offsetOfCigarettesConsumed);
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      size_t offsetBeforeCigarettesConsumed = pos1;
+      size_t offsetBeforeCigarettesConsumed = scanOffset;
       size_t positionBeforeCigarettesConsumed = sl_pos[0];
       size_t bytesRemainingBeforeCigarettesConsumed = (sl_len - positionBeforeCigarettesConsumed);
       bool hasBytesForCigarettesConsumed;
@@ -54,7 +54,7 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
       }
       uint8_t resultOfCigarettesConsumed;
       if (hasBytesForCigarettesConsumed) {
-        pos1 = (offsetBeforeCigarettesConsumed + 1);
+        scanOffset = (offsetBeforeCigarettesConsumed + 1);
         resultOfCigarettesConsumed = EVERPARSE_STATUS_SUCCESS;
       }
       else {
@@ -70,7 +70,7 @@ static uint8_t Smoker_validate____core__smoker(EVERPARSE_APP_CTXT ctxt, EVERPARS
       }
       if (res == EVERPARSE_STATUS_SUCCESS) {
         size_t currentPosition2 = sl_pos[0];
-        size_t newPosition = (currentPosition2 + pos1);
+        size_t newPosition = (currentPosition2 + scanOffset);
         sl_pos[0] = newPosition;
         resultAfterSmoker = EVERPARSE_STATUS_SUCCESS;
       }

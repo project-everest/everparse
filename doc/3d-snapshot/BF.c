@@ -6,13 +6,13 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
 static uint8_t BF_validate____core__dummy(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInBitfield0 = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtBitfield0 = (uint64_t)currentPosition;
-  size_t offsetOfBitfield0 = pos;
+  size_t offsetOfBitfield0 = offsetInBitfield0;
   uint64_t startPositionOfBitfield0 = (streamPositionAtBitfield0 + (uint64_t)offsetOfBitfield0);
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  size_t offsetBeforeBitfield0 = pos;
+  size_t offsetBeforeBitfield0 = offsetInBitfield0;
   size_t positionBeforeBitfield0 = sl_pos[0];
   size_t bytesRemainingBeforeBitfield0 = (sl_len - positionBeforeBitfield0);
   bool hasBytesForBitfield0;
@@ -24,7 +24,7 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
   }
   uint8_t resultOfBitfield0;
   if (hasBytesForBitfield0) {
-    pos = (offsetBeforeBitfield0 + 2);
+    offsetInBitfield0 = (offsetBeforeBitfield0 + 2);
     resultOfBitfield0 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -46,9 +46,9 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
     uint16_t bitfield0 = EverParse3d_Prelude_read____UINT16(bytesOfBitfield0);
     size_t currentPosition1 = sl_pos[0];
     uint64_t fieldStartBf2bis = (uint64_t)currentPosition1;
-    size_t pos1 = 0;
+    size_t offsetInBitfield1 = 0;
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-    size_t offsetBeforeBitfield1 = pos1;
+    size_t offsetBeforeBitfield1 = offsetInBitfield1;
     size_t positionBeforeBitfield1 = sl_pos[0];
     size_t bytesRemainingBeforeBitfield1 = (sl_len - positionBeforeBitfield1);
     bool hasBytesForBitfield1;
@@ -60,7 +60,7 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
     }
     uint8_t resultAfterBitfield1;
     if (hasBytesForBitfield1) {
-      pos1 = (offsetBeforeBitfield1 + 2);
+      offsetInBitfield1 = (offsetBeforeBitfield1 + 2);
       resultAfterBitfield1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -75,14 +75,14 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
       uint16_t bitfield1 = EverParse3d_Prelude_read____UINT16(bytesOfBitfield1);
       bool bitfield1ConstraintIsOk = (EverParseGetBitfield16(bitfield1, 0, 12) < EverParseGetBitfield16(bitfield0, 0, 6));
       if (bitfield1ConstraintIsOk) {
-        size_t pos2 = 0;
+        size_t scanOffset = 0;
         /* Validating field z */
         size_t currentPosition2 = sl_pos[0];
         uint64_t streamPositionAtZ = (uint64_t)currentPosition2;
-        size_t offsetOfZ = pos2;
+        size_t offsetOfZ = scanOffset;
         uint64_t startPositionOfZ = (streamPositionAtZ + (uint64_t)offsetOfZ);
         /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-        size_t offsetBeforeZ = pos2;
+        size_t offsetBeforeZ = scanOffset;
         size_t positionBeforeZ = sl_pos[0];
         size_t bytesRemainingBeforeZ = (sl_len - positionBeforeZ);
         bool hasBytesForZ;
@@ -94,7 +94,7 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
         }
         uint8_t resultOfZ;
         if (hasBytesForZ) {
-          pos2 = (offsetBeforeZ + 1);
+          scanOffset = (offsetBeforeZ + 1);
           resultOfZ = EVERPARSE_STATUS_SUCCESS;
         }
         else {
@@ -110,7 +110,7 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
         }
         if (res == EVERPARSE_STATUS_SUCCESS) {
           size_t currentPosition3 = sl_pos[0];
-          size_t newPosition = (currentPosition3 + pos2);
+          size_t newPosition = (currentPosition3 + scanOffset);
           sl_pos[0] = newPosition;
           resultAfterBf2bis = EVERPARSE_STATUS_SUCCESS;
         }
@@ -139,13 +139,13 @@ static inline uint8_t BF_validate____core__BF2bis(EVERPARSE_APP_CTXT ctxt, EVERP
 }
 
 static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInBitfield0 = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtBitfield0 = (uint64_t)currentPosition;
-  size_t offsetOfBitfield0 = pos;
+  size_t offsetOfBitfield0 = offsetInBitfield0;
   uint64_t startPositionOfBitfield0 = (streamPositionAtBitfield0 + (uint64_t)offsetOfBitfield0);
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-  size_t offsetBeforeBitfield0 = pos;
+  size_t offsetBeforeBitfield0 = offsetInBitfield0;
   size_t positionBeforeBitfield0 = sl_pos[0];
   size_t bytesRemainingBeforeBitfield0 = (sl_len - positionBeforeBitfield0);
   bool hasBytesForBitfield0;
@@ -157,7 +157,7 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
   }
   uint8_t resultOfBitfield0;
   if (hasBytesForBitfield0) {
-    pos = (offsetBeforeBitfield0 + 2);
+    offsetInBitfield0 = (offsetBeforeBitfield0 + 2);
     resultOfBitfield0 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -179,9 +179,9 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
     uint16_t bitfield0 = EverParse3d_Prelude_read____UINT16BE(bytesOfBitfield0);
     size_t currentPosition1 = sl_pos[0];
     uint64_t fieldStartBf3 = (uint64_t)currentPosition1;
-    size_t pos1 = 0;
+    size_t offsetInBitfield1 = 0;
     /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-    size_t offsetBeforeBitfield1 = pos1;
+    size_t offsetBeforeBitfield1 = offsetInBitfield1;
     size_t positionBeforeBitfield1 = sl_pos[0];
     size_t bytesRemainingBeforeBitfield1 = (sl_len - positionBeforeBitfield1);
     bool hasBytesForBitfield1;
@@ -193,7 +193,7 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
     }
     uint8_t resultAfterBitfield1;
     if (hasBytesForBitfield1) {
-      pos1 = (offsetBeforeBitfield1 + 2);
+      offsetInBitfield1 = (offsetBeforeBitfield1 + 2);
       resultAfterBitfield1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -208,14 +208,14 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
       uint16_t bitfield1 = EverParse3d_Prelude_read____UINT16BE(bytesOfBitfield1);
       bool bitfield1ConstraintIsOk = (EverParseGetBitfield16MsbFirst(bitfield1, 0, 12) < EverParseGetBitfield16MsbFirst(bitfield0, 0, 6));
       if (bitfield1ConstraintIsOk) {
-        size_t pos2 = 0;
+        size_t scanOffset = 0;
         /* Validating field z */
         size_t currentPosition2 = sl_pos[0];
         uint64_t streamPositionAtZ = (uint64_t)currentPosition2;
-        size_t offsetOfZ = pos2;
+        size_t offsetOfZ = scanOffset;
         uint64_t startPositionOfZ = (streamPositionAtZ + (uint64_t)offsetOfZ);
         /* Checking that we have enough space for a UINT8BE, i.e., 1 byte */
-        size_t offsetBeforeZ = pos2;
+        size_t offsetBeforeZ = scanOffset;
         size_t positionBeforeZ = sl_pos[0];
         size_t bytesRemainingBeforeZ = (sl_len - positionBeforeZ);
         bool hasBytesForZ;
@@ -227,7 +227,7 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
         }
         uint8_t resultOfZ;
         if (hasBytesForZ) {
-          pos2 = (offsetBeforeZ + 1);
+          scanOffset = (offsetBeforeZ + 1);
           resultOfZ = EVERPARSE_STATUS_SUCCESS;
         }
         else {
@@ -243,7 +243,7 @@ static inline uint8_t BF_validate____core__BF3(EVERPARSE_APP_CTXT ctxt, EVERPARS
         }
         if (res == EVERPARSE_STATUS_SUCCESS) {
           size_t currentPosition3 = sl_pos[0];
-          size_t newPosition = (currentPosition3 + pos2);
+          size_t newPosition = (currentPosition3 + scanOffset);
           sl_pos[0] = newPosition;
           resultAfterBf3 = EVERPARSE_STATUS_SUCCESS;
         }

@@ -7,8 +7,8 @@ static uint8_t Triangle2_validate____core__triangle(EVERPARSE_APP_CTXT ctxt, EVE
   /* Validating field corners */
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartTriangle = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBefore = pos;
+  size_t scanOffset = 0;
+  size_t offsetBefore = scanOffset;
   size_t positionBefore = sl_pos[0];
   size_t bytesRemainingBefore = (sl_len - positionBefore);
   bool hasBytesFor;
@@ -20,7 +20,7 @@ static uint8_t Triangle2_validate____core__triangle(EVERPARSE_APP_CTXT ctxt, EVE
   }
   uint8_t res;
   if (hasBytesFor) {
-    pos = (offsetBefore + (size_t)12);
+    scanOffset = (offsetBefore + (size_t)12);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -29,7 +29,7 @@ static uint8_t Triangle2_validate____core__triangle(EVERPARSE_APP_CTXT ctxt, EVE
   uint8_t resultAfterTriangle;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterTriangle = EVERPARSE_STATUS_SUCCESS;
   }

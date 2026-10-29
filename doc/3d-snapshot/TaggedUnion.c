@@ -6,14 +6,14 @@ static uint8_t TaggedUnion_validate____core__integer(EVERPARSE_APP_CTXT ctxt, EV
 
 static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   if (size == (uint32_t)TAGGEDUNION_SIZE8) {
-    size_t pos = 0;
+    size_t scanOffset = 0;
     /* Validating field value8 */
     size_t currentPosition = sl_pos[0];
     uint64_t streamPositionAtValue8 = (uint64_t)currentPosition;
-    size_t offsetOfValue8 = pos;
+    size_t offsetOfValue8 = scanOffset;
     uint64_t startPositionOfValue8 = (streamPositionAtValue8 + (uint64_t)offsetOfValue8);
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    size_t offsetBeforeValue8 = pos;
+    size_t offsetBeforeValue8 = scanOffset;
     size_t positionBeforeValue8 = sl_pos[0];
     size_t bytesRemainingBeforeValue8 = (sl_len - positionBeforeValue8);
     bool hasBytesForValue8;
@@ -25,7 +25,7 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
     }
     uint8_t resultOfValue8;
     if (hasBytesForValue8) {
-      pos = (offsetBeforeValue8 + 1);
+      scanOffset = (offsetBeforeValue8 + 1);
       resultOfValue8 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -41,7 +41,7 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
     }
     if (res == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition1 = sl_pos[0];
-      size_t newPosition = (currentPosition1 + pos);
+      size_t newPosition = (currentPosition1 + scanOffset);
       sl_pos[0] = newPosition;
       return EVERPARSE_STATUS_SUCCESS;
     }
@@ -51,14 +51,14 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
   }
   else {
     if (size == (uint32_t)TAGGEDUNION_SIZE16) {
-      size_t pos_1 = 0;
+      size_t scanOffset_1 = 0;
       /* Validating field value16 */
       size_t currentPosition_1 = sl_pos[0];
       uint64_t streamPositionAtValue16 = (uint64_t)currentPosition_1;
-      size_t offsetOfValue16 = pos_1;
+      size_t offsetOfValue16 = scanOffset_1;
       uint64_t startPositionOfValue16 = (streamPositionAtValue16 + (uint64_t)offsetOfValue16);
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      size_t offsetBeforeValue16 = pos_1;
+      size_t offsetBeforeValue16 = scanOffset_1;
       size_t positionBeforeValue16 = sl_pos[0];
       size_t bytesRemainingBeforeValue16 = (sl_len - positionBeforeValue16);
       bool hasBytesForValue16;
@@ -70,7 +70,7 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
       }
       uint8_t resultOfValue16;
       if (hasBytesForValue16) {
-        pos_1 = (offsetBeforeValue16 + 2);
+        scanOffset_1 = (offsetBeforeValue16 + 2);
         resultOfValue16 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
@@ -86,7 +86,7 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
       }
       if (res_1 == EVERPARSE_STATUS_SUCCESS) {
         size_t currentPosition1_1 = sl_pos[0];
-        size_t newPosition_1 = (currentPosition1_1 + pos_1);
+        size_t newPosition_1 = (currentPosition1_1 + scanOffset_1);
         sl_pos[0] = newPosition_1;
         return EVERPARSE_STATUS_SUCCESS;
       }
@@ -96,14 +96,14 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
     }
     else {
       if (size == (uint32_t)TAGGEDUNION_SIZE32) {
-        size_t pos_2 = 0;
+        size_t scanOffset_2 = 0;
         /* Validating field value32 */
         size_t currentPosition_2 = sl_pos[0];
         uint64_t streamPositionAtValue32 = (uint64_t)currentPosition_2;
-        size_t offsetOfValue32 = pos_2;
+        size_t offsetOfValue32 = scanOffset_2;
         uint64_t startPositionOfValue32 = (streamPositionAtValue32 + (uint64_t)offsetOfValue32);
         /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-        size_t offsetBeforeValue32 = pos_2;
+        size_t offsetBeforeValue32 = scanOffset_2;
         size_t positionBeforeValue32 = sl_pos[0];
         size_t bytesRemainingBeforeValue32 = (sl_len - positionBeforeValue32);
         bool hasBytesForValue32;
@@ -115,7 +115,7 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
         }
         uint8_t resultOfValue32;
         if (hasBytesForValue32) {
-          pos_2 = (offsetBeforeValue32 + 4);
+          scanOffset_2 = (offsetBeforeValue32 + 4);
           resultOfValue32 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
@@ -131,7 +131,7 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
         }
         if (res_2 == EVERPARSE_STATUS_SUCCESS) {
           size_t currentPosition1_2 = sl_pos[0];
-          size_t newPosition_2 = (currentPosition1_2 + pos_2);
+          size_t newPosition_2 = (currentPosition1_2 + scanOffset_2);
           sl_pos[0] = newPosition_2;
           return EVERPARSE_STATUS_SUCCESS;
         }
@@ -140,10 +140,10 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
         }
       }
       else {
-        size_t pos_3 = 0;
+        size_t scanOffset_3 = 0;
         size_t currentPosition_3 = sl_pos[0];
         uint64_t streamPositionAtX17 = (uint64_t)currentPosition_3;
-        uint64_t startPositionOfX17 = (streamPositionAtX17 + (uint64_t)pos_3);
+        uint64_t startPositionOfX17 = (streamPositionAtX17 + (uint64_t)scanOffset_3);
         uint8_t resultOfX17 = EVERPARSE_STATUS_ERROR_IMPOSSIBLE;
         uint8_t res_3;
         if (resultOfX17 == EVERPARSE_STATUS_SUCCESS) {
@@ -155,7 +155,7 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
         }
         if (res_3 == EVERPARSE_STATUS_SUCCESS) {
           size_t currentPosition1_3 = sl_pos[0];
-          size_t newPosition_3 = (currentPosition1_3 + pos_3);
+          size_t newPosition_3 = (currentPosition1_3 + scanOffset_3);
           sl_pos[0] = newPosition_3;
           return EVERPARSE_STATUS_SUCCESS;
         }
@@ -168,13 +168,13 @@ static inline uint8_t TaggedUnion_validate____core__int_payload(uint32_t size, E
 }
 
 static uint8_t TaggedUnion_validate____core__integer(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t offsetInSize = 0;
   size_t currentPosition = sl_pos[0];
   uint64_t streamPositionAtSize = (uint64_t)currentPosition;
-  size_t offsetOfSize = pos;
+  size_t offsetOfSize = offsetInSize;
   uint64_t startPositionOfSize = (streamPositionAtSize + (uint64_t)offsetOfSize);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeSize = pos;
+  size_t offsetBeforeSize = offsetInSize;
   size_t positionBeforeSize = sl_pos[0];
   size_t bytesRemainingBeforeSize = (sl_len - positionBeforeSize);
   bool hasBytesForSize;
@@ -186,7 +186,7 @@ static uint8_t TaggedUnion_validate____core__integer(EVERPARSE_APP_CTXT ctxt, EV
   }
   uint8_t resultOfSize;
   if (hasBytesForSize) {
-    pos = (offsetBeforeSize + 4);
+    offsetInSize = (offsetBeforeSize + 4);
     resultOfSize = EVERPARSE_STATUS_SUCCESS;
   }
   else {

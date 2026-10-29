@@ -7,8 +7,8 @@ static uint8_t Derived_validate____core__Quad(EVERPARSE_APP_CTXT ctxt, EVERPARSE
 static uint8_t Derived_validate____core__Triple(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartTriple = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforePair = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforePair = scanOffset;
   size_t positionBeforePair = sl_pos[0];
   size_t bytesRemainingBeforePair = (sl_len - positionBeforePair);
   bool hasBytesForPair;
@@ -20,7 +20,7 @@ static uint8_t Derived_validate____core__Triple(EVERPARSE_APP_CTXT ctxt, EVERPAR
   }
   uint8_t res;
   if (hasBytesForPair) {
-    pos = (offsetBeforePair + (size_t)12);
+    scanOffset = (offsetBeforePair + (size_t)12);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -29,7 +29,7 @@ static uint8_t Derived_validate____core__Triple(EVERPARSE_APP_CTXT ctxt, EVERPAR
   uint8_t resultAfterTriple;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterTriple = EVERPARSE_STATUS_SUCCESS;
   }
@@ -57,8 +57,8 @@ uint64_t DerivedValidateTriple(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, u
 static uint8_t Derived_validate____core__Quad(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartQuad = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBefore12 = pos;
+  size_t scanOffset = 0;
+  size_t offsetBefore12 = scanOffset;
   size_t positionBefore12 = sl_pos[0];
   size_t bytesRemainingBefore12 = (sl_len - positionBefore12);
   bool hasBytesFor12;
@@ -70,7 +70,7 @@ static uint8_t Derived_validate____core__Quad(EVERPARSE_APP_CTXT ctxt, EVERPARSE
   }
   uint8_t res;
   if (hasBytesFor12) {
-    pos = (offsetBefore12 + (size_t)16);
+    scanOffset = (offsetBefore12 + (size_t)16);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -79,7 +79,7 @@ static uint8_t Derived_validate____core__Quad(EVERPARSE_APP_CTXT ctxt, EVERPARSE
   uint8_t resultAfterQuad;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterQuad = EVERPARSE_STATUS_SUCCESS;
   }

@@ -56,8 +56,8 @@ uint64_t BaseValidateUlong(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8
 static uint8_t Base_validate____core__Pair(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartPair = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBeforeFirst = pos;
+  size_t scanOffset = 0;
+  size_t offsetBeforeFirst = scanOffset;
   size_t positionBeforeFirst = sl_pos[0];
   size_t bytesRemainingBeforeFirst = (sl_len - positionBeforeFirst);
   bool hasBytesForFirst;
@@ -69,7 +69,7 @@ static uint8_t Base_validate____core__Pair(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ER
   }
   uint8_t res;
   if (hasBytesForFirst) {
-    pos = (offsetBeforeFirst + (size_t)8);
+    scanOffset = (offsetBeforeFirst + (size_t)8);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -78,7 +78,7 @@ static uint8_t Base_validate____core__Pair(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ER
   uint8_t resultAfterPair;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterPair = EVERPARSE_STATUS_SUCCESS;
   }

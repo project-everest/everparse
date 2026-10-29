@@ -7,9 +7,9 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
   /* Validating field col */
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartColoredPoint = (uint64_t)currentPosition;
-  size_t pos = 0;
+  size_t offsetInCol_refinement = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeCol_refinement = pos;
+  size_t offsetBeforeCol_refinement = offsetInCol_refinement;
   size_t positionBeforeCol_refinement = sl_pos[0];
   size_t bytesRemainingBeforeCol_refinement = (sl_len - positionBeforeCol_refinement);
   bool hasBytesForCol_refinement;
@@ -21,7 +21,7 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
   }
   uint8_t resultAfterCol_refinement;
   if (hasBytesForCol_refinement) {
-    pos = (offsetBeforeCol_refinement + 4);
+    offsetInCol_refinement = (offsetBeforeCol_refinement + 4);
     resultAfterCol_refinement = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -59,8 +59,8 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
   if (resultAfterCol_refinement1 == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
     uint64_t fieldStartColoredPoint1 = (uint64_t)currentPosition1;
-    size_t pos1 = 0;
-    size_t offsetBeforeX = pos1;
+    size_t scanOffset = 0;
+    size_t offsetBeforeX = scanOffset;
     size_t positionBeforeX = sl_pos[0];
     size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
     bool hasBytesForX;
@@ -72,7 +72,7 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
     }
     uint8_t res;
     if (hasBytesForX) {
-      pos1 = (offsetBeforeX + (size_t)8);
+      scanOffset = (offsetBeforeX + (size_t)8);
       res = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -81,7 +81,7 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
     uint8_t resultAfterColoredPoint1;
     if (res == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition2 = sl_pos[0];
-      size_t newPosition = (currentPosition2 + pos1);
+      size_t newPosition = (currentPosition2 + scanOffset);
       sl_pos[0] = newPosition;
       resultAfterColoredPoint1 = EVERPARSE_STATUS_SUCCESS;
     }

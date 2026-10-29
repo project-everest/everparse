@@ -7,14 +7,14 @@ static uint8_t PointArch_32_64_validate____core__POINT(EVERPARSE_APP_CTXT ctxt, 
 static inline uint8_t PointArch_32_64_validate____core__INT(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   #if defined(ARCH64)
   {
-    size_t pos = 0;
+    size_t scanOffset = 0;
     /* Validating field x */
     size_t currentPosition = sl_pos[0];
     uint64_t streamPositionAtX = (uint64_t)currentPosition;
-    size_t offsetOfX = pos;
+    size_t offsetOfX = scanOffset;
     uint64_t startPositionOfX = (streamPositionAtX + (uint64_t)offsetOfX);
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    size_t offsetBeforeX = pos;
+    size_t offsetBeforeX = scanOffset;
     size_t positionBeforeX = sl_pos[0];
     size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
     bool hasBytesForX;
@@ -26,7 +26,7 @@ static inline uint8_t PointArch_32_64_validate____core__INT(EVERPARSE_APP_CTXT c
     }
     uint8_t resultOfX;
     if (hasBytesForX) {
-      pos = (offsetBeforeX + 8);
+      scanOffset = (offsetBeforeX + 8);
       resultOfX = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -42,7 +42,7 @@ static inline uint8_t PointArch_32_64_validate____core__INT(EVERPARSE_APP_CTXT c
     }
     if (res == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition1 = sl_pos[0];
-      size_t newPosition = (currentPosition1 + pos);
+      size_t newPosition = (currentPosition1 + scanOffset);
       sl_pos[0] = newPosition;
       return EVERPARSE_STATUS_SUCCESS;
     }
@@ -52,14 +52,14 @@ static inline uint8_t PointArch_32_64_validate____core__INT(EVERPARSE_APP_CTXT c
   }
   #else
   {
-    size_t pos_1 = 0;
+    size_t scanOffset_1 = 0;
     /* Validating field x */
     size_t currentPosition_1 = sl_pos[0];
     uint64_t streamPositionAtX_1 = (uint64_t)currentPosition_1;
-    size_t offsetOfX_1 = pos_1;
+    size_t offsetOfX_1 = scanOffset_1;
     uint64_t startPositionOfX_1 = (streamPositionAtX_1 + (uint64_t)offsetOfX_1);
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t offsetBeforeX_1 = pos_1;
+    size_t offsetBeforeX_1 = scanOffset_1;
     size_t positionBeforeX_1 = sl_pos[0];
     size_t bytesRemainingBeforeX_1 = (sl_len - positionBeforeX_1);
     bool hasBytesForX_1;
@@ -71,7 +71,7 @@ static inline uint8_t PointArch_32_64_validate____core__INT(EVERPARSE_APP_CTXT c
     }
     uint8_t resultOfX_1;
     if (hasBytesForX_1) {
-      pos_1 = (offsetBeforeX_1 + 4);
+      scanOffset_1 = (offsetBeforeX_1 + 4);
       resultOfX_1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -87,7 +87,7 @@ static inline uint8_t PointArch_32_64_validate____core__INT(EVERPARSE_APP_CTXT c
     }
     if (res_1 == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition1_1 = sl_pos[0];
-      size_t newPosition_1 = (currentPosition1_1 + pos_1);
+      size_t newPosition_1 = (currentPosition1_1 + scanOffset_1);
       sl_pos[0] = newPosition_1;
       return EVERPARSE_STATUS_SUCCESS;
     }

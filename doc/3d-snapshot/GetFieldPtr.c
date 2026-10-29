@@ -8,8 +8,8 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
   /* Validating field f1 */
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartT = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBefore = pos;
+  size_t scanOffset = 0;
+  size_t offsetBefore = scanOffset;
   size_t positionBefore = sl_pos[0];
   size_t bytesRemainingBefore = (sl_len - positionBefore);
   bool hasBytesFor;
@@ -21,7 +21,7 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
   }
   uint8_t res;
   if (hasBytesFor) {
-    pos = (offsetBefore + (size_t)10);
+    scanOffset = (offsetBefore + (size_t)10);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -30,7 +30,7 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
   uint8_t resultAfterT;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterT = EVERPARSE_STATUS_SUCCESS;
   }
@@ -53,8 +53,8 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
     uint64_t fieldStartF2 = (uint64_t)currentPosition2;
     size_t currentPosition3 = sl_pos[0];
     uint64_t fieldStartT2 = (uint64_t)currentPosition3;
-    size_t pos1 = 0;
-    size_t offsetBefore1 = pos1;
+    size_t scanOffset1 = 0;
+    size_t offsetBefore1 = scanOffset1;
     size_t positionBefore1 = sl_pos[0];
     size_t bytesRemainingBefore1 = (sl_len - positionBefore1);
     bool hasBytesFor1;
@@ -66,7 +66,7 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
     }
     uint8_t res1;
     if (hasBytesFor1) {
-      pos1 = (offsetBefore1 + (size_t)20);
+      scanOffset1 = (offsetBefore1 + (size_t)20);
       res1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -75,7 +75,7 @@ static uint8_t GetFieldPtr_validate____core__T(uint8_t **out, EVERPARSE_APP_CTXT
     uint8_t resultAfterT1;
     if (res1 == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition4 = sl_pos[0];
-      size_t newPosition_1 = (currentPosition4 + pos1);
+      size_t newPosition_1 = (currentPosition4 + scanOffset1);
       sl_pos[0] = newPosition_1;
       resultAfterT1 = EVERPARSE_STATUS_SUCCESS;
     }
@@ -131,8 +131,8 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
   /* Validating field f1 */
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartTact = (uint64_t)currentPosition;
-  size_t pos = 0;
-  size_t offsetBefore = pos;
+  size_t scanOffset = 0;
+  size_t offsetBefore = scanOffset;
   size_t positionBefore = sl_pos[0];
   size_t bytesRemainingBefore = (sl_len - positionBefore);
   bool hasBytesFor;
@@ -144,7 +144,7 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
   }
   uint8_t res;
   if (hasBytesFor) {
-    pos = (offsetBefore + (size_t)10);
+    scanOffset = (offsetBefore + (size_t)10);
     res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -153,7 +153,7 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
   uint8_t resultAfterTact;
   if (res == EVERPARSE_STATUS_SUCCESS) {
     size_t currentPosition1 = sl_pos[0];
-    size_t newPosition = (currentPosition1 + pos);
+    size_t newPosition = (currentPosition1 + scanOffset);
     sl_pos[0] = newPosition;
     resultAfterTact = EVERPARSE_STATUS_SUCCESS;
   }
@@ -176,8 +176,8 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
     uint64_t fieldStartF2 = (uint64_t)currentPosition2;
     size_t currentPosition3 = sl_pos[0];
     uint64_t fieldStartTact2 = (uint64_t)currentPosition3;
-    size_t pos1 = 0;
-    size_t offsetBefore1 = pos1;
+    size_t scanOffset1 = 0;
+    size_t offsetBefore1 = scanOffset1;
     size_t positionBefore1 = sl_pos[0];
     size_t bytesRemainingBefore1 = (sl_len - positionBefore1);
     bool hasBytesFor1;
@@ -189,7 +189,7 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
     }
     uint8_t res1;
     if (hasBytesFor1) {
-      pos1 = (offsetBefore1 + (size_t)20);
+      scanOffset1 = (offsetBefore1 + (size_t)20);
       res1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
@@ -198,7 +198,7 @@ static uint8_t GetFieldPtr_validate____core__TAct(uint8_t **out, EVERPARSE_APP_C
     uint8_t resultAfterTact1;
     if (res1 == EVERPARSE_STATUS_SUCCESS) {
       size_t currentPosition4 = sl_pos[0];
-      size_t newPosition_1 = (currentPosition4 + pos1);
+      size_t newPosition_1 = (currentPosition4 + scanOffset1);
       sl_pos[0] = newPosition_1;
       resultAfterTact1 = EVERPARSE_STATUS_SUCCESS;
     }

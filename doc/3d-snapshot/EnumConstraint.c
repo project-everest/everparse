@@ -6,9 +6,9 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
 static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   size_t currentPosition = sl_pos[0];
   uint64_t fieldStartEnumConstraint = (uint64_t)currentPosition;
-  size_t pos = 0;
+  size_t offsetInCol = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t offsetBeforeCol = pos;
+  size_t offsetBeforeCol = offsetInCol;
   size_t positionBeforeCol = sl_pos[0];
   size_t bytesRemainingBeforeCol = (sl_len - positionBeforeCol);
   bool hasBytesForCol;
@@ -20,7 +20,7 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
   }
   uint8_t resultAfterCol;
   if (hasBytesForCol) {
-    pos = (offsetBeforeCol + 4);
+    offsetInCol = (offsetBeforeCol + 4);
     resultAfterCol = EVERPARSE_STATUS_SUCCESS;
   }
   else {
@@ -38,9 +38,9 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
       /* Validating field x */
       size_t currentPosition1 = sl_pos[0];
       uint64_t fieldStartEnumConstraint1 = (uint64_t)currentPosition1;
-      size_t pos1 = 0;
+      size_t offsetInX_refinement = 0;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      size_t offsetBeforeX_refinement = pos1;
+      size_t offsetBeforeX_refinement = offsetInX_refinement;
       size_t positionBeforeX_refinement = sl_pos[0];
       size_t bytesRemainingBeforeX_refinement = (sl_len - positionBeforeX_refinement);
       bool hasBytesForX_refinement;
@@ -52,7 +52,7 @@ static uint8_t EnumConstraint_validate____core__enum_constraint(EVERPARSE_APP_CT
       }
       uint8_t resultAfterX_refinement;
       if (hasBytesForX_refinement) {
-        pos1 = (offsetBeforeX_refinement + 4);
+        offsetInX_refinement = (offsetBeforeX_refinement + 4);
         resultAfterX_refinement = EVERPARSE_STATUS_SUCCESS;
       }
       else {
