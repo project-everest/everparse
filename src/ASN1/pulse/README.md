@@ -20,6 +20,37 @@ fallback), and the presentation types (EXTERNAL, EMBEDDED PDV, CHARACTER
 STRING). The interpreter rejects unsupported schemas statically
 (`supported_k`), which the extraction roots discharge by normalization.
 
+## Zero-copy parsers and right-to-left writers
+
+Beyond validators, the directory has parsers and serializers over a
+low-level representation `asn1_impl_t k` of the values of a schema `k`
+(`ASN1.Pulse.Rel`): machine integers, booleans, slices pointing into the
+input for strings and big integers, tuples/`option`/`either` for
+SEQUENCE, SET and CHOICE, and LowParse mixed lists
+(`LowParse.PulseParse.Iterator.*`) for SEQUENCE OF and SET OF. The relation
+`asn1_rel k pm x' x` ties a low-level value `x'` to a spec value `x`,
+holding fractional permission `pm` on the input bytes it borrows.
+
+* **Parsers** (`ASN1.Pulse.Parser`, `parse_k`): from a validated input
+  (`pts_to_parsed`), return `x'` with `asn1_rel k pm x' x`, where `x` is
+  the value parsed by `asn1_as_parser k`; no copy, no allocation (SEQUENCE
+  OF and SET OF are returned lazily, as a count and the payload). Supported
+  schemas: `psupported_k`.
+* **Writers** (`ASN1.Pulse.Writer`, `write_k`): right-to-left. Given
+  `asn1_rel k pm x' x`, an output slice and a position `pos`, write the
+  encoding just left of `pos` and move `pos` to its start, or return
+  `false` (output too small) leaving the bytes right of `pos` untouched
+  (`LowParse.Pulse.R2L.r2l_writer_f`). Writing from the right lets every
+  TLV length be written after its contents, so no size is computed ahead.
+  The bytes written are `asn1_value_enc (to_value k x)`, which is the DER
+  encoding `serialize (asn1_serializer k) x` of `ASN1.Spec.Serializer`.
+  Supported schemas: `RS.wsupported_k` (all but ANY DEFINED BY; SET
+  components in canonical order) and well-formed (`Conformance.wf`).
+
+`make test-parse` and `make test-write` run the parsers and writers
+extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
+(`test/parse_test.c`, `test/write_test.c`: parse/write round trips).
+
 ## Layout
 
 | Module | Contents |
@@ -31,6 +62,10 @@ STRING). The interpreter rejects unsupported schemas statically
 | `ASN1.Pulse.Constructed`, `ASN1.Pulse.SetOf`, `ASN1.Pulse.SetComp` | SEQUENCE OF, CHOICE, SET OF, SET |
 | `ASN1.Pulse.Any`, `ASN1.Pulse.AnyDefinedBy` | ANY, ANY DEFINED BY |
 | `ASN1.Pulse.Interpreter` | the interpreter `validate_k` over schemas |
+| `ASN1.Pulse.Rel`, `ASN1.Pulse.RelShare` | low-level value types and relations; share/gather; writer-supported schemas |
+| `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
+| `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers, and the interpreter `write_k` |
+| `ASN1.Pulse.ParseTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |
 | `ASN1.Pulse.X509` | extraction roots for X.509 certificates and CRLs |
 
@@ -62,6 +97,9 @@ Custard pitfalls met in this code (comments in `ASN1.Pulse.Interpreter`):
   monomorphized value do not reduce: use projectors (`C?.x v`).
 * A monomorphized argument must not be a closure whose type mentions the
   schema (Error 368): rebuild the closure in the callee instead.
+* A top-level record of functions (such as `ASN1.Pulse.Rel.ml_ops`) is
+  extracted as a zero-initialized static, without its initializer: mark it
+  `inline_for_extraction`.
 
 ## Build and test
 
@@ -72,6 +110,8 @@ make test-oracle  # difftest vectors and mutations, against the F* spec runner
 make test-corpus  # X.509 and CRL corpora (../evaluation/data), against the spec runner
 make test-deep-any  # ANY nested 4000 deep, under a 64 KiB stack limit
 make stack-check    # no recursion, and worst-case stack of the X.509/CRL validators
+make test-parse     # zero-copy parsers on hand-written encodings
+make test-write     # right-to-left writers: parse/write round trips
 ```
 
 `make -C .. test` runs all of these, unless `NO_PULSE` is set. C files
