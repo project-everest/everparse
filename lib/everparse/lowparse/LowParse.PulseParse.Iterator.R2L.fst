@@ -229,6 +229,10 @@ let pts_to_parsed_serialize
 = serializer_correct_implies_complete p (bare_serialize s);
   assert (Seq.equal (Seq.slice w 0 (Seq.length w)) w)
 
+(* `enc` agrees with the bytes of every serialized element *)
+let enc_consumed (#k: parser_kind) (#u: Type) (p: parser k u) (enc: u -> GTot bytes) =
+  (w: bytes) -> (y: u) -> Lemma (requires pts_to_parsed_prop p w y) (ensures enc y == w)
+
 let append_assoc_singleton (#t: Type) (ld: list t) (y: t) (tl: list t)
 : Lemma (List.Tot.append ld (y :: tl) == List.Tot.append (List.Tot.append ld [y]) tl)
 = List.Tot.append_assoc ld [y] tl
@@ -236,13 +240,13 @@ let append_assoc_singleton (#t: Type) (ld: list t) (y: t) (tl: list t)
 (* Writing one element, either structured or already serialized *)
 
 inline_for_extraction
-fn r2l_write_elt_or_serialized
+fn r2l_write_elt_or_serialized_gen
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: Ghost.erased parser_kind) (#p: parser k u) (s: serializer p)
-  (sq: squash (k.parser_kind_injective == true))
-  (w: (pm: perm) -> r2l_writer_f (vmatch pm) (bare_serialize s))
+  (#k: Ghost.erased parser_kind) (#p: parser k u) (enc: u -> GTot bytes)
+  (enc_ok: enc_consumed p enc)
+  (w: (pm: perm) -> r2l_writer_f (vmatch pm) enc)
   (pm: perm)
-: r2l_writer_f #(elt_or_serialized t) #u (elt_or_serialized_match vmatch io p pm) (bare_serialize s)
+: r2l_writer_f #(elt_or_serialized t) #u (elt_or_serialized_match vmatch io p pm) enc
 = (x': elt_or_serialized t)
   (#x: Ghost.erased u)
   (out: S.slice byte)
@@ -261,7 +265,7 @@ fn r2l_write_elt_or_serialized
       rewrite (elt_or_serialized_match vmatch io p pm x' x) as (pts_to_parsed p pl #pm x);
       unfold (pts_to_parsed p pl #pm x);
       with wb . assert (S.pts_to pl #pm wb);
-      pts_to_parsed_serialize s wb x;
+      enc_ok wb x;
       fold (vmatch_bytes pm pl wb);
       let res = r2l_write_copy pm pl #wb out pos;
       unfold (vmatch_bytes pm pl wb);
@@ -277,15 +281,15 @@ fn r2l_write_elt_or_serialized
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 1"
 
 inline_for_extraction
-fn r2l_write_mixed_list
+fn r2l_write_mixed_list_gen
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: Ghost.erased parser_kind) (#p: parser k u) (s: serializer p)
-  (sq: squash (k.parser_kind_injective == true))
+  (#k: Ghost.erased parser_kind) (#p: parser k u) (enc: u -> GTot bytes)
+  (enc_ok: enc_consumed p enc)
   (j: LPS.jumper p)
-  (w: (pm: perm) -> r2l_writer_f (vmatch pm) (bare_serialize s))
+  (w: (pm: perm) -> r2l_writer_f (vmatch pm) enc)
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
   (pm: perm)
-: r2l_writer_f #(mixed_list i t) #(list u) (mixed_list_match vmatch io p pm) (enc_list (bare_serialize s))
+: r2l_writer_f #(mixed_list i t) #(list u) (mixed_list_match vmatch io p pm) (enc_list enc)
 = (ml: mixed_list i t)
   (#l: Ghost.erased (list u))
   (out: S.slice byte)
@@ -300,7 +304,7 @@ fn r2l_write_mixed_list
   let mut pit = it0;
   let mut pn = n0;
   let mut pok = true;
-  r2l_ml_inv_init (bare_serialize s) l (SZ.v p0) v;
+  r2l_ml_inv_init enc l (SZ.v p0) v;
   let p0r = !pos;
   let mut pld : Ghost.erased (list u) = Ghost.hide [];
   while (
@@ -316,7 +320,7 @@ fn r2l_write_mixed_list
     pure (
       Ghost.reveal l == List.Tot.append (Ghost.reveal ld) lr /\
       io.v n == List.Tot.length lr /\
-      r2l_ml_inv (bare_serialize s) l (SZ.v p0) v (Ghost.reveal ld) ok (SZ.v pc) vc
+      r2l_ml_inv enc l (SZ.v p0) v (Ghost.reveal ld) ok (SZ.v pc) vc
     )
   decreases %[(if !pok then 1 else 0); io.v (!pn)]
   {
@@ -331,7 +335,7 @@ fn r2l_write_mixed_list
       elt_or_serialized_match vmatch io p pm_v x y **
       R.pts_to pit it' **
       iterator_match vmatch io p pm' it' tl);
-    let res = r2l_write_elt_or_serialized vmatch io s sq w pm_v x #y out pos;
+    let res = r2l_write_elt_or_serialized_gen vmatch io enc enc_ok w pm_v x #y out pos;
     Trade.elim_hyp_l (elt_or_serialized_match vmatch io p pm_v x y) (iterator_match vmatch io p pm' it' tl) (iterator_match vmatch io p pmi it lr);
     Trade.trans (iterator_match vmatch io p pm' it' tl) (iterator_match vmatch io p pmi it lr) (mixed_list_match vmatch io p pm ml l);
     append_assoc_singleton #u (Ghost.reveal ld) y tl;
@@ -342,13 +346,13 @@ fn r2l_write_mixed_list
       let pnew = !pos;
       r2l_reverse_range out pnew pcur;
       with v3 . assert (pts_to out v3);
-      assert (pure (r2l_ml_inv (bare_serialize s) l (SZ.v p0) v (Ghost.reveal ld) true (SZ.v pc) vc));
-      assert (pure (r2l_post (bare_serialize s y) (SZ.v pc) vc true (SZ.v p2) v2));
+      assert (pure (r2l_ml_inv enc l (SZ.v p0) v (Ghost.reveal ld) true (SZ.v pc) vc));
+      assert (pure (r2l_post (enc y) (SZ.v pc) vc true (SZ.v p2) v2));
       assert (pure (reverse_range_post v2 (SZ.v p2) (SZ.v pc) v3));
-      r2l_ml_inv_step (bare_serialize s) l (SZ.v p0) v (Ghost.reveal ld) y (SZ.v pc) vc (SZ.v p2) v2 v3;
-      assert (pure (r2l_ml_inv (bare_serialize s) l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
+      r2l_ml_inv_step enc l (SZ.v p0) v (Ghost.reveal ld) y (SZ.v pc) vc (SZ.v p2) v2 v3;
+      assert (pure (r2l_ml_inv enc l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
     } else {
-      r2l_ml_inv_fail (bare_serialize s) l (SZ.v p0) v (Ghost.reveal ld) y tl (SZ.v pc) vc (SZ.v p2) v2;
+      r2l_ml_inv_fail enc l (SZ.v p0) v (Ghost.reveal ld) y tl (SZ.v pc) vc (SZ.v p2) v2;
       pok := false;
     }
   };
@@ -362,12 +366,26 @@ fn r2l_write_mixed_list
     let pend = !pos;
     r2l_reverse_range out pend p0r;
     with v3 . assert (pts_to out v3);
-    r2l_ml_inv_end (bare_serialize s) l (SZ.v p0) v (SZ.v pc) vc v3;
+    r2l_ml_inv_end enc l (SZ.v p0) v (SZ.v pc) vc v3;
     true
   } else {
-    r2l_ml_inv_end_fail (bare_serialize s) l (SZ.v p0) v (Ghost.reveal ld) (SZ.v pc) vc;
+    r2l_ml_inv_end_fail enc l (SZ.v p0) v (Ghost.reveal ld) (SZ.v pc) vc;
     false
   }
 }
 
 #pop-options
+
+(* The special case of a serializer *)
+
+inline_for_extraction
+let r2l_write_mixed_list
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
+  (#k: Ghost.erased parser_kind) (#p: parser k u) (s: serializer p)
+  (sq: squash (k.parser_kind_injective == true))
+  (j: LPS.jumper p)
+  (w: (pm: perm) -> r2l_writer_f (vmatch pm) (bare_serialize s))
+  (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
+  (pm: perm)
+: r2l_writer_f #(mixed_list i t) #(list u) (mixed_list_match vmatch io p pm) (enc_list (bare_serialize s))
+= r2l_write_mixed_list_gen vmatch io (bare_serialize s) (fun wb y -> pts_to_parsed_serialize s wb y) j w vmatch_share vmatch_gather pm

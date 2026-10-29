@@ -736,6 +736,116 @@ fn r2l_writer_sz_of_leaf_writer
   res
 }
 
+(* Leaf writers from left-to-right leaf writers of known size *)
+
+let r2l_of_l2r_post_lemma
+  (bs: bytes) (vp: nat) (v: bytes) (v1: bytes) (v1': bytes) (v2: bytes) (v': bytes)
+: Lemma
+  (requires
+    Seq.length bs <= vp /\ vp <= Seq.length v /\
+    v1 == Seq.slice v 0 vp /\ v2 == Seq.slice v vp (Seq.length v) /\
+    Seq.length v1' == vp /\
+    Seq.slice v1' (vp - Seq.length bs) vp == bs /\
+    v' == Seq.append v1' v2)
+  (ensures r2l_post bs vp v true (vp - Seq.length bs) v')
+= assert (Seq.equal (Seq.slice v' (vp - Seq.length bs) vp) (Seq.slice v1' (vp - Seq.length bs) vp));
+  assert (Seq.equal (Seq.slice v' vp (Seq.length v)) v2)
+
+inline_for_extraction
+fn r2l_leaf_writer_of_l2r
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: l2r_leaf_writer s)
+  (sz: (x: t) -> (n: SZ.t { SZ.v n == Seq.length (bare_serialize s x) }))
+: r2l_leaf_writer #t (bare_serialize s)
+= (x': t)
+  (#x: Ghost.erased t)
+  (out: slice byte)
+  (pos: ref SZ.t)
+  (#v: Ghost.erased bytes)
+  (#p0: Ghost.erased SZ.t)
+{
+  unfold (eq_as_slprop t x' x);
+  fold (eq_as_slprop t x' x);
+  let vp = !pos;
+  let n = sz x';
+  if (SZ.lt vp n) {
+    false
+  } else {
+    S.pts_to_len out;
+    let sp1, sp2 = S.split out vp;
+    with v1 . assert (pts_to sp1 v1);
+    with v2 . assert (pts_to sp2 v2);
+    S.pts_to_len sp1;
+    let off = SZ.sub vp n;
+    let _res = w x' sp1 off;
+    with v1' . assert (pts_to sp1 v1');
+    S.pts_to_len sp1;
+    S.join sp1 sp2 out;
+    r2l_of_l2r_post_lemma (bare_serialize s x) (SZ.v vp) v v1 v1' v2 (Seq.append v1' v2);
+    pos := off;
+    true
+  }
+}
+
+(* Byte sequences given by their length and an index function, e.g. the
+   encoding of a constant or of a small value computed on the fly *)
+
+let indexed_inv (v: bytes) (e: bytes) (start: nat) (i: nat) (vi: bytes) : prop =
+  start + Seq.length e <= Seq.length v /\
+  i <= Seq.length e /\
+  Seq.length vi == Seq.length v /\
+  (forall (j: nat) . {:pattern (Seq.index vi j)} j < Seq.length v ==> Seq.index vi j == (
+    if start <= j && j < start + i then Seq.index e (j - start) else Seq.index v j))
+
+let indexed_inv_end (v: bytes) (e: bytes) (start: nat) (vi: bytes)
+: Lemma
+  (requires indexed_inv v e start (Seq.length e) vi)
+  (ensures r2l_post e (start + Seq.length e) v true start vi)
+= let p = start + Seq.length e in
+  assert (Seq.equal (Seq.slice vi start p) e);
+  assert (Seq.equal (Seq.slice vi p (Seq.length v)) (Seq.slice v p (Seq.length v)))
+
+inline_for_extraction
+fn r2l_write_indexed
+  (len: SZ.t)
+  (f: (i: SZ.t { SZ.v i < SZ.v len }) -> byte)
+  (e: Ghost.erased bytes { Seq.length e == SZ.v len /\ (forall (i: nat) . i < SZ.v len ==> Seq.index e i == f (SZ.uint_to_t i)) })
+  (out: slice byte)
+  (pos: ref SZ.t)
+  (#v: Ghost.erased bytes)
+  (#p: Ghost.erased SZ.t)
+requires pts_to out v ** pts_to pos p ** pure (SZ.v p <= Seq.length v)
+returns res: bool
+ensures exists* v' p' . pts_to out v' ** pts_to pos p' ** pure (r2l_post e (SZ.v p) v res (SZ.v p') v')
+{
+  let vp = !pos;
+  if (SZ.lt vp len) {
+    false
+  } else {
+    S.pts_to_len out;
+    let start = SZ.sub vp len;
+    let mut pi = 0sz;
+    while (
+      let i = !pi;
+      SZ.lt i len
+    ) invariant exists* vi i . pts_to out vi ** pts_to pi i ** pure (indexed_inv v e (SZ.v start) (SZ.v i) vi)
+    decreases (SZ.v len - SZ.v (!pi))
+    {
+      let i = !pi;
+      S.pts_to_len out;
+      S.(out.(SZ.add start i) <- f i);
+      pi := SZ.add i 1sz;
+    };
+    with vi . assert (pts_to out vi);
+    indexed_inv_end v e (SZ.v start) vi;
+    pos := start;
+    true
+  }
+}
+
 (* Arrays *)
 
 let rec enc_seq
