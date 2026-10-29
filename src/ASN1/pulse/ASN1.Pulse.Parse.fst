@@ -217,3 +217,173 @@ fn parse_ilc
   Trade.trans _ _ (S.pts_to input #pm w);
   res
 }
+
+(* INTEGER *)
+
+module E = LowParse.Endianness
+module INT = ASN1.Spec.Content.INTEGER
+module I64 = FStar.Int64
+
+(* Two's complement big-endian value of a byte sequence *)
+let signed_be (b: SB.bytes) : GTot int =
+  if Seq.length b = 0 then 0
+  else if U8.v (Seq.index b 0) >= 128
+  then E.be_to_n b - pow2 (8 * Seq.length b)
+  else E.be_to_n b
+
+let signed_be_bounds (b: SB.bytes) : Lemma
+  (requires (Seq.length b > 0))
+  (ensures (
+    - (pow2 (8 * Seq.length b - 1)) <= signed_be b /\
+    signed_be b < pow2 (8 * Seq.length b - 1)
+  ))
+= E.lemma_be_to_n_is_bounded b;
+  INT.be_to_n_msb b;
+  FStar.Math.Lemmas.pow2_plus (8 * Seq.length b - 1) 1
+
+let signed_be_one (b: SB.bytes) : Lemma
+  (requires (Seq.length b == 1))
+  (ensures (signed_be b == (if U8.v (Seq.index b 0) >= 128 then U8.v (Seq.index b 0) - 256 else U8.v (Seq.index b 0))))
+= INT.be_to_n_singleton b;
+  assert_norm (pow2 8 == 256)
+
+let signed_be_snoc (b: SB.bytes) (x: U8.t) : Lemma
+  (requires (Seq.length b > 0))
+  (ensures (signed_be (Seq.snoc b x) == signed_be b * 256 + U8.v x))
+= let b1 = Seq.create 1 x in
+  Seq.lemma_eq_elim (Seq.snoc b x) (Seq.append b b1);
+  E.be_to_n_append b b1;
+  INT.be_to_n_singleton b1;
+  assert_norm (pow2 8 == 256);
+  FStar.Math.Lemmas.pow2_plus (8 * Seq.length b) 8
+
+let mk_integer'_signed_be (b: SB.bytes) : Lemma
+  (requires (INT.valid_unsigned_repr b))
+  (ensures (INT.mk_integer' b == signed_be b))
+= INT.be_to_n_msb b
+
+let parse_integer_eq (bound: pos) (w: SB.bytes) (v: asn1_integer_t bound) : Lemma
+  (requires (parsed #asn1_weak_parser_kind #(asn1_terminal_t (ASN1_INTEGER bound)) (asn1_terminal_as_parser (ASN1_INTEGER bound)) w v))
+  (ensures (
+    Seq.length w <= bound /\
+    INT.valid_unsigned_repr w /\
+    v == signed_be w
+  ))
+= assert (SB.parse (asn1_terminal_as_parser (ASN1_INTEGER bound)) w == INT.parse_untagged_bounded_integer' bound w);
+  mk_integer'_signed_be w
+
+#push-options "--z3rlimit 32"
+let big_integer_not_fits (w: SB.bytes) : Lemma
+  (requires (INT.valid_unsigned_repr w /\ Seq.length w > 8))
+  (ensures (~ (fits_i64 (INT.mk_integer' w))))
+= let n = Seq.length w in
+  INT.mk_integer'_eq w;
+  let x = INT.mk_integer' w in
+  let s = Some?.v (INT.mk_integer_aux w) in
+  assert (x == s);
+  assert (INT.domain n x);
+  FStar.Math.Lemmas.pow2_le_compat (8 * (n - 1) - 1) 63;
+  FStar.Math.Lemmas.pow2_le_compat (8 * (n - 1)) 64;
+  FStar.Math.Lemmas.pow2_plus (8 * (n - 1)) 8;
+  assert_norm (pow2 8 == 256);
+  assert_norm (pow2 63 == 9223372036854775808);
+  assert_norm (pow2 64 == 18446744073709551616)
+#pop-options
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn read_int64
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#w: Ghost.erased SB.bytes)
+  requires S.pts_to input #pm w ** pure (0 < Seq.length w /\ Seq.length w <= 8)
+  returns res: I64.t
+  ensures S.pts_to input #pm w ** pure (I64.v res == signed_be w)
+{
+  S.pts_to_len input;
+  let len = S.len input;
+  let b0 = S.(input.(0sz));
+  Seq.lemma_eq_elim (Seq.slice w 0 1) (Seq.create 1 b0);
+  signed_be_one (Seq.slice w 0 1);
+  let i0 = FStar.Int.Cast.uint8_to_int64 b0;
+  let init = (if U8.lt b0 128uy then i0 else I64.sub i0 256L);
+  let mut pacc = init;
+  let mut pi = 1sz;
+  while (
+    let i = !pi;
+    SZ.lt i len
+  ) invariant exists* acc i .
+    S.pts_to input #pm w **
+    pts_to pacc acc **
+    pts_to pi i **
+    pure (
+      1 <= SZ.v i /\ SZ.v i <= Seq.length w /\
+      I64.v acc == signed_be (Seq.slice w 0 (SZ.v i))
+    )
+    decreases (SZ.v len - SZ.v (!pi))
+  {
+    let i = !pi;
+    let acc = !pacc;
+    let b = S.(input.(i));
+    let wi = Ghost.hide (Seq.slice w 0 (SZ.v i));
+    Seq.lemma_eq_elim (Seq.slice w 0 (SZ.v i + 1)) (Seq.snoc wi b);
+    signed_be_snoc wi b;
+    signed_be_bounds wi;
+    signed_be_bounds (Seq.slice w 0 (SZ.v i + 1));
+    FStar.Math.Lemmas.pow2_le_compat 63 (8 * (SZ.v i + 1) - 1);
+    FStar.Math.Lemmas.pow2_plus (8 * SZ.v i - 1) 8;
+    assert_norm (pow2 8 == 256);
+    assert_norm (pow2 63 == 9223372036854775808);
+    let acc' = I64.add (I64.mul acc 256L) (FStar.Int.Cast.uint8_to_int64 b);
+    pacc := acc';
+    pi := SZ.add i 1sz;
+  };
+  !pacc
+}
+
+#pop-options
+
+inline_for_extraction
+fn parse_small_integer (bound: pos { small_integer bound })
+: aparser #I64.t #(asn1_integer_t bound) (asn1_small_int_rel bound) #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_INTEGER bound))
+= (input: _) (#pm: _) (#w: _) (#v: _)
+{
+  parse_integer_eq bound w v;
+  let res = read_int64 input;
+  fold (asn1_small_int_rel bound pm res v);
+  intro_trade (asn1_small_int_rel bound pm res v) (S.pts_to input #pm w) (S.pts_to input #pm w) fn _ {
+    unfold (asn1_small_int_rel bound pm res v);
+  };
+  res
+}
+
+inline_for_extraction
+fn parse_big_integer (bound: pos)
+: aparser #asn1_int_impl #(asn1_integer_t bound) (asn1_int_rel bound) #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_INTEGER bound))
+= (input: _) (#pm: _) (#w: _) (#v: _)
+{
+  parse_integer_eq bound w v;
+  S.pts_to_len input;
+  if (SZ.lte (S.len input) 8sz) {
+    let i = read_int64 input;
+    let res = Small i;
+    rewrite (pure (I64.v i == Ghost.reveal v)) as (asn1_int_rel bound pm res v);
+    intro_trade (asn1_int_rel bound pm res v) (S.pts_to input #pm w) (S.pts_to input #pm w) fn _ {
+      rewrite (asn1_int_rel bound pm res v) as (pure (I64.v i == Ghost.reveal v));
+    };
+    res
+  } else {
+    big_integer_not_fits w;
+    mk_integer'_signed_be w;
+    leaf_enc_consumed (ASN1_INTEGER bound) w;
+    let res = Big input;
+    fold (prel_slice_ser (integer_enc bound) pm input v);
+    rewrite (prel_slice_ser (integer_enc bound) pm input v ** pure (~ (fits_i64 v))) as (asn1_int_rel bound pm res v);
+    intro_trade (asn1_int_rel bound pm res v) (S.pts_to input #pm w) emp fn _ {
+      rewrite (asn1_int_rel bound pm res v) as (prel_slice_ser (integer_enc bound) pm input v ** pure (~ (fits_i64 v)));
+      unfold (prel_slice_ser (integer_enc bound) pm input v);
+    };
+    res
+  }
+}
