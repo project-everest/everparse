@@ -205,6 +205,29 @@ int main(void) {
   if (VALID(ASN1_Pulse_ParseTest_validate_adbI, ki6)) { printf("adbI invalid 1 INTEGER\n"); fails++; }
   uint8_t ki7[] = {0x30, 0x06, 0x02, 0x02, 0x00, 0x01, 0x05, 0x00}; /* non-minimal key */
   if (VALID(ASN1_Pulse_ParseTest_validate_adbI, ki7)) { printf("adbI invalid non-minimal\n"); fails++; }
+  /* ANY DEFINED BY a [0] EXPLICIT INTEGER key: 1 -> NULL, -1 -> INTEGER, no fallback */
+  uint8_t kt1[] = {0x30, 0x07, 0xa0, 0x03, 0x02, 0x01, 0x01, 0x05, 0x00};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbT, kt1)) { printf("adbT valid 1\n"); fails++; }
+  FStar_Pervasives_either__unit_asn1_int_impl akt = ASN1_Pulse_ParseTest_parse_adbT(SL(kt1));
+  if (akt.tag != FSTAR_PERVASIVES_INL__UNIT_ASN1_INT_IMPL) { printf("adbT 1\n"); fails++; }
+  uint8_t kt2[] = {0x30, 0x08, 0xa0, 0x03, 0x02, 0x01, 0xff, 0x02, 0x01, 0x07};
+  if (!VALID(ASN1_Pulse_ParseTest_validate_adbT, kt2)) { printf("adbT valid -1\n"); fails++; }
+  akt = ASN1_Pulse_ParseTest_parse_adbT(SL(kt2));
+  if (akt.tag != FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL || akt.val.Inr.val.Small != 7) { printf("adbT -1\n"); fails++; }
+  uint8_t kt3[] = {0x30, 0x07, 0xa0, 0x03, 0x02, 0x01, 0x02, 0x05, 0x00}; /* unknown key, no fallback */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt3)) { printf("adbT invalid 2\n"); fails++; }
+  uint8_t kt4[] = {0x30, 0x07, 0xa0, 0x03, 0x04, 0x01, 0x01, 0x05, 0x00}; /* wrong inner identifier */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt4)) { printf("adbT invalid inner id\n"); fails++; }
+  uint8_t kt5[] = {0x30, 0x08, 0xa0, 0x81, 0x03, 0x02, 0x01, 0x01, 0x05, 0x00}; /* non-minimal outer length */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt5)) { printf("adbT invalid outer length\n"); fails++; }
+  uint8_t kt6[] = {0x30, 0x08, 0xa0, 0x04, 0x02, 0x81, 0x01, 0x01, 0x05, 0x00}; /* non-minimal inner length */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt6)) { printf("adbT invalid inner length\n"); fails++; }
+  uint8_t kt7[] = {0x30, 0x08, 0xa0, 0x03, 0x02, 0x01, 0x01, 0x02, 0x01, 0x07}; /* 1 -> NULL, not INTEGER */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt7)) { printf("adbT invalid 1 INTEGER\n"); fails++; }
+  uint8_t kt8[] = {0x30, 0x08, 0xa0, 0x04, 0x02, 0x01, 0x01, 0x00, 0x05, 0x00}; /* trailing byte in the tag */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt8)) { printf("adbT invalid trailing\n"); fails++; }
+  uint8_t kt9[] = {0x30, 0x08, 0xa0, 0x04, 0x02, 0x02, 0x00, 0x01, 0x05, 0x00}; /* non-minimal INTEGER key */
+  if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt9)) { printf("adbT invalid non-minimal\n"); fails++; }
   /* AlgorithmIdentifier from the difftest schemas */
   uint8_t g1[] = {0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
   FStar_Pervasives_either__unit_tuple2_slice_uint8_option_slice_uint8 ag = ASN1_Pulse_ParseTest_parse_algId(SL(g1));

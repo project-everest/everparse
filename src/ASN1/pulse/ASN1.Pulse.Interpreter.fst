@@ -22,6 +22,7 @@ module Rs = ASN1.Pulse.Restrict
 module SC = ASN1.Pulse.SetComp
 module Any = ASN1.Pulse.Any
 module ADB = ASN1.Pulse.AnyDefinedBy
+module AP = ASN1.Pulse.AdbPrefixed
 module SA = ASN1.Pulse.SeqAny
 module PPFL = LowParse.PulseParse.FLData
 module SCo = LowParse.Spec.Combinators
@@ -95,12 +96,19 @@ let supported_restriction (k: asn1_terminal_k) (r: asn1_restriction k) : Tot boo
 
 (* ANY DEFINED BY: the kinds of keys that can be compared with a constant *)
 [@@asn1_pulse_attr]
-let adb_key_supported (k: asn1_terminal_k) : Tot bool =
+let rec adb_key_supported (k: asn1_terminal_k) : Tot bool (decreases k) =
   match k with
   | ASN1_INTEGER _ -> supported_terminal k
-  | ASN1_RELATIVE_OID
-  | ASN1_PREFIXED_TERMINAL _ _ -> false
+  | ASN1_RELATIVE_OID -> false
+  | ASN1_PREFIXED_TERMINAL _ k' -> adb_key_supported k'
   | _ -> true
+
+let rec adb_key_supported_terminal (k: asn1_terminal_k)
+: Lemma (requires adb_key_supported k) (ensures supported_terminal k) (decreases k)
+  [SMTPat (adb_key_supported k)]
+= match k with
+  | ASN1_PREFIXED_TERMINAL _ k' -> adb_key_supported_terminal k'
+  | _ -> ()
 
 [@@asn1_pulse_attr]
 let rec supported_content (k: asn1_content_k) : Tot bool (decreases k) =
@@ -287,7 +295,7 @@ let rec char_list_bytes_correct (#p: U8.t -> Tot bool) (l: list (b: LowParse.Byt
 
 [@@asn1_pulse_attr]
 inline_for_extraction
-let key_enc_list (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) }) (x: asn1_key_lit k) : Tot (list U8.t) =
+let key_enc_list (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) /\ ~ (ASN1_PREFIXED_TERMINAL? k) }) (x: asn1_key_lit k) : Tot (list U8.t) =
   match k with
   | ASN1_BOOLEAN -> let x : bool = x in [if x then 0xFFuy else 0x00uy]
   | ASN1_NULL -> []
@@ -300,7 +308,7 @@ let key_enc_list (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) })
   | _ -> let x : list U8.t = x in x
 
 #push-options "--z3rlimit 32 --fuel 2 --ifuel 2"
-let key_enc_list_correct (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) }) (x: asn1_key_lit k)
+let key_enc_list_correct (k: asn1_terminal_k { adb_key_supported k /\ ~ (ASN1_OID? k) /\ ~ (ASN1_PREFIXED_TERMINAL? k) }) (x: asn1_key_lit k)
 : Lemma (Seq.seq_of_list (key_enc_list k x) == ASN1.Spec.Content.Enc.leaf_enc k (key_of_lit k x))
 = match k with
   | ASN1_BOOLEAN ->
@@ -350,10 +358,29 @@ let rec validate_bytes_eq ([@@@FStar.Attributes.monomorphize] l: list U8.t)
 
 [@@asn1_pulse_attr]
 inline_for_extraction
-let validate_key_eq_fl (key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k)) (x: asn1_key_lit key_k) (l: SZ.t)
+let prefixed_lit (id2: asn1_id_t) (k2: asn1_terminal_k) (x: asn1_key_lit (ASN1_PREFIXED_TERMINAL id2 k2)) : Tot (asn1_key_lit k2) =
+  assert_norm (asn1_key_lit (ASN1_PREFIXED_TERMINAL id2 k2) == asn1_key_lit k2);
+  coerce_eq () x
+
+#push-options "--fuel 2 --ifuel 2"
+let key_of_lit_prefixed (id2: asn1_id_t) (k2: asn1_terminal_k) (x: asn1_key_lit (ASN1_PREFIXED_TERMINAL id2 k2))
+: Lemma (key_of_lit (ASN1_PREFIXED_TERMINAL id2 k2) x == AP.pt_val id2 k2 (key_of_lit k2 (prefixed_lit id2 k2 x)))
+= ()
+#pop-options
+
+[@@asn1_pulse_attr]
+let rec validate_key_eq_fl ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k)) ([@@@FStar.Attributes.monomorphize] x: asn1_key_lit key_k) (l: SZ.t)
 : Tot (LPS.validator #_ #(SFL.parse_fldata_kind (SZ.v l) (SCo.parse_filter_kind asn1_weak_parser_kind)) (ADB.key_eq_fldata key_k (key_of_lit key_k x) (SZ.v l)))
+  (decreases key_k)
 = match key_k with
   | ASN1_OID -> PPFL.validate_fldata (validate_key_eq key_k () x) l
+  | ASN1_PREFIXED_TERMINAL id2 k2 ->
+    let x2 = prefixed_lit id2 k2 x in
+    key_of_lit_prefixed id2 k2 x;
+    Classical.forall_intro (AP.prefixed_key_fldata_consumed id2 k2 (key_of_lit k2 x2) (SZ.v l));
+    validate_ext_consumed
+      (PPFL.validate_fldata (AP.validate_prefixed_key id2 (fun len -> validate_key_eq_fl k2 () x2 len)) l)
+      (ADB.key_eq_fldata key_k (key_of_lit key_k x) (SZ.v l))
   | _ ->
     key_enc_list_correct key_k x;
     Classical.forall_intro (ADB.key_lit_fldata_consumed key_k (key_of_lit key_k x) (key_enc_list key_k x) (SZ.v l));
