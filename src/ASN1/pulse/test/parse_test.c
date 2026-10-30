@@ -228,6 +228,48 @@ int main(void) {
   if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt8)) { printf("adbT invalid trailing\n"); fails++; }
   uint8_t kt9[] = {0x30, 0x08, 0xa0, 0x04, 0x02, 0x02, 0x00, 0x01, 0x05, 0x00}; /* non-minimal INTEGER key */
   if (VALID(ASN1_Pulse_ParseTest_validate_adbT, kt9)) { printf("adbT invalid non-minimal\n"); fails++; }
+  /* DEFAULT literals: SEQUENCE { a INTEGER DEFAULT 0, b OCTET STRING DEFAULT 'ABCD'H,
+     s PrintableString DEFAULT "ab", t [0] EXPLICIT INTEGER DEFAULT 5,
+     r [1] IMPLICIT INTEGER (0..10) DEFAULT 3 } */
+  uint8_t dl1[] = {0x30, 0x00}; /* all defaults */
+  if (!VALID(ASN1_Pulse_ParseTest_validate_defL, dl1)) { printf("defL valid empty\n"); fails++; }
+  {
+    uint8_t d[] = {0x30, 0x11, 0x02, 0x01, 0x01, 0x04, 0x01, 0xab, 0x13, 0x01, 0x61,
+      0xa0, 0x03, 0x02, 0x01, 0x06, 0x81, 0x01, 0x0a}; /* all non-default */
+    if (!VALID(ASN1_Pulse_ParseTest_validate_defL, d)) { printf("defL valid non-default\n"); fails++; }
+    FStar_Pervasives_Native_tuple2__option_asn1_int_impl_tuple2_option_slice_uint8_t p = ASN1_Pulse_ParseTest_parse_defL(SL(d));
+    if (p._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || p._1.val.Some.val.Small != 1
+        || p._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8 || p._2._1.val.Some.len != 1 || p._2._1.val.Some.elt != d + 7
+        || p._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8 || p._2._2._1.val.Some.len != 1 || p._2._2._1.val.Some.elt != d + 10
+        || p._2._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || p._2._2._2._1.val.Some.val.Small != 6
+        || p._2._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || p._2._2._2._2.val.Some.val.Small != 10) { printf("defL parse non-default\n"); fails++; }
+  }
+  {
+    FStar_Pervasives_Native_tuple2__option_asn1_int_impl_tuple2_option_slice_uint8_t p = ASN1_Pulse_ParseTest_parse_defL(SL(dl1));
+    if (p._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL || p._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8
+        || p._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8 || p._2._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL
+        || p._2._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL) { printf("defL parse empty\n"); fails++; }
+  }
+  uint8_t dl3[] = {0x30, 0x03, 0x02, 0x01, 0x00}; /* a = 0 encoded */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl3)) { printf("defL invalid a\n"); fails++; }
+  uint8_t dl4[] = {0x30, 0x04, 0x04, 0x02, 0xab, 0xcd}; /* b = 'ABCD'H encoded */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl4)) { printf("defL invalid b\n"); fails++; }
+  uint8_t dl4b[] = {0x30, 0x05, 0x04, 0x03, 0xab, 0xcd, 0x00}; /* b with default prefix */
+  if (!VALID(ASN1_Pulse_ParseTest_validate_defL, dl4b)) { printf("defL valid b prefix\n"); fails++; }
+  uint8_t dl5[] = {0x30, 0x04, 0x13, 0x02, 0x61, 0x62}; /* s = "ab" encoded */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl5)) { printf("defL invalid s\n"); fails++; }
+  uint8_t dl6[] = {0x30, 0x05, 0xa0, 0x03, 0x02, 0x01, 0x05}; /* t = 5 encoded */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl6)) { printf("defL invalid t\n"); fails++; }
+  uint8_t dl7[] = {0x30, 0x03, 0x81, 0x01, 0x03}; /* r = 3 encoded */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl7)) { printf("defL invalid r\n"); fails++; }
+  uint8_t dl8[] = {0x30, 0x03, 0x81, 0x01, 0x0b}; /* r = 11 out of range */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl8)) { printf("defL invalid r range\n"); fails++; }
+  uint8_t dl9[] = {0x30, 0x03, 0x81, 0x01, 0x04}; /* r = 4 */
+  if (!VALID(ASN1_Pulse_ParseTest_validate_defL, dl9)) { printf("defL valid r\n"); fails++; }
+  uint8_t dl10[] = {0x30, 0x04, 0x02, 0x02, 0x00, 0x01}; /* non-minimal INTEGER */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl10)) { printf("defL invalid non-minimal\n"); fails++; }
+  uint8_t dl11[] = {0x30, 0x04, 0x13, 0x02, 0x61, 0x7f}; /* s not printable */
+  if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl11)) { printf("defL invalid s char\n"); fails++; }
   /* AlgorithmIdentifier from the difftest schemas */
   uint8_t g1[] = {0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
   FStar_Pervasives_either__unit_tuple2_slice_uint8_option_slice_uint8 ag = ASN1_Pulse_ParseTest_parse_algId(SL(g1));

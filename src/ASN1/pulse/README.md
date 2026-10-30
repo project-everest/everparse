@@ -13,7 +13,10 @@ consumed length (`LowParse.Pulse.Base.validator`).
 
 Every schema construct of the specification: all universal terminal types,
 restricted terminals (`asn1_restriction`), PREFIXED (EXPLICIT tags),
-SEQUENCE (OPTIONAL, DEFAULT for BOOLEAN and NULL), SEQUENCE OF, SET OF
+SEQUENCE (OPTIONAL, DEFAULT: default values are `asn1_key_lit` literals,
+so a present component encoding its default is rejected by the same
+comparison as ANY DEFINED BY keys, for every terminal kind supported as a
+key, restricted or not; `ASN1.Pulse.DefaultLit`), SEQUENCE OF, SET OF
 (DER ordering), SET (at most 64 components), CHOICE, ANY, ANY DEFINED BY
 (with or without a prefix, with or without a fallback; keys of any terminal
 type except RELATIVE-OID: OBJECT IDENTIFIER keys are

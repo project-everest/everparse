@@ -190,14 +190,14 @@ let dec_shaped' (#s: _) (#d: _) (dk: asn1_decorated_k s d) (id: asn1_id_t) (b: b
     parse_synth_eq (Mkgendcparser?.fp item id) Some b
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     let fp = Mkgendcparser?.fp item in
-    parse_synth_eq ((fp id) `parse_filter` (defaultv_filter defv)) (defaultv_synth defv) b;
-    parse_filter_eq (fp id) (defaultv_filter defv) b;
+    parse_synth_eq ((fp id) `parse_filter` (defaultv_filter (key_of_lit k defv))) (defaultv_synth (key_of_lit k defv)) b;
+    parse_filter_eq (fp id) (defaultv_filter (key_of_lit k defv)) b;
     if id = id0 then C.vlgen_eq (asn1_terminal_as_parser k) b
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     let fp = Mkgendcparser?.fp item in
     let d = Mkgendcparser?.d item in
-    parse_synth_eq (((fp id) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defv)) (defaultv_synth #(asn1_decorated_pure_t d) defv) b;
-    parse_filter_eq ((fp id) `parse_filter` (restriction_pred r)) (defaultv_filter #(asn1_decorated_pure_t d) defv) b;
+    parse_synth_eq (((fp id) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) (key_of_lit k defv))) (defaultv_synth #(asn1_decorated_pure_t d) (key_of_lit k defv)) b;
+    parse_filter_eq ((fp id) `parse_filter` (restriction_pred r)) (defaultv_filter #(asn1_decorated_pure_t d) (key_of_lit k defv)) b;
     parse_filter_eq (fp id) (restriction_pred r) b;
     if id = id0 then C.vlgen_eq (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) b
 #pop-options
@@ -386,7 +386,7 @@ let dec_option (#s: _) (k: asn1_k s) (w: bytes) (v: option (asn1_t k))
     assert (parse_asn1_sequence_item_twin (I.twin_of (ASN1_OPTION_ILC k)) id == (snd (asn1_as_parser_twin k) id `parse_synth` Some));
     parse_synth_eq (snd (asn1_as_parser_twin k) id) Some (Seq.slice w c1 (Seq.length w))
 
-let dec_default (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k) (w: bytes) (v: default_tv defv)
+let dec_default (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (w: bytes) (v: default_tv (key_of_lit k defv))
 : Lemma
   (requires (item_parsed (I.twin_of (ASN1_DEFAULT_TERMINAL id0 #k defv)) w v))
   (ensures (Nondefault? v /\ P.parsed #asn1_strong_parser_kind (parse_asn1_ILC id0 #(ASN1_TERMINAL k) (asn1_terminal_as_parser k)) w (Nondefault?.v' v)))
@@ -396,21 +396,22 @@ let dec_default (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k)
   | Some (id, c1) ->
     let b1 = Seq.slice w c1 (Seq.length w) in
     let fp = parse_asn1_ILC_twin id0 #(ASN1_TERMINAL k) p in
-    parse_synth_eq ((fp id) `parse_filter` (defaultv_filter defv)) (defaultv_synth defv) b1;
-    parse_filter_eq (fp id) (defaultv_filter defv) b1
+    parse_synth_eq ((fp id) `parse_filter` (defaultv_filter (key_of_lit k defv))) (defaultv_synth (key_of_lit k defv)) b1;
+    parse_filter_eq (fp id) (defaultv_filter (key_of_lit k defv)) b1
 
-let dec_default_restricted (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: parse_filter_refine (restriction_pred r)) (w: bytes) (v: default_tv defv)
+let dec_default_restricted (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (w: bytes) (v: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
 : Lemma
   (requires (item_parsed (I.twin_of (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) w v))
   (ensures (Nondefault? v /\ P.parsed #asn1_strong_parser_kind (parse_asn1_ILC id0 #(ASN1_RESTRICTED_TERMINAL k r) (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))) w (Nondefault?.v' v)))
-= let p : asn1_weak_parser (parse_filter_refine (restriction_pred r)) = weaken _ ((asn1_terminal_as_parser k) `parse_filter` (restriction_pred r)) in
+= let dv : parse_filter_refine (restriction_pred r) = key_of_lit k defv in
+  let p : asn1_weak_parser (parse_filter_refine (restriction_pred r)) = weaken _ ((asn1_terminal_as_parser k) `parse_filter` (restriction_pred r)) in
   assert (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r) == p);
   ILC.ilc_eq id0 #(ASN1_RESTRICTED_TERMINAL k r) p w;
   match parse parse_asn1_identifier_U32 w with
   | Some (id, c1) ->
     let b1 = Seq.slice w c1 (Seq.length w) in
     let fp = parse_asn1_ILC_twin id0 #(ASN1_RESTRICTED_TERMINAL k r) p in
-    parse_synth_eq (((fp id) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter defv)) (defaultv_synth defv) b1;
-    parse_filter_eq ((fp id) `parse_filter` (restriction_pred r)) (defaultv_filter defv) b1;
+    parse_synth_eq (((fp id) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter dv)) (defaultv_synth dv) b1;
+    parse_filter_eq ((fp id) `parse_filter` (restriction_pred r)) (defaultv_filter dv) b1;
     parse_filter_eq (fp id) (restriction_pred r) b1
 #pop-options

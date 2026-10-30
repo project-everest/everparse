@@ -1543,11 +1543,13 @@ let dec_twin_tag (#s: _) (#d: _) (dk: asn1_decorated_k s d) (id: asn1_id_t) (b: 
   | ASN1_OPTION_ILC k ->
     k_twin_tag k id b;
     parse_synth_eq (Mkgendcparser?.fp item id) Some b
-  | ASN1_DEFAULT_TERMINAL id0 #k defv ->
+  | ASN1_DEFAULT_TERMINAL id0 #k defv_l ->
+    let defv = key_of_lit k defv_l in
     let fp = Mkgendcparser?.fp item in
     parse_synth_eq ((fp id) `parse_filter` (defaultv_filter defv)) (defaultv_synth defv) b;
     parse_filter_eq (fp id) (defaultv_filter defv) b
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv_l ->
+    let defv : parse_filter_refine (restriction_pred r) = key_of_lit k defv_l in
     let fp = Mkgendcparser?.fp item in
     let d = Mkgendcparser?.d item in
     parse_synth_eq (((fp id) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defv)) (defaultv_synth #(asn1_decorated_pure_t d) defv) b;

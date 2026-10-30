@@ -683,13 +683,13 @@ let dec_option_equiv (#s: _) (k: asn1_k s)
 : Lemma (prel_equiv #(option (asn1_impl_t k)) #(option (asn1_t k)) (prel_option (asn1_rel k)) (asn1_decorated_rel (ASN1_OPTION_ILC k)))
 = assert_norm (prel_equiv #(option (asn1_impl_t k)) #(option (asn1_t k)) (prel_option (asn1_rel k)) (asn1_decorated_rel (ASN1_OPTION_ILC k)))
 
-let dec_default_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k)
-: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv defv) (prel_default (asn1_terminal_rel k) defv) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 defv)))
-= assert_norm (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv defv) (prel_default (asn1_terminal_rel k) defv) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 defv)))
+let dec_default_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k)
+: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv (key_of_lit k defv)) (prel_default (asn1_terminal_rel k) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)))
+= assert_norm (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv (key_of_lit k defv)) (prel_default (asn1_terminal_rel k) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)))
 
-let dec_default_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: parse_filter_refine (restriction_pred r))
-: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv defv) (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv)))
-= assert_norm (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv defv) (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv)))
+let dec_default_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) })
+: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv)) (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)))
+= assert_norm (prel_equiv #(option (asn1_terminal_impl_t k)) #(default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv)) (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)))
 
 (* Items *)
 
@@ -980,10 +980,10 @@ and share_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (wsupported_
     share_ext (prel_option (asn1_rel k)) (asn1_decorated_rel (ASN1_OPTION_ILC k)) () (share_option (asn1_rel k) (share_k k ()))
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     dec_default_equiv id0 defv;
-    share_ext (prel_default (asn1_terminal_rel k) defv) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 defv)) () (share_default (asn1_terminal_rel k) defv (share_terminal k))
+    share_ext (prel_default (asn1_terminal_rel k) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (share_default (asn1_terminal_rel k) (key_of_lit k defv) (share_terminal k))
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    share_ext (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv)) () (share_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv (share_restricted k r (share_terminal k)))
+    share_ext (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (share_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv) (share_restricted k r (share_terminal k)))
 
 and share_items (#i: _) (ls: asn1_gen_items_l i) (u: squash (wsupported_items ls))
 : Tot (share_t (asn1_items_rel ls)) (decreases ls)
@@ -1051,10 +1051,10 @@ and gather_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (wsupported
     gather_ext (prel_option (asn1_rel k)) (asn1_decorated_rel (ASN1_OPTION_ILC k)) () (gather_option (asn1_rel k) (gather_k k ()))
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     dec_default_equiv id0 defv;
-    gather_ext (prel_default (asn1_terminal_rel k) defv) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 defv)) () (gather_default (asn1_terminal_rel k) defv (gather_terminal k))
+    gather_ext (prel_default (asn1_terminal_rel k) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (gather_default (asn1_terminal_rel k) (key_of_lit k defv) (gather_terminal k))
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    gather_ext (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv)) () (gather_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv (gather_restricted k r (gather_terminal k)))
+    gather_ext (prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (gather_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv) (gather_restricted k r (gather_terminal k)))
 
 and gather_items (#i: _) (ls: asn1_gen_items_l i) (u: squash (wsupported_items ls))
 : Tot (gather_t (asn1_items_rel ls)) (decreases ls)

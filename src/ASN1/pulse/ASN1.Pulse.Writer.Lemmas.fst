@@ -159,16 +159,16 @@ let denc_option (#s: _) (k: asn1_k s) (x: asn1_decorated_t_core (ASN1_OPTION_ILC
   | None -> ()
   | Some y -> value_list_enc_single (to_value k y)
 
-let denc_default (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k) (x: asn1_decorated_t_core (ASN1_DEFAULT_TERMINAL id0 defv))
-: Lemma (denc (ASN1_DEFAULT_TERMINAL id0 defv) x == default_enc #_ #defv (WL.terminal_enc id0 k) x)
-= let x' : default_tv defv = x in
+let denc_default (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (x: asn1_decorated_t_core (ASN1_DEFAULT_TERMINAL id0 #k defv))
+: Lemma (denc (ASN1_DEFAULT_TERMINAL id0 #k defv) x == default_enc #_ #(key_of_lit k defv) (WL.terminal_enc id0 k) x)
+= let x' : default_tv (key_of_lit k defv) = x in
   match x' with
   | Default -> ()
   | Nondefault y -> value_list_enc_single (terminal_to_value id0 k y)
 
-let denc_default_restricted (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: parse_filter_refine (restriction_pred r)) (x: asn1_decorated_t_core (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv))
-: Lemma (denc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv) x == default_enc #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) #defv (cenc id0 (ASN1_RESTRICTED_TERMINAL k r)) x)
-= let x' : default_tv #(parse_filter_refine (restriction_pred r)) defv = x in
+let denc_default_restricted (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (x: asn1_decorated_t_core (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv))
+: Lemma (denc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) x == default_enc #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) #(key_of_lit k defv) (cenc id0 (ASN1_RESTRICTED_TERMINAL k r)) x)
+= let x' : default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv) = x in
   match x' with
   | Default -> ()
   | Nondefault y -> value_list_enc_single (terminal_to_value id0 k y)
@@ -255,10 +255,10 @@ let dec_vals (#s: _) (#d: _) (dk: asn1_decorated_k s d) (x: asn1_decorated_t_cor
     let x' : option (asn1_t k) = x in
     (match x' with None -> () | Some y -> k_value_id k y)
   | ASN1_DEFAULT_TERMINAL id #k defv ->
-    let x' : default_tv defv = x in
+    let x' : default_tv (key_of_lit k defv) = x in
     (match x' with Default -> () | Nondefault y -> terminal_value_id id k y)
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv ->
-    let x' : default_tv #(parse_filter_refine (restriction_pred r)) defv = x in
+    let x' : default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv) = x in
     (match x' with Default -> () | Nondefault y -> terminal_value_id id k y)
 #pop-options
 

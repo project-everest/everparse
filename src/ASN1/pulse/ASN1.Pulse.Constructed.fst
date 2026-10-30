@@ -263,10 +263,11 @@ let lc_filter_consumed (k: asn1_terminal_k) (f: asn1_terminal_t k -> bool) (b: b
       T.parse_filter_eq #asn1_weak_parser_kind p (restriction_pred (RESTRICT_CUSTOM f)) (Seq.slice b sz (sz + U32.v len))
     end
 
-let default_terminal_twin_consumed (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k) (id: asn1_id_t) (b: bytes)
-: Lemma (consumed #asn1_strong_parser_kind (parse_asn1_sequence_item_twin (asn1_decorated_as_parser_twin (ASN1_DEFAULT_TERMINAL id0 #k defv)) id) b ==
-    (if id0 = id then consumed #asn1_strong_parser_kind (parse_asn1_LC (asn1_content_as_parser (default_content k defv))) b else None))
-= let fp = parse_asn1_ILC_twin id0 #(ASN1_TERMINAL k) (asn1_terminal_as_parser k) id in
+let default_terminal_twin_consumed (id0: asn1_id_t) (#k: asn1_terminal_k) (defl: asn1_key_lit k) (id: asn1_id_t) (b: bytes)
+: Lemma (consumed #asn1_strong_parser_kind (parse_asn1_sequence_item_twin (asn1_decorated_as_parser_twin (ASN1_DEFAULT_TERMINAL id0 #k defl)) id) b ==
+    (if id0 = id then consumed #asn1_strong_parser_kind (parse_asn1_LC (asn1_content_as_parser (default_content k (key_of_lit k defl)))) b else None))
+= let defv = key_of_lit k defl in
+  let fp = parse_asn1_ILC_twin id0 #(ASN1_TERMINAL k) (asn1_terminal_as_parser k) id in
   T.parse_filter_eq #asn1_strong_parser_kind fp (defaultv_filter defv) b;
   if id0 = id
   then lc_filter_consumed k (defaultv_filter defv) b
@@ -306,10 +307,11 @@ let lc_filter2_consumed (k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1
       T.parse_filter_eq #asn1_weak_parser_kind p0 (restriction_pred (RESTRICT_CUSTOM (restricted_default_filter r defv))) b'
     end
 
-let default_restricted_twin_consumed (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_terminal_t k { restriction_pred r defv }) (id: asn1_id_t) (b: bytes)
-: Lemma (consumed #asn1_strong_parser_kind (parse_asn1_sequence_item_twin (asn1_decorated_as_parser_twin (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) id) b ==
-    (if id0 = id then consumed #asn1_strong_parser_kind (parse_asn1_LC (asn1_content_as_parser (default_restricted_content k r defv))) b else None))
-= let p : asn1_weak_parser (parse_filter_refine (restriction_pred r)) = weaken _ (asn1_terminal_as_parser k `parse_filter` restriction_pred r) in
+let default_restricted_twin_consumed (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defl: asn1_key_lit k { restriction_pred r (key_of_lit k defl) }) (id: asn1_id_t) (b: bytes)
+: Lemma (consumed #asn1_strong_parser_kind (parse_asn1_sequence_item_twin (asn1_decorated_as_parser_twin (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) id) b ==
+    (if id0 = id then consumed #asn1_strong_parser_kind (parse_asn1_LC (asn1_content_as_parser (default_restricted_content k r (key_of_lit k defl)))) b else None))
+= let defv : parse_filter_refine (restriction_pred r) = key_of_lit k defl in
+  let p : asn1_weak_parser (parse_filter_refine (restriction_pred r)) = weaken _ (asn1_terminal_as_parser k `parse_filter` restriction_pred r) in
   let fp = parse_asn1_ILC_twin id0 #(ASN1_RESTRICTED_TERMINAL k r) p id in
   let q = T.parse_filter fp (restriction_pred r) in
   T.parse_filter_eq #asn1_strong_parser_kind fp (restriction_pred r) b;

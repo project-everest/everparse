@@ -577,6 +577,84 @@ let restriction_pred (#k : asn1_terminal_k) (r : asn1_restriction k) (x : asn1_t
      | _ -> false)
   | RESTRICT_CUSTOM f -> f x
 
+(* Restrictions on literals (e.g. DEFAULT values), computable by
+   normalization since they do not go through `Seq` *)
+
+let rec be_of_list (l : list U8.t) : Tot nat (decreases l) =
+  match l with
+  | [] -> 0
+  | c :: q -> U8.v c * pow2 (8 * List.length q) + be_of_list q
+
+let int_of_lit_list (l : list U8.t) : Tot int =
+  match l with
+  | [] -> 0
+  | c0 :: _ -> if U8.v c0 >= 128 then be_of_list l - pow2 (8 * List.length l) else be_of_list l
+
+let rec be_of_list_correct (l : list U8.t)
+: Lemma (be_of_list l == FStar.Endianness.be_to_n (Seq.seq_of_list l)) (decreases l)
+= match l with
+  | [] ->
+    Seq.lemma_seq_of_list_induction #U8.t [];
+    FStar.Endianness.reveal_be_to_n (Seq.seq_of_list #U8.t [])
+  | c :: q ->
+    be_of_list_correct q;
+    Seq.lemma_seq_of_list_induction l;
+    let c1 = Seq.create 1 c in
+    Seq.lemma_eq_elim (Seq.cons c (Seq.seq_of_list q)) (Seq.append c1 (Seq.seq_of_list q));
+    LowParse.Endianness.be_to_n_append c1 (Seq.seq_of_list q);
+    be_to_n_singleton c1
+
+let int_of_lit_list_correct (bound : pos) (l : asn1_int_lit bound)
+: Lemma (int_of_lit_list l == int_of_lit bound l)
+= int_lit_valid bound l;
+  let b = Seq.seq_of_list l in
+  be_of_list_correct l;
+  mk_integer'_eq b;
+  be_to_n_msb b;
+  Seq.lemma_seq_of_list_induction l
+
+let restriction_pred_lit (#k : asn1_terminal_k) (r : asn1_restriction k) (x : asn1_key_lit k) : Tot bool =
+  match k with
+  | ASN1_INTEGER bound ->
+    let x : asn1_int_lit bound = x in
+    (match r with
+     | RESTRICT_INT_IN l -> List.mem #int (int_of_lit_list x) l
+     | RESTRICT_INT_RANGE lo hi -> int_in_range lo hi (int_of_lit_list x)
+     | _ -> false)
+  | ASN1_OCTETSTRING ->
+    let x : list U8.t = x in
+    (match r with
+     | RESTRICT_SIZE lo hi ->
+       lo <= List.length x &&
+       (match hi with None -> true | Some h -> List.length x <= h)
+     | _ -> false)
+  | ASN1_BITSTRING
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR
+  | ASN1_UTF8STRING
+  | ASN1_BMPSTRING
+  | ASN1_UNIVERSALSTRING
+  | ASN1_OID_IRI
+  | ASN1_RELATIVE_OID_IRI
+  | ASN1_UTCTIME
+  | ASN1_GENERALIZEDTIME
+  | ASN1_DATE
+  | ASN1_TIME_OF_DAY
+  | ASN1_DATE_TIME
+  | ASN1_PREFIXED_TERMINAL _ _ -> false
+  | _ -> restriction_pred r (key_of_lit k x)
+
+#push-options "--fuel 2 --ifuel 2"
+let restriction_pred_lit_correct (#k : asn1_terminal_k) (r : asn1_restriction k) (x : asn1_key_lit k)
+: Lemma (requires (restriction_pred_lit r x)) (ensures (restriction_pred r (key_of_lit k x)))
+= match k with
+  | ASN1_INTEGER bound -> int_of_lit_list_correct bound x
+  | _ -> ()
+#pop-options
+
 noeq //noextract
 type asn1_content_k : Type =
 | ASN1_RESTRICTED_TERMINAL : (k : asn1_terminal_k) -> (r : asn1_restriction k) -> asn1_content_k
@@ -613,9 +691,9 @@ and asn1_k : Set.set asn1_id_t -> Type =
 and asn1_decorated_k : Set.set asn1_id_t -> asn1_decorator -> Type =
 | ASN1_PLAIN_ILC : #s : _ -> k : asn1_k s -> asn1_decorated_k s PLAIN
 | ASN1_OPTION_ILC : #s : _ -> k : asn1_k s -> asn1_decorated_k s OPTION
-| ASN1_DEFAULT_TERMINAL : id : asn1_id_t -> #k : asn1_terminal_k -> defaultv : asn1_terminal_t k -> asn1_decorated_k (Set.singleton id) DEFAULT
+| ASN1_DEFAULT_TERMINAL : id : asn1_id_t -> #k : asn1_terminal_k -> defaultv : asn1_key_lit k -> asn1_decorated_k (Set.singleton id) DEFAULT
 | ASN1_DEFAULT_RESTRICTED_TERMINAL : id : asn1_id_t -> #k : asn1_terminal_k -> r : asn1_restriction k -> 
-                                     defaultv : asn1_terminal_t k {restriction_pred r defaultv = true} -> asn1_decorated_k (Set.singleton id) DEFAULT
+                                     defaultv : asn1_key_lit k {restriction_pred r (key_of_lit k defaultv) = true} -> asn1_decorated_k (Set.singleton id) DEFAULT
 
 
 and asn1_gen_items_l : id_decs -> Type0 = 
@@ -766,8 +844,8 @@ and asn1_decorated_t_core #s #d (dk:asn1_decorated_k s d) : Tot Type  (decreases
   match dk with
   | ASN1_PLAIN_ILC k -> asn1_t k
   | ASN1_OPTION_ILC k -> option (asn1_t k)
-  | ASN1_DEFAULT_TERMINAL id defv -> default_tv defv
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv -> default_tv #(parse_filter_refine (restriction_pred r)) defv
+  | ASN1_DEFAULT_TERMINAL id #k defv -> default_tv (key_of_lit k defv)
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv -> default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv)
 
 and asn1_sequence_t_core #id_decs (items:asn1_gen_items_l id_decs) : Tot Type (decreases items) =
   match items with

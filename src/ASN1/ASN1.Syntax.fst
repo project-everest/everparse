@@ -167,10 +167,13 @@ let proj_terminal_t (#s) (x : asn1_k s {is_terminal x})
 = match proj_content x with
   | ASN1_TERMINAL tk -> asn1_terminal_t tk
 
-let mk_default_field (#s) (x : asn1_k s {is_terminal x}) (v : proj_terminal_t x)
+// DEFAULT values are given as literals (see asn1_key_lit), e.g. the
+// DER content bytes for INTEGER (mk_int_lit)
+
+let mk_default_field (#s) (x : asn1_k s {is_terminal x}) (v : asn1_key_lit (proj_terminal_k x))
 = ASN1_DEFAULT_TERMINAL (proj_identifier x) #(proj_terminal_k x) v
 
-let mk_restricted_default_field (#s) (x : asn1_k s {is_terminal x}) (f : proj_terminal_t x -> bool) (v : proj_terminal_t x {f v})
+let mk_restricted_default_field (#s) (x : asn1_k s {is_terminal x}) (f : proj_terminal_t x -> bool) (v : asn1_key_lit (proj_terminal_k x) {f (key_of_lit (proj_terminal_k x) v)})
 = ASN1_DEFAULT_RESTRICTED_TERMINAL (proj_identifier x) #(proj_terminal_k x) (RESTRICT_CUSTOM f) v
 
 let mk_restricted_field (#s) (x : asn1_k s {is_terminal x}) (f : proj_terminal_t x -> bool)
@@ -178,8 +181,11 @@ let mk_restricted_field (#s) (x : asn1_k s {is_terminal x}) (f : proj_terminal_t
 
 (* Restrictions given as first-class descriptors (see asn1_restriction),
    which validator generators can implement *)
-let mk_restriction_default_field (#s) (x : asn1_k s {is_terminal x}) (r : asn1_restriction (proj_terminal_k x)) (v : proj_terminal_t x {restriction_pred r v})
-= ASN1_DEFAULT_RESTRICTED_TERMINAL (proj_identifier x) #(proj_terminal_k x) r v
+// the restriction is checked on the literal (restriction_pred_lit), which
+// normalization can decide
+let mk_restriction_default_field (#s) (x : asn1_k s {is_terminal x}) (r : asn1_restriction (proj_terminal_k x)) (v : asn1_key_lit (proj_terminal_k x) {restriction_pred_lit r v})
+= restriction_pred_lit_correct r v;
+  ASN1_DEFAULT_RESTRICTED_TERMINAL (proj_identifier x) #(proj_terminal_k x) r v
 
 let mk_restriction_field (#s) (x : asn1_k s {is_terminal x}) (r : asn1_restriction (proj_terminal_k x))
 = ASN1_ILC (proj_identifier x) (ASN1_RESTRICTED_TERMINAL (proj_terminal_k x) r)

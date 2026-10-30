@@ -353,7 +353,7 @@ and asn1_decorated_rel (#s: _) (#d: _) (dk: asn1_decorated_k s d) (pm: perm) (x:
     end
   | ASN1_DEFAULT_TERMINAL _ #k defv ->
     let x' : option (asn1_terminal_impl_t k) = x in
-    let y' : default_tv defv = y in
+    let y' : default_tv (key_of_lit k defv) = y in
     begin match x', y' with
     | None, Default -> emp
     | Some a, Nondefault b -> asn1_terminal_rel k pm a b
@@ -361,7 +361,7 @@ and asn1_decorated_rel (#s: _) (#d: _) (dk: asn1_decorated_k s d) (pm: perm) (x:
     end
   | ASN1_DEFAULT_RESTRICTED_TERMINAL _ #k r defv ->
     let x' : option (asn1_terminal_impl_t k) = x in
-    let y' : default_tv #(parse_filter_refine (restriction_pred r)) defv = y in
+    let y' : default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv) = y in
     begin match x', y' with
     | None, Default -> emp
     | Some a, Nondefault b -> asn1_terminal_rel k pm a b

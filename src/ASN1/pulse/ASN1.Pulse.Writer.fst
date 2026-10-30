@@ -117,16 +117,16 @@ and write_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.
       (write_option (asn1_rel k) pm (fun x' #x out pos #v #p -> write_k k () pm x' #x out pos #v #p))
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     RS.dec_default_equiv id0 defv;
-    write_ext #(option (asn1_terminal_impl_t k)) #(default_tv defv) (RS.prel_default (asn1_terminal_rel k) defv) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 defv)) ()
-      (WLm.denc (ASN1_DEFAULT_TERMINAL id0 defv)) (fun x -> WLm.denc_default id0 defv x) pm
-      (write_default (asn1_terminal_rel k) defv pm
+    write_ext #(option (asn1_terminal_impl_t k)) #(default_tv (key_of_lit k defv)) (RS.prel_default (asn1_terminal_rel k) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) ()
+      (WLm.denc (ASN1_DEFAULT_TERMINAL id0 #k defv)) (fun x -> WLm.denc_default id0 defv x) pm
+      (write_default (asn1_terminal_rel k) (key_of_lit k defv) pm
         (fun x' #x out pos #v #p -> WL.r2l_write_terminal id0 k () pm x' #x out pos #v #p))
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     RS.dec_default_restricted_equiv id0 r defv;
-    write_ext #(option (asn1_terminal_impl_t k)) #(default_tv defv)
-      (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv)) ()
-      (WLm.denc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 r defv)) (fun x -> WLm.denc_default_restricted id0 r defv x) pm
-      (write_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) defv pm
+    write_ext #(option (asn1_terminal_impl_t k)) #(default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
+      (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv)) (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) ()
+      (WLm.denc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) (fun x -> WLm.denc_default_restricted id0 r defv x) pm
+      (write_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv) pm
         (write_restricted id0 k r pm
           (fun x' #x out pos #v #p -> WL.r2l_write_terminal id0 k () pm x' #x out pos #v #p))))
   in vf x' #x out pos #v #p

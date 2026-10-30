@@ -404,10 +404,12 @@ let item_twin_v (it: gen_decorated_parser_twin) (id: asn1_id_t) (b: bytes)
     match dk with
     | ASN1_PLAIN_ILC _ -> ()
     | ASN1_OPTION_ILC _ -> parse_synth_eq (fp id) Some b
-    | ASN1_DEFAULT_TERMINAL _ defv ->
+    | ASN1_DEFAULT_TERMINAL _ #k_dl defv_l ->
+      let defv = key_of_lit k_dl defv_l in
       parse_synth_eq (fp id `parse_filter` defaultv_filter defv) (defaultv_synth defv) b;
       parse_filter_eq (fp id) (defaultv_filter defv) b
-    | ASN1_DEFAULT_RESTRICTED_TERMINAL _ r defv ->
+    | ASN1_DEFAULT_RESTRICTED_TERMINAL _ #k_dl r defv_l ->
+      let defv : parse_filter_refine (restriction_pred r) = key_of_lit k_dl defv_l in
       let p1 = fp id `parse_filter` restriction_pred r in
       parse_synth_eq (p1 `parse_filter` defaultv_filter #(asn1_decorated_pure_t d) defv) (defaultv_synth #(asn1_decorated_pure_t d) defv) b;
       parse_filter_eq p1 (defaultv_filter #(asn1_decorated_pure_t d) defv) b;

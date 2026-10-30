@@ -256,7 +256,7 @@ let any_top_esound ()
   esound_ext parse_asn1_value asn1_value_enc (fun (x: asn1_t ASN1_ANY_ILC) -> asn1_value_enc (to_value ASN1_ANY_ILC x));
   esound_twin_ext parse_asn1_value_twin asn1_value_enc (fun (x: asn1_t ASN1_ANY_ILC) -> asn1_value_enc (to_value ASN1_ANY_ILC x))
 
-let default_terminal_esound (id: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k)
+let default_terminal_esound (id: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k)
 : Lemma
   (requires (wf_terminal id k))
   (ensures (item_esound (asn1_decorated_as_parser_twin (ASN1_DEFAULT_TERMINAL id #k defv))))
@@ -271,7 +271,7 @@ let default_terminal_esound (id: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_te
   Classical.forall_intro prf;
   esound_twin_ext fp (fun x -> enc_tlv id true (tbytes id k x)) (fun x -> asn1_value_enc (pure_value it x))
 
-let default_restricted_terminal_esound (id: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_terminal_t k {restriction_pred r defv = true})
+let default_restricted_terminal_esound (id: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k {restriction_pred r (key_of_lit k defv) = true})
 : Lemma
   (requires (wf_terminal id k))
   (ensures (item_esound (asn1_decorated_as_parser_twin (ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv))))

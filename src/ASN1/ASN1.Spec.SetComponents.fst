@@ -100,12 +100,14 @@ let decorated_tag (d : asn1_gen_item_k) (v : asn1_decorated_t d) : Tot (option a
       (match v0 with
        | None -> None
        | Some v' -> Some (asn1_k_tag k v'))
-    | ASN1_DEFAULT_TERMINAL id #k defv ->
+    | ASN1_DEFAULT_TERMINAL id #k defv_l ->
+      let defv = key_of_lit k defv_l in
       let v0 : default_tv defv = v in
       (match v0 with
        | Default -> None
        | Nondefault _ -> Some id)
-    | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv ->
+    | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv_l ->
+      let defv : parse_filter_refine (restriction_pred r) = key_of_lit k defv_l in
       let v0 : default_tv #(parse_filter_refine (restriction_pred r)) defv = v in
       (match v0 with
        | Default -> None

@@ -286,7 +286,7 @@ fn dec_option_absent
 
 (* DEFAULT *)
 
-let dec_default_lemma (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k) (w: SB.bytes) (v: default_tv defv)
+let dec_default_lemma (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (w: SB.bytes) (v: default_tv (key_of_lit k defv))
 : Lemma
   (requires item_parsed_core (ASN1_DEFAULT_TERMINAL id0 #k defv) w v)
   (ensures Nondefault? v /\ parsed #asn1_strong_parser_kind (parse_asn1_ILC id0 #(ASN1_TERMINAL k) (asn1_terminal_as_parser k)) w (Nondefault?.v' v))
@@ -294,20 +294,20 @@ let dec_default_lemma (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_termina
 
 let nondefault_v (#t: eqtype) (#defv: t) (v: default_tv defv { Nondefault? v }) : Tot t = Nondefault?.v' v
 
-let dec_rel_default_some (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv defv)
+let dec_rel_default_some (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv (key_of_lit k defv))
 : Lemma (requires Nondefault? y) (ensures asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm (Some a) y == asn1_terminal_rel k pm a (nondefault_v y))
 = let Nondefault b = y in
   assert_norm (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm (Some a) (Nondefault b) == asn1_terminal_rel k pm a b)
 
 inline_for_extraction
 fn dec_default_present
-  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_terminal_t k))
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k))
   (pt: aparser #(asn1_terminal_impl_t k) #(asn1_terminal_t k) (asn1_terminal_rel k) #asn1_weak_parser_kind (asn1_terminal_as_parser k))
 : dpresent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_TERMINAL id0 #k defv)
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_default_lemma id0 #k defv w v;
-  let gv : Ghost.erased (default_tv #(asn1_terminal_t k) defv) = v;
+  let gv : Ghost.erased (default_tv #(asn1_terminal_t k) (key_of_lit k defv)) = v;
   let r = parse_ilc id0 #(ASN1_TERMINAL k) #_ #_ #(asn1_terminal_as_parser k) pt input #pm #w #(nondefault_v (Ghost.reveal gv));
   let res : option (asn1_terminal_impl_t k) = Some r;
   dec_rel_default_some id0 #k defv pm r v;
@@ -315,13 +315,13 @@ fn dec_default_present
   res
 }
 
-let dec_rel_default_none (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_terminal_t k) (pm: perm) (y: default_tv defv)
+let dec_rel_default_none (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (pm: perm) (y: default_tv (key_of_lit k defv))
 : Lemma (requires absent_core (ASN1_DEFAULT_TERMINAL id0 #k defv) y) (ensures asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm None y == emp)
-= assert_norm (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm None (Default #_ #defv) == emp)
+= assert_norm (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm None (Default #_ #(key_of_lit k defv)) == emp)
 
 inline_for_extraction
 fn dec_default_absent
-  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_terminal_t k))
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k))
 : dabsent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_TERMINAL id0 #k defv)
 = (pm: _) (v: _)
 {
@@ -333,7 +333,7 @@ fn dec_default_absent
 
 (* DEFAULT, restricted *)
 
-let dec_default_restricted_lemma (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: parse_filter_refine (restriction_pred r)) (w: SB.bytes) (v: default_tv defv)
+let dec_default_restricted_lemma (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (w: SB.bytes) (v: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
 : Lemma
   (requires item_parsed_core (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) w v)
   (ensures Nondefault? v /\ parsed #asn1_strong_parser_kind (parse_asn1_ILC id0 #(ASN1_RESTRICTED_TERMINAL k r) (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))) w (Nondefault?.v' v))
@@ -343,20 +343,20 @@ let nondefault_r (#k: asn1_terminal_k) (r: asn1_restriction k) (#defv: parse_fil
 : Tot (asn1_content_t (ASN1_RESTRICTED_TERMINAL k r))
 = Nondefault?.v' v
 
-let dec_rel_default_restricted_some (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: parse_filter_refine (restriction_pred r)) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv defv)
+let dec_rel_default_restricted_some (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
 : Lemma (requires Nondefault? y) (ensures asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm (Some a) y == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a (nondefault_r r y))
 = let Nondefault b = y in
   assert_norm (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm (Some a) (Nondefault b) == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a b)
 
 inline_for_extraction
 fn dec_default_restricted_present
-  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (parse_filter_refine (restriction_pred r)))
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) }))
   (pc: aparser #(asn1_content_impl_t (ASN1_RESTRICTED_TERMINAL k r)) #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)))
 : dpresent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_default_restricted_lemma id0 #k r defv w v;
-  let gv : Ghost.erased (default_tv #(parse_filter_refine (restriction_pred r)) (Ghost.reveal defv)) = v;
+  let gv : Ghost.erased (default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv)) = v;
   let x = parse_ilc id0 #(ASN1_RESTRICTED_TERMINAL k r) #_ #_ #(asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) pc input #pm #w #(nondefault_r r (Ghost.reveal gv));
   let res : option (asn1_terminal_impl_t k) = Some x;
   dec_rel_default_restricted_some id0 #k r defv pm x v;
@@ -364,13 +364,13 @@ fn dec_default_restricted_present
   res
 }
 
-let dec_rel_default_restricted_none (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: parse_filter_refine (restriction_pred r)) (pm: perm) (y: default_tv defv)
+let dec_rel_default_restricted_none (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (pm: perm) (y: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
 : Lemma (requires absent_core (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) y) (ensures asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm None y == emp)
-= assert_norm (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm None (Default #_ #defv) == emp)
+= assert_norm (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm None (Default #(parse_filter_refine (restriction_pred r)) #(key_of_lit k defv)) == emp)
 
 inline_for_extraction
 fn dec_default_restricted_absent
-  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (parse_filter_refine (restriction_pred r)))
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) }))
 : dabsent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)
 = (pm: _) (v: _)
 {

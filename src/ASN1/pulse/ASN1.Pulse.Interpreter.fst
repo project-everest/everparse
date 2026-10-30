@@ -23,6 +23,7 @@ module SC = ASN1.Pulse.SetComp
 module Any = ASN1.Pulse.Any
 module ADB = ASN1.Pulse.AnyDefinedBy
 module AP = ASN1.Pulse.AdbPrefixed
+module DL = ASN1.Pulse.DefaultLit
 module SA = ASN1.Pulse.SeqAny
 module PPFL = LowParse.PulseParse.FLData
 module SCo = LowParse.Spec.Combinators
@@ -83,10 +84,6 @@ let rec supported_terminal (k: asn1_terminal_k) : Tot bool (decreases k) =
   | _ -> true
 
 [@@asn1_pulse_attr]
-let supported_default (k: asn1_terminal_k) : Tot bool =
-  ASN1_BOOLEAN? k || ASN1_NULL? k
-
-[@@asn1_pulse_attr]
 let supported_restriction (k: asn1_terminal_k) (r: asn1_restriction k) : Tot bool =
   match k with
   | ASN1_BOOLEAN -> RESTRICT_IN? r
@@ -109,6 +106,15 @@ let rec adb_key_supported_terminal (k: asn1_terminal_k)
 = match k with
   | ASN1_PREFIXED_TERMINAL _ k' -> adb_key_supported_terminal k'
   | _ -> ()
+
+(* DEFAULT values are literals, compared like ANY DEFINED BY keys *)
+[@@asn1_pulse_attr]
+let supported_default (k: asn1_terminal_k) : Tot bool =
+  adb_key_supported k
+
+[@@asn1_pulse_attr]
+let supported_default_restricted (k: asn1_terminal_k) (r: asn1_restriction k) : Tot bool =
+  supported_restriction k r && adb_key_supported k
 
 [@@asn1_pulse_attr]
 let rec supported_content (k: asn1_content_k) : Tot bool (decreases k) =
@@ -150,7 +156,7 @@ and supported_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : Tot bool (decreas
   | ASN1_PLAIN_ILC k -> supported_k k
   | ASN1_OPTION_ILC k -> supported_k k
   | ASN1_DEFAULT_TERMINAL _ #k _ -> supported_default k
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL _ #k r _ -> ASN1_BOOLEAN? k && RESTRICT_IN? r
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL _ #k r _ -> supported_default_restricted k r
   | _ -> false
 
 (* Static information about sequence items *)
@@ -401,18 +407,6 @@ let vres (#t: Type0) (#k: SB.parser_kind) (p: SB.parser k t)
     (fun res -> pts_to input #pm v ** (exists* off . R.pts_to poffset off ** pure (LPS.validator_postcond p offset v off res)))
 
 [@@asn1_pulse_attr]
-let validate_default_content ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] defv: asn1_terminal_t k) (u: squash (supported_default k))
-  (vinput: slice byte) (vpoffset: R.ref SZ.t) (#voffset: Ghost.erased SZ.t) (#vpm: perm) (#vv: Ghost.erased bytes)
-: Tot (vres #(asn1_content_t (C.default_content k defv)) #asn1_weak_parser_kind (asn1_content_as_parser (C.default_content k defv)) vinput vpoffset voffset vpm vv)
-= [@inline_let] let vf : LPS.validator #(asn1_content_t (C.default_content k defv)) #asn1_weak_parser_kind (asn1_content_as_parser (C.default_content k defv)) =
-  (match k with
-  | ASN1_BOOLEAN -> Rs.validate_boolean_neq defv
-  | ASN1_NULL ->
-    Classical.forall_intro C.default_null_fails;
-    validate_fail (asn1_content_as_parser (C.default_content k defv)) ())
-  in vf vinput vpoffset #voffset #vpm #vv
-
-[@@asn1_pulse_attr]
 let validate_restricted ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] r: asn1_restriction k) (u: squash (supported_restriction k r))
   (vinput: slice byte) (vpoffset: R.ref SZ.t) (#voffset: Ghost.erased SZ.t) (#vpm: perm) (#vv: Ghost.erased bytes)
 : Tot (vres #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) vinput vpoffset voffset vpm vv)
@@ -423,16 +417,6 @@ let validate_restricted ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) 
   | ASN1_INTEGER bound ->
     Rs.validate_integer_restricted (U64.uint_to_t bound) r
   | ASN1_OCTETSTRING -> Rs.validate_octetstring_size r)
-  in vf vinput vpoffset #voffset #vpm #vv
-
-[@@asn1_pulse_attr]
-let validate_default_restricted_content ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] r: asn1_restriction k) ([@@@FStar.Attributes.monomorphize] defv: asn1_terminal_t k { restriction_pred r defv }) (u: squash (ASN1_BOOLEAN? k && RESTRICT_IN? r))
-  (vinput: slice byte) (vpoffset: R.ref SZ.t) (#voffset: Ghost.erased SZ.t) (#vpm: perm) (#vv: Ghost.erased bytes)
-: Tot (vres #(asn1_content_t (C.default_restricted_content k r defv)) #asn1_weak_parser_kind (asn1_content_as_parser (C.default_restricted_content k r defv)) vinput vpoffset voffset vpm vv)
-= [@inline_let] let vf : LPS.validator #(asn1_content_t (C.default_restricted_content k r defv)) #asn1_weak_parser_kind (asn1_content_as_parser (C.default_restricted_content k r defv)) =
-  (match k with
-  | ASN1_BOOLEAN ->
-    Rs.validate_boolean_in_neq (RESTRICT_IN?.values r) defv)
   in vf vinput vpoffset #voffset #vpm #vv
 
 [@@asn1_pulse_attr]
@@ -472,6 +456,28 @@ let rec validate_terminal ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k
   | ASN1_PREFIXED_TERMINAL id k' ->
     LPS.validate_weaken asn1_weak_parser_kind
       (ILC.validate_asn1_ILC id #(ASN1_TERMINAL k') #(asn1_terminal_as_parser k') (validate_terminal k' ())))
+  in vf vinput vpoffset #voffset #vpm #vv
+
+[@@asn1_pulse_attr]
+let validate_default_lc ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] defl: asn1_key_lit k) (u: squash (supported_default k))
+  (vinput: slice byte) (vpoffset: R.ref SZ.t) (#voffset: Ghost.erased SZ.t) (#vpm: perm) (#vv: Ghost.erased bytes)
+: Tot (vres (DL.lc_p (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser k) (defaultv_filter (key_of_lit k defl)))) vinput vpoffset voffset vpm vv)
+= [@inline_let] let vf : LPS.validator (DL.lc_p (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser k) (defaultv_filter (key_of_lit k defl)))) =
+    DL.validate_lc_fl (fun len ->
+      Classical.forall_intro (DL.neq_fl_consumed k (key_of_lit k defl) (SZ.v len));
+      DL.validate_neq (validate_key_eq_fl k () defl len) (PPFL.validate_fldata (validate_terminal k ()) len)
+        (SFL.parse_fldata (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser k) (defaultv_filter (key_of_lit k defl))) (SZ.v len)))
+  in vf vinput vpoffset #voffset #vpm #vv
+
+[@@asn1_pulse_attr]
+let validate_default_restricted_lc ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] r: asn1_restriction k) ([@@@FStar.Attributes.monomorphize] defl: asn1_key_lit k { restriction_pred r (key_of_lit k defl) }) (u: squash (supported_default_restricted k r))
+  (vinput: slice byte) (vpoffset: R.ref SZ.t) (#voffset: Ghost.erased SZ.t) (#vpm: perm) (#vv: Ghost.erased bytes)
+: Tot (vres (DL.lc_p (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser k) (C.restricted_default_filter r (key_of_lit k defl)))) vinput vpoffset voffset vpm vv)
+= [@inline_let] let vf : LPS.validator (DL.lc_p (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser k) (C.restricted_default_filter r (key_of_lit k defl)))) =
+    DL.validate_lc_fl (fun len ->
+      Classical.forall_intro (DL.neq_fl_restricted_consumed k r (key_of_lit k defl) (SZ.v len));
+      DL.validate_neq (validate_key_eq_fl k () defl len) (PPFL.validate_fldata (validate_restricted k r ()) len)
+        (SFL.parse_fldata (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser k) (C.restricted_default_filter r (key_of_lit k defl))) (SZ.v len)))
   in vf vinput vpoffset #voffset #vpm #vv
 
 let rec validate_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u: squash (supported_content k))
@@ -669,13 +675,15 @@ and validate_dec_twin (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Att
     validate_item_twin_option (twin_of dk) id (validate_k_twin k () id)
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     Classical.forall_intro (C.default_terminal_twin_consumed id0 #k defv id);
+    Classical.forall_intro (DL.default_lc_consumed k (key_of_lit k defv));
     LPS.ifthenelse_validator (parse_asn1_sequence_item_twin (twin_of dk) id) (ILC.asn1_id_eq id0 id)
-      (fun _ -> validate_ext_consumed (ILC.validate_asn1_LC (validate_default_content k defv ())) (parse_asn1_sequence_item_twin (twin_of dk) id))
+      (fun _ -> validate_ext_consumed (validate_default_lc k defv ()) (parse_asn1_sequence_item_twin (twin_of dk) id))
       (fun _ -> validate_fail (parse_asn1_sequence_item_twin (twin_of dk) id) ())
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     Classical.forall_intro (C.default_restricted_twin_consumed id0 #k r defv id);
+    Classical.forall_intro (DL.default_restricted_lc_consumed k r (key_of_lit k defv));
     LPS.ifthenelse_validator (parse_asn1_sequence_item_twin (twin_of dk) id) (ILC.asn1_id_eq id0 id)
-      (fun _ -> validate_ext_consumed (ILC.validate_asn1_LC (validate_default_restricted_content k r defv ())) (parse_asn1_sequence_item_twin (twin_of dk) id))
+      (fun _ -> validate_ext_consumed (validate_default_restricted_lc k r defv ()) (parse_asn1_sequence_item_twin (twin_of dk) id))
       (fun _ -> validate_fail (parse_asn1_sequence_item_twin (twin_of dk) id) ()))
   in vf vinput vpoffset #voffset #vpm #vv
 

@@ -138,10 +138,12 @@ and dec_to_values (#s: _) (#d: _) (dk: asn1_decorated_k s d) (x: asn1_decorated_
   | ASN1_OPTION_ILC k ->
     let x' : option (asn1_t k) = x in
     (match x' with None -> [] | Some y -> [to_value k y])
-  | ASN1_DEFAULT_TERMINAL id #k defv ->
+  | ASN1_DEFAULT_TERMINAL id #k defv_l ->
+    let defv = key_of_lit k defv_l in
     let x' : default_tv defv = x in
     (match x' with Default -> [] | Nondefault y -> [terminal_to_value id k y])
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv ->
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv_l ->
+    let defv : parse_filter_refine (restriction_pred r) = key_of_lit k defv_l in
     let x' : default_tv #(parse_filter_refine (restriction_pred r)) defv = x in
     (match x' with Default -> [] | Nondefault y -> [terminal_to_value id k y])
 
