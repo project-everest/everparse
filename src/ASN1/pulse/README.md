@@ -123,8 +123,8 @@ holding fractional permission `pm` on the input bytes it borrows.
   written component (it must belong to the component just written if
   present, and must not if absent, which rules out DEFAULT values
   written out). SEQUENCE OF and SET OF are checked element by element
-  (each element by its own JIT writer, or validated right after being
-  copied if given already serialized; nonempty; for SET OF, exactly one
+  (each element by its own JIT writer, or, if given already serialized,
+  validated on the input slice before being copied; nonempty; for SET OF, exactly one
   frame, so that the on-the-fly insertion keeps them sorted), plus the
   SIZE (1..MAX) constraint on the result. SET is checked component by
   component: each component, checked by its own JIT writer, must be empty
@@ -136,10 +136,11 @@ holding fractional permission `pm` on the input bytes it borrows.
   on the input value before writing (`ASN1.Pulse.JitTerminal`: string
   contents, BIT STRING padding, INTEGER minimality or small-INTEGER range,
   restrictions, disequality with the DEFAULT value), without scratch
-  buffers or allocation; their TLV is then correct by construction. The
-  remaining chunks (ANY DEFINED BY, DEFAULT components of PREFIXED type)
-  are validated locally, right after being written, within their own
-  bounds (so, still in the cache). Each byte is
+  buffers or allocation; their TLV is then correct by construction. ANY
+  values are likewise validated on the input slice before being copied.
+  Only DEFAULT components of PREFIXED type are still validated locally,
+  right after being written, within their own bounds (so, still in the
+  cache). Each byte is
   validated at most once. If the JIT writer gives up (invalid value, or
   not enough space), `check_write_jit_k` falls back to `check_write_raw_k`
   to tell `CW_INVALID` from `CW_NO_SPACE`, so the fallback only costs on

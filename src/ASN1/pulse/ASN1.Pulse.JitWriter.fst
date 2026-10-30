@@ -14,7 +14,8 @@ module ASN1.Pulse.JitWriter
      component of each nonempty suffix;
    - SEQUENCE OF and SET OF are checked element by element: each element
      is checked by its own JIT writer (or, if given already serialized,
-     validated right after being copied) and must be nonempty; a SET OF
+     validated on the input slice before being copied) and must be
+     nonempty; a SET OF
      element must also be exactly one frame, so that inserting it keeps
      the elements sorted; finally the SIZE (1..MAX) constraint is checked;
    - SET is checked component by component: each component is checked by
@@ -30,9 +31,10 @@ module ASN1.Pulse.JitWriter
      INTEGERs, the range of the machine integer), restrictions, and
      disequality with the DEFAULT value; their TLV is then correct by
      construction. No scratch buffer is used;
-   - the remaining chunks (ANY DEFINED BY, and DEFAULT components of
-     PREFIXED type) are validated locally, right after being written,
-     within their own bounds.
+   - ANY values are validated on the input slice, before being copied;
+   - DEFAULT components of PREFIXED type are validated locally, right
+     after being written, within their own bounds. (ANY DEFINED BY is
+     not supported by the raw writers.)
 
    So each byte is validated at most once, while it is still in the cache.
    If a check fails, or if the output buffer is too small, the JIT writer
@@ -477,14 +479,30 @@ fn jit_set_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (
 
 (* SEQUENCE OF and SET OF: each element is written and checked on its own
    (an element given as a structure by its own JIT writer, an already
-   serialized element by validating it right after copying it), and must be
-   nonempty; then, as in
+   serialized element by validating it on the input slice before copying
+   it), and must be nonempty; then, as in
    `LowParse.PulseParse.Iterator.R2L.r2l_write_mixed_list_gen` (resp.
    `ASN1.Pulse.SortedInsert.r2l_write_mixed_list_sorted_gen`), it is
    reversed (resp. inserted into the elements written so far). For a
    SET OF, each element is also checked to be exactly one frame, so that
    the insertion keeps the elements sorted. Finally, the SIZE (1..MAX)
    constraint is checked on the size of the result. *)
+
+inline_for_extraction
+fn jit_pre (#t: Type0) (r: bprel t) (a a': SB.bytes -> prop)
+  (imp: (x: SB.bytes) -> Lemma (requires (a x)) (ensures (a' x)))
+  (pm: perm) (c: JT.pcg r JT.ptrue a pm) (w: RW.rw r pm)
+: jw #t r a' pm
+= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  let ok = c x' #x;
+  if ok {
+    imp x;
+    w x' #x out pos
+  } else {
+    false
+  }
+}
 
 let ser_rel (pm: perm) (pl: S.slice U8.t) (y: SB.bytes) : slprop =
   PB.pts_to_parsed p_raw pl #pm y
@@ -506,6 +524,31 @@ fn raw_write_ser (pm: perm)
   res
 }
 
+(* Validate an already serialized element on the input slice, before
+   copying it *)
+inline_for_extraction
+fn pc_ser (#tp: Type0) (#kk: Ghost.erased parser_kind) (#pp: SB.parser kk tp) (vf: LPS.validator #tp #kk pp) (pm: perm)
+: JT.pcg #(S.slice U8.t) ser_rel JT.ptrue (L.acc pp) pm
+= (pl: S.slice U8.t) (#x: Ghost.erased SB.bytes)
+{
+  unfold (ser_rel pm pl x);
+  unfold (PB.pts_to_parsed p_raw pl #pm x);
+  with wb . assert (S.pts_to pl #pm wb);
+  p_raw_consumed wb x;
+  S.pts_to_len pl;
+  let mut off = 0sz;
+  let valid = vf pl off;
+  let off1 = !off;
+  fold (PB.pts_to_parsed p_raw pl #pm x);
+  fold (ser_rel pm pl x);
+  if (valid && (off1 = S.len pl)) {
+    JT.acc_of_valid pp wb off1;
+    true
+  } else {
+    false
+  }
+}
+
 inline_for_extraction
 fn jit_elt (#t: Type0) (r: bprel t)
   (#tp: Type0) (#pp: asn1_strong_parser tp) (vf: LPS.validator #tp #asn1_strong_parser_kind pp)
@@ -523,7 +566,7 @@ fn jit_elt (#t: Type0) (r: bprel t)
     }
     WI.ESerialized pl -> {
       rewrite (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x) as (ser_rel pm pl x);
-      let res = jit_local ser_rel pm (raw_write_ser pm) vf pl #x out pos;
+      let res = jit_pre ser_rel (L.acc #asn1_strong_parser_kind pp) (L.acc #asn1_strong_parser_kind pp) (fun _ -> ()) pm (pc_ser #tp #asn1_strong_parser_kind #pp vf pm) (raw_write_ser pm) pl #x out pos;
       rewrite (ser_rel pm pl x) as (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x);
       res
     }
@@ -776,22 +819,6 @@ let lc_ok (lc: list (asn1_id_t & asn1_content_k)) : prop =
    length and encoding of small integers, BOOLEAN and NULL are then
    correct by construction, so nothing is read back from the output. *)
 
-inline_for_extraction
-fn jit_pre (#t: Type0) (r: bprel t) (a a': SB.bytes -> prop)
-  (imp: (x: SB.bytes) -> Lemma (requires (a x)) (ensures (a' x)))
-  (pm: perm) (c: JT.pcg r JT.ptrue a pm) (w: RW.rw r pm)
-: jw #t r a' pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  let ok = c x' #x;
-  if ok {
-    imp x;
-    w x' #x out pos
-  } else {
-    false
-  }
-}
-
 #push-options "--fuel 2 --ifuel 1"
 let acc_terminal_prefixed (id2: asn1_id_t) (k2: asn1_terminal_k) (b: SB.bytes)
 : Lemma (requires (cacc id2 (ASN1_TERMINAL k2) b))
@@ -981,11 +1008,11 @@ let rec jit_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k:
     jit_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k' r)) ()
       (cacc id (ASN1_RESTRICTED_TERMINAL k' r)) (cacc id k) (fun _ -> ()) pm
       (jit_restricted_tlv id k' r () pm)
-  | _ ->
-    (* ANY DEFINED BY: validated locally, right after being written *)
-    jit_local (raw_content_rel id k) pm
-      (fun x' #x out pos #v #p -> RW.raw_write_content id k pm x' #x out pos #v #p)
-      (ILC.validate_asn1_ILC id (In.validate_content k ())))
+  | ASN1_ANY_DEFINED_BY idp prefix aid key_k ls ofb pf_wf pf_sup ->
+    (* not supported by the raw writers *)
+    content_adb_equiv id idp prefix aid key_k ls ofb pf_wf pf_sup;
+    jit_ext (raw_false _) (raw_content_rel id k) () (cacc id k) (cacc id k) (fun _ -> ()) pm
+      (jit_false _ (cacc id k) pm))
   in vf x' #x out pos #v #p
 
 and jit_write_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (In.supported_items ls)) (pm: perm)
@@ -1100,7 +1127,9 @@ and jit_write_k (#[@@@FStar.Attributes.monomorphize] s: _) ([@@@FStar.Attributes
   | ASN1_ANY_ILC ->
     rel_any_equiv ();
     jit_ext raw_slice (raw_rel ASN1_ANY_ILC) () (kacc k) (kacc k) (fun _ -> ()) pm
-      (jit_local raw_slice pm (RW.raw_write_slice pm) (In.validate_k ASN1_ANY_ILC ())))
+      (jit_pre raw_slice (kacc k) (kacc k) (fun _ -> ()) pm
+        (JT.pc_slice (In.validate_k ASN1_ANY_ILC ()) JT.ptrue (kacc k) (fun _ -> ()) pm)
+        (RW.raw_write_slice pm)))
   in vf x' #x out pos #v #p
 
 and jit_write_lc ([@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (u: squash (lc_ok lc)) (pm: perm)
