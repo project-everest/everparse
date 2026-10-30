@@ -17,9 +17,14 @@ module ASN1.Pulse.JitWriter
      validated right after being copied) and must be nonempty; a SET OF
      element must also be exactly one frame, so that inserting it keeps
      the elements sorted; finally the SIZE (1..MAX) constraint is checked;
-   - all other chunks (terminals, SET, ANY, DEFAULT components) are
-     validated locally, right after being written, within their own
-     bounds.
+   - SET is checked component by component: each component is checked by
+     its own JIT writer and must be either empty or exactly one frame
+     whose identifier belongs to the component, so that inserting it keeps
+     the components sorted; since the tags of distinct components are
+     disjoint, the result is then strictly sorted, with each component at
+     most once;
+   - all other chunks (terminals, ANY, DEFAULT components) are validated
+     locally, right after being written, within their own bounds.
 
    So each byte is validated at most once, while it is still in the cache.
    If a check fails, or if the output buffer is too small, the JIT writer
@@ -375,6 +380,90 @@ fn jit_items_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
   }
 }
 
+(* SET components: each component is written and checked on its own: it
+   must be either empty (an absent OPTIONAL or DEFAULT component) or exactly
+   one frame whose identifier is one of those of the component; then it is
+   inserted at its sorted position into the components written so far. The
+   disjointness of the tags of the components (`asn1_set_k_wf`) then
+   ensures that the result is strictly sorted, each component appearing at
+   most once. *)
+
+inline_for_extraction
+fn check_elt (s: Ghost.erased (Set.set asn1_id_t)) (has_id: (id: asn1_id_t) -> (b: bool { b == Set.mem id s }))
+  (out: S.slice U8.t) (p2 p1: SZ.t) (#v: Ghost.erased SB.bytes)
+requires pts_to out v ** pure (SZ.v p2 <= SZ.v p1 /\ SZ.v p1 <= Seq.length v)
+returns res: bool
+ensures pts_to out v ** pure (SZ.v p2 <= SZ.v p1 /\ SZ.v p1 <= Seq.length v /\ (res == true ==> L.elt_ok s (Seq.slice v (SZ.v p2) (SZ.v p1))))
+{
+  if (SZ.lt p2 p1) {
+    let n = SI.read_frame out p2 p1;
+    if (n = SZ.sub p1 p2) {
+      let a = SI.read_id out p2 p1;
+      match a {
+        None -> { false }
+        Some id -> { has_id id }
+      }
+    } else {
+      false
+    }
+  } else {
+    true
+  }
+}
+
+inline_for_extraction
+fn jit_set_elt (hd: Ghost.erased gen_decorated_parser_twin)
+  (has_id: (id: asn1_id_t) -> (b: bool { b == Set.mem id (Sq.item_set hd) }))
+  (#t: Type0) (r: bprel t) (pm: perm) (w: jw r (L.iacc [Ghost.reveal hd]) pm)
+: jw #t r (L.sacc1 hd) pm
+= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  let p0 = !pos;
+  let res = w x' #x out pos;
+  if res {
+    let p2 = !pos;
+    check_elt (Sq.item_set hd) has_id out p2 p0
+  } else {
+    false
+  }
+}
+
+inline_for_extraction
+fn jit_set_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (list gen_decorated_parser_twin))
+  (sq: squash (L.set_cons_ok hd tl))
+  (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
+  (w1: jw r1 (L.sacc1 hd) pm) (w2: jw r2 (L.sacc tl) pm)
+: jw #(t1 & t2) (raw_ins SI.lt_tag r1 r2) (L.sacc (Ghost.reveal hd :: Ghost.reveal tl)) pm
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_ins SI.lt_tag r1 r2 pm x' x);
+  with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
+  let p0 = !pos;
+  let ok = w2 (snd x') #c2 out pos;
+  if ok {
+    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    let p1r = !pos;
+    let res = w1 (fst x') #c1 out pos;
+    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
+    if res {
+      let p2r = !pos;
+      SI.r2l_insert SI.lt_tag (SI.lt_tag_impl ()) out p2r p1r p0;
+      with v3 . assert (pts_to out v3);
+      SI.r2l_post_ins SI.lt_tag c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2 v3;
+      L.sacc_cons hd tl c1 c2;
+      fold (raw_ins SI.lt_tag r1 r2 pm x' x);
+      true
+    } else {
+      fold (raw_ins SI.lt_tag r1 r2 pm x' x);
+      false
+    }
+  } else {
+    fold (raw_ins SI.lt_tag r1 r2 pm x' x);
+    false
+  }
+}
+
 (* SEQUENCE OF and SET OF: each element is written and checked on its own
    (an element given as a structure by its own JIT writer, an already
    serialized element by validating it right after copying it), and must be
@@ -711,6 +800,14 @@ let rec jit_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k:
         (jit_ext (raw_ml_sorted (raw_rel k')) (raw_ml_sorted (raw_rel k')) ()
           (L.acc #asn1_weak_parser_kind (parse_sized_set ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET_OF ne k'))) (L.acc_set_of ne k') pm
           (jit_write_ml_sorted (raw_rel k') ne (In.validate_k k' ()) (fun pm x' #x out pos #v #p -> jit_write_k k' () pm x' #x out pos #v #p) (share_k k') (gather_k k') pm)))
+  | ASN1_SET ids items pf ->
+    content_set_equiv id ids items pf;
+    jit_ext (raw_tlv id (raw_items_rel true items)) (raw_content_rel id (ASN1_SET ids items pf)) ()
+      (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SET ids items pf)))) (cacc id k) (fun _ -> ()) pm
+      (jit_tlv id (raw_items_rel true items) (asn1_content_as_parser (ASN1_SET ids items pf)) pm
+        (jit_ext (raw_items_rel true items) (raw_items_rel true items) ()
+          (L.sacc (In.twins_of items)) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf))) (L.acc_set ids items pf) pm
+          (fun x' #x out pos #v #p -> jit_write_set_items items () pm x' #x out pos #v #p)))
   | _ ->
     jit_local (raw_content_rel id k) pm
       (fun x' #x out pos #v #p -> RW.raw_write_content id k pm x' #x out pos #v #p)
@@ -747,6 +844,42 @@ and jit_write_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attrib
         (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) pm
         (fun x' #x out pos #v #p -> jit_write_dec dk () pm x' #x out pos #v #p)
         (fun x' #x out pos #v #p -> jit_write_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () pm x' #x out pos #v #p)))
+  in vf x' #x out pos #v #p
+
+and jit_write_set_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (In.supported_items ls /\ asn1_set_k_wf i)) (pm: perm)
+  (x': asn1_items_impl_t ls) (#x: Ghost.erased SB.bytes)
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+: Tot (jres (raw_items_rel true ls) (L.sacc (In.twins_of ls)) pm x' x out pos v p)
+  (decreases ls)
+= [@inline_let] let vf : jw (raw_items_rel true ls) (L.sacc (In.twins_of ls)) pm =
+  (match ls with
+  | ASN1_GEN_ITEMS_NIL ->
+    items_nil_equiv true;
+    jit_ext (raw_pure null_enc) (raw_items_rel true ASN1_GEN_ITEMS_NIL) ()
+      (L.iacc []) (L.sacc (In.twins_of ls)) L.sacc_nil pm (jit_nil pm)
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
+    items_single_equiv true dk;
+    L.twins_of_single dk;
+    L.set_cons_ok_intro dk ASN1_GEN_ITEMS_NIL;
+    jit_ext (raw_dec_rel dk) (raw_items_rel true (PS.single dk)) ()
+      (L.sacc1 (In.twin_of dk)) (L.sacc (In.twins_of ls)) (L.sacc_single (In.twin_of dk)) pm
+      (jit_set_elt (In.twin_of dk) (In.has_id_dec dk ()) (raw_dec_rel dk) pm
+        (fun x' #x out pos #v #p -> jit_write_dec dk () pm x' #x out pos #v #p))
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
+    items_cons_equiv true dk dk2 tl2;
+    join_ins_equiv true (raw_dec_rel dk) (raw_items_rel true (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2));
+    L.twins_of_cons2 dk dk2 tl2;
+    L.set_cons_ok_intro dk (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2);
+    jit_ext
+      #(asn1_decorated_impl_t dk & asn1_items_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))
+      (raw_ins SI.lt_tag (raw_dec_rel dk) (raw_items_rel true (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
+      (raw_items_rel true (PS.cons2 dk dk2 tl2)) ()
+      (L.sacc (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (L.sacc (In.twins_of ls)) (fun _ -> ()) pm
+      (jit_set_cons (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) ()
+        (raw_dec_rel dk) (raw_items_rel true (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) pm
+        (jit_set_elt (In.twin_of dk) (In.has_id_dec dk ()) (raw_dec_rel dk) pm
+          (fun x' #x out pos #v #p -> jit_write_dec dk () pm x' #x out pos #v #p))
+        (fun x' #x out pos #v #p -> jit_write_set_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
 and jit_write_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) ([@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (u: squash (In.supported_dec dk)) (pm: perm)

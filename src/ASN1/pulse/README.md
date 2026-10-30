@@ -126,9 +126,15 @@ holding fractional permission `pm` on the input bytes it borrows.
   (each element by its own JIT writer, or validated right after being
   copied if given already serialized; nonempty; for SET OF, exactly one
   frame, so that the on-the-fly insertion keeps them sorted), plus the
-  SIZE (1..MAX) constraint on the result. All other chunks (terminals,
-  SET, ANY, DEFAULT components) are validated locally, right after being
-  written, within their own bounds (so, still in the cache). Each byte is
+  SIZE (1..MAX) constraint on the result. SET is checked component by
+  component: each component, checked by its own JIT writer, must be empty
+  (absent OPTIONAL or DEFAULT component) or exactly one frame whose
+  identifier belongs to that component, and is then inserted at its
+  sorted position; the disjointness of the tags of the components then
+  makes the result strictly sorted with each component at most once. All
+  other chunks (terminals, ANY, DEFAULT components) are validated locally,
+  right after being written, within their own bounds (so, still in the
+  cache). Each byte is
   validated at most once. If the JIT writer gives up (invalid value, or
   not enough space), `check_write_jit_k` falls back to `check_write_raw_k`
   to tell `CW_INVALID` from `CW_NO_SPACE`, so the fallback only costs on

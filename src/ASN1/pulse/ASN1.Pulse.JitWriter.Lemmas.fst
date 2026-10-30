@@ -500,3 +500,334 @@ let acc_set_of (ne: bool) (#s: _) (k: asn1_k s) (b: bytes)
 = ()
 
 let sf_empty (#t: Type) (pp: asn1_strong_parser t) : Lemma (sf pp None (SI.sort_list SI.lt_lex RR.id_enc [])) = ()
+
+(* SET { ... }: each component is written and checked on its own (it must
+   be either empty, for an absent OPTIONAL or DEFAULT component, or exactly
+   one frame whose identifier is one of those of the component), then
+   inserted at its sorted position into the components written so far.
+   `fl its r l`: `r` is the sequence of frames of the elements `l`. *)
+
+open ASN1.Spec.SetComponents
+module FSet = FStar.Set
+module LT = FStar.List.Tot
+module TC = LowParse.Tot.Combinators
+module PSet = ASN1.Pulse.ParseSet.Lemmas
+module SC = ASN1.Pulse.SetComp
+
+let pse_frame (its: list gen_decorated_parser_twin) (f: bytes) (e: set_elem_t its) : prop =
+  match SB.parse (parse_set_elem its) f with
+  | Some (e', c) -> e' == e /\ (c <: nat) == Seq.length f
+  | None -> False
+
+let rec fl (its: list gen_decorated_parser_twin) (r: bytes) (l: list (set_elem_t its))
+: GTot prop (decreases l)
+= match l with
+  | [] -> Seq.length r == 0
+  | e :: q ->
+    let n = SI.frame_len r in
+    SI.frame_len_le r;
+    n > 0 /\ pse_frame its (Seq.slice r 0 n) e /\ fl its (Seq.slice r n (Seq.length r)) q
+
+let sacc (its: list gen_decorated_parser_twin) (r: bytes) : prop =
+  exists (l: list (set_elem_t its)) . fl its r l /\ set_ok its l == true
+
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 32"
+let rec fl_parse (its: list gen_decorated_parser_twin) (r: bytes) (l: list (set_elem_t its))
+: Lemma (requires (fl its r l))
+  (ensures (match SB.parse (parse_list (parse_set_elem its)) r with
+    | Some (l', c) -> l' == l /\ (c <: nat) == Seq.length r
+    | None -> False))
+  (decreases l)
+= match l with
+  | [] -> tot_parse_list_eq (parse_set_elem its) r
+  | e :: q ->
+    let n = SI.frame_len r in
+    SI.frame_len_le r;
+    let f = Seq.slice r 0 n in
+    let r' = Seq.slice r n (Seq.length r) in
+    Seq.lemma_split r n;
+    tot_parse_list_eq (parse_set_elem its) r;
+    strong_ext #asn1_strong_parser_kind (parse_set_elem its) f r';
+    fl_parse its r' q
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 32"
+let acc_set (ids: _) (items: asn1_gen_items_l ids) (pf: _) (b: bytes)
+: Lemma (requires (sacc (In.twins_of items) b))
+  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf)) b))
+= let its = In.twins_of items in
+  set_to_tuple_injective its;
+  TC.parse_synth_eq (parse_list (parse_set_elem its) `TC.parse_filter` set_ok its) (set_to_tuple its) b;
+  TC.parse_filter_eq (parse_list (parse_set_elem its)) (set_ok its) b;
+  eliminate exists (l: list (set_elem_t its)) . fl its b l /\ set_ok its l == true
+  with fl_parse its b l
+#pop-options
+
+(* Insertion of an element at its sorted position *)
+
+let rec lins (#t: Type) (key: t -> Tot (option asn1_id_t)) (x: t) (l: list t) : Tot (list t) =
+  match l with
+  | [] -> [x]
+  | y :: q -> if opt_tag_lt (key y) (key x) then y :: lins key x q else x :: l
+
+let lins_hd (#t: Type) (key: t -> Tot (option asn1_id_t)) (x: t) (l: list t)
+: Lemma (Cons? (lins key x l) /\ (LT.hd (lins key x l) == x \/ (Cons? l /\ LT.hd (lins key x l) == LT.hd l)))
+= ()
+
+let rec tags_distinct (#t: Type) (key: t -> Tot (option asn1_id_t)) (a: asn1_id_t) (l: list t) : Tot prop =
+  match l with
+  | [] -> True
+  | y :: q -> (match key y with Some b -> ~ (asn1_same_tag a b) | None -> True) /\ tags_distinct key a q
+
+let rec tags_in (#t: Type) (key: t -> Tot (option asn1_id_t)) (s: FSet.set asn1_id_t) (l: list t) : Tot prop =
+  match l with
+  | [] -> True
+  | y :: q -> (match key y with Some b -> FSet.mem b s | None -> False) /\ tags_in key s q
+
+let rec in_distinct (#t: Type) (key: t -> Tot (option asn1_id_t)) (a: asn1_id_t) (s1 s2: FSet.set asn1_id_t) (l: list t)
+: Lemma (requires (FSet.mem a s1 /\ asn1_set_disjoint s1 s2 /\ tags_in key s2 l))
+  (ensures (tags_distinct key a l))
+= match l with
+  | [] -> ()
+  | _ :: q -> in_distinct key a s1 s2 q
+
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
+let rec tags_sorted_lins (#t: Type) (key: t -> Tot (option asn1_id_t)) (x: t) (a: asn1_id_t) (l: list t)
+: Lemma (requires (tags_sorted key l /\ key x == Some a /\ tags_distinct key a l))
+  (ensures (tags_sorted key (lins key x l)))
+= match l with
+  | [] -> ()
+  | y :: q ->
+    if opt_tag_lt (key y) (key x) then begin
+      tags_sorted_lins key x a q;
+      lins_hd key x q
+    end else ()
+#pop-options
+
+(* Components of a SET with a head component `hd` *)
+
+let as_e (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (e: set_elem_t (hd :: tl))
+: Tot (either (asn1_decorated_t (Mkgendcparser?.d hd)) (set_elem_t tl))
+= e
+
+let inr_e (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (e: set_elem_t tl)
+: Tot (set_elem_t (hd :: tl))
+= Inr #(asn1_decorated_t (Mkgendcparser?.d hd)) e
+
+let rec inr_l (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (l: list (set_elem_t tl))
+: Tot (list (set_elem_t (hd :: tl)))
+= match l with
+  | [] -> []
+  | e :: q -> inr_e hd tl e :: inr_l hd tl q
+
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
+let rec inr_l_props (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (l: list (set_elem_t tl)) (a: asn1_id_t)
+: Lemma (heads (PSet.as_either hd tl (inr_l hd tl l)) == [] /\
+    tails (PSet.as_either hd tl (inr_l hd tl l)) == l /\
+    tags_sorted (elem_tag (hd :: tl)) (inr_l hd tl l) == tags_sorted (elem_tag tl) l /\
+    (tags_distinct (elem_tag tl) a l ==> tags_distinct (elem_tag (hd :: tl)) a (inr_l hd tl l)))
+= match l with
+  | [] -> ()
+  | _ :: q -> inr_l_props hd tl q a
+
+let rec lins_inr (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (x: set_elem_t (hd :: tl)) (l: list (set_elem_t tl))
+: Lemma (requires (Inl? (as_e hd tl x)))
+  (ensures (heads (PSet.as_either hd tl (lins (elem_tag (hd :: tl)) x (inr_l hd tl l))) == [Inl?.v (as_e hd tl x)] /\
+    tails (PSet.as_either hd tl (lins (elem_tag (hd :: tl)) x (inr_l hd tl l))) == l))
+= inr_l_props hd tl l (MK_ASN1_ID UNIVERSAL PRIMITIVE 0ul);
+  match l with
+  | [] -> ()
+  | _ :: q -> lins_inr hd tl x q
+#pop-options
+
+(* Parsing one element of a SET with a head component `hd` *)
+
+#push-options "--z3rlimit 64 --fuel 1 --ifuel 2"
+let set_elem_inr (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (b: bytes)
+: Lemma (requires (match SB.parse parse_asn1_identifier_U32 b with Some (id, _) -> ~ (FSet.mem id (Sq.item_set hd)) | None -> True))
+  (ensures (match SB.parse (parse_set_elem tl) b, SB.parse (parse_set_elem (hd :: tl)) b with
+    | None, None -> True
+    | Some (e2, n2), Some (e, n) -> e == inr_e hd tl e2 /\ (n <: nat) == n2
+    | _ -> False))
+= parse_set_elem_twin_cases_injective (hd :: tl);
+  parse_set_elem_twin_cases_injective tl;
+  TC.and_then_eq parse_asn1_identifier_U32 #asn1_strong_parser_kind #(set_elem_t (hd :: tl)) (parse_set_elem_twin (hd :: tl)) b;
+  TC.and_then_eq parse_asn1_identifier_U32 #asn1_strong_parser_kind #(set_elem_t tl) (parse_set_elem_twin tl) b;
+  match SB.parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id, n1) ->
+    let b' = Seq.slice b n1 (Seq.length b) in
+    TC.parse_synth_eq (parse_set_elem_twin tl id) (Inr #(asn1_decorated_t (Mkgendcparser?.d hd))) b'
+
+let elem_inl (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (c: bytes)
+: Lemma (requires (iacc [hd] c /\ Seq.length c > 0 /\ (match SI.parse_id c with Some id -> FSet.mem id (Sq.item_set hd) | None -> False)))
+  (ensures (match SB.parse (parse_set_elem (hd :: tl)) c with
+    | Some (e, n) -> (n <: nat) == Seq.length c /\ Inl? (as_e hd tl e)
+    | None -> False))
+= Sq.seq_cons_none [hd] c;
+  parse_set_elem_twin_cases_injective (hd :: tl);
+  TC.and_then_eq parse_asn1_identifier_U32 #asn1_strong_parser_kind #(set_elem_t (hd :: tl)) (parse_set_elem_twin (hd :: tl)) c;
+  let Some (id, n1) = SB.parse parse_asn1_identifier_U32 c in
+  let c' = Seq.slice c n1 (Seq.length c) in
+  Sq.seq_single_some hd id c';
+  TC.parse_synth_eq (parse_asn1_sequence_item_twin hd id) (Inl #_ #(set_elem_t tl)) c'
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 32"
+let tag_frame (its: list gen_decorated_parser_twin) (f: bytes) (e: set_elem_t its)
+: Lemma (requires (pse_frame its f e /\ C.items_tagged its))
+  (ensures (SI.parse_id f == elem_tag its e /\
+    (match elem_tag its e with Some id -> FSet.mem id (PSet.items_set its) | None -> False)))
+= SC.set_elem_eq its f;
+  match SB.parse parse_asn1_identifier_U32 f with
+  | Some (id, _) -> PSet.comp_of_id_mem its id
+  | None -> ()
+
+let rec fl_tags (its: list gen_decorated_parser_twin) (r: bytes) (l: list (set_elem_t its))
+: Lemma (requires (fl its r l /\ C.items_tagged its))
+  (ensures (tags_in (elem_tag its) (PSet.items_set its) l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | e :: q ->
+    let n = SI.frame_len r in
+    SI.frame_len_le r;
+    tag_frame its (Seq.slice r 0 n) e;
+    fl_tags its (Seq.slice r n (Seq.length r)) q
+
+let rec fl_lift (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (r: bytes) (l: list (set_elem_t tl))
+: Lemma (requires (fl tl r l /\ C.items_tagged tl /\ asn1_set_disjoint (Sq.item_set hd) (PSet.items_set tl)))
+  (ensures (fl (hd :: tl) r (inr_l hd tl l)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | e :: q ->
+    let n = SI.frame_len r in
+    SI.frame_len_le r;
+    let f = Seq.slice r 0 n in
+    tag_frame tl f e;
+    let Some id = elem_tag tl e in
+    assert (FSet.mem id (PSet.items_set tl));
+    assert (asn1_same_tag id id);
+    assert (~ (FSet.mem id (Sq.item_set hd)));
+    set_elem_inr hd tl f;
+    fl_lift hd tl (Seq.slice r n (Seq.length r)) q
+
+let fl_cons (its: list gen_decorated_parser_twin) (e: bytes) (x: set_elem_t its) (r: bytes) (l: list (set_elem_t its))
+: Lemma (requires (SI.frame_len e == Seq.length e /\ Seq.length e > 0 /\ pse_frame its e x /\ fl its r l))
+  (ensures (fl its (Seq.append e r) (x :: l)))
+= let b = Seq.append e r in
+  let n = Seq.length e in
+  assert (Seq.equal (Seq.slice b 0 n) (Seq.slice e 0 n));
+  frame_prefix e b n;
+  assert (Seq.equal (Seq.slice b 0 n) e);
+  assert (Seq.equal (Seq.slice b n (Seq.length b)) r)
+
+let rec fl_ins (its: list gen_decorated_parser_twin) (e: bytes) (x: set_elem_t its) (r: bytes) (l: list (set_elem_t its))
+: Lemma (requires (C.items_tagged its /\ SI.frame_len e == Seq.length e /\ Seq.length e > 0 /\ pse_frame its e x /\ fl its r l))
+  (ensures (fl its (SI.ins SI.lt_tag e r) (lins (elem_tag its) x l)))
+  (decreases l)
+= SI.ins_unfold SI.lt_tag e r;
+  tag_frame its e x;
+  match l with
+  | [] ->
+    ident_empty ();
+    assert (Seq.equal r Seq.empty);
+    fl_cons its e x r l
+  | y :: q ->
+    let n = SI.frame_len r in
+    SI.frame_len_le r;
+    let f = Seq.slice r 0 n in
+    let r' = Seq.slice r n (Seq.length r) in
+    tag_frame its f y;
+    if opt_tag_lt (elem_tag its y) (elem_tag its x) then begin
+      fl_ins its e x r' q;
+      let i = SI.ins SI.lt_tag e r' in
+      let b = Seq.append f i in
+      assert (Seq.equal (Seq.slice b 0 n) (Seq.slice r 0 n));
+      frame_prefix r b n;
+      assert (Seq.equal (Seq.slice b 0 n) f);
+      assert (Seq.equal (Seq.slice b n (Seq.length b)) i)
+    end else
+      fl_cons its e x r l
+#pop-options
+
+(* The checks on one component, and the well-formedness of the SET *)
+
+let elt_ok (s: FSet.set asn1_id_t) (c: bytes) : prop =
+  Seq.length c > 0 ==> (SI.frame_len c == Seq.length c /\ (match SI.parse_id c with Some id -> FSet.mem id s | None -> False))
+
+let sacc1 (hd: gen_decorated_parser_twin) (c: bytes) : prop =
+  iacc [hd] c /\ elt_ok (Sq.item_set hd) c
+
+let set_cons_ok (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) : prop =
+  C.items_tagged (hd :: tl) /\ asn1_set_disjoint (Sq.item_set hd) (PSet.items_set tl)
+
+let ins_empty (r: bytes) : Lemma (SI.ins SI.lt_tag Seq.empty r == r) =
+  SI.ins_unfold SI.lt_tag Seq.empty r;
+  ident_empty ();
+  assert (Seq.equal (Seq.append Seq.empty r) r)
+
+let ins_empty_r (e: bytes) : Lemma (SI.ins SI.lt_tag e Seq.empty == e) =
+  SI.ins_unfold SI.lt_tag e Seq.empty;
+  ident_empty ();
+  assert (Seq.equal (Seq.append e Seq.empty) e)
+
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 64"
+let sacc_cons (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (c1 c2: bytes)
+: Lemma (requires (set_cons_ok hd tl /\ sacc1 hd c1 /\ sacc tl c2))
+  (ensures (sacc (hd :: tl) (SI.ins SI.lt_tag c1 c2)))
+= let its = hd :: tl in
+  eliminate exists (l2: list (set_elem_t tl)) . fl tl c2 l2 /\ set_ok tl l2 == true
+  with begin
+    fl_lift hd tl c2 l2;
+    let l = inr_l hd tl l2 in
+    if Seq.length c1 = 0 then begin
+      inr_l_props hd tl l2 (MK_ASN1_ID UNIVERSAL PRIMITIVE 0ul);
+      assert (Seq.equal c1 Seq.empty);
+      ins_empty c2;
+      iacc_single_empty hd;
+      assert (fl its (SI.ins SI.lt_tag c1 c2) l /\ set_ok its l == true)
+    end else begin
+      elem_inl hd tl c1;
+      let Some (x, _) = SB.parse (parse_set_elem its) c1 in
+      assert (pse_frame its c1 x);
+      fl_ins its c1 x c2 l;
+      let Some id = SI.parse_id c1 in
+      tag_frame its c1 x;
+      fl_tags tl c2 l2;
+      in_distinct (elem_tag tl) id (Sq.item_set hd) (PSet.items_set tl) l2;
+      inr_l_props hd tl l2 id;
+      tags_sorted_lins (elem_tag its) x id l;
+      lins_inr hd tl x l2;
+      let l' = lins (elem_tag its) x l in
+      assert (fl its (SI.ins SI.lt_tag c1 c2) l' /\ set_ok its l' == true)
+    end
+  end
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1"
+let sacc_nil (x: bytes) : Lemma (requires (iacc [] x)) (ensures (sacc [] x)) =
+  Sq.seq_nil_none x;
+  assert (fl [] x [] /\ set_ok [] [] == true)
+
+let sacc_single (hd: gen_decorated_parser_twin) (c: bytes)
+: Lemma (requires (set_cons_ok hd [] /\ sacc1 hd c)) (ensures (sacc [hd] c))
+= assert (fl [] Seq.empty [] /\ set_ok [] [] == true);
+  sacc_cons hd [] c Seq.empty;
+  ins_empty_r c
+
+let rec ids_disj (#i: _) (ls: asn1_gen_items_l i) (s: FSet.set asn1_id_t)
+: Lemma (requires (asn1_set_k_wf' s i)) (ensures (asn1_set_disjoint s (PSet.items_set (In.twins_of ls)))) (decreases ls)
+= match ls with
+  | ASN1_GEN_ITEMS_NIL -> ()
+  | ASN1_GEN_ITEMS_CONS s' _ dk _ tl ->
+    ids_disj tl s;
+    assert (Sq.item_set (In.twin_of dk) == s')
+
+let set_cons_ok_intro (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i: _) (tl: asn1_gen_items_l i)
+: Lemma (requires (asn1_set_k_wf ((s, d) :: i))) (ensures (set_cons_ok (In.twin_of dk) (In.twins_of tl)))
+= C.items_tagged_intro (ASN1_GEN_ITEMS_CONS s d dk i tl);
+  ids_disj tl s;
+  assert (Sq.item_set (In.twin_of dk) == s)
+#pop-options
