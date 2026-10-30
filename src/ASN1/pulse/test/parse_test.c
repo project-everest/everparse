@@ -270,6 +270,36 @@ int main(void) {
   if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl10)) { printf("defL invalid non-minimal\n"); fails++; }
   uint8_t dl11[] = {0x30, 0x04, 0x13, 0x02, 0x61, 0x7f}; /* s not printable */
   if (VALID(ASN1_Pulse_ParseTest_validate_defL, dl11)) { printf("defL invalid s char\n"); fails++; }
+  /* SET { c [1] IMPLICIT OCTET STRING, a [0] IMPLICIT INTEGER OPTIONAL,
+     b INTEGER DEFAULT 0 }, declared out of canonical order: the result
+     follows the declaration order, the encoding the canonical one (b, a, c) */
+  {
+    typedef FStar_Pervasives_Native_tuple2__slice_uint8_tuple2_option_asn1_int_impl_option_a setCAB_t;
+    uint8_t c1[] = {0x31, 0x0a, 0x02, 0x01, 0x05, 0x80, 0x01, 0x07, 0x81, 0x02, 0xaa, 0xbb};
+    if (!VALID(ASN1_Pulse_ParseTest_validate_setCAB, c1)) { printf("setCAB valid\n"); fails++; }
+    setCAB_t sc = ASN1_Pulse_ParseTest_parse_setCAB(SL(c1));
+    if (sc._1.len != 2 || sc._1.elt != c1 + 10
+        || sc._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || sc._2._1.val.Some.val.Small != 7
+        || sc._2._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || sc._2._2.val.Some.val.Small != 5) { printf("setCAB parse\n"); fails++; }
+    uint8_t c2[] = {0x31, 0x04, 0x81, 0x02, 0xaa, 0xbb};
+    if (!VALID(ASN1_Pulse_ParseTest_validate_setCAB, c2)) { printf("setCAB valid c\n"); fails++; }
+    sc = ASN1_Pulse_ParseTest_parse_setCAB(SL(c2));
+    if (sc._1.len != 2 || sc._1.elt != c2 + 4 || sc._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL
+        || sc._2._2.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL) { printf("setCAB parse c\n"); fails++; }
+    uint8_t c3[] = {0x31, 0x07, 0x80, 0x01, 0x07, 0x81, 0x02, 0xaa, 0xbb};
+    sc = ASN1_Pulse_ParseTest_parse_setCAB(SL(c3));
+    if (!VALID(ASN1_Pulse_ParseTest_validate_setCAB, c3) || sc._1.elt != c3 + 7
+        || sc._2._1.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || sc._2._1.val.Some.val.Small != 7
+        || sc._2._2.tag != FSTAR_PERVASIVES_NATIVE_NONE__ASN1_INT_IMPL) { printf("setCAB parse ac\n"); fails++; }
+    uint8_t c4[] = {0x31, 0x0a, 0x80, 0x01, 0x07, 0x02, 0x01, 0x05, 0x81, 0x02, 0xaa, 0xbb}; /* not in canonical order */
+    if (VALID(ASN1_Pulse_ParseTest_validate_setCAB, c4)) { printf("setCAB invalid order\n"); fails++; }
+    uint8_t c5[] = {0x31, 0x07, 0x02, 0x01, 0x00, 0x81, 0x02, 0xaa, 0xbb}; /* b = 0 encoded */
+    if (VALID(ASN1_Pulse_ParseTest_validate_setCAB, c5)) { printf("setCAB invalid default\n"); fails++; }
+    uint8_t c6[] = {0x31, 0x03, 0x02, 0x01, 0x05}; /* c missing */
+    if (VALID(ASN1_Pulse_ParseTest_validate_setCAB, c6)) { printf("setCAB invalid missing\n"); fails++; }
+    uint8_t c7[] = {0x31, 0x0a, 0x80, 0x01, 0x07, 0x80, 0x01, 0x08, 0x81, 0x02, 0xaa, 0xbb}; /* a twice */
+    if (VALID(ASN1_Pulse_ParseTest_validate_setCAB, c7)) { printf("setCAB invalid duplicate\n"); fails++; }
+  }
   /* AlgorithmIdentifier from the difftest schemas */
   uint8_t g1[] = {0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00};
   FStar_Pervasives_either__unit_tuple2_slice_uint8_option_slice_uint8 ag = ASN1_Pulse_ParseTest_parse_algId(SL(g1));

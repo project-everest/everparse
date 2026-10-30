@@ -47,7 +47,11 @@ holding fractional permission `pm` on the input bytes it borrows.
   (`pts_to_parsed`), return `x'` with `asn1_rel k pm x' x`, where `x` is
   the value parsed by `asn1_as_parser k`; no copy, no allocation (SEQUENCE
   OF and SET OF are returned lazily, as a count and the payload). Supported
-  schemas: `psupported_k`.
+  schemas: `psupported_k`. SET components may be declared in any order
+  (`ASN1.Pulse.ParseSetAny`): each element, read in encoding order, is
+  dispatched by its tag to the slot of its component in a tuple of
+  `option`s, and the empty slots are then filled with absent/default
+  values; the result follows the declaration order.
 * **Writers** (`ASN1.Pulse.Writer`, `write_k`): right-to-left. Given
   `asn1_rel k pm x' x`, an output slice and a position `pos`, write the
   encoding just left of `pos` and move `pos` to its start, or return

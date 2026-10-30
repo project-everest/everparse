@@ -393,6 +393,36 @@ let parse_defL : aparser #(asn1_impl_t defL) #(asn1_t defL) (asn1_rel defL) #asn
 let validate_defL : LowParse.Pulse.Base.validator #(asn1_t defL) #asn1_strong_parser_kind (asn1_as_parser defL) =
   validate_k defL (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
 
+(* SET { c [1] IMPLICIT OCTET STRING,
+         a [0] IMPLICIT INTEGER OPTIONAL,
+         b INTEGER DEFAULT 0 }
+   whose components are declared in the reverse of the canonical order of
+   their tags: the parser dispatches each encoded element to its component
+   by its tag *)
+noextract
+let setCAB = ASN1.Syntax.asn1_set [
+    "c" *^ (PLAIN ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ASN1.Syntax.asn1_octetstring);
+    "a" *^ (OPTION ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0) ASN1.Syntax.asn1_integer);
+    "b" *^ (DEFAULT ^: ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_integer (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x00uy] (_ by (ASN1.Syntax.wf_tac ()))))]
+    (_ by (ASN1.Syntax.set_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_setCAB : aparser #(asn1_impl_t setCAB) #(asn1_t setCAB) (asn1_rel setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
+  fun input #pm #w #v -> parse_k setCAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_setCAB : LowParse.Pulse.Base.validator #(asn1_t setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
+  validate_k setCAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
 (* Extraction roots: right-to-left writers for the same types (ANY DEFINED BY
    is not supported by the writers) *)
 

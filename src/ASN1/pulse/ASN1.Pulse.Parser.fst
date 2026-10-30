@@ -16,8 +16,9 @@ open ASN1.Pulse.Interpreter
 open ASN1.Pulse.ParseChoice
 open ASN1.Pulse.ParseSequence
 open ASN1.Pulse.ParseSeqOf
-open ASN1.Pulse.ParseSet
 open ASN1.Pulse.ParseAdb
+open ASN1.Pulse.ParseSetAny.Lemmas
+open ASN1.Pulse.ParseSetAny
 
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
@@ -45,6 +46,9 @@ let ndres (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_item
     (S.pts_to kc #pm wk ** S.pts_to pin #pm wp ** pure (parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk (dfst (Ghost.reveal v)) /\ AL.pl_parsed key_k ls wp v))
     (fun res -> asn1_adb_rel key_k ls pm res v ** Trade.trade (asn1_adb_rel key_k ls pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
 
+let sdres (#i: _) (ls: asn1_gen_items_l i) (id: asn1_id_t) (e: S.slice U8.t) (pm: perm) (we: Ghost.erased SB.bytes) (st: opt_tuple ls) (v: Ghost.erased (asn1_sequence_t_core ls)) : Type
+= ddres ls id e pm we st v
+
 let fdres (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (kc pin: S.slice U8.t) (pm: perm) (wk wp: Ghost.erased SB.bytes) (v: Ghost.erased (AL.ady_fb key_k ls fb)) : Type
 = stt (asn1_adb_suffix_impl_t key_k ls (Some (fbt key_k fb)))
@@ -62,7 +66,7 @@ let rec psupported_content (k: asn1_content_k) : Tot bool (decreases k) =
   | ASN1_SEQUENCE gitems -> psupported_items (dsnd gitems)
   | ASN1_SEQUENCE_OF _ k' -> psupported_k k'
   | ASN1_SET_OF _ k' -> psupported_k k'
-  | ASN1_SET _ items _ -> psupported_items items && items_canon items
+  | ASN1_SET _ items _ -> psupported_items items
   | ASN1_ANY_DEFINED_BY _ prefix _ key_k ls ofb _ _ ->
     psupported_items prefix && adb_key_supported key_k && psupported_ls ls &&
     (match ofb with None -> true | Some fb -> psupported_items (dsnd fb))
@@ -182,6 +186,22 @@ let dec_absent (#s: _) (#d: _) (dk: asn1_decorated_k s d)
   | ASN1_DEFAULT_TERMINAL id0 #k defv -> dec_default_absent id0 #k defv
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv -> dec_default_restricted_absent id0 #k r defv
 
+(* Filling the empty slots of a SET *)
+
+[@@asn1_pulse_attr]
+let rec parse_sfin (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i)
+  (st: opt_tuple ls) (#pm: perm) (#v: Ghost.erased (asn1_sequence_t_core ls))
+: Tot (fres ls st pm v)
+  (decreases ls)
+= [@inline_let] let vf : fin_t ls =
+  (match ls with
+  | ASN1_GEN_ITEMS_NIL -> fin_nil ()
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL -> fin_single dk (dec_absent dk)
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
+    fin_cons2 dk dk2 tl2 (dec_absent dk)
+      (fun st #pm #v -> parse_sfin (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) st #pm #v))
+  in vf st #pm #v
+
 let rec parse_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u: squash (psupported_content k))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_content_t k))
 : Tot (ares (asn1_content_rel k) (asn1_content_as_parser k) input pm w v)
@@ -197,7 +217,9 @@ let rec parse_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u:
   | ASN1_SEQUENCE_OF ne k' -> seq_of_parser ne k'
   | ASN1_SET_OF ne k' -> set_of_parser ne k'
   | ASN1_SET _ items pf ->
-    set_parser items pf () (fun input #pm #w #v -> parse_items items () input #pm #w #v)
+    set_any_parser items pf (none_tuple items)
+      (fun id e #pm #we st #v -> parse_sdisp items () id e #pm #we st #v)
+      (fun st #pm #v -> parse_sfin items st #pm #v)
   | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
     begin match ofb with
     | None ->
@@ -285,6 +307,19 @@ and parse_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes
       (dec_absent dk)
       (fun input #pm #w #v -> parse_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () input #pm #w #v))
   in vf input #pm #w #v
+
+and parse_sdisp (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (psupported_items ls))
+  (id: asn1_id_t) (e: S.slice U8.t) (#pm: perm) (#we: Ghost.erased SB.bytes) (st: opt_tuple ls) (#v: Ghost.erased (asn1_sequence_t_core ls))
+: Tot (sdres ls id e pm we st v)
+  (decreases ls)
+= [@inline_let] let vf : disp_t ls =
+  (match ls with
+  | ASN1_GEN_ITEMS_NIL -> disp_nil ()
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl ->
+    disp_cons dk tl (phas_id_dec dk)
+      (fun input #pm #w #v -> parse_dec dk () input #pm #w #v)
+      (fun id e #pm #we st #v -> parse_sdisp tl () id e #pm #we st #v))
+  in vf id e #pm #we st #v
 
 and parse_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) ([@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (u: squash (psupported_dec dk))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_decorated_t_core dk))
