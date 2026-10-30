@@ -63,9 +63,37 @@ holding fractional permission `pm` on the input bytes it borrows.
   Supported schemas: `RS.wsupported_k` (all but ANY DEFINED BY; SET
   components in canonical order) and well-formed (`Conformance.wf`).
 
+* **Checked writers** (`ASN1.Pulse.CheckedWriter`, `check_write_k`): the
+  writers above require `asn1_rel k pm x' x`, i.e. that the value already
+  satisfies all the constraints of `k`. A checked writer instead takes a
+  value of the *relaxed* schema `relax k` (`ASN1.Spec.Relax`), which has
+  the same low-level type `asn1_impl_t k` but drops the constraints that
+  can be checked on the encoding: value restrictions, DEFAULT (becomes
+  OPTIONAL: a present value equal to the default is rejected), SIZE
+  (1..MAX), SET OF order, small INTEGER bounds (relaxed to 8 bytes), and
+  the contents of non-universally tagged strings, times and OIDs (relaxed
+  to OCTET STRING). It writes with `write_k (relax k)`, validates the
+  written bytes with `validate_k k`, and returns `CW_OK` (the bytes are
+  the DER encoding of a value of `k`, and they are exactly the relaxed
+  encoding of the input), `CW_NO_SPACE` (the relaxed encoding does not fit)
+  or `CW_INVALID` (it fits, but no value of `k` encodes to it). The
+  specification `cw_post` is complete: `CW_OK` iff the encoding fits and
+  conforms (relying on the injectivity of `to_value`,
+  `ASN1.Spec.ToValue.Inj`). Schemas must satisfy `checked_ok k`, proved
+  per schema by normalization. What remains a precondition (part of
+  `asn1_rel (relax k)`) is what the relaxed schema still enforces: the
+  contents of universally tagged strings, times and OIDs, BIT STRING
+  padding, minimal and out-of-`int64` big INTEGER slices, ANY slices
+  holding one TLV, and `Serialized` chunks of SEQUENCE OF / SET OF valid
+  under the relaxed element schema. Writing and validating are two passes
+  over the output.
+
 `make test-parse` and `make test-write` run the parsers and writers
 extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 (`test/parse_test.c`, `test/write_test.c`: parse/write round trips).
+`make test-checked-write` runs the checked writers extracted from
+`ASN1.Pulse.CheckedWriteTest` on values built in C
+(`test/checked_write_test.c`).
 
 ## Layout
 
@@ -81,7 +109,8 @@ extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 | `ASN1.Pulse.Rel`, `ASN1.Pulse.RelShare` | low-level value types and relations; share/gather; writer-supported schemas |
 | `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers, and the interpreter `write_k` |
-| `ASN1.Pulse.ParseTest` | extraction roots for parser and writer tests |
+| `ASN1.Pulse.CheckedWriter` | checked writers `check_write_k` (relaxed write, then validate) |
+| `ASN1.Pulse.ParseTest`, `ASN1.Pulse.CheckedWriteTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |
 | `ASN1.Pulse.X509` | extraction roots for X.509 certificates and CRLs |
 
@@ -128,6 +157,7 @@ make test-deep-any  # ANY nested 4000 deep, under a 64 KiB stack limit
 make stack-check    # no recursion, and worst-case stack of the X.509/CRL validators
 make test-parse     # zero-copy parsers on hand-written encodings
 make test-write     # right-to-left writers: parse/write round trips
+make test-checked-write  # checked writers: OK, INVALID and NO_SPACE cases
 ```
 
 `make -C .. test` runs all of these, unless `NO_PULSE` is set. C files
