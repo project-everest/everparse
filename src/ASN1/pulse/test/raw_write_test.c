@@ -6,7 +6,14 @@
    BIT STRING padding, DEFAULT values, restrictions, etc.), and CW_NO_SPACE
    on a short buffer. The components of a SET and the elements of a SET OF
    are sorted while writing, whatever their order in the schema or in the
-   input. */
+   input.
+
+   Each test is run on both `check_write_raw_<name>`, which validates the
+   whole output after writing it, and `check_write_jit_<name>`, which checks
+   the output while writing it. Moreover, the JIT writer alone,
+   `jit_<name>`, must succeed exactly on the CW_OK cases, with the same
+   bytes, so that `check_write_jit_<name>` never falls back to full
+   validation on valid inputs. */
 #include "ASN1.Pulse.RawWriteTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -27,40 +34,63 @@ static const char *res_name(ASN1_Pulse_CheckedWriter_cw_result r) {
 /* Write `x` at the right edge of a BUF-byte buffer. On CW_OK, compare with
    `vec`; then retry with a buffer one byte too short and expect CW_NO_SPACE.
    Check that nothing is written left of the final position. */
-#define OK(name, x, vec) do {                                                 \
-    uint8_t exp_[] = vec;                                                     \
+#define OK1(kind, name, x, ...) do {                                          \
+    uint8_t exp_[] = __VA_ARGS__;                                             \
     uint8_t out_[BUF + 1];                                                    \
     memset(out_, 0xcc, sizeof(out_));                                         \
     size_t pos_ = BUF;                                                        \
     Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_ + 1, .len = BUF };        \
     ASN1_Pulse_CheckedWriter_cw_result r_ =                                   \
-      ASN1_Pulse_RawWriteTest_check_write_raw_##name(x, o_, &pos_);           \
+      ASN1_Pulse_RawWriteTest_check_write_##kind##_##name(x, o_, &pos_);       \
     if (r_ != ASN1_PULSE_CHECKEDWRITER_CW_OK || pos_ != BUF - sizeof(exp_)    \
         || memcmp(out_ + 1 + pos_, exp_, sizeof(exp_)) != 0) {                \
-      printf("%s:%d: %s: expected OK, got %s:", __FILE__, __LINE__, #name, res_name(r_)); \
+      printf("%s:%d: %s %s: expected OK, got %s:", __FILE__, __LINE__, #kind, #name, res_name(r_)); \
       for (size_t i_ = pos_; i_ < BUF; i_++) printf(" %02x", out_[1 + i_]);   \
       printf("\n"); fails++;                                                  \
     }                                                                         \
     for (size_t i_ = 0; i_ < 1 + pos_ && i_ <= BUF; i_++)                     \
-      if (out_[i_] != 0xcc) { printf("%s:%d: %s: wrote left of pos\n", __FILE__, __LINE__, #name); fails++; break; } \
+      if (out_[i_] != 0xcc) { printf("%s:%d: %s %s: wrote left of pos\n", __FILE__, __LINE__, #kind, #name); fails++; break; } \
     memset(out_, 0xcc, sizeof(out_));                                         \
     pos_ = sizeof(exp_) - 1;                                                  \
     Pulse_Lib_Slice_slice__uint8 s_ = { .elt = out_ + 1, .len = sizeof(exp_) - 1 }; \
-    r_ = ASN1_Pulse_RawWriteTest_check_write_raw_##name(x, s_, &pos_);        \
+    r_ = ASN1_Pulse_RawWriteTest_check_write_##kind##_##name(x, s_, &pos_);    \
     if (r_ != ASN1_PULSE_CHECKEDWRITER_CW_NO_SPACE || out_[0] != 0xcc) {      \
-      printf("%s:%d: %s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #name, res_name(r_)); fails++; \
+      printf("%s:%d: %s %s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #kind, #name, res_name(r_)); fails++; \
     }                                                                         \
   } while (0)
 
-#define INVALID(name, x) do {                                                 \
+#define INVALID1(kind, name, x) do {                                                 \
     uint8_t out_[BUF];                                                        \
     size_t pos_ = BUF;                                                        \
     Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_, .len = BUF };            \
     ASN1_Pulse_CheckedWriter_cw_result r_ =                                   \
-      ASN1_Pulse_RawWriteTest_check_write_raw_##name(x, o_, &pos_);           \
+      ASN1_Pulse_RawWriteTest_check_write_##kind##_##name(x, o_, &pos_);       \
     if (r_ != ASN1_PULSE_CHECKEDWRITER_CW_INVALID) {                          \
-      printf("%s:%d: %s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, res_name(r_)); fails++; \
+      printf("%s:%d: %s %s: expected INVALID, got %s\n", __FILE__, __LINE__, #kind, #name, res_name(r_)); fails++; \
     }                                                                         \
+  } while (0)
+
+/* The JIT writer alone: succeeds iff `ok`, and then writes `vec` */
+#define JIT(name, x, ok, ...) do {                                            \
+    uint8_t exp_[] = __VA_ARGS__;                                             \
+    uint8_t out_[BUF];                                                        \
+    size_t pos_ = BUF;                                                        \
+    Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_, .len = BUF };            \
+    bool r_ = ASN1_Pulse_RawWriteTest_jit_##name(x, o_, &pos_);               \
+    if (r_ != (ok) || (ok && (pos_ != BUF - sizeof(exp_)                      \
+        || memcmp(out_ + pos_, exp_, sizeof(exp_)) != 0))) {                  \
+      printf("%s:%d: jit_%s: expected %d, got %d\n", __FILE__, __LINE__, #name, (ok), r_); fails++; \
+    }                                                                         \
+  } while (0)
+
+#define OK(name, x, ...) do {                                                 \
+    OK1(raw, name, x, __VA_ARGS__); OK1(jit, name, x, __VA_ARGS__);     \
+    JIT(name, x, true, __VA_ARGS__);  \
+  } while (0)
+
+#define INVALID(name, x) do {                                                 \
+    INVALID1(raw, name, x); INVALID1(jit, name, x);                           \
+    JIT(name, x, false, V(0));                                                \
   } while (0)
 
 #define SMALL(n) ((ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = (n) } })

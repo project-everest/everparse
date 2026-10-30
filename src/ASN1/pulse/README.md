@@ -111,6 +111,25 @@ holding fractional permission `pm` on the input bytes it borrows.
   SEQUENCE OF / SET OF must be a sequence of TLVs (`p_raw`). ANY DEFINED
   BY has no raw representation.
 
+* **Just-in-time checked raw writers** (`ASN1.Pulse.JitWriter`,
+  `check_write_jit_k`): same input, same `cw_post`, but the checks are
+  made while writing, instead of in a final validation pass over the
+  whole output. The JIT writer `jit_write_k` writes right to left like
+  `raw_write_k` and either succeeds, having proven that the chunk it wrote
+  is accepted by the parser of its schema (it parses and consumes it all),
+  or gives up. The TLV framing of SEQUENCEs and PREFIXED types and the
+  alternatives of CHOICEs are correct by construction; SEQUENCE
+  components only need a runtime check of the identifier of the first
+  written component (it must belong to the component just written if
+  present, and must not if absent, which rules out DEFAULT values
+  written out). All other chunks (terminals, SET, SEQUENCE OF, SET OF,
+  ANY, DEFAULT components) are validated locally, right after being
+  written, within their own bounds (so, still in the cache). Each byte is
+  validated at most once. If the JIT writer gives up (invalid value, or
+  not enough space), `check_write_jit_k` falls back to `check_write_raw_k`
+  to tell `CW_INVALID` from `CW_NO_SPACE`, so the fallback only costs on
+  failure paths. Proofs: `ASN1.Pulse.JitWriter.Lemmas`.
+
 `make test-parse` and `make test-write` run the parsers and writers
 extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 (`test/parse_test.c`, `test/write_test.c`: parse/write round trips).
@@ -120,7 +139,9 @@ extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 raw writers extracted from `ASN1.Pulse.RawWriteTest` on values built in C,
 including invalid strings, BIT STRING padding, non-minimal INTEGERs, bad
 ANY slices, unsorted SET OF elements and a SET declared in non-canonical
-order (`test/raw_write_test.c`).
+order (`test/raw_write_test.c`); each case is also run on the JIT
+variants, checking that the JIT writer alone succeeds exactly on valid
+values.
 
 ## Layout
 
@@ -138,6 +159,7 @@ order (`test/raw_write_test.c`).
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers, and the interpreter `write_k` |
 | `ASN1.Pulse.CheckedWriter` | checked writers `check_write_k` (relaxed write, then validate) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and checked raw writers `check_write_raw_k` (raw write, then validate) |
+| `ASN1.Pulse.JitWriter.Lemmas`, `ASN1.Pulse.JitWriter` | just-in-time checked raw writers `check_write_jit_k` (check while writing) |
 | `ASN1.Pulse.SortedInsert` | on-the-fly insertion sort of SET components and SET OF elements for the raw writers |
 | `ASN1.Pulse.ParseTest`, `ASN1.Pulse.CheckedWriteTest`, `ASN1.Pulse.RawWriteTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |
