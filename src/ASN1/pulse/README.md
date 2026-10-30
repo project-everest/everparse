@@ -98,11 +98,18 @@ holding fractional permission `pm` on the input bytes it borrows.
   `raw_write_k` writes those bytes right to left, then `validate_k k`
   checks them, with the same `cw_post` as the checked writers, so all
   constraints of `k` become runtime checks (`CW_INVALID`). Schemas must
-  satisfy `raw_ok k` (`supported_k` and `Conformance.wf`). What remains
-  a precondition: `Serialized` chunks of SEQUENCE OF / SET OF must be a
-  sequence of TLVs (`p_raw`), and SET components are written in schema
-  order (a non-canonical order yields `CW_INVALID`, pending on-the-fly
-  sorting). ANY DEFINED BY has no raw representation.
+  satisfy `raw_ok k` (`supported_k` and `Conformance.wf`). The raw
+  writer sorts while writing, in the style of the CDDL "table" map
+  groups (`ASN1.Pulse.SortedInsert`): right after writing a SET component
+  or a SET OF element, it inserts it in place, by rotation, into the
+  already written and sorted ones, by tag (X.690 10.3) or by encoding
+  (X.690 11.6). So neither the order of the SET components in the schema
+  nor the order of the SET OF elements in the input matter (duplicate SET
+  OF elements are kept). The insertion is total (a malformed frame just
+  stops the scan) and sortedness is never proven: the final validation
+  checks it. What remains a precondition: `Serialized` chunks of
+  SEQUENCE OF / SET OF must be a sequence of TLVs (`p_raw`). ANY DEFINED
+  BY has no raw representation.
 
 `make test-parse` and `make test-write` run the parsers and writers
 extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
@@ -111,8 +118,9 @@ extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 `ASN1.Pulse.CheckedWriteTest` on values built in C
 (`test/checked_write_test.c`). `make test-raw-write` runs the checked
 raw writers extracted from `ASN1.Pulse.RawWriteTest` on values built in C,
-including invalid strings, BIT STRING padding, non-minimal INTEGERs and bad
-ANY slices (`test/raw_write_test.c`).
+including invalid strings, BIT STRING padding, non-minimal INTEGERs, bad
+ANY slices, unsorted SET OF elements and a SET declared in non-canonical
+order (`test/raw_write_test.c`).
 
 ## Layout
 
@@ -130,6 +138,7 @@ ANY slices (`test/raw_write_test.c`).
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers, and the interpreter `write_k` |
 | `ASN1.Pulse.CheckedWriter` | checked writers `check_write_k` (relaxed write, then validate) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and checked raw writers `check_write_raw_k` (raw write, then validate) |
+| `ASN1.Pulse.SortedInsert` | on-the-fly insertion sort of SET components and SET OF elements for the raw writers |
 | `ASN1.Pulse.ParseTest`, `ASN1.Pulse.CheckedWriteTest`, `ASN1.Pulse.RawWriteTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |
 | `ASN1.Pulse.X509` | extraction roots for X.509 certificates and CRLs |

@@ -122,3 +122,26 @@ let mix_ok : squash (raw_ok mix) = _ by (FStar.Tactics.norm [delta; zeta; iota; 
   zeta; iota; primops]]
 let check_write_raw_mix : checked_raw_writer_t mix 1.0R =
   fun x' #y out pos #v #p -> check_write_raw_k mix mix_ok 1.0R (raw_writer mix 1.0R) (raw_validator mix mix_ok) x' #y out pos #v #p
+
+(* SET { c [1] IMPLICIT OCTET STRING, a [0] IMPLICIT INTEGER OPTIONAL,
+   b INTEGER DEFAULT 0 }, declared in the reverse of the canonical order of
+   the tags: the writer sorts the components by tag while writing *)
+noextract
+let setCAB = ASN1.Syntax.asn1_set [
+    "c" *^ (PLAIN ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ASN1.Syntax.asn1_octetstring);
+    "a" *^ (OPTION ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0) ASN1.Syntax.asn1_integer);
+    "b" *^ (DEFAULT ^: ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_integer (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x00uy] (_ by (ASN1.Syntax.wf_tac ()))))]
+    (_ by (ASN1.Syntax.set_tac ()))
+
+noextract
+let setCAB_ok : squash (raw_ok setCAB) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator];
+  zeta; iota; primops]]
+let check_write_raw_setCAB : checked_raw_writer_t setCAB 1.0R =
+  fun x' #y out pos #v #p -> check_write_raw_k setCAB setCAB_ok 1.0R (raw_writer setCAB 1.0R) (raw_validator setCAB setCAB_ok) x' #y out pos #v #p

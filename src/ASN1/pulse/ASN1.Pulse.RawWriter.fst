@@ -40,6 +40,7 @@ module PS = ASN1.Pulse.ParseSequence
 module Conf = ASN1.Spec.Conformance
 module In = ASN1.Pulse.Interpreter
 module CW = ASN1.Pulse.CheckedWriter
+module SI = ASN1.Pulse.SortedInsert
 
 inline_for_extraction
 let rw (#t: Type0) (r: bprel t) (pm: perm) = W.r2l_writer_f #t #SB.bytes (r pm) id_enc
@@ -83,6 +84,51 @@ fn raw_write_cat (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm) (w1: 
     false
   }
 }
+
+(* Write `snd x`, then `fst x`, then insert the latter at its sorted
+   position into the former *)
+inline_for_extraction
+fn raw_write_ins (lt: SI.lt_t) (lt_impl: SI.lt_impl_t lt) (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm) (w1: rw r1 pm) (w2: rw r2 pm)
+: rw #(t1 & t2) (raw_ins lt r1 r2) pm
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_ins lt r1 r2 pm x' x);
+  with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
+  let p0 = !pos;
+  let ok = w2 (snd x') #c2 out pos;
+  if ok {
+    with v1 p1 . assert (pts_to out v1 ** R.pts_to pos p1);
+    let p1r = !pos;
+    let res = w1 (fst x') #c1 out pos;
+    with v2 p2 . assert (pts_to out v2 ** R.pts_to pos p2);
+    if res {
+      let p2r = !pos;
+      SI.r2l_insert lt lt_impl out p2r p1r p0;
+      with v3 . assert (pts_to out v3);
+      SI.r2l_post_ins lt c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2 v3;
+      fold (raw_ins lt r1 r2 pm x' x);
+      true
+    } else {
+      W.r2l_post_append c1 c2 (SZ.v p) v (SZ.v p1) v1 res (SZ.v p2) v2;
+      SI.ins_length lt c1 c2;
+      W.r2l_post_false_weaken (Seq.append c1 c2) x (SZ.v p) v (SZ.v p2) v2;
+      fold (raw_ins lt r1 r2 pm x' x);
+      false
+    }
+  } else {
+    SI.ins_length lt c1 c2;
+    W.r2l_post_false_weaken c2 x (SZ.v p) v (SZ.v p) v;
+    fold (raw_ins lt r1 r2 pm x' x);
+    false
+  }
+}
+
+inline_for_extraction
+let raw_write_join (srt: bool) (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm) (w1: rw r1 pm) (w2: rw r2 pm)
+: rw (raw_join srt r1 r2) pm
+= if srt
+  then (join_ins_equiv srt r1 r2; raw_write_ext (raw_ins SI.lt_tag r1 r2) (raw_join srt r1 r2) () pm (raw_write_ins SI.lt_tag (SI.lt_tag_impl ()) r1 r2 pm w1 w2))
+  else (join_cat_equiv srt r1 r2; raw_write_ext (raw_cat r1 r2) (raw_join srt r1 r2) () pm (raw_write_cat r1 r2 pm w1 w2))
 
 inline_for_extraction
 fn raw_write_opt (#t: Type0) (r: bprel t) (pm: perm) (w: rw r pm)
@@ -158,6 +204,18 @@ fn raw_write_ml (#t: Type0) (r: bprel t) (w: (pm: perm) -> rw r pm) (sh: share_t
   with l . assert (It.mixed_list_match r ml_ops #asn1_strong_parser_kind p_raw pm x' l);
   let res = WI.r2l_write_mixed_list_gen r ml_ops #asn1_strong_parser_kind #p_raw id_enc p_raw_consumed jump_raw w sh g pm x' #l out pos;
   fold (raw_ml r pm x' x);
+  res
+}
+
+inline_for_extraction
+fn raw_write_ml_sorted (#t: Type0) (r: bprel t) (w: (pm: perm) -> rw r pm) (sh: share_t r) (g: gather_t r) (pm: perm)
+: rw #(ml t) (raw_ml_sorted r) pm
+= (x': ml t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_ml_sorted r pm x' x);
+  with l . assert (It.mixed_list_match r ml_ops #asn1_strong_parser_kind p_raw pm x' l);
+  let res = SI.r2l_write_mixed_list_sorted_gen r ml_ops #asn1_strong_parser_kind #p_raw id_enc p_raw_consumed jump_raw w sh g SI.lt_lex (SI.lt_lex_impl ()) pm x' #l out pos;
+  fold (raw_ml_sorted r pm x' x);
   res
 }
 
@@ -371,12 +429,12 @@ let rec raw_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k:
       (raw_write_tlv id (raw_rel k') pm (fun x' #x out pos #v #p -> raw_write_k k' pm x' #x out pos #v #p))
   | ASN1_SEQUENCE gitems ->
     content_sequence_equiv id gitems;
-    raw_write_ext (raw_tlv id (raw_items_rel (dsnd gitems))) (raw_content_rel id (ASN1_SEQUENCE gitems)) () pm
-      (raw_write_tlv id (raw_items_rel (dsnd gitems)) pm (fun x' #x out pos #v #p -> raw_write_items (dsnd gitems) pm x' #x out pos #v #p))
+    raw_write_ext (raw_tlv id (raw_items_rel false (dsnd gitems))) (raw_content_rel id (ASN1_SEQUENCE gitems)) () pm
+      (raw_write_tlv id (raw_items_rel false (dsnd gitems)) pm (fun x' #x out pos #v #p -> raw_write_items false (dsnd gitems) pm x' #x out pos #v #p))
   | ASN1_SET ids items pf ->
     content_set_equiv id ids items pf;
-    raw_write_ext (raw_tlv id (raw_items_rel items)) (raw_content_rel id (ASN1_SET ids items pf)) () pm
-      (raw_write_tlv id (raw_items_rel items) pm (fun x' #x out pos #v #p -> raw_write_items items pm x' #x out pos #v #p))
+    raw_write_ext (raw_tlv id (raw_items_rel true items)) (raw_content_rel id (ASN1_SET ids items pf)) () pm
+      (raw_write_tlv id (raw_items_rel true items) pm (fun x' #x out pos #v #p -> raw_write_items true items pm x' #x out pos #v #p))
   | ASN1_SEQUENCE_OF ne k' ->
     content_seq_of_equiv id ne k';
     raw_write_ext (raw_tlv id (raw_ml (raw_rel k'))) (raw_content_rel id (ASN1_SEQUENCE_OF ne k')) () pm
@@ -384,38 +442,38 @@ let rec raw_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k:
         (raw_write_ml (raw_rel k') (fun pm x' #x out pos #v #p -> raw_write_k k' pm x' #x out pos #v #p) (share_k k') (gather_k k') pm))
   | ASN1_SET_OF ne k' ->
     content_set_of_equiv id ne k';
-    raw_write_ext (raw_tlv id (raw_ml (raw_rel k'))) (raw_content_rel id (ASN1_SET_OF ne k')) () pm
-      (raw_write_tlv id (raw_ml (raw_rel k')) pm
-        (raw_write_ml (raw_rel k') (fun pm x' #x out pos #v #p -> raw_write_k k' pm x' #x out pos #v #p) (share_k k') (gather_k k') pm))
+    raw_write_ext (raw_tlv id (raw_ml_sorted (raw_rel k'))) (raw_content_rel id (ASN1_SET_OF ne k')) () pm
+      (raw_write_tlv id (raw_ml_sorted (raw_rel k')) pm
+        (raw_write_ml_sorted (raw_rel k') (fun pm x' #x out pos #v #p -> raw_write_k k' pm x' #x out pos #v #p) (share_k k') (gather_k k') pm))
   | ASN1_ANY_DEFINED_BY idp prefix aid key_k ls ofb pf_wf pf_sup ->
     content_adb_equiv id idp prefix aid key_k ls ofb pf_wf pf_sup;
     raw_write_ext (raw_false _) (raw_content_rel id (ASN1_ANY_DEFINED_BY idp prefix aid key_k ls ofb pf_wf pf_sup)) () pm
       (raw_write_false _ pm))
   in vf x' #x out pos #v #p
 
-and raw_write_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (pm: perm)
+and raw_write_items ([@@@FStar.Attributes.monomorphize] srt: bool) (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (pm: perm)
   (x': asn1_items_impl_t ls) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_items_rel ls) pm x' x out pos v p)
+: Tot (wres (raw_items_rel srt ls) pm x' x out pos v p)
   (decreases ls)
-= [@inline_let] let vf : rw (raw_items_rel ls) pm =
+= [@inline_let] let vf : rw (raw_items_rel srt ls) pm =
   (match ls with
   | ASN1_GEN_ITEMS_NIL ->
-    items_nil_equiv ();
-    raw_write_ext (raw_pure null_enc) (raw_items_rel ASN1_GEN_ITEMS_NIL) () pm (raw_write_null pm)
+    items_nil_equiv srt;
+    raw_write_ext (raw_pure null_enc) (raw_items_rel srt ASN1_GEN_ITEMS_NIL) () pm (raw_write_null pm)
   | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_single_equiv dk;
-    raw_write_ext (raw_dec_rel dk) (raw_items_rel (PS.single dk)) () pm
+    items_single_equiv srt dk;
+    raw_write_ext (raw_dec_rel dk) (raw_items_rel srt (PS.single dk)) () pm
       (fun x' #x out pos #v #p -> raw_write_dec dk pm x' #x out pos #v #p)
   | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_cons_equiv dk dk2 tl2;
+    items_cons_equiv srt dk dk2 tl2;
     raw_write_ext
       #(asn1_decorated_impl_t dk & asn1_items_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))
-      (raw_cat (raw_dec_rel dk) (raw_items_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
-      (raw_items_rel (PS.cons2 dk dk2 tl2)) () pm
-      (raw_write_cat (raw_dec_rel dk) (raw_items_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) pm
+      (raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
+      (raw_items_rel srt (PS.cons2 dk dk2 tl2)) () pm
+      (raw_write_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) pm
         (fun x' #x out pos #v #p -> raw_write_dec dk pm x' #x out pos #v #p)
-        (fun x' #x out pos #v #p -> raw_write_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) pm x' #x out pos #v #p)))
+        (fun x' #x out pos #v #p -> raw_write_items srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
 and raw_write_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) ([@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (pm: perm)

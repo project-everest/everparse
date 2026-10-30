@@ -3,8 +3,10 @@
    as is, then the written bytes are validated against the schema. Check
    CW_OK with the expected DER bytes, CW_INVALID on values that are not
    DER encodings of the schema (invalid strings, non-minimal INTEGERs, bad
-   BIT STRING padding, DEFAULT values, restrictions, SET OF order, etc.),
-   and CW_NO_SPACE on a short buffer. */
+   BIT STRING padding, DEFAULT values, restrictions, etc.), and CW_NO_SPACE
+   on a short buffer. The components of a SET and the elements of a SET OF
+   are sorted while writing, whatever their order in the schema or in the
+   input. */
 #include "ASN1.Pulse.RawWriteTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -140,6 +142,14 @@ static mix_t mix(Pulse_Lib_Slice_slice__uint8 p, Pulse_Lib_Slice_slice__uint8 a,
   return (mix_t){ ._1 = p, ._2 = { ._1 = a, ._2 = { ._1 = bs, ._2 = { ._1 = n, ._2 = { ._1 = c, ._2 = { ._1 = t, ._2 = b } } } } } };
 }
 
+typedef FStar_Pervasives_Native_tuple2__slice_uint8_tuple2_option_asn1_int_impl_option_a setCAB_t;
+
+/* SET { c [1] IMPLICIT OCTET STRING, a [0] IMPLICIT INTEGER OPTIONAL,
+   b INTEGER DEFAULT 0 } */
+static setCAB_t setCAB(Pulse_Lib_Slice_slice__uint8 c, oint a, oint b) {
+  return (setCAB_t){ ._1 = c, ._2 = { ._1 = a, ._2 = b } };
+}
+
 int main(void) {
   uint8_t ab[] = { 'a', 'b' }, ac[] = { 'a', 'c' }, abcd[] = { 0xab, 0xcd }, abce[] = { 0xab, 0xce };
   uint8_t hi[] = { 'h', 'i' }, hi80[] = { 'h', 0x80 }, hat[] = { 'h', '@' };
@@ -183,18 +193,36 @@ int main(void) {
     INVALID(neSeqOfInt, ints(bad, 2));    /* non-minimal */
   }
 
-  /* setOfOctets: DER order of the elements, structured or serialized */
+  /* setOfOctets: the elements are sorted by encoding while writing,
+     whether structured or serialized; duplicates are allowed */
   {
+    uint8_t bb[] = { 0xbb };
     Pulse_Lib_Slice_slice__uint8 sorted[] = { SL(aa), SL(aa00) };
     Pulse_Lib_Slice_slice__uint8 unsorted[] = { SL(aa00), SL(aa) };
+    Pulse_Lib_Slice_slice__uint8 three[] = { SL(bb), SL(aa00), SL(aa) };
+    Pulse_Lib_Slice_slice__uint8 dup[] = { SL(aa), SL(bb), SL(aa) };
     uint8_t ser_sorted[] = { 0x04, 0x01, 0xaa, 0x04, 0x02, 0xaa, 0x00 };
     uint8_t ser_unsorted[] = { 0x04, 0x02, 0xaa, 0x00, 0x04, 0x01, 0xaa };
+    uint8_t ser_bad[] = { 0x04, 0x01, 0xaa, 0x02, 0x00 };
     OK(setOfOctets, octs(sorted, 2), V(0x31, 0x07, 0x04, 0x01, 0xaa, 0x04, 0x02, 0xaa, 0x00));
     OK(setOfOctets, octs(sorted, 0), V(0x31, 0x00));
     OK(setOfOctets, octs_ser(ser_sorted, sizeof(ser_sorted), 2), V(0x31, 0x07, 0x04, 0x01, 0xaa, 0x04, 0x02, 0xaa, 0x00));
-    INVALID(setOfOctets, octs(unsorted, 2));
-    INVALID(setOfOctets, octs_ser(ser_unsorted, sizeof(ser_unsorted), 2));
+    OK(setOfOctets, octs(unsorted, 2), V(0x31, 0x07, 0x04, 0x01, 0xaa, 0x04, 0x02, 0xaa, 0x00));
+    OK(setOfOctets, octs_ser(ser_unsorted, sizeof(ser_unsorted), 2), V(0x31, 0x07, 0x04, 0x01, 0xaa, 0x04, 0x02, 0xaa, 0x00));
+    OK(setOfOctets, octs(three, 3), V(0x31, 0x0a, 0x04, 0x01, 0xaa, 0x04, 0x01, 0xbb, 0x04, 0x02, 0xaa, 0x00));
+    OK(setOfOctets, octs(dup, 3), V(0x31, 0x09, 0x04, 0x01, 0xaa, 0x04, 0x01, 0xaa, 0x04, 0x01, 0xbb));
+    INVALID(setOfOctets, octs_ser(ser_bad, sizeof(ser_bad), 2));   /* INTEGER element */
   }
+
+  /* setCAB: the components are sorted by tag while writing, although the
+     schema declares them in the reverse order */
+  OK(setCAB, setCAB(SL(abcd), SOME_INT(7), SOME_INT(-1)),
+     V(0x31, 0x0a, 0x02, 0x01, 0xff, 0x80, 0x01, 0x07, 0x81, 0x02, 0xab, 0xcd));
+  OK(setCAB, setCAB(SL(abcd), NONE_INT, NONE_INT), V(0x31, 0x04, 0x81, 0x02, 0xab, 0xcd));
+  OK(setCAB, setCAB(SL(abcd), NONE_INT, SOME_INT(-1)), V(0x31, 0x07, 0x02, 0x01, 0xff, 0x81, 0x02, 0xab, 0xcd));
+  OK(setCAB, setCAB(none, SOME_INT(7), NONE_INT), V(0x31, 0x05, 0x80, 0x01, 0x07, 0x81, 0x00));
+  INVALID(setCAB, setCAB(SL(abcd), NONE_INT, SOME_INT(0)));   /* b = default */
+  INVALID(setCAB, setCAB(SL(abcd), SOME_BIG(SL(nm1)), NONE_INT)); /* non-minimal */
 
   /* mix: strings, ANY, BIT STRING, big INTEGER, CHOICE, OPTIONAL, BOOLEAN DEFAULT */
   OK(mix, mix(SL(hi), SL(null_), BITS(0, SL(aa)), SMALL(300), INL(SMALL(1)), NONE_SL, NONE_B),
