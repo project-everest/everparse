@@ -90,7 +90,6 @@ NEED_Z3_TESTGEN := $(NEED_Z3)
 ifeq (1,$(ADMIT))
 NEED_Z3 :=
 endif
-export PATH := $(z3_dir):$(PATH)
 
 $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
@@ -110,6 +109,14 @@ opam-env.Makefile: $(NEED_OPAM_DIR) $(EVERPARSE_OPT_PATH)/opam-env.sh
 include opam-env.Makefile
 else
 -include opam-env.Makefile
+endif
+
+# Must come after opam-env.Makefile, which recomputes PATH via $(shell) from
+# the process environment (GNU Make < 4.4 does not pass exported variables to
+# $(shell)), so an earlier prepend would be lost. Avoid duplicating z3_dir
+# across make restarts, since the restarted make inherits the exported PATH.
+ifeq (,$(filter $(z3_dir),$(subst :, ,$(PATH))))
+export PATH := $(z3_dir):$(PATH)
 endif
 
 # point to the Makefile because Z3 depends on the F* directory only but when I build F* the directory timestamp changes

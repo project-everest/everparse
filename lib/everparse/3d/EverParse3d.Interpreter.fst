@@ -198,6 +198,7 @@ let itype_as_validator
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#[@@@erasable] d: state_dict)
   (#use_error_handler:bool)
+  (name: string)
   (i:itype)
   : A.validate_with_action_t #base_t #len_t #pos_t
       (itype_as_parser i)
@@ -214,14 +215,14 @@ let itype_as_validator
         (allow_reader_of_itype i)
         use_error_handler
     with
-    | UInt8 -> A.validate____UINT8
-    | UInt16 -> A.validate____UINT16
-    | UInt32 -> A.validate____UINT32
-    | UInt64 -> A.validate____UINT64
-    | UInt8BE -> A.validate____UINT8BE
-    | UInt16BE -> A.validate____UINT16BE
-    | UInt32BE -> A.validate____UINT32BE
-    | UInt64BE -> A.validate____UINT64BE
+    | UInt8 -> A.validate____UINT8 name
+    | UInt16 -> A.validate____UINT16 name
+    | UInt32 -> A.validate____UINT32 name
+    | UInt64 -> A.validate____UINT64 name
+    | UInt8BE -> A.validate____UINT8BE name
+    | UInt16BE -> A.validate____UINT16BE name
+    | UInt32BE -> A.validate____UINT32BE name
+    | UInt64BE -> A.validate____UINT64BE name
     | Unit -> A.validate_unit_no_read
     | AllBytes -> A.validate_all_bytes
     | AllZeros -> A.validate_all_zeros
@@ -363,6 +364,7 @@ let dtyp_as_parser #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
 [@@specialize]
 let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                       #nz #wk (#pk:P.parser_kind nz wk) (#ha #hr:_)
+                      (name: string)
                       (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha hr)
   : A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(dtyp_as_type t)
         (dtyp_as_parser t)
@@ -375,7 +377,7 @@ let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t l
         d
         ha hr use_error_handler
     with
-    | DT_IType i -> itype_as_validator #base_t #len_t #pos_t #inst #_extra #d #use_error_handler i
+    | DT_IType i -> itype_as_validator #base_t #len_t #pos_t #inst #_extra #d #use_error_handler name i
     | DT_App _ _ _ b _ -> validator_of_binding b
 
 (* At `hr = true`, `validate_with_action_t` reduces to the non-consuming
@@ -384,12 +386,13 @@ let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t l
 [@@specialize]
 let dtyp_as_validator_no_read #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                       #nz #wk (#pk:P.parser_kind nz wk) (#ha:_)
+                      (name: string)
                       (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha true)
   : A.validate_with_action_no_read #base_t #len_t #pos_t #inst
         (dtyp_as_parser t)
         d
         ha use_error_handler
-  = dtyp_as_validator t
+  = dtyp_as_validator name t
 
 [@@specialize]
 let dtyp_as_leaf_reader #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
@@ -1215,7 +1218,7 @@ let rec as_validator
       assert_norm (as_type (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_type td);
       assert_norm (as_parser (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_parser td);
       A.validate_with_error_handler_gen ehm typename fldname _
-        (A.validate_eta_gen _ (dtyp_as_validator td))
+        (A.validate_eta_gen _ (dtyp_as_validator fldname td))
 
     | T_pair fldname k1_const t1 k2_const t2 ->
       assert_norm (as_type (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == as_type t1 & as_type t2);
@@ -1231,7 +1234,7 @@ let rec as_validator
       assert_norm (as_parser (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) ==
                    P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
       A.validate_dep_pair fldname
-          (A.validate_with_error_handler_no_read ehm typename fldname (dtyp_as_validator_no_read i))
+          (A.validate_with_error_handler_no_read ehm typename fldname (dtyp_as_validator_no_read fldname i))
           (dtyp_as_leaf_reader i)
           (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x)))
 
@@ -1240,7 +1243,7 @@ let rec as_validator
       assert_norm (as_parser (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f) == P.parse_filter (dtyp_as_parser t) f);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_filter fldname
-          (dtyp_as_validator_no_read t)
+          (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
           f "reading field_value" "checking constraint")
 
@@ -1249,7 +1252,7 @@ let rec as_validator
       assert_norm (as_parser (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f a) == P.parse_filter (dtyp_as_parser t) f);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_filter_with_action fldname
-          (dtyp_as_validator_no_read t)
+          (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
           f "reading field_value" "checking constraint"
           (fun x -> action_as_action (a x)))
@@ -1261,7 +1264,7 @@ let rec as_validator
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_dep_pair_with_refinement (not ha1) fldname
-            (dtyp_as_validator_no_read base)
+            (dtyp_as_validator_no_read fldname base)
             (dtyp_as_leaf_reader base)
             refinement
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x))))
@@ -1273,7 +1276,7 @@ let rec as_validator
                         P.(dtyp_as_parser base `parse_dep_pair` (fun x -> as_parser (t x))));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_dep_pair_with_action
-            (dtyp_as_validator_no_read base)
+            (dtyp_as_validator_no_read fldname base)
             (dtyp_as_leaf_reader base)
             (fun x -> action_as_action (act x))
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x))))
@@ -1285,7 +1288,7 @@ let rec as_validator
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_dep_pair_with_refinement_and_action (not ha1) fldname
             (A.validate_with_error_handler_no_read ehm typename fldname
-              (dtyp_as_validator_no_read base))
+              (dtyp_as_validator_no_read fldname base))
             (dtyp_as_leaf_reader base)
             refinement
             (fun x -> action_as_action (act x))
@@ -1330,7 +1333,7 @@ let rec as_validator
       assert_norm (as_parser (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == dtyp_as_parser i);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_with_dep_action fldname
-            (dtyp_as_validator_no_read i)
+            (dtyp_as_validator_no_read fldname i)
             (dtyp_as_leaf_reader i)
             (fun x -> action_as_action (a typename x)))
 
@@ -1371,7 +1374,7 @@ let rec as_validator
       assert_norm (as_type (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.cstring (dtyp_as_type elt_t) terminator);
       assert_norm (as_parser (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.parse_string (dtyp_as_parser elt_t) terminator);
       A.validate_with_error_handler ehm typename fldname
-        (A.validate_string (dtyp_as_validator_no_read elt_t)
+        (A.validate_string (dtyp_as_validator_no_read fldname elt_t)
                            (dtyp_as_leaf_reader elt_t)
                            terminator)
 #pop-options
@@ -1466,7 +1469,7 @@ let t_probe_then_validate
      (fun typename src ->
         Atomic_action (atomic_action_call
           (A.probe_then_validate ehm typename fldname
-             (A.validate_without_reading_gen has_reader (dtyp_as_validator td))
+             (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
              src as_u64 nullable dest_name dest init_cb dest_sz probe sq)))
 
 [@@specialize]
@@ -1557,7 +1560,7 @@ let t_probe_then_validate_gen
         Atomic_action (atomic_action_call
           (A.action_weaken
             (A.probe_then_validate ehm typename fldname
-               (A.validate_without_reading_gen has_reader (dtyp_as_validator td))
+               (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
                src as_u64 nullable dest_name dest init_cb dest_sz probe sq)
             d
             sq_weaken)))

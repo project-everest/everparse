@@ -17,7 +17,7 @@ let smoke_v
     state_dict_empty
     false
     false
-= A.validate_pair B.error_handler_macro "smoke" "fst" true (A.validate_without_reading A.validate____UINT8) true (A.validate_without_reading A.validate____UINT16)
+= A.validate_pair B.error_handler_macro "smoke" "fst" true (A.validate_without_reading (A.validate____UINT8 "fst")) true (A.validate_without_reading (A.validate____UINT16 "snd"))
 
 inline_for_extraction noextract
 let smoke_r
@@ -40,8 +40,8 @@ let smoke_extern
     false
     false
 = A.validate_pair #_ #_ #_ #E.input_stream_extern E.error_handler_macro "smoke" "fst" true
-    (A.validate_without_reading A.validate____UINT8) true
-    (A.validate_without_reading A.validate____UINT16)
+    (A.validate_without_reading (A.validate____UINT8 "fst")) true
+    (A.validate_without_reading (A.validate____UINT16 "snd"))
 
 (* And at the `static` backend. *)
 module St = EverParse3d.InputStream.Static
@@ -55,7 +55,7 @@ let smoke_static
     state_dict_empty
     false
     false
-= A.validate_without_reading #_ #_ #_ #St.input_stream_static A.validate____UINT32
+= A.validate_without_reading #_ #_ #_ #St.input_stream_static (A.validate____UINT32 "value")
 
 (* Probe combinators, at the `buffer` backend. As above, this is here to make
    sure the definitions of EverParse3d.ProbeActions are really applicable by a

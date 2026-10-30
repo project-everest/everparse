@@ -4,78 +4,43 @@
 static uint8_t Triangle_validate____core__triangle(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos);
 
 static uint8_t Triangle_validate____core__triangle(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_triangle = (uint64_t)p;
-  size_t pos = 0;
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = ((size_t)12 <= (rem - p0));
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartTriangle = (uint64_t)currentPosition;
+  size_t scanOffset = 0;
+  size_t offsetBeforeA = scanOffset;
+  size_t positionBeforeA = sl_pos[0];
+  size_t bytesRemainingBeforeA = (sl_len - positionBeforeA);
+  bool hasBytesForA;
+  if (offsetBeforeA <= bytesRemainingBeforeA) {
+    hasBytesForA = ((size_t)12 <= (bytesRemainingBeforeA - offsetBeforeA));
   }
   else {
-    hasBytes = false;
+    hasBytesForA = false;
   }
   uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + (size_t)12);
-    res = 0;
+  if (hasBytesForA) {
+    scanOffset = (offsetBeforeA + (size_t)12);
+    res = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    res = 2;
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_triangle;
-  if (res == 0) {
-    size_t p2 = sl_pos[0];
-    size_t p_ = (p2 + pos);
-    sl_pos[0] = p_;
-    resultAfter_triangle = 0;
-  }
-  else {
-    resultAfter_triangle = res;
-  }
-  if (resultAfter_triangle == 0) {
-    return resultAfter_triangle;
+  uint8_t resultAfterTriangle;
+  if (res == EVERPARSE_STATUS_SUCCESS) {
+    size_t currentPosition1 = sl_pos[0];
+    size_t newPosition = (currentPosition1 + scanOffset);
+    sl_pos[0] = newPosition;
+    resultAfterTriangle = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    const char * _ct1;
-    if (resultAfter_triangle == 0) {
-      _ct1 = "success";
-    }
-    else if (resultAfter_triangle == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (resultAfter_triangle == 3) {
-      _ct1 = "impossible";
-    }
-    else if (resultAfter_triangle == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (resultAfter_triangle == 5) {
-      _ct1 = "action failed";
-    }
-    else if (resultAfter_triangle == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (resultAfter_triangle == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (resultAfter_triangle == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
-    if ((resultAfter_triangle == 0) || ((resultAfter_triangle >= 2) && (resultAfter_triangle <= 8))) {
-      _ct2 = (uint64_t)resultAfter_triangle;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("_triangle", "a", _ct1, _ct2, ctxt, sl_base, fieldStart_triangle));
-    return resultAfter_triangle;
+    resultAfterTriangle = res;
+  }
+  if (resultAfterTriangle == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterTriangle;
+  }
+  else {
+    (void)(error_handler_fn("_triangle", "a", EverParse3d_ErrorCode_error_reason_of_result(resultAfterTriangle), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterTriangle), ctxt, sl_base, fieldStartTriangle));
+    return resultAfterTriangle;
   }
 }
 
@@ -85,14 +50,7 @@ uint64_t TriangleValidateTriangle(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler
   size_t cursor = initial;
   uint8_t status = Triangle_validate____core__triangle(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

@@ -48,7 +48,7 @@ fn scan_worker (extra: B.extra_t)
   parser_result (Seq.slice remaining (U64.v old) (Seq.length remaining));
   let prefix = B.stream_has_u64 #extra base len cursor high contents remaining;
   if prefix {
-    let enough = B.stream_has_at #extra base len cursor high 8sz contents remaining;
+    let enough = B.stream_has_at #extra "" base len cursor high 8sz contents remaining;
     if enough {
       assert (pure (U64.fits (U64.v high + 8)));
       let next = B.scan_add high 8sz;

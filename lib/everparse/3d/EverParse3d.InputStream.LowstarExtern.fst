@@ -14,6 +14,7 @@ module Util = EverParse3d.Util
 module Raw = EverParse3d.InputStream.LowstarExtern.Raw
 module EH = EverParse3d.Actions.ErrorHandler.LowstarExtern
 module B = EverParse3d.CAbi.Boolean
+module Common = EverParse3d.Actions.Common
 include EverParse3d.InputStream.LowstarExtern.Types
 
 ghost
@@ -76,6 +77,7 @@ ensures stream_pts_to b len pos c v **
 inline_for_extraction noextract
 fn stream_has
   (#[Util.solve_from_ctx ()] extra: extra_t)
+  (name: string)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (c v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos c v
@@ -90,6 +92,7 @@ ensures stream_pts_to b len pos c v **
 inline_for_extraction noextract
 fn stream_has_at
   (#[Util.solve_from_ctx ()] extra: extra_t)
+  (name: string)
   (b: base_t) (len: len_t) (pos: pos_t) (off: U64.t) (n: SZ.t)
   (c v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos c v
@@ -179,6 +182,7 @@ ensures stream_pts_to b len pos c Seq.empty
 inline_for_extraction noextract
 fn stream_read
   (#[Util.solve_from_ctx ()] extra: extra_t)
+  (name: string)
   (t': Type0) (k: LP.parser_kind) (p: LP.parser k t')
   (reader: API.leaf_reader p)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
@@ -200,15 +204,15 @@ ensures exists* v'.
   unfold (stream_pts_to b len pos c v);
   with current. _;
   unfold (public_pts_to b current c v);
-  let cur = !pos;
+  let [@@@rename_let ("positionOf" ^ Common.pascal_case name)] cur = !pos;
   let count = I.native_scan_to_u64 n;
   let mut scratch = [| 0uy; n |];
   let dst = AP.from_array scratch;
-  let bytes = Raw.read b.base count dst;
+  let [@@@rename_let ("bytesOf" ^ Common.pascal_case name)] bytes = Raw.read b.base count dst;
   let res = reader bytes;
   Raw.restore_read b.base count (U64.v cur) dst bytes;
   AP.to_array dst scratch;
-  let next = U64.add cur count;
+  let [@@@rename_let ("positionAfter" ^ Common.pascal_case name)] next = U64.add cur count;
   pos := next;
   let rest = Ghost.hide (Seq.slice v (SZ.v n) (Seq.length v));
   rewrite (storage b.base (U64.v cur + U64.v count))

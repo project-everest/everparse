@@ -9,7 +9,7 @@ import sys
 
 VALIDATOR = re.compile(r"\b(uint(?:8|64)_t)\s+(\w*Validate\w*)\s*\(")
 WRAPPER = re.compile(r"\b(BOOLEAN|bool)\s+(\w*Check\w*)\s*\(([^;]*)\);")
-PULSE_INTERNAL = re.compile(r"EVERPARSEPULSEINTERNAL_|EverParsePulseInternal")
+PULSE_INTERNAL = re.compile(r"EverParsePulseInternal")
 
 # Older extraction exposed the Pulse worker next to the public uint64_t
 # adapter. Native Custard keeps it private and preserves its F* name.

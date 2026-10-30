@@ -5,181 +5,99 @@ static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVE
 
 static uint8_t Color_validate____core__coloredPoint(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   /* Validating field col */
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_coloredPoint = (uint64_t)p;
-  size_t pos = 0;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartColoredPoint = (uint64_t)currentPosition;
+  size_t offsetInCol_refinement = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeCol_refinement = offsetInCol_refinement;
+  size_t positionBeforeCol_refinement = sl_pos[0];
+  size_t bytesRemainingBeforeCol_refinement = (sl_len - positionBeforeCol_refinement);
+  bool hasBytesForCol_refinement;
+  if (offsetBeforeCol_refinement <= bytesRemainingBeforeCol_refinement) {
+    hasBytesForCol_refinement = (4 <= (bytesRemainingBeforeCol_refinement - offsetBeforeCol_refinement));
   }
   else {
-    hasBytes = false;
+    hasBytesForCol_refinement = false;
   }
-  uint8_t resultAftercol_refinement;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    resultAftercol_refinement = 0;
+  uint8_t resultAfterCol_refinement;
+  if (hasBytesForCol_refinement) {
+    offsetInCol_refinement = (offsetBeforeCol_refinement + 4);
+    resultAfterCol_refinement = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAftercol_refinement = 2;
+    resultAfterCol_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_coloredPoint;
-  if (resultAftercol_refinement == 0) {
+  uint8_t resultAfterColoredPoint;
+  if (resultAfterCol_refinement == EVERPARSE_STATUS_SUCCESS) {
     /* reading field_value */
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t col_refinement = (bfirst2 + (n2 * 256));
+    size_t positionOfCol_refinement = sl_pos[0];
+    size_t positionAfterCol_refinement = (positionOfCol_refinement + 4);
+    uint8_t *bytesOfCol_refinement = (sl_base + positionOfCol_refinement);
+    sl_pos[0] = positionAfterCol_refinement;
+    uint32_t col_refinement = EverParse3d_Prelude_read____UINT32(bytesOfCol_refinement);
     /* start: checking constraint */
     bool col_refinementConstraintIsOk = ((COLOR_RED == col_refinement) || ((COLOR_GREEN == col_refinement) || (COLOR_BLUE == col_refinement)));
     /* end: checking constraint */
     if (col_refinementConstraintIsOk) {
-      resultAfter_coloredPoint = 0;
+      resultAfterColoredPoint = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfter_coloredPoint = 6;
+      resultAfterColoredPoint = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
-    resultAfter_coloredPoint = resultAftercol_refinement;
+    resultAfterColoredPoint = resultAfterCol_refinement;
   }
-  uint8_t resultAftercol_refinement1;
-  if (resultAfter_coloredPoint == 0) {
-    resultAftercol_refinement1 = resultAfter_coloredPoint;
+  uint8_t resultAfterCol_refinement1;
+  if (resultAfterColoredPoint == EVERPARSE_STATUS_SUCCESS) {
+    resultAfterCol_refinement1 = resultAfterColoredPoint;
   }
   else {
-    const char * _ct1;
-    if (resultAfter_coloredPoint == 0) {
-      _ct1 = "success";
-    }
-    else if (resultAfter_coloredPoint == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (resultAfter_coloredPoint == 3) {
-      _ct1 = "impossible";
-    }
-    else if (resultAfter_coloredPoint == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (resultAfter_coloredPoint == 5) {
-      _ct1 = "action failed";
-    }
-    else if (resultAfter_coloredPoint == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (resultAfter_coloredPoint == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (resultAfter_coloredPoint == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
-    if ((resultAfter_coloredPoint == 0) || ((resultAfter_coloredPoint >= 2) && (resultAfter_coloredPoint <= 8))) {
-      _ct2 = (uint64_t)resultAfter_coloredPoint;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("_coloredPoint", "col.refinement", _ct1, _ct2, ctxt, sl_base, fieldStart_coloredPoint));
-    resultAftercol_refinement1 = resultAfter_coloredPoint;
+    (void)(error_handler_fn("_coloredPoint", "col.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfterColoredPoint), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterColoredPoint), ctxt, sl_base, fieldStartColoredPoint));
+    resultAfterCol_refinement1 = resultAfterColoredPoint;
   }
-  if (resultAftercol_refinement1 == 0) {
-    size_t p2 = sl_pos[0];
-    uint64_t fieldStart_coloredPoint1 = (uint64_t)p2;
-    size_t pos1 = 0;
-    size_t p01_1 = pos1;
-    size_t p3 = sl_pos[0];
-    size_t rem1 = (sl_len - p3);
-    bool hasBytes1;
-    if (p01_1 <= rem1) {
-      hasBytes1 = ((size_t)8 <= (rem1 - p01_1));
+  if (resultAfterCol_refinement1 == EVERPARSE_STATUS_SUCCESS) {
+    size_t currentPosition1 = sl_pos[0];
+    uint64_t fieldStartColoredPoint1 = (uint64_t)currentPosition1;
+    size_t scanOffset = 0;
+    size_t offsetBeforeX = scanOffset;
+    size_t positionBeforeX = sl_pos[0];
+    size_t bytesRemainingBeforeX = (sl_len - positionBeforeX);
+    bool hasBytesForX;
+    if (offsetBeforeX <= bytesRemainingBeforeX) {
+      hasBytesForX = ((size_t)8 <= (bytesRemainingBeforeX - offsetBeforeX));
     }
     else {
-      hasBytes1 = false;
+      hasBytesForX = false;
     }
     uint8_t res;
-    if (hasBytes1) {
-      pos1 = (p01_1 + (size_t)8);
-      res = 0;
+    if (hasBytesForX) {
+      scanOffset = (offsetBeforeX + (size_t)8);
+      res = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      res = 2;
+      res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    uint8_t resultAfter_coloredPoint1;
-    if (res == 0) {
-      size_t p4 = sl_pos[0];
-      size_t p_ = (p4 + pos1);
-      sl_pos[0] = p_;
-      resultAfter_coloredPoint1 = 0;
-    }
-    else {
-      resultAfter_coloredPoint1 = res;
-    }
-    if (resultAfter_coloredPoint1 == 0) {
-      return resultAfter_coloredPoint1;
+    uint8_t resultAfterColoredPoint1;
+    if (res == EVERPARSE_STATUS_SUCCESS) {
+      size_t currentPosition2 = sl_pos[0];
+      size_t newPosition = (currentPosition2 + scanOffset);
+      sl_pos[0] = newPosition;
+      resultAfterColoredPoint1 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      const char * _ct3;
-      if (resultAfter_coloredPoint1 == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAfter_coloredPoint1 == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAfter_coloredPoint1 == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAfter_coloredPoint1 == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAfter_coloredPoint1 == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAfter_coloredPoint1 == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAfter_coloredPoint1 == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAfter_coloredPoint1 == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
-      if ((resultAfter_coloredPoint1 == 0) || ((resultAfter_coloredPoint1 >= 2) && (resultAfter_coloredPoint1 <= 8))) {
-        _ct4 = (uint64_t)resultAfter_coloredPoint1;
-      }
-      else {
-        _ct4 = 15;
-      }
-      (void)(error_handler_fn("_coloredPoint", "x", _ct3, _ct4, ctxt, sl_base, fieldStart_coloredPoint1));
-      return resultAfter_coloredPoint1;
+      resultAfterColoredPoint1 = res;
+    }
+    if (resultAfterColoredPoint1 == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterColoredPoint1;
+    }
+    else {
+      (void)(error_handler_fn("_coloredPoint", "x", EverParse3d_ErrorCode_error_reason_of_result(resultAfterColoredPoint1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterColoredPoint1), ctxt, sl_base, fieldStartColoredPoint1));
+      return resultAfterColoredPoint1;
     }
   }
   else {
-    return resultAftercol_refinement1;
+    return resultAfterCol_refinement1;
   }
 }
 
@@ -189,14 +107,7 @@ uint64_t ColorValidateColoredPoint(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handle
   size_t cursor = initial;
   uint8_t status = Color_validate____core__coloredPoint(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

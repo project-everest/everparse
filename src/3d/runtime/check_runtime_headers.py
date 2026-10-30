@@ -78,8 +78,6 @@ def check(args):
         windows = os.name == "nt" or os.environ.get("OS") == "Windows_NT"
         endian = "EverParseEndianness_Windows_NT.h" if windows else "EverParseEndianness.h"
         shutil.copyfile(RUNTIME / endian, output / "EverParseEndianness.h")
-        for name in ("EverParsePulse.h", "EverParsePulseEndianness.h"):
-            shutil.copyfile(RUNTIME / name, output / name)
         consumers(profile, reference[directory], output)
         flags = ["-D_DEFAULT_SOURCE", "-Wall", "-Wextra", "-Werror", "-O1",
                  "-I" + str(output), "-I" + str(HERE / "tests")]

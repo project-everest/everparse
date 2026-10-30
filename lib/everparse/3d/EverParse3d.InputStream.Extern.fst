@@ -201,6 +201,7 @@ inline_for_extraction
 noextract
 fn stream_has_bounded
     (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (name: string)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -213,7 +214,7 @@ ensures stream_pts_to base len pos contents v **
   pure (res == true <==> SZ.v n <= Seq.length v)
 {
   if bounded len {
-    let rem = stream_remaining base len pos contents v;
+    let [@@@rename_let ("bytesRemainingBefore" ^ Common.pascal_case name)] rem = stream_remaining base len pos contents v;
     SZ.lte n rem
   } else {
     unfold (stream_pts_to base len pos contents v);
@@ -259,6 +260,7 @@ inline_for_extraction
 noextract
 fn stream_has_at_bounded
     (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (name: string)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -277,7 +279,7 @@ ensures stream_pts_to base len pos contents v **
   )
 {
   if bounded len {
-    let rem = stream_remaining base len pos contents v;
+    let [@@@rename_let ("bytesRemainingBefore" ^ Common.pascal_case name)] rem = stream_remaining base len pos contents v;
     if (SZ.lte off rem) {
       SZ.lte n (SZ.sub rem off)
     } else {
@@ -368,6 +370,7 @@ inline_for_extraction
 noextract
 fn stream_read
     (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (name: string)
   (t': Type0)
   (k: LP.parser_kind)
   (p: LP.parser k t')
@@ -397,7 +400,7 @@ fn stream_read
   API.parse_constant_size_eq p v;
   LP.parse_strong_prefix p v (Seq.slice v 0 (SZ.v n));
   let mut scratch = [| 0uy; n |];
-  let sp = AP.from_array scratch;
+  let [@@@rename_let ("bytesOf" ^ Common.pascal_case name)] sp = AP.from_array scratch;
   stream_read_bytes_bounded base len pos n sp contents v _;
   let res = r sp;
   AP.to_array sp scratch;
@@ -656,8 +659,8 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
   extra_t = extra_t;
   pts_to_is_suffix_of = (fun b l (p: pos_t) c v -> stream_pts_to_is_suffix_of b l p c v);
   get_position = stream_get_relative_position;
-  has = (fun b l (p: pos_t) n c v -> stream_has_bounded b l p n c v);
-  has_at = (fun b l (p: pos_t) off n c v -> stream_has_at_bounded b l p off n c v);
+  has = (fun name b l (p: pos_t) n c v -> stream_has_bounded name b l p n c v);
+  has_at = (fun name b l (p: pos_t) off n c v -> stream_has_at_bounded name b l p off n c v);
   read = stream_read;
   skip = (fun b l (p: pos_t) n c v -> stream_skip_bounded b l p n c v);
   empty = (fun b l (p: pos_t) c v -> stream_empty_unit b l p c v);

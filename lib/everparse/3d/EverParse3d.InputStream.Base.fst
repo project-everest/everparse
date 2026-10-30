@@ -190,8 +190,13 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
       )
     );
 
+  (* The [name] argument of [has], [has_at] and [read] is the 3D field being
+     checked or read ("" if none). It is only used by the inlined
+     implementations to name their C locals after the field, with
+     `rename_let`; it never reaches the generated C code. *)
   has:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
+    (name: string) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -243,6 +248,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
      too. *)
   has_at:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
+    (name: string) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -264,6 +270,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
 
   read:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
+    (name: string) ->
     (t': Type0) ->
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->

@@ -53,11 +53,6 @@ Then, EverParse/3d produces:
   helpers for the implementation of verified validators, common to
   ``MyFile1.3d`` and ``MyFile2.3d``
 
-* ``EverParsePulse.h``, ``EverParsePulseEndianness.h``: two further headers
-  playing the same role for the Pulse backend. They are written under
-  ``--api pulse``; ``--api lowstar``, which is the default, does not emit
-  them, as its ``EverParse.h`` is self-contained
-
 3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
    compilation units that need to call a validator from
    ``MyFile1.3d``, and similarly for ``MyFile2.3d``.
@@ -645,8 +640,7 @@ Options are treated from left to right:
   * ``pulse``: ``lib/everparse/3d/runtime/<input_stream_format>``
 
   These paths are relative to the EverParse package or repository. Also
-  include ``lib/everparse/3d`` for ``EverParseEndianness.h`` and, under
-  ``--api pulse``, ``EverParsePulse{,Endianness}.h``.
+  include ``lib/everparse/3d`` for ``EverParseEndianness.h``.
   Despite preserving the
   Low\* public C API, ``--api lowstar`` needs its own runtime header, not
   the Pulse one.

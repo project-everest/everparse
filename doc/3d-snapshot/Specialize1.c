@@ -134,368 +134,211 @@ static void Specialize1____specialized32____probe_S64(uint32_t bound, const char
 }
 
 static inline uint8_t Specialize1_validate____core__T(uint32_t bound, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
+  size_t scanOffset = 0;
   /* Validating field t1 */
-  size_t p = sl_pos[0];
-  uint64_t view_start = (uint64_t)p;
-  size_t field_off = pos;
-  uint64_t start_pos = (view_start + (uint64_t)field_off);
+  size_t currentPosition = sl_pos[0];
+  uint64_t streamPositionAtT1 = (uint64_t)currentPosition;
+  size_t offsetOfT1 = scanOffset;
+  uint64_t startPositionOfT1 = (streamPositionAtT1 + (uint64_t)offsetOfT1);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeT1 = scanOffset;
+  size_t positionBeforeT1 = sl_pos[0];
+  size_t bytesRemainingBeforeT1 = (sl_len - positionBeforeT1);
+  bool hasBytesForT1;
+  if (offsetBeforeT1 <= bytesRemainingBeforeT1) {
+    hasBytesForT1 = (4 <= (bytesRemainingBeforeT1 - offsetBeforeT1));
   }
   else {
-    hasBytes = false;
+    hasBytesForT1 = false;
+  }
+  uint8_t resultOfT1;
+  if (hasBytesForT1) {
+    scanOffset = (offsetBeforeT1 + 4);
+    resultOfT1 = EVERPARSE_STATUS_SUCCESS;
+  }
+  else {
+    resultOfT1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
   uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    res = 0;
+  if (resultOfT1 == EVERPARSE_STATUS_SUCCESS) {
+    res = resultOfT1;
   }
   else {
-    res = 2;
+    (void)(error_handler_fn("_T", "t1", EverParse3d_ErrorCode_error_reason_of_result(resultOfT1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfT1), ctxt, sl_base, startPositionOfT1));
+    res = resultOfT1;
   }
-  uint8_t res1;
-  if (res == 0) {
-    res1 = res;
-  }
-  else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
-    if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("_T", "t1", _ct1, _ct2, ctxt, sl_base, start_pos));
-    res1 = res;
-  }
-  uint8_t resultAftert1;
-  if (res1 == 0) {
-    size_t p2 = sl_pos[0];
-    size_t p_ = (p2 + pos);
-    sl_pos[0] = p_;
-    resultAftert1 = 0;
+  uint8_t resultAfterT1;
+  if (res == EVERPARSE_STATUS_SUCCESS) {
+    size_t currentPosition1 = sl_pos[0];
+    size_t newPosition = (currentPosition1 + scanOffset);
+    sl_pos[0] = newPosition;
+    resultAfterT1 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAftert1 = res1;
+    resultAfterT1 = res;
   }
-  if (resultAftert1 == 0) {
+  if (resultAfterT1 == EVERPARSE_STATUS_SUCCESS) {
     /* Validating field t2 */
-    size_t p2_1 = sl_pos[0];
-    uint64_t fieldStart_T = (uint64_t)p2_1;
-    size_t pos1 = 0;
+    size_t currentPosition1_1 = sl_pos[0];
+    uint64_t fieldStartT = (uint64_t)currentPosition1_1;
+    size_t offsetInT2_refinement = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t p01 = pos1;
-    size_t p3 = sl_pos[0];
-    size_t rem1 = (sl_len - p3);
-    bool hasBytes1;
-    if (p01 <= rem1) {
-      hasBytes1 = (4 <= (rem1 - p01));
+    size_t offsetBeforeT2_refinement = offsetInT2_refinement;
+    size_t positionBeforeT2_refinement = sl_pos[0];
+    size_t bytesRemainingBeforeT2_refinement = (sl_len - positionBeforeT2_refinement);
+    bool hasBytesForT2_refinement;
+    if (offsetBeforeT2_refinement <= bytesRemainingBeforeT2_refinement) {
+      hasBytesForT2_refinement = (4 <= (bytesRemainingBeforeT2_refinement - offsetBeforeT2_refinement));
     }
     else {
-      hasBytes1 = false;
+      hasBytesForT2_refinement = false;
     }
-    uint8_t resultAftert2_refinement;
-    if (hasBytes1) {
-      pos1 = (p01 + 4);
-      resultAftert2_refinement = 0;
+    uint8_t resultAfterT2_refinement;
+    if (hasBytesForT2_refinement) {
+      offsetInT2_refinement = (offsetBeforeT2_refinement + 4);
+      resultAfterT2_refinement = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAftert2_refinement = 2;
+      resultAfterT2_refinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    uint8_t resultAfter_T;
-    if (resultAftert2_refinement == 0) {
+    uint8_t resultAfterT;
+    if (resultAfterT2_refinement == EVERPARSE_STATUS_SUCCESS) {
       /* reading field_value */
-      size_t p02 = sl_pos[0];
-      size_t m = (p02 + 4);
-      uint8_t *sub = (sl_base + p02);
-      sl_pos[0] = m;
-      uint8_t first = sub[0];
-      size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-      uint8_t first1 = sub[1];
-      size_t pos_1 = (pos_ + 1);
-      uint8_t first2 = sub[pos_];
-      uint8_t first3 = sub[pos_1];
-      uint32_t n = (uint32_t)first3;
-      uint32_t bfirst = (uint32_t)first2;
-      uint32_t n1 = (bfirst + (n * 256));
-      uint32_t bfirst1 = (uint32_t)first1;
-      uint32_t n2 = (bfirst1 + (n1 * 256));
-      uint32_t bfirst2 = (uint32_t)first;
-      uint32_t t2_refinement = (bfirst2 + (n2 * 256));
+      size_t positionOfT2_refinement = sl_pos[0];
+      size_t positionAfterT2_refinement = (positionOfT2_refinement + 4);
+      uint8_t *bytesOfT2_refinement = (sl_base + positionOfT2_refinement);
+      sl_pos[0] = positionAfterT2_refinement;
+      uint32_t t2_refinement = EverParse3d_Prelude_read____UINT32(bytesOfT2_refinement);
       /* start: checking constraint */
       bool t2_refinementConstraintIsOk = (t2_refinement <= bound);
       /* end: checking constraint */
       if (t2_refinementConstraintIsOk) {
-        resultAfter_T = 0;
+        resultAfterT = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_T = 6;
+        resultAfterT = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
       }
     }
     else {
-      resultAfter_T = resultAftert2_refinement;
+      resultAfterT = resultAfterT2_refinement;
     }
-    if (resultAfter_T == 0) {
-      return resultAfter_T;
+    if (resultAfterT == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterT;
     }
     else {
-      const char * _ct3;
-      if (resultAfter_T == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAfter_T == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAfter_T == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAfter_T == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAfter_T == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAfter_T == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAfter_T == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAfter_T == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
-      if ((resultAfter_T == 0) || ((resultAfter_T >= 2) && (resultAfter_T <= 8))) {
-        _ct4 = (uint64_t)resultAfter_T;
-      }
-      else {
-        _ct4 = 15;
-      }
-      (void)(error_handler_fn("_T", "t2.refinement", _ct3, _ct4, ctxt, sl_base, fieldStart_T));
-      return resultAfter_T;
+      (void)(error_handler_fn("_T", "t2.refinement", EverParse3d_ErrorCode_error_reason_of_result(resultAfterT), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterT), ctxt, sl_base, fieldStartT));
+      return resultAfterT;
     }
   }
   else {
-    return resultAftert1;
+    return resultAfterT1;
   }
 }
 
 static inline uint8_t Specialize1_validate____core__S64(void (*___probe_ptrT)(uint32_t, const char *, const char *, const char *, EVERPARSE_APP_CTXT, void (*)(const char *, const char *, const char *, uint64_t, uint8_t *, uint8_t *, uint64_t), uint64_t *, uint64_t *, BOOLEAN *, uint64_t, uint64_t, EVERPARSE_COPY_BUFFER_T), uint32_t bound, EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_S64 = (uint64_t)p;
-  size_t pos = 0;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartS64 = (uint64_t)currentPosition;
+  size_t offsetInS1 = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeS1 = offsetInS1;
+  size_t positionBeforeS1 = sl_pos[0];
+  size_t bytesRemainingBeforeS1 = (sl_len - positionBeforeS1);
+  bool hasBytesForS1;
+  if (offsetBeforeS1 <= bytesRemainingBeforeS1) {
+    hasBytesForS1 = (4 <= (bytesRemainingBeforeS1 - offsetBeforeS1));
   }
   else {
-    hasBytes = false;
+    hasBytesForS1 = false;
   }
-  uint8_t resultAfters1;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    resultAfters1 = 0;
+  uint8_t resultAfterS1;
+  if (hasBytesForS1) {
+    offsetInS1 = (offsetBeforeS1 + 4);
+    resultAfterS1 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfters1 = 2;
+    resultAfterS1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_S64;
-  if (resultAfters1 == 0) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t s1 = (bfirst2 + (n2 * 256));
+  uint8_t resultAfterS64;
+  if (resultAfterS1 == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfS1 = sl_pos[0];
+    size_t positionAfterS1 = (positionOfS1 + 4);
+    uint8_t *bytesOfS1 = (sl_base + positionOfS1);
+    sl_pos[0] = positionAfterS1;
+    uint32_t s1 = EverParse3d_Prelude_read____UINT32(bytesOfS1);
     bool s1ConstraintIsOk = (s1 <= bound);
     if (s1ConstraintIsOk) {
       /* Validating field ___alignment_padding_4 */
-      size_t p2 = sl_pos[0];
-      uint64_t fieldStart_S641 = (uint64_t)p2;
-      size_t pos1 = 0;
-      size_t p02 = pos1;
-      size_t p3 = sl_pos[0];
-      size_t rem1 = (sl_len - p3);
-      bool hasBytes1;
-      if (p02 <= rem1) {
-        hasBytes1 = ((size_t)4 <= (rem1 - p02));
+      size_t currentPosition1 = sl_pos[0];
+      uint64_t fieldStartS641 = (uint64_t)currentPosition1;
+      size_t scanOffset = 0;
+      size_t offsetBefore = scanOffset;
+      size_t positionBefore = sl_pos[0];
+      size_t bytesRemainingBefore = (sl_len - positionBefore);
+      bool hasBytesFor;
+      if (offsetBefore <= bytesRemainingBefore) {
+        hasBytesFor = ((size_t)4 <= (bytesRemainingBefore - offsetBefore));
       }
       else {
-        hasBytes1 = false;
+        hasBytesFor = false;
       }
       uint8_t res;
-      if (hasBytes1) {
-        pos1 = (p02 + (size_t)4);
-        res = 0;
+      if (hasBytesFor) {
+        scanOffset = (offsetBefore + (size_t)4);
+        res = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        res = 2;
+        res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
-      uint8_t resultAfter_S64_1;
-      if (res == 0) {
-        size_t p4 = sl_pos[0];
-        size_t p_ = (p4 + pos1);
-        sl_pos[0] = p_;
-        resultAfter_S64_1 = 0;
-      }
-      else {
-        resultAfter_S64_1 = res;
-      }
-      uint8_t resultAfter___alignment_padding_4;
-      if (resultAfter_S64_1 == 0) {
-        resultAfter___alignment_padding_4 = resultAfter_S64_1;
+      uint8_t resultAfterS64_1;
+      if (res == EVERPARSE_STATUS_SUCCESS) {
+        size_t currentPosition2 = sl_pos[0];
+        size_t newPosition = (currentPosition2 + scanOffset);
+        sl_pos[0] = newPosition;
+        resultAfterS64_1 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        const char * _ct1;
-        if (resultAfter_S64_1 == 0) {
-          _ct1 = "success";
-        }
-        else if (resultAfter_S64_1 == 2) {
-          _ct1 = "not enough data";
-        }
-        else if (resultAfter_S64_1 == 3) {
-          _ct1 = "impossible";
-        }
-        else if (resultAfter_S64_1 == 4) {
-          _ct1 = "list size not multiple of element size";
-        }
-        else if (resultAfter_S64_1 == 5) {
-          _ct1 = "action failed";
-        }
-        else if (resultAfter_S64_1 == 6) {
-          _ct1 = "constraint failed";
-        }
-        else if (resultAfter_S64_1 == 7) {
-          _ct1 = "unexpected padding";
-        }
-        else if (resultAfter_S64_1 == 8) {
-          _ct1 = "probe failed";
-        }
-        else {
-          _ct1 = "unspecified";
-        }
-        uint64_t _ct2;
-        if ((resultAfter_S64_1 == 0) || ((resultAfter_S64_1 >= 2) && (resultAfter_S64_1 <= 8))) {
-          _ct2 = (uint64_t)resultAfter_S64_1;
-        }
-        else {
-          _ct2 = 15;
-        }
-        (void)(error_handler_fn("_S64", "___alignment_padding_4", _ct1, _ct2, ctxt, sl_base, fieldStart_S641));
-        resultAfter___alignment_padding_4 = resultAfter_S64_1;
+        resultAfterS64_1 = res;
       }
-      if (resultAfter___alignment_padding_4 == 0) {
-        size_t p4_1 = sl_pos[0];
-        uint64_t fieldStart_S642 = (uint64_t)p4_1;
-        size_t p5 = sl_pos[0];
-        uint64_t fieldStartptrT = (uint64_t)p5;
-        size_t pos2 = 0;
+      uint8_t resultAfterAlignmentPadding4;
+      if (resultAfterS64_1 == EVERPARSE_STATUS_SUCCESS) {
+        resultAfterAlignmentPadding4 = resultAfterS64_1;
+      }
+      else {
+        (void)(error_handler_fn("_S64", "___alignment_padding_4", EverParse3d_ErrorCode_error_reason_of_result(resultAfterS64_1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterS64_1), ctxt, sl_base, fieldStartS641));
+        resultAfterAlignmentPadding4 = resultAfterS64_1;
+      }
+      if (resultAfterAlignmentPadding4 == EVERPARSE_STATUS_SUCCESS) {
+        size_t currentPosition2_1 = sl_pos[0];
+        uint64_t fieldStartS642 = (uint64_t)currentPosition2_1;
+        size_t currentPosition3 = sl_pos[0];
+        uint64_t fieldStartPtrT = (uint64_t)currentPosition3;
+        size_t offsetInPtrT = 0;
         /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-        size_t p03 = pos2;
-        size_t p6 = sl_pos[0];
-        size_t rem2 = (sl_len - p6);
-        bool hasBytes2;
-        if (p03 <= rem2) {
-          hasBytes2 = (8 <= (rem2 - p03));
+        size_t offsetBeforePtrT = offsetInPtrT;
+        size_t positionBeforePtrT = sl_pos[0];
+        size_t bytesRemainingBeforePtrT = (sl_len - positionBeforePtrT);
+        bool hasBytesForPtrT;
+        if (offsetBeforePtrT <= bytesRemainingBeforePtrT) {
+          hasBytesForPtrT = (8 <= (bytesRemainingBeforePtrT - offsetBeforePtrT));
         }
         else {
-          hasBytes2 = false;
+          hasBytesForPtrT = false;
         }
-        uint8_t resultAfterptrT;
-        if (hasBytes2) {
-          pos2 = (p03 + 8);
-          resultAfterptrT = 0;
+        uint8_t resultAfterPtrT;
+        if (hasBytesForPtrT) {
+          offsetInPtrT = (offsetBeforePtrT + 8);
+          resultAfterPtrT = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          resultAfterptrT = 2;
+          resultAfterPtrT = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
         }
-        uint8_t resultAfter_S641;
-        if (resultAfterptrT == 0) {
-          size_t p04 = sl_pos[0];
-          size_t m1 = (p04 + 8);
-          uint8_t *sub1 = (sl_base + p04);
-          sl_pos[0] = m1;
-          uint8_t first4 = sub1[0];
-          size_t pos_2 = (((size_t)1ULL) + ((size_t)1ULL));
-          uint8_t first5 = sub1[1];
-          size_t pos_3 = (pos_2 + 1);
-          uint8_t first6 = sub1[pos_2];
-          size_t pos_4 = (pos_3 + 1);
-          uint8_t first7 = sub1[pos_3];
-          size_t pos_5 = (pos_4 + 1);
-          uint8_t first8 = sub1[pos_4];
-          size_t pos_6 = (pos_5 + 1);
-          uint8_t first9 = sub1[pos_5];
-          size_t pos_7 = (pos_6 + 1);
-          uint8_t first10 = sub1[pos_6];
-          uint8_t first11 = sub1[pos_7];
-          uint64_t n3 = (uint64_t)first11;
-          uint64_t bfirst3 = (uint64_t)first10;
-          uint64_t n4 = (bfirst3 + (n3 * 256));
-          uint64_t bfirst4 = (uint64_t)first9;
-          uint64_t n5 = (bfirst4 + (n4 * 256));
-          uint64_t bfirst5 = (uint64_t)first8;
-          uint64_t n6 = (bfirst5 + (n5 * 256));
-          uint64_t bfirst6 = (uint64_t)first7;
-          uint64_t n7 = (bfirst6 + (n6 * 256));
-          uint64_t bfirst7 = (uint64_t)first6;
-          uint64_t n8 = (bfirst7 + (n7 * 256));
-          uint64_t bfirst8 = (uint64_t)first5;
-          uint64_t n9 = (bfirst8 + (n8 * 256));
-          uint64_t bfirst9 = (uint64_t)first4;
-          uint64_t ptrT = (bfirst9 + (n9 * 256));
+        uint8_t resultAfterS641;
+        if (resultAfterPtrT == EVERPARSE_STATUS_SUCCESS) {
+          size_t positionOfPtrT = sl_pos[0];
+          size_t positionAfterPtrT = (positionOfPtrT + 8);
+          uint8_t *bytesOfPtrT = (sl_base + positionOfPtrT);
+          sl_pos[0] = positionAfterPtrT;
+          uint64_t ptrT = EverParse3d_Prelude_read____UINT64(bytesOfPtrT);
           uint64_t read_offset = 0;
           uint64_t write_offset = 0;
           BOOLEAN failed = ((uint8_t)0U);
@@ -515,231 +358,97 @@ static inline uint8_t Specialize1_validate____core__S64(void (*___probe_ptrT)(ui
           else {
             b = write_offset;
           }
-          bool action_success_ptrT;
+          bool actionSuccessPtrT;
           if (b != 0) {
             uint8_t *base = (uint8_t *)(EverParseStreamOf(dest));
             size_t len = (size_t)(EverParseStreamLen(dest));
             size_t cursor = 0;
             uint8_t res1 = Specialize1_validate____core__T(s1, ctxt, error_handler_fn, base, len, &cursor);
-            action_success_ptrT = (res1 == 0);
+            actionSuccessPtrT = (res1 == EVERPARSE_STATUS_SUCCESS);
           }
           else {
-            const char * _ct3;
-            uint8_t _cs4 = ((uint8_t)8U);
-            if (_cs4 == 0) {
-              _ct3 = "success";
-            }
-            else if (_cs4 == 2) {
-              _ct3 = "not enough data";
-            }
-            else if (_cs4 == 3) {
-              _ct3 = "impossible";
-            }
-            else if (_cs4 == 4) {
-              _ct3 = "list size not multiple of element size";
-            }
-            else if (_cs4 == 5) {
-              _ct3 = "action failed";
-            }
-            else if (_cs4 == 6) {
-              _ct3 = "constraint failed";
-            }
-            else if (_cs4 == 7) {
-              _ct3 = "unexpected padding";
-            }
-            else if (_cs4 == 8) {
-              _ct3 = "probe failed";
-            }
-            else {
-              _ct3 = "unspecified";
-            }
-            (void)(error_handler_fn("_S64", "ptrT", _ct3, (uint64_t)8, ctxt, sl_base, fieldStartptrT));
-            action_success_ptrT = false;
+            (void)(error_handler_fn("_S64", "ptrT", EverParse3d_ErrorCode_error_reason_of_result(EVERPARSE_STATUS_ERROR_PROBE_FAILED), EverParse3d_Lowstar_ErrorCode_legacy_kind(EVERPARSE_STATUS_ERROR_PROBE_FAILED), ctxt, sl_base, fieldStartPtrT));
+            actionSuccessPtrT = false;
           }
-          if (action_success_ptrT) {
-            resultAfter_S641 = 0;
+          if (actionSuccessPtrT) {
+            resultAfterS641 = EVERPARSE_STATUS_SUCCESS;
           }
           else {
-            resultAfter_S641 = 5;
+            resultAfterS641 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
           }
         }
         else {
-          resultAfter_S641 = resultAfterptrT;
+          resultAfterS641 = resultAfterPtrT;
         }
-        uint8_t resultAfterptrT1;
-        if (resultAfter_S641 == 0) {
-          resultAfterptrT1 = resultAfter_S641;
+        uint8_t resultAfterPtrT1;
+        if (resultAfterS641 == EVERPARSE_STATUS_SUCCESS) {
+          resultAfterPtrT1 = resultAfterS641;
         }
         else {
-          const char * _ct5;
-          if (resultAfter_S641 == 0) {
-            _ct5 = "success";
-          }
-          else if (resultAfter_S641 == 2) {
-            _ct5 = "not enough data";
-          }
-          else if (resultAfter_S641 == 3) {
-            _ct5 = "impossible";
-          }
-          else if (resultAfter_S641 == 4) {
-            _ct5 = "list size not multiple of element size";
-          }
-          else if (resultAfter_S641 == 5) {
-            _ct5 = "action failed";
-          }
-          else if (resultAfter_S641 == 6) {
-            _ct5 = "constraint failed";
-          }
-          else if (resultAfter_S641 == 7) {
-            _ct5 = "unexpected padding";
-          }
-          else if (resultAfter_S641 == 8) {
-            _ct5 = "probe failed";
-          }
-          else {
-            _ct5 = "unspecified";
-          }
-          uint64_t _ct6;
-          if ((resultAfter_S641 == 0) || ((resultAfter_S641 >= 2) && (resultAfter_S641 <= 8))) {
-            _ct6 = (uint64_t)resultAfter_S641;
-          }
-          else {
-            _ct6 = 15;
-          }
-          (void)(error_handler_fn("_S64", "ptrT", _ct5, _ct6, ctxt, sl_base, fieldStart_S642));
-          resultAfterptrT1 = resultAfter_S641;
+          (void)(error_handler_fn("_S64", "ptrT", EverParse3d_ErrorCode_error_reason_of_result(resultAfterS641), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterS641), ctxt, sl_base, fieldStartS642));
+          resultAfterPtrT1 = resultAfterS641;
         }
-        if (resultAfterptrT1 == 0) {
-          size_t p7 = sl_pos[0];
-          uint64_t fieldStart_S643 = (uint64_t)p7;
-          size_t pos3 = 0;
-          size_t p04_1 = pos3;
-          size_t p8 = sl_pos[0];
-          size_t rem3 = (sl_len - p8);
-          bool hasBytes3;
-          if (p04_1 <= rem3) {
-            hasBytes3 = ((size_t)8 <= (rem3 - p04_1));
+        if (resultAfterPtrT1 == EVERPARSE_STATUS_SUCCESS) {
+          size_t currentPosition4 = sl_pos[0];
+          uint64_t fieldStartS643 = (uint64_t)currentPosition4;
+          size_t scanOffset1 = 0;
+          size_t offsetBeforeS2 = scanOffset1;
+          size_t positionBeforeS2 = sl_pos[0];
+          size_t bytesRemainingBeforeS2 = (sl_len - positionBeforeS2);
+          bool hasBytesForS2;
+          if (offsetBeforeS2 <= bytesRemainingBeforeS2) {
+            hasBytesForS2 = ((size_t)8 <= (bytesRemainingBeforeS2 - offsetBeforeS2));
           }
           else {
-            hasBytes3 = false;
+            hasBytesForS2 = false;
           }
           uint8_t res1_1;
-          if (hasBytes3) {
-            pos3 = (p04_1 + (size_t)8);
-            res1_1 = 0;
+          if (hasBytesForS2) {
+            scanOffset1 = (offsetBeforeS2 + (size_t)8);
+            res1_1 = EVERPARSE_STATUS_SUCCESS;
           }
           else {
-            res1_1 = 2;
+            res1_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
           }
-          uint8_t resultAfter_S642;
-          if (res1_1 == 0) {
-            size_t p9 = sl_pos[0];
-            size_t p__1 = (p9 + pos3);
-            sl_pos[0] = p__1;
-            resultAfter_S642 = 0;
-          }
-          else {
-            resultAfter_S642 = res1_1;
-          }
-          if (resultAfter_S642 == 0) {
-            resultAfter_S64 = resultAfter_S642;
+          uint8_t resultAfterS642;
+          if (res1_1 == EVERPARSE_STATUS_SUCCESS) {
+            size_t currentPosition5 = sl_pos[0];
+            size_t newPosition_1 = (currentPosition5 + scanOffset1);
+            sl_pos[0] = newPosition_1;
+            resultAfterS642 = EVERPARSE_STATUS_SUCCESS;
           }
           else {
-            const char * _ct7;
-            if (resultAfter_S642 == 0) {
-              _ct7 = "success";
-            }
-            else if (resultAfter_S642 == 2) {
-              _ct7 = "not enough data";
-            }
-            else if (resultAfter_S642 == 3) {
-              _ct7 = "impossible";
-            }
-            else if (resultAfter_S642 == 4) {
-              _ct7 = "list size not multiple of element size";
-            }
-            else if (resultAfter_S642 == 5) {
-              _ct7 = "action failed";
-            }
-            else if (resultAfter_S642 == 6) {
-              _ct7 = "constraint failed";
-            }
-            else if (resultAfter_S642 == 7) {
-              _ct7 = "unexpected padding";
-            }
-            else if (resultAfter_S642 == 8) {
-              _ct7 = "probe failed";
-            }
-            else {
-              _ct7 = "unspecified";
-            }
-            uint64_t _ct8;
-            if ((resultAfter_S642 == 0) || ((resultAfter_S642 >= 2) && (resultAfter_S642 <= 8))) {
-              _ct8 = (uint64_t)resultAfter_S642;
-            }
-            else {
-              _ct8 = 15;
-            }
-            (void)(error_handler_fn("_S64", "s2", _ct7, _ct8, ctxt, sl_base, fieldStart_S643));
-            resultAfter_S64 = resultAfter_S642;
+            resultAfterS642 = res1_1;
+          }
+          if (resultAfterS642 == EVERPARSE_STATUS_SUCCESS) {
+            resultAfterS64 = resultAfterS642;
+          }
+          else {
+            (void)(error_handler_fn("_S64", "s2", EverParse3d_ErrorCode_error_reason_of_result(resultAfterS642), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterS642), ctxt, sl_base, fieldStartS643));
+            resultAfterS64 = resultAfterS642;
           }
         }
         else {
-          resultAfter_S64 = resultAfterptrT1;
+          resultAfterS64 = resultAfterPtrT1;
         }
       }
       else {
-        resultAfter_S64 = resultAfter___alignment_padding_4;
+        resultAfterS64 = resultAfterAlignmentPadding4;
       }
     }
     else {
-      resultAfter_S64 = 6;
+      resultAfterS64 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
-    resultAfter_S64 = resultAfters1;
+    resultAfterS64 = resultAfterS1;
   }
-  if (resultAfter_S64 == 0) {
-    return resultAfter_S64;
+  if (resultAfterS64 == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterS64;
   }
   else {
-    const char * _ct9;
-    if (resultAfter_S64 == 0) {
-      _ct9 = "success";
-    }
-    else if (resultAfter_S64 == 2) {
-      _ct9 = "not enough data";
-    }
-    else if (resultAfter_S64 == 3) {
-      _ct9 = "impossible";
-    }
-    else if (resultAfter_S64 == 4) {
-      _ct9 = "list size not multiple of element size";
-    }
-    else if (resultAfter_S64 == 5) {
-      _ct9 = "action failed";
-    }
-    else if (resultAfter_S64 == 6) {
-      _ct9 = "constraint failed";
-    }
-    else if (resultAfter_S64 == 7) {
-      _ct9 = "unexpected padding";
-    }
-    else if (resultAfter_S64 == 8) {
-      _ct9 = "probe failed";
-    }
-    else {
-      _ct9 = "unspecified";
-    }
-    uint64_t _ct10;
-    if ((resultAfter_S64 == 0) || ((resultAfter_S64 >= 2) && (resultAfter_S64 <= 8))) {
-      _ct10 = (uint64_t)resultAfter_S64;
-    }
-    else {
-      _ct10 = 15;
-    }
-    (void)(error_handler_fn("_S64", "s1", _ct9, _ct10, ctxt, sl_base, fieldStart_S64));
-    return resultAfter_S64;
+    (void)(error_handler_fn("_S64", "s1", EverParse3d_ErrorCode_error_reason_of_result(resultAfterS64), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterS64), ctxt, sl_base, fieldStartS64));
+    return resultAfterS64;
   }
 }
 
@@ -753,134 +462,75 @@ static void Specialize1____specialized32____probe_T(uint32_t bound, const char *
 }
 
 static inline uint8_t Specialize1_validate____core____specialized_R32(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
-  size_t p = sl_pos[0];
-  uint64_t view_start = (uint64_t)p;
-  size_t field_off = pos;
-  uint64_t start_pos = (view_start + (uint64_t)field_off);
+  size_t offsetInR1 = 0;
+  size_t currentPosition = sl_pos[0];
+  uint64_t streamPositionAtR1 = (uint64_t)currentPosition;
+  size_t offsetOfR1 = offsetInR1;
+  uint64_t startPositionOfR1 = (streamPositionAtR1 + (uint64_t)offsetOfR1);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeR1 = offsetInR1;
+  size_t positionBeforeR1 = sl_pos[0];
+  size_t bytesRemainingBeforeR1 = (sl_len - positionBeforeR1);
+  bool hasBytesForR1;
+  if (offsetBeforeR1 <= bytesRemainingBeforeR1) {
+    hasBytesForR1 = (4 <= (bytesRemainingBeforeR1 - offsetBeforeR1));
   }
   else {
-    hasBytes = false;
+    hasBytesForR1 = false;
   }
-  uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    res = 0;
-  }
-  else {
-    res = 2;
-  }
-  uint8_t resultAfterr1;
-  if (res == 0) {
-    resultAfterr1 = res;
+  uint8_t resultOfR1;
+  if (hasBytesForR1) {
+    offsetInR1 = (offsetBeforeR1 + 4);
+    resultOfR1 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
-    if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("___specialized_R32", "r1", _ct1, _ct2, ctxt, sl_base, start_pos));
-    resultAfterr1 = res;
+    resultOfR1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAfterr1 == 0) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t r1 = (bfirst2 + (n2 * 256));
-    size_t p2 = sl_pos[0];
-    uint64_t fieldStart___specialized_R32 = (uint64_t)p2;
-    size_t p3 = sl_pos[0];
-    uint64_t fieldStartptrS = (uint64_t)p3;
-    size_t pos1 = 0;
+  uint8_t resultAfterR1;
+  if (resultOfR1 == EVERPARSE_STATUS_SUCCESS) {
+    resultAfterR1 = resultOfR1;
+  }
+  else {
+    (void)(error_handler_fn("___specialized_R32", "r1", EverParse3d_ErrorCode_error_reason_of_result(resultOfR1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfR1), ctxt, sl_base, startPositionOfR1));
+    resultAfterR1 = resultOfR1;
+  }
+  if (resultAfterR1 == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfR1 = sl_pos[0];
+    size_t positionAfterR1 = (positionOfR1 + 4);
+    uint8_t *bytesOfR1 = (sl_base + positionOfR1);
+    sl_pos[0] = positionAfterR1;
+    uint32_t r1 = EverParse3d_Prelude_read____UINT32(bytesOfR1);
+    size_t currentPosition1 = sl_pos[0];
+    uint64_t fieldStartSpecializedR32 = (uint64_t)currentPosition1;
+    size_t currentPosition2 = sl_pos[0];
+    uint64_t fieldStartPtrS = (uint64_t)currentPosition2;
+    size_t offsetInPtrS = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t p02 = pos1;
-    size_t p4 = sl_pos[0];
-    size_t rem1 = (sl_len - p4);
-    bool hasBytes1;
-    if (p02 <= rem1) {
-      hasBytes1 = (4 <= (rem1 - p02));
+    size_t offsetBeforePtrS = offsetInPtrS;
+    size_t positionBeforePtrS = sl_pos[0];
+    size_t bytesRemainingBeforePtrS = (sl_len - positionBeforePtrS);
+    bool hasBytesForPtrS;
+    if (offsetBeforePtrS <= bytesRemainingBeforePtrS) {
+      hasBytesForPtrS = (4 <= (bytesRemainingBeforePtrS - offsetBeforePtrS));
     }
     else {
-      hasBytes1 = false;
+      hasBytesForPtrS = false;
     }
-    uint8_t resultAfterptrS;
-    if (hasBytes1) {
-      pos1 = (p02 + 4);
-      resultAfterptrS = 0;
+    uint8_t resultAfterPtrS;
+    if (hasBytesForPtrS) {
+      offsetInPtrS = (offsetBeforePtrS + 4);
+      resultAfterPtrS = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfterptrS = 2;
+      resultAfterPtrS = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    uint8_t resultAfter___specialized_R32;
-    if (resultAfterptrS == 0) {
-      size_t p03 = sl_pos[0];
-      size_t m1 = (p03 + 4);
-      uint8_t *sub1 = (sl_base + p03);
-      sl_pos[0] = m1;
-      uint8_t first4 = sub1[0];
-      size_t pos_2 = (((size_t)1ULL) + ((size_t)1ULL));
-      uint8_t first5 = sub1[1];
-      size_t pos_3 = (pos_2 + 1);
-      uint8_t first6 = sub1[pos_2];
-      uint8_t first7 = sub1[pos_3];
-      uint32_t n3 = (uint32_t)first7;
-      uint32_t bfirst3 = (uint32_t)first6;
-      uint32_t n4 = (bfirst3 + (n3 * 256));
-      uint32_t bfirst4 = (uint32_t)first5;
-      uint32_t n5 = (bfirst4 + (n4 * 256));
-      uint32_t bfirst5 = (uint32_t)first4;
-      uint32_t ptrS = (bfirst5 + (n5 * 256));
+    uint8_t resultAfterSpecializedR32;
+    if (resultAfterPtrS == EVERPARSE_STATUS_SUCCESS) {
+      size_t positionOfPtrS = sl_pos[0];
+      size_t positionAfterPtrS = (positionOfPtrS + 4);
+      uint8_t *bytesOfPtrS = (sl_base + positionOfPtrS);
+      sl_pos[0] = positionAfterPtrS;
+      uint32_t ptrS = EverParse3d_Prelude_read____UINT32(bytesOfPtrS);
       uint64_t src64 = (UlongToPtr(ptrS));
       uint64_t read_offset = 0;
       uint64_t write_offset = 0;
@@ -901,326 +551,152 @@ static inline uint8_t Specialize1_validate____core____specialized_R32(EVERPARSE_
       else {
         b = write_offset;
       }
-      bool action_success_ptrS;
+      bool actionSuccessPtrS;
       if (b != 0) {
         uint8_t *base = (uint8_t *)(EverParseStreamOf(destS));
         size_t len = (size_t)(EverParseStreamLen(destS));
         size_t cursor = 0;
-        uint8_t res1 = Specialize1_validate____core__S64(Specialize1____specialized32____probe_T, r1, destT, ctxt, error_handler_fn, base, len, &cursor);
-        action_success_ptrS = (res1 == 0);
+        uint8_t res = Specialize1_validate____core__S64(Specialize1____specialized32____probe_T, r1, destT, ctxt, error_handler_fn, base, len, &cursor);
+        actionSuccessPtrS = (res == EVERPARSE_STATUS_SUCCESS);
       }
       else {
-        const char * _ct3;
-        uint8_t _cs4 = ((uint8_t)8U);
-        if (_cs4 == 0) {
-          _ct3 = "success";
-        }
-        else if (_cs4 == 2) {
-          _ct3 = "not enough data";
-        }
-        else if (_cs4 == 3) {
-          _ct3 = "impossible";
-        }
-        else if (_cs4 == 4) {
-          _ct3 = "list size not multiple of element size";
-        }
-        else if (_cs4 == 5) {
-          _ct3 = "action failed";
-        }
-        else if (_cs4 == 6) {
-          _ct3 = "constraint failed";
-        }
-        else if (_cs4 == 7) {
-          _ct3 = "unexpected padding";
-        }
-        else if (_cs4 == 8) {
-          _ct3 = "probe failed";
-        }
-        else {
-          _ct3 = "unspecified";
-        }
-        (void)(error_handler_fn("___specialized_R32", "ptrS", _ct3, (uint64_t)8, ctxt, sl_base, fieldStartptrS));
-        action_success_ptrS = false;
+        (void)(error_handler_fn("___specialized_R32", "ptrS", EverParse3d_ErrorCode_error_reason_of_result(EVERPARSE_STATUS_ERROR_PROBE_FAILED), EverParse3d_Lowstar_ErrorCode_legacy_kind(EVERPARSE_STATUS_ERROR_PROBE_FAILED), ctxt, sl_base, fieldStartPtrS));
+        actionSuccessPtrS = false;
       }
-      if (action_success_ptrS) {
-        resultAfter___specialized_R32 = 0;
+      if (actionSuccessPtrS) {
+        resultAfterSpecializedR32 = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter___specialized_R32 = 5;
+        resultAfterSpecializedR32 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
       }
     }
     else {
-      resultAfter___specialized_R32 = resultAfterptrS;
+      resultAfterSpecializedR32 = resultAfterPtrS;
     }
-    if (resultAfter___specialized_R32 == 0) {
-      return resultAfter___specialized_R32;
+    if (resultAfterSpecializedR32 == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterSpecializedR32;
     }
     else {
-      const char * _ct5;
-      if (resultAfter___specialized_R32 == 0) {
-        _ct5 = "success";
-      }
-      else if (resultAfter___specialized_R32 == 2) {
-        _ct5 = "not enough data";
-      }
-      else if (resultAfter___specialized_R32 == 3) {
-        _ct5 = "impossible";
-      }
-      else if (resultAfter___specialized_R32 == 4) {
-        _ct5 = "list size not multiple of element size";
-      }
-      else if (resultAfter___specialized_R32 == 5) {
-        _ct5 = "action failed";
-      }
-      else if (resultAfter___specialized_R32 == 6) {
-        _ct5 = "constraint failed";
-      }
-      else if (resultAfter___specialized_R32 == 7) {
-        _ct5 = "unexpected padding";
-      }
-      else if (resultAfter___specialized_R32 == 8) {
-        _ct5 = "probe failed";
-      }
-      else {
-        _ct5 = "unspecified";
-      }
-      uint64_t _ct6;
-      if ((resultAfter___specialized_R32 == 0) || ((resultAfter___specialized_R32 >= 2) && (resultAfter___specialized_R32 <= 8))) {
-        _ct6 = (uint64_t)resultAfter___specialized_R32;
-      }
-      else {
-        _ct6 = 15;
-      }
-      (void)(error_handler_fn("___specialized_R32", "ptrS", _ct5, _ct6, ctxt, sl_base, fieldStart___specialized_R32));
-      return resultAfter___specialized_R32;
+      (void)(error_handler_fn("___specialized_R32", "ptrS", EverParse3d_ErrorCode_error_reason_of_result(resultAfterSpecializedR32), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterSpecializedR32), ctxt, sl_base, fieldStartSpecializedR32));
+      return resultAfterSpecializedR32;
     }
   }
   else {
-    return resultAfterr1;
+    return resultAfterR1;
   }
 }
 
 static inline uint8_t Specialize1_validate____core__R64(void (*___probe__S64_0)(uint32_t, const char *, const char *, const char *, EVERPARSE_APP_CTXT, void (*)(const char *, const char *, const char *, uint64_t, uint8_t *, uint8_t *, uint64_t), uint64_t *, uint64_t *, BOOLEAN *, uint64_t, uint64_t, EVERPARSE_COPY_BUFFER_T), void (*___probe_ptrS)(uint32_t, const char *, const char *, const char *, EVERPARSE_APP_CTXT, void (*)(const char *, const char *, const char *, uint64_t, uint8_t *, uint8_t *, uint64_t), uint64_t *, uint64_t *, BOOLEAN *, uint64_t, uint64_t, EVERPARSE_COPY_BUFFER_T), EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
-  size_t p = sl_pos[0];
-  uint64_t view_start = (uint64_t)p;
-  size_t field_off = pos;
-  uint64_t start_pos = (view_start + (uint64_t)field_off);
+  size_t offsetInR1 = 0;
+  size_t currentPosition = sl_pos[0];
+  uint64_t streamPositionAtR1 = (uint64_t)currentPosition;
+  size_t offsetOfR1 = offsetInR1;
+  uint64_t startPositionOfR1 = (streamPositionAtR1 + (uint64_t)offsetOfR1);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeR1 = offsetInR1;
+  size_t positionBeforeR1 = sl_pos[0];
+  size_t bytesRemainingBeforeR1 = (sl_len - positionBeforeR1);
+  bool hasBytesForR1;
+  if (offsetBeforeR1 <= bytesRemainingBeforeR1) {
+    hasBytesForR1 = (4 <= (bytesRemainingBeforeR1 - offsetBeforeR1));
   }
   else {
-    hasBytes = false;
+    hasBytesForR1 = false;
   }
-  uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    res = 0;
-  }
-  else {
-    res = 2;
-  }
-  uint8_t resultAfterr1;
-  if (res == 0) {
-    resultAfterr1 = res;
+  uint8_t resultOfR1;
+  if (hasBytesForR1) {
+    offsetInR1 = (offsetBeforeR1 + 4);
+    resultOfR1 = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
-    if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("_R64", "r1", _ct1, _ct2, ctxt, sl_base, start_pos));
-    resultAfterr1 = res;
+    resultOfR1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAfterr1 == 0) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t r1 = (bfirst2 + (n2 * 256));
+  uint8_t resultAfterR1;
+  if (resultOfR1 == EVERPARSE_STATUS_SUCCESS) {
+    resultAfterR1 = resultOfR1;
+  }
+  else {
+    (void)(error_handler_fn("_R64", "r1", EverParse3d_ErrorCode_error_reason_of_result(resultOfR1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfR1), ctxt, sl_base, startPositionOfR1));
+    resultAfterR1 = resultOfR1;
+  }
+  if (resultAfterR1 == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfR1 = sl_pos[0];
+    size_t positionAfterR1 = (positionOfR1 + 4);
+    uint8_t *bytesOfR1 = (sl_base + positionOfR1);
+    sl_pos[0] = positionAfterR1;
+    uint32_t r1 = EverParse3d_Prelude_read____UINT32(bytesOfR1);
     /* Validating field ___alignment_padding_6 */
-    size_t p2 = sl_pos[0];
-    uint64_t fieldStart_R64 = (uint64_t)p2;
-    size_t pos1 = 0;
-    size_t p02 = pos1;
-    size_t p3 = sl_pos[0];
-    size_t rem1 = (sl_len - p3);
-    bool hasBytes1;
-    if (p02 <= rem1) {
-      hasBytes1 = ((size_t)4 <= (rem1 - p02));
+    size_t currentPosition1 = sl_pos[0];
+    uint64_t fieldStartR64 = (uint64_t)currentPosition1;
+    size_t scanOffset = 0;
+    size_t offsetBefore = scanOffset;
+    size_t positionBefore = sl_pos[0];
+    size_t bytesRemainingBefore = (sl_len - positionBefore);
+    bool hasBytesFor;
+    if (offsetBefore <= bytesRemainingBefore) {
+      hasBytesFor = ((size_t)4 <= (bytesRemainingBefore - offsetBefore));
     }
     else {
-      hasBytes1 = false;
+      hasBytesFor = false;
     }
-    uint8_t res1;
-    if (hasBytes1) {
-      pos1 = (p02 + (size_t)4);
-      res1 = 0;
-    }
-    else {
-      res1 = 2;
-    }
-    uint8_t resultAfter_R64;
-    if (res1 == 0) {
-      size_t p4 = sl_pos[0];
-      size_t p_ = (p4 + pos1);
-      sl_pos[0] = p_;
-      resultAfter_R64 = 0;
+    uint8_t res;
+    if (hasBytesFor) {
+      scanOffset = (offsetBefore + (size_t)4);
+      res = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfter_R64 = res1;
+      res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    uint8_t resultAfter___alignment_padding_6;
-    if (resultAfter_R64 == 0) {
-      resultAfter___alignment_padding_6 = resultAfter_R64;
+    uint8_t resultAfterR64;
+    if (res == EVERPARSE_STATUS_SUCCESS) {
+      size_t currentPosition2 = sl_pos[0];
+      size_t newPosition = (currentPosition2 + scanOffset);
+      sl_pos[0] = newPosition;
+      resultAfterR64 = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      const char * _ct3;
-      if (resultAfter_R64 == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAfter_R64 == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAfter_R64 == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAfter_R64 == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAfter_R64 == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAfter_R64 == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAfter_R64 == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAfter_R64 == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
-      if ((resultAfter_R64 == 0) || ((resultAfter_R64 >= 2) && (resultAfter_R64 <= 8))) {
-        _ct4 = (uint64_t)resultAfter_R64;
-      }
-      else {
-        _ct4 = 15;
-      }
-      (void)(error_handler_fn("_R64", "___alignment_padding_6", _ct3, _ct4, ctxt, sl_base, fieldStart_R64));
-      resultAfter___alignment_padding_6 = resultAfter_R64;
+      resultAfterR64 = res;
     }
-    if (resultAfter___alignment_padding_6 == 0) {
-      size_t p4_1 = sl_pos[0];
-      uint64_t fieldStart_R641 = (uint64_t)p4_1;
-      size_t p5 = sl_pos[0];
-      uint64_t fieldStartptrS = (uint64_t)p5;
-      size_t pos2 = 0;
+    uint8_t resultAfterAlignmentPadding6;
+    if (resultAfterR64 == EVERPARSE_STATUS_SUCCESS) {
+      resultAfterAlignmentPadding6 = resultAfterR64;
+    }
+    else {
+      (void)(error_handler_fn("_R64", "___alignment_padding_6", EverParse3d_ErrorCode_error_reason_of_result(resultAfterR64), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterR64), ctxt, sl_base, fieldStartR64));
+      resultAfterAlignmentPadding6 = resultAfterR64;
+    }
+    if (resultAfterAlignmentPadding6 == EVERPARSE_STATUS_SUCCESS) {
+      size_t currentPosition2_1 = sl_pos[0];
+      uint64_t fieldStartR641 = (uint64_t)currentPosition2_1;
+      size_t currentPosition3 = sl_pos[0];
+      uint64_t fieldStartPtrS = (uint64_t)currentPosition3;
+      size_t offsetInPtrS = 0;
       /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-      size_t p03 = pos2;
-      size_t p6 = sl_pos[0];
-      size_t rem2 = (sl_len - p6);
-      bool hasBytes2;
-      if (p03 <= rem2) {
-        hasBytes2 = (8 <= (rem2 - p03));
+      size_t offsetBeforePtrS = offsetInPtrS;
+      size_t positionBeforePtrS = sl_pos[0];
+      size_t bytesRemainingBeforePtrS = (sl_len - positionBeforePtrS);
+      bool hasBytesForPtrS;
+      if (offsetBeforePtrS <= bytesRemainingBeforePtrS) {
+        hasBytesForPtrS = (8 <= (bytesRemainingBeforePtrS - offsetBeforePtrS));
       }
       else {
-        hasBytes2 = false;
+        hasBytesForPtrS = false;
       }
-      uint8_t resultAfterptrS;
-      if (hasBytes2) {
-        pos2 = (p03 + 8);
-        resultAfterptrS = 0;
+      uint8_t resultAfterPtrS;
+      if (hasBytesForPtrS) {
+        offsetInPtrS = (offsetBeforePtrS + 8);
+        resultAfterPtrS = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfterptrS = 2;
+        resultAfterPtrS = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
-      uint8_t resultAfter_R641;
-      if (resultAfterptrS == 0) {
-        size_t p04 = sl_pos[0];
-        size_t m1 = (p04 + 8);
-        uint8_t *sub1 = (sl_base + p04);
-        sl_pos[0] = m1;
-        uint8_t first4 = sub1[0];
-        size_t pos_2 = (((size_t)1ULL) + ((size_t)1ULL));
-        uint8_t first5 = sub1[1];
-        size_t pos_3 = (pos_2 + 1);
-        uint8_t first6 = sub1[pos_2];
-        size_t pos_4 = (pos_3 + 1);
-        uint8_t first7 = sub1[pos_3];
-        size_t pos_5 = (pos_4 + 1);
-        uint8_t first8 = sub1[pos_4];
-        size_t pos_6 = (pos_5 + 1);
-        uint8_t first9 = sub1[pos_5];
-        size_t pos_7 = (pos_6 + 1);
-        uint8_t first10 = sub1[pos_6];
-        uint8_t first11 = sub1[pos_7];
-        uint64_t n3 = (uint64_t)first11;
-        uint64_t bfirst3 = (uint64_t)first10;
-        uint64_t n4 = (bfirst3 + (n3 * 256));
-        uint64_t bfirst4 = (uint64_t)first9;
-        uint64_t n5 = (bfirst4 + (n4 * 256));
-        uint64_t bfirst5 = (uint64_t)first8;
-        uint64_t n6 = (bfirst5 + (n5 * 256));
-        uint64_t bfirst6 = (uint64_t)first7;
-        uint64_t n7 = (bfirst6 + (n6 * 256));
-        uint64_t bfirst7 = (uint64_t)first6;
-        uint64_t n8 = (bfirst7 + (n7 * 256));
-        uint64_t bfirst8 = (uint64_t)first5;
-        uint64_t n9 = (bfirst8 + (n8 * 256));
-        uint64_t bfirst9 = (uint64_t)first4;
-        uint64_t ptrS = (bfirst9 + (n9 * 256));
+      uint8_t resultAfterR641;
+      if (resultAfterPtrS == EVERPARSE_STATUS_SUCCESS) {
+        size_t positionOfPtrS = sl_pos[0];
+        size_t positionAfterPtrS = (positionOfPtrS + 8);
+        uint8_t *bytesOfPtrS = (sl_base + positionOfPtrS);
+        sl_pos[0] = positionAfterPtrS;
+        uint64_t ptrS = EverParse3d_Prelude_read____UINT64(bytesOfPtrS);
         uint64_t read_offset = 0;
         uint64_t write_offset = 0;
         BOOLEAN failed = ((uint8_t)0U);
@@ -1240,106 +716,42 @@ static inline uint8_t Specialize1_validate____core__R64(void (*___probe__S64_0)(
         else {
           b = write_offset;
         }
-        bool action_success_ptrS;
+        bool actionSuccessPtrS;
         if (b != 0) {
           uint8_t *base = (uint8_t *)(EverParseStreamOf(destS));
           size_t len = (size_t)(EverParseStreamLen(destS));
           size_t cursor = 0;
-          uint8_t res2 = Specialize1_validate____core__S64(___probe__S64_0, r1, destT, ctxt, error_handler_fn, base, len, &cursor);
-          action_success_ptrS = (res2 == 0);
+          uint8_t res1 = Specialize1_validate____core__S64(___probe__S64_0, r1, destT, ctxt, error_handler_fn, base, len, &cursor);
+          actionSuccessPtrS = (res1 == EVERPARSE_STATUS_SUCCESS);
         }
         else {
-          const char * _ct5;
-          uint8_t _cs6 = ((uint8_t)8U);
-          if (_cs6 == 0) {
-            _ct5 = "success";
-          }
-          else if (_cs6 == 2) {
-            _ct5 = "not enough data";
-          }
-          else if (_cs6 == 3) {
-            _ct5 = "impossible";
-          }
-          else if (_cs6 == 4) {
-            _ct5 = "list size not multiple of element size";
-          }
-          else if (_cs6 == 5) {
-            _ct5 = "action failed";
-          }
-          else if (_cs6 == 6) {
-            _ct5 = "constraint failed";
-          }
-          else if (_cs6 == 7) {
-            _ct5 = "unexpected padding";
-          }
-          else if (_cs6 == 8) {
-            _ct5 = "probe failed";
-          }
-          else {
-            _ct5 = "unspecified";
-          }
-          (void)(error_handler_fn("_R64", "ptrS", _ct5, (uint64_t)8, ctxt, sl_base, fieldStartptrS));
-          action_success_ptrS = false;
+          (void)(error_handler_fn("_R64", "ptrS", EverParse3d_ErrorCode_error_reason_of_result(EVERPARSE_STATUS_ERROR_PROBE_FAILED), EverParse3d_Lowstar_ErrorCode_legacy_kind(EVERPARSE_STATUS_ERROR_PROBE_FAILED), ctxt, sl_base, fieldStartPtrS));
+          actionSuccessPtrS = false;
         }
-        if (action_success_ptrS) {
-          resultAfter_R641 = 0;
+        if (actionSuccessPtrS) {
+          resultAfterR641 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          resultAfter_R641 = 5;
+          resultAfterR641 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
         }
       }
       else {
-        resultAfter_R641 = resultAfterptrS;
+        resultAfterR641 = resultAfterPtrS;
       }
-      if (resultAfter_R641 == 0) {
-        return resultAfter_R641;
+      if (resultAfterR641 == EVERPARSE_STATUS_SUCCESS) {
+        return resultAfterR641;
       }
       else {
-        const char * _ct7;
-        if (resultAfter_R641 == 0) {
-          _ct7 = "success";
-        }
-        else if (resultAfter_R641 == 2) {
-          _ct7 = "not enough data";
-        }
-        else if (resultAfter_R641 == 3) {
-          _ct7 = "impossible";
-        }
-        else if (resultAfter_R641 == 4) {
-          _ct7 = "list size not multiple of element size";
-        }
-        else if (resultAfter_R641 == 5) {
-          _ct7 = "action failed";
-        }
-        else if (resultAfter_R641 == 6) {
-          _ct7 = "constraint failed";
-        }
-        else if (resultAfter_R641 == 7) {
-          _ct7 = "unexpected padding";
-        }
-        else if (resultAfter_R641 == 8) {
-          _ct7 = "probe failed";
-        }
-        else {
-          _ct7 = "unspecified";
-        }
-        uint64_t _ct8;
-        if ((resultAfter_R641 == 0) || ((resultAfter_R641 >= 2) && (resultAfter_R641 <= 8))) {
-          _ct8 = (uint64_t)resultAfter_R641;
-        }
-        else {
-          _ct8 = 15;
-        }
-        (void)(error_handler_fn("_R64", "ptrS", _ct7, _ct8, ctxt, sl_base, fieldStart_R641));
-        return resultAfter_R641;
+        (void)(error_handler_fn("_R64", "ptrS", EverParse3d_ErrorCode_error_reason_of_result(resultAfterR641), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterR641), ctxt, sl_base, fieldStartR641));
+        return resultAfterR641;
       }
     }
     else {
-      return resultAfter___alignment_padding_6;
+      return resultAfterAlignmentPadding6;
     }
   }
   else {
-    return resultAfterr1;
+    return resultAfterR1;
   }
 }
 
@@ -1388,98 +800,28 @@ static void Specialize1____R____probe_field_R64_1_S64(uint32_t ____arg0, const c
 static uint8_t Specialize1_validate____core____R(bool requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   if (requestor32) {
     /* Validating field r32 */
-    size_t p = sl_pos[0];
-    uint64_t fieldStart___R = (uint64_t)p;
-    uint8_t resultAfter___R = Specialize1_validate____core____specialized_R32(destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter___R == 0) {
-      return resultAfter___R;
+    size_t currentPosition = sl_pos[0];
+    uint64_t fieldStartR = (uint64_t)currentPosition;
+    uint8_t resultAfterR = Specialize1_validate____core____specialized_R32(destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
+    if (resultAfterR == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterR;
     }
     else {
-      const char * _ct1;
-      if (resultAfter___R == 0) {
-        _ct1 = "success";
-      }
-      else if (resultAfter___R == 2) {
-        _ct1 = "not enough data";
-      }
-      else if (resultAfter___R == 3) {
-        _ct1 = "impossible";
-      }
-      else if (resultAfter___R == 4) {
-        _ct1 = "list size not multiple of element size";
-      }
-      else if (resultAfter___R == 5) {
-        _ct1 = "action failed";
-      }
-      else if (resultAfter___R == 6) {
-        _ct1 = "constraint failed";
-      }
-      else if (resultAfter___R == 7) {
-        _ct1 = "unexpected padding";
-      }
-      else if (resultAfter___R == 8) {
-        _ct1 = "probe failed";
-      }
-      else {
-        _ct1 = "unspecified";
-      }
-      uint64_t _ct2;
-      if ((resultAfter___R == 0) || ((resultAfter___R >= 2) && (resultAfter___R <= 8))) {
-        _ct2 = (uint64_t)resultAfter___R;
-      }
-      else {
-        _ct2 = 15;
-      }
-      (void)(error_handler_fn("___R", "r32", _ct1, _ct2, ctxt, sl_base, fieldStart___R));
-      return resultAfter___R;
+      (void)(error_handler_fn("___R", "r32", EverParse3d_ErrorCode_error_reason_of_result(resultAfterR), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterR), ctxt, sl_base, fieldStartR));
+      return resultAfterR;
     }
   }
   else {
     /* Validating field r64 */
-    size_t p_1 = sl_pos[0];
-    uint64_t fieldStart___R_1 = (uint64_t)p_1;
-    uint8_t resultAfter___R_1 = Specialize1_validate____core__R64(Specialize1____R____probe_field_R64_0_T, Specialize1____R____probe_field_R64_1_S64, destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter___R_1 == 0) {
-      return resultAfter___R_1;
+    size_t currentPosition_1 = sl_pos[0];
+    uint64_t fieldStartR_1 = (uint64_t)currentPosition_1;
+    uint8_t resultAfterR_1 = Specialize1_validate____core__R64(Specialize1____R____probe_field_R64_0_T, Specialize1____R____probe_field_R64_1_S64, destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
+    if (resultAfterR_1 == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterR_1;
     }
     else {
-      const char * _ct3;
-      if (resultAfter___R_1 == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAfter___R_1 == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAfter___R_1 == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAfter___R_1 == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAfter___R_1 == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAfter___R_1 == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAfter___R_1 == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAfter___R_1 == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
-      if ((resultAfter___R_1 == 0) || ((resultAfter___R_1 >= 2) && (resultAfter___R_1 <= 8))) {
-        _ct4 = (uint64_t)resultAfter___R_1;
-      }
-      else {
-        _ct4 = 15;
-      }
-      (void)(error_handler_fn("___R", "r64", _ct3, _ct4, ctxt, sl_base, fieldStart___R_1));
-      return resultAfter___R_1;
+      (void)(error_handler_fn("___R", "r64", EverParse3d_ErrorCode_error_reason_of_result(resultAfterR_1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterR_1), ctxt, sl_base, fieldStartR_1));
+      return resultAfterR_1;
     }
   }
 }
@@ -1490,14 +832,7 @@ uint64_t Specialize1ValidateR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS
   size_t cursor = initial;
   uint8_t status = Specialize1_validate____core____R((requestor32 != 0), destS, destT, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 static void Specialize1____R32_Attempt____probe_ptrS_S32Attempt(uint32_t ____arg0, const char * tn, const char * fn_, const char * fd, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER err, uint64_t *read_offset, uint64_t *write_offset, BOOLEAN *failed, uint64_t src, uint64_t sz, EVERPARSE_COPY_BUFFER_T dest) {
@@ -1543,92 +878,68 @@ static void Specialize1____S32Attempt____probe_ptrT_T(uint32_t ____arg0, const c
 }
 
 static inline uint8_t Specialize1_validate____core__S32_Attempt(uint32_t bound, EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t p = sl_pos[0];
-  uint64_t fieldStart_S32_Attempt = (uint64_t)p;
-  size_t pos = 0;
+  size_t currentPosition = sl_pos[0];
+  uint64_t fieldStartS32Attempt = (uint64_t)currentPosition;
+  size_t offsetInF = 0;
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeF = offsetInF;
+  size_t positionBeforeF = sl_pos[0];
+  size_t bytesRemainingBeforeF = (sl_len - positionBeforeF);
+  bool hasBytesForF;
+  if (offsetBeforeF <= bytesRemainingBeforeF) {
+    hasBytesForF = (4 <= (bytesRemainingBeforeF - offsetBeforeF));
   }
   else {
-    hasBytes = false;
+    hasBytesForF = false;
   }
-  uint8_t resultAfterf;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    resultAfterf = 0;
+  uint8_t resultAfterF;
+  if (hasBytesForF) {
+    offsetInF = (offsetBeforeF + 4);
+    resultAfterF = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    resultAfterf = 2;
+    resultAfterF = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  uint8_t resultAfter_S32_Attempt;
-  if (resultAfterf == 0) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t f = (bfirst2 + (n2 * 256));
+  uint8_t resultAfterS32Attempt;
+  if (resultAfterF == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfF = sl_pos[0];
+    size_t positionAfterF = (positionOfF + 4);
+    uint8_t *bytesOfF = (sl_base + positionOfF);
+    sl_pos[0] = positionAfterF;
+    uint32_t f = EverParse3d_Prelude_read____UINT32(bytesOfF);
     bool fConstraintIsOk = (f <= bound);
     if (fConstraintIsOk) {
-      size_t p2 = sl_pos[0];
-      uint64_t fieldStart_S32_Attempt1 = (uint64_t)p2;
-      size_t p3 = sl_pos[0];
-      uint64_t fieldStartptrT = (uint64_t)p3;
-      size_t pos1 = 0;
+      size_t currentPosition1 = sl_pos[0];
+      uint64_t fieldStartS32Attempt1 = (uint64_t)currentPosition1;
+      size_t currentPosition2 = sl_pos[0];
+      uint64_t fieldStartPtrT = (uint64_t)currentPosition2;
+      size_t offsetInPtrT = 0;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      size_t p02 = pos1;
-      size_t p4 = sl_pos[0];
-      size_t rem1 = (sl_len - p4);
-      bool hasBytes1;
-      if (p02 <= rem1) {
-        hasBytes1 = (4 <= (rem1 - p02));
+      size_t offsetBeforePtrT = offsetInPtrT;
+      size_t positionBeforePtrT = sl_pos[0];
+      size_t bytesRemainingBeforePtrT = (sl_len - positionBeforePtrT);
+      bool hasBytesForPtrT;
+      if (offsetBeforePtrT <= bytesRemainingBeforePtrT) {
+        hasBytesForPtrT = (4 <= (bytesRemainingBeforePtrT - offsetBeforePtrT));
       }
       else {
-        hasBytes1 = false;
+        hasBytesForPtrT = false;
       }
-      uint8_t resultAfterptrT;
-      if (hasBytes1) {
-        pos1 = (p02 + 4);
-        resultAfterptrT = 0;
+      uint8_t resultAfterPtrT;
+      if (hasBytesForPtrT) {
+        offsetInPtrT = (offsetBeforePtrT + 4);
+        resultAfterPtrT = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfterptrT = 2;
+        resultAfterPtrT = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
       }
-      uint8_t resultAfter_S32_Attempt_1;
-      if (resultAfterptrT == 0) {
-        size_t p03 = sl_pos[0];
-        size_t m1 = (p03 + 4);
-        uint8_t *sub1 = (sl_base + p03);
-        sl_pos[0] = m1;
-        uint8_t first4 = sub1[0];
-        size_t pos_2 = (((size_t)1ULL) + ((size_t)1ULL));
-        uint8_t first5 = sub1[1];
-        size_t pos_3 = (pos_2 + 1);
-        uint8_t first6 = sub1[pos_2];
-        uint8_t first7 = sub1[pos_3];
-        uint32_t n3 = (uint32_t)first7;
-        uint32_t bfirst3 = (uint32_t)first6;
-        uint32_t n4 = (bfirst3 + (n3 * 256));
-        uint32_t bfirst4 = (uint32_t)first5;
-        uint32_t n5 = (bfirst4 + (n4 * 256));
-        uint32_t bfirst5 = (uint32_t)first4;
-        uint32_t ptrT = (bfirst5 + (n5 * 256));
+      uint8_t resultAfterS32Attempt_1;
+      if (resultAfterPtrT == EVERPARSE_STATUS_SUCCESS) {
+        size_t positionOfPtrT = sl_pos[0];
+        size_t positionAfterPtrT = (positionOfPtrT + 4);
+        uint8_t *bytesOfPtrT = (sl_base + positionOfPtrT);
+        sl_pos[0] = positionAfterPtrT;
+        uint32_t ptrT = EverParse3d_Prelude_read____UINT32(bytesOfPtrT);
         uint64_t src64 = (UlongToPtr(ptrT));
         uint64_t read_offset = 0;
         uint64_t write_offset = 0;
@@ -1649,363 +960,170 @@ static inline uint8_t Specialize1_validate____core__S32_Attempt(uint32_t bound, 
         else {
           b = write_offset;
         }
-        bool action_success_ptrT;
+        bool actionSuccessPtrT;
         if (b != 0) {
           uint8_t *base = (uint8_t *)(EverParseStreamOf(dest));
           size_t len = (size_t)(EverParseStreamLen(dest));
           size_t cursor = 0;
           uint8_t res = Specialize1_validate____core__T(f, ctxt, error_handler_fn, base, len, &cursor);
-          action_success_ptrT = (res == 0);
+          actionSuccessPtrT = (res == EVERPARSE_STATUS_SUCCESS);
         }
         else {
-          const char * _ct1;
-          uint8_t _cs2 = ((uint8_t)8U);
-          if (_cs2 == 0) {
-            _ct1 = "success";
-          }
-          else if (_cs2 == 2) {
-            _ct1 = "not enough data";
-          }
-          else if (_cs2 == 3) {
-            _ct1 = "impossible";
-          }
-          else if (_cs2 == 4) {
-            _ct1 = "list size not multiple of element size";
-          }
-          else if (_cs2 == 5) {
-            _ct1 = "action failed";
-          }
-          else if (_cs2 == 6) {
-            _ct1 = "constraint failed";
-          }
-          else if (_cs2 == 7) {
-            _ct1 = "unexpected padding";
-          }
-          else if (_cs2 == 8) {
-            _ct1 = "probe failed";
-          }
-          else {
-            _ct1 = "unspecified";
-          }
-          (void)(error_handler_fn("_S32_Attempt", "ptrT", _ct1, (uint64_t)8, ctxt, sl_base, fieldStartptrT));
-          action_success_ptrT = false;
+          (void)(error_handler_fn("_S32_Attempt", "ptrT", EverParse3d_ErrorCode_error_reason_of_result(EVERPARSE_STATUS_ERROR_PROBE_FAILED), EverParse3d_Lowstar_ErrorCode_legacy_kind(EVERPARSE_STATUS_ERROR_PROBE_FAILED), ctxt, sl_base, fieldStartPtrT));
+          actionSuccessPtrT = false;
         }
-        if (action_success_ptrT) {
-          resultAfter_S32_Attempt_1 = 0;
+        if (actionSuccessPtrT) {
+          resultAfterS32Attempt_1 = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          resultAfter_S32_Attempt_1 = 5;
+          resultAfterS32Attempt_1 = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
         }
       }
       else {
-        resultAfter_S32_Attempt_1 = resultAfterptrT;
+        resultAfterS32Attempt_1 = resultAfterPtrT;
       }
-      uint8_t resultAfterptrT1;
-      if (resultAfter_S32_Attempt_1 == 0) {
-        resultAfterptrT1 = resultAfter_S32_Attempt_1;
+      uint8_t resultAfterPtrT1;
+      if (resultAfterS32Attempt_1 == EVERPARSE_STATUS_SUCCESS) {
+        resultAfterPtrT1 = resultAfterS32Attempt_1;
       }
       else {
-        const char * _ct3;
-        if (resultAfter_S32_Attempt_1 == 0) {
-          _ct3 = "success";
-        }
-        else if (resultAfter_S32_Attempt_1 == 2) {
-          _ct3 = "not enough data";
-        }
-        else if (resultAfter_S32_Attempt_1 == 3) {
-          _ct3 = "impossible";
-        }
-        else if (resultAfter_S32_Attempt_1 == 4) {
-          _ct3 = "list size not multiple of element size";
-        }
-        else if (resultAfter_S32_Attempt_1 == 5) {
-          _ct3 = "action failed";
-        }
-        else if (resultAfter_S32_Attempt_1 == 6) {
-          _ct3 = "constraint failed";
-        }
-        else if (resultAfter_S32_Attempt_1 == 7) {
-          _ct3 = "unexpected padding";
-        }
-        else if (resultAfter_S32_Attempt_1 == 8) {
-          _ct3 = "probe failed";
-        }
-        else {
-          _ct3 = "unspecified";
-        }
-        uint64_t _ct4;
-        if ((resultAfter_S32_Attempt_1 == 0) || ((resultAfter_S32_Attempt_1 >= 2) && (resultAfter_S32_Attempt_1 <= 8))) {
-          _ct4 = (uint64_t)resultAfter_S32_Attempt_1;
-        }
-        else {
-          _ct4 = 15;
-        }
-        (void)(error_handler_fn("_S32_Attempt", "ptrT", _ct3, _ct4, ctxt, sl_base, fieldStart_S32_Attempt1));
-        resultAfterptrT1 = resultAfter_S32_Attempt_1;
+        (void)(error_handler_fn("_S32_Attempt", "ptrT", EverParse3d_ErrorCode_error_reason_of_result(resultAfterS32Attempt_1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterS32Attempt_1), ctxt, sl_base, fieldStartS32Attempt1));
+        resultAfterPtrT1 = resultAfterS32Attempt_1;
       }
-      if (resultAfterptrT1 == 0) {
-        size_t pos2 = 0;
+      if (resultAfterPtrT1 == EVERPARSE_STATUS_SUCCESS) {
+        size_t scanOffset = 0;
         /* Validating field g */
-        size_t p5 = sl_pos[0];
-        uint64_t view_start = (uint64_t)p5;
-        size_t field_off = pos2;
-        uint64_t start_pos = (view_start + (uint64_t)field_off);
+        size_t currentPosition3 = sl_pos[0];
+        uint64_t streamPositionAtG = (uint64_t)currentPosition3;
+        size_t offsetOfG = scanOffset;
+        uint64_t startPositionOfG = (streamPositionAtG + (uint64_t)offsetOfG);
         /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-        size_t p03_1 = pos2;
-        size_t p6 = sl_pos[0];
-        size_t rem2 = (sl_len - p6);
-        bool hasBytes2;
-        if (p03_1 <= rem2) {
-          hasBytes2 = (4 <= (rem2 - p03_1));
+        size_t offsetBeforeG = scanOffset;
+        size_t positionBeforeG = sl_pos[0];
+        size_t bytesRemainingBeforeG = (sl_len - positionBeforeG);
+        bool hasBytesForG;
+        if (offsetBeforeG <= bytesRemainingBeforeG) {
+          hasBytesForG = (4 <= (bytesRemainingBeforeG - offsetBeforeG));
         }
         else {
-          hasBytes2 = false;
+          hasBytesForG = false;
+        }
+        uint8_t resultOfG;
+        if (hasBytesForG) {
+          scanOffset = (offsetBeforeG + 4);
+          resultOfG = EVERPARSE_STATUS_SUCCESS;
+        }
+        else {
+          resultOfG = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
         }
         uint8_t res_1;
-        if (hasBytes2) {
-          pos2 = (p03_1 + 4);
-          res_1 = 0;
+        if (resultOfG == EVERPARSE_STATUS_SUCCESS) {
+          res_1 = resultOfG;
         }
         else {
-          res_1 = 2;
+          (void)(error_handler_fn("_S32_Attempt", "g", EverParse3d_ErrorCode_error_reason_of_result(resultOfG), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfG), ctxt, sl_base, startPositionOfG));
+          res_1 = resultOfG;
         }
-        uint8_t res1;
-        if (res_1 == 0) {
-          res1 = res_1;
-        }
-        else {
-          const char * _ct5;
-          if (res_1 == 0) {
-            _ct5 = "success";
-          }
-          else if (res_1 == 2) {
-            _ct5 = "not enough data";
-          }
-          else if (res_1 == 3) {
-            _ct5 = "impossible";
-          }
-          else if (res_1 == 4) {
-            _ct5 = "list size not multiple of element size";
-          }
-          else if (res_1 == 5) {
-            _ct5 = "action failed";
-          }
-          else if (res_1 == 6) {
-            _ct5 = "constraint failed";
-          }
-          else if (res_1 == 7) {
-            _ct5 = "unexpected padding";
-          }
-          else if (res_1 == 8) {
-            _ct5 = "probe failed";
-          }
-          else {
-            _ct5 = "unspecified";
-          }
-          uint64_t _ct6;
-          if ((res_1 == 0) || ((res_1 >= 2) && (res_1 <= 8))) {
-            _ct6 = (uint64_t)res_1;
-          }
-          else {
-            _ct6 = 15;
-          }
-          (void)(error_handler_fn("_S32_Attempt", "g", _ct5, _ct6, ctxt, sl_base, start_pos));
-          res1 = res_1;
-        }
-        if (res1 == 0) {
-          size_t p7 = sl_pos[0];
-          size_t p_ = (p7 + pos2);
-          sl_pos[0] = p_;
-          resultAfter_S32_Attempt = 0;
+        if (res_1 == EVERPARSE_STATUS_SUCCESS) {
+          size_t currentPosition4 = sl_pos[0];
+          size_t newPosition = (currentPosition4 + scanOffset);
+          sl_pos[0] = newPosition;
+          resultAfterS32Attempt = EVERPARSE_STATUS_SUCCESS;
         }
         else {
-          resultAfter_S32_Attempt = res1;
+          resultAfterS32Attempt = res_1;
         }
       }
       else {
-        resultAfter_S32_Attempt = resultAfterptrT1;
+        resultAfterS32Attempt = resultAfterPtrT1;
       }
     }
     else {
-      resultAfter_S32_Attempt = 6;
+      resultAfterS32Attempt = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
     }
   }
   else {
-    resultAfter_S32_Attempt = resultAfterf;
+    resultAfterS32Attempt = resultAfterF;
   }
-  if (resultAfter_S32_Attempt == 0) {
-    return resultAfter_S32_Attempt;
+  if (resultAfterS32Attempt == EVERPARSE_STATUS_SUCCESS) {
+    return resultAfterS32Attempt;
   }
   else {
-    const char * _ct7;
-    if (resultAfter_S32_Attempt == 0) {
-      _ct7 = "success";
-    }
-    else if (resultAfter_S32_Attempt == 2) {
-      _ct7 = "not enough data";
-    }
-    else if (resultAfter_S32_Attempt == 3) {
-      _ct7 = "impossible";
-    }
-    else if (resultAfter_S32_Attempt == 4) {
-      _ct7 = "list size not multiple of element size";
-    }
-    else if (resultAfter_S32_Attempt == 5) {
-      _ct7 = "action failed";
-    }
-    else if (resultAfter_S32_Attempt == 6) {
-      _ct7 = "constraint failed";
-    }
-    else if (resultAfter_S32_Attempt == 7) {
-      _ct7 = "unexpected padding";
-    }
-    else if (resultAfter_S32_Attempt == 8) {
-      _ct7 = "probe failed";
-    }
-    else {
-      _ct7 = "unspecified";
-    }
-    uint64_t _ct8;
-    if ((resultAfter_S32_Attempt == 0) || ((resultAfter_S32_Attempt >= 2) && (resultAfter_S32_Attempt <= 8))) {
-      _ct8 = (uint64_t)resultAfter_S32_Attempt;
-    }
-    else {
-      _ct8 = 15;
-    }
-    (void)(error_handler_fn("_S32_Attempt", "f", _ct7, _ct8, ctxt, sl_base, fieldStart_S32_Attempt));
-    return resultAfter_S32_Attempt;
+    (void)(error_handler_fn("_S32_Attempt", "f", EverParse3d_ErrorCode_error_reason_of_result(resultAfterS32Attempt), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterS32Attempt), ctxt, sl_base, fieldStartS32Attempt));
+    return resultAfterS32Attempt;
   }
 }
 
 static inline uint8_t Specialize1_validate____core__R32_Attempt(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
-  size_t pos = 0;
-  size_t p = sl_pos[0];
-  uint64_t view_start = (uint64_t)p;
-  size_t field_off = pos;
-  uint64_t start_pos = (view_start + (uint64_t)field_off);
+  size_t offsetInF = 0;
+  size_t currentPosition = sl_pos[0];
+  uint64_t streamPositionAtF = (uint64_t)currentPosition;
+  size_t offsetOfF = offsetInF;
+  uint64_t startPositionOfF = (streamPositionAtF + (uint64_t)offsetOfF);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = sl_pos[0];
-  size_t rem = (sl_len - p1);
-  bool hasBytes;
-  if (p0 <= rem) {
-    hasBytes = (4 <= (rem - p0));
+  size_t offsetBeforeF = offsetInF;
+  size_t positionBeforeF = sl_pos[0];
+  size_t bytesRemainingBeforeF = (sl_len - positionBeforeF);
+  bool hasBytesForF;
+  if (offsetBeforeF <= bytesRemainingBeforeF) {
+    hasBytesForF = (4 <= (bytesRemainingBeforeF - offsetBeforeF));
   }
   else {
-    hasBytes = false;
+    hasBytesForF = false;
   }
-  uint8_t res;
-  if (hasBytes) {
-    pos = (p0 + 4);
-    res = 0;
-  }
-  else {
-    res = 2;
-  }
-  uint8_t resultAfterf;
-  if (res == 0) {
-    resultAfterf = res;
+  uint8_t resultOfF;
+  if (hasBytesForF) {
+    offsetInF = (offsetBeforeF + 4);
+    resultOfF = EVERPARSE_STATUS_SUCCESS;
   }
   else {
-    const char * _ct1;
-    if (res == 0) {
-      _ct1 = "success";
-    }
-    else if (res == 2) {
-      _ct1 = "not enough data";
-    }
-    else if (res == 3) {
-      _ct1 = "impossible";
-    }
-    else if (res == 4) {
-      _ct1 = "list size not multiple of element size";
-    }
-    else if (res == 5) {
-      _ct1 = "action failed";
-    }
-    else if (res == 6) {
-      _ct1 = "constraint failed";
-    }
-    else if (res == 7) {
-      _ct1 = "unexpected padding";
-    }
-    else if (res == 8) {
-      _ct1 = "probe failed";
-    }
-    else {
-      _ct1 = "unspecified";
-    }
-    uint64_t _ct2;
-    if ((res == 0) || ((res >= 2) && (res <= 8))) {
-      _ct2 = (uint64_t)res;
-    }
-    else {
-      _ct2 = 15;
-    }
-    (void)(error_handler_fn("_R32_Attempt", "f", _ct1, _ct2, ctxt, sl_base, start_pos));
-    resultAfterf = res;
+    resultOfF = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAfterf == 0) {
-    size_t p01 = sl_pos[0];
-    size_t m = (p01 + 4);
-    uint8_t *sub = (sl_base + p01);
-    sl_pos[0] = m;
-    uint8_t first = sub[0];
-    size_t pos_ = (((size_t)1ULL) + ((size_t)1ULL));
-    uint8_t first1 = sub[1];
-    size_t pos_1 = (pos_ + 1);
-    uint8_t first2 = sub[pos_];
-    uint8_t first3 = sub[pos_1];
-    uint32_t n = (uint32_t)first3;
-    uint32_t bfirst = (uint32_t)first2;
-    uint32_t n1 = (bfirst + (n * 256));
-    uint32_t bfirst1 = (uint32_t)first1;
-    uint32_t n2 = (bfirst1 + (n1 * 256));
-    uint32_t bfirst2 = (uint32_t)first;
-    uint32_t f = (bfirst2 + (n2 * 256));
-    size_t p2 = sl_pos[0];
-    uint64_t fieldStart_R32_Attempt = (uint64_t)p2;
-    size_t p3 = sl_pos[0];
-    uint64_t fieldStartptrS = (uint64_t)p3;
-    size_t pos1 = 0;
+  uint8_t resultAfterF;
+  if (resultOfF == EVERPARSE_STATUS_SUCCESS) {
+    resultAfterF = resultOfF;
+  }
+  else {
+    (void)(error_handler_fn("_R32_Attempt", "f", EverParse3d_ErrorCode_error_reason_of_result(resultOfF), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultOfF), ctxt, sl_base, startPositionOfF));
+    resultAfterF = resultOfF;
+  }
+  if (resultAfterF == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfF = sl_pos[0];
+    size_t positionAfterF = (positionOfF + 4);
+    uint8_t *bytesOfF = (sl_base + positionOfF);
+    sl_pos[0] = positionAfterF;
+    uint32_t f = EverParse3d_Prelude_read____UINT32(bytesOfF);
+    size_t currentPosition1 = sl_pos[0];
+    uint64_t fieldStartR32Attempt = (uint64_t)currentPosition1;
+    size_t currentPosition2 = sl_pos[0];
+    uint64_t fieldStartPtrS = (uint64_t)currentPosition2;
+    size_t offsetInPtrS = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    size_t p02 = pos1;
-    size_t p4 = sl_pos[0];
-    size_t rem1 = (sl_len - p4);
-    bool hasBytes1;
-    if (p02 <= rem1) {
-      hasBytes1 = (4 <= (rem1 - p02));
+    size_t offsetBeforePtrS = offsetInPtrS;
+    size_t positionBeforePtrS = sl_pos[0];
+    size_t bytesRemainingBeforePtrS = (sl_len - positionBeforePtrS);
+    bool hasBytesForPtrS;
+    if (offsetBeforePtrS <= bytesRemainingBeforePtrS) {
+      hasBytesForPtrS = (4 <= (bytesRemainingBeforePtrS - offsetBeforePtrS));
     }
     else {
-      hasBytes1 = false;
+      hasBytesForPtrS = false;
     }
-    uint8_t resultAfterptrS;
-    if (hasBytes1) {
-      pos1 = (p02 + 4);
-      resultAfterptrS = 0;
+    uint8_t resultAfterPtrS;
+    if (hasBytesForPtrS) {
+      offsetInPtrS = (offsetBeforePtrS + 4);
+      resultAfterPtrS = EVERPARSE_STATUS_SUCCESS;
     }
     else {
-      resultAfterptrS = 2;
+      resultAfterPtrS = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    uint8_t resultAfter_R32_Attempt;
-    if (resultAfterptrS == 0) {
-      size_t p03 = sl_pos[0];
-      size_t m1 = (p03 + 4);
-      uint8_t *sub1 = (sl_base + p03);
-      sl_pos[0] = m1;
-      uint8_t first4 = sub1[0];
-      size_t pos_2 = (((size_t)1ULL) + ((size_t)1ULL));
-      uint8_t first5 = sub1[1];
-      size_t pos_3 = (pos_2 + 1);
-      uint8_t first6 = sub1[pos_2];
-      uint8_t first7 = sub1[pos_3];
-      uint32_t n3 = (uint32_t)first7;
-      uint32_t bfirst3 = (uint32_t)first6;
-      uint32_t n4 = (bfirst3 + (n3 * 256));
-      uint32_t bfirst4 = (uint32_t)first5;
-      uint32_t n5 = (bfirst4 + (n4 * 256));
-      uint32_t bfirst5 = (uint32_t)first4;
-      uint32_t ptrS = (bfirst5 + (n5 * 256));
+    uint8_t resultAfterR32Attempt;
+    if (resultAfterPtrS == EVERPARSE_STATUS_SUCCESS) {
+      size_t positionOfPtrS = sl_pos[0];
+      size_t positionAfterPtrS = (positionOfPtrS + 4);
+      uint8_t *bytesOfPtrS = (sl_base + positionOfPtrS);
+      sl_pos[0] = positionAfterPtrS;
+      uint32_t ptrS = EverParse3d_Prelude_read____UINT32(bytesOfPtrS);
       uint64_t src64 = (UlongToPtr(ptrS));
       uint64_t read_offset = 0;
       uint64_t write_offset = 0;
@@ -2026,102 +1144,38 @@ static inline uint8_t Specialize1_validate____core__R32_Attempt(EVERPARSE_COPY_B
       else {
         b = write_offset;
       }
-      bool action_success_ptrS;
+      bool actionSuccessPtrS;
       if (b != 0) {
         uint8_t *base = (uint8_t *)(EverParseStreamOf(destS));
         size_t len = (size_t)(EverParseStreamLen(destS));
         size_t cursor = 0;
-        uint8_t res1 = Specialize1_validate____core__S32_Attempt(f, destT, ctxt, error_handler_fn, base, len, &cursor);
-        action_success_ptrS = (res1 == 0);
+        uint8_t res = Specialize1_validate____core__S32_Attempt(f, destT, ctxt, error_handler_fn, base, len, &cursor);
+        actionSuccessPtrS = (res == EVERPARSE_STATUS_SUCCESS);
       }
       else {
-        const char * _ct3;
-        uint8_t _cs4 = ((uint8_t)8U);
-        if (_cs4 == 0) {
-          _ct3 = "success";
-        }
-        else if (_cs4 == 2) {
-          _ct3 = "not enough data";
-        }
-        else if (_cs4 == 3) {
-          _ct3 = "impossible";
-        }
-        else if (_cs4 == 4) {
-          _ct3 = "list size not multiple of element size";
-        }
-        else if (_cs4 == 5) {
-          _ct3 = "action failed";
-        }
-        else if (_cs4 == 6) {
-          _ct3 = "constraint failed";
-        }
-        else if (_cs4 == 7) {
-          _ct3 = "unexpected padding";
-        }
-        else if (_cs4 == 8) {
-          _ct3 = "probe failed";
-        }
-        else {
-          _ct3 = "unspecified";
-        }
-        (void)(error_handler_fn("_R32_Attempt", "ptrS", _ct3, (uint64_t)8, ctxt, sl_base, fieldStartptrS));
-        action_success_ptrS = false;
+        (void)(error_handler_fn("_R32_Attempt", "ptrS", EverParse3d_ErrorCode_error_reason_of_result(EVERPARSE_STATUS_ERROR_PROBE_FAILED), EverParse3d_Lowstar_ErrorCode_legacy_kind(EVERPARSE_STATUS_ERROR_PROBE_FAILED), ctxt, sl_base, fieldStartPtrS));
+        actionSuccessPtrS = false;
       }
-      if (action_success_ptrS) {
-        resultAfter_R32_Attempt = 0;
+      if (actionSuccessPtrS) {
+        resultAfterR32Attempt = EVERPARSE_STATUS_SUCCESS;
       }
       else {
-        resultAfter_R32_Attempt = 5;
+        resultAfterR32Attempt = EVERPARSE_STATUS_ERROR_ACTION_FAILED;
       }
     }
     else {
-      resultAfter_R32_Attempt = resultAfterptrS;
+      resultAfterR32Attempt = resultAfterPtrS;
     }
-    if (resultAfter_R32_Attempt == 0) {
-      return resultAfter_R32_Attempt;
+    if (resultAfterR32Attempt == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterR32Attempt;
     }
     else {
-      const char * _ct5;
-      if (resultAfter_R32_Attempt == 0) {
-        _ct5 = "success";
-      }
-      else if (resultAfter_R32_Attempt == 2) {
-        _ct5 = "not enough data";
-      }
-      else if (resultAfter_R32_Attempt == 3) {
-        _ct5 = "impossible";
-      }
-      else if (resultAfter_R32_Attempt == 4) {
-        _ct5 = "list size not multiple of element size";
-      }
-      else if (resultAfter_R32_Attempt == 5) {
-        _ct5 = "action failed";
-      }
-      else if (resultAfter_R32_Attempt == 6) {
-        _ct5 = "constraint failed";
-      }
-      else if (resultAfter_R32_Attempt == 7) {
-        _ct5 = "unexpected padding";
-      }
-      else if (resultAfter_R32_Attempt == 8) {
-        _ct5 = "probe failed";
-      }
-      else {
-        _ct5 = "unspecified";
-      }
-      uint64_t _ct6;
-      if ((resultAfter_R32_Attempt == 0) || ((resultAfter_R32_Attempt >= 2) && (resultAfter_R32_Attempt <= 8))) {
-        _ct6 = (uint64_t)resultAfter_R32_Attempt;
-      }
-      else {
-        _ct6 = 15;
-      }
-      (void)(error_handler_fn("_R32_Attempt", "ptrS", _ct5, _ct6, ctxt, sl_base, fieldStart_R32_Attempt));
-      return resultAfter_R32_Attempt;
+      (void)(error_handler_fn("_R32_Attempt", "ptrS", EverParse3d_ErrorCode_error_reason_of_result(resultAfterR32Attempt), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterR32Attempt), ctxt, sl_base, fieldStartR32Attempt));
+      return resultAfterR32Attempt;
     }
   }
   else {
-    return resultAfterf;
+    return resultAfterF;
   }
 }
 
@@ -2170,98 +1224,28 @@ static void Specialize1____RMux____probe_field_R64_1_S64(uint32_t ____arg0, cons
 static uint8_t Specialize1_validate____core__RMux(bool requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER error_handler_fn, uint8_t *sl_base, size_t sl_len, size_t *sl_pos) {
   if (requestor32) {
     /* Validating field r32 */
-    size_t p = sl_pos[0];
-    uint64_t fieldStart_RMux = (uint64_t)p;
-    uint8_t resultAfter_RMux = Specialize1_validate____core__R32_Attempt(destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter_RMux == 0) {
-      return resultAfter_RMux;
+    size_t currentPosition = sl_pos[0];
+    uint64_t fieldStartRmux = (uint64_t)currentPosition;
+    uint8_t resultAfterRmux = Specialize1_validate____core__R32_Attempt(destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
+    if (resultAfterRmux == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterRmux;
     }
     else {
-      const char * _ct1;
-      if (resultAfter_RMux == 0) {
-        _ct1 = "success";
-      }
-      else if (resultAfter_RMux == 2) {
-        _ct1 = "not enough data";
-      }
-      else if (resultAfter_RMux == 3) {
-        _ct1 = "impossible";
-      }
-      else if (resultAfter_RMux == 4) {
-        _ct1 = "list size not multiple of element size";
-      }
-      else if (resultAfter_RMux == 5) {
-        _ct1 = "action failed";
-      }
-      else if (resultAfter_RMux == 6) {
-        _ct1 = "constraint failed";
-      }
-      else if (resultAfter_RMux == 7) {
-        _ct1 = "unexpected padding";
-      }
-      else if (resultAfter_RMux == 8) {
-        _ct1 = "probe failed";
-      }
-      else {
-        _ct1 = "unspecified";
-      }
-      uint64_t _ct2;
-      if ((resultAfter_RMux == 0) || ((resultAfter_RMux >= 2) && (resultAfter_RMux <= 8))) {
-        _ct2 = (uint64_t)resultAfter_RMux;
-      }
-      else {
-        _ct2 = 15;
-      }
-      (void)(error_handler_fn("_RMux", "r32", _ct1, _ct2, ctxt, sl_base, fieldStart_RMux));
-      return resultAfter_RMux;
+      (void)(error_handler_fn("_RMux", "r32", EverParse3d_ErrorCode_error_reason_of_result(resultAfterRmux), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterRmux), ctxt, sl_base, fieldStartRmux));
+      return resultAfterRmux;
     }
   }
   else {
     /* Validating field r64 */
-    size_t p_1 = sl_pos[0];
-    uint64_t fieldStart_RMux_1 = (uint64_t)p_1;
-    uint8_t resultAfter_RMux_1 = Specialize1_validate____core__R64(Specialize1____RMux____probe_field_R64_0_T, Specialize1____RMux____probe_field_R64_1_S64, destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
-    if (resultAfter_RMux_1 == 0) {
-      return resultAfter_RMux_1;
+    size_t currentPosition_1 = sl_pos[0];
+    uint64_t fieldStartRmux_1 = (uint64_t)currentPosition_1;
+    uint8_t resultAfterRmux_1 = Specialize1_validate____core__R64(Specialize1____RMux____probe_field_R64_0_T, Specialize1____RMux____probe_field_R64_1_S64, destS, destT, ctxt, error_handler_fn, sl_base, sl_len, sl_pos);
+    if (resultAfterRmux_1 == EVERPARSE_STATUS_SUCCESS) {
+      return resultAfterRmux_1;
     }
     else {
-      const char * _ct3;
-      if (resultAfter_RMux_1 == 0) {
-        _ct3 = "success";
-      }
-      else if (resultAfter_RMux_1 == 2) {
-        _ct3 = "not enough data";
-      }
-      else if (resultAfter_RMux_1 == 3) {
-        _ct3 = "impossible";
-      }
-      else if (resultAfter_RMux_1 == 4) {
-        _ct3 = "list size not multiple of element size";
-      }
-      else if (resultAfter_RMux_1 == 5) {
-        _ct3 = "action failed";
-      }
-      else if (resultAfter_RMux_1 == 6) {
-        _ct3 = "constraint failed";
-      }
-      else if (resultAfter_RMux_1 == 7) {
-        _ct3 = "unexpected padding";
-      }
-      else if (resultAfter_RMux_1 == 8) {
-        _ct3 = "probe failed";
-      }
-      else {
-        _ct3 = "unspecified";
-      }
-      uint64_t _ct4;
-      if ((resultAfter_RMux_1 == 0) || ((resultAfter_RMux_1 >= 2) && (resultAfter_RMux_1 <= 8))) {
-        _ct4 = (uint64_t)resultAfter_RMux_1;
-      }
-      else {
-        _ct4 = 15;
-      }
-      (void)(error_handler_fn("_RMux", "r64", _ct3, _ct4, ctxt, sl_base, fieldStart_RMux_1));
-      return resultAfter_RMux_1;
+      (void)(error_handler_fn("_RMux", "r64", EverParse3d_ErrorCode_error_reason_of_result(resultAfterRmux_1), EverParse3d_Lowstar_ErrorCode_legacy_kind(resultAfterRmux_1), ctxt, sl_base, fieldStartRmux_1));
+      return resultAfterRmux_1;
     }
   }
 }
@@ -2272,14 +1256,7 @@ uint64_t Specialize1ValidateRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T de
   size_t cursor = initial;
   uint8_t status = Specialize1_validate____core__RMux((requestor32 != 0), destS, destT, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  uint64_t _ct1;
-  if ((status == 0) || ((status >= 2) && (status <= 8))) {
-    _ct1 = (uint64_t)status;
-  }
-  else {
-    _ct1 = 15;
-  }
-  return ((_ct1 * 1152921504606846976ULL) + position);
+  return ((EverParse3d_Lowstar_ErrorCode_legacy_kind(status) * 1152921504606846976ULL) + position);
 }
 
 

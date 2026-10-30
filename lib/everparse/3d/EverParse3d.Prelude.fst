@@ -252,45 +252,57 @@ let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.p
 // Base types
 ////////////////////////////////////////////////////////////////////////////////
 
+// The integer readers are not inline_for_extraction: they are extracted once
+// into the runtime EverParse.h as static inline functions, and 3D validators
+// call them instead of duplicating the byte-assembly code at every read site.
+
 /// UINT8
 let parse____UINT8 = LowParse.Spec.Int.parse_u8
-inline_for_extraction noextract
-let read____UINT8 = LowParse.Pulse.ArrayPtr.Int.read_u8 ()
+[@@FStar.Attributes.CInline]
+let read____UINT8 : reader parse____UINT8 =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.Int.read_u8 () x #pm #v
 
 /// UINT8BE
 let parse____UINT8BE = LowParse.Spec.Int.parse_u8
-inline_for_extraction noextract
-let read____UINT8BE = LowParse.Pulse.ArrayPtr.Int.read_u8 ()
+[@@FStar.Attributes.CInline]
+let read____UINT8BE : reader parse____UINT8BE =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.Int.read_u8 () x #pm #v
 
 /// UInt16BE
 let parse____UINT16BE = LowParse.Spec.Int.parse_u16
-inline_for_extraction noextract
-let read____UINT16BE = LowParse.Pulse.ArrayPtr.Int.read_u16 ()
+[@@FStar.Attributes.CInline]
+let read____UINT16BE : reader parse____UINT16BE =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.Int.read_u16 () x #pm #v
 
 /// UInt32BE
 let parse____UINT32BE = LowParse.Spec.Int.parse_u32
-inline_for_extraction noextract
-let read____UINT32BE = LowParse.Pulse.ArrayPtr.Int.read_u32 ()
+[@@FStar.Attributes.CInline]
+let read____UINT32BE : reader parse____UINT32BE =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.Int.read_u32 () x #pm #v
 
 /// UInt64BE
 let parse____UINT64BE = LowParse.Spec.Int.parse_u64
-inline_for_extraction noextract
-let read____UINT64BE = LowParse.Pulse.ArrayPtr.Int.read_u64 ()
+[@@FStar.Attributes.CInline]
+let read____UINT64BE : reader parse____UINT64BE =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.Int.read_u64 () x #pm #v
 
 
 /// UInt16
 let parse____UINT16 = LowParse.Spec.BoundedInt.parse_u16_le
-inline_for_extraction noextract
-let read____UINT16 = LowParse.Pulse.ArrayPtr.IntLE.read_u16_le
+[@@FStar.Attributes.CInline]
+let read____UINT16 : reader parse____UINT16 =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.IntLE.read_u16_le x #pm #v
 
 /// UInt32
 let parse____UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
-inline_for_extraction noextract
-let read____UINT32 = LowParse.Pulse.ArrayPtr.IntLE.read_u32_le
+[@@FStar.Attributes.CInline]
+let read____UINT32 : reader parse____UINT32 =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.IntLE.read_u32_le x #pm #v
 
 
 /// UInt64
 let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
-inline_for_extraction noextract
-let read____UINT64 = LowParse.Pulse.ArrayPtr.Int.read_u64_le ()
+[@@FStar.Attributes.CInline]
+let read____UINT64 : reader parse____UINT64 =
+  fun x #pm #v -> LowParse.Pulse.ArrayPtr.Int.read_u64_le () x #pm #v
   

@@ -48,15 +48,16 @@ ensures stream_pts_to b len pos contents v **
   pure (U64.v res + Seq.length v == Seq.length contents)
 {
   unfold (stream_pts_to b len pos contents v);
-  let p = !pos;
-  I.sizet_to_uint64_exact p;
+  let currentPosition = !pos;
+  I.sizet_to_uint64_exact currentPosition;
   fold (stream_pts_to b len pos contents v);
-  SZ.sizet_to_uint64 p
+  SZ.sizet_to_uint64 currentPosition
 }
 
 inline_for_extraction
 fn stream_has
     (#[Util.solve_from_ctx ()] _extra: unit)
+  (name: string)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v
@@ -65,8 +66,8 @@ ensures stream_pts_to b len pos contents v **
   pure (res == true <==> SZ.v n <= Seq.length v)
 {
   unfold (stream_pts_to b len pos contents v);
-  let p = !pos;
-  let avail = SZ.sub len p;
+  let [@@@rename_let ("positionBefore" ^ Common.pascal_case name)] p = !pos;
+  let [@@@rename_let ("bytesRemainingBefore" ^ Common.pascal_case name)] avail = SZ.sub len p;
   fold (stream_pts_to b len pos contents v);
   SZ.lte n avail
 }
@@ -78,6 +79,7 @@ ensures stream_pts_to b len pos contents v **
 inline_for_extraction
 fn stream_has_at
     (#[Util.solve_from_ctx ()] _extra: unit)
+  (name: string)
   (b: base_t) (len: len_t) (pos: pos_t) (off: SZ.t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
 requires stream_pts_to b len pos contents v
@@ -90,8 +92,8 @@ ensures stream_pts_to b len pos contents v ** pure (
 )
 {
   unfold (stream_pts_to b len pos contents v);
-  let p = !pos;
-  let rem = SZ.sub len p;
+  let [@@@rename_let ("positionBefore" ^ Common.pascal_case name)] p = !pos;
+  let [@@@rename_let ("bytesRemainingBefore" ^ Common.pascal_case name)] rem = SZ.sub len p;
   fold (stream_pts_to b len pos contents v);
   if (SZ.lte off rem) {
     SZ.lte n (SZ.sub rem off)
@@ -111,13 +113,13 @@ ensures exists* v' .
   pure (Seq.length v >= SZ.v n /\ v' `Seq.equal` Seq.slice v (SZ.v n) (Seq.length v))
 {
   unfold (stream_pts_to b len pos contents v);
-  let p = !pos;
-  let p' = SZ.add p n;
-  pos := p';
+  let currentPosition = !pos;
+  let newPosition = SZ.add currentPosition n;
+  pos := newPosition;
   Seq.lemma_eq_elim
-    (Seq.slice contents (SZ.v p') (SZ.v len))
+    (Seq.slice contents (SZ.v newPosition) (SZ.v len))
     (Seq.slice v (SZ.v n) (Seq.length v));
-  fold (stream_pts_to b len pos contents (Seq.slice contents (SZ.v p') (SZ.v len)));
+  fold (stream_pts_to b len pos contents (Seq.slice contents (SZ.v newPosition) (SZ.v len)));
 }
 
 inline_for_extraction
@@ -131,11 +133,11 @@ ensures stream_pts_to b len pos contents Seq.empty **
   pure (SZ.v res == Seq.length v)
 {
   unfold (stream_pts_to b len pos contents v);
-  let p = !pos;
+  let currentPosition = !pos;
   pos := len;
   Seq.lemma_eq_elim (Seq.slice contents (SZ.v len) (SZ.v len)) (Seq.empty #U8.t);
   fold (stream_pts_to b len pos contents (Seq.empty #U8.t));
-  SZ.sub len p
+  SZ.sub len currentPosition
 }
 
 (* Keep the native count-returning helper unchanged; the high-level operation
@@ -189,20 +191,20 @@ ensures exists* contents' v1 v2 .
   )
 {
   unfold (stream_pts_to b len pos contents v);
-  let p = !pos;
-  let m = SZ.add p n;
-  let s' = AP.ghost_split b m;
+  let currentPosition = !pos;
+  let truncatedLength = SZ.add currentPosition n;
+  let s' = AP.ghost_split b truncatedLength;
   Seq.lemma_eq_elim
     (Ghost.reveal v)
     (Seq.append
-      (Seq.slice contents (SZ.v p) (SZ.v m))
-      (Seq.slice contents (SZ.v m) (SZ.v len)));
-  fold (stream_pts_to b m pos
-          (Seq.slice contents 0 (SZ.v m))
-          (Seq.slice contents (SZ.v p) (SZ.v m)));
-  fold (stream_is_prefix_of b m pos b len pos contents
-          (Seq.slice contents (SZ.v m) (SZ.v len)));
-  m
+      (Seq.slice contents (SZ.v currentPosition) (SZ.v truncatedLength))
+      (Seq.slice contents (SZ.v truncatedLength) (SZ.v len)));
+  fold (stream_pts_to b truncatedLength pos
+          (Seq.slice contents 0 (SZ.v truncatedLength))
+          (Seq.slice contents (SZ.v currentPosition) (SZ.v truncatedLength)));
+  fold (stream_is_prefix_of b truncatedLength pos b len pos contents
+          (Seq.slice contents (SZ.v truncatedLength) (SZ.v len)));
+  truncatedLength
 }
 
 ghost
@@ -234,6 +236,7 @@ ensures stream_pts_to base_y len_y pos_y contents0 (Seq.append v suffix)
 inline_for_extraction
 fn stream_read
     (#[Util.solve_from_ctx ()] _extra: unit)
+  (name: string)
   (t': Type0) (k: LP.parser_kind) (p: LP.parser k t') (r: API.leaf_reader p)
   (b: base_t) (len: len_t) (pos: pos_t) (n: SZ.t)
   (contents: Ghost.erased (Seq.seq U8.t)) (v: Ghost.erased (Seq.seq U8.t))
@@ -254,13 +257,13 @@ ensures exists* v' .
 {
   LP.parser_kind_prop_equiv k p;
   unfold (stream_pts_to b len pos contents v);
-  let p0 = !pos;
-  let m = SZ.add p0 n;
+  let [@@@rename_let ("positionOf" ^ Common.pascal_case name)] p0 = !pos;
+  let [@@@rename_let ("positionAfter" ^ Common.pascal_case name)] m = SZ.add p0 n;
   (* [AP.split] is pure pointer arithmetic: it extracts to [b + p0] and gives
      [sub] the ownership of the bytes from the current position onwards, which
      is exactly the remaining input [v]. The reader looks at the first [n] of
      them; the strong-prefix property makes the rest irrelevant. *)
-  let sub = AP.split b p0;
+  let [@@@rename_let ("bytesOf" ^ Common.pascal_case name)] sub = AP.split b p0;
   Seq.lemma_eq_elim (Seq.slice contents (SZ.v p0) (Seq.length contents)) v;
   (* The position is advanced *before* the value is read, although the read
      does not depend on it, so that this function's last statement is the read
@@ -325,7 +328,7 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
    As in Low*, the handle is an abstract type with assumed projections, all
    implemented by the client in C: Custard emits them as `extern`
-   declarations in `EverParse.h`, and `EverParsePulseEndianness.h` gives
+   declarations in `EverParse.h`, and `EverParseEndianness.h` gives
    `EVERPARSE_COPY_BUFFER_T` its `void *` typedef. Keeping the handle opaque
    is what lets a probe callback *repoint* it -- have `EverParseStreamOf`
    return a different pointer after the probe -- rather than copy into it.

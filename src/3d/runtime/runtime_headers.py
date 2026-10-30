@@ -13,6 +13,12 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 RUNTIME = ROOT / "lib/everparse/3d"
 PREFIX = "EverParse3d."
+INTERNAL_ENTRIES = tuple(
+    "Prelude.read____" + ty
+    for ty in ("UINT8", "UINT8BE", "UINT16", "UINT16BE",
+               "UINT32", "UINT32BE", "UINT64", "UINT64BE")
+)
+LOWSTAR_INTERNAL_ENTRIES = ("Lowstar.ErrorCode.legacy_kind",)
 CONTRACT = json.loads((HERE / "runtime-contract.json").read_text())
 PROFILES = {p["directory"]: p for p in CONTRACT["profiles"]}
 COMPANION = "EverParseStreamPrimitives.h"
@@ -89,22 +95,24 @@ def profile_config(profile):
         "Actions.ErrorHandler." + backend: {"error_handler"},
     }
     error_prefix = "EverParsePulseInternal" if lowstar else "EverParse"
-    macro_prefix = "EVERPARSEPULSEINTERNAL_" if lowstar else "EVERPARSE_"
-    error_names = {
-        "validator_" + name: macro_prefix + "VALIDATOR_" + name.upper()
+    names["ErrorCode"] = {
+        "validator_" + name: "EVERPARSE_STATUS_" + name.upper()
         for name in ("success", "error_action_failed", "error_not_enough_data",
                      "error_impossible", "error_list_size_not_multiple",
                      "error_constraint_failed", "error_unexpected_padding",
                      "error_probe_failed")
     }
-    error_names["error_reason_of_result"] = error_prefix + "ErrorReasonOfResult"
-    names["CAbi.ErrorCode" + ("Lowstar" if lowstar else "Pulse")] = error_names | {
+    names["CAbi.ErrorCode" + ("Lowstar" if lowstar else "Pulse")] = {
+        "error_reason_of_result": error_prefix + "ErrorReasonOfResult",
         "error_code_is_range_okay": error_prefix + "IsRangeOkay",
     }
     names["CAbi.Public"] = {}
+    names["CAbi.ErrorFrame"] = {"error_frame": "EVERPARSE_ERROR_FRAME"}
+    if not lowstar:
+        names["CAbi.ErrorFramePulse"] = {"default_error_handler": "EverParseDefaultErrorHandler"}
     foreign = {}
     external_types = {}
-    include = "EverParseEndianness.h" if lowstar else "EverParsePulseEndianness.h"
+    include = "EverParseEndianness.h"
     copy_module = "CopyBuffer." + backend
     external_types[("CopyBuffer.Buffer" if not lowstar else copy_module)
                    + ".copy_buffer_t"] = "EVERPARSE_COPY_BUFFER_T"
@@ -161,7 +169,6 @@ def profile_config(profile):
                 "error_constraint_failed", "error_unexpected_padding", "error_probe_failed",
             )
         })
-        names["Lowstar.Public"]["error_frame"] = "EVERPARSE_ERROR_FRAME"
         names["CAbi.Public"].update({
             name: c_name(name)
             for name in ("is_error", "is_success", "is_range_okay", "check_constraint_ok")
@@ -215,6 +222,10 @@ def extract(args):
     for module, declarations in names.items():
         for name in declarations:
             extraction += ["--custard_entry", PREFIX + module + "." + name]
+    # Internal helpers called by generated validators through EverParse.cui,
+    # rather than duplicated in every validator.
+    for name in INTERNAL_ENTRIES + (LOWSTAR_INTERNAL_ENTRIES if profile["api"] == "lowstar" else ()):
+        extraction += ["--custard_entry", PREFIX + name]
     for name, target in external_types.items():
         extraction += ["--custard_extern_type", PREFIX + name + "=" + target + "@" + include]
     header = build / "EverParse.h"

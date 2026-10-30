@@ -411,15 +411,6 @@ let collect_files
         List.fold_left collect_file accu
           (everparse_static_headers (Options.get_input_stream_binding ()) out_dir)
       in
-      (* --api pulse copies two more headers into out_dir; treat them like the
-         others (clang-format, cleanup, ...). *)
-      let accu =
-        if Options.uses_pulse_api ()
-        then
-          let accu = collect_file accu (filename_concat out_dir "EverParsePulse.h") in
-          collect_file accu (filename_concat out_dir "EverParsePulseEndianness.h")
-        else accu
-      in
       accu
     else
       accu
@@ -518,27 +509,9 @@ let copy_everparse_h_raw
           if wanted name then
             copy (filename_concat (everparse_h_home input_stream_binding) name) destination)
         (everparse_static_headers input_stream_binding out_dir);
-      if Options.uses_pulse_api ()
-      then begin
-        let everparse_pulse_h_source = filename_concat lib_3d_home "EverParsePulse.h" in
-        if wanted "EverParsePulse.h" && file_exists everparse_pulse_h_source
-        then copy everparse_pulse_h_source (filename_concat out_dir "EverParsePulse.h")
-        ;
-        let everparse_pulse_endianness_h_source = filename_concat lib_3d_home "EverParsePulseEndianness.h" in
-        if wanted "EverParsePulseEndianness.h" && file_exists everparse_pulse_endianness_h_source
-        then copy everparse_pulse_endianness_h_source (filename_concat out_dir "EverParsePulseEndianness.h")
-      end;
       let everparse_endianness_source = (filename_concat lib_3d_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
       if wanted "EverParseEndianness.h" && file_exists everparse_endianness_source
       then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
-
-let everparse_pulse_headers out_dir =
-  if Options.uses_pulse_api ()
-  then [
-      filename_concat out_dir "EverParsePulse.h";
-      filename_concat out_dir "EverParsePulseEndianness.h";
-    ]
-  else []
 
 let copy_everparse_h
       (clang_format: bool)
@@ -555,7 +528,7 @@ let copy_everparse_h
       List.filter
         (fun f -> only = [] || List.mem (Filename.basename f) only)
         ([filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"]
-         @ everparse_pulse_headers out_dir @ everparse_static_headers input_stream_binding out_dir)
+         @ everparse_static_headers input_stream_binding out_dir)
     in
     call_clang_format_on clang_format_executable copied
 
