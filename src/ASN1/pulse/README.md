@@ -88,12 +88,31 @@ holding fractional permission `pm` on the input bytes it borrows.
   under the relaxed element schema. Writing and validating are two passes
   over the output.
 
+* **Checked raw writers** (`ASN1.Pulse.RawWriter`, `check_write_raw_k`):
+  they remove those remaining preconditions, using the same
+  `asn1_impl_t k` input type. The raw relation `raw_rel k pm x' y`
+  (`ASN1.Pulse.RawRel`) relates a low-level value to the bytes `y` that
+  its fields spell out, with no semantic constraint: any slice is accepted
+  as string, time, OID, ANY or big INTEGER contents, any `unused` byte and
+  slice as a BIT STRING, any `int64` as an INTEGER. The raw writer
+  `raw_write_k` writes those bytes right to left, then `validate_k k`
+  checks them, with the same `cw_post` as the checked writers, so all
+  constraints of `k` become runtime checks (`CW_INVALID`). Schemas must
+  satisfy `raw_ok k` (`supported_k` and `Conformance.wf`). What remains
+  a precondition: `Serialized` chunks of SEQUENCE OF / SET OF must be a
+  sequence of TLVs (`p_raw`), and SET components are written in schema
+  order (a non-canonical order yields `CW_INVALID`, pending on-the-fly
+  sorting). ANY DEFINED BY has no raw representation.
+
 `make test-parse` and `make test-write` run the parsers and writers
 extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 (`test/parse_test.c`, `test/write_test.c`: parse/write round trips).
 `make test-checked-write` runs the checked writers extracted from
 `ASN1.Pulse.CheckedWriteTest` on values built in C
-(`test/checked_write_test.c`).
+(`test/checked_write_test.c`). `make test-raw-write` runs the checked
+raw writers extracted from `ASN1.Pulse.RawWriteTest` on values built in C,
+including invalid strings, BIT STRING padding, non-minimal INTEGERs and bad
+ANY slices (`test/raw_write_test.c`).
 
 ## Layout
 
@@ -110,7 +129,8 @@ extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 | `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers, and the interpreter `write_k` |
 | `ASN1.Pulse.CheckedWriter` | checked writers `check_write_k` (relaxed write, then validate) |
-| `ASN1.Pulse.ParseTest`, `ASN1.Pulse.CheckedWriteTest` | extraction roots for parser and writer tests |
+| `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and checked raw writers `check_write_raw_k` (raw write, then validate) |
+| `ASN1.Pulse.ParseTest`, `ASN1.Pulse.CheckedWriteTest`, `ASN1.Pulse.RawWriteTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |
 | `ASN1.Pulse.X509` | extraction roots for X.509 certificates and CRLs |
 
@@ -158,6 +178,7 @@ make stack-check    # no recursion, and worst-case stack of the X.509/CRL valida
 make test-parse     # zero-copy parsers on hand-written encodings
 make test-write     # right-to-left writers: parse/write round trips
 make test-checked-write  # checked writers: OK, INVALID and NO_SPACE cases
+make test-raw-write      # checked raw writers: OK, INVALID and NO_SPACE cases
 ```
 
 `make -C .. test` runs all of these, unless `NO_PULSE` is set. C files
