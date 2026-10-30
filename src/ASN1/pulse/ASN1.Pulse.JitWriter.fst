@@ -23,8 +23,16 @@ module ASN1.Pulse.JitWriter
      the components sorted; since the tags of distinct components are
      disjoint, the result is then strictly sorted, with each component at
      most once;
-   - all other chunks (terminals, ANY, DEFAULT components) are validated
-     locally, right after being written, within their own bounds.
+   - terminals, RESTRICTED terminals, and DEFAULT components of leaf
+     type are checked on the input value, before writing anything
+     (`ASN1.Pulse.JitTerminal`): string contents, BOOLEAN and NULL
+     contents, BIT STRING padding, INTEGER minimality (or, for small
+     INTEGERs, the range of the machine integer), restrictions, and
+     disequality with the DEFAULT value; their TLV is then correct by
+     construction. No scratch buffer is used;
+   - the remaining chunks (ANY DEFINED BY, and DEFAULT components of
+     PREFIXED type) are validated locally, right after being written,
+     within their own bounds.
 
    So each byte is validated at most once, while it is still in the cache.
    If a check fails, or if the output buffer is too small, the JIT writer
@@ -66,6 +74,9 @@ module WI = LowParse.PulseParse.Iterator.R2L
 module PB = LowParse.PulseParse.Base
 module SI = ASN1.Pulse.SortedInsert
 module Trade = Pulse.Lib.Trade.Util
+module E = ASN1.Spec.Content.Enc
+module Co = ASN1.Pulse.Constructed
+module JT = ASN1.Pulse.JitTerminal
 open Pulse.Lib.Trade
 
 (* A JIT writer either writes `x` and checks that it satisfies `a`, or gives
@@ -761,6 +772,158 @@ let dacc (#s: _) (#d: _) (dk: asn1_decorated_k s d) : SB.bytes -> prop =
 let lc_ok (lc: list (asn1_id_t & asn1_content_k)) : prop =
   In.supported_lc lc /\ List.Tot.noRepeats (List.Tot.map fst lc)
 
+(* Terminals: check the raw input, then write it. Only the identifier,
+   length and encoding of small integers, BOOLEAN and NULL are then
+   correct by construction, so nothing is read back from the output. *)
+
+inline_for_extraction
+fn jit_pre (#t: Type0) (r: bprel t) (a a': SB.bytes -> prop)
+  (imp: (x: SB.bytes) -> Lemma (requires (a x)) (ensures (a' x)))
+  (pm: perm) (c: JT.pcg r JT.ptrue a pm) (w: RW.rw r pm)
+: jw #t r a' pm
+= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  let ok = c x' #x;
+  if ok {
+    imp x;
+    w x' #x out pos
+  } else {
+    false
+  }
+}
+
+#push-options "--fuel 2 --ifuel 1"
+let acc_terminal_prefixed (id2: asn1_id_t) (k2: asn1_terminal_k) (b: SB.bytes)
+: Lemma (requires (cacc id2 (ASN1_TERMINAL k2) b))
+  (ensures (L.acc #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2)) b))
+= ()
+
+let acc_terminal_tlv (id: asn1_id_t) (k: asn1_terminal_k) (b: SB.bytes)
+: Lemma (requires (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k)) b))
+  (ensures (cacc id (ASN1_TERMINAL k) b))
+= ()
+#pop-options
+
+inline_for_extraction
+fn jit_terminal_prefixed (id: asn1_id_t) (id2: asn1_id_t) (k2: asn1_terminal_k) (pm: perm)
+  (w: jw (raw_terminal_rel id2 k2) (cacc id2 (ASN1_TERMINAL k2)) pm)
+: jw #(asn1_terminal_impl_t (ASN1_PREFIXED_TERMINAL id2 k2)) (raw_terminal_rel id (ASN1_PREFIXED_TERMINAL id2 k2)) (cacc id (ASN1_TERMINAL (ASN1_PREFIXED_TERMINAL id2 k2))) pm
+= (x': asn1_terminal_impl_t (ASN1_PREFIXED_TERMINAL id2 k2)) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  terminal_prefixed_eq id id2 k2 pm x' x;
+  let x2 = prefixed_down id2 k2 x';
+  rewrite (raw_terminal_rel id (ASN1_PREFIXED_TERMINAL id2 k2) pm x' x) as (raw_tlv id (raw_terminal_rel id2 k2) pm x2 x);
+  let res = jit_tlv id (raw_terminal_rel id2 k2) #(ASN1_TERMINAL (ASN1_PREFIXED_TERMINAL id2 k2)) (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2)) pm
+    (jit_ext (raw_terminal_rel id2 k2) (raw_terminal_rel id2 k2) ()
+      (cacc id2 (ASN1_TERMINAL k2)) (L.acc #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2))) (acc_terminal_prefixed id2 k2) pm w)
+    x2 #x out pos;
+  rewrite (raw_tlv id (raw_terminal_rel id2 k2) pm x2 x) as (raw_terminal_rel id (ASN1_PREFIXED_TERMINAL id2 k2) pm x' x);
+  if res {
+    acc_terminal_tlv id (ASN1_PREFIXED_TERMINAL id2 k2) x;
+    true
+  } else {
+    false
+  }
+}
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let jit_leaf_tlv (id: asn1_id_t) (k: E.leaf_k) (u: squash (In.supported_terminal k)) (pm: perm)
+: jw (raw_terminal_rel id k) (cacc id (ASN1_TERMINAL k)) pm
+= terminal_leaf_equiv id k;
+  jit_ext (raw_tlv id (raw_leaf k)) (raw_terminal_rel id k) ()
+    (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k))) (cacc id (ASN1_TERMINAL k)) (acc_terminal_tlv id k) pm
+    (jit_tlv id (raw_leaf k) #(ASN1_TERMINAL k) (asn1_terminal_as_parser k) pm
+      (jit_pre (raw_leaf k) (L.tacc k) (L.acc #asn1_weak_parser_kind (asn1_terminal_as_parser k)) (fun _ -> ()) pm
+        (JT.pv k () pm) (RW.raw_write_leaf k pm)))
+
+[@@In.asn1_pulse_attr]
+let rec jit_write_terminal (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) (u: squash (In.supported_terminal k)) (pm: perm)
+  (x': asn1_terminal_impl_t k) (#x: Ghost.erased SB.bytes)
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+: Tot (jres (raw_terminal_rel id k) (cacc id (ASN1_TERMINAL k)) pm x' x out pos v p)
+  (decreases k)
+= [@inline_let] let vf : jw (raw_terminal_rel id k) (cacc id (ASN1_TERMINAL k)) pm =
+  (match k with
+  | ASN1_PREFIXED_TERMINAL id2 k2 ->
+    jit_terminal_prefixed id id2 k2 pm
+      (fun x' #x out pos #v #p -> jit_write_terminal id2 k2 () pm x' #x out pos #v #p)
+  | _ -> jit_leaf_tlv id k () pm)
+  in vf x' #x out pos #v #p
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let jit_restricted_tlv (id: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k) (u: squash (In.supported_restriction k r)) (pm: perm)
+: jw (raw_terminal_rel id k) (cacc id (ASN1_RESTRICTED_TERMINAL k r)) pm
+= terminal_leaf_equiv id k;
+  jit_ext (raw_tlv id (raw_leaf k)) (raw_terminal_rel id k) ()
+    (cacc id (ASN1_RESTRICTED_TERMINAL k r)) (cacc id (ASN1_RESTRICTED_TERMINAL k r)) (fun _ -> ()) pm
+    (jit_tlv id (raw_leaf k) #(ASN1_RESTRICTED_TERMINAL k r) (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) pm
+      (jit_pre (raw_leaf k) (JT.pand (L.tacc k) (L.holds k (restriction_pred r)))
+        (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))) (fun w -> L.acc_restricted k r w) pm
+        (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (restriction_pred r)) (fun _ -> ()) pm
+          (JT.pv k () pm) (JT.pr k r () pm))
+        (RW.raw_write_leaf k pm)))
+
+(* DEFAULT of a PREFIXED terminal: validated locally, right after being
+   written *)
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let jit_dec_local (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (In.supported_dec dk /\ (ASN1_DEFAULT_TERMINAL? dk \/ ASN1_DEFAULT_RESTRICTED_TERMINAL? dk))) (pm: perm)
+: jw (raw_dec_rel dk) (dacc dk) pm
+= L.twins_of_single dk;
+  jit_ext (raw_dec_rel dk) (raw_dec_rel dk) () (L.iacc (In.twins_of (PS.single dk))) (dacc dk) (fun _ -> ()) pm
+    (jit_local (raw_dec_rel dk) pm
+      (fun x' #x out pos #v #p -> RW.raw_write_dec dk pm x' #x out pos #v #p)
+      (In.validate_seq (PS.single dk) (L.supported_single dk ()) None))
+
+(* DEFAULT components: also check that the value is not the default one *)
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let jit_default (id0: asn1_id_t) (k: E.leaf_k) (defl: asn1_key_lit k) (u: squash (In.supported_default k)) (pm: perm)
+: jw (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defl)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) pm
+= let defv = key_of_lit k defl in
+  dec_default_equiv id0 #k defl;
+  terminal_leaf_equiv id0 k;
+  L.iacc_default_none (ASN1_DEFAULT_TERMINAL id0 #k defl);
+  jit_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defl)) ()
+    (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (fun _ -> ()) pm
+    (jit_opt (raw_terminal_rel id0 k) (cacc id0 (Co.default_content k defv)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) ()
+      (L.iacc_default id0 #k defl) pm
+      (jit_ext (raw_tlv id0 (raw_leaf k)) (raw_terminal_rel id0 k) ()
+        (cacc id0 (Co.default_content k defv)) (cacc id0 (Co.default_content k defv)) (fun _ -> ()) pm
+        (jit_tlv id0 (raw_leaf k) #(Co.default_content k defv) (asn1_content_as_parser (Co.default_content k defv)) pm
+          (jit_pre (raw_leaf k) (JT.pand (L.tacc k) (L.holds k (defaultv_filter defv)))
+            (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_content k defv))) (fun w -> L.acc_default k defv w) pm
+            (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (defaultv_filter defv)) (fun _ -> ()) pm
+              (JT.pv k () pm) (JT.pn k defl () pm))
+            (RW.raw_write_leaf k pm)))))
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let jit_default_restricted (id0: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k) (defl: asn1_key_lit k { restriction_pred r (key_of_lit k defl) })
+  (u: squash (In.supported_default_restricted k r)) (pm: perm)
+: jw (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) pm
+= let defv = key_of_lit k defl in
+  dec_default_restricted_equiv id0 #k r defl;
+  terminal_leaf_equiv id0 k;
+  L.iacc_default_none (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl);
+  jit_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) ()
+    (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) (fun _ -> ()) pm
+    (jit_opt (raw_terminal_rel id0 k) (cacc id0 (Co.default_restricted_content k r defv)) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) ()
+      (L.iacc_default_restricted id0 #k r defl) pm
+      (jit_ext (raw_tlv id0 (raw_leaf k)) (raw_terminal_rel id0 k) ()
+        (cacc id0 (Co.default_restricted_content k r defv)) (cacc id0 (Co.default_restricted_content k r defv)) (fun _ -> ()) pm
+        (jit_tlv id0 (raw_leaf k) #(Co.default_restricted_content k r defv) (asn1_content_as_parser (Co.default_restricted_content k r defv)) pm
+          (jit_pre (raw_leaf k) (JT.pand (JT.pand (L.tacc k) (L.holds k (restriction_pred r))) (L.holds k (defaultv_filter defv)))
+            (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_restricted_content k r defv))) (fun w -> L.acc_default_restricted k r defv w) pm
+            (JT.pc_then (raw_leaf k) JT.ptrue (JT.pand (L.tacc k) (L.holds k (restriction_pred r))) (L.tacc k) (L.holds k (defaultv_filter defv)) (fun _ -> ()) pm
+              (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (restriction_pred r)) (fun _ -> ()) pm
+                (JT.pv k () pm) (JT.pr k r () pm))
+              (JT.pn k defl () pm))
+            (RW.raw_write_leaf k pm)))))
+
 [@@In.asn1_pulse_attr]
 let rec jit_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u: squash (In.supported_content k)) (pm: perm)
   (x': asn1_content_impl_t k) (#x: Ghost.erased SB.bytes)
@@ -808,7 +971,18 @@ let rec jit_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k:
         (jit_ext (raw_items_rel true items) (raw_items_rel true items) ()
           (L.sacc (In.twins_of items)) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf))) (L.acc_set ids items pf) pm
           (fun x' #x out pos #v #p -> jit_write_set_items items () pm x' #x out pos #v #p)))
+  | ASN1_TERMINAL k' ->
+    content_terminal_equiv id k';
+    jit_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_TERMINAL k')) ()
+      (cacc id (ASN1_TERMINAL k')) (cacc id k) (fun _ -> ()) pm
+      (fun x' #x out pos #v #p -> jit_write_terminal id k' () pm x' #x out pos #v #p)
+  | ASN1_RESTRICTED_TERMINAL k' r ->
+    content_restricted_equiv id k' r;
+    jit_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k' r)) ()
+      (cacc id (ASN1_RESTRICTED_TERMINAL k' r)) (cacc id k) (fun _ -> ()) pm
+      (jit_restricted_tlv id k' r () pm)
   | _ ->
+    (* ANY DEFINED BY: validated locally, right after being written *)
     jit_local (raw_content_rel id k) pm
       (fun x' #x out pos #v #p -> RW.raw_write_content id k pm x' #x out pos #v #p)
       (ILC.validate_asn1_ILC id (In.validate_content k ())))
@@ -899,12 +1073,13 @@ and jit_write_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attribu
     jit_ext (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k)) () (dacc dk) (dacc dk) (fun _ -> ()) pm
       (jit_opt (raw_rel k) (kacc k) (dacc dk) () (L.iacc_option_some k) pm
         (fun x' #x out pos #v #p -> jit_write_k k () pm x' #x out pos #v #p))
-  | _ ->
-    L.twins_of_single dk;
-    jit_ext (raw_dec_rel dk) (raw_dec_rel dk) () (L.iacc (In.twins_of (PS.single dk))) (dacc dk) (fun _ -> ()) pm
-      (jit_local (raw_dec_rel dk) pm
-        (fun x' #x out pos #v #p -> RW.raw_write_dec dk pm x' #x out pos #v #p)
-        (In.validate_seq (PS.single dk) (L.supported_single dk ()) None)))
+  | ASN1_DEFAULT_TERMINAL id0 #k defl ->
+    if ASN1_PREFIXED_TERMINAL? k
+    then jit_dec_local dk () pm
+    else jit_default id0 k defl () pm
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl ->
+    jit_default_restricted id0 k r defl () pm
+  | _ -> false_elim ())
   in vf x' #x out pos #v #p
 
 and jit_write_k (#[@@@FStar.Attributes.monomorphize] s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (u: squash (In.supported_k k)) (pm: perm)

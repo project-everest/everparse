@@ -131,10 +131,15 @@ holding fractional permission `pm` on the input bytes it borrows.
   (absent OPTIONAL or DEFAULT component) or exactly one frame whose
   identifier belongs to that component, and is then inserted at its
   sorted position; the disjointness of the tags of the components then
-  makes the result strictly sorted with each component at most once. All
-  other chunks (terminals, ANY, DEFAULT components) are validated locally,
-  right after being written, within their own bounds (so, still in the
-  cache). Each byte is
+  makes the result strictly sorted with each component at most once. Terminals,
+  RESTRICTED terminals, and DEFAULT components of leaf type are checked
+  on the input value before writing (`ASN1.Pulse.JitTerminal`: string
+  contents, BIT STRING padding, INTEGER minimality or small-INTEGER range,
+  restrictions, disequality with the DEFAULT value), without scratch
+  buffers or allocation; their TLV is then correct by construction. The
+  remaining chunks (ANY DEFINED BY, DEFAULT components of PREFIXED type)
+  are validated locally, right after being written, within their own
+  bounds (so, still in the cache). Each byte is
   validated at most once. If the JIT writer gives up (invalid value, or
   not enough space), `check_write_jit_k` falls back to `check_write_raw_k`
   to tell `CW_INVALID` from `CW_NO_SPACE`, so the fallback only costs on
@@ -169,7 +174,7 @@ values.
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers, and the interpreter `write_k` |
 | `ASN1.Pulse.CheckedWriter` | checked writers `check_write_k` (relaxed write, then validate) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and checked raw writers `check_write_raw_k` (raw write, then validate) |
-| `ASN1.Pulse.JitWriter.Lemmas`, `ASN1.Pulse.JitWriter` | just-in-time checked raw writers `check_write_jit_k` (check while writing) |
+| `ASN1.Pulse.JitWriter.Lemmas`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitWriter` | just-in-time checked raw writers `check_write_jit_k` (check while writing) |
 | `ASN1.Pulse.SortedInsert` | on-the-fly insertion sort of SET components and SET OF elements for the raw writers |
 | `ASN1.Pulse.ParseTest`, `ASN1.Pulse.CheckedWriteTest`, `ASN1.Pulse.RawWriteTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |

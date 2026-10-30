@@ -831,3 +831,101 @@ let set_cons_ok_intro (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i: _) (tl: as
   ids_disj tl s;
   assert (Sq.item_set (In.twin_of dk) == s)
 #pop-options
+
+(* Terminals: checks on the raw input, before writing. `tacc k c` states
+   that the content `c` is a valid DER content of the terminal type `k`;
+   `holds k f c` that its value, if any, satisfies `f`. *)
+
+module E = ASN1.Spec.Content.Enc
+module ADB = ASN1.Pulse.AnyDefinedBy
+module SFL = LowParse.Spec.FLData
+module SCo = LowParse.Spec.Combinators
+module INT = ASN1.Spec.Content.INTEGER
+
+let tacc (k: asn1_terminal_k) (c: bytes) : prop =
+  acc #asn1_weak_parser_kind (asn1_terminal_as_parser k) c
+
+let holds (k: asn1_terminal_k) (f: asn1_terminal_t k -> bool) (c: bytes) : prop =
+  match parse (asn1_terminal_as_parser k) c with
+  | Some (v, n) -> n == Seq.length c ==> f v == true
+  | None -> True
+
+let leaf_tacc (k: E.leaf_k) (x: asn1_terminal_t k) (f: asn1_terminal_t k -> bool) (c: bytes)
+: Lemma (requires (c == E.leaf_enc k x))
+  (ensures (tacc k c /\ (holds k f c <==> f x == true)))
+= E.parse_leaf_enc k x
+
+let acc_restricted (k: asn1_terminal_k) (r: asn1_restriction k) (c: bytes)
+: Lemma (requires (tacc k c /\ holds k (restriction_pred r) c))
+  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) c))
+= TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred r) c
+
+let restricted_holds (k: asn1_terminal_k) (r: asn1_restriction k) (c: bytes)
+: Lemma (requires (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) c))
+  (ensures (tacc k c /\ holds k (restriction_pred r) c))
+= TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred r) c
+
+let acc_default (k: asn1_terminal_k) (defv: asn1_terminal_t k) (c: bytes)
+: Lemma (requires (tacc k c /\ holds k (defaultv_filter defv) c))
+  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_content k defv)) c))
+= TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred (RESTRICT_CUSTOM (defaultv_filter defv))) c
+
+let acc_default_restricted (k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_terminal_t k) (c: bytes)
+: Lemma (requires (tacc k c /\ holds k (restriction_pred r) c /\ holds k (defaultv_filter defv) c))
+  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_restricted_content k r defv)) c))
+= TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred (RESTRICT_CUSTOM (Co.restricted_default_filter r defv))) c
+
+(* A content that is not the encoding of the default value *)
+let neq_enc_holds (k: E.leaf_k) (defv: asn1_terminal_t k) (c: bytes)
+: Lemma (requires (~ (c == E.leaf_enc k defv))) (ensures (holds k (defaultv_filter defv) c))
+= E.leaf_enc_consumed k c;
+  assert (Seq.equal (Seq.slice c 0 (Seq.length c)) c)
+
+(* A content that the fixed-length equality check rejects *)
+let neq_fl_holds (k: asn1_terminal_k) (defv: asn1_terminal_t k) (c: bytes)
+: Lemma (requires (None? (parse (ADB.key_eq_fldata k defv (Seq.length c)) (Seq.slice c 0 (Seq.length c)))))
+  (ensures (holds k (defaultv_filter defv) c))
+= let p = asn1_terminal_as_parser k in
+  assert (Seq.equal (Seq.slice c 0 (Seq.length c)) c);
+  ADB.fldata_eq #(SCo.parse_filter_kind asn1_weak_parser_kind) (SCo.parse_filter #asn1_weak_parser_kind p (ADB.key_eq defv)) (Seq.length c) c;
+  SCo.parse_filter_eq #asn1_weak_parser_kind p (ADB.key_eq defv) c
+
+(* INTEGER contents encoded from a 64-bit integer *)
+let i64_interval (bound: pos { bound <= 8 }) (x: int) (c: bytes)
+: Lemma (requires (INT.interval 8 x /\ c == E.integer_enc 8 x /\ tacc (ASN1_INTEGER bound) c))
+  (ensures (INT.interval bound x))
+= E.leaf_enc_consumed (ASN1_INTEGER bound) c;
+  assert (Seq.equal (Seq.slice c 0 (Seq.length c)) c);
+  let Some (v, _) = parse (asn1_terminal_as_parser (ASN1_INTEGER bound)) c in
+  let v : int = v in
+  INT.interval_weaken bound 8 v;
+  E.leaf_enc_inj (ASN1_INTEGER 8) v x
+
+(* DEFAULT: the item is present and accepted *)
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 32"
+let iacc_default (id0: asn1_id_t) (#k: asn1_terminal_k) (defl: asn1_key_lit k) (b: bytes)
+: Lemma (requires (acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_content k (key_of_lit k defl)))) b))
+  (ensures (iacc [In.twin_of (ASN1_DEFAULT_TERMINAL id0 #k defl)] b))
+= let hd = In.twin_of (ASN1_DEFAULT_TERMINAL id0 #k defl) in
+  let p = asn1_content_as_parser (Co.default_content k (key_of_lit k defl)) in
+  ILC.ilc_eq id0 p b;
+  PSL.identifier_nonempty b;
+  Sq.seq_cons_none [hd] b;
+  let Some (id, c1) = parse parse_asn1_identifier_U32 b in
+  let b1 = Seq.slice b c1 (Seq.length b) in
+  Sq.seq_single_some hd id b1;
+  Co.default_terminal_twin_consumed id0 #k defl id b1
+
+let iacc_default_restricted (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defl: asn1_key_lit k { restriction_pred r (key_of_lit k defl) }) (b: bytes)
+: Lemma (requires (acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_restricted_content k r (key_of_lit k defl)))) b))
+  (ensures (iacc [In.twin_of (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)] b))
+= let hd = In.twin_of (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl) in
+  let p = asn1_content_as_parser (Co.default_restricted_content k r (key_of_lit k defl)) in
+  ILC.ilc_eq id0 p b;
+  PSL.identifier_nonempty b;
+  Sq.seq_cons_none [hd] b;
+  let Some (id, c1) = parse parse_asn1_identifier_U32 b in
+  let b1 = Seq.slice b c1 (Seq.length b) in
+  Sq.seq_single_some hd id b1;
+  Co.default_restricted_twin_consumed id0 #k r defl id b1
+#pop-options
