@@ -122,8 +122,12 @@ holding fractional permission `pm` on the input bytes it borrows.
   components only need a runtime check of the identifier of the first
   written component (it must belong to the component just written if
   present, and must not if absent, which rules out DEFAULT values
-  written out). All other chunks (terminals, SET, SEQUENCE OF, SET OF,
-  ANY, DEFAULT components) are validated locally, right after being
+  written out). SEQUENCE OF and SET OF are checked element by element
+  (each element by its own JIT writer, or validated right after being
+  copied if given already serialized; nonempty; for SET OF, exactly one
+  frame, so that the on-the-fly insertion keeps them sorted), plus the
+  SIZE (1..MAX) constraint on the result. All other chunks (terminals,
+  SET, ANY, DEFAULT components) are validated locally, right after being
   written, within their own bounds (so, still in the cache). Each byte is
   validated at most once. If the JIT writer gives up (invalid value, or
   not enough space), `check_write_jit_k` falls back to `check_write_raw_k`

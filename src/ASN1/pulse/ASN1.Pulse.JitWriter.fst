@@ -12,9 +12,14 @@ module ASN1.Pulse.JitWriter
      construction, so only the presence and order of the components of
      SEQUENCEs need to be checked, by reading the identifier of the first
      component of each nonempty suffix;
-   - all other chunks (terminals, SET, SEQUENCE OF, SET OF, ANY, DEFAULT
-     components) are validated locally, right after being written, within
-     their own bounds.
+   - SEQUENCE OF and SET OF are checked element by element: each element
+     is checked by its own JIT writer (or, if given already serialized,
+     validated right after being copied) and must be nonempty; a SET OF
+     element must also be exactly one frame, so that inserting it keeps
+     the elements sorted; finally the SIZE (1..MAX) constraint is checked;
+   - all other chunks (terminals, SET, ANY, DEFAULT components) are
+     validated locally, right after being written, within their own
+     bounds.
 
    So each byte is validated at most once, while it is still in the cache.
    If a check fails, or if the output buffer is too small, the JIT writer
@@ -51,6 +56,12 @@ module RW = ASN1.Pulse.RawWriter
 module I = ASN1.Pulse.Identifier
 module ILC = ASN1.Pulse.ILC
 module L = ASN1.Pulse.JitWriter.Lemmas
+module It = LowParse.PulseParse.Iterator
+module WI = LowParse.PulseParse.Iterator.R2L
+module PB = LowParse.PulseParse.Base
+module SI = ASN1.Pulse.SortedInsert
+module Trade = Pulse.Lib.Trade.Util
+open Pulse.Lib.Trade
 
 (* A JIT writer either writes `x` and checks that it satisfies `a`, or gives
    up, leaving the output after `p` untouched *)
@@ -364,6 +375,283 @@ fn jit_items_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
   }
 }
 
+(* SEQUENCE OF and SET OF: each element is written and checked on its own
+   (an element given as a structure by its own JIT writer, an already
+   serialized element by validating it right after copying it), and must be
+   nonempty; then, as in
+   `LowParse.PulseParse.Iterator.R2L.r2l_write_mixed_list_gen` (resp.
+   `ASN1.Pulse.SortedInsert.r2l_write_mixed_list_sorted_gen`), it is
+   reversed (resp. inserted into the elements written so far). For a
+   SET OF, each element is also checked to be exactly one frame, so that
+   the insertion keeps the elements sorted. Finally, the SIZE (1..MAX)
+   constraint is checked on the size of the result. *)
+
+let ser_rel (pm: perm) (pl: S.slice U8.t) (y: SB.bytes) : slprop =
+  PB.pts_to_parsed p_raw pl #pm y
+
+inline_for_extraction
+fn raw_write_ser (pm: perm)
+: RW.rw #(S.slice U8.t) ser_rel pm
+= (x': S.slice U8.t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (ser_rel pm x' x);
+  unfold (PB.pts_to_parsed p_raw x' #pm x);
+  with wb . assert (S.pts_to x' #pm wb);
+  p_raw_consumed wb x;
+  fold (W.vmatch_bytes pm x' wb);
+  let res = W.r2l_write_copy pm x' #wb out pos;
+  unfold (W.vmatch_bytes pm x' wb);
+  fold (PB.pts_to_parsed p_raw x' #pm x);
+  fold (ser_rel pm x' x);
+  res
+}
+
+inline_for_extraction
+fn jit_elt (#t: Type0) (r: bprel t)
+  (#tp: Type0) (#pp: asn1_strong_parser tp) (vf: LPS.validator #tp #asn1_strong_parser_kind pp)
+  (w: (pm: perm) -> jw r (L.acc #asn1_strong_parser_kind pp) pm)
+  (pm: perm)
+: jw #(WI.elt_or_serialized t) (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw) (L.acc #asn1_strong_parser_kind pp) pm
+= (x': WI.elt_or_serialized t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  match x' {
+    WI.EElement e -> {
+      rewrite (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x) as (r pm e x);
+      let res = w pm e #x out pos;
+      rewrite (r pm e x) as (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x);
+      res
+    }
+    WI.ESerialized pl -> {
+      rewrite (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x) as (ser_rel pm pl x);
+      let res = jit_local ser_rel pm (raw_write_ser pm) vf pl #x out pos;
+      rewrite (ser_rel pm pl x) as (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x);
+      res
+    }
+  }
+}
+
+let jml_frame (p0: nat) (v0 vc: SB.bytes) : prop =
+  Seq.length vc == Seq.length v0 /\ p0 <= Seq.length v0 /\
+  Seq.slice vc p0 (Seq.length v0) == Seq.slice v0 p0 (Seq.length v0)
+
+let jml_inv (#tp: Type) (pp: asn1_strong_parser tp) (l: list SB.bytes) (p0: nat) (v0: SB.bytes) (ld: list SB.bytes) (ok: bool) (pc: nat) (vc: SB.bytes) : prop =
+  jml_frame p0 v0 vc /\
+  (ok == true ==> (WI.r2l_ml_inv id_enc l p0 v0 ld true pc vc /\ L.all_eacc pp ld))
+
+let jsml_inv (#tp: Type) (pp: asn1_strong_parser tp) (l: list SB.bytes) (p0: nat) (v0: SB.bytes) (ld: list SB.bytes) (ok: bool) (pc: nat) (vc: SB.bytes) : prop =
+  jml_frame p0 v0 vc /\
+  (ok == true ==> (SI.r2l_mls_inv SI.lt_lex id_enc l p0 v0 ld true pc vc /\ L.sf pp None (SI.sort_list SI.lt_lex id_enc ld)))
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 1"
+
+inline_for_extraction
+fn jit_write_ml (#t: Type0) (r: bprel t) (ne: bool)
+  (#tp: Type0) (#pp: asn1_strong_parser tp) (vf: LPS.validator #tp #asn1_strong_parser_kind pp)
+  (w: (pm: perm) -> jw r (L.acc #asn1_strong_parser_kind pp) pm)
+  (sh: share_t r) (g: gather_t r) (pm: perm)
+: jw #(ml t) (raw_ml r) (L.acc #asn1_weak_parser_kind (parse_sized_list ne pp)) pm
+= (x': ml t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p0: Ghost.erased SZ.t)
+{
+  unfold (raw_ml r pm x' x);
+  with l . assert (WI.mixed_list_match r ml_ops #asn1_strong_parser_kind p_raw pm x' l);
+  WI.mixed_list_match_length r ml_ops p_raw pm x' l;
+  let n0 = LowParse.PulseParse.Iterator.Type.mixed_list_length ml_ops x';
+  let it0 = WI.iterator_start r ml_ops p_raw RW.jump_raw pm x' l sh g;
+  with pm0 . assert (WI.iterator_match r ml_ops p_raw pm0 it0 l);
+  let mut pit = it0;
+  let mut pn = n0;
+  let mut pok = true;
+  WI.r2l_ml_inv_init id_enc l (SZ.v p0) v;
+  let p0r = !pos;
+  let mut pld : Ghost.erased (list SB.bytes) = Ghost.hide [];
+  while (
+    let ok = !pok;
+    let n = !pn;
+    (ok && not (ml_ops.eq n ml_ops.zero))
+  ) invariant exists* (it: LowParse.PulseParse.Iterator.Type.iterator SZ.t t) (pmi: perm) (ld: Ghost.erased (list SB.bytes)) (lr: list SB.bytes) (n: SZ.t) (ok: bool) (vc: SB.bytes) (pc: SZ.t) .
+    R.pts_to pit it ** R.pts_to pld ld **
+    WI.iterator_match r ml_ops p_raw pmi it lr **
+    trade (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l) **
+    R.pts_to pn n ** R.pts_to pok ok **
+    pts_to out vc ** R.pts_to pos pc **
+    pure (
+      Ghost.reveal l == List.Tot.append (Ghost.reveal ld) lr /\
+      ml_ops.v n == List.Tot.length lr /\
+      SZ.v p0r == SZ.v p0 /\
+      jml_inv pp l (SZ.v p0) v (Ghost.reveal ld) ok (SZ.v pc) vc
+    )
+  decreases %[(if !pok then 1 else 0); ml_ops.v (!pn)]
+  {
+    with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
+    with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+    let ld = !pld;
+    let n = !pn;
+    let pcur = !pos;
+    let xe = WI.iterator_next_eos r ml_ops p_raw RW.jump_raw pmi pit it lr sh g;
+    unfold (WI.iterator_next_eos_post r ml_ops p_raw pmi pit it lr xe);
+    with pm_v y tl it' pm' . assert (
+      WI.elt_or_serialized_match r ml_ops p_raw pm_v xe y **
+      R.pts_to pit it' **
+      WI.iterator_match r ml_ops p_raw pm' it' tl);
+    let res = jit_elt r vf w pm_v xe #y out pos;
+    Trade.elim_hyp_l (WI.elt_or_serialized_match r ml_ops p_raw pm_v xe y) (WI.iterator_match r ml_ops p_raw pm' it' tl) (WI.iterator_match r ml_ops p_raw pmi it lr);
+    Trade.trans (WI.iterator_match r ml_ops p_raw pm' it' tl) (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
+    WI.append_assoc_singleton #SB.bytes (Ghost.reveal ld) y tl;
+    pn := ml_ops.sub n ml_ops.one;
+    pld := Ghost.hide (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]);
+    with v2 p2 . assert (pts_to out v2 ** R.pts_to pos p2);
+    frame_trans (SZ.v p0) v (SZ.v pc) vc v2;
+    if res {
+      let pnew = !pos;
+      if (SZ.lt pnew pcur) {
+        WI.r2l_reverse_range out pnew pcur;
+        with v3 . assert (pts_to out v3);
+        assert (pure (WI.r2l_ml_inv id_enc l (SZ.v p0) v (Ghost.reveal ld) true (SZ.v pc) vc));
+        assert (pure (W.r2l_post (id_enc y) (SZ.v pc) vc true (SZ.v p2) v2));
+        assert (pure (WI.reverse_range_post v2 (SZ.v p2) (SZ.v pc) v3));
+        WI.r2l_ml_inv_step id_enc l (SZ.v p0) v (Ghost.reveal ld) y (SZ.v pc) vc (SZ.v p2) v2 v3;
+        assert (pure (L.all_eacc pp (Ghost.reveal ld)));
+        assert (pure (L.eacc pp y));
+        L.all_eacc_snoc pp (Ghost.reveal ld) y;
+        assert (pure (L.all_eacc pp (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y])));
+        assert (pure (WI.r2l_ml_inv id_enc l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
+        assert (pure (jml_frame (SZ.v p0) v v3));
+        assert (pure (jml_inv pp l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
+      } else {
+        pok := false;
+      }
+    } else {
+      pok := false;
+    }
+  };
+  with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
+  with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+  let ld = !pld;
+  Trade.elim (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
+  fold (raw_ml r pm x' x);
+  let ok = !pok;
+  if ok {
+    List.Tot.append_l_nil (Ghost.reveal ld);
+    let pend = !pos;
+    if (ne && not (SZ.lt pend p0r)) {
+      false
+    } else {
+      WI.r2l_reverse_range out pend p0r;
+      with v3 . assert (pts_to out v3);
+      WI.r2l_ml_inv_end id_enc l (SZ.v p0) v (SZ.v pc) vc v3;
+      L.acc_sized_list ne pp l;
+      true
+    }
+  } else {
+    false
+  }
+}
+
+inline_for_extraction
+fn jit_write_ml_sorted (#t: Type0) (r: bprel t) (ne: bool)
+  (#tp: Type0) (#pp: asn1_strong_parser tp) (vf: LPS.validator #tp #asn1_strong_parser_kind pp)
+  (w: (pm: perm) -> jw r (L.acc #asn1_strong_parser_kind pp) pm)
+  (sh: share_t r) (g: gather_t r) (pm: perm)
+: jw #(ml t) (raw_ml_sorted r) (L.acc #asn1_weak_parser_kind (parse_sized_set ne pp)) pm
+= (x': ml t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p0: Ghost.erased SZ.t)
+{
+  unfold (raw_ml_sorted r pm x' x);
+  with l . assert (WI.mixed_list_match r ml_ops #asn1_strong_parser_kind p_raw pm x' l);
+  WI.mixed_list_match_length r ml_ops p_raw pm x' l;
+  let n0 = LowParse.PulseParse.Iterator.Type.mixed_list_length ml_ops x';
+  let it0 = WI.iterator_start r ml_ops p_raw RW.jump_raw pm x' l sh g;
+  with pm0 . assert (WI.iterator_match r ml_ops p_raw pm0 it0 l);
+  let mut pit = it0;
+  let mut pn = n0;
+  let mut pok = true;
+  SI.r2l_mls_inv_init SI.lt_lex id_enc l (SZ.v p0) v;
+  L.sf_empty pp;
+  let p0r = !pos;
+  let mut pld : Ghost.erased (list SB.bytes) = Ghost.hide [];
+  while (
+    let ok = !pok;
+    let n = !pn;
+    (ok && not (ml_ops.eq n ml_ops.zero))
+  ) invariant exists* (it: LowParse.PulseParse.Iterator.Type.iterator SZ.t t) (pmi: perm) (ld: Ghost.erased (list SB.bytes)) (lr: list SB.bytes) (n: SZ.t) (ok: bool) (vc: SB.bytes) (pc: SZ.t) .
+    R.pts_to pit it ** R.pts_to pld ld **
+    WI.iterator_match r ml_ops p_raw pmi it lr **
+    trade (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l) **
+    R.pts_to pn n ** R.pts_to pok ok **
+    pts_to out vc ** R.pts_to pos pc **
+    pure (
+      Ghost.reveal l == List.Tot.append (Ghost.reveal ld) lr /\
+      ml_ops.v n == List.Tot.length lr /\
+      SZ.v p0r == SZ.v p0 /\
+      jsml_inv pp l (SZ.v p0) v (Ghost.reveal ld) ok (SZ.v pc) vc
+    )
+  decreases %[(if !pok then 1 else 0); ml_ops.v (!pn)]
+  {
+    with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
+    with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+    let ld = !pld;
+    let n = !pn;
+    let pcur = !pos;
+    let xe = WI.iterator_next_eos r ml_ops p_raw RW.jump_raw pmi pit it lr sh g;
+    unfold (WI.iterator_next_eos_post r ml_ops p_raw pmi pit it lr xe);
+    with pm_v y tl it' pm' . assert (
+      WI.elt_or_serialized_match r ml_ops p_raw pm_v xe y **
+      R.pts_to pit it' **
+      WI.iterator_match r ml_ops p_raw pm' it' tl);
+    let res = jit_elt r vf w pm_v xe #y out pos;
+    Trade.elim_hyp_l (WI.elt_or_serialized_match r ml_ops p_raw pm_v xe y) (WI.iterator_match r ml_ops p_raw pm' it' tl) (WI.iterator_match r ml_ops p_raw pmi it lr);
+    Trade.trans (WI.iterator_match r ml_ops p_raw pm' it' tl) (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
+    WI.append_assoc_singleton #SB.bytes (Ghost.reveal ld) y tl;
+    pn := ml_ops.sub n ml_ops.one;
+    pld := Ghost.hide (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]);
+    with v2 p2 . assert (pts_to out v2 ** R.pts_to pos p2);
+    frame_trans (SZ.v p0) v (SZ.v pc) vc v2;
+    if res {
+      let pnew = !pos;
+      let fl = SI.read_frame out pnew pcur;
+      if (SZ.gt fl 0sz && SZ.eq fl (SZ.sub pcur pnew)) {
+        assert (pure (W.r2l_post (id_enc y) (SZ.v pc) vc true (SZ.v p2) v2));
+        assert (pure (Seq.slice v2 (SZ.v p2) (SZ.v pc) == Ghost.reveal y));
+        assert (pure (L.fresh_frame pp y));
+        SI.r2l_insert SI.lt_lex (SI.lt_lex_impl ()) out pnew pcur p0r;
+        with v3 . assert (pts_to out v3);
+        assert (pure (SI.r2l_mls_inv SI.lt_lex id_enc l (SZ.v p0) v (Ghost.reveal ld) true (SZ.v pc) vc));
+        SI.r2l_mls_inv_step SI.lt_lex id_enc l (SZ.v p0) v (Ghost.reveal ld) y (SZ.v pc) vc (SZ.v p2) v2 v3;
+        SI.sort_acc_snoc SI.lt_lex id_enc Seq.empty (Ghost.reveal ld) y;
+        assert (pure (L.sf pp None (SI.sort_list SI.lt_lex id_enc (Ghost.reveal ld))));
+        L.sf_ins pp None y (SI.sort_list SI.lt_lex id_enc (Ghost.reveal ld));
+        assert (pure (L.sf pp None (SI.sort_list SI.lt_lex id_enc (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]))));
+        assert (pure (SI.r2l_mls_inv SI.lt_lex id_enc l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
+        assert (pure (jsml_inv pp l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
+      } else {
+        pok := false;
+      }
+    } else {
+      pok := false;
+    }
+  };
+  with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
+  with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+  let ld = !pld;
+  Trade.elim (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
+  fold (raw_ml_sorted r pm x' x);
+  let ok = !pok;
+  if ok {
+    List.Tot.append_l_nil (Ghost.reveal ld);
+    let pend = !pos;
+    if (ne && not (SZ.lt pend p0r)) {
+      false
+    } else {
+      SI.r2l_mls_inv_end SI.lt_lex id_enc l (SZ.v p0) v (SZ.v pc) vc;
+      L.acc_sized_set ne pp (SI.sort_list SI.lt_lex id_enc l);
+      true
+    }
+  } else {
+    false
+  }
+}
+
+#pop-options
+
 (* The whole schema *)
 
 let jres (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
@@ -407,6 +695,22 @@ let rec jit_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k:
         (jit_ext (raw_items_rel false (dsnd gitems)) (raw_items_rel false (dsnd gitems)) ()
           (L.iacc (In.twins_of (dsnd gitems))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE gitems))) (L.acc_sequence gitems) pm
           (fun x' #x out pos #v #p -> jit_write_items (dsnd gitems) () pm x' #x out pos #v #p)))
+  | ASN1_SEQUENCE_OF ne k' ->
+    content_seq_of_equiv id ne k';
+    jit_ext (raw_tlv id (raw_ml (raw_rel k'))) (raw_content_rel id (ASN1_SEQUENCE_OF ne k')) ()
+      (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')))) (cacc id k) (fun _ -> ()) pm
+      (jit_tlv id (raw_ml (raw_rel k')) (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')) pm
+        (jit_ext (raw_ml (raw_rel k')) (raw_ml (raw_rel k')) ()
+          (L.acc #asn1_weak_parser_kind (parse_sized_list ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k'))) (L.acc_seq_of ne k') pm
+          (jit_write_ml (raw_rel k') ne (In.validate_k k' ()) (fun pm x' #x out pos #v #p -> jit_write_k k' () pm x' #x out pos #v #p) (share_k k') (gather_k k') pm)))
+  | ASN1_SET_OF ne k' ->
+    content_set_of_equiv id ne k';
+    jit_ext (raw_tlv id (raw_ml_sorted (raw_rel k'))) (raw_content_rel id (ASN1_SET_OF ne k')) ()
+      (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SET_OF ne k')))) (cacc id k) (fun _ -> ()) pm
+      (jit_tlv id (raw_ml_sorted (raw_rel k')) (asn1_content_as_parser (ASN1_SET_OF ne k')) pm
+        (jit_ext (raw_ml_sorted (raw_rel k')) (raw_ml_sorted (raw_rel k')) ()
+          (L.acc #asn1_weak_parser_kind (parse_sized_set ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET_OF ne k'))) (L.acc_set_of ne k') pm
+          (jit_write_ml_sorted (raw_rel k') ne (In.validate_k k' ()) (fun pm x' #x out pos #v #p -> jit_write_k k' () pm x' #x out pos #v #p) (share_k k') (gather_k k') pm)))
   | _ ->
     jit_local (raw_content_rel id k) pm
       (fun x' #x out pos #v #p -> RW.raw_write_content id k pm x' #x out pos #v #p)
