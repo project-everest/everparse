@@ -60,8 +60,15 @@ holding fractional permission `pm` on the input bytes it borrows.
   TLV length be written after its contents, so no size is computed ahead.
   The bytes written are `asn1_value_enc (to_value k x)`, which is the DER
   encoding `serialize (asn1_serializer k) x` of `ASN1.Spec.Serializer`.
-  Supported schemas: `RS.wsupported_k` (all but ANY DEFINED BY; SET
-  components in canonical order) and well-formed (`Conformance.wf`).
+  Supported schemas: `RS.wsupported_k` (SET components in canonical
+  order; ANY DEFINED BY keys of the kinds supported by the parsers) and
+  well-formed (`Conformance.wf`). For ANY DEFINED BY
+  (`ASN1.Pulse.WriteAdb`), the value selects the payload of one key
+  literal (or the fallback): the payload is written, then the TLV of the
+  key literal, by a constant writer unrolled at extraction time from the
+  literal (no scratch buffer), then the prefix items; in the fallback
+  case, the key is written from the value, and the precondition
+  `asn1_rel` requires that it differs from every key literal.
 
 * **Checked writers** (`ASN1.Pulse.CheckedWriter`, `check_write_k`): the
   writers above require `asn1_rel k pm x' x`, i.e. that the value already
@@ -85,8 +92,11 @@ holding fractional permission `pm` on the input bytes it borrows.
   contents of universally tagged strings, times and OIDs, BIT STRING
   padding, minimal and out-of-`int64` big INTEGER slices, ANY slices
   holding one TLV, and `Serialized` chunks of SEQUENCE OF / SET OF valid
-  under the relaxed element schema. Writing and validating are two passes
-  over the output.
+  under the relaxed element schema. `relax k` leaves ANY DEFINED BY
+  unchanged (including its prefix and payloads), so all the constraints
+  of an ANY DEFINED BY are preconditions, including that a fallback key
+  differs from every key literal. Writing and
+  validating are two passes over the output.
 
 * **Checked raw writers** (`ASN1.Pulse.RawWriter`, `check_write_raw_k`):
   they remove those remaining preconditions, using the same
@@ -172,7 +182,7 @@ values.
 | `ASN1.Pulse.Interpreter` | the interpreter `validate_k` over schemas |
 | `ASN1.Pulse.Rel`, `ASN1.Pulse.RelShare` | low-level value types and relations; share/gather; writer-supported schemas |
 | `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
-| `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers, and the interpreter `write_k` |
+| `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.WriteAdb`, `ASN1.Pulse.Writer.Lemmas`, `ASN1.Pulse.Writer` | right-to-left writers (ANY DEFINED BY: `WriteAdb`), and the interpreter `write_k` |
 | `ASN1.Pulse.CheckedWriter` | checked writers `check_write_k` (relaxed write, then validate) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and checked raw writers `check_write_raw_k` (raw write, then validate) |
 | `ASN1.Pulse.JitWriter.Lemmas`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitWriter` | just-in-time checked raw writers `check_write_jit_k` (check while writing) |

@@ -2,8 +2,8 @@ module ASN1.Pulse.Writer
 #lang-pulse
 
 (* The right-to-left writer interpreter: from a well-formed schema value `k`
-   supported by the writers (no ANY DEFINED BY, SET fields in canonical
-   order), a writer from `asn1_rel k pm` to the generic DER encoding of the
+   supported by the writers (SET fields in canonical order, ANY DEFINED BY
+   keys of supported kinds), a writer from `asn1_rel k pm` to the generic DER encoding of the
    value, `asn1_value_enc (to_value k x)`. Combined with
    `ASN1.Spec.Serializer.asn1_ser_eq`, this is the DER encoding of `x`. *)
 
@@ -25,6 +25,10 @@ module WL = ASN1.Pulse.WriteLeaf
 module RS = ASN1.Pulse.RelShare
 module WLm = ASN1.Pulse.Writer.Lemmas
 module PS = ASN1.Pulse.ParseSequence
+module PA = ASN1.Pulse.ParseAdb
+module AL = ASN1.Pulse.ParseAdb.Lemmas
+module In = ASN1.Pulse.Interpreter
+module WA = ASN1.Pulse.WriteAdb
 
 let rec write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u: squash (RS.wsupported_content k /\ Conf.wf_content id k)) (pm: perm)
   (x': asn1_content_impl_t k) (#x: Ghost.erased (asn1_content_t k))
@@ -65,7 +69,106 @@ let rec write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn
     write_set_of id ne k' ()
       (fun pm x' #x out pos #v #p -> write_k k' () pm x' #x out pos #v #p)
       (RS.share_k k' ()) (RS.gather_k k' ()) pm
-  | _ -> false_elim ())
+  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
+    begin match ofb with
+    | None ->
+      RS.adb_none_equiv ipd prefix kid key_k ls pf pf';
+      write_ext #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls None)) #(asn1_sequence_any_t_core prefix (AL.ady key_k ls))
+        (asn1_items_any_rel prefix (asn1_adb_rel key_k ls)) (asn1_content_rel (PA.adb_k_none ipd prefix kid key_k ls pf pf')) ()
+        (WLm.cenc id (PA.adb_k_none ipd prefix kid key_k ls pf pf')) (fun x -> WLm.cenc_adb_none id ipd prefix kid key_k ls pf pf' x) pm
+        (WL.r2l_write_tlv id (fun x' #x out pos #v #p ->
+          write_items_any prefix () (asn1_adb_rel key_k ls) (WLm.adb_sv kid key_k ls) pm
+            (fun x' #x out pos #v #p -> write_adb kid key_k () ls () pm x' #x out pos #v #p)
+            x' #x out pos #v #p))
+    | Some fb ->
+      RS.adb_some_equiv ipd prefix kid key_k ls fb pf pf';
+      write_ext #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb)))) #(asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb))
+        (asn1_items_any_rel prefix (PA.afb_rel key_k ls fb)) (asn1_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) ()
+        (WLm.cenc id (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) (fun x -> WLm.cenc_adb_some id ipd prefix kid key_k ls fb pf pf' x) pm
+        (WL.r2l_write_tlv id (fun x' #x out pos #v #p ->
+          write_items_any prefix () (PA.afb_rel key_k ls fb) (WLm.adb_fb_sv kid key_k ls fb) pm
+            (fun x' #x out pos #v #p -> write_afb kid key_k () ls () fb pm
+              (fun x' #x out pos #v #p -> write_items (dsnd fb) () pm x' #x out pos #v #p)
+              x' #x out pos #v #p)
+            x' #x out pos #v #p))
+    end)
+  in vf x' #x out pos #v #p
+
+(* ANY DEFINED BY: the prefix items, then the suffix (written first) *)
+and write_items_any (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (RS.wsupported_items ls /\ Conf.wf_items ls))
+  (#sfxi: Type0) (#sfxs: Type0) (sfxr: prel sfxi sfxs) (sv: Ghost.erased (sfxs -> Tot (list asn1_value))) (pm: perm)
+  ([@@@FStar.Attributes.monomorphize] ws: W.r2l_writer_f (sfxr pm) (WLm.vlenc (Ghost.reveal sv)))
+  (x': asn1_items_any_impl_t ls sfxi) (#x: Ghost.erased (asn1_sequence_any_t_core ls sfxs))
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+: Tot (WL.wres (asn1_items_any_rel ls sfxr pm) (WLm.aenc ls (Ghost.reveal sv)) x' x out pos v p)
+  (decreases ls)
+= [@inline_let] let vf : W.r2l_writer_f #(asn1_items_any_impl_t ls sfxi) #(asn1_sequence_any_t_core ls sfxs) (asn1_items_any_rel ls sfxr pm) (WLm.aenc ls (Ghost.reveal sv)) =
+  (match ls with
+  | ASN1_GEN_ITEMS_NIL ->
+    RS.items_any_nil_equiv sfxr;
+    write_ext #sfxi #sfxs sfxr (asn1_items_any_rel ASN1_GEN_ITEMS_NIL sfxr) ()
+      (WLm.aenc ASN1_GEN_ITEMS_NIL (Ghost.reveal sv)) (fun x -> WLm.aenc_nil (Ghost.reveal sv) x) pm
+      ws
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
+    RS.items_any_single_equiv dk sfxr;
+    write_ext #(asn1_decorated_impl_t dk & sfxi) #(asn1_decorated_t_core dk & sfxs)
+      (prel_pair (asn1_decorated_rel dk) sfxr) (asn1_items_any_rel (PS.single dk) sfxr) ()
+      (WLm.aenc (PS.single dk) (Ghost.reveal sv)) (fun x -> WLm.aenc_single dk (Ghost.reveal sv) x) pm
+      (write_pair (asn1_decorated_rel dk) sfxr pm
+        (fun x' #x out pos #v #p -> write_dec dk () pm x' #x out pos #v #p)
+        ws)
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
+    RS.items_any_cons_equiv dk dk2 tl2 sfxr;
+    write_ext
+      #(asn1_decorated_impl_t dk & asn1_items_any_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxi)
+      #(asn1_decorated_t_core dk & asn1_sequence_any_t_core (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxs)
+      (prel_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr))
+      (asn1_items_any_rel (PS.cons2 dk dk2 tl2) sfxr) ()
+      (WLm.aenc (PS.cons2 dk dk2 tl2) (Ghost.reveal sv)) (fun x -> WLm.aenc_cons dk dk2 tl2 (Ghost.reveal sv) x) pm
+      (write_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr) pm
+        (fun x' #x out pos #v #p -> write_dec dk () pm x' #x out pos #v #p)
+        (fun x' #x out pos #v #p -> write_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () sfxr sv pm ws x' #x out pos #v #p)))
+  in vf x' #x out pos #v #p
+
+(* The key, then the payload selected by the key *)
+and write_adb (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (Conf.wf_terminal kid key_k /\ In.adb_key_supported key_k))
+  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (RS.wsupported_ls ls /\ Conf.wf_ls ls)) (pm: perm)
+  (x': asn1_adb_suffix_impl_t key_k ls None) (#x: Ghost.erased (AL.ady key_k ls))
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+: Tot (WL.wres (asn1_adb_rel key_k ls pm) (WLm.senc kid key_k ls) x' x out pos v p)
+  (decreases ls)
+= [@inline_let] let vf : W.r2l_writer_f #(asn1_adb_suffix_impl_t key_k ls None) #(AL.ady key_k ls) (asn1_adb_rel key_k ls pm) (WLm.senc kid key_k ls) =
+  (match ls with
+  | [] -> WA.write_adb_nil kid key_k pm
+  | [(kx, y)] ->
+    WA.write_adb_single kid () kx y pm
+      (fun x' #x out pos #v #p -> write_items (dsnd y) () pm x' #x out pos #v #p)
+  | (kx, y) :: hd2 :: tl2 ->
+    WA.write_adb_cons kid () kx y hd2 tl2 pm
+      (fun x' #x out pos #v #p -> write_items (dsnd y) () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> write_adb kid key_k () (hd2 :: tl2) () pm x' #x out pos #v #p))
+  in vf x' #x out pos #v #p
+
+(* The same, with a fallback, whose items writer is `wfb` *)
+and write_afb (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (Conf.wf_terminal kid key_k /\ In.adb_key_supported key_k))
+  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (RS.wsupported_ls ls /\ Conf.wf_ls ls))
+  ([@@@FStar.Attributes.monomorphize] fb: asn1_gen_items_lk) (pm: perm)
+  ([@@@FStar.Attributes.monomorphize] wfb: W.r2l_writer_f (asn1_items_rel (dsnd fb) pm) (WLm.ienc (dsnd fb)))
+  (x': asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))) (#x: Ghost.erased (AL.ady_fb key_k ls fb))
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+: Tot (WL.wres (PA.afb_rel key_k ls fb pm) (WLm.fsenc kid key_k ls fb) x' x out pos v p)
+  (decreases ls)
+= [@inline_let] let vf : W.r2l_writer_f #(asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k ls fb) (PA.afb_rel key_k ls fb pm) (WLm.fsenc kid key_k ls fb) =
+  (match ls with
+  | [] -> WA.write_afb_nil kid key_k fb () pm wfb
+  | [(kx, y)] ->
+    WA.write_afb_single kid () kx y fb pm
+      (fun x' #x out pos #v #p -> write_items (dsnd y) () pm x' #x out pos #v #p)
+      (WA.write_afb_nil kid key_k fb () pm wfb)
+  | (kx, y) :: hd2 :: tl2 ->
+    WA.write_afb_cons kid () kx y hd2 tl2 fb pm
+      (fun x' #x out pos #v #p -> write_items (dsnd y) () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> write_afb kid key_k () (hd2 :: tl2) () fb pm wfb x' #x out pos #v #p))
   in vf x' #x out pos #v #p
 
 and write_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (RS.wsupported_items ls /\ Conf.wf_items ls)) (pm: perm)

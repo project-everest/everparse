@@ -116,6 +116,57 @@ static setBAC_t setBAC(oint b, oint a, Pulse_Lib_Slice_slice__uint8 c) {
   return (setBAC_t){ ._1 = b, ._2 = { ._1 = a, ._2 = c } };
 }
 
+/* ANY DEFINED BY */
+typedef FStar_Pervasives_Native_tuple2__asn1_int_impl_either_unit_asn1_int_impl adbP_t;
+typedef FStar_Pervasives_either__unit_either_asn1_int_impl_tuple2_slice_uint8_opt adbF_t;
+typedef FStar_Pervasives_Native_tuple2__asn1_int_impl_either_asn1_int_impl_unit adbB_t;
+typedef FStar_Pervasives_either__unit_either_asn1_int_impl_either_unit_tuple2_asn adbI_t;
+typedef FStar_Pervasives_either__unit_asn1_int_impl adbT_t;
+
+static adbP_t adbP_null(int64_t v) {
+  return (adbP_t){ ._1 = SMALL(v), ._2 = { .tag = FSTAR_PERVASIVES_INL__UNIT_ASN1_INT_IMPL } };
+}
+static adbP_t adbP_int(int64_t v, int64_t p) {
+  return (adbP_t){ ._1 = SMALL(v), ._2 = { .tag = FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL, .val = { .Inr = SMALL(p) } } };
+}
+/* adbF and adbO: first key -> NULL, second key -> INTEGER, else fallback */
+static adbF_t adbF_null(void) {
+  return (adbF_t){ .tag = FSTAR_PERVASIVES_INL__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT };
+}
+static adbF_t adbF_int(int64_t p) {
+  return (adbF_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT, .val = { .Inr = {
+    .tag = FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI, .val = { .Inl = SMALL(p) } } } };
+}
+static adbF_t adbF_fb(Pulse_Lib_Slice_slice__uint8 key, osl any) {
+  return (adbF_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT, .val = { .Inr = {
+    .tag = FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI, .val = { .Inr = { ._1 = key, ._2 = any } } } } };
+}
+static adbB_t adbB_true(int64_t v, int64_t p) {
+  return (adbB_t){ ._1 = SMALL(v), ._2 = { .tag = FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_UNIT, .val = { .Inl = SMALL(p) } } };
+}
+static adbB_t adbB_false(int64_t v) {
+  return (adbB_t){ ._1 = SMALL(v), ._2 = { .tag = FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_UNIT } };
+}
+static adbI_t adbI_one(void) {
+  return (adbI_t){ .tag = FSTAR_PERVASIVES_INL__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN };
+}
+static adbI_t adbI_minus_one(int64_t p) {
+  return (adbI_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN, .val = { .Inr = {
+    .tag = FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN1_INT_IMPL_O, .val = { .Inl = SMALL(p) } } } };
+}
+static adbI_t adbI_big(void) {
+  return (adbI_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN, .val = { .Inr = {
+    .tag = FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN1_INT_IMPL_O, .val = { .Inr = {
+      .tag = FSTAR_PERVASIVES_INL__UNIT_TUPLE2_ASN1_INT_IMPL_OPTION_SLICE_UINT8 } } } } };
+}
+static adbI_t adbI_fb(int64_t key, osl any) {
+  return (adbI_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN, .val = { .Inr = {
+    .tag = FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_EITHER_UNIT_TUPLE2_ASN1_INT_IMPL_O, .val = { .Inr = {
+      .tag = FSTAR_PERVASIVES_INR__UNIT_TUPLE2_ASN1_INT_IMPL_OPTION_SLICE_UINT8, .val = { .Inr = { ._1 = SMALL(key), ._2 = any } } } } } } };
+}
+static adbT_t adbT_null(void) { return (adbT_t){ .tag = FSTAR_PERVASIVES_INL__UNIT_ASN1_INT_IMPL }; }
+static adbT_t adbT_int(int64_t p) { return (adbT_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL, .val = { .Inr = SMALL(p) } }; }
+
 int main(void) {
   uint8_t ab[] = { 'a', 'b' }, ac[] = { 'a', 'c' }, abcd[] = { 0xab, 0xcd }, abce[] = { 0xab, 0xce };
   uint8_t hi[] = { 'h', 'i' }, hi80[] = { 'h', 0x80 };
@@ -162,6 +213,57 @@ int main(void) {
      V(0x31, 0x0a, 0x02, 0x01, 0xff, 0x80, 0x01, 0x07, 0x81, 0x02, 0xab, 0xcd));
   OK(setBAC, setBAC(NONE_INT, NONE_INT, SL(abcd)), V(0x31, 0x04, 0x81, 0x02, 0xab, 0xcd));
   INVALID(setBAC, setBAC(SOME_INT(0), NONE_INT, SL(abcd)));  /* b = default */
+
+  /* ANY DEFINED BY, OBJECT IDENTIFIER keys after an INTEGER prefix:
+     1.2.3 -> NULL, 1.2.4 -> INTEGER */
+  OK(adbP, adbP_null(5), V(0x30, 0x09, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00));
+  OK(adbP, adbP_int(5, 7), V(0x30, 0x0a, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
+
+  /* ... with a fallback key (OID content bytes) and an OPTIONAL ANY */
+  {
+    uint8_t k125[] = { 0x2a, 0x05 };
+    uint8_t k123[] = { 0x2a, 0x03 };
+    uint8_t kbad[] = { 0x80, 0x01 };   /* non-minimal subidentifier */
+    uint8_t any_ok[] = { 0x01, 0x01, 0xff };
+    uint8_t any_bad[] = { 0x01, 0x02, 0xff };
+    OK(adbF, adbF_null(), V(0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00));
+    OK(adbF, adbF_int(7), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
+    OK(adbF, adbF_fb(SL(k125), NONE_SL), V(0x30, 0x04, 0x06, 0x02, 0x2a, 0x05));
+    OK(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_ok))), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x05, 0x01, 0x01, 0xff));
+    /* Outside the precondition (relax leaves ANY DEFINED BY unchanged), but
+       caught by the validation pass: */
+    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback */
+    INVALID(adbF, adbF_fb(SL(kbad), NONE_SL));          /* not a DER OID */
+    INVALID(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_bad)))); /* not a DER TLV */
+  }
+
+  /* OCTET STRING keys: 'AA'H -> NULL, 'AABB'H -> INTEGER, fallback OPTIONAL ANY */
+  {
+    uint8_t kaa00[] = { 0xaa, 0x00 };
+    uint8_t kbb[] = { 0xbb };
+    uint8_t any_ok[] = { 0x01, 0x01, 0xff };
+    OK(adbO, adbF_null(), V(0x30, 0x05, 0x04, 0x01, 0xaa, 0x05, 0x00));
+    OK(adbO, adbF_int(7), V(0x30, 0x07, 0x04, 0x02, 0xaa, 0xbb, 0x02, 0x01, 0x07));
+    OK(adbO, adbF_fb(SL(kaa00), NONE_SL), V(0x30, 0x04, 0x04, 0x02, 0xaa, 0x00));
+    OK(adbO, adbF_fb(SL(kbb), SOME_SL(SL(any_ok))), V(0x30, 0x06, 0x04, 0x01, 0xbb, 0x01, 0x01, 0xff));
+    INVALID(adbO, adbF_fb(SL(aa), NONE_SL));            /* a known key in the fallback (outside the precondition) */
+  }
+
+  /* BOOLEAN keys after an INTEGER prefix: TRUE -> INTEGER, FALSE -> NULL */
+  OK(adbB, adbB_true(5, 7), V(0x30, 0x09, 0x02, 0x01, 0x05, 0x01, 0x01, 0xff, 0x02, 0x01, 0x07));
+  OK(adbB, adbB_false(5), V(0x30, 0x08, 0x02, 0x01, 0x05, 0x01, 0x01, 0x00, 0x05, 0x00));
+
+  /* INTEGER keys: 1 -> NULL, -1 -> INTEGER, 2^64 -> NULL, fallback OPTIONAL ANY */
+  OK(adbI, adbI_one(), V(0x30, 0x05, 0x02, 0x01, 0x01, 0x05, 0x00));
+  OK(adbI, adbI_minus_one(7), V(0x30, 0x06, 0x02, 0x01, 0xff, 0x02, 0x01, 0x07));
+  OK(adbI, adbI_big(), V(0x30, 0x0d, 0x02, 0x09, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0x05, 0x00));
+  OK(adbI, adbI_fb(2, NONE_SL), V(0x30, 0x03, 0x02, 0x01, 0x02));
+  INVALID(adbI, adbI_fb(1, NONE_SL));                   /* a known key in the fallback (outside the precondition) */
+  INVALID(adbI, adbI_fb(-1, NONE_SL));
+
+  /* [0] EXPLICIT INTEGER keys: 1 -> NULL, -1 -> INTEGER */
+  OK(adbT, adbT_null(), V(0x30, 0x07, 0xa0, 0x03, 0x02, 0x01, 0x01, 0x05, 0x00));
+  OK(adbT, adbT_int(7), V(0x30, 0x08, 0xa0, 0x03, 0x02, 0x01, 0xff, 0x02, 0x01, 0x07));
 
   printf(fails ? "FAIL\n" : "OK\n");
   return fails;

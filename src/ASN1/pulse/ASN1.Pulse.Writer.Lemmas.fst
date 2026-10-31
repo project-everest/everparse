@@ -348,3 +348,162 @@ let cenc_set (id: asn1_id_t) (ids: _) (items: asn1_gen_items_l ids) (pf: _) (x: 
   (ensures (cenc id (ASN1_SET ids items pf) x == enc_tlv id true (ienc items x)))
 = sort_canon items x;
   mk_cons_enc id (items_to_values items x)
+
+(* ANY DEFINED BY: the prefix items, then the key, then the payload
+   selected by the key (or the fallback) *)
+
+module AL = ASN1.Pulse.ParseAdb.Lemmas
+module PA = ASN1.Pulse.ParseAdb
+
+let vlenc (#t: Type) (sv: t -> Tot (list asn1_value)) (x: t) : GTot SB.bytes =
+  asn1_value_list_enc (sv x)
+
+let aenc (#ids: _) (items: asn1_gen_items_l ids) (#t: Type) (sv: t -> Tot (list asn1_value)) (x: asn1_sequence_any_t_core items t) : GTot SB.bytes =
+  asn1_value_list_enc (items_any_to_values items sv x)
+
+let aenc_nil (#t: Type) (sv: t -> Tot (list asn1_value)) (x: asn1_sequence_any_t_core ASN1_GEN_ITEMS_NIL t)
+: Lemma (aenc ASN1_GEN_ITEMS_NIL sv x == vlenc sv x)
+= ()
+
+let aenc_single (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#t: Type) (sv: t -> Tot (list asn1_value)) (x: asn1_sequence_any_t_core (PS.single dk) t)
+: Lemma (aenc (PS.single dk) sv x == pair_enc #(asn1_decorated_t_core dk) #t (denc dk) (vlenc sv) x)
+= let x' : asn1_decorated_t_core dk & t = x in
+  let (a, b) = x' in
+  value_list_enc_append (dec_to_values dk a) (sv b)
+
+let aenc_cons (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#s2: _) (#d2: _) (dk2: asn1_decorated_k s2 d2) (#ids2: _) (tl2: asn1_gen_items_l ids2)
+  (#t: Type) (sv: t -> Tot (list asn1_value)) (x: asn1_sequence_any_t_core (PS.cons2 dk dk2 tl2) t)
+: Lemma (aenc (PS.cons2 dk dk2 tl2) sv x == pair_enc (denc dk) (aenc (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sv) x)
+= let x' : asn1_decorated_t_core dk & asn1_sequence_any_t_core (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) t = x in
+  let (a, b) = x' in
+  value_list_enc_append (dec_to_values dk a) (items_any_to_values (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sv b)
+
+let rec items_any_ext (#ids: _) (items: asn1_gen_items_l ids) (#t: Type) (f g: t -> Tot (list asn1_value)) (x: asn1_sequence_any_t_core items t)
+: Lemma
+  (requires (forall z. f z == g z))
+  (ensures (items_any_to_values items f x == items_any_to_values items g x))
+  (decreases items)
+= match items with
+  | ASN1_GEN_ITEMS_NIL -> ()
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL -> ()
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl ->
+    let x' : asn1_decorated_t_core dk & asn1_sequence_any_t_core tl t = x in
+    items_any_ext tl f g (snd x')
+
+let rec ls_fb_ext (#lt #t: eqtype) (f: lt -> Tot t) (ls: list (lt & asn1_gen_items_lk)) (fb: Type) (f1 f2: fb -> Tot (list asn1_value)) (key: t) (y: idlookup_with_fallback_t key (asn1_any_t_core t f ls) fb)
+: Lemma
+  (requires (forall z. f1 z == f2 z))
+  (ensures (ls_fb_to_values f ls fb f1 key y == ls_fb_to_values f ls fb f2 key y))
+  (decreases ls)
+= match ls with
+  | [] -> ()
+  | (key', _) :: tl -> if key = f key' then () else ls_fb_ext f tl fb f1 f2 key y
+
+(* Without a fallback *)
+
+let adb_sv (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (s: AL.ady key_k ls) : Tot (list asn1_value) =
+  terminal_to_value kid key_k (dfst s) :: ls_to_values (key_of_lit key_k) ls (dfst s) (dsnd s)
+
+let senc (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (s: AL.ady key_k ls) : GTot SB.bytes =
+  vlenc (adb_sv kid key_k ls) s
+
+#push-options "--fuel 2 --ifuel 1"
+let senc_head (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (s: AL.ady key_k ((kx, y) :: tl))
+: Lemma
+  (requires (dfst s == key_of_lit key_k kx))
+  (ensures (senc kid key_k ((kx, y) :: tl) s == WL.terminal_enc kid key_k (key_of_lit key_k kx) `Seq.append` ienc (dsnd y) (AL.ady_head_val kx y tl s ())))
+= ()
+
+let senc_tail (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (s: AL.ady key_k ((kx, y) :: tl))
+: Lemma
+  (requires (dfst s =!= key_of_lit key_k kx))
+  (ensures (senc kid key_k ((kx, y) :: tl) s == senc kid key_k tl (AL.ady_tail_val kx y tl s ())))
+= ()
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
+let cenc_adb_none (id: asn1_id_t) (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
+  (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
+  (x: asn1_content_t (PA.adb_k_none ipd prefix kid key_k ls pf pf'))
+: Lemma
+  (requires (asn1_any_id_valid id /\ CONSTRUCTED? id.f))
+  (ensures (cenc id (PA.adb_k_none ipd prefix kid key_k ls pf pf') x == enc_tlv id true (aenc prefix (adb_sv kid key_k ls) x)))
+= let clo (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls)) : Tot (list asn1_value) =
+    let (| key, y |) = s in
+    terminal_to_value kid key_k key :: ls_to_values (key_of_lit key_k) ls key y
+  in
+  assert (content_to_value id (PA.adb_k_none ipd prefix kid key_k ls pf pf') x ==
+    mk_cons id (items_any_to_values prefix (fun (s: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls)) -> (let (| key, y |) = s in terminal_to_value kid key_k key :: ls_to_values (key_of_lit key_k) ls key y) <: list asn1_value) x))
+    by (FStar.Tactics.norm [delta_only [`%content_to_value; `%PA.adb_k_none]; zeta; iota]; FStar.Tactics.trefl ());
+  items_any_ext prefix clo (adb_sv kid key_k ls) x;
+  mk_cons_enc id (items_any_to_values prefix (adb_sv kid key_k ls) x)
+#pop-options
+
+(* With a fallback *)
+
+let fbv (fb: asn1_gen_items_lk) (z: asn1_sequence_t_core (dsnd fb)) : Tot (list asn1_value) =
+  items_to_values (dsnd fb) z
+
+let adb_fb_sv (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (s: AL.ady_fb key_k ls fb) : Tot (list asn1_value) =
+  terminal_to_value kid key_k (dfst s) :: ls_fb_to_values (key_of_lit key_k) ls (asn1_sequence_t_core (dsnd fb)) (fbv fb) (dfst s) (dsnd s)
+
+let fsenc (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (s: AL.ady_fb key_k ls fb) : GTot SB.bytes =
+  vlenc (adb_fb_sv kid key_k ls fb) s
+
+#push-options "--fuel 2 --ifuel 1"
+let fsenc_nil (kid: asn1_id_t) (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (s: AL.ady_fb key_k [] fb)
+: Lemma (fsenc kid key_k [] fb s == WL.terminal_enc kid key_k (dfst s) `Seq.append` ienc (dsnd fb) (AL.ady_fb_nil_val fb s))
+= ()
+
+let fsenc_head (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (s: AL.ady_fb key_k ((kx, y) :: tl) fb)
+: Lemma
+  (requires (dfst s == key_of_lit key_k kx))
+  (ensures (fsenc kid key_k ((kx, y) :: tl) fb s == WL.terminal_enc kid key_k (key_of_lit key_k kx) `Seq.append` ienc (dsnd y) (AL.ady_fb_head_val kx y tl fb s ())))
+= ()
+
+let fsenc_tail (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (s: AL.ady_fb key_k ((kx, y) :: tl) fb)
+: Lemma
+  (requires (dfst s =!= key_of_lit key_k kx))
+  (ensures (fsenc kid key_k ((kx, y) :: tl) fb s == fsenc kid key_k tl fb (AL.ady_fb_tail_val kx y tl fb s ())))
+= ()
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
+let cenc_adb_some' (id: asn1_id_t) (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (fbids: id_decs {asn1_sequence_k_wf fbids}) (fbitems: asn1_gen_items_l fbids)
+  (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
+  (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
+  (x: asn1_content_t (PA.adb_k_some ipd prefix kid key_k ls (| fbids, fbitems |) pf pf'))
+: Lemma
+  (requires (asn1_any_id_valid id /\ CONSTRUCTED? id.f))
+  (ensures (cenc id (PA.adb_k_some ipd prefix kid key_k ls (| fbids, fbitems |) pf pf') x == enc_tlv id true (aenc prefix (adb_fb_sv kid key_k ls (| fbids, fbitems |)) x)))
+= let clo (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core fbitems)) : Tot (list asn1_value) =
+    let (| key, y |) = s in
+    terminal_to_value kid key_k key ::
+    ls_fb_to_values (key_of_lit key_k) ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y
+  in
+  assert (content_to_value id (PA.adb_k_some ipd prefix kid key_k ls (| fbids, fbitems |) pf pf') x ==
+    mk_cons id (items_any_to_values prefix (fun (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core fbitems)) -> (let (| key, y |) = s in terminal_to_value kid key_k key :: ls_fb_to_values (key_of_lit key_k) ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) key y) <: list asn1_value) x))
+    by (FStar.Tactics.norm [delta_only [`%content_to_value; `%PA.adb_k_some]; zeta; iota]; FStar.Tactics.trefl ());
+  let prf (s: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core fbitems))
+  : Lemma (clo s == adb_fb_sv kid key_k ls (| fbids, fbitems |) s)
+  = ls_fb_ext (key_of_lit key_k) ls (asn1_sequence_t_core fbitems) (fun (z: asn1_sequence_t_core fbitems) -> items_to_values fbitems z) (fbv (| fbids, fbitems |)) (dfst s) (dsnd s)
+  in
+  Classical.forall_intro prf;
+  items_any_ext prefix clo (adb_fb_sv kid key_k ls (| fbids, fbitems |)) x;
+  mk_cons_enc id (items_any_to_values prefix (adb_fb_sv kid key_k ls (| fbids, fbitems |)) x)
+#pop-options
+
+let cenc_adb_some (id: asn1_id_t) (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
+  (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
+  (x: asn1_content_t (PA.adb_k_some ipd prefix kid key_k ls fb pf pf'))
+: Lemma
+  (requires (asn1_any_id_valid id /\ CONSTRUCTED? id.f))
+  (ensures (cenc id (PA.adb_k_some ipd prefix kid key_k ls fb pf pf') x == enc_tlv id true (aenc prefix (adb_fb_sv kid key_k ls fb) x)))
+= let (| fbids, fbitems |) = fb in
+  cenc_adb_some' id ipd prefix kid key_k ls fbids fbitems pf pf' x

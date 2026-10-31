@@ -5,7 +5,8 @@ module ASN1.Pulse.RelShare
    as needed by the mixed-list iterator, hence by the SEQUENCE OF / SET OF
    writers. Gathering also proves that the relation is functional, from the
    injectivity of the content encoders (`leaf_enc_inj`, `asn1_value_enc_inj`).
-   ANY DEFINED BY is not supported (`wsupported_*`). *)
+   ANY DEFINED BY keys must be comparable with a literal
+   (`adb_key_supported`). *)
 
 open Pulse.Lib.Pervasives
 open ASN1.Base
@@ -22,9 +23,11 @@ module PB = LowParse.PulseParse.Base
 module It = LowParse.PulseParse.Iterator
 module PS = ASN1.Pulse.ParseSequence
 module PC = ASN1.Pulse.ParseChoice
+module PA = ASN1.Pulse.ParseAdb
+module AL = ASN1.Pulse.ParseAdb.Lemmas
+module T = FStar.Tactics
 
-(* The schemas supported by the writers: those of the parsers, minus ANY
-   DEFINED BY *)
+(* The schemas supported by the writers: those of the parsers *)
 
 [@@ASN1.Pulse.Interpreter.asn1_pulse_attr]
 let rec wsupported_content (k: asn1_content_k) : Tot bool (decreases k) =
@@ -36,7 +39,14 @@ let rec wsupported_content (k: asn1_content_k) : Tot bool (decreases k) =
   | ASN1_SEQUENCE_OF _ k' -> wsupported_k k'
   | ASN1_SET_OF _ k' -> wsupported_k k'
   | ASN1_SET _ items _ -> wsupported_items items && ASN1.Pulse.ParseSet.items_canon items
-  | _ -> false
+  | ASN1_ANY_DEFINED_BY _ prefix _ key_k ls ofb _ _ ->
+    wsupported_items prefix && ASN1.Pulse.Interpreter.adb_key_supported key_k && wsupported_ls ls &&
+    (match ofb with None -> true | Some fb -> wsupported_items (dsnd fb))
+
+and wsupported_ls (#t: eqtype) (ls: list (t & asn1_gen_items_lk)) : Tot bool (decreases ls) =
+  match ls with
+  | [] -> true
+  | (_, y) :: tl -> wsupported_items (dsnd y) && wsupported_ls tl
 
 and wsupported_items (#i: _) (ls: asn1_gen_items_l i) : Tot bool (decreases ls) =
   match ls with
@@ -928,6 +938,530 @@ let share_any (_: unit) : share_t #(S.slice U8.t) #asn1_value (prel_slice_ser as
 let gather_any (_: unit) : gather_t #(S.slice U8.t) #asn1_value (prel_slice_ser asn1_value_enc) =
   gather_slice_ser asn1_value_enc (value_enc_injective ())
 
+(* ANY DEFINED BY *)
+
+let items_any_nil_equiv (#sfxi: Type0) (#sfxs: Type0) (sfxr: prel sfxi sfxs)
+: Lemma (prel_equiv #sfxi #sfxs sfxr (asn1_items_any_rel ASN1_GEN_ITEMS_NIL sfxr))
+= assert_norm (prel_equiv #sfxi #sfxs sfxr (asn1_items_any_rel ASN1_GEN_ITEMS_NIL sfxr))
+
+let items_any_single_equiv (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#sfxi: Type0) (#sfxs: Type0) (sfxr: prel sfxi sfxs)
+: Lemma (prel_equiv #(asn1_decorated_impl_t dk & sfxi) #(asn1_decorated_t_core dk & sfxs) (prel_pair (asn1_decorated_rel dk) sfxr) (asn1_items_any_rel (PS.single dk) sfxr))
+= assert_norm (prel_equiv #(asn1_decorated_impl_t dk & sfxi) #(asn1_decorated_t_core dk & sfxs) (prel_pair (asn1_decorated_rel dk) sfxr) (asn1_items_any_rel (PS.single dk) sfxr))
+
+let items_any_cons_equiv (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#s2: _) (#d2: _) (dk2: asn1_decorated_k s2 d2) (#ids2: _) (tl2: asn1_gen_items_l ids2)
+  (#sfxi: Type0) (#sfxs: Type0) (sfxr: prel sfxi sfxs)
+: Lemma (prel_equiv
+    #(asn1_decorated_impl_t dk & asn1_items_any_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxi)
+    #(asn1_decorated_t_core dk & asn1_sequence_any_t_core (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxs)
+    (prel_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr))
+    (asn1_items_any_rel (PS.cons2 dk dk2 tl2) sfxr))
+= assert_norm (prel_equiv
+    #(asn1_decorated_impl_t dk & asn1_items_any_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxi)
+    #(asn1_decorated_t_core dk & asn1_sequence_any_t_core (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxs)
+    (prel_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr))
+    (asn1_items_any_rel (PS.cons2 dk dk2 tl2) sfxr))
+
+let adb_none_equiv (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
+  (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
+: Lemma (prel_equiv
+    #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls None))
+    #(asn1_sequence_any_t_core prefix (AL.ady key_k ls))
+    (asn1_items_any_rel prefix (asn1_adb_rel key_k ls))
+    (asn1_content_rel (PA.adb_k_none ipd prefix kid key_k ls pf pf')))
+= Classical.forall_intro_3 (PA.adb_rel_none_eq ipd prefix kid key_k ls pf pf')
+
+let adb_some_equiv (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
+  (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
+: Lemma (prel_equiv
+    #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))))
+    #(asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb))
+    (asn1_items_any_rel prefix (PA.afb_rel key_k ls fb))
+    (asn1_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')))
+= Classical.forall_intro_3 (PA.adb_rel_some_eq ipd prefix kid key_k ls fb pf pf')
+
+(* Without a fallback *)
+
+let adb_single_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (pm: perm)
+  (r: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady key_k [(kx, y)])
+: Lemma (asn1_adb_rel key_k [(kx, y)] pm r v ==
+    (if dfst v = key_of_lit key_k kx then asn1_items_rel (dsnd y) pm r (AL.ady_head_val kx y [] v ()) else pure False))
+= assert_norm (asn1_adb_rel key_k [(kx, y)] pm r v == (let (| key, w |) = v in if key = key_of_lit key_k kx then asn1_items_rel (dsnd y) pm r w else pure False))
+
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
+let adb_cons_inl_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pm: perm) (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady key_k ((kx, y) :: hd2 :: tl2))
+: Lemma (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) pm (Inl #_ #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) a) v ==
+    (if dfst v = key_of_lit key_k kx then asn1_items_rel (dsnd y) pm a (AL.ady_head_val kx y (hd2 :: tl2) v ()) else pure False))
+= ()
+
+let adb_cons_inr_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) (v: AL.ady key_k ((kx, y) :: hd2 :: tl2))
+: Lemma (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) b) v ==
+    (if dfst v = key_of_lit key_k kx then pure False else asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val kx y (hd2 :: tl2) v ())))
+= let (| key, w |) = v in
+  PA.adb_rel_cons_inr_aux kx y hd2 tl2 pm b key w
+#pop-options
+
+let ady_head_inj (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (v v': AL.ady key_k ((kx, y) :: tl))
+: Lemma (requires dfst v == key_of_lit key_k kx /\ dfst v' == key_of_lit key_k kx /\ AL.ady_head_val kx y tl v () == AL.ady_head_val kx y tl v' ())
+  (ensures v == v')
+= ()
+
+let ady_tail_inj (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (v v': AL.ady key_k ((kx, y) :: tl))
+: Lemma (requires dfst v <> key_of_lit key_k kx /\ dfst v' <> key_of_lit key_k kx /\ AL.ady_tail_val kx y tl v () == AL.ady_tail_val kx y tl v' ())
+  (ensures v == v')
+= ()
+
+ghost
+fn share_adb_nil (key_k: asn1_terminal_k)
+: share_t #(asn1_adb_suffix_impl_t key_k [] None) #(AL.ady key_k []) (asn1_adb_rel key_k [])
+= (x: asn1_adb_suffix_impl_t key_k [] None) (#p: perm) (#y: AL.ady key_k [])
+{
+  rewrite (asn1_adb_rel key_k [] p x y) as (pure False);
+  unreachable ()
+}
+
+ghost
+fn gather_adb_nil (key_k: asn1_terminal_k)
+: gather_t #(asn1_adb_suffix_impl_t key_k [] None) #(AL.ady key_k []) (asn1_adb_rel key_k [])
+= (x: asn1_adb_suffix_impl_t key_k [] None) (#p: perm) (#y: AL.ady key_k []) (#p': perm) (#y': AL.ady key_k [])
+{
+  rewrite (asn1_adb_rel key_k [] p x y) as (pure False);
+  unreachable ()
+}
+
+ghost
+fn share_adb_single (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (sh: share_t (asn1_items_rel (dsnd y)))
+: share_t #(asn1_adb_suffix_impl_t key_k [(kx, y)] None) #(AL.ady key_k [(kx, y)]) (asn1_adb_rel key_k [(kx, y)])
+= (x: asn1_adb_suffix_impl_t key_k [(kx, y)] None) (#p: perm) (#v: AL.ady key_k [(kx, y)])
+{
+  adb_single_eq kx y p x v;
+  adb_single_eq kx y (p /. 2.0R) x v;
+  if (dfst v = key_of_lit key_k kx) {
+    rewrite (asn1_adb_rel key_k [(kx, y)] p x v) as (asn1_items_rel (dsnd y) p x (AL.ady_head_val kx y [] v ()));
+    sh x #p #(AL.ady_head_val kx y [] v ());
+    rewrite (asn1_items_rel (dsnd y) (p /. 2.0R) x (AL.ady_head_val kx y [] v ()) ** asn1_items_rel (dsnd y) (p /. 2.0R) x (AL.ady_head_val kx y [] v ()))
+      as (asn1_adb_rel key_k [(kx, y)] (p /. 2.0R) x v ** asn1_adb_rel key_k [(kx, y)] (p /. 2.0R) x v)
+  } else {
+    rewrite (asn1_adb_rel key_k [(kx, y)] p x v) as (pure False);
+    unreachable ()
+  }
+}
+
+ghost
+fn gather_adb_single (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (g: gather_t (asn1_items_rel (dsnd y)))
+: gather_t #(asn1_adb_suffix_impl_t key_k [(kx, y)] None) #(AL.ady key_k [(kx, y)]) (asn1_adb_rel key_k [(kx, y)])
+= (x: asn1_adb_suffix_impl_t key_k [(kx, y)] None) (#p: perm) (#v: AL.ady key_k [(kx, y)]) (#p': perm) (#v': AL.ady key_k [(kx, y)])
+{
+  adb_single_eq kx y p x v;
+  adb_single_eq kx y p' x v';
+  adb_single_eq kx y (p +. p') x v;
+  if (dfst v = key_of_lit key_k kx) {
+    if (dfst v' = key_of_lit key_k kx) {
+      rewrite (asn1_adb_rel key_k [(kx, y)] p x v ** asn1_adb_rel key_k [(kx, y)] p' x v')
+        as (asn1_items_rel (dsnd y) p x (AL.ady_head_val kx y [] v ()) ** asn1_items_rel (dsnd y) p' x (AL.ady_head_val kx y [] v' ()));
+      g x #p #(AL.ady_head_val kx y [] v ()) #p' #(AL.ady_head_val kx y [] v' ());
+      ady_head_inj kx y [] v v';
+      rewrite (asn1_items_rel (dsnd y) (p +. p') x (AL.ady_head_val kx y [] v ())) as (asn1_adb_rel key_k [(kx, y)] (p +. p') x v)
+    } else {
+      rewrite (asn1_adb_rel key_k [(kx, y)] p' x v') as (pure False);
+      unreachable ()
+    }
+  } else {
+    rewrite (asn1_adb_rel key_k [(kx, y)] p x v) as (pure False);
+    unreachable ()
+  }
+}
+
+ghost
+fn share_adb_cons (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (sh: share_t (asn1_items_rel (dsnd y))) (sht: share_t (asn1_adb_rel key_k (hd2 :: tl2)))
+: share_t #(asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) None) #(AL.ady key_k ((kx, y) :: hd2 :: tl2)) (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2))
+= (x: asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) None) (#p: perm) (#v: AL.ady key_k ((kx, y) :: hd2 :: tl2))
+{
+  let x' : either (asn1_items_impl_t (Mkdtuple2?._2 y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) = x;
+  match x' {
+    Inl a -> {
+      adb_cons_inl_eq kx y hd2 tl2 p a v;
+      adb_cons_inl_eq kx y hd2 tl2 (p /. 2.0R) a v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v) as (asn1_items_rel (dsnd y) p a (AL.ady_head_val kx y (hd2 :: tl2) v ()));
+        sh a #p #(AL.ady_head_val kx y (hd2 :: tl2) v ());
+        rewrite (asn1_items_rel (dsnd y) (p /. 2.0R) a (AL.ady_head_val kx y (hd2 :: tl2) v ()) ** asn1_items_rel (dsnd y) (p /. 2.0R) a (AL.ady_head_val kx y (hd2 :: tl2) v ()))
+          as (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) (p /. 2.0R) x v ** asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) (p /. 2.0R) x v)
+      } else {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v) as (pure False);
+        unreachable ()
+      }
+    }
+    Inr b -> {
+      adb_cons_inr_eq kx y hd2 tl2 p b v;
+      adb_cons_inr_eq kx y hd2 tl2 (p /. 2.0R) b v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v) as (pure False);
+        unreachable ()
+      } else {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v) as (asn1_adb_rel key_k (hd2 :: tl2) p b (AL.ady_tail_val kx y (hd2 :: tl2) v ()));
+        sht b #p #(AL.ady_tail_val kx y (hd2 :: tl2) v ());
+        rewrite (asn1_adb_rel key_k (hd2 :: tl2) (p /. 2.0R) b (AL.ady_tail_val kx y (hd2 :: tl2) v ()) ** asn1_adb_rel key_k (hd2 :: tl2) (p /. 2.0R) b (AL.ady_tail_val kx y (hd2 :: tl2) v ()))
+          as (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) (p /. 2.0R) x v ** asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) (p /. 2.0R) x v)
+      }
+    }
+  }
+}
+
+ghost
+fn gather_adb_cons (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (g: gather_t (asn1_items_rel (dsnd y))) (gt: gather_t (asn1_adb_rel key_k (hd2 :: tl2)))
+: gather_t #(asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) None) #(AL.ady key_k ((kx, y) :: hd2 :: tl2)) (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2))
+= (x: asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) None) (#p: perm) (#v: AL.ady key_k ((kx, y) :: hd2 :: tl2)) (#p': perm) (#v': AL.ady key_k ((kx, y) :: hd2 :: tl2))
+{
+  let x' : either (asn1_items_impl_t (Mkdtuple2?._2 y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None) = x;
+  match x' {
+    Inl a -> {
+      adb_cons_inl_eq kx y hd2 tl2 p a v;
+      adb_cons_inl_eq kx y hd2 tl2 p' a v';
+      adb_cons_inl_eq kx y hd2 tl2 (p +. p') a v;
+      if (dfst v = key_of_lit key_k kx) {
+        if (dfst v' = key_of_lit key_k kx) {
+          rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v ** asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p' x v')
+            as (asn1_items_rel (dsnd y) p a (AL.ady_head_val kx y (hd2 :: tl2) v ()) ** asn1_items_rel (dsnd y) p' a (AL.ady_head_val kx y (hd2 :: tl2) v' ()));
+          g a #p #(AL.ady_head_val kx y (hd2 :: tl2) v ()) #p' #(AL.ady_head_val kx y (hd2 :: tl2) v' ());
+          ady_head_inj kx y (hd2 :: tl2) v v';
+          rewrite (asn1_items_rel (dsnd y) (p +. p') a (AL.ady_head_val kx y (hd2 :: tl2) v ())) as (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) (p +. p') x v)
+        } else {
+          rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p' x v') as (pure False);
+          unreachable ()
+        }
+      } else {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v) as (pure False);
+        unreachable ()
+      }
+    }
+    Inr b -> {
+      adb_cons_inr_eq kx y hd2 tl2 p b v;
+      adb_cons_inr_eq kx y hd2 tl2 p' b v';
+      adb_cons_inr_eq kx y hd2 tl2 (p +. p') b v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v) as (pure False);
+        unreachable ()
+      } else if (dfst v' = key_of_lit key_k kx) {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p' x v') as (pure False);
+        unreachable ()
+      } else {
+        rewrite (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p x v ** asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) p' x v')
+          as (asn1_adb_rel key_k (hd2 :: tl2) p b (AL.ady_tail_val kx y (hd2 :: tl2) v ()) ** asn1_adb_rel key_k (hd2 :: tl2) p' b (AL.ady_tail_val kx y (hd2 :: tl2) v' ()));
+        gt b #p #(AL.ady_tail_val kx y (hd2 :: tl2) v ()) #p' #(AL.ady_tail_val kx y (hd2 :: tl2) v' ());
+        ady_tail_inj kx y (hd2 :: tl2) v v';
+        rewrite (asn1_adb_rel key_k (hd2 :: tl2) (p +. p') b (AL.ady_tail_val kx y (hd2 :: tl2) v ())) as (asn1_adb_rel key_k ((kx, y) :: hd2 :: tl2) (p +. p') x v)
+      }
+    }
+  }
+}
+
+(* With a fallback *)
+
+let fbr_eq (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (pm: perm) (z: PA.fbt key_k fb) (key: asn1_terminal_t key_k) (v: PA.fbs fb)
+: Lemma (PA.fbr key_k fb pm z key v == (asn1_terminal_rel key_k pm (fst z) key ** asn1_items_rel (dsnd fb) pm (snd z) v))
+= ()
+
+ghost
+fn share_fbr (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (shk: share_t (asn1_terminal_rel key_k)) (shi: share_t (asn1_items_rel (dsnd fb)))
+  (z: PA.fbt key_k fb) (#p: perm) (#key: asn1_terminal_t key_k) (#v: PA.fbs fb)
+requires PA.fbr key_k fb p z key v
+ensures PA.fbr key_k fb (p /. 2.0R) z key v ** PA.fbr key_k fb (p /. 2.0R) z key v
+{
+  fbr_eq key_k fb p z key v;
+  fbr_eq key_k fb (p /. 2.0R) z key v;
+  rewrite (PA.fbr key_k fb p z key v) as (asn1_terminal_rel key_k p (fst z) key ** asn1_items_rel (dsnd fb) p (snd z) v);
+  shk (fst z) #p #key;
+  shi (snd z) #p #v;
+  rewrite (asn1_terminal_rel key_k (p /. 2.0R) (fst z) key ** asn1_items_rel (dsnd fb) (p /. 2.0R) (snd z) v) as (PA.fbr key_k fb (p /. 2.0R) z key v);
+  rewrite (asn1_terminal_rel key_k (p /. 2.0R) (fst z) key ** asn1_items_rel (dsnd fb) (p /. 2.0R) (snd z) v) as (PA.fbr key_k fb (p /. 2.0R) z key v)
+}
+
+ghost
+fn gather_fbr (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (gk: gather_t (asn1_terminal_rel key_k)) (gi: gather_t (asn1_items_rel (dsnd fb)))
+  (z: PA.fbt key_k fb) (#p: perm) (#key: asn1_terminal_t key_k) (#v: PA.fbs fb) (#p': perm) (#key': asn1_terminal_t key_k) (#v': PA.fbs fb)
+requires PA.fbr key_k fb p z key v ** PA.fbr key_k fb p' z key' v'
+ensures PA.fbr key_k fb (p +. p') z key v ** pure (key == key' /\ v == v')
+{
+  fbr_eq key_k fb p z key v;
+  fbr_eq key_k fb p' z key' v';
+  fbr_eq key_k fb (p +. p') z key v;
+  rewrite (PA.fbr key_k fb p z key v) as (asn1_terminal_rel key_k p (fst z) key ** asn1_items_rel (dsnd fb) p (snd z) v);
+  rewrite (PA.fbr key_k fb p' z key' v') as (asn1_terminal_rel key_k p' (fst z) key' ** asn1_items_rel (dsnd fb) p' (snd z) v');
+  gk (fst z) #p #key #p' #key';
+  gi (snd z) #p #v #p' #v';
+  rewrite (asn1_terminal_rel key_k (p +. p') (fst z) key ** asn1_items_rel (dsnd fb) (p +. p') (snd z) v) as (PA.fbr key_k fb (p +. p') z key v)
+}
+
+let afb_nil_eq (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (pm: perm) (z: PA.fbt key_k fb) (v: AL.ady_fb key_k [] fb)
+: Lemma (PA.afb_rel key_k [] fb pm z v == PA.fbr key_k fb pm z (dfst v) (AL.ady_fb_nil_val fb v))
+= PA.afb_rel_nil_eq fb pm (fst z) (snd z) v
+
+let afb_single_inl_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
+  (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady_fb key_k [(kx, y)] fb)
+: Lemma (PA.afb_rel key_k [(kx, y)] fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(PA.fbt key_k fb) a) v ==
+    (if dfst v = key_of_lit key_k kx then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val kx y [] fb v ()) else pure False))
+= let (| key, w |) = v in
+  PA.afb_rel_single_inl_aux kx y fb pm a key w
+
+let afb_single_inr_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
+  (b: PA.fbt key_k fb) (v: AL.ady_fb key_k [(kx, y)] fb)
+: Lemma (PA.afb_rel key_k [(kx, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(PA.fbt key_k fb) b) v ==
+    (if dfst v = key_of_lit key_k kx then pure False else PA.fbr key_k fb pm b (dfst v) (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ()))))
+= let (| key, w |) = v in
+  PA.afb_rel_single_inr_aux kx y fb pm b key w
+
+let afb_cons_inl_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm)
+  (a: asn1_items_impl_t (Mkdtuple2?._2 y)) (v: AL.ady_fb key_k ((kx, y) :: hd2 :: tl2) fb)
+: Lemma (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm (Inl #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (PA.fbt key_k fb))) a) v ==
+    (if dfst v = key_of_lit key_k kx then asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()) else pure False))
+= let (| key, w |) = v in
+  PA.afb_rel_cons_inl_aux kx y hd2 tl2 fb pm a key w
+
+let afb_cons_inr_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm)
+  (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (PA.fbt key_k fb))) (v: AL.ady_fb key_k ((kx, y) :: hd2 :: tl2) fb)
+: Lemma (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (PA.fbt key_k fb))) b) v ==
+    (if dfst v = key_of_lit key_k kx then pure False else PA.afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ())))
+= let (| key, w |) = v in
+  PA.afb_rel_cons_inr_aux kx y hd2 tl2 fb pm b key w
+
+let ady_fb_nil_inj (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (v v': AL.ady_fb key_k [] fb)
+: Lemma (requires dfst v == dfst v' /\ AL.ady_fb_nil_val fb v == AL.ady_fb_nil_val fb v')
+  (ensures v == v')
+= ()
+
+let ady_fb_head_inj (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (v v': AL.ady_fb key_k ((kx, y) :: tl) fb)
+: Lemma (requires dfst v == key_of_lit key_k kx /\ dfst v' == key_of_lit key_k kx /\ AL.ady_fb_head_val kx y tl fb v () == AL.ady_fb_head_val kx y tl fb v' ())
+  (ensures v == v')
+= ()
+
+let ady_fb_tail_inj (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (v v': AL.ady_fb key_k ((kx, y) :: tl) fb)
+: Lemma (requires dfst v <> key_of_lit key_k kx /\ dfst v' <> key_of_lit key_k kx /\ AL.ady_fb_tail_val kx y tl fb v () == AL.ady_fb_tail_val kx y tl fb v' ())
+  (ensures v == v')
+= ()
+
+let ady_fb_single_inr_inj (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk)
+  (v v': AL.ady_fb key_k [(kx, y)] fb)
+: Lemma (requires dfst v <> key_of_lit key_k kx /\ dfst v' <> key_of_lit key_k kx /\ dfst v == dfst v' /\
+    AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ()) == AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v' ()))
+  (ensures v == v')
+= ()
+
+ghost
+fn share_afb_nil (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (shk: share_t (asn1_terminal_rel key_k)) (shi: share_t (asn1_items_rel (dsnd fb)))
+: share_t #(asn1_adb_suffix_impl_t key_k [] (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k [] fb) (PA.afb_rel key_k [] fb)
+= (x: asn1_adb_suffix_impl_t key_k [] (Some (PA.fbt key_k fb))) (#p: perm) (#v: AL.ady_fb key_k [] fb)
+{
+  let z : PA.fbt key_k fb = x;
+  afb_nil_eq fb p z v;
+  afb_nil_eq fb (p /. 2.0R) z v;
+  rewrite (PA.afb_rel key_k [] fb p x v) as (PA.fbr key_k fb p z (dfst v) (AL.ady_fb_nil_val fb v));
+  share_fbr key_k fb shk shi z;
+  rewrite (PA.fbr key_k fb (p /. 2.0R) z (dfst v) (AL.ady_fb_nil_val fb v) ** PA.fbr key_k fb (p /. 2.0R) z (dfst v) (AL.ady_fb_nil_val fb v))
+    as (PA.afb_rel key_k [] fb (p /. 2.0R) x v ** PA.afb_rel key_k [] fb (p /. 2.0R) x v)
+}
+
+ghost
+fn gather_afb_nil (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (gk: gather_t (asn1_terminal_rel key_k)) (gi: gather_t (asn1_items_rel (dsnd fb)))
+: gather_t #(asn1_adb_suffix_impl_t key_k [] (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k [] fb) (PA.afb_rel key_k [] fb)
+= (x: asn1_adb_suffix_impl_t key_k [] (Some (PA.fbt key_k fb))) (#p: perm) (#v: AL.ady_fb key_k [] fb) (#p': perm) (#v': AL.ady_fb key_k [] fb)
+{
+  let z : PA.fbt key_k fb = x;
+  afb_nil_eq fb p z v;
+  afb_nil_eq fb p' z v';
+  afb_nil_eq fb (p +. p') z v;
+  rewrite (PA.afb_rel key_k [] fb p x v ** PA.afb_rel key_k [] fb p' x v')
+    as (PA.fbr key_k fb p z (dfst v) (AL.ady_fb_nil_val fb v) ** PA.fbr key_k fb p' z (dfst v') (AL.ady_fb_nil_val fb v'));
+  gather_fbr key_k fb gk gi z #p #(dfst v) #(AL.ady_fb_nil_val fb v) #p' #(dfst v') #(AL.ady_fb_nil_val fb v');
+  ady_fb_nil_inj fb v v';
+  rewrite (PA.fbr key_k fb (p +. p') z (dfst v) (AL.ady_fb_nil_val fb v)) as (PA.afb_rel key_k [] fb (p +. p') x v)
+}
+
+ghost
+fn share_afb_single (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk)
+  (sh: share_t (asn1_items_rel (dsnd y))) (shk: share_t (asn1_terminal_rel key_k)) (shi: share_t (asn1_items_rel (dsnd fb)))
+: share_t #(asn1_adb_suffix_impl_t key_k [(kx, y)] (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k [(kx, y)] fb) (PA.afb_rel key_k [(kx, y)] fb)
+= (x: asn1_adb_suffix_impl_t key_k [(kx, y)] (Some (PA.fbt key_k fb))) (#p: perm) (#v: AL.ady_fb key_k [(kx, y)] fb)
+{
+  let x' : either (asn1_items_impl_t (Mkdtuple2?._2 y)) (PA.fbt key_k fb) = x;
+  match x' {
+    Inl a -> {
+      afb_single_inl_eq kx y fb p a v;
+      afb_single_inl_eq kx y fb (p /. 2.0R) a v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p x v) as (asn1_items_rel (dsnd y) p a (AL.ady_fb_head_val kx y [] fb v ()));
+        sh a #p #(AL.ady_fb_head_val kx y [] fb v ());
+        rewrite (asn1_items_rel (dsnd y) (p /. 2.0R) a (AL.ady_fb_head_val kx y [] fb v ()) ** asn1_items_rel (dsnd y) (p /. 2.0R) a (AL.ady_fb_head_val kx y [] fb v ()))
+          as (PA.afb_rel key_k [(kx, y)] fb (p /. 2.0R) x v ** PA.afb_rel key_k [(kx, y)] fb (p /. 2.0R) x v)
+      } else {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p x v) as (pure False);
+        unreachable ()
+      }
+    }
+    Inr b -> {
+      afb_single_inr_eq kx y fb p b v;
+      afb_single_inr_eq kx y fb (p /. 2.0R) b v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p x v) as (pure False);
+        unreachable ()
+      } else {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p x v) as (PA.fbr key_k fb p b (dfst v) (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ())));
+        share_fbr key_k fb shk shi b;
+        rewrite (PA.fbr key_k fb (p /. 2.0R) b (dfst v) (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ())) ** PA.fbr key_k fb (p /. 2.0R) b (dfst v) (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ())))
+          as (PA.afb_rel key_k [(kx, y)] fb (p /. 2.0R) x v ** PA.afb_rel key_k [(kx, y)] fb (p /. 2.0R) x v)
+      }
+    }
+  }
+}
+
+ghost
+fn gather_afb_single (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk)
+  (g: gather_t (asn1_items_rel (dsnd y))) (gk: gather_t (asn1_terminal_rel key_k)) (gi: gather_t (asn1_items_rel (dsnd fb)))
+: gather_t #(asn1_adb_suffix_impl_t key_k [(kx, y)] (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k [(kx, y)] fb) (PA.afb_rel key_k [(kx, y)] fb)
+= (x: asn1_adb_suffix_impl_t key_k [(kx, y)] (Some (PA.fbt key_k fb))) (#p: perm) (#v: AL.ady_fb key_k [(kx, y)] fb) (#p': perm) (#v': AL.ady_fb key_k [(kx, y)] fb)
+{
+  let x' : either (asn1_items_impl_t (Mkdtuple2?._2 y)) (PA.fbt key_k fb) = x;
+  match x' {
+    Inl a -> {
+      afb_single_inl_eq kx y fb p a v;
+      afb_single_inl_eq kx y fb p' a v';
+      afb_single_inl_eq kx y fb (p +. p') a v;
+      if (dfst v = key_of_lit key_k kx) {
+        if (dfst v' = key_of_lit key_k kx) {
+          rewrite (PA.afb_rel key_k [(kx, y)] fb p x v ** PA.afb_rel key_k [(kx, y)] fb p' x v')
+            as (asn1_items_rel (dsnd y) p a (AL.ady_fb_head_val kx y [] fb v ()) ** asn1_items_rel (dsnd y) p' a (AL.ady_fb_head_val kx y [] fb v' ()));
+          g a #p #(AL.ady_fb_head_val kx y [] fb v ()) #p' #(AL.ady_fb_head_val kx y [] fb v' ());
+          ady_fb_head_inj kx y [] fb v v';
+          rewrite (asn1_items_rel (dsnd y) (p +. p') a (AL.ady_fb_head_val kx y [] fb v ())) as (PA.afb_rel key_k [(kx, y)] fb (p +. p') x v)
+        } else {
+          rewrite (PA.afb_rel key_k [(kx, y)] fb p' x v') as (pure False);
+          unreachable ()
+        }
+      } else {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p x v) as (pure False);
+        unreachable ()
+      }
+    }
+    Inr b -> {
+      afb_single_inr_eq kx y fb p b v;
+      afb_single_inr_eq kx y fb p' b v';
+      afb_single_inr_eq kx y fb (p +. p') b v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p x v) as (pure False);
+        unreachable ()
+      } else if (dfst v' = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p' x v') as (pure False);
+        unreachable ()
+      } else {
+        rewrite (PA.afb_rel key_k [(kx, y)] fb p x v ** PA.afb_rel key_k [(kx, y)] fb p' x v')
+          as (PA.fbr key_k fb p b (dfst v) (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ())) ** PA.fbr key_k fb p' b (dfst v') (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v' ())));
+        gather_fbr key_k fb gk gi b #p #(dfst v) #(AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ())) #p' #(dfst v') #(AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v' ()));
+        ady_fb_single_inr_inj kx y fb v v';
+        rewrite (PA.fbr key_k fb (p +. p') b (dfst v) (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val kx y [] fb v ()))) as (PA.afb_rel key_k [(kx, y)] fb (p +. p') x v)
+      }
+    }
+  }
+}
+
+#push-options "--z3rlimit 64"
+ghost
+fn share_afb_cons (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (sh: share_t (asn1_items_rel (dsnd y))) (sht: share_t (PA.afb_rel key_k (hd2 :: tl2) fb))
+: share_t #(asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k ((kx, y) :: hd2 :: tl2) fb) (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb)
+= (x: asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) (Some (PA.fbt key_k fb))) (#p: perm) (#v: AL.ady_fb key_k ((kx, y) :: hd2 :: tl2) fb)
+{
+  let x' : either (asn1_items_impl_t (Mkdtuple2?._2 y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (PA.fbt key_k fb))) = x;
+  match x' {
+    Inl a -> {
+      afb_cons_inl_eq kx y hd2 tl2 fb p a v;
+      afb_cons_inl_eq kx y hd2 tl2 fb (p /. 2.0R) a v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v) as (asn1_items_rel (dsnd y) p a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()));
+        sh a #p #(AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ());
+        rewrite (asn1_items_rel (dsnd y) (p /. 2.0R) a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()) ** asn1_items_rel (dsnd y) (p /. 2.0R) a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()))
+          as (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb (p /. 2.0R) x v ** PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb (p /. 2.0R) x v)
+      } else {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v) as (pure False);
+        unreachable ()
+      }
+    }
+    Inr b -> {
+      afb_cons_inr_eq kx y hd2 tl2 fb p b v;
+      afb_cons_inr_eq kx y hd2 tl2 fb (p /. 2.0R) b v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v) as (pure False);
+        unreachable ()
+      } else {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v) as (PA.afb_rel key_k (hd2 :: tl2) fb p b (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()));
+        sht b #p #(AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ());
+        rewrite (PA.afb_rel key_k (hd2 :: tl2) fb (p /. 2.0R) b (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()) ** PA.afb_rel key_k (hd2 :: tl2) fb (p /. 2.0R) b (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()))
+          as (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb (p /. 2.0R) x v ** PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb (p /. 2.0R) x v)
+      }
+    }
+  }
+}
+
+ghost
+fn gather_afb_cons (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (g: gather_t (asn1_items_rel (dsnd y))) (gt: gather_t (PA.afb_rel key_k (hd2 :: tl2) fb))
+: gather_t #(asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k ((kx, y) :: hd2 :: tl2) fb) (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb)
+= (x: asn1_adb_suffix_impl_t key_k ((kx, y) :: hd2 :: tl2) (Some (PA.fbt key_k fb))) (#p: perm) (#v: AL.ady_fb key_k ((kx, y) :: hd2 :: tl2) fb) (#p': perm) (#v': AL.ady_fb key_k ((kx, y) :: hd2 :: tl2) fb)
+{
+  let x' : either (asn1_items_impl_t (Mkdtuple2?._2 y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (PA.fbt key_k fb))) = x;
+  match x' {
+    Inl a -> {
+      afb_cons_inl_eq kx y hd2 tl2 fb p a v;
+      afb_cons_inl_eq kx y hd2 tl2 fb p' a v';
+      afb_cons_inl_eq kx y hd2 tl2 fb (p +. p') a v;
+      if (dfst v = key_of_lit key_k kx) {
+        if (dfst v' = key_of_lit key_k kx) {
+          rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v ** PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p' x v')
+            as (asn1_items_rel (dsnd y) p a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()) ** asn1_items_rel (dsnd y) p' a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v' ()));
+          g a #p #(AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()) #p' #(AL.ady_fb_head_val kx y (hd2 :: tl2) fb v' ());
+          ady_fb_head_inj kx y (hd2 :: tl2) fb v v';
+          rewrite (asn1_items_rel (dsnd y) (p +. p') a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ())) as (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb (p +. p') x v)
+        } else {
+          rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p' x v') as (pure False);
+          unreachable ()
+        }
+      } else {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v) as (pure False);
+        unreachable ()
+      }
+    }
+    Inr b -> {
+      afb_cons_inr_eq kx y hd2 tl2 fb p b v;
+      afb_cons_inr_eq kx y hd2 tl2 fb p' b v';
+      afb_cons_inr_eq kx y hd2 tl2 fb (p +. p') b v;
+      if (dfst v = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v) as (pure False);
+        unreachable ()
+      } else if (dfst v' = key_of_lit key_k kx) {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p' x v') as (pure False);
+        unreachable ()
+      } else {
+        rewrite (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p x v ** PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb p' x v')
+          as (PA.afb_rel key_k (hd2 :: tl2) fb p b (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()) ** PA.afb_rel key_k (hd2 :: tl2) fb p' b (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v' ()));
+        gt b #p #(AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()) #p' #(AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v' ());
+        ady_fb_tail_inj kx y (hd2 :: tl2) fb v v';
+        rewrite (PA.afb_rel key_k (hd2 :: tl2) fb (p +. p') b (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ())) as (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb (p +. p') x v)
+      }
+    }
+  }
+}
+#pop-options
+
 (* The shares of a whole schema *)
 
 let rec share_content (k: asn1_content_k) (u: squash (wsupported_content k))
@@ -948,6 +1482,47 @@ let rec share_content (k: asn1_content_k) (u: squash (wsupported_content k))
     share_ext (asn1_items_rel items) (asn1_content_rel (ASN1_SET ids items pf)) () (share_items items ())
   | ASN1_SEQUENCE_OF ne k' -> share_seq_of ne k' (share_k k' ())
   | ASN1_SET_OF ne k' -> share_set_of ne k' (share_k k' ())
+  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
+    begin match ofb with
+    | None ->
+      adb_none_equiv ipd prefix kid key_k ls pf pf';
+      share_ext (asn1_items_any_rel prefix (asn1_adb_rel key_k ls)) (asn1_content_rel (PA.adb_k_none ipd prefix kid key_k ls pf pf')) ()
+        (share_items_any prefix () (asn1_adb_rel key_k ls) (share_adb key_k ls ()))
+    | Some fb ->
+      adb_some_equiv ipd prefix kid key_k ls fb pf pf';
+      share_ext (asn1_items_any_rel prefix (PA.afb_rel key_k ls fb)) (asn1_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) ()
+        (share_items_any prefix () (PA.afb_rel key_k ls fb) (share_afb key_k ls () fb (share_terminal key_k) (share_items (dsnd fb) ())))
+    end
+
+and share_adb (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u: squash (wsupported_ls ls))
+: Tot (share_t (asn1_adb_rel key_k ls)) (decreases ls)
+= match ls with
+  | [] -> share_adb_nil key_k
+  | [(kx, y)] -> share_adb_single kx y (share_items (dsnd y) ())
+  | (kx, y) :: hd2 :: tl2 -> share_adb_cons kx y hd2 tl2 (share_items (dsnd y) ()) (share_adb key_k (hd2 :: tl2) ())
+
+and share_afb (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u: squash (wsupported_ls ls)) (fb: asn1_gen_items_lk)
+  (xk: share_t (asn1_terminal_rel key_k)) (xi: share_t (asn1_items_rel (dsnd fb)))
+: Tot (share_t (PA.afb_rel key_k ls fb)) (decreases ls)
+= match ls with
+  | [] -> share_afb_nil key_k fb xk xi
+  | [(kx, y)] -> share_afb_single kx y fb (share_items (dsnd y) ()) xk xi
+  | (kx, y) :: hd2 :: tl2 -> share_afb_cons kx y hd2 tl2 fb (share_items (dsnd y) ()) (share_afb key_k (hd2 :: tl2) () fb xk xi)
+
+and share_items_any (#i: _) (ls: asn1_gen_items_l i) (u: squash (wsupported_items ls)) (#sfxi: Type0) (#sfxs: Type0) (sfxr: prel sfxi sfxs) (xs: share_t sfxr)
+: Tot (share_t (asn1_items_any_rel ls sfxr)) (decreases ls)
+= match ls with
+  | ASN1_GEN_ITEMS_NIL ->
+    items_any_nil_equiv sfxr;
+    share_ext sfxr (asn1_items_any_rel ASN1_GEN_ITEMS_NIL sfxr) () xs
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
+    items_any_single_equiv dk sfxr;
+    share_ext (prel_pair (asn1_decorated_rel dk) sfxr) (asn1_items_any_rel (PS.single dk) sfxr) ()
+      (share_pair (asn1_decorated_rel dk) sfxr (share_dec dk ()) xs)
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
+    items_any_cons_equiv dk dk2 tl2 sfxr;
+    share_ext (prel_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr)) (asn1_items_any_rel (PS.cons2 dk dk2 tl2) sfxr) ()
+      (share_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr) (share_dec dk ()) (share_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () sfxr xs))
 
 and share_lc (lc: list (asn1_id_t & asn1_content_k)) (u: squash (wsupported_lc lc))
 : Tot (share_t (asn1_lc_rel lc)) (decreases lc)
@@ -1019,6 +1594,47 @@ let rec gather_content (k: asn1_content_k) (u: squash (wsupported_content k))
     gather_ext (asn1_items_rel items) (asn1_content_rel (ASN1_SET ids items pf)) () (gather_items items ())
   | ASN1_SEQUENCE_OF ne k' -> gather_seq_of ne k' (gather_k k' ())
   | ASN1_SET_OF ne k' -> gather_set_of ne k' (gather_k k' ())
+  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
+    begin match ofb with
+    | None ->
+      adb_none_equiv ipd prefix kid key_k ls pf pf';
+      gather_ext (asn1_items_any_rel prefix (asn1_adb_rel key_k ls)) (asn1_content_rel (PA.adb_k_none ipd prefix kid key_k ls pf pf')) ()
+        (gather_items_any prefix () (asn1_adb_rel key_k ls) (gather_adb key_k ls ()))
+    | Some fb ->
+      adb_some_equiv ipd prefix kid key_k ls fb pf pf';
+      gather_ext (asn1_items_any_rel prefix (PA.afb_rel key_k ls fb)) (asn1_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) ()
+        (gather_items_any prefix () (PA.afb_rel key_k ls fb) (gather_afb key_k ls () fb (gather_terminal key_k) (gather_items (dsnd fb) ())))
+    end
+
+and gather_adb (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u: squash (wsupported_ls ls))
+: Tot (gather_t (asn1_adb_rel key_k ls)) (decreases ls)
+= match ls with
+  | [] -> gather_adb_nil key_k
+  | [(kx, y)] -> gather_adb_single kx y (gather_items (dsnd y) ())
+  | (kx, y) :: hd2 :: tl2 -> gather_adb_cons kx y hd2 tl2 (gather_items (dsnd y) ()) (gather_adb key_k (hd2 :: tl2) ())
+
+and gather_afb (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u: squash (wsupported_ls ls)) (fb: asn1_gen_items_lk)
+  (xk: gather_t (asn1_terminal_rel key_k)) (xi: gather_t (asn1_items_rel (dsnd fb)))
+: Tot (gather_t (PA.afb_rel key_k ls fb)) (decreases ls)
+= match ls with
+  | [] -> gather_afb_nil key_k fb xk xi
+  | [(kx, y)] -> gather_afb_single kx y fb (gather_items (dsnd y) ()) xk xi
+  | (kx, y) :: hd2 :: tl2 -> gather_afb_cons kx y hd2 tl2 fb (gather_items (dsnd y) ()) (gather_afb key_k (hd2 :: tl2) () fb xk xi)
+
+and gather_items_any (#i: _) (ls: asn1_gen_items_l i) (u: squash (wsupported_items ls)) (#sfxi: Type0) (#sfxs: Type0) (sfxr: prel sfxi sfxs) (xs: gather_t sfxr)
+: Tot (gather_t (asn1_items_any_rel ls sfxr)) (decreases ls)
+= match ls with
+  | ASN1_GEN_ITEMS_NIL ->
+    items_any_nil_equiv sfxr;
+    gather_ext sfxr (asn1_items_any_rel ASN1_GEN_ITEMS_NIL sfxr) () xs
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
+    items_any_single_equiv dk sfxr;
+    gather_ext (prel_pair (asn1_decorated_rel dk) sfxr) (asn1_items_any_rel (PS.single dk) sfxr) ()
+      (gather_pair (asn1_decorated_rel dk) sfxr (gather_dec dk ()) xs)
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
+    items_any_cons_equiv dk dk2 tl2 sfxr;
+    gather_ext (prel_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr)) (asn1_items_any_rel (PS.cons2 dk dk2 tl2) sfxr) ()
+      (gather_pair (asn1_decorated_rel dk) (asn1_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxr) (gather_dec dk ()) (gather_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () sfxr xs))
 
 and gather_lc (lc: list (asn1_id_t & asn1_content_k)) (u: squash (wsupported_lc lc))
 : Tot (gather_t (asn1_lc_rel lc)) (decreases lc)
