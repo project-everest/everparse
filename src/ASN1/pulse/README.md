@@ -118,8 +118,12 @@ holding fractional permission `pm` on the input bytes it borrows.
   OF elements are kept). The insertion is total (a malformed frame just
   stops the scan) and sortedness is never proven: the final validation
   checks it. What remains a precondition: `Serialized` chunks of
-  SEQUENCE OF / SET OF must be a sequence of TLVs (`p_raw`). ANY DEFINED
-  BY has no raw representation.
+  SEQUENCE OF / SET OF must be a sequence of TLVs (`p_raw`). For ANY
+  DEFINED BY, the raw relation is the choice, in order, of each key
+  literal (written as a constant TLV, `WriteAdb.raw_key_enc`, with no
+  precondition on the key kind) followed by its payload, then of the
+  fallback; whether the chosen alternative actually matches its key is
+  left to the validation.
 
 * **Just-in-time checked raw writers** (`ASN1.Pulse.JitWriter`,
   `check_write_jit_k`): same input, same `cw_post`, but the checks are
@@ -148,9 +152,10 @@ holding fractional permission `pm` on the input bytes it borrows.
   restrictions, disequality with the DEFAULT value), without scratch
   buffers or allocation; their TLV is then correct by construction. ANY
   values are likewise validated on the input slice before being copied.
-  Only DEFAULT components of PREFIXED type are still validated locally,
-  right after being written, within their own bounds (so, still in the
-  cache). Each byte is
+  Only DEFAULT components of PREFIXED type and the contents of ANY
+  DEFINED BY TLVs (key, payload and prefix items alike) are still
+  validated locally, right after being written, within their own bounds
+  (so, still in the cache). Each byte is
   validated at most once. If the JIT writer gives up (invalid value, or
   not enough space), `check_write_jit_k` falls back to `check_write_raw_k`
   to tell `CW_INVALID` from `CW_NO_SPACE`, so the fallback only costs on
@@ -164,8 +169,9 @@ extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
 (`test/checked_write_test.c`). `make test-raw-write` runs the checked
 raw writers extracted from `ASN1.Pulse.RawWriteTest` on values built in C,
 including invalid strings, BIT STRING padding, non-minimal INTEGERs, bad
-ANY slices, unsorted SET OF elements and a SET declared in non-canonical
-order (`test/raw_write_test.c`); each case is also run on the JIT
+ANY slices, unsorted SET OF elements, a SET declared in non-canonical
+order, and ANY DEFINED BY values (known keys in the fallback, bad
+payloads) (`test/raw_write_test.c`); each case is also run on the JIT
 variants, checking that the JIT writer alone succeeds exactly on valid
 values.
 

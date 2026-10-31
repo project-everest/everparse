@@ -32,9 +32,9 @@ module ASN1.Pulse.JitWriter
      disequality with the DEFAULT value; their TLV is then correct by
      construction. No scratch buffer is used;
    - ANY values are validated on the input slice, before being copied;
-   - DEFAULT components of PREFIXED type are validated locally, right
-     after being written, within their own bounds. (ANY DEFINED BY is
-     not supported by the raw writers.)
+   - DEFAULT components of PREFIXED type, and the contents of ANY
+     DEFINED BY TLVs, are validated locally, right after being written,
+     within their own bounds.
 
    So each byte is validated at most once, while it is still in the cache.
    If a check fails, or if the output buffer is too small, the JIT writer
@@ -1008,11 +1008,36 @@ let rec jit_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k:
     jit_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k' r)) ()
       (cacc id (ASN1_RESTRICTED_TERMINAL k' r)) (cacc id k) (fun _ -> ()) pm
       (jit_restricted_tlv id k' r () pm)
-  | ASN1_ANY_DEFINED_BY idp prefix aid key_k ls ofb pf_wf pf_sup ->
-    (* not supported by the raw writers *)
-    content_adb_equiv id idp prefix aid key_k ls ofb pf_wf pf_sup;
-    jit_ext (raw_false _) (raw_content_rel id k) () (cacc id k) (cacc id k) (fun _ -> ()) pm
-      (jit_false _ (cacc id k) pm))
+  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
+    (* written raw, then its content validated locally, once *)
+    begin match ofb with
+    | None ->
+      content_adb_none_equiv id ipd prefix kid key_k ls pf pf';
+      jit_ext (raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls))) (raw_content_rel id k) ()
+        (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser k))) (cacc id k) (fun _ -> ()) pm
+        (jit_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)) (asn1_content_as_parser k) pm
+          (jit_local (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)) pm
+            (fun x' #x out pos #v #p ->
+              RW.raw_write_items_any prefix (raw_adb_rel kid key_k ls) pm
+                (fun x' #x out pos #v #p -> RW.raw_write_adb kid key_k ls pm x' #x out pos #v #p)
+                x' #x out pos #v #p)
+            (In.validate_content k u)))
+    | Some fb ->
+      content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf';
+      jit_ext (raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb))) (raw_content_rel id k) ()
+        (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser k))) (cacc id k) (fun _ -> ()) pm
+        (jit_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)) (asn1_content_as_parser k) pm
+          (jit_local (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)) pm
+            (fun x' #x out pos #v #p ->
+              RW.raw_write_items_any prefix (raw_afb_rel kid key_k ls fb) pm
+                (fun x' #x out pos #v #p -> RW.raw_write_afb kid key_k ls fb pm
+                  (RW.raw_write_cat (raw_terminal_rel kid key_k) (raw_items_rel false (dsnd fb)) pm
+                    (fun x' #x out pos #v #p -> RW.raw_write_terminal kid key_k pm x' #x out pos #v #p)
+                    (fun x' #x out pos #v #p -> RW.raw_write_items false (dsnd fb) pm x' #x out pos #v #p))
+                  x' #x out pos #v #p)
+                x' #x out pos #v #p)
+            (In.validate_content k u)))
+    end)
   in vf x' #x out pos #v #p
 
 and jit_write_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (In.supported_items ls)) (pm: perm)

@@ -233,6 +233,50 @@ let rec cw_key (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn1_
   | _ -> cw_key_leaf kid key_k () x)
   in vf x' #xx out pos #v #p
 
+(* Raw key literals: the TLV of a key literal, with no requirement on the
+   key schema (used by the raw writers, whose output is validated
+   afterwards). This coincides with `key_enc` for well-formed, supported
+   keys *)
+
+let raw_key_list (k: asn1_terminal_k { ~ (ASN1_OID? k) /\ ~ (ASN1_RELATIVE_OID? k) /\ ~ (ASN1_PREFIXED_TERMINAL? k) }) (x: asn1_key_lit k) : Tot (list U8.t) =
+  match k with
+  | ASN1_BOOLEAN -> let x : bool = x in [if x then 0xFFuy else 0x00uy]
+  | ASN1_NULL -> []
+  | ASN1_INTEGER bound -> let x : asn1_int_lit bound = x in (x <: list U8.t)
+  | ASN1_BITSTRING -> let x : asn1_bitstring_lit = x in fst x :: snd x
+  | ASN1_PRINTABLESTRING -> let x : asn1_printablestring_t = x in In.char_list_bytes x
+  | ASN1_IA5STRING -> let x : asn1_ia5string_t = x in In.char_list_bytes x
+  | ASN1_VISIBLESTRING -> let x : asn1_visiblestring_t = x in In.char_list_bytes x
+  | ASN1_NUMERICSTRING -> let x : asn1_numericstring_t = x in In.char_list_bytes x
+  | _ -> let x : list U8.t = x in x
+
+let rec raw_key_enc (kid: asn1_id_t) (key_k: asn1_terminal_k) (x: asn1_key_lit key_k) : Tot SB.bytes (decreases key_k) =
+  match key_k with
+  | ASN1_PREFIXED_TERMINAL id2 k2 -> enc_tlv kid true (raw_key_enc id2 k2 (In.prefixed_lit id2 k2 x))
+  | ASN1_OID -> let x' : asn1_oid_t = x in enc_tlv kid true (CE.list_enc CE.enc_arc (In.oid_enc x'))
+  | ASN1_RELATIVE_OID -> let x' : asn1_relative_oid_t = x in enc_tlv kid true (CE.list_enc CE.enc_arc x')
+  | _ -> enc_tlv kid true (Seq.seq_of_list (raw_key_list key_k x))
+
+[@@In.asn1_pulse_attr]
+let rec cw_raw_key (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k)
+  ([@@@FStar.Attributes.monomorphize] x: asn1_key_lit key_k)
+  (x': unit) (#xx: Ghost.erased unit) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+: Tot (WL.wres (prel_emp unit unit 1.0R) (const_enc (raw_key_enc kid key_k x)) x' xx out pos v p)
+  (decreases key_k)
+= [@inline_let] let vf : cwriter (raw_key_enc kid key_k x) =
+  (match key_k with
+  | ASN1_PREFIXED_TERMINAL id2 k2 ->
+    cw_ext (cw_tlv kid (fun x' #xx out pos #v #p -> cw_raw_key id2 k2 (In.prefixed_lit id2 k2 x) x' #xx out pos #v #p)) (raw_key_enc kid key_k x) ()
+  | ASN1_OID ->
+    [@inline_let] let x' : asn1_oid_t = x in
+    cw_ext (cw_tlv kid (fun x0 #xx out pos #v #p -> cw_arcs (In.oid_enc x') x0 #xx out pos #v #p)) (raw_key_enc kid key_k x) ()
+  | ASN1_RELATIVE_OID ->
+    [@inline_let] let x' : asn1_relative_oid_t = x in
+    cw_ext (cw_tlv kid (fun x0 #xx out pos #v #p -> cw_arcs x' x0 #xx out pos #v #p)) (raw_key_enc kid key_k x) ()
+  | _ ->
+    cw_ext (cw_tlv kid (fun x0 #xx out pos #v #p -> cw_bytes (raw_key_list key_k x) x0 #xx out pos #v #p)) (raw_key_enc kid key_k x) ())
+  in vf x' #xx out pos #v #p
+
 (* Writing a payload, then a constant (the TLV of the key literal selecting
    it) to its left *)
 

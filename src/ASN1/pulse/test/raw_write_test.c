@@ -180,6 +180,31 @@ static setCAB_t setCAB(Pulse_Lib_Slice_slice__uint8 c, oint a, oint b) {
   return (setCAB_t){ ._1 = c, ._2 = { ._1 = a, ._2 = b } };
 }
 
+typedef FStar_Pervasives_Native_tuple2__asn1_int_impl_either_unit_asn1_int_impl adbP_t;
+typedef FStar_Pervasives_either__unit_either_asn1_int_impl_tuple2_slice_uint8_opt adbF_t;
+typedef FStar_Pervasives_either__unit_asn1_int_impl adbT_t;
+
+/* ANY DEFINED BY: first key -> NULL, second key -> INTEGER, else fallback */
+static adbP_t adbP_null(int64_t v) {
+  return (adbP_t){ ._1 = SMALL(v), ._2 = { .tag = FSTAR_PERVASIVES_INL__UNIT_ASN1_INT_IMPL } };
+}
+static adbP_t adbP_int(int64_t v, int64_t p) {
+  return (adbP_t){ ._1 = SMALL(v), ._2 = { .tag = FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL, .val = { .Inr = SMALL(p) } } };
+}
+static adbF_t adbF_null(void) {
+  return (adbF_t){ .tag = FSTAR_PERVASIVES_INL__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT };
+}
+static adbF_t adbF_int(int64_t p) {
+  return (adbF_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT, .val = { .Inr = {
+    .tag = FSTAR_PERVASIVES_INL__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI, .val = { .Inl = SMALL(p) } } } };
+}
+static adbF_t adbF_fb(Pulse_Lib_Slice_slice__uint8 key, osl any) {
+  return (adbF_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_EITHER_ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPT, .val = { .Inr = {
+    .tag = FSTAR_PERVASIVES_INR__ASN1_INT_IMPL_TUPLE2_SLICE_UINT8_OPTION_SLICE_UI, .val = { .Inr = { ._1 = key, ._2 = any } } } } };
+}
+static adbT_t adbT_null(void) { return (adbT_t){ .tag = FSTAR_PERVASIVES_INL__UNIT_ASN1_INT_IMPL }; }
+static adbT_t adbT_int(int64_t p) { return (adbT_t){ .tag = FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL, .val = { .Inr = SMALL(p) } }; }
+
 int main(void) {
   uint8_t ab[] = { 'a', 'b' }, ac[] = { 'a', 'c' }, abcd[] = { 0xab, 0xcd }, abce[] = { 0xab, 0xce };
   uint8_t hi[] = { 'h', 'i' }, hi80[] = { 'h', 0x80 }, hat[] = { 'h', '@' };
@@ -278,5 +303,41 @@ int main(void) {
   INVALID(mix, mix(SL(hi), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, SOME_B(false))); /* b = default */
 
   printf(fails ? "FAIL\n" : "OK\n");
+
+  /* ANY DEFINED BY, OBJECT IDENTIFIER keys after an INTEGER prefix:
+     1.2.3 -> NULL, 1.2.4 -> INTEGER. The key literal is written as a
+     constant, then the content of the TLV is validated locally. */
+  OK(adbP, adbP_null(5), V(0x30, 0x09, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00));
+  OK(adbP, adbP_int(5, 7), V(0x30, 0x0a, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
+  OK(adbP, adbP_int(-1, 300), V(0x30, 0x0b, 0x02, 0x01, 0xff, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x02, 0x01, 0x2c));
+
+  /* ... with a fallback key (OID content bytes) and an OPTIONAL ANY */
+  {
+    uint8_t k125[] = { 0x2a, 0x05 };
+    uint8_t k123[] = { 0x2a, 0x03 };
+    uint8_t kbad[] = { 0x80, 0x01 };   /* non-minimal subidentifier */
+    uint8_t any_ok[] = { 0x01, 0x01, 0xff };
+    uint8_t any_bad[] = { 0x01, 0x02, 0xff };
+    OK(adbF, adbF_null(), V(0x30, 0x06, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00));
+    OK(adbF, adbF_int(7), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
+    OK(adbF, adbF_fb(SL(k125), NONE_SL), V(0x30, 0x04, 0x06, 0x02, 0x2a, 0x05));
+    OK(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_ok))), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x05, 0x01, 0x01, 0xff));
+    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback */
+    INVALID(adbF, adbF_fb(SL(kbad), NONE_SL));          /* not a DER OID */
+    INVALID(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_bad)))); /* not a TLV */
+  }
+
+  /* PREFIXED INTEGER keys: [0] 1 -> NULL, [0] -1 -> INTEGER */
+  OK(adbT, adbT_null(), V(0x30, 0x07, 0xa0, 0x03, 0x02, 0x01, 0x01, 0x05, 0x00));
+  OK(adbT, adbT_int(7), V(0x30, 0x08, 0xa0, 0x03, 0x02, 0x01, 0xff, 0x02, 0x01, 0x07));
+  {
+    /* a non-minimal INTEGER payload, caught by the local validation */
+    uint8_t nonmin[] = { 0x00, 0x07 };
+    adbT_t x = { .tag = FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL, .val = { .Inr = BIG(SL(nonmin)) } };
+    INVALID(adbT, x);
+    INVALID(adbP, ((adbP_t){ ._1 = SMALL(5), ._2 = x }));
+    INVALID(adbP, ((adbP_t){ ._1 = BIG(SL(nonmin)), ._2 = adbP_null(5)._2 }));  /* in the prefix */
+  }
+
   return fails;
 }
