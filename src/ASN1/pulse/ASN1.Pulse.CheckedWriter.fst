@@ -54,11 +54,15 @@ let relaxed_rel (#s: _) (k: asn1_k s) (u: squash (checked_ok k)) (pm: perm) (x: 
 let conforming (#s: _) (k: asn1_k s) (enc: SB.bytes) : prop =
   exists (x: asn1_t k) . Ser.encodable k x /\ Ser.asn1_enc k x == enc
 
+(* CW_OK iff `enc` fits and conforms; otherwise CW_NO_SPACE only if `enc`
+   does not fit, and CW_INVALID only if `enc` does not conform. If `enc`
+   neither fits nor conforms, either one may be returned. *)
 let cw_post (#s: _) (k: asn1_k s) (enc: SB.bytes) (p: nat) (v: SB.bytes) (res: cw_result) (p': nat) (v': SB.bytes) : prop =
   Seq.length v' == Seq.length v /\
   p <= Seq.length v /\
   Seq.slice v' p (Seq.length v) == Seq.slice v p (Seq.length v) /\
-  (res == CW_NO_SPACE <==> Seq.length enc > p) /\
+  (res == CW_NO_SPACE ==> Seq.length enc > p) /\
+  (res == CW_INVALID ==> ~ (conforming k enc)) /\
   (res == CW_OK <==> (Seq.length enc <= p /\ conforming k enc)) /\
   (res == CW_OK ==> (p' + Seq.length enc == p /\ Seq.slice v' p' p == enc))
 

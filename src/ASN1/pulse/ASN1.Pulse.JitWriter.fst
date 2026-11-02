@@ -43,9 +43,10 @@ module ASN1.Pulse.JitWriter
      after being written, within their own bounds.
 
    So each byte is validated at most once, while it is still in the cache.
-   If a check fails, or if the output buffer is too small, the JIT writer
-   gives up, and `check_write_jit_k` falls back to `check_write_raw_k` to
-   distinguish CW_INVALID from CW_NO_SPACE. *)
+   The JIT writer returns JIT_OK, JIT_NO_SPACE (the encoding does not
+   fit), JIT_INVALID (the value is not conforming) or JIT_RETRY (it could
+   not decide, e.g. a check failed in a CHOICE alternative); only on
+   JIT_RETRY does `check_write_jit_k` fall back to `check_write_raw_k`. *)
 
 open Pulse.Lib.Pervasives
 open ASN1.Base
@@ -91,20 +92,35 @@ module ADB = ASN1.Pulse.AnyDefinedBy
 module WA = ASN1.Pulse.WriteAdb
 open Pulse.Lib.Trade
 
-(* A JIT writer either writes `x` and checks that it satisfies `a`, or gives
-   up, leaving the output after `p` untouched *)
+(* A JIT writer either writes `x` and checks that it satisfies `a`
+   (JIT_OK), or fails, leaving the output after `p` untouched: JIT_NO_SPACE
+   if `x` is too large, JIT_INVALID if `x` does not satisfy `a`, or
+   JIT_RETRY if it could not tell. *)
 
-let jit_post (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (res: bool) (p': nat) (v': SB.bytes) : prop =
+type jit_result =
+| JIT_OK
+| JIT_NO_SPACE
+| JIT_INVALID
+| JIT_RETRY
+
+let jit_post (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (res: jit_result) (p': nat) (v': SB.bytes) : prop =
   Seq.length v' == Seq.length v /\
   p <= Seq.length v /\
   Seq.slice v' p (Seq.length v) == Seq.slice v p (Seq.length v) /\
-  (res == true ==> (W.r2l_post x p v true p' v' /\ a))
+  (res == JIT_OK ==> (W.r2l_post x p v true p' v' /\ a)) /\
+  (res == JIT_NO_SPACE ==> Seq.length x > p) /\
+  (res == JIT_INVALID ==> ~ a)
+
+(* Keep JIT_NO_SPACE, turn any other failure into JIT_RETRY *)
+inline_for_extraction
+let ns_or_retry (r: jit_result) : jit_result =
+  if JIT_NO_SPACE? r then JIT_NO_SPACE else JIT_RETRY
 
 inline_for_extraction
 let jw (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) =
   (x': t) -> (#x: Ghost.erased SB.bytes) ->
   (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
-  stt bool
+  stt jit_result
     (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
     (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
       pure (jit_post x (a x) (SZ.v p) v res (SZ.v p') v'))
@@ -131,11 +147,11 @@ fn jit_ext (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r2))
   rewrite (r2 pm x' x) as (r1 pm x' x);
   let res = w x' #x out pos;
   rewrite (r1 pm x' x) as (r2 pm x' x);
-  if res {
+  if (JIT_OK? res) {
     imp x;
-    true
+    JIT_OK
   } else {
-    false
+    ns_or_retry res
   }
 }
 
@@ -171,14 +187,14 @@ fn jit_local (#t: Type0) (r: bprel t) (pm: perm) (w: RW.rw r pm)
           as (pts_to out v1);
         if (valid && off1 = p0) {
           local_correct pp x v1 p1 (SZ.v p0) off1 valid;
-          true
+          JIT_OK
         } else {
-          false
+          JIT_RETRY
         }
       }
     }
   } else {
-    false
+    JIT_NO_SPACE
   }
 }
 
@@ -193,7 +209,7 @@ fn jit_tlv (id: asn1_id_t) (#t: Type0) (r: bprel t)
   with c . assert (r pm x' c);
   let p0 = !pos;
   let ok = w x' #c out pos;
-  if ok {
+  if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
     let p1r = !pos;
     let len = SZ.sub p0 p1r;
@@ -213,21 +229,21 @@ fn jit_tlv (id: asn1_id_t) (#t: Type0) (r: bprel t)
           W.r2l_post_append (enc_hdr true (Seq.length c)) c (SZ.v p) v (SZ.v p1) v1 true (SZ.v p2) v2;
           W.r2l_post_append (asn1_id_enc id) (enc_hdr true (Seq.length c) `Seq.append` c) (SZ.v p) v (SZ.v p2) v2 true (SZ.v p3) v3;
           L.acc_tlv id #ack pp c;
-          true
+          JIT_OK
         } else {
-          false
+          JIT_NO_SPACE
         }
       } else {
         fold (raw_tlv id r pm x' x);
-        false
+        JIT_NO_SPACE
       }
     } else {
       fold (raw_tlv id r pm x' x);
-      false
+      JIT_RETRY
     }
   } else {
     fold (raw_tlv id r pm x' x);
-    false
+    ns_or_retry ok
   }
 }
 
@@ -244,17 +260,17 @@ fn jit_opt (#t: Type0) (r: bprel t) (a1 a2: SB.bytes -> prop)
       rewrite (raw_opt r pm x' x) as (pure (Ghost.reveal x == Seq.empty));
       W.r2l_post_empty (SZ.v p) v;
       rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt r pm x' x);
-      true
+      JIT_OK
     }
     Some y -> {
       rewrite (raw_opt r pm x' x) as (r pm y x);
       let res = w y #x out pos;
       rewrite (r pm y x) as (raw_opt r pm x' x);
-      if res {
+      if (JIT_OK? res) {
         imp x;
-        true
+        JIT_OK
       } else {
-        false
+        ns_or_retry res
       }
     }
   }
@@ -273,22 +289,22 @@ fn jit_either (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a1 a2 a: SB.bytes 
       rewrite (raw_either r1 r2 pm x' x) as (r1 pm y x);
       let res = w1 y #x out pos;
       rewrite (r1 pm y x) as (raw_either r1 r2 pm x' x);
-      if res {
+      if (JIT_OK? res) {
         imp1 x;
-        true
+        JIT_OK
       } else {
-        false
+        ns_or_retry res
       }
     }
     Inr y -> {
       rewrite (raw_either r1 r2 pm x' x) as (r2 pm y x);
       let res = w2 y #x out pos;
       rewrite (r2 pm y x) as (raw_either r1 r2 pm x' x);
-      if res {
+      if (JIT_OK? res) {
         imp2 x;
-        true
+        JIT_OK
       } else {
-        false
+        ns_or_retry res
       }
     }
   }
@@ -312,7 +328,7 @@ fn jit_nil (pm: perm)
   fold (raw_pure null_enc pm x' x);
   W.r2l_post_empty (SZ.v p) v;
   L.iacc_nil ();
-  true
+  JIT_OK
 }
 
 (* SEQUENCE components: after writing the head `hd` before the tail `tl`,
@@ -378,28 +394,28 @@ fn jit_items_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
   let p0 = !pos;
   let ok = w2 (snd x') #c2 out pos;
-  if ok {
+  if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
     let p1r = !pos;
     let res = w1 (fst x') #c1 out pos;
     with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
-    if res {
+    if (JIT_OK? res) {
       let p2r = !pos;
       let ck = check_ids (Sq.item_set hd) has_id out p2r p1r p0;
       if ck {
         cons_correct hd tl c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2;
-        true
+        JIT_OK
       } else {
-        false
+        JIT_RETRY
       }
     } else {
-      false
+      ns_or_retry res
     }
   } else {
     fold (raw_cat r1 r2 pm x' x);
-    false
+    ns_or_retry ok
   }
 }
 
@@ -443,11 +459,12 @@ fn jit_set_elt (hd: Ghost.erased gen_decorated_parser_twin)
 {
   let p0 = !pos;
   let res = w x' #x out pos;
-  if res {
+  if (JIT_OK? res) {
     let p2 = !pos;
-    check_elt (Sq.item_set hd) has_id out p2 p0
+    let ck = check_elt (Sq.item_set hd) has_id out p2 p0;
+    if ck { JIT_OK } else { JIT_RETRY }
   } else {
-    false
+    ns_or_retry res
   }
 }
 
@@ -463,27 +480,29 @@ fn jit_set_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
   let p0 = !pos;
   let ok = w2 (snd x') #c2 out pos;
-  if ok {
+  if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
     let p1r = !pos;
     let res = w1 (fst x') #c1 out pos;
     with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
-    if res {
+    if (JIT_OK? res) {
       let p2r = !pos;
       SI.r2l_insert SI.lt_tag (SI.lt_tag_impl ()) out p2r p1r p0;
       with v3 . assert (pts_to out v3);
       SI.r2l_post_ins SI.lt_tag c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2 v3;
       L.sacc_cons hd tl c1 c2;
       fold (raw_ins SI.lt_tag r1 r2 pm x' x);
-      true
+      JIT_OK
     } else {
+      SI.ins_length SI.lt_tag c1 c2;
       fold (raw_ins SI.lt_tag r1 r2 pm x' x);
-      false
+      ns_or_retry res
     }
   } else {
+    SI.ins_length SI.lt_tag c1 c2;
     fold (raw_ins SI.lt_tag r1 r2 pm x' x);
-    false
+    ns_or_retry ok
   }
 }
 
@@ -508,9 +527,10 @@ fn jit_pre (#t: Type0) (r: bprel t) (a a': SB.bytes -> prop)
   let ok = c x' #x;
   if ok {
     imp x;
-    w x' #x out pos
+    let res = w x' #x out pos;
+    if res { JIT_OK } else { JIT_NO_SPACE }
   } else {
-    false
+    JIT_RETRY
   }
 }
 
@@ -587,13 +607,17 @@ let jml_frame (p0: nat) (v0 vc: SB.bytes) : prop =
   Seq.length vc == Seq.length v0 /\ p0 <= Seq.length v0 /\
   Seq.slice vc p0 (Seq.length v0) == Seq.slice v0 p0 (Seq.length v0)
 
-let jml_inv (#tp: Type) (pp: asn1_strong_parser tp) (l: list SB.bytes) (p0: nat) (v0: SB.bytes) (ld: list SB.bytes) (ok: bool) (pc: nat) (vc: SB.bytes) : prop =
+let jml_inv (#tp: Type) (pp: asn1_strong_parser tp) (l: list SB.bytes) (p0: nat) (v0: SB.bytes) (ld: list SB.bytes) (ok: jit_result) (pc: nat) (vc: SB.bytes) : prop =
   jml_frame p0 v0 vc /\
-  (ok == true ==> (WI.r2l_ml_inv id_enc l p0 v0 ld true pc vc /\ L.all_eacc pp ld))
+  (ok == JIT_OK ==> (WI.r2l_ml_inv id_enc l p0 v0 ld true pc vc /\ L.all_eacc pp ld)) /\
+  (ok == JIT_NO_SPACE ==> Seq.length (W.enc_list id_enc l) > p0) /\
+  (ok =!= JIT_INVALID)
 
-let jsml_inv (#tp: Type) (pp: asn1_strong_parser tp) (l: list SB.bytes) (p0: nat) (v0: SB.bytes) (ld: list SB.bytes) (ok: bool) (pc: nat) (vc: SB.bytes) : prop =
+let jsml_inv (#tp: Type) (pp: asn1_strong_parser tp) (l: list SB.bytes) (p0: nat) (v0: SB.bytes) (ld: list SB.bytes) (ok: jit_result) (pc: nat) (vc: SB.bytes) : prop =
   jml_frame p0 v0 vc /\
-  (ok == true ==> (SI.r2l_mls_inv SI.lt_lex id_enc l p0 v0 ld true pc vc /\ L.sf pp None (SI.sort_list SI.lt_lex id_enc ld)))
+  (ok == JIT_OK ==> (SI.r2l_mls_inv SI.lt_lex id_enc l p0 v0 ld true pc vc /\ L.sf pp None (SI.sort_list SI.lt_lex id_enc ld))) /\
+  (ok == JIT_NO_SPACE ==> Seq.length (W.enc_list id_enc l) > p0) /\
+  (ok =!= JIT_INVALID)
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 1"
 
@@ -613,15 +637,15 @@ fn jit_write_ml (#t: Type0) (r: bprel t) (ne: bool)
   with pm0 . assert (WI.iterator_match r ml_ops p_raw pm0 it0 l);
   let mut pit = it0;
   let mut pn = n0;
-  let mut pok = true;
+  let mut pok = JIT_OK;
   WI.r2l_ml_inv_init id_enc l (SZ.v p0) v;
   let p0r = !pos;
   let mut pld : Ghost.erased (list SB.bytes) = Ghost.hide [];
   while (
     let ok = !pok;
     let n = !pn;
-    (ok && not (ml_ops.eq n ml_ops.zero))
-  ) invariant exists* (it: LowParse.PulseParse.Iterator.Type.iterator SZ.t t) (pmi: perm) (ld: Ghost.erased (list SB.bytes)) (lr: list SB.bytes) (n: SZ.t) (ok: bool) (vc: SB.bytes) (pc: SZ.t) .
+    (JIT_OK? ok && not (ml_ops.eq n ml_ops.zero))
+  ) invariant exists* (it: LowParse.PulseParse.Iterator.Type.iterator SZ.t t) (pmi: perm) (ld: Ghost.erased (list SB.bytes)) (lr: list SB.bytes) (n: SZ.t) (ok: jit_result) (vc: SB.bytes) (pc: SZ.t) .
     R.pts_to pit it ** R.pts_to pld ld **
     WI.iterator_match r ml_ops p_raw pmi it lr **
     trade (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l) **
@@ -633,7 +657,7 @@ fn jit_write_ml (#t: Type0) (r: bprel t) (ne: bool)
       SZ.v p0r == SZ.v p0 /\
       jml_inv pp l (SZ.v p0) v (Ghost.reveal ld) ok (SZ.v pc) vc
     )
-  decreases %[(if !pok then 1 else 0); ml_ops.v (!pn)]
+  decreases %[(if JIT_OK? (!pok) then 1 else 0); ml_ops.v (!pn)]
   {
     with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
     with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
@@ -654,7 +678,7 @@ fn jit_write_ml (#t: Type0) (r: bprel t) (ne: bool)
     pld := Ghost.hide (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]);
     with v2 p2 . assert (pts_to out v2 ** R.pts_to pos p2);
     frame_trans (SZ.v p0) v (SZ.v pc) vc v2;
-    if res {
+    if (JIT_OK? res) {
       let pnew = !pos;
       if (SZ.lt pnew pcur) {
         WI.r2l_reverse_range out pnew pcur;
@@ -669,12 +693,15 @@ fn jit_write_ml (#t: Type0) (r: bprel t) (ne: bool)
         assert (pure (L.all_eacc pp (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y])));
         assert (pure (WI.r2l_ml_inv id_enc l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
         assert (pure (jml_frame (SZ.v p0) v v3));
-        assert (pure (jml_inv pp l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
+        assert (pure (jml_inv pp l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) JIT_OK (SZ.v p2) v3));
       } else {
-        pok := false;
+        pok := JIT_RETRY;
       }
+    } else if (JIT_NO_SPACE? res) {
+      WI.r2l_ml_inv_fail id_enc l (SZ.v p0) v (Ghost.reveal ld) y tl (SZ.v pc) vc (SZ.v p2) v2;
+      pok := JIT_NO_SPACE;
     } else {
-      pok := false;
+      pok := JIT_RETRY;
     }
   };
   with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
@@ -683,20 +710,20 @@ fn jit_write_ml (#t: Type0) (r: bprel t) (ne: bool)
   Trade.elim (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
   fold (raw_ml r pm x' x);
   let ok = !pok;
-  if ok {
+  if (JIT_OK? ok) {
     List.Tot.append_l_nil (Ghost.reveal ld);
     let pend = !pos;
     if (ne && not (SZ.lt pend p0r)) {
-      false
+      JIT_RETRY
     } else {
       WI.r2l_reverse_range out pend p0r;
       with v3 . assert (pts_to out v3);
       WI.r2l_ml_inv_end id_enc l (SZ.v p0) v (SZ.v pc) vc v3;
       L.acc_sized_list ne pp l;
-      true
+      JIT_OK
     }
   } else {
-    false
+    ok
   }
 }
 
@@ -716,7 +743,7 @@ fn jit_write_ml_sorted (#t: Type0) (r: bprel t) (ne: bool)
   with pm0 . assert (WI.iterator_match r ml_ops p_raw pm0 it0 l);
   let mut pit = it0;
   let mut pn = n0;
-  let mut pok = true;
+  let mut pok = JIT_OK;
   SI.r2l_mls_inv_init SI.lt_lex id_enc l (SZ.v p0) v;
   L.sf_empty pp;
   let p0r = !pos;
@@ -724,8 +751,8 @@ fn jit_write_ml_sorted (#t: Type0) (r: bprel t) (ne: bool)
   while (
     let ok = !pok;
     let n = !pn;
-    (ok && not (ml_ops.eq n ml_ops.zero))
-  ) invariant exists* (it: LowParse.PulseParse.Iterator.Type.iterator SZ.t t) (pmi: perm) (ld: Ghost.erased (list SB.bytes)) (lr: list SB.bytes) (n: SZ.t) (ok: bool) (vc: SB.bytes) (pc: SZ.t) .
+    (JIT_OK? ok && not (ml_ops.eq n ml_ops.zero))
+  ) invariant exists* (it: LowParse.PulseParse.Iterator.Type.iterator SZ.t t) (pmi: perm) (ld: Ghost.erased (list SB.bytes)) (lr: list SB.bytes) (n: SZ.t) (ok: jit_result) (vc: SB.bytes) (pc: SZ.t) .
     R.pts_to pit it ** R.pts_to pld ld **
     WI.iterator_match r ml_ops p_raw pmi it lr **
     trade (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l) **
@@ -737,7 +764,7 @@ fn jit_write_ml_sorted (#t: Type0) (r: bprel t) (ne: bool)
       SZ.v p0r == SZ.v p0 /\
       jsml_inv pp l (SZ.v p0) v (Ghost.reveal ld) ok (SZ.v pc) vc
     )
-  decreases %[(if !pok then 1 else 0); ml_ops.v (!pn)]
+  decreases %[(if JIT_OK? (!pok) then 1 else 0); ml_ops.v (!pn)]
   {
     with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
     with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
@@ -758,7 +785,7 @@ fn jit_write_ml_sorted (#t: Type0) (r: bprel t) (ne: bool)
     pld := Ghost.hide (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]);
     with v2 p2 . assert (pts_to out v2 ** R.pts_to pos p2);
     frame_trans (SZ.v p0) v (SZ.v pc) vc v2;
-    if res {
+    if (JIT_OK? res) {
       let pnew = !pos;
       let fl = SI.read_frame out pnew pcur;
       if (SZ.gt fl 0sz && SZ.eq fl (SZ.sub pcur pnew)) {
@@ -774,12 +801,15 @@ fn jit_write_ml_sorted (#t: Type0) (r: bprel t) (ne: bool)
         L.sf_ins pp None y (SI.sort_list SI.lt_lex id_enc (Ghost.reveal ld));
         assert (pure (L.sf pp None (SI.sort_list SI.lt_lex id_enc (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]))));
         assert (pure (SI.r2l_mls_inv SI.lt_lex id_enc l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
-        assert (pure (jsml_inv pp l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) true (SZ.v p2) v3));
+        assert (pure (jsml_inv pp l (SZ.v p0) v (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]) JIT_OK (SZ.v p2) v3));
       } else {
-        pok := false;
+        pok := JIT_RETRY;
       }
+    } else if (JIT_NO_SPACE? res) {
+      SI.r2l_mls_inv_fail SI.lt_lex id_enc l (SZ.v p0) v (Ghost.reveal ld) y tl (SZ.v pc) vc (SZ.v p2) v2;
+      pok := JIT_NO_SPACE;
     } else {
-      pok := false;
+      pok := JIT_RETRY;
     }
   };
   with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
@@ -788,18 +818,19 @@ fn jit_write_ml_sorted (#t: Type0) (r: bprel t) (ne: bool)
   Trade.elim (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
   fold (raw_ml_sorted r pm x' x);
   let ok = !pok;
-  if ok {
+  if (JIT_OK? ok) {
     List.Tot.append_l_nil (Ghost.reveal ld);
     let pend = !pos;
     if (ne && not (SZ.lt pend p0r)) {
-      false
+      JIT_RETRY
     } else {
       SI.r2l_mls_inv_end SI.lt_lex id_enc l (SZ.v p0) v (SZ.v pc) vc;
       L.acc_sized_set ne pp (SI.sort_list SI.lt_lex id_enc l);
-      true
+      JIT_OK
     }
   } else {
-    false
+    SI.sort_list_length SI.lt_lex id_enc l;
+    ok
   }
 }
 
@@ -877,28 +908,28 @@ fn jit_acons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (lis
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
   let p0 = !pos;
   let ok = w2 (snd x') #c2 out pos;
-  if ok {
+  if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
     let p1r = !pos;
     let res = w1 (fst x') #c1 out pos;
     with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
-    if res {
+    if (JIT_OK? res) {
       let p2r = !pos;
       let ck = check_ids (Sq.item_set hd) has_id out p2r p1r p0;
       if ck {
         acons_correct aa hd tl c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2;
-        true
+        JIT_OK
       } else {
-        false
+        JIT_RETRY
       }
     } else {
-      false
+      ns_or_retry res
     }
   } else {
     fold (raw_cat r1 r2 pm x' x);
-    false
+    ns_or_retry ok
   }
 }
 
@@ -913,22 +944,22 @@ fn jit_cat (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a1 a2 a: SB.bytes -> 
   unfold (raw_cat r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
   let ok = w2 (snd x') #c2 out pos;
-  if ok {
+  if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
     let res = w1 (fst x') #c1 out pos;
     with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
-    if res {
+    if (JIT_OK? res) {
       W.r2l_post_append c1 c2 (SZ.v p) v (SZ.v p1) v1 true (SZ.v p2) v2;
       lem c1 c2;
-      true
+      JIT_OK
     } else {
-      false
+      ns_or_retry res
     }
   } else {
     fold (raw_cat r1 r2 pm x' x);
-    false
+    ns_or_retry ok
   }
 }
 
@@ -963,7 +994,7 @@ fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_supp
   with c . assert (r pm x' c);
   let p0 = !pos;
   let ok = w x' #c out pos;
-  if ok {
+  if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
     let p1r = !pos;
     fold (prel_emp unit unit 1.0R () ());
@@ -976,22 +1007,22 @@ fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_supp
       let p2r = !pos;
       let km = JA.key_match kid key_k u kx out p2r p0;
       match km {
-        None -> { false }
+        None -> { JIT_RETRY }
         Some em -> {
           if (snd em && fst em = p1r) {
             lit_correct kid key_k (key_of_lit key_k kx) pp (WA.raw_key_enc kid key_k kx) c (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2 (fst em);
-            true
+            JIT_OK
           } else {
-            false
+            JIT_RETRY
           }
         }
       }
     } else {
-      false
+      JIT_NO_SPACE
     }
   } else {
     fold (raw_pre (WA.raw_key_enc kid key_k kx) r pm x' x);
-    false
+    ns_or_retry ok
   }
 }
 
@@ -1008,29 +1039,29 @@ fn jit_skip (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_sup
 {
   let p0 = !pos;
   let ok = w x' #x out pos;
-  if ok {
+  if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
     let p1r = !pos;
     let km = JA.key_match kid key_k u kx out p1r p0;
     match km {
-      None -> { false }
+      None -> { JIT_RETRY }
       Some em -> {
         if (snd em) {
-          false
+          JIT_RETRY
         } else {
-          true
+          JIT_OK
         }
       }
     }
   } else {
-    false
+    ok
   }
 }
 
 (* The whole schema *)
 
 let jres (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
-  stt bool
+  stt jit_result
     (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
     (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
       pure (jit_post x (a x) (SZ.v p) v res (SZ.v p') v'))
@@ -1077,11 +1108,11 @@ fn jit_terminal_prefixed (id: asn1_id_t) (id2: asn1_id_t) (k2: asn1_terminal_k) 
       (cacc id2 (ASN1_TERMINAL k2)) (L.acc #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2))) (acc_terminal_prefixed id2 k2) pm w)
     x2 #x out pos;
   rewrite (raw_tlv id (raw_terminal_rel id2 k2) pm x2 x) as (raw_terminal_rel id (ASN1_PREFIXED_TERMINAL id2 k2) pm x' x);
-  if res {
+  if (JIT_OK? res) {
     acc_terminal_tlv id (ASN1_PREFIXED_TERMINAL id2 k2) x;
-    true
+    JIT_OK
   } else {
-    false
+    ns_or_retry res
   }
 }
 
@@ -1550,10 +1581,20 @@ let jit_writer (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm) : jw (
 
 let jit_ok_correct (#s: _) (k: asn1_k s) (enc: SB.bytes) (p: nat) (v: SB.bytes) (p': nat) (v': SB.bytes)
 : Lemma
-  (requires (Conf.wf k /\ jit_post enc (kacc k enc) p v true p' v'))
+  (requires (Conf.wf k /\ jit_post enc (kacc k enc) p v JIT_OK p' v'))
   (ensures (CW.cw_post k enc p v CW.CW_OK p' v'))
 = Ser.parsed_spec_correct k enc;
   assert (Seq.equal (Seq.slice enc 0 (Seq.length enc)) enc)
+
+let jit_invalid_correct (#s: _) (k: asn1_k s) (enc: SB.bytes)
+: Lemma
+  (requires (Conf.wf k /\ ~ (kacc k enc)))
+  (ensures (~ (CW.conforming k enc)))
+= let prf (x: asn1_t k) : Lemma (requires (Ser.encodable k x /\ Ser.asn1_enc k x == enc)) (ensures (kacc k enc)) =
+    Ser.serialize_asn1_correct k;
+    LowParse.Spec.Combinators.parse_filter_eq #asn1_strong_parser_kind (asn1_as_parser k) (Ser.encodable_b k) enc
+  in
+  Classical.forall_intro (Classical.move_requires prf)
 
 (* `wj`, `w` and `vf` are meant to be `jit_writer k u pm`,
    `RW.raw_writer k pm` and `RW.raw_validator k u`, passed by the
@@ -1570,9 +1611,14 @@ fn check_write_jit_k (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm)
   let p0 = !pos;
   let ok = wj x' #y out pos;
   with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-  if ok {
+  if (JIT_OK? ok) {
     jit_ok_correct k y (SZ.v p) v (SZ.v p1) v1;
     CW.CW_OK
+  } else if (JIT_NO_SPACE? ok) {
+    CW.CW_NO_SPACE
+  } else if (JIT_INVALID? ok) {
+    jit_invalid_correct k y;
+    CW.CW_INVALID
   } else {
     pos := p0;
     let res = RW.check_write_raw_k k u pm w vf x' #y out pos;

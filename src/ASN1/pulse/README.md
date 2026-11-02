@@ -159,10 +159,14 @@ holding fractional permission `pm` on the input bytes it borrows.
   literals of the alternatives. Only DEFAULT components of PREFIXED type
   are still validated locally, right after being written, within their
   own bounds (so, still in the cache). Each byte is
-  validated at most once. If the JIT writer gives up (invalid value, or
-  not enough space), `check_write_jit_k` falls back to `check_write_raw_k`
-  to tell `CW_INVALID` from `CW_NO_SPACE`, so the fallback only costs on
-  failure paths. Proofs: `ASN1.Pulse.JitWriter.Lemmas`.
+  validated at most once. The JIT writer returns `JIT_OK`, `JIT_NO_SPACE`
+  (the encoding does not fit), `JIT_INVALID` (the value is not
+  conforming), or `JIT_RETRY` (it could not decide); only on `JIT_RETRY`
+  does `check_write_jit_k` fall back to `check_write_raw_k`. Accordingly,
+  `cw_post` only requires `CW_NO_SPACE` to imply that the encoding does
+  not fit, and `CW_INVALID` that the value is not conforming (`CW_OK`
+  still holds exactly when both hold). Proofs:
+  `ASN1.Pulse.JitWriter.Lemmas`.
 
 `make test-parse` and `make test-write` run the parsers and writers
 extracted from `ASN1.Pulse.ParseTest` on hand-written encodings
@@ -176,7 +180,7 @@ ANY slices, unsorted SET OF elements, a SET declared in non-canonical
 order, and ANY DEFINED BY values (known keys in the fallback, bad
 payloads) (`test/raw_write_test.c`); each case is also run on the JIT
 variants, checking that the JIT writer alone succeeds exactly on valid
-values.
+values, and returns `JIT_NO_SPACE` when the buffer is one byte short.
 
 ## Layout
 
