@@ -162,7 +162,13 @@ holding fractional permission `pm` on the input bytes it borrows.
   validated at most once. The JIT writer returns `JIT_OK`, `JIT_NO_SPACE`
   (the encoding does not fit), `JIT_INVALID` (the value is not
   conforming), or `JIT_RETRY` (it could not decide); only on `JIT_RETRY`
-  does `check_write_jit_k` fall back to `check_write_raw_k`. Accordingly,
+  does `check_write_jit_k` fall back to `check_write_raw_k`. A failed
+  check is reported as `JIT_INVALID` through terminals, TLVs, PREFIXED
+  types, SEQUENCEs and those SEQUENCE components that are present and not
+  ANY (each is one TLV with one of its own identifiers,
+  `ASN1.Pulse.JitFrame`, so the SEQUENCE is invalid as soon as it or the
+  rest is); under CHOICE, ANY, absent components, SET, SET OF, SEQUENCE
+  OF and ANY DEFINED BY, it is `JIT_RETRY`. Accordingly,
   `cw_post` only requires `CW_NO_SPACE` to imply that the encoding does
   not fit, and `CW_INVALID` that the value is not conforming (`CW_OK`
   still holds exactly when both hold). Proofs:
@@ -180,7 +186,8 @@ ANY slices, unsorted SET OF elements, a SET declared in non-canonical
 order, and ANY DEFINED BY values (known keys in the fallback, bad
 payloads) (`test/raw_write_test.c`); each case is also run on the JIT
 variants, checking that the JIT writer alone succeeds exactly on valid
-values, and returns `JIT_NO_SPACE` when the buffer is one byte short.
+values, and returns `JIT_NO_SPACE` when the buffer is one byte short;
+some invalid values are also checked to yield `JIT_INVALID` directly.
 
 ## Layout
 

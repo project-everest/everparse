@@ -35,11 +35,11 @@ module ADB = ASN1.Pulse.AnyDefinedBy
 module L = ASN1.Pulse.JitWriter.Lemmas
 module BS = ASN1.Spec.Content.BITSTRING
 
-(* Pre-checker of `r pm x' x` against `a x`, assuming `g x` *)
+(* Exact pre-checker of `r pm x' x` against `a x`, assuming `g x` *)
 inline_for_extraction
 let pcg (#t: Type0) (r: bprel t) (g a: SB.bytes -> prop) (pm: perm) =
   (x': t) -> (#x: Ghost.erased SB.bytes) ->
-  stt bool (r pm x' x ** pure (g x)) (fun res -> r pm x' x ** pure (res == true ==> a x))
+  stt bool (r pm x' x ** pure (g x)) (fun res -> r pm x' x ** pure (res == true <==> a x))
 
 let ptrue (_: SB.bytes) : prop = True
 
@@ -51,6 +51,11 @@ let slice_full (w: SB.bytes) : Lemma (Seq.slice w 0 (Seq.length w) == w) =
 let acc_of_valid (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (w: SB.bytes) (off: SZ.t)
 : Lemma (requires (LPS.validator_postcond p 0sz w off true /\ SZ.v off == Seq.length w))
   (ensures (L.acc p w))
+= slice_full w
+
+let valid_iff (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (w: SB.bytes) (off: SZ.t) (valid: bool)
+: Lemma (requires (LPS.validator_postcond p 0sz w off valid))
+  (ensures ((valid && (SZ.v off = Seq.length w)) == true <==> L.acc p w))
 = slice_full w
 
 let none_of_invalid (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (w: SB.bytes) (off: SZ.t)
@@ -234,6 +239,29 @@ let bitstring_tacc (u: U8.t) (b: SB.bytes)
   bitstring_parts u b;
   Term.bitstring_eq w
 
+let bitstring_tacc_iff (u: U8.t) (b: SB.bytes)
+: Lemma ((BS.filter_asn1_bitstring_unused u /\ BS.filter_asn1_bitstring_payload u b) <==> L.tacc ASN1_BITSTRING (Seq.append (W.enc_byte u) b))
+= let w = Seq.append (W.enc_byte u) b in
+  bitstring_parts u b;
+  Term.bitstring_eq w
+
+let bitstring_eq_not_holds (defl: asn1_key_lit ASN1_BITSTRING) (u: U8.t) (b: SB.bytes)
+: Lemma (requires (u == fst #U8.t #(list U8.t) defl /\ b == Seq.seq_of_list (snd #U8.t #(list U8.t) defl)))
+  (ensures (~ (L.holds ASN1_BITSTRING (defaultv_filter (key_of_lit ASN1_BITSTRING defl)) (Seq.append (W.enc_byte u) b))))
+= let defl' : asn1_bitstring_lit = defl in
+  let w = Seq.append (W.enc_byte u) b in
+  In.key_enc_list_correct ASN1_BITSTRING defl;
+  Seq.lemma_seq_of_list_induction (fst defl' :: snd defl');
+  bitstring_parts u b;
+  let e = E.leaf_enc ASN1_BITSTRING (key_of_lit ASN1_BITSTRING defl) in
+  assert (Seq.index e 0 == fst defl');
+  assert (Seq.equal (Seq.slice e 1 (Seq.length e)) (Seq.seq_of_list (snd defl')));
+  Seq.lemma_split e 1;
+  Seq.lemma_split w 1;
+  assert (Seq.equal (Seq.slice e 0 1) (Seq.slice w 0 1));
+  assert (Seq.equal w e);
+  L.leaf_tacc ASN1_BITSTRING (key_of_lit ASN1_BITSTRING defl) (defaultv_filter (key_of_lit ASN1_BITSTRING defl)) w
+
 let bitstring_neq (defl: asn1_key_lit ASN1_BITSTRING) (u: U8.t) (b: SB.bytes)
 : Lemma (requires (~ (u == fst #U8.t #(list U8.t) defl) \/ ~ (b == Seq.seq_of_list (snd #U8.t #(list U8.t) defl))))
   (ensures (L.holds ASN1_BITSTRING (defaultv_filter (key_of_lit ASN1_BITSTRING defl)) (Seq.append (W.enc_byte u) b)))
@@ -274,46 +302,50 @@ let null_tacc (x: unit)
   L.leaf_tacc ASN1_NULL x (fun _ -> true) (null_enc x)
 
 let bool_restr (r: asn1_restriction ASN1_BOOLEAN { RESTRICT_IN? r }) (x: bool)
-: Lemma (requires (Rs.bool_in (RESTRICT_IN?.values r) x == true))
-  (ensures (L.holds ASN1_BOOLEAN (restriction_pred r) (boolean_enc x)))
+: Lemma (Rs.bool_in (RESTRICT_IN?.values r) x == true <==> L.holds ASN1_BOOLEAN (restriction_pred r) (boolean_enc x))
 = Rs.bool_in_correct (RESTRICT_IN?.values r) x;
   L.leaf_tacc ASN1_BOOLEAN x (restriction_pred r) (boolean_enc x)
 
 let bool_neq (defl: asn1_key_lit ASN1_BOOLEAN) (x: bool)
-: Lemma (requires (not (x = (defl <: bool))))
-  (ensures (L.holds ASN1_BOOLEAN (defaultv_filter (key_of_lit ASN1_BOOLEAN defl)) (boolean_enc x)))
+: Lemma (not (x = (defl <: bool)) == true <==> L.holds ASN1_BOOLEAN (defaultv_filter (key_of_lit ASN1_BOOLEAN defl)) (boolean_enc x))
 = assert (key_of_lit ASN1_BOOLEAN defl == defl);
   L.leaf_tacc ASN1_BOOLEAN x (defaultv_filter (key_of_lit ASN1_BOOLEAN defl)) (boolean_enc x)
 
+let tacc_interval (bound: pos) (i: I64.t)
+: Lemma (requires (L.tacc (ASN1_INTEGER bound) (i64_enc i))) (ensures (INT.interval bound (I64.v i)))
+= if bound <= 8 then i64_interval bound i else i64_big bound i
+
 let i64_valid (bound: pos { bound <= 8 }) (i: I64.t)
-: Lemma (requires (i64_fits bound i == true)) (ensures (L.tacc (ASN1_INTEGER bound) (i64_enc i)))
+: Lemma (i64_fits bound i == true <==> L.tacc (ASN1_INTEGER bound) (i64_enc i))
 = i64_fits_correct bound i;
-  i64_tacc bound i (fun _ -> true)
+  if i64_fits bound i then i64_tacc bound i (fun _ -> true)
+  else Classical.move_requires (tacc_interval bound) i
 
 let small_valid (bound: pos { bound > 8 }) (i: I64.t)
 : Lemma (L.tacc (ASN1_INTEGER bound) (i64_enc i))
 = i64_big bound i;
   i64_tacc bound i (fun _ -> true)
 
-let tacc_interval (bound: pos) (i: I64.t)
-: Lemma (requires (L.tacc (ASN1_INTEGER bound) (i64_enc i))) (ensures (INT.interval bound (I64.v i)))
-= if bound <= 8 then i64_interval bound i else i64_big bound i
-
 let i64_restr_holds (bound: pos) (r: asn1_restriction (ASN1_INTEGER bound) { Rs.int_restriction_ok r }) (i: I64.t)
-: Lemma (requires (L.tacc (ASN1_INTEGER bound) (i64_enc i) /\ i64_restr r i == true))
-  (ensures (L.holds (ASN1_INTEGER bound) (restriction_pred r) (i64_enc i)))
+: Lemma (requires (L.tacc (ASN1_INTEGER bound) (i64_enc i)))
+  (ensures (i64_restr r i == true <==> L.holds (ASN1_INTEGER bound) (restriction_pred r) (i64_enc i)))
 = tacc_interval bound i;
   i64_restr_correct r i;
   int_pred_restriction bound r (I64.v i);
   i64_tacc bound i (restriction_pred r)
 
 let i64_neq_holds (bound: pos) (defl: asn1_key_lit (ASN1_INTEGER bound)) (i: I64.t)
-: Lemma (requires (L.tacc (ASN1_INTEGER bound) (i64_enc i) /\ not (lit_eq i defl) == true))
-  (ensures (L.holds (ASN1_INTEGER bound) (defaultv_filter (key_of_lit (ASN1_INTEGER bound) defl)) (i64_enc i)))
+: Lemma (requires (L.tacc (ASN1_INTEGER bound) (i64_enc i)))
+  (ensures (not (lit_eq i defl) == true <==> L.holds (ASN1_INTEGER bound) (defaultv_filter (key_of_lit (ASN1_INTEGER bound) defl)) (i64_enc i)))
 = tacc_interval bound i;
   lit_eq_correct i defl;
   int_lit_val bound defl;
   i64_tacc bound i (defaultv_filter (key_of_lit (ASN1_INTEGER bound) defl))
+
+let null_neq (defl: asn1_key_lit ASN1_NULL) (x: unit)
+: Lemma (~ (L.holds ASN1_NULL (defaultv_filter (key_of_lit ASN1_NULL defl)) (null_enc x)))
+= assert (E.leaf_enc ASN1_NULL x == null_enc x);
+  L.leaf_tacc ASN1_NULL x (defaultv_filter (key_of_lit ASN1_NULL defl)) (null_enc x)
 
 (* Combinators *)
 
@@ -335,25 +367,21 @@ fn pc_then (#t: Type0) (r: bprel t) (g a1 g2 a2: SB.bytes -> prop)
 
 inline_for_extraction
 fn pc_pure (#t: Type0) (enc: t -> GTot SB.bytes) (g a: SB.bytes -> prop) (f: t -> bool)
-  (lem: (x': t) -> Lemma (requires (g (enc x') /\ f x' == true)) (ensures (a (enc x'))))
+  (lem: (x': t) -> Lemma (requires (g (enc x'))) (ensures (f x' == true <==> a (enc x'))))
   (pm: perm)
 : pcg #t (raw_pure enc) g a pm
 = (x': t) (#x: Ghost.erased SB.bytes)
 {
   unfold (raw_pure enc pm x' x);
   fold (raw_pure enc pm x' x);
-  if (f x') {
-    lem x';
-    true
-  } else {
-    false
-  }
+  lem x';
+  f x'
 }
 
 inline_for_extraction
 fn pc_slice (#tp: Type0) (#kk: Ghost.erased SB.parser_kind) (#pp: SB.parser kk tp) (vf: LPS.validator pp)
   (g a: SB.bytes -> prop)
-  (lem: (w: SB.bytes) -> Lemma (requires (g w /\ L.acc pp w)) (ensures (a w)))
+  (lem: (w: SB.bytes) -> Lemma (requires (g w)) (ensures (L.acc pp w <==> a w)))
   (pm: perm)
 : pcg raw_slice g a pm
 = (s: S.slice U8.t) (#x: Ghost.erased SB.bytes)
@@ -367,18 +395,14 @@ fn pc_slice (#tp: Type0) (#kk: Ghost.erased SB.parser_kind) (#pp: SB.parser kk t
   let off1 = !off;
   fold (prel_slice_ser id_enc pm s x);
   fold (raw_slice pm s x);
-  if (valid && (off1 = S.len s)) {
-    acc_of_valid pp w off1;
-    lem x;
-    true
-  } else {
-    false
-  }
+  valid_iff pp w off1 valid;
+  lem x;
+  (valid && (off1 = S.len s))
 }
 
 inline_for_extraction
 fn pc_int (g a: SB.bytes -> prop) (f: I64.t -> bool)
-  (lem: (i: I64.t) -> Lemma (requires (g (i64_enc i) /\ f i == true)) (ensures (a (i64_enc i))))
+  (lem: (i: I64.t) -> Lemma (requires (g (i64_enc i))) (ensures (f i == true <==> a (i64_enc i))))
   (pm: perm) (cs: pcg raw_slice g a pm)
 : pcg #asn1_int_impl raw_int g a pm
 = (x': asn1_int_impl) (#x: Ghost.erased SB.bytes)
@@ -387,12 +411,8 @@ fn pc_int (g a: SB.bytes -> prop) (f: I64.t -> bool)
     Small i -> {
       rewrite (raw_int pm x' x) as (pure (Ghost.reveal x == i64_enc i));
       rewrite (pure (Ghost.reveal x == i64_enc i)) as (raw_int pm x' x);
-      if (f i) {
-        lem i;
-        true
-      } else {
-        false
-      }
+      lem i;
+      f i
     }
     Big s -> {
       rewrite (raw_int pm x' x) as (raw_slice pm s x);
@@ -418,10 +438,11 @@ fn pn_slice (k: asn1_terminal_k) (u: squash (In.adb_key_supported k)) (defl: asn
   let off1 = !off;
   fold (prel_slice_ser id_enc pm s x);
   fold (raw_slice pm s x);
+  slice_full w;
   if valid {
+    L.fl_eq_not_holds k (key_of_lit k defl) w;
     false
   } else {
-    slice_full w;
     L.neq_fl_holds k (key_of_lit k defl) w;
     true
   }
@@ -432,7 +453,7 @@ fn pn_slice (k: asn1_terminal_k) (u: squash (In.adb_key_supported k)) (defl: asn
 fn check_bits (u: U8.t) (s: S.slice U8.t) (#pm: perm) (#b: Ghost.erased SB.bytes)
 requires S.pts_to s #pm b
 returns res: bool
-ensures S.pts_to s #pm b ** pure (res == true ==> (BS.filter_asn1_bitstring_unused u /\ BS.filter_asn1_bitstring_payload u b))
+ensures S.pts_to s #pm b ** pure (res == true <==> (BS.filter_asn1_bitstring_unused u /\ BS.filter_asn1_bitstring_payload u b))
 {
   S.pts_to_len s;
   if (U8.lte u 7uy) {
@@ -462,12 +483,8 @@ fn pv_bitstring (g: SB.bytes -> prop) (pm: perm)
   with b . assert (S.pts_to x'.bytes #pm b);
   let res = check_bits x'.unused x'.bytes;
   fold (raw_bitstring pm x' x);
-  if res {
-    bitstring_tacc x'.unused b;
-    true
-  } else {
-    false
-  }
+  bitstring_tacc_iff x'.unused b;
+  res
 }
 
 inline_for_extraction
@@ -488,6 +505,9 @@ fn pn_bitstring (defl: asn1_key_lit ASN1_BITSTRING) (g: SB.bytes -> prop) (pm: p
     let off1 = !off;
     fold (raw_bitstring pm x' x);
     if valid {
+      ADB.bytes_eq_consumed (snd d) b;
+      slice_full b;
+      bitstring_eq_not_holds defl x'.unused b;
       false
     } else {
       none_of_invalid (ADB.bytes_eq_p (snd d)) b off1;
@@ -531,7 +551,7 @@ let pr_integer (bound: pos) (r: asn1_restriction (ASN1_INTEGER bound)) (u: squas
   if small_integer bound
   then coerce_eq () (pc_pure i64_enc g a (i64_restr r) (i64_restr_holds bound r) pm)
   else coerce_eq () (pc_int g a (i64_restr r) (i64_restr_holds bound r) pm
-    (pc_slice (In.validate_restricted (ASN1_INTEGER bound) r ()) g a (fun w -> L.restricted_holds (ASN1_INTEGER bound) r w) pm))
+    (pc_slice (In.validate_restricted (ASN1_INTEGER bound) r ()) g a (fun w -> L.restricted_iff (ASN1_INTEGER bound) r w) pm))
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction
@@ -542,7 +562,7 @@ let pr (k: E.leaf_k) (r: asn1_restriction k) (u: squash (In.supported_restrictio
   | ASN1_INTEGER bound -> pr_integer bound r () pm
   | ASN1_OCTETSTRING ->
     slice_leaf_eq ASN1_OCTETSTRING (L.tacc k) (L.holds k (restriction_pred r)) pm;
-    coerce_eq () (pc_slice (In.validate_restricted ASN1_OCTETSTRING r ()) (L.tacc k) (L.holds k (restriction_pred r)) (fun w -> L.restricted_holds ASN1_OCTETSTRING r w) pm)
+    coerce_eq () (pc_slice (In.validate_restricted ASN1_OCTETSTRING r ()) (L.tacc k) (L.holds k (restriction_pred r)) (fun w -> L.restricted_iff ASN1_OCTETSTRING r w) pm)
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction
@@ -561,7 +581,7 @@ let pn (k: E.leaf_k) (defl: asn1_key_lit k) (u: squash (In.adb_key_supported k))
 : pcg (raw_leaf k) (L.tacc k) (L.holds k (defaultv_filter (key_of_lit k defl))) pm
 = match k with
   | ASN1_BOOLEAN -> pc_pure boolean_enc (L.tacc ASN1_BOOLEAN) (L.holds ASN1_BOOLEAN (defaultv_filter (key_of_lit ASN1_BOOLEAN defl))) (fun x -> not (x = (defl <: bool))) (bool_neq defl) pm
-  | ASN1_NULL -> pc_pure null_enc (L.tacc ASN1_NULL) (L.holds ASN1_NULL (defaultv_filter (key_of_lit ASN1_NULL defl))) (fun _ -> false) (fun _ -> ()) pm
+  | ASN1_NULL -> pc_pure null_enc (L.tacc ASN1_NULL) (L.holds ASN1_NULL (defaultv_filter (key_of_lit ASN1_NULL defl))) (fun _ -> false) (null_neq defl) pm
   | ASN1_INTEGER bound -> pn_integer bound defl () pm
   | ASN1_BITSTRING -> pn_bitstring defl (L.tacc ASN1_BITSTRING) pm
   | _ ->

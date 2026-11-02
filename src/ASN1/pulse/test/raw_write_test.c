@@ -112,6 +112,18 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
     }                                                                         \
   } while (0)
 
+/* The JIT writer alone, on an invalid input that it reports as such
+   without falling back */
+#define JIT_INV(name, x) do {                                                 \
+    uint8_t out_[BUF];                                                        \
+    size_t pos_ = BUF;                                                        \
+    Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_, .len = BUF };            \
+    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_jit_##name(x, o_, &pos_); \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_INVALID) {                             \
+      printf("%s:%d: jit_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
+  } while (0)
+
 #define OK(name, x, ...) do {                                                 \
     OK1(raw, name, x, __VA_ARGS__); OK1(jit, name, x, __VA_ARGS__);     \
     JIT_OK(name, x, __VA_ARGS__);  \
@@ -251,6 +263,7 @@ int main(void) {
        0xa0, 0x03, 0x02, 0x01, 0x06, 0x81, 0x01, 0x04));
   OK(defL, defL(SOME_BIG(SL(i256)), NONE_SL, NONE_SL, NONE_INT, NONE_INT), V(0x30, 0x04, 0x02, 0x02, 0x01, 0x00));
   INVALID(defL, defL(SOME_INT(0), NONE_SL, NONE_SL, NONE_INT, NONE_INT));   /* a = default */
+  JIT_INV(defL, defL(SOME_INT(0), NONE_SL, NONE_SL, NONE_INT, NONE_INT));
   INVALID(defL, defL(NONE_INT, SOME_SL(SL(abcd)), NONE_SL, NONE_INT, NONE_INT)); /* b = default */
   INVALID(defL, defL(NONE_INT, NONE_SL, SOME_SL(SL(ab)), NONE_INT, NONE_INT)); /* s = default */
   INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, SOME_INT(5), NONE_INT));   /* t = default */
@@ -258,15 +271,21 @@ int main(void) {
   INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(11)));  /* r > 10 */
   INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(-1)));  /* r < 0 */
   INVALID(defL, defL(SOME_BIG(SL(nm1)), NONE_SL, NONE_SL, NONE_INT, NONE_INT)); /* non-minimal */
+  JIT_INV(defL, defL(SOME_BIG(SL(nm1)), NONE_SL, NONE_SL, NONE_INT, NONE_INT));
   INVALID(defL, defL(SOME_BIG(none), NONE_SL, NONE_SL, NONE_INT, NONE_INT));    /* empty INTEGER */
+  JIT_INV(defL, defL(SOME_BIG(none), NONE_SL, NONE_SL, NONE_INT, NONE_INT));
   INVALID(defL, defL(NONE_INT, NONE_SL, SOME_SL(SL(hat)), NONE_INT, NONE_INT)); /* not printable */
 
   /* tagS: restriction, implicitly tagged IA5String, 1-byte INTEGER */
   OK(tagS, tagS(SL(hi), 10, -128), V(0x30, 0x0a, 0x80, 0x02, 'h', 'i', 0x02, 0x01, 0x0a, 0x02, 0x01, 0x80));
   INVALID(tagS, tagS(SL(hi), 11, 0));     /* r > 10 */
+  JIT_INV(tagS, tagS(SL(hi), 11, 0));
   INVALID(tagS, tagS(SL(hi80), 0, 0));    /* not IA5 */
+  JIT_INV(tagS, tagS(SL(hi80), 0, 0));
   INVALID(tagS, tagS(SL(hi), 0, 200));    /* s out of 1-byte bound */
+  JIT_INV(tagS, tagS(SL(hi), 0, 200));
   INVALID(tagS, tagS(SL(hi), 0, -129));
+  JIT_INV(tagS, tagS(SL(hi), 0, -129));
 
   /* neSeqOfInt: SIZE (1..MAX), big INTEGERs */
   {
@@ -321,6 +340,7 @@ int main(void) {
      V(0x30, 0x0f, 0x13, 0x02, 'h', 'i', 0x05, 0x00, 0x03, 0x01, 0x00,
        0x02, 0x01, 0x00, 0x02, 0x01, 0x01));
   INVALID(mix, mix(SL(hat), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));     /* not printable */
+  JIT_INV(mix, mix(SL(hat), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));
   INVALID(mix, mix(SL(hi), SL(badint), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));    /* bad ANY */
   INVALID(mix, mix(SL(hi), none, BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));          /* empty ANY */
   INVALID(mix, mix(SL(hi), SL(null_), BITS(8, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));     /* unused > 7 */

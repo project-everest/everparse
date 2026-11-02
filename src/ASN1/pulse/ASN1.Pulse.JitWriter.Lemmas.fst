@@ -856,8 +856,8 @@ let leaf_tacc (k: E.leaf_k) (x: asn1_terminal_t k) (f: asn1_terminal_t k -> bool
 = E.parse_leaf_enc k x
 
 let acc_restricted (k: asn1_terminal_k) (r: asn1_restriction k) (c: bytes)
-: Lemma (requires (tacc k c /\ holds k (restriction_pred r) c))
-  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) c))
+: Lemma ((tacc k c /\ holds k (restriction_pred r) c) <==>
+  acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) c)
 = TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred r) c
 
 let restricted_holds (k: asn1_terminal_k) (r: asn1_restriction k) (c: bytes)
@@ -866,13 +866,13 @@ let restricted_holds (k: asn1_terminal_k) (r: asn1_restriction k) (c: bytes)
 = TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred r) c
 
 let acc_default (k: asn1_terminal_k) (defv: asn1_terminal_t k) (c: bytes)
-: Lemma (requires (tacc k c /\ holds k (defaultv_filter defv) c))
-  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_content k defv)) c))
+: Lemma ((tacc k c /\ holds k (defaultv_filter defv) c) <==>
+  acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_content k defv)) c)
 = TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred (RESTRICT_CUSTOM (defaultv_filter defv))) c
 
 let acc_default_restricted (k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_terminal_t k) (c: bytes)
-: Lemma (requires (tacc k c /\ holds k (restriction_pred r) c /\ holds k (defaultv_filter defv) c))
-  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_restricted_content k r defv)) c))
+: Lemma (((tacc k c /\ holds k (restriction_pred r) c) /\ holds k (defaultv_filter defv) c) <==>
+  acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_restricted_content k r defv)) c)
 = TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred (RESTRICT_CUSTOM (Co.restricted_default_filter r defv))) c
 
 (* A content that is not the encoding of the default value *)
@@ -889,6 +889,20 @@ let neq_fl_holds (k: asn1_terminal_k) (defv: asn1_terminal_t k) (c: bytes)
   assert (Seq.equal (Seq.slice c 0 (Seq.length c)) c);
   ADB.fldata_eq #(SCo.parse_filter_kind asn1_weak_parser_kind) (SCo.parse_filter #asn1_weak_parser_kind p (ADB.key_eq defv)) (Seq.length c) c;
   SCo.parse_filter_eq #asn1_weak_parser_kind p (ADB.key_eq defv) c
+
+(* A content that the fixed-length equality check accepts *)
+let fl_eq_not_holds (k: asn1_terminal_k) (defv: asn1_terminal_t k) (c: bytes)
+: Lemma (requires (Some? (parse (ADB.key_eq_fldata k defv (Seq.length c)) (Seq.slice c 0 (Seq.length c)))))
+  (ensures (~ (holds k (defaultv_filter defv) c)))
+= let p = asn1_terminal_as_parser k in
+  assert (Seq.equal (Seq.slice c 0 (Seq.length c)) c);
+  ADB.fldata_eq #(SCo.parse_filter_kind asn1_weak_parser_kind) (SCo.parse_filter #asn1_weak_parser_kind p (ADB.key_eq defv)) (Seq.length c) c;
+  SCo.parse_filter_eq #asn1_weak_parser_kind p (ADB.key_eq defv) c
+
+let restricted_iff (k: asn1_terminal_k) (r: asn1_restriction k) (c: bytes)
+: Lemma (requires (tacc k c))
+  (ensures (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) c <==> holds k (restriction_pred r) c))
+= TC.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred r) c
 
 (* INTEGER contents encoded from a 64-bit integer *)
 let i64_interval (bound: pos { bound <= 8 }) (x: int) (c: bytes)
@@ -928,4 +942,213 @@ let iacc_default_restricted (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_rest
   let b1 = Seq.slice b c1 (Seq.length b) in
   Sq.seq_single_some hd id b1;
   Co.default_restricted_twin_consumed id0 #k r defl id b1
+#pop-options
+
+(* Conversely, a TLV is accepted only if its contents are, and are
+   shorter than 2^32 bytes *)
+
+let hdr_big_none (n: nat) (rest: bytes)
+: Lemma (requires (n >= 4294967296))
+  (ensures (None? (parse parse_asn1_length_u32_t (enc_hdr true n `Seq.append` rest))))
+= let b = enc_hdr true n `Seq.append` rest in
+  parse_len_consumed b;
+  match parse parse_asn1_length_u32_t b with
+  | Some (y, c) ->
+    enc_len_head y;
+    assert (Seq.index (Seq.slice b 0 c) 0 == Seq.index b 0)
+  | None -> ()
+
+#push-options "--z3rlimit 64"
+let acc_tlv_inv (id: asn1_id_t) (#ack: asn1_content_k) (p: asn1_weak_parser (asn1_content_t ack)) (c: bytes)
+: Lemma
+  (requires (acc #asn1_strong_parser_kind (parse_asn1_ILC id p) (enc_tlv id true c)))
+  (ensures (acc #asn1_weak_parser_kind p c /\ Seq.length c < 4294967296))
+= let hdr = enc_hdr true (Seq.length c) in
+  let rest = hdr `Seq.append` c in
+  let b = enc_tlv id true c in
+  assert (b == IE.asn1_id_enc id `Seq.append` rest);
+  IE.parse_asn1_identifier_U32_enc id rest;
+  ILC.ilc_eq id p b;
+  let c1 = Seq.length (IE.asn1_id_enc id) in
+  assert (Seq.equal (Seq.slice b c1 (Seq.length b)) rest);
+  C.vlgen_eq p rest;
+  if Seq.length c >= 4294967296
+  then hdr_big_none (Seq.length c) c
+  else begin
+    let n = U32.uint_to_t (Seq.length c) in
+    parse_enc_len n c;
+    assert (Seq.equal (Seq.slice rest (Seq.length hdr) (Seq.length hdr + Seq.length c)) c)
+  end
+#pop-options
+
+let acc_tlv_iff (id: asn1_id_t) (#ack: asn1_content_k) (p: asn1_weak_parser (asn1_content_t ack)) (c: bytes)
+: Lemma (acc #asn1_strong_parser_kind (parse_asn1_ILC id p) (enc_tlv id true c) <==>
+    (acc #asn1_weak_parser_kind p c /\ Seq.length c < 4294967296))
+= Classical.move_requires (acc_tlv_inv id p) c;
+  Classical.move_requires (acc_tlv id p) c
+
+
+(* Framed chunks: one TLV with one of the given identifiers. A present
+   component (other than ANY) is framed, and the acceptance of a framed
+   first component and of the remaining ones are then independent, so that
+   a failure in either is a failure of the whole. *)
+
+let framed (s: FStar.Set.set asn1_id_t) (x: bytes) : prop =
+  exists (id: asn1_id_t) (c: bytes) . FStar.Set.mem id s /\ x == enc_tlv id true c
+
+let enc_tlv_ne (id: asn1_id_t) (c: bytes)
+: Lemma (Seq.length (enc_tlv id true c) > 0)
+= if Seq.length c < 4294967296 then enc_len_head (U32.uint_to_t (Seq.length c))
+
+let framed_ne (s: FStar.Set.set asn1_id_t) (x: bytes)
+: Lemma (requires (framed s x)) (ensures (Seq.length x > 0))
+= eliminate exists (id: asn1_id_t) (c: bytes) . FStar.Set.mem id s /\ x == enc_tlv id true c
+  with enc_tlv_ne id c
+
+let framed_intro (id: asn1_id_t) (s: FStar.Set.set asn1_id_t) (c: bytes)
+: Lemma (requires (FStar.Set.mem id s)) (ensures (framed s (enc_tlv id true c)))
+= ()
+
+let framed_sub (s1 s2: FStar.Set.set asn1_id_t) (x: bytes)
+: Lemma (requires (framed s1 x /\ FStar.Set.subset s1 s2)) (ensures (framed s2 x))
+= ()
+
+#push-options "--fuel 1 --ifuel 1"
+let iacc_plain_iff (#s: _) (k: asn1_k s) (b: bytes)
+: Lemma (acc #asn1_strong_parser_kind (asn1_as_parser k) b <==> iacc [In.twin_of (ASN1_PLAIN_ILC k)] b)
+= let hd = In.twin_of (ASN1_PLAIN_ILC k) in
+  twin_of_plain k;
+  PSL.k_id_then k b;
+  Sq.seq_cons_none [hd] b;
+  match parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id, c1) ->
+    let b1 = Seq.slice b c1 (Seq.length b) in
+    Sq.seq_single_some hd id b1;
+    assert (parse_asn1_sequence_item_twin hd id == snd (asn1_as_parser_twin k) id)
+
+let iacc_option_iff (#s: _) (k: asn1_k s) (b: bytes)
+: Lemma (requires (Seq.length b > 0))
+  (ensures (acc #asn1_strong_parser_kind (asn1_as_parser k) b <==> iacc [In.twin_of (ASN1_OPTION_ILC k)] b))
+= let hd = In.twin_of (ASN1_OPTION_ILC k) in
+  twin_of_option k;
+  PSL.k_id_then k b;
+  Sq.seq_cons_none [hd] b;
+  match parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id, c1) ->
+    let b1 = Seq.slice b c1 (Seq.length b) in
+    Sq.seq_single_some hd id b1;
+    assert (parse_asn1_sequence_item_twin hd id == (snd (asn1_as_parser_twin k) id `LowParse.Tot.Combinators.parse_synth` Some));
+    LowParse.Tot.Combinators.parse_synth_eq (snd (asn1_as_parser_twin k) id) Some b1
+
+let iacc_default_iff (id0: asn1_id_t) (#k: asn1_terminal_k) (defl: asn1_key_lit k) (b: bytes)
+: Lemma (requires (Seq.length b > 0))
+  (ensures (acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_content k (key_of_lit k defl)))) b <==>
+    iacc [In.twin_of (ASN1_DEFAULT_TERMINAL id0 #k defl)] b))
+= let hd = In.twin_of (ASN1_DEFAULT_TERMINAL id0 #k defl) in
+  let p = asn1_content_as_parser (Co.default_content k (key_of_lit k defl)) in
+  ILC.ilc_eq id0 p b;
+  Sq.seq_cons_none [hd] b;
+  match parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id, c1) ->
+    let b1 = Seq.slice b c1 (Seq.length b) in
+    Sq.seq_single_some hd id b1;
+    Co.default_terminal_twin_consumed id0 #k defl id b1
+
+let iacc_default_restricted_iff (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defl: asn1_key_lit k { restriction_pred r (key_of_lit k defl) }) (b: bytes)
+: Lemma (requires (Seq.length b > 0))
+  (ensures (acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_restricted_content k r (key_of_lit k defl)))) b <==>
+    iacc [In.twin_of (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)] b))
+= let hd = In.twin_of (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl) in
+  let p = asn1_content_as_parser (Co.default_restricted_content k r (key_of_lit k defl)) in
+  ILC.ilc_eq id0 p b;
+  Sq.seq_cons_none [hd] b;
+  match parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id, c1) ->
+    let b1 = Seq.slice b c1 (Seq.length b) in
+    Sq.seq_single_some hd id b1;
+    Co.default_restricted_twin_consumed id0 #k r defl id b1
+#pop-options
+
+let strong_prefix_down (#t: Type) (p: SB.parser asn1_strong_parser_kind t) (b1 b2: bytes) (n: nat)
+: Lemma
+  (requires (Seq.length b1 <= Seq.length b2 /\ Seq.slice b2 0 (Seq.length b1) == b1 /\ Sq.consumed p b2 == Some n /\ n <= Seq.length b1))
+  (ensures (Sq.consumed p b1 == Some n))
+= let Some (_, c) = SB.parse p b2 in
+  Seq.slice_slice b2 0 (Seq.length b1) 0 c;
+  SB.parse_strong_prefix p b2 b1
+
+let lc_size_tlv (c x2: bytes)
+: Lemma
+  (PSL.lc_size ((enc_hdr true (Seq.length c) `Seq.append` c) `Seq.append` x2) ==
+    (if Seq.length c < 4294967296 then Some (Seq.length (enc_hdr true (Seq.length c)) + Seq.length c) else None))
+= let hdr = enc_hdr true (Seq.length c) in
+  Seq.append_assoc hdr c x2;
+  if Seq.length c < 4294967296
+  then parse_enc_len (U32.uint_to_t (Seq.length c)) (c `Seq.append` x2)
+  else hdr_big_none (Seq.length c) (c `Seq.append` x2)
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 128"
+let iacc_cons_inv' (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin { Cons? tl })
+  (id: asn1_id_t) (c x2: bytes)
+: Lemma
+  (requires (FStar.Set.mem id (Sq.item_set hd) /\ PSL.item_shaped hd /\ iacc (hd :: tl) (enc_tlv id true c `Seq.append` x2)))
+  (ensures (iacc [hd] (enc_tlv id true c) /\ iacc tl x2))
+= let hdr = enc_hdr true (Seq.length c) in
+  let r1 = hdr `Seq.append` c in
+  let x1 = enc_tlv id true c in
+  let x = x1 `Seq.append` x2 in
+  let ie = IE.asn1_id_enc id in
+  let rr = r1 `Seq.append` x2 in
+  Seq.append_assoc ie r1 x2;
+  IE.parse_asn1_identifier_U32_enc id rr;
+  IE.parse_asn1_identifier_U32_enc id r1;
+  enc_tlv_ne id c;
+  Sq.seq_cons_none (hd :: tl) x;
+  Sq.seq_cons_none [hd] x1;
+  let c1 = Seq.length ie in
+  assert (Seq.equal (Seq.slice x c1 (Seq.length x)) rr);
+  assert (Seq.equal (Seq.slice x1 c1 (Seq.length x1)) r1);
+  Sq.seq_cons_cons_some hd tl id rr;
+  Sq.seq_single_some hd id r1;
+  let tw = parse_asn1_sequence_item_twin hd id in
+  assert (PSL.lc_shaped tw);
+  lc_size_tlv c x2;
+  match Sq.consumed #asn1_strong_parser_kind tw rr with
+  | None -> ()
+  | Some n1 ->
+    assert (Seq.equal (Seq.slice rr 0 (Seq.length r1)) r1);
+    strong_prefix_down tw r1 rr n1;
+    assert (Seq.equal (Seq.slice rr n1 (Seq.length rr)) x2)
+#pop-options
+
+let iacc_cons_inv (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin { Cons? tl })
+  (x1 x2: bytes)
+: Lemma
+  (requires (framed (Sq.item_set hd) x1 /\ PSL.item_shaped hd /\ iacc (hd :: tl) (x1 `Seq.append` x2)))
+  (ensures (iacc [hd] x1 /\ iacc tl x2))
+= eliminate exists (id: asn1_id_t) (c: bytes) . FStar.Set.mem id (Sq.item_set hd) /\ x1 == enc_tlv id true c
+  with iacc_cons_inv' hd tl id c x2
+
+(* Converses, used by the JIT writers to report invalid inputs *)
+
+#push-options "--fuel 2 --ifuel 1"
+let item_set_twin (#s: _) (#d: _) (dk: asn1_decorated_k s d)
+: Lemma (Sq.item_set (In.twin_of dk) == s)
+= ()
+
+let acc_k_ilc_inv (id: asn1_id_t) (c: asn1_content_k) (b: bytes)
+: Lemma (requires (acc #asn1_strong_parser_kind (asn1_as_parser (ASN1_ILC id c)) b)) (ensures (acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser c)) b))
+= ()
+
+let acc_prefixed_inv (#s: _) (k: asn1_k s) (b: bytes)
+: Lemma (requires (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_PREFIXED k)) b)) (ensures (acc #asn1_strong_parser_kind (asn1_as_parser k) b))
+= ()
+
+let acc_sequence_inv (g: asn1_gen_items_lk) (b: bytes)
+: Lemma (requires (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE g)) b)) (ensures (iacc (In.twins_of (dsnd g)) b))
+= ()
 #pop-options
