@@ -160,13 +160,9 @@ There can be multiple definitions marked ``entrypoint`` in a given
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
 
-  ``ModuleWrapper.h`` includes ``EverParsePulseEndianness.h`` instead of
-  ``EverParseEndianness.h``; its named ``EVERPARSE_ERROR_*`` kinds use the
-  same numbers (see :ref:`sec-error-handling-pulse`).
-  ``everparse-3d.exe --api pulse --batch`` accordingly writes two
-  extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
-  into the output directory alongside the ones listed above, unless
-  ``--no_copy_everparse_h`` is specified. Finally, the
+  ``ModuleWrapper.h`` additionally includes ``EverParse.h``; its named
+  ``EVERPARSE_ERROR_*`` kinds use the same numbers (see
+  :ref:`sec-error-handling-pulse`). Finally, the
   client primitives that ``--input_stream`` and ``extern`` specifications
   require are not the same; those are documented in
   :ref:`the 3d user manual <3d>`.
@@ -2234,8 +2230,8 @@ Error handling under ``--api pulse``
 The Pulse backend keeps the whole of the design above: the same
 ``EVERPARSE_ERROR_HANDLER`` typedef in ``EverParse.h``, the same
 ``EVERPARSE_ERROR_FRAME`` structure and ``EverParseDefaultErrorHandler``
-(shipped as plain C in ``EverParsePulse.h`` rather than generated into
-``EverParse.h``), the same per-module ``<Mod>EverParseError`` callback, and
+(whose ``Input`` argument is a plain ``uint8_t *``, unused by the default
+handler), the same per-module ``<Mod>EverParseError`` callback, and
 the same stack trace of enclosing types. What changes is the handler's
 argument list and the width of the error code, not its kind number.
 
@@ -2287,6 +2283,10 @@ Three points deserve attention:
 constants under ``--api pulse`` with the same kind numbers as
 ``--api lowstar``.
 The validator still returns a byte, not a packed position/error value.
+The runtime ``EverParse.h`` also names these byte-sized codes
+``EVERPARSE_STATUS_SUCCESS`` and ``EVERPARSE_STATUS_ERROR_*``, under both
+APIs; under ``--api lowstar``, ``EVERPARSE_VALIDATOR_*`` remain the packed
+64-bit codes.
 The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
   - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)

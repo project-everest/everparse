@@ -1,8 +1,12 @@
 /* EverCBOR benchmark and conformance tests for the C API.
  *
- * This file is compiled twice:
+ * This file is compiled three times:
  *   - once with -DEVERCBOR_DET, against the deterministic-encoding snapshot;
- *   - once with -DEVERCBOR_NONDET, against the non-deterministic snapshot.
+ *   - once with -DEVERCBOR_NONDET, against the non-deterministic snapshot;
+ *   - once with -DEVERCBOR_NONDET -DEVERCBOR_NONDET_BOUNDED, against the
+ *     non-deterministic snapshot, validating with
+ *     cbor_nondet_parse_bounded(MAP_DEPTH_BOUND, MAP_LENGTH_BOUND, ...)
+ *     instead of the unbounded cbor_nondet_parse.
  *
  * Each test is repeated BENCH_ITERATIONS times and timed.
  */
@@ -31,6 +35,9 @@
 #if !defined(EVERCBOR_DET) && !defined(EVERCBOR_NONDET)
 #  error "Define exactly one of EVERCBOR_DET or EVERCBOR_NONDET"
 #endif
+#if defined(EVERCBOR_NONDET_BOUNDED) && !defined(EVERCBOR_NONDET)
+#  error "EVERCBOR_NONDET_BOUNDED requires EVERCBOR_NONDET"
+#endif
 
 #ifdef EVERCBOR_DET
 #  include "CBORDet.h"
@@ -38,8 +45,26 @@
 #  define IS_DETERMINISTIC 1
 #else
 #  include "CBORNondet.h"
-#  define API_NAME "nondet"
+#  ifdef EVERCBOR_NONDET_BOUNDED
+#    define API_NAME "bounded"
+#  else
+#    define API_NAME "nondet"
+#  endif
 #  define IS_DETERMINISTIC 0
+#endif
+
+/* Bounds used by the EVERCBOR_NONDET_BOUNDED variant. The defaults must be
+ * large enough for every valid test of the suite to be accepted. */
+#ifndef MAP_DEPTH_BOUND
+#  define MAP_DEPTH_BOUND 16
+#endif
+#ifndef MAP_LENGTH_BOUND
+#  define MAP_LENGTH_BOUND 64
+#endif
+#ifdef EVERCBOR_NONDET_BOUNDED
+#  define IS_BOUNDED 1
+#else
+#  define IS_BOUNDED 0
 #endif
 
 #ifndef BENCH_ITERATIONS
@@ -61,6 +86,13 @@ typedef cbor_nondet_map_entry_t cbor_entry_t;
 static size_t cbor_v_validate(uint8_t *bytes, size_t len) {
 #ifdef EVERCBOR_DET
   return cbor_det_validate(bytes, len);
+#elif defined(EVERCBOR_NONDET_BOUNDED)
+  uint8_t *p = bytes;
+  size_t l = len;
+  cbor_t dest;
+  if (!cbor_nondet_parse_bounded(MAP_DEPTH_BOUND, MAP_LENGTH_BOUND,
+                                 &p, &l, &dest)) return 0;
+  return len - l;
 #else
   uint8_t *p = bytes;
   size_t l = len;
@@ -2913,12 +2945,188 @@ static int test_arr_wide_deep_iter_canonical(void) {
 }
 
 /* ============================================================
+ *   Validation complexity tests (nondet and bounded only)
+ *
+ * Validation-only tests on inputs that are adversarial for the
+ * unbounded nondet validator, plus boundary cases for the bounds of the
+ * bounded variant. Each input is built once and cached, so that the
+ * timed loop measures validation alone. These tests write no artefacts.
+ *
+ * Expected cost of the unbounded validator (N = input size):
+ *   - map_chain_*:    {0: {0: ... {0: 0, 1: 0} ..., 1: 0}, 1: 0}.
+ *                     The duplicate-key check of each map jumps over the
+ *                     nested value to reach key 1: O(N^2).
+ *   - map_wide_*:     one map with N distinct integer keys: O(N^2) key
+ *                     comparisons.
+ *   - map_dupkey_*:   {K_d: 0, K_d: 0} with K_0 = 0 and
+ *                     K_d = {K_(d-1): 0, -1: 0}. Rejected (duplicate key),
+ *                     but comparing the two keys costs O(2^d) for an
+ *                     input of size O(d). The bounded variant rejects
+ *                     them as soon as the map depth (d + 1) exceeds
+ *                     MAP_DEPTH_BOUND; within the bound, it pays the same
+ *                     exponential cost, which is why MAP_DEPTH_BOUND should
+ *                     be kept small.
+ * ============================================================ */
+
+#if !IS_DETERMINISTIC
+
+/* Expected validation result. `map_depth` and `max_map_length` describe
+ * the input; `valid` is its validity for the unbounded validator. */
+static int run_validate_only(uint8_t *bytes, size_t len, bool valid,
+                             size_t map_depth, size_t max_map_length) {
+  bool accept = valid &&
+    (!IS_BOUNDED ||
+     (map_depth <= MAP_DEPTH_BOUND && max_map_length <= MAP_LENGTH_BOUND));
+  size_t vsize = cbor_v_validate(bytes, len);
+  if (accept && vsize != len)
+    TFAIL("expected acceptance of %zu bytes, got %zu", len, vsize);
+  if (!accept && vsize != 0)
+    TFAIL("expected rejection, got %zu", vsize);
+  return 0;
+}
+
+static size_t emit_head(uint8_t *buf, size_t off, uint8_t major, uint64_t v) {
+  uint8_t mt = (uint8_t)(major << 5);
+  if (v < 24) { buf[off++] = mt | (uint8_t)v; }
+  else if (v <= 0xff) { buf[off++] = mt | 24; buf[off++] = (uint8_t)v; }
+  else if (v <= 0xffff) {
+    buf[off++] = mt | 25;
+    buf[off++] = (uint8_t)(v >> 8); buf[off++] = (uint8_t)v;
+  } else {
+    buf[off++] = mt | 26;
+    for (int i = 3; i >= 0; i--) buf[off++] = (uint8_t)(v >> (8 * i));
+  }
+  return off;
+}
+
+/* Chain of k nested 2-entry maps; if `wrap`, each nested map is also
+ * wrapped in a 1-element array and a tag (which do not count toward the
+ * map depth). Map depth: k. */
+static size_t gen_map_chain(uint8_t *buf, size_t k, bool wrap) {
+  size_t off = 0;
+  for (size_t i = 0; i < k; i++) {
+    if (wrap && i > 0) {
+      off = emit_head(buf, off, 4, 1);
+      off = emit_head(buf, off, 6, 1234);
+    }
+    off = emit_head(buf, off, 5, 2);
+    off = emit_head(buf, off, 0, 0);
+  }
+  off = emit_head(buf, off, 0, 0);
+  for (size_t i = 0; i < k; i++) {
+    off = emit_head(buf, off, 0, 1);
+    off = emit_head(buf, off, 0, 0);
+  }
+  return off;
+}
+
+/* A single map with n distinct integer keys. */
+static size_t gen_map_wide(uint8_t *buf, size_t n) {
+  size_t off = emit_head(buf, 0, 5, n);
+  for (size_t i = 0; i < n; i++) {
+    off = emit_head(buf, off, 0, i);
+    off = emit_head(buf, off, 0, 0);
+  }
+  return off;
+}
+
+static size_t gen_dupkey_key(uint8_t *buf, size_t off, size_t d) {
+  if (d == 0) return emit_head(buf, off, 0, 0);
+  off = emit_head(buf, off, 5, 2);
+  off = gen_dupkey_key(buf, off, d - 1);
+  off = emit_head(buf, off, 0, 0);
+  off = emit_head(buf, off, 1, 0);
+  off = emit_head(buf, off, 0, 0);
+  return off;
+}
+
+/* {K_d: 0, K_d: 0}. Map depth: d + 1. */
+static size_t gen_map_dupkey(uint8_t *buf, size_t d) {
+  size_t off = emit_head(buf, 0, 5, 2);
+  for (int i = 0; i < 2; i++) {
+    off = gen_dupkey_key(buf, off, d);
+    off = emit_head(buf, off, 0, 0);
+  }
+  return off;
+}
+
+/* An array of n copies of {0: {0: 0}, 1: 0}: a benign input, linear for
+ * both validators. Map depth: 2. */
+static size_t gen_arr_of_maps(uint8_t *buf, size_t n) {
+  size_t off = emit_head(buf, 0, 4, n);
+  for (size_t i = 0; i < n; i++) {
+    off = emit_head(buf, off, 5, 2);
+    off = emit_head(buf, off, 0, 0);
+    off = emit_head(buf, off, 5, 1);
+    off = emit_head(buf, off, 0, 0);
+    off = emit_head(buf, off, 0, 0);
+    off = emit_head(buf, off, 0, 1);
+    off = emit_head(buf, off, 0, 0);
+  }
+  return off;
+}
+
+#define COMPLEXITY_BUF_SIZE (1 << 16)
+
+#define COMPLEXITY_TEST(name, gen_call, valid, map_depth, max_map_length) \
+  static int test_##name(void) {                                        \
+    static uint8_t buf[COMPLEXITY_BUF_SIZE];                            \
+    static size_t len = 0;                                              \
+    if (len == 0) len = (gen_call);                                     \
+    return run_validate_only(buf, len, (valid), (map_depth),            \
+                             (max_map_length));                         \
+  }
+
+/* Boundary cases for MAP_DEPTH_BOUND and MAP_LENGTH_BOUND. */
+COMPLEXITY_TEST(map_chain_at_depth_bound,
+  gen_map_chain(buf, MAP_DEPTH_BOUND, false), true, MAP_DEPTH_BOUND, 2)
+COMPLEXITY_TEST(map_chain_over_depth_bound,
+  gen_map_chain(buf, MAP_DEPTH_BOUND + 1, false), true, MAP_DEPTH_BOUND + 1, 2)
+COMPLEXITY_TEST(map_chain_wrapped_at_depth_bound,
+  gen_map_chain(buf, MAP_DEPTH_BOUND, true), true, MAP_DEPTH_BOUND, 2)
+COMPLEXITY_TEST(map_chain_wrapped_over_depth_bound,
+  gen_map_chain(buf, MAP_DEPTH_BOUND + 1, true), true, MAP_DEPTH_BOUND + 1, 2)
+COMPLEXITY_TEST(map_wide_at_length_bound,
+  gen_map_wide(buf, MAP_LENGTH_BOUND), true, 1, MAP_LENGTH_BOUND)
+COMPLEXITY_TEST(map_wide_over_length_bound,
+  gen_map_wide(buf, MAP_LENGTH_BOUND + 1), true, 1, MAP_LENGTH_BOUND + 1)
+COMPLEXITY_TEST(map_dupkey_at_depth_bound,
+  gen_map_dupkey(buf, MAP_DEPTH_BOUND - 1), false, MAP_DEPTH_BOUND, 2)
+COMPLEXITY_TEST(map_dupkey_over_depth_bound,
+  gen_map_dupkey(buf, MAP_DEPTH_BOUND), false, MAP_DEPTH_BOUND + 1, 2)
+
+/* Benign input: both validators are linear. */
+COMPLEXITY_TEST(arr_of_maps_4096,
+  gen_arr_of_maps(buf, 4096), true, 2, 2)
+
+/* Quadratic for the unbounded validator: doubling the size multiplies
+ * its time by 4. */
+COMPLEXITY_TEST(map_chain_1000, gen_map_chain(buf, 1000, false), true, 1000, 2)
+COMPLEXITY_TEST(map_chain_2000, gen_map_chain(buf, 2000, false), true, 2000, 2)
+COMPLEXITY_TEST(map_chain_4000, gen_map_chain(buf, 4000, false), true, 4000, 2)
+COMPLEXITY_TEST(map_wide_1000, gen_map_wide(buf, 1000), true, 1, 1000)
+COMPLEXITY_TEST(map_wide_2000, gen_map_wide(buf, 2000), true, 1, 2000)
+COMPLEXITY_TEST(map_wide_4000, gen_map_wide(buf, 4000), true, 1, 4000)
+
+/* Exponential for the unbounded validator: adding 2 to d multiplies its
+ * time by 4, while the input grows by 16 bytes. */
+COMPLEXITY_TEST(map_dupkey_12, gen_map_dupkey(buf, 12), false, 13, 2)
+COMPLEXITY_TEST(map_dupkey_14, gen_map_dupkey(buf, 14), false, 15, 2)
+COMPLEXITY_TEST(map_dupkey_16, gen_map_dupkey(buf, 16), false, 17, 2)
+COMPLEXITY_TEST(map_dupkey_18, gen_map_dupkey(buf, 18), false, 19, 2)
+COMPLEXITY_TEST(map_dupkey_20, gen_map_dupkey(buf, 20), false, 21, 2)
+
+#endif /* !IS_DETERMINISTIC */
+
+/* ============================================================
  *   Test registry & driver
  * ============================================================ */
 
 typedef struct {
   const char *name;
   int (*fn)(void);
+  /* Divides BENCH_ITERATIONS for expensive tests (0 means 1). */
+  int iterations_divisor;
 } test_entry_t;
 
 static const test_entry_t TESTS[] = {
@@ -3121,6 +3329,30 @@ static const test_entry_t TESTS[] = {
   { "tag_nested_iter_canonical",           test_tag_nested_iter_canonical },
   { "tag_array_payload_iter_canonical",    test_tag_array_payload_iter_canonical },
   { "arr_wide_deep_iter_canonical",        test_arr_wide_deep_iter_canonical },
+
+#if !IS_DETERMINISTIC
+  /* ---------- Validation complexity (validation only, no artefacts) ---------- */
+  { "map_chain_at_depth_bound",            test_map_chain_at_depth_bound },
+  { "map_chain_over_depth_bound",          test_map_chain_over_depth_bound },
+  { "map_chain_wrapped_at_depth_bound",    test_map_chain_wrapped_at_depth_bound },
+  { "map_chain_wrapped_over_depth_bound",  test_map_chain_wrapped_over_depth_bound },
+  { "map_wide_at_length_bound",            test_map_wide_at_length_bound },
+  { "map_wide_over_length_bound",          test_map_wide_over_length_bound },
+  { "map_dupkey_at_depth_bound",           test_map_dupkey_at_depth_bound,  100 },
+  { "map_dupkey_over_depth_bound",         test_map_dupkey_over_depth_bound, 100 },
+  { "arr_of_maps_4096",                    test_arr_of_maps_4096,             10 },
+  { "map_chain_1000",                      test_map_chain_1000,              200 },
+  { "map_chain_2000",                      test_map_chain_2000,              500 },
+  { "map_chain_4000",                      test_map_chain_4000,             2000 },
+  { "map_wide_1000",                       test_map_wide_1000,               200 },
+  { "map_wide_2000",                       test_map_wide_2000,               500 },
+  { "map_wide_4000",                       test_map_wide_4000,              2000 },
+  { "map_dupkey_12",                       test_map_dupkey_12,               100 },
+  { "map_dupkey_14",                       test_map_dupkey_14,               500 },
+  { "map_dupkey_16",                       test_map_dupkey_16,              2000 },
+  { "map_dupkey_18",                       test_map_dupkey_18,              5000 },
+  { "map_dupkey_20",                       test_map_dupkey_20,             10000 },
+#endif
 };
 
 #define N_TESTS ((int)(sizeof(TESTS) / sizeof(TESTS[0])))
@@ -3135,6 +3367,10 @@ int main(void) {
   printf("EverCBOR test suite [%s] : %d tests, %d iterations each\n"
          "Writing artefacts under '%s/'\n",
          API_NAME, N_TESTS, (int)BENCH_ITERATIONS, g_out_dir);
+#if IS_BOUNDED
+  printf("Bounds: map depth <= %d, map length <= %d\n",
+         (int)MAP_DEPTH_BOUND, (int)MAP_LENGTH_BOUND);
+#endif
 
   int passed = 0, failed = 0;
   double total_seconds = 0.0;
@@ -3154,8 +3390,12 @@ int main(void) {
       continue;
     }
 
+    int divisor = TESTS[i].iterations_divisor > 0
+                  ? TESTS[i].iterations_divisor : 1;
+    int iterations = (int)BENCH_ITERATIONS / divisor;
+    if (iterations < 1) iterations = 1;
     clock_t start = clock();
-    for (int it = 0; it < BENCH_ITERATIONS; it++) {
+    for (int it = 0; it < iterations; it++) {
       rc = TESTS[i].fn();
       if (rc != 0) break;
     }
@@ -3164,7 +3404,7 @@ int main(void) {
     total_seconds += seconds;
     if (rc == 0) {
       printf("PASS  %d iters in %.6fs (%.3e s/iter)\n",
-             (int)BENCH_ITERATIONS, seconds, seconds / BENCH_ITERATIONS);
+             iterations, seconds, seconds / iterations);
       passed++;
     } else {
       printf("FAIL\n");

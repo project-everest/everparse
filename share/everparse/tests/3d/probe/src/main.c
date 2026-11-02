@@ -77,7 +77,7 @@ size_t * EverParseStreamPos(EVERPARSE_COPY_BUFFER_T x) {
 // used as an input buffer to the validator for the `secondary` type
 // defined in Probe.3d.
 
-BOOLEAN ProbeAndCopy(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+bool ProbeAndCopy(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
   static_assert(sizeof(secondary) == 4, "unexpected size of secondary");
   copy_buffer_t *p = dst;
   if (src == (uint64_t) secondary &&
@@ -92,7 +92,7 @@ BOOLEAN ProbeAndCopy(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERP
   }
 }
 
-BOOLEAN ProbeInit(const char* typename, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+bool ProbeInit(const char* typename, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   return true;
 }
 
@@ -108,7 +108,7 @@ BOOLEAN ProbeInit(const char* typename, uint64_t len, EVERPARSE_COPY_BUFFER_T ds
 // the validator only ever reaches the bytes through
 // EverParseStreamOf, so overwriting `buf` here repoints it.
 
-BOOLEAN ProbeInPlace(
+bool ProbeInPlace(
   uint64_t len,
   uint64_t read_offset,
   uint64_t write_offset,

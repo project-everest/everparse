@@ -96,15 +96,15 @@ typedef struct CBOR_Spec_Raw_EverParse_initial_byte_t_s
 }
 CBOR_Spec_Raw_EverParse_initial_byte_t;
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS (24U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS ((uint8_t)24U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_UNASSIGNED_MIN (28U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_UNASSIGNED_MIN ((uint8_t)28U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS (25U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS ((uint8_t)25U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS (26U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS ((uint8_t)26U)
 
-#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS (27U)
+#define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS ((uint8_t)27U)
 
 #define CBOR_Spec_Raw_EverParse_LongArgumentSimpleValue 0
 #define CBOR_Spec_Raw_EverParse_LongArgumentU8 1
@@ -805,6 +805,316 @@ CBOR_Pulse_Raw_EverParse_Format_jump_raw_data_item(
     pn = n - (size_t)1U + CBOR_Pulse_Raw_EverParse_Format_jump_recursive_step_count_leaf(input1);
   }
   return poffset;
+}
+
+static bool
+CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_map_length_bounded(
+  size_t n,
+  CBOR_Pulse_Raw_Slice_byte_slice input,
+  size_t *poffset
+)
+{
+  size_t pn = (size_t)1U;
+  bool pres = true;
+  while (pres && pn > (size_t)0U)
+  {
+    size_t off = *poffset;
+    size_t n1 = pn;
+    if (n1 > Pulse_Lib_Slice_len__uint8_t(input) - off)
+      pres = false;
+    else
+    {
+      size_t offset = *poffset;
+      bool ite0;
+      if (CBOR_Pulse_Raw_EverParse_Format_validate_header(input, poffset))
+      {
+        size_t off1 = *poffset;
+        prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        x =
+          CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input,
+                offset)._2,
+              off1 - offset)._1);
+        CBOR_Spec_Raw_EverParse_initial_byte_t b = x._1;
+        if
+        (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+        {
+          size_t offset1 = *poffset;
+          size_t offset2 = *poffset;
+          size_t remaining = Pulse_Lib_Slice_len__uint8_t(input) - offset2;
+          bool ite1;
+          if
+          (
+            remaining / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >=
+              (size_t)16U
+          )
+            ite1 = true;
+          else
+          {
+            uint64_t b64 = (uint64_t)remaining;
+            ite1 = CBOR_Spec_Raw_EverParse_argument_as_uint64(x._1, x._2) <= b64;
+          }
+          bool ite;
+          if (ite1)
+          {
+            *poffset = offset2 + (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(x._1, x._2);
+            ite = true;
+          }
+          else
+            ite = false;
+          if (ite)
+          {
+            size_t off2 = *poffset;
+            CBOR_Pulse_Raw_Slice_byte_slice
+            x1 =
+              Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, offset1)._2,
+                off2 - offset1)._1;
+            if (CBOR_Spec_Raw_EverParse_get_header_major_type(x) == CBOR_MAJOR_TYPE_BYTE_STRING)
+              ite0 = true;
+            else
+              ite0 = CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(x1);
+          }
+          else
+            ite0 = false;
+        }
+        else
+          ite0 = true;
+      }
+      else
+        ite0 = false;
+      if (!ite0)
+        pres = false;
+      else
+      {
+        size_t offset1 = *poffset;
+        CBOR_Pulse_Raw_Slice_byte_slice
+        input1 =
+          Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, off)._2,
+            offset1 - off)._1;
+        prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        h =
+          CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(input1,
+              CBOR_Pulse_Raw_EverParse_Format_jump_header(input1, (size_t)0U))._1);
+        bool ite;
+        if (CBOR_Spec_Raw_EverParse_get_header_major_type(h) == CBOR_MAJOR_TYPE_MAP)
+        {
+          uint64_t arg64 = CBOR_Spec_Raw_EverParse_argument_as_uint64(h._1, h._2);
+          ite =
+            n / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U ||
+              arg64 <= (uint64_t)n;
+        }
+        else
+          ite = true;
+        if (!ite)
+          pres = false;
+        else
+        {
+          size_t bound = Pulse_Lib_Slice_len__uint8_t(input) - off - n1;
+          bool
+          res2 =
+            CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(input1,
+              bound,
+              &pn);
+          size_t count = pn;
+          if (res2 || count > bound)
+            pres = false;
+          else
+            pn = n1 - (size_t)1U + count;
+        }
+      }
+    }
+  }
+  return pres;
+}
+
+bool
+CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
+  size_t map_length_bound,
+  size_t d,
+  size_t n,
+  CBOR_Pulse_Raw_Slice_byte_slice input,
+  size_t *poffset
+)
+{
+  size_t pn = n;
+  bool pres = true;
+  while (pres && pn > (size_t)0U)
+  {
+    size_t off = *poffset;
+    size_t n1 = pn;
+    if (n1 > Pulse_Lib_Slice_len__uint8_t(input) - off)
+      pres = false;
+    else
+    {
+      size_t offset = *poffset;
+      bool ite0;
+      if (CBOR_Pulse_Raw_EverParse_Format_validate_header(input, poffset))
+      {
+        size_t off1 = *poffset;
+        prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        x =
+          CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input,
+                offset)._2,
+              off1 - offset)._1);
+        CBOR_Spec_Raw_EverParse_initial_byte_t b = x._1;
+        if
+        (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+        {
+          size_t offset1 = *poffset;
+          size_t offset2 = *poffset;
+          size_t remaining = Pulse_Lib_Slice_len__uint8_t(input) - offset2;
+          bool ite1;
+          if
+          (
+            remaining / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >=
+              (size_t)16U
+          )
+            ite1 = true;
+          else
+          {
+            uint64_t b64 = (uint64_t)remaining;
+            ite1 = CBOR_Spec_Raw_EverParse_argument_as_uint64(x._1, x._2) <= b64;
+          }
+          bool ite;
+          if (ite1)
+          {
+            *poffset = offset2 + (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(x._1, x._2);
+            ite = true;
+          }
+          else
+            ite = false;
+          if (ite)
+          {
+            size_t off2 = *poffset;
+            CBOR_Pulse_Raw_Slice_byte_slice
+            x1 =
+              Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, offset1)._2,
+                off2 - offset1)._1;
+            if (CBOR_Spec_Raw_EverParse_get_header_major_type(x) == CBOR_MAJOR_TYPE_BYTE_STRING)
+              ite0 = true;
+            else
+              ite0 = CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(x1);
+          }
+          else
+            ite0 = false;
+        }
+        else
+          ite0 = true;
+      }
+      else
+        ite0 = false;
+      if (!ite0)
+        pres = false;
+      else
+      {
+        size_t offset1 = *poffset;
+        CBOR_Pulse_Raw_Slice_byte_slice
+        input1 =
+          Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, off)._2,
+            offset1 - off)._1;
+        size_t bound = Pulse_Lib_Slice_len__uint8_t(input) - off - n1;
+        prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        h =
+          CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(input1,
+              CBOR_Pulse_Raw_EverParse_Format_jump_header(input1, (size_t)0U))._1);
+        uint8_t typ = CBOR_Spec_Raw_EverParse_get_header_major_type(h);
+        uint8_t r;
+        if (typ == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          uint64_t arg64 = CBOR_Spec_Raw_EverParse_argument_as_uint64(h._1, h._2);
+          if
+          (
+            bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U
+            || arg64 <= (uint64_t)bound
+          )
+          {
+            pn = (size_t)arg64;
+            r = 2U;
+          }
+          else
+            r = 1U;
+        }
+        else if (typ == CBOR_MAJOR_TYPE_MAP)
+        {
+          uint64_t arg64 = CBOR_Spec_Raw_EverParse_argument_as_uint64(h._1, h._2);
+          if
+          (
+            !(map_length_bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U
+            >= (size_t)16U
+            || arg64 <= (uint64_t)map_length_bound)
+          )
+            r = 0U;
+          else if
+          (
+            bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U
+            || arg64 <= (uint64_t)bound
+          )
+          {
+            size_t arg = (size_t)arg64;
+            if (bound - arg < arg)
+              r = 1U;
+            else
+            {
+              pn = arg + arg;
+              r = 3U;
+            }
+          }
+          else
+            r = 1U;
+        }
+        else if (typ == CBOR_MAJOR_TYPE_TAGGED)
+        {
+          pn = (size_t)1U;
+          r = 2U;
+        }
+        else
+        {
+          pn = (size_t)0U;
+          r = 2U;
+        }
+        if (r == 0U)
+          pres = false;
+        else
+        {
+          size_t count = pn;
+          if (r == 1U || count > bound)
+            pres = false;
+          else if (r == 3U)
+            if (d == (size_t)0U)
+              pres = false;
+            else if
+            (
+              !CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(map_length_bound,
+                d - (size_t)1U,
+                count,
+                input,
+                poffset)
+            )
+              pres = false;
+            else
+              pn = n1 - (size_t)1U;
+          else
+            pn = n1 - (size_t)1U + count;
+        }
+      }
+    }
+  }
+  return pres;
+}
+
+static bool
+CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_bounded(
+  size_t map_depth_bound,
+  size_t map_length_bound,
+  CBOR_Pulse_Raw_Slice_byte_slice input,
+  size_t *poffset
+)
+{
+  return
+    CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(map_length_bound,
+      map_depth_bound,
+      (size_t)1U,
+      input,
+      poffset);
 }
 
 static cbor_raw
@@ -3218,10 +3528,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
       size_t pn = nv1;
       FStar_Pervasives_Native_option__bool
       pres = { .tag = FStar_Pervasives_Native_Some, .v = true };
-      size_t n0 = pn;
-      bool cond = n0 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres);
-      while (cond)
+      while (true)
       {
+        size_t n = pn;
+        if (!(n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres)))
+          break;
         CBOR_Pulse_Raw_Slice_byte_slice l = pl;
         size_t n_ = pn - (size_t)1U;
         FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3241,11 +3552,12 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
         FStar_Pervasives_Native_option__bool
         pres1 = { .tag = FStar_Pervasives_Native_Some, .v = false };
         bool pcont = true;
-        size_t n1 = pn1;
-        bool cont0 = pcont;
-        bool cond0 = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont0;
-        while (cond0)
+        while (true)
         {
+          size_t n1 = pn1;
+          bool cont = pcont;
+          if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont))
+            break;
           CBOR_Pulse_Raw_Slice_byte_slice l3 = pll;
           size_t n_1 = pn1 - (size_t)1U;
           FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3258,10 +3570,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
           CBOR_Pulse_Raw_Slice_byte_slice pl2 = scrut0._1;
           FStar_Pervasives_Native_option__bool
           pres2 = { .tag = FStar_Pervasives_Native_Some, .v = true };
-          size_t n20 = pn2;
-          bool cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres2) && n20 > (size_t)0U;
-          while (cond)
+          while (true)
           {
+            size_t n20 = pn2;
+            if (!(CBOR_Pulse_Raw_Util_eq_Some_true(pres2) && n20 > (size_t)0U))
+              break;
             CBOR_Pulse_Raw_Slice_byte_slice l1_ = pl1;
             CBOR_Pulse_Raw_Slice_byte_slice l2_ = pl2;
             FStar_Pervasives_Native_option__bool
@@ -3416,8 +3729,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                 }
               }
             }
-            size_t n2 = pn2;
-            cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres2) && n2 > (size_t)0U;
           }
           FStar_Pervasives_Native_option__bool res = pres2;
           if (res.tag == FStar_Pervasives_Native_None)
@@ -3442,10 +3753,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
               CBOR_Pulse_Raw_Slice_byte_slice pl21 = lv1;
               FStar_Pervasives_Native_option__bool
               pres3 = { .tag = FStar_Pervasives_Native_Some, .v = true };
-              size_t n20 = pn3;
-              bool cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres3) && n20 > (size_t)0U;
-              while (cond)
+              while (true)
               {
+                size_t n20 = pn3;
+                if (!(CBOR_Pulse_Raw_Util_eq_Some_true(pres3) && n20 > (size_t)0U))
+                  break;
                 CBOR_Pulse_Raw_Slice_byte_slice l1_ = pl11;
                 CBOR_Pulse_Raw_Slice_byte_slice l2_ = pl21;
                 FStar_Pervasives_Native_option__bool
@@ -3600,8 +3912,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                     }
                   }
                 }
-                size_t n2 = pn3;
-                cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres3) && n2 > (size_t)0U;
               }
               pres1 = pres3;
               pcont = false;
@@ -3612,9 +3922,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
               pn1 = n_1;
             }
           }
-          size_t n1 = pn1;
-          bool cont = pcont;
-          cond0 = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont;
         }
         FStar_Pervasives_Native_option__bool res = pres1;
         if (CBOR_Pulse_Raw_Util_eq_Some_true(res))
@@ -3624,8 +3931,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
         }
         else
           pres = res;
-        size_t n = pn;
-        cond = n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres);
       }
       FStar_Pervasives_Native_option__bool res = pres;
       if (CBOR_Pulse_Raw_Util_eq_Some_true(res))
@@ -3634,10 +3939,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
         size_t pn1 = nv2;
         FStar_Pervasives_Native_option__bool
         pres1 = { .tag = FStar_Pervasives_Native_Some, .v = true };
-        size_t n = pn1;
-        bool cond = n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1);
-        while (cond)
+        while (true)
         {
+          size_t n = pn1;
+          if (!(n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1)))
+            break;
           CBOR_Pulse_Raw_Slice_byte_slice l = pl1;
           size_t n_ = pn1 - (size_t)1U;
           FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3657,11 +3963,12 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
           FStar_Pervasives_Native_option__bool
           pres2 = { .tag = FStar_Pervasives_Native_Some, .v = false };
           bool pcont = true;
-          size_t n1 = pn2;
-          bool cont0 = pcont;
-          bool cond0 = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2) && cont0;
-          while (cond0)
+          while (true)
           {
+            size_t n1 = pn2;
+            bool cont = pcont;
+            if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2) && cont))
+              break;
             CBOR_Pulse_Raw_Slice_byte_slice l3 = pll;
             size_t n_1 = pn2 - (size_t)1U;
             FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3674,10 +3981,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
             CBOR_Pulse_Raw_Slice_byte_slice pl2 = scrut0._1;
             FStar_Pervasives_Native_option__bool
             pres3 = { .tag = FStar_Pervasives_Native_Some, .v = true };
-            size_t n20 = pn3;
-            bool cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres3) && n20 > (size_t)0U;
-            while (cond)
+            while (true)
             {
+              size_t n20 = pn3;
+              if (!(CBOR_Pulse_Raw_Util_eq_Some_true(pres3) && n20 > (size_t)0U))
+                break;
               CBOR_Pulse_Raw_Slice_byte_slice l1_ = pl11;
               CBOR_Pulse_Raw_Slice_byte_slice l2_ = pl2;
               FStar_Pervasives_Native_option__bool
@@ -3832,8 +4140,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                   }
                 }
               }
-              size_t n2 = pn3;
-              cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres3) && n2 > (size_t)0U;
             }
             FStar_Pervasives_Native_option__bool res1 = pres3;
             if (res1.tag == FStar_Pervasives_Native_None)
@@ -3858,10 +4164,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                 CBOR_Pulse_Raw_Slice_byte_slice pl21 = lv1;
                 FStar_Pervasives_Native_option__bool
                 pres4 = { .tag = FStar_Pervasives_Native_Some, .v = true };
-                size_t n20 = pn4;
-                bool cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres4) && n20 > (size_t)0U;
-                while (cond)
+                while (true)
                 {
+                  size_t n20 = pn4;
+                  if (!(CBOR_Pulse_Raw_Util_eq_Some_true(pres4) && n20 > (size_t)0U))
+                    break;
                   CBOR_Pulse_Raw_Slice_byte_slice l1_ = pl12;
                   CBOR_Pulse_Raw_Slice_byte_slice l2_ = pl21;
                   FStar_Pervasives_Native_option__bool
@@ -4019,8 +4326,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                       }
                     }
                   }
-                  size_t n2 = pn4;
-                  cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres4) && n2 > (size_t)0U;
                 }
                 pres2 = pres4;
                 pcont = false;
@@ -4031,9 +4336,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                 pn2 = n_1;
               }
             }
-            size_t n1 = pn2;
-            bool cont = pcont;
-            cond0 = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2) && cont;
           }
           FStar_Pervasives_Native_option__bool res1 = pres2;
           if (CBOR_Pulse_Raw_Util_eq_Some_true(res1))
@@ -4043,8 +4345,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
           }
           else
             pres1 = res1;
-          size_t n = pn1;
-          cond = n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1);
         }
         return pres1;
       }
@@ -4074,10 +4374,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(
     CBOR_Pulse_Raw_Slice_byte_slice pl1 = l1;
     CBOR_Pulse_Raw_Slice_byte_slice pl2 = l2;
     FStar_Pervasives_Native_option__bool pres = { .tag = FStar_Pervasives_Native_Some, .v = true };
-    size_t n0 = pn;
-    bool cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres) && n0 > (size_t)0U;
-    while (cond)
+    while (true)
     {
+      size_t n0 = pn;
+      if (!(CBOR_Pulse_Raw_Util_eq_Some_true(pres) && n0 > (size_t)0U))
+        break;
       CBOR_Pulse_Raw_Slice_byte_slice l1_ = pl1;
       CBOR_Pulse_Raw_Slice_byte_slice l2_ = pl2;
       FStar_Pervasives_Native_option__bool
@@ -4224,8 +4525,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_list_basic(
           }
         }
       }
-      size_t n = pn;
-      cond = CBOR_Pulse_Raw_Util_eq_Some_true(pres) && n > (size_t)0U;
     }
     return pres;
   }
@@ -4290,10 +4589,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
           fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(h));
       FStar_Pervasives_Native_option__bool
       pres1 = { .tag = FStar_Pervasives_Native_Some, .v = true };
-      size_t n1 = pn1;
-      bool cond = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1);
-      while (cond)
+      while (true)
       {
+        size_t n1 = pn1;
+        if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1)))
+          break;
         size_t n_ = pn1 - (size_t)1U;
         CBOR_Pulse_Raw_Slice_byte_slice l = pl;
         FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -4310,10 +4610,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
         size_t pn2 = n_;
         FStar_Pervasives_Native_option__bool
         pres2 = { .tag = FStar_Pervasives_Native_Some, .v = false };
-        size_t n2 = pn2;
-        bool cond0 = n2 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2);
-        while (cond0)
+        while (true)
         {
+          size_t n2 = pn2;
+          if (!(n2 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2)))
+            break;
           size_t n_1 = pn2 - (size_t)1U;
           CBOR_Pulse_Raw_Slice_byte_slice l2 = pl1;
           FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -4335,8 +4636,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
           }
           else
             pres2 = res;
-          size_t n2 = pn2;
-          cond0 = n2 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2);
         }
         FStar_Pervasives_Native_option__bool res = pres2;
         if (res.tag == FStar_Pervasives_Native_None)
@@ -4374,8 +4673,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
           else
             pres1 = ((FStar_Pervasives_Native_option__bool){ .tag = FStar_Pervasives_Native_None });
         }
-        size_t n1 = pn1;
-        cond = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1);
       }
       ite0 = CBOR_Pulse_Raw_Util_eq_Some_true(pres1);
     }
@@ -4422,10 +4719,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_list_for_all_with_overflow_setoid_ass
   CBOR_Pulse_Raw_Slice_byte_slice pl = l2;
   size_t pn = nl2;
   FStar_Pervasives_Native_option__bool pres = { .tag = FStar_Pervasives_Native_Some, .v = true };
-  size_t n = pn;
-  bool cond = n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres);
-  while (cond)
+  while (true)
   {
+    size_t n = pn;
+    if (!(n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres)))
+      break;
     CBOR_Pulse_Raw_Slice_byte_slice l = pl;
     size_t n_ = pn - (size_t)1U;
     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -4445,11 +4743,12 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_list_for_all_with_overflow_setoid_ass
     FStar_Pervasives_Native_option__bool
     pres1 = { .tag = FStar_Pervasives_Native_Some, .v = false };
     bool pcont = true;
-    size_t n1 = pn1;
-    bool cont0 = pcont;
-    bool cond0 = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont0;
-    while (cond0)
+    while (true)
     {
+      size_t n1 = pn1;
+      bool cont = pcont;
+      if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont))
+        break;
       CBOR_Pulse_Raw_Slice_byte_slice l3 = pll;
       size_t n_1 = pn1 - (size_t)1U;
       FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -4495,9 +4794,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_list_for_all_with_overflow_setoid_ass
           pn1 = n_1;
         }
       }
-      size_t n1 = pn1;
-      bool cont = pcont;
-      cond0 = n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont;
     }
     FStar_Pervasives_Native_option__bool res = pres1;
     if (CBOR_Pulse_Raw_Util_eq_Some_true(res))
@@ -4507,8 +4803,6 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_list_for_all_with_overflow_setoid_ass
     }
     else
       pres = res;
-    size_t n = pn;
-    cond = n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres);
   }
   return pres;
 }
@@ -4887,16 +5181,15 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
         cbor_nondet_array_iterator_t
         pi2 = CBOR_Pulse_Raw_Read_cbor_array_iterator_init_with_depth(x2);
         bool pres = true;
-        bool res = pres;
-        bool cond = res && !CBOR_Pulse_Raw_Read_cbor_array_iterator_is_empty_with_depth(pi1);
-        while (cond)
+        while (true)
         {
+          bool res = pres;
+          if (!(res && !CBOR_Pulse_Raw_Read_cbor_array_iterator_is_empty_with_depth(pi1)))
+            break;
           cbor_raw y1 = CBOR_Pulse_Raw_Read_cbor_array_iterator_next_with_depth(&pi1);
           pres =
             CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(y1,
               CBOR_Pulse_Raw_Read_cbor_array_iterator_next_with_depth(&pi2));
-          bool res = pres;
-          cond = res && !CBOR_Pulse_Raw_Read_cbor_array_iterator_is_empty_with_depth(pi1);
         }
         return pres;
       }
@@ -4937,18 +5230,20 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
       cbor_nondet_map_iterator_t i2 = CBOR_Pulse_Raw_Read_cbor_map_iterator_init_with_depth(x2);
       cbor_nondet_map_iterator_t pi2 = i1;
       bool pres = true;
-      bool res0 = pres;
-      bool cond = res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi2);
-      while (cond)
+      while (true)
       {
+        bool res0 = pres;
+        if (!(res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi2)))
+          break;
         cbor_map_entry x21 = CBOR_Pulse_Raw_Read_cbor_map_iterator_next_with_depth(&pi2);
         cbor_nondet_map_iterator_t pi1 = i2;
         FStar_Pervasives_Native_option__bool pres1 = { .tag = FStar_Pervasives_Native_None };
-        FStar_Pervasives_Native_option__bool res = pres1;
-        bool __anf00 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi1);
-        bool cond0 = res.tag == FStar_Pervasives_Native_None && !__anf00;
-        while (cond0)
+        while (true)
         {
+          FStar_Pervasives_Native_option__bool res = pres1;
+          bool __anf0 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi1);
+          if (!(res.tag == FStar_Pervasives_Native_None && !__anf0))
+            break;
           cbor_map_entry x11 = CBOR_Pulse_Raw_Read_cbor_map_iterator_next_with_depth(&pi1);
           if
           (
@@ -4963,13 +5258,8 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
                     x11.cbor_map_entry_value)
                 }
               );
-          FStar_Pervasives_Native_option__bool res = pres1;
-          bool __anf0 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi1);
-          cond0 = res.tag == FStar_Pervasives_Native_None && !__anf0;
         }
         pres = CBOR_Pulse_Raw_Util_eq_Some_true(pres1);
-        bool res0 = pres;
-        cond = res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi2);
       }
       if (!pres)
         return false;
@@ -4977,18 +5267,20 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
       {
         cbor_nondet_map_iterator_t pi21 = i2;
         bool pres1 = true;
-        bool res0 = pres1;
-        bool cond = res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi21);
-        while (cond)
+        while (true)
         {
+          bool res0 = pres1;
+          if (!(res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi21)))
+            break;
           cbor_map_entry x21 = CBOR_Pulse_Raw_Read_cbor_map_iterator_next_with_depth(&pi21);
           cbor_nondet_map_iterator_t pi1 = i1;
           FStar_Pervasives_Native_option__bool pres2 = { .tag = FStar_Pervasives_Native_None };
-          FStar_Pervasives_Native_option__bool res = pres2;
-          bool __anf010 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi1);
-          bool cond0 = res.tag == FStar_Pervasives_Native_None && !__anf010;
-          while (cond0)
+          while (true)
           {
+            FStar_Pervasives_Native_option__bool res = pres2;
+            bool __anf01 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi1);
+            if (!(res.tag == FStar_Pervasives_Native_None && !__anf01))
+              break;
             cbor_map_entry x11 = CBOR_Pulse_Raw_Read_cbor_map_iterator_next_with_depth(&pi1);
             if
             (
@@ -5003,13 +5295,8 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
                       x11.cbor_map_entry_value)
                   }
                 );
-            FStar_Pervasives_Native_option__bool res = pres2;
-            bool __anf01 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi1);
-            cond0 = res.tag == FStar_Pervasives_Native_None && !__anf01;
           }
           pres1 = CBOR_Pulse_Raw_Util_eq_Some_true(pres2);
-          bool res0 = pres1;
-          cond = res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi21);
         }
         return pres1;
       }
@@ -5029,34 +5316,30 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_no_setoid_repeats(
 {
   size_t pn1 = (size_t)0U;
   bool pres = true;
-  bool res0 = pres;
-  size_t __anf00 = pn1;
-  bool cond = res0 && __anf00 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x);
-  while (cond)
+  while (true)
   {
+    bool res0 = pres;
+    size_t __anf00 = pn1;
+    if (!(res0 && __anf00 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x)))
+      break;
     size_t n1 = pn1;
     cbor_map_entry x1 = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(x, n1);
     size_t n2 = n1 + (size_t)1U;
     pn1 = n2;
     size_t pn2 = n2;
-    bool res = pres;
-    size_t __anf00 = pn2;
-    bool cond0 = res && __anf00 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x);
-    while (cond0)
+    while (true)
     {
+      bool res = pres;
+      size_t __anf0 = pn2;
+      if (!(res && __anf0 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x)))
+        break;
       size_t n21 = pn2;
       pres =
         !CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv(x1.cbor_map_entry_key,
           Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(x,
             n21).cbor_map_entry_key);
       pn2 = n21 + (size_t)1U;
-      bool res = pres;
-      size_t __anf0 = pn2;
-      cond0 = res && __anf0 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x);
     }
-    bool res0 = pres;
-    size_t __anf0 = pn1;
-    cond = res0 && __anf0 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x);
   }
   return pres;
 }
@@ -5076,6 +5359,72 @@ CBOR_Pulse_Raw_Format_Nondet_Validate_cbor_validate_nondet(
     (
       CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(map_key_bound,
         strict_check,
+        Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, (size_t)0U)._2,
+          off - (size_t)0U)._1)
+    )
+      return off;
+    else
+      return (size_t)0U;
+  }
+  else
+    return (size_t)0U;
+}
+
+static size_t
+CBOR_Pulse_Raw_Format_Nondet_Validate_cbor_validate_nondet_map_length_bounded(
+  size_t map_length_bound,
+  FStar_Pervasives_Native_option__size_t map_key_bound,
+  bool strict_check,
+  CBOR_Pulse_Raw_Slice_byte_slice input
+)
+{
+  size_t poff = (size_t)0U;
+  if
+  (
+    CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_map_length_bounded(map_length_bound,
+      input,
+      &poff)
+  )
+  {
+    size_t off = poff;
+    if
+    (
+      CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(map_key_bound,
+        strict_check,
+        Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, (size_t)0U)._2,
+          off - (size_t)0U)._1)
+    )
+      return off;
+    else
+      return (size_t)0U;
+  }
+  else
+    return (size_t)0U;
+}
+
+static size_t
+CBOR_Pulse_Raw_Format_Nondet_Validate_cbor_validate_nondet_bounded(
+  size_t map_depth_bound,
+  size_t map_length_bound,
+  CBOR_Pulse_Raw_Slice_byte_slice input
+)
+{
+  size_t poff = (size_t)0U;
+  if
+  (
+    CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_bounded(map_depth_bound,
+      map_length_bound,
+      input,
+      &poff)
+  )
+  {
+    size_t off = poff;
+    if
+    (
+      CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic((
+          (FStar_Pervasives_Native_option__size_t){ .tag = FStar_Pervasives_Native_None }
+        ),
+        false,
         Pulse_Lib_Slice_split__uint8_t(Pulse_Lib_Slice_split__uint8_t(input, (size_t)0U)._2,
           off - (size_t)0U)._1)
     )
@@ -5112,6 +5461,34 @@ CBOR_Pulse_Raw_Nondet_cbor_nondet_parse_valid(
 )
 {
   return CBOR_Pulse_Raw_Format_Parse_cbor_parse(input, len);
+}
+
+static size_t
+CBOR_Pulse_Raw_Nondet_cbor_nondet_validate_map_length_bounded(
+  size_t map_length_bound,
+  FStar_Pervasives_Native_option__size_t map_key_bound,
+  bool strict_check,
+  CBOR_Pulse_Raw_Slice_byte_slice input
+)
+{
+  return
+    CBOR_Pulse_Raw_Format_Nondet_Validate_cbor_validate_nondet_map_length_bounded(map_length_bound,
+      map_key_bound,
+      strict_check,
+      input);
+}
+
+static size_t
+CBOR_Pulse_Raw_Nondet_cbor_nondet_validate_bounded(
+  size_t map_depth_bound,
+  size_t map_length_bound,
+  CBOR_Pulse_Raw_Slice_byte_slice input
+)
+{
+  return
+    CBOR_Pulse_Raw_Format_Nondet_Validate_cbor_validate_nondet_bounded(map_depth_bound,
+      map_length_bound,
+      input);
 }
 
 static size_t CBOR_Pulse_Raw_Nondet_cbor_nondet_size(cbor_raw x, size_t bound)
@@ -5571,6 +5948,100 @@ cbor_nondet_parse(
                                                                        ),
           check_map_key_bound,
           s);
+      if (consume == (size_t)0U)
+        return false;
+      else
+      {
+        *pinput = input + consume;
+        *plen = len - consume;
+        *dest =
+          CBOR_Pulse_Raw_Nondet_cbor_nondet_parse_valid(Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input,
+              consume),
+            consume);
+        return true;
+      }
+    }
+  }
+}
+
+bool
+cbor_nondet_parse_map_length_bounded(
+  size_t map_length_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
+  uint8_t **pinput,
+  size_t *plen,
+  cbor_raw *dest
+)
+{
+  if (pinput == NULL || plen == NULL || dest == NULL)
+    return false;
+  else
+  {
+    uint8_t *input = *pinput;
+    if (*pinput == NULL)
+      return false;
+    else
+    {
+      size_t len = *plen;
+      CBOR_Pulse_Raw_Slice_byte_slice
+      s = Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input, len);
+      size_t
+      consume =
+        CBOR_Pulse_Raw_Nondet_cbor_nondet_validate_map_length_bounded(map_length_bound,
+          check_map_key_bound ? (
+                                (FStar_Pervasives_Native_option__size_t){
+                                  .tag = FStar_Pervasives_Native_Some,
+                                  .v = map_key_bound
+                                }
+                              )
+                              : (
+                                (FStar_Pervasives_Native_option__size_t){
+                                  .tag = FStar_Pervasives_Native_None
+                                }
+                              ),
+          check_map_key_bound,
+          s);
+      if (consume == (size_t)0U)
+        return false;
+      else
+      {
+        *pinput = input + consume;
+        *plen = len - consume;
+        *dest =
+          CBOR_Pulse_Raw_Nondet_cbor_nondet_parse_valid(Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input,
+              consume),
+            consume);
+        return true;
+      }
+    }
+  }
+}
+
+bool
+cbor_nondet_parse_bounded(
+  size_t map_depth_bound,
+  size_t map_length_bound,
+  uint8_t **pinput,
+  size_t *plen,
+  cbor_raw *dest
+)
+{
+  if (pinput == NULL || plen == NULL || dest == NULL)
+    return false;
+  else
+  {
+    uint8_t *input = *pinput;
+    if (*pinput == NULL)
+      return false;
+    else
+    {
+      size_t len = *plen;
+      size_t
+      consume =
+        CBOR_Pulse_Raw_Nondet_cbor_nondet_validate_bounded(map_depth_bound,
+          map_length_bound,
+          Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input, len));
       if (consume == (size_t)0U)
         return false;
       else
@@ -6126,54 +6597,54 @@ cbor_nondet_map_get_multiple(
       Pulse_Lib_Slice_arrayptr_to_slice_intro__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dest,
         len);
     size_t pi = (size_t)0U;
-    size_t i0 = pi;
-    bool
-    cond =
-      i0 <
-        Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests);
-    while (cond)
+    while (true)
     {
       size_t i = pi;
+      if
+      (
+        !(i <
+          Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests))
+      )
+        break;
+      size_t i0 = pi;
       cbor_nondet_map_get_multiple_entry_t
       x =
         Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests,
-          i);
+          i0);
       Pulse_Lib_Slice_op_Array_Assignment__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests,
-        i,
+        i0,
         ((cbor_nondet_map_get_multiple_entry_t){ .key = x.key, .value = x.value, .found = false }));
-      pi = i + (size_t)1U;
-      size_t i0 = pi;
-      cond =
-        i0 <
-          Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests);
+      pi = i0 + (size_t)1U;
     }
     cbor_nondet_map_iterator_t piter = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_start(map);
-    size_t i1 = pi;
-    bool
-    cond0 = i1 != (size_t)0U && !CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_is_empty(piter);
-    while (cond0)
+    while (true)
     {
+      size_t i0 = pi;
+      if (!(i0 != (size_t)0U && !CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_is_empty(piter)))
+        break;
       cbor_map_entry entry = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_next(&piter);
       size_t pj = (size_t)0U;
-      size_t j0 = pj;
-      size_t i0 = pi;
-      bool
-      cond =
-        j0 <
-          Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests)
-        && i0 > (size_t)0U;
-      while (cond)
+      while (true)
       {
         size_t j = pj;
-        pj = j + (size_t)1U;
+        size_t i = pi;
+        if
+        (
+          !(j <
+            Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests)
+          && i > (size_t)0U)
+        )
+          break;
+        size_t j0 = pj;
+        pj = j0 + (size_t)1U;
         cbor_nondet_map_get_multiple_entry_t
         dest_entry =
           Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests,
-            j);
+            j0);
         if (CBOR_Pulse_Raw_Nondet_cbor_nondet_equal(dest_entry.key, entry.cbor_map_entry_key))
         {
           Pulse_Lib_Slice_op_Array_Assignment__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests,
-            j,
+            j0,
             (
               (cbor_nondet_map_get_multiple_entry_t){
                 .key = dest_entry.key,
@@ -6184,15 +6655,7 @@ cbor_nondet_map_get_multiple(
           if (!dest_entry.found)
             pi--;
         }
-        size_t j0 = pj;
-        size_t i = pi;
-        cond =
-          j0 <
-            Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests)
-          && i > (size_t)0U;
       }
-      size_t i = pi;
-      cond0 = i != (size_t)0U && !CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_is_empty(piter);
     }
     return true;
   }

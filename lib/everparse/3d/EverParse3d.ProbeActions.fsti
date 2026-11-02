@@ -1,5 +1,6 @@
 module EverParse3d.ProbeActions
 module AppCtxt = EverParse3d.AppCtxt
+module Bool = EverParse3d.Boolean
 module I = EverParse3d.InputStream.Base
 module U8 = FStar.UInt8
 module U16 = FStar.UInt16
@@ -18,6 +19,8 @@ val probe_fn_incremental
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
 : Type0
 
 inline_for_extraction
@@ -27,6 +30,8 @@ val init_probe_dest_t
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
 : Type0
 
 inline_for_extraction
@@ -35,6 +40,8 @@ val write_at_offset_t
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (t:Type0) (n:U64.t) : Type0
 
 inline_for_extraction
@@ -44,6 +51,8 @@ val probe_and_read_at_offset_t
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
 (t:Type0) (size_t:U64.t) : Type0
 
 inline_for_extraction
@@ -52,56 +61,72 @@ let probe_and_read_at_offset_uint8
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U8.t 1uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U8.t 1uL
 inline_for_extraction
 let probe_and_read_at_offset_uint16
   (#copy_buffer_t: Type0)
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U16.t 2uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U16.t 2uL
 inline_for_extraction
 let probe_and_read_at_offset_uint32
   (#copy_buffer_t: Type0)
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U32.t 4uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U32.t 4uL
 inline_for_extraction
 let probe_and_read_at_offset_uint64
   (#copy_buffer_t: Type0)
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U64.t 8uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U64.t 8uL
 inline_for_extraction
 let write_at_offset_uint8
   (#copy_buffer_t: Type0)
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U8.t 1uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U8.t 1uL
 inline_for_extraction
 let write_at_offset_uint16
   (#copy_buffer_t: Type0)
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U16.t 2uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U16.t 2uL
 inline_for_extraction
 let write_at_offset_uint32
   (#copy_buffer_t: Type0)
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U32.t 4uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U32.t 4uL
 inline_for_extraction
 let write_at_offset_uint64
   (#copy_buffer_t: Type0)
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t U64.t 8uL
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+= write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U64.t 8uL
 
 inline_for_extraction
 val probe_m
@@ -109,6 +134,8 @@ val probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (a:Type0) (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_handler:bool) : Type0
 
 inline_for_extraction
@@ -118,8 +145,10 @@ val probe_fn_incremental_as_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-(#use_error_handler:bool) (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t) (bytes_to_read:U64.t)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+(#use_error_handler:bool) (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst) (bytes_to_read:U64.t)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -128,8 +157,10 @@ val init_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-(#use_error_handler:bool) (probe_struct_name:string) (f:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit false false use_error_handler
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+(#use_error_handler:bool) (probe_struct_name:string) (f:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit false false use_error_handler
 
 inline_for_extraction
 noextract
@@ -138,8 +169,10 @@ val init_probe_size
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
-: probe_m #_ #_ #_ #_ #inst #cbinst U64.t true false use_error_handler
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst U64.t true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -148,8 +181,10 @@ val write_at_offset_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t w) (v:t)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+  (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst t w) (v:t)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -158,10 +193,12 @@ val probe_and_read_at_offset_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL })
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (reader:probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t s)
-: probe_m #_ #_ #_ #_ #inst #cbinst t true false use_error_handler
+  (reader:probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst t s)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst t true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -170,10 +207,12 @@ val seq_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a:Type0)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (detail:string) (dflt:a) (m1:probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler) (m2:probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler)
-: probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler
+  (detail:string) (dflt:a) (m1:probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler) (m2:probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst a true false use_error_handler)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst a true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -182,10 +221,12 @@ val bind_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a #b:Type0)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (detail:string) (dflt:b) (m1:probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler) (m2:a -> probe_m #_ #_ #_ #_ #inst #cbinst b true false use_error_handler)
-: probe_m #_ #_ #_ #_ #inst #cbinst b true false use_error_handler
+  (detail:string) (dflt:b) (m1:probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst a true false use_error_handler) (m2:a -> probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst b true false use_error_handler)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst b true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -194,10 +235,12 @@ val probe_and_copy_init_sz
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+  (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -206,8 +249,10 @@ val return_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a:Type0) (v:a)
-: probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst a true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -216,8 +261,10 @@ val skip_read
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (bytes_to_skip:U64.t)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -226,8 +273,10 @@ val skip_write
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (bytes_to_skip:U64.t)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -236,8 +285,10 @@ val fail
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -246,8 +297,10 @@ val if_then_else
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
-  (#use_error_handler:bool) (b:bool) (m0 m1:probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+  (#use_error_handler:bool) (b:bool) (m0 m1:probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -256,10 +309,12 @@ val probe_array
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (byte_len:U64.t) (probe_elem:probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler
+  (byte_len:U64.t) (probe_elem:probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -273,8 +328,10 @@ val lift_pure_external_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a:Type0) (f:pure_external_action a)
-: probe_m #_ #_ #_ #_ #inst #cbinst a true false use_error_handler
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst a true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -283,12 +340,14 @@ val init_and_probe
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cbinst: copy_buffer copy_buffer_t base_t len_t pos_t |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (#mz:bool)
       (struct_name:string)
-      (init:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
-      (probe:probe_m #_ #_ #_ #_ #inst #cbinst unit true mz use_error_handler)
-: probe_m #_ #_ #_ #_ #inst #cbinst unit false mz use_error_handler
+      (init:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst)
+      (probe:probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true mz use_error_handler)
+: probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit false mz use_error_handler
 
 inline_for_extraction
 noextract
@@ -297,9 +356,11 @@ val run_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#any:bool)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (m:probe_m #_ #_ #_ #_ #inst #cb_inst unit false any use_error_handler)
+  (m:probe_m #_ #_ #_ #_ #inst #cb_inst #boolean_t #boolean_inst unit false any use_error_handler)
   (tn fn_ det:string)
   (ctxt:app_ctxt)
   (err:(if use_error_handler then error_handler #base_t #len_t #pos_t #inst else unit))

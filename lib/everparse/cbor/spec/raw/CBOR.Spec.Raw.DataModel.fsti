@@ -564,3 +564,9 @@ val cbor_map_key_depth
   #order #compare
   (c: cbor order compare)
 : Tot nat
+
+val cbor_map_length_bounded
+  #order #compare
+  (n: nat)
+  (c: cbor order compare)
+: Tot bool

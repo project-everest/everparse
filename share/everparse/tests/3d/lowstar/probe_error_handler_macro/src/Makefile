@@ -12,15 +12,7 @@ include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
-
-ifeq (,$(KRML_HOME))
-  KRML_HOME := $(realpath $(EVERPARSE_HOME_)/../karamel)
-endif
-ifeq ($(OS),Windows_NT)
-  KRML_HOME := $(shell cygpath -m "$(KRML_HOME)")
-endif
-export KRML_HOME
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 all: Probe.3d
 	mkdir -p out.z3-testgen

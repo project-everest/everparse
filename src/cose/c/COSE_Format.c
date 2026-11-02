@@ -4,9 +4,9 @@
 
 #include "CBORDetAPI.h"
 
-#define CDDL_SIMPLE_VALUE_FALSE (20U)
+#define CDDL_SIMPLE_VALUE_FALSE ((uint8_t)20U)
 
-#define CDDL_SIMPLE_VALUE_TRUE (21U)
+#define CDDL_SIMPLE_VALUE_TRUE ((uint8_t)21U)
 
 static bool sizet_lte_u64(size_t b, uint64_t a)
 {
@@ -36,9 +36,9 @@ static bool sizet_eq_u64(size_t b, uint64_t a)
 
 typedef enum { MGOK, MGFail, MGCutFail } impl_map_group_result;
 
-#define SIMPLE_VALUE_TRUE (21U)
+#define SIMPLE_VALUE_TRUE ((uint8_t)21U)
 
-#define SIMPLE_VALUE_FALSE (20U)
+#define SIMPLE_VALUE_FALSE ((uint8_t)20U)
 
 bool COSE_Format_validate_bool(cbor_det_t c)
 {
@@ -5428,10 +5428,11 @@ COSE_Format_serialize_cose_key_generic(
               CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1
               pc = c23;
               bool pres = true;
-              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-              bool cond = pres && !em1;
-              while (cond)
+              while (true)
               {
+                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+                if (!(pres && !em1))
+                  break;
                 CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1
                 i = pc;
                 uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -5456,8 +5457,6 @@ COSE_Format_serialize_cose_key_generic(
                     &psize1)
                 )
                   pres = false;
-                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-                cond = pres && !em1;
               }
               bool ret = pres;
               ite = ret ? ret : ret;
@@ -5814,16 +5813,15 @@ COSE_Format_serialize_cose_key_generic(
       pc = c21;
       cbor_det_map_iterator_t pj = c21.cddl_map_iterator_contents;
       bool pres1 = true;
-      bool test0 = cbor_det_map_iterator_is_empty(pj);
-      bool cond = pres1 && !test0;
-      while (cond)
+      while (true)
       {
+        bool test = cbor_det_map_iterator_is_empty(pj);
+        if (!(pres1 && !test))
+          break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
         if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-        bool test = cbor_det_map_iterator_is_empty(pj);
-        cond = pres1 && !test;
       }
       bool pem = pres1;
       while (pres && !pem)
@@ -6022,17 +6020,16 @@ COSE_Format_serialize_cose_key_generic(
                       __anf0 = pc;
                       cbor_det_map_iterator_t pj2 = __anf0.cddl_map_iterator_contents;
                       bool pres2 = true;
-                      bool test = cbor_det_map_iterator_is_empty(pj2);
-                      bool cond = pres2 && !test;
-                      while (cond)
+                      while (true)
                       {
+                        bool test = cbor_det_map_iterator_is_empty(pj2);
+                        if (!(pres2 && !test))
+                          break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
                         if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-                        bool test = cbor_det_map_iterator_is_empty(pj2);
-                        cond = pres2 && !test;
                       }
                       pem = pres2;
                       psize = size2_;
@@ -6197,16 +6194,15 @@ COSE_Format_is_empty_iterate_map_evercddl_label_and_values(
 {
   cbor_det_map_iterator_t pj = i.cddl_map_iterator_contents;
   bool pres = true;
-  bool test = cbor_det_map_iterator_is_empty(pj);
-  bool cond = pres && !test;
-  while (cond)
+  while (true)
   {
+    bool test = cbor_det_map_iterator_is_empty(pj);
+    if (!(pres && !test))
+      break;
     cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
     if (!!i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
       if (!i.cddl_map_iterator_impl_validate_ex(elt))
         pres = !i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-    bool test = cbor_det_map_iterator_is_empty(pj);
-    cond = pres && !test;
   }
   return pres;
 }
@@ -6505,10 +6501,11 @@ COSE_Format_serialize_cose_keyset(
       CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_key_generic
       pc = c2;
       bool pres = true;
-      bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-      bool cond = pres && !em1;
-      while (cond)
+      while (true)
       {
+        bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+        if (!(pres && !em1))
+          break;
         CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_key_generic
         i = pc;
         uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -6533,8 +6530,6 @@ COSE_Format_serialize_cose_keyset(
             &psize)
         )
           pres = false;
-        bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-        cond = pres && !em1;
       }
       bool ret = pres;
       ite = ret ? ret : ret;
@@ -7954,16 +7949,15 @@ COSE_Format_serialize_cose_key_okp(
       pc = c21;
       cbor_det_map_iterator_t pj = c21.cddl_map_iterator_contents;
       bool pres1 = true;
-      bool test0 = cbor_det_map_iterator_is_empty(pj);
-      bool cond = pres1 && !test0;
-      while (cond)
+      while (true)
       {
+        bool test = cbor_det_map_iterator_is_empty(pj);
+        if (!(pres1 && !test))
+          break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
         if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-        bool test = cbor_det_map_iterator_is_empty(pj);
-        cond = pres1 && !test;
       }
       bool pem = pres1;
       while (pres && !pem)
@@ -8162,17 +8156,16 @@ COSE_Format_serialize_cose_key_okp(
                       __anf0 = pc;
                       cbor_det_map_iterator_t pj2 = __anf0.cddl_map_iterator_contents;
                       bool pres2 = true;
-                      bool test = cbor_det_map_iterator_is_empty(pj2);
-                      bool cond = pres2 && !test;
-                      while (cond)
+                      while (true)
                       {
+                        bool test = cbor_det_map_iterator_is_empty(pj2);
+                        if (!(pres2 && !test))
+                          break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
                         if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-                        bool test = cbor_det_map_iterator_is_empty(pj2);
-                        cond = pres2 && !test;
                       }
                       pem = pres2;
                       psize = size2_;
@@ -10917,10 +10910,11 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
               CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label
               pc = c25;
               bool pres = true;
-              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-              bool cond = pres && !em1;
-              while (cond)
+              while (true)
               {
+                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+                if (!(pres && !em1))
+                  break;
                 CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label
                 i = pc;
                 uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -10945,8 +10939,6 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                     &psize1)
                 )
                   pres = false;
-                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-                cond = pres && !em1;
               }
               bool ret = pres;
               ite = ret ? ret : ret;
@@ -11856,16 +11848,15 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
       pc = c21;
       cbor_det_map_iterator_t pj = c21.cddl_map_iterator_contents;
       bool pres1 = true;
-      bool test0 = cbor_det_map_iterator_is_empty(pj);
-      bool cond = pres1 && !test0;
-      while (cond)
+      while (true)
       {
+        bool test = cbor_det_map_iterator_is_empty(pj);
+        if (!(pres1 && !test))
+          break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
         if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-        bool test = cbor_det_map_iterator_is_empty(pj);
-        cond = pres1 && !test;
       }
       bool pem = pres1;
       while (pres && !pem)
@@ -12064,17 +12055,16 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                       __anf0 = pc;
                       cbor_det_map_iterator_t pj2 = __anf0.cddl_map_iterator_contents;
                       bool pres2 = true;
-                      bool test = cbor_det_map_iterator_is_empty(pj2);
-                      bool cond = pres2 && !test;
-                      while (cond)
+                      while (true)
                       {
+                        bool test = cbor_det_map_iterator_is_empty(pj2);
+                        if (!(pres2 && !test))
+                          break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
                         if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-                        bool test = cbor_det_map_iterator_is_empty(pj2);
-                        cond = pres2 && !test;
                       }
                       pem = pres2;
                       psize = size2_;
@@ -14830,10 +14820,11 @@ COSE_Format_serialize_cose_sign(COSE_Format_cose_sign c, Pulse_Lib_Slice_slice__
             CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_signature
             pc = c22;
             bool pres = true;
-            bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-            bool cond = pres && !em1;
-            while (cond)
+            while (true)
             {
+              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+              if (!(pres && !em1))
+                break;
               CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_signature
               i = pc;
               uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -14858,8 +14849,6 @@ COSE_Format_serialize_cose_sign(COSE_Format_cose_sign c, Pulse_Lib_Slice_slice__
                   &psize1)
               )
                 pres = false;
-              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-              cond = pres && !em1;
             }
             bool ret = pres;
             ite = ret ? ret : ret;

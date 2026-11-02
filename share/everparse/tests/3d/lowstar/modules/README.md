@@ -41,6 +41,6 @@ all handwritten:
 * `main.c`: the main function of the test program, which calls the
   validator for the `T` data type defined in `Test.3d`.
 
-All intermediate files (`*.fst*`, `*.json`), output files (`*.h`,
+All intermediate files (`*.fst*`, `*.checked`, `*.cui`), output files (`*.h`,
 `*.c`) as well as the `test.exe` test executable, are slated to be
 generated into the `obj/` subdirectory.

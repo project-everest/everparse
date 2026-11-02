@@ -12,7 +12,7 @@ set -e
 #     turn symlinks to opt/FStar/ulib and opt/FStar/stage2/ulib.checked, and
 #     whose lib/fstar/pulse/{common,pulse}.checked are symlinks to
 #     opt/FStar/pulse/build/lib.{common,pulse}.checked;
-#   * opt/karamel/out and opt/karamel/{krmllib,include,misc};
+#   * opt/FStar/karamel/out and opt/FStar/karamel/{krmllib,include,misc};
 #   * the opam switch.
 #
 # Everything else below is scaffolding that only the dependency build needs.
@@ -37,8 +37,8 @@ find "$opt"/FStar/pulse/build -mindepth 1 -maxdepth 1 \
 rm -rf "$opt"/FStar/.git
 
 # karamel: the dune build tree.
-rm -rf "$opt"/karamel/_build
-rm -rf "$opt"/karamel/.git
+rm -rf "$opt"/FStar/karamel/_build
+rm -rf "$opt"/FStar/karamel/.git
 
 # opam: package sources, download cache and the repository metadata are only
 # needed to *install* packages, not to use them.

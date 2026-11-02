@@ -1482,6 +1482,58 @@ let holds_on_raw_data_item_pred (p: (raw_data_item -> bool)) : pred_recursive_t 
   prf = holds_on_raw_data_item_eq_recursive p;
 }
 
+let rec list_max_le_for_all
+  (#t: Type)
+  (f: t -> nat)
+  (d: nat)
+  (l: list t)
+: Lemma
+  (ensures ((list_max f l <= d) == List.Tot.for_all (fun y -> f y <= d) l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_le_for_all f d q
+
+let rec list_for_all_map_depth_le
+  (d: nat)
+  (l: list raw_data_item)
+: Lemma
+  (ensures (List.Tot.for_all (fun y -> map_depth y <= d) l == List.Tot.for_all (map_depth_le d) l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_map_depth_le d q
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+let map_depth_le_eq_recursive
+  (d: nat)
+  (x: raw_data_item)
+: Lemma
+  (map_depth_le d x == (
+    let c = get_children serialize_raw_data_item_param x in
+    if Map? x
+    then d > 0 && List.Tot.for_all (map_depth_le (d - 1)) c
+    else List.Tot.for_all (map_depth_le d) c
+  ))
+= map_depth_eq x;
+  match x with
+  | Map _ l ->
+    let l : list (raw_data_item & raw_data_item) = l in
+    list_max_map_dep_pair_list_of_pair_list l;
+    if d > 0
+    then begin
+      list_max_le_for_all map_depth (d - 1) (CBOR.Spec.Util.list_of_pair_list l);
+      list_for_all_map_depth_le (d - 1) (CBOR.Spec.Util.list_of_pair_list l)
+    end
+  | Array _ l ->
+    list_max_le_for_all map_depth d l;
+    list_for_all_map_depth_le d l
+  | _ -> ()
+
+#pop-options
+
 (* 4.2.1 Deterministically encoded CBOR: The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. *)
 
 let serialized_lex_order

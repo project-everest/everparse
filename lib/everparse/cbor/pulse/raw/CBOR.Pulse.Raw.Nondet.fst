@@ -158,6 +158,31 @@ fn cbor_nondet_validate (_: unit) : cbor_nondet_validate_t =
   CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet map_key_bound strict_check input;
 }
 
+fn cbor_nondet_validate_map_length_bounded (_: unit) : cbor_nondet_validate_map_length_bounded_t =
+  (map_length_bound: _)
+  (map_key_bound: _)
+  (strict_check: _)
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  Classical.forall_intro (Classical.move_requires SpecRaw.mk_cbor_map_key_depth);
+  Classical.forall_intro (Classical.move_requires (SpecRaw.mk_cbor_map_length_bounded (SZ.v map_length_bound)));
+  CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet_map_length_bounded map_length_bound map_key_bound strict_check input;
+}
+
+fn cbor_nondet_validate_bounded (_: unit) : cbor_nondet_validate_bounded_t =
+  (map_depth_bound: _)
+  (map_length_bound: _)
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  Classical.forall_intro (Classical.move_requires SpecRaw.mk_cbor_map_depth);
+  Classical.forall_intro (Classical.move_requires (SpecRaw.mk_cbor_map_length_bounded (SZ.v map_length_bound)));
+  CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet_bounded map_depth_bound map_length_bound input;
+}
+
 fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t cbor_nondet_match =
   (input: S.slice U8.t)
   (len: SZ.t)
@@ -199,6 +224,27 @@ fn cbor_nondet_parse (_: unit) : cbor_nondet_parse_t #cbor_nondet_t cbor_nondet_
     fold (cbor_nondet_parse_post cbor_nondet_match input pm v (Some (resl, inr)));
     Some (resl, inr);
   }
+}
+
+fn cbor_nondet_parse_map_length_bounded (_: unit) : cbor_nondet_parse_map_length_bounded_t #cbor_nondet_t cbor_nondet_match =
+  (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
+  (strict_check: bool)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  CBOR.Pulse.API.Base.cbor_nondet_parse_map_length_bounded (cbor_nondet_validate_map_length_bounded ()) (cbor_nondet_parse_valid ()) map_length_bound map_key_bound strict_check input
+}
+
+fn cbor_nondet_parse_bounded (_: unit) : cbor_nondet_parse_bounded_t #cbor_nondet_t cbor_nondet_match =
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  CBOR.Pulse.API.Base.cbor_nondet_parse_bounded (cbor_nondet_validate_bounded ()) (cbor_nondet_parse_valid ()) map_depth_bound map_length_bound input
 }
 
 let cbor_nondet_match_with_size

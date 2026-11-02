@@ -65,10 +65,14 @@ let pulse_cb_inst_args () : ML string =
   Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
     (pulse_inst ())
 
+let pulse_typ_probe_args () : ML string =
+  Printf.sprintf " #B.base_t #B.len_t #B.pos_t #%s #_ #B.copy_buffer_t #B.copy_buffer_buffer"
+    (pulse_inst ())
+
 (* The client context (`EVERPARSE_EXTRA_T`) that the extern/static backends
    thread down to the stream primitives. The generated validator binds it so
    that `EverParse3d.Util.solve_from_ctx` can resolve it inside the body, and
-   so that KaRaMeL emits it as the validator's first C parameter. The buffer
+   so that Custard emits it as the validator's first C parameter. The buffer
    backend has no context (`extra_t = unit`),
    so nothing is emitted and the binder erases. *)
 let pulse_extra_binder () : ML string =
@@ -797,6 +801,15 @@ let print_derived_name (mname:string) (tag:string) (i:A.ident) =
    anything mentioning a `state_dict` is printed, which is the only context in
    which the key of a leaf can refer to a parameter. *)
 let pulse_kenv : ref (list string) = alloc []
+let boolean_pointer_params : ref (list A.ident) = alloc []
+
+let is_boolean_param (t:T.typ) : bool =
+  match t with
+  | T.T_app {v={name="Bool"}} _ [] -> true
+  | _ -> false
+
+let is_boolean_pointer (i:A.ident) : ML bool =
+  lowstar_api () && List.existsb (A.eq_idents i) !boolean_pointer_params
 
 let set_pulse_kenv (l:list string) : ML unit =
   pulse_kenv := l
@@ -1075,7 +1088,10 @@ let rec print_action (mname:string) (a:T.action)
 
         | T.Action_deref i ->
           if pulse ()
-          then Printf.sprintf "(Action_deref %s %s ())"
+          then Printf.sprintf "(%s %s %s ())"
+                              (if is_boolean_pointer i
+                               then "Action_deref_map EverParse3d.CAbi.Boolean.to_bool"
+                               else "Action_deref")
                               (pulse_key_arg_of (print_ident mname i))
                               (print_ident mname i)
           else
@@ -1087,7 +1103,9 @@ let rec print_action (mname:string) (a:T.action)
           then Printf.sprintf "(Action_assignment %s %s %s ())"
                               (pulse_key_arg_of (print_ident mname lhs))
                               (print_ident mname lhs)
-                              (T.print_expr mname rhs)
+                              (if is_boolean_pointer lhs
+                               then Printf.sprintf "(EverParse3d.CAbi.Boolean.of_bool %s)" (T.print_expr mname rhs)
+                               else T.print_expr mname rhs)
           else
           Printf.sprintf "(Action_assignment %s %s)"
                          (print_ident mname lhs)
@@ -1258,7 +1276,9 @@ let rec print_typ (mname:string) (t:typ)
         then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
-        Printf.sprintf "(t_probe_then_validate_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+        Printf.sprintf "(t_probe_then_validate_gen%s%s %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+                     (pulse_typ_probe_args ())
+                     (T.print_boolean_inst_args ())
                      (pulse_ehm ())
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      nullable
@@ -1291,7 +1311,9 @@ let rec print_typ (mname:string) (t:typ)
         then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
-        Printf.sprintf "(t_probe_then_validate_alt_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+        Printf.sprintf "(t_probe_then_validate_alt_gen%s%s %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+                     (pulse_typ_probe_args ())
+                     (T.print_boolean_inst_args ())
                      (pulse_ehm ())
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      nullable
@@ -1401,7 +1423,7 @@ let print_disj mname (i:index disj) =
   | None -> "Trivial"
   | Some i -> print_disj' mname i
 
-let print_td_iface_pulse is_entrypoint mname root_name binders args
+let print_td_iface_pulse is_entrypoint mname root_name binders args public_binders public_args
                          sd ha ar pk_wk pk_nz =
   let ar = if is_entrypoint then false else ar in
   (* NOTE: the kind itself is *not* declared here; `print_binding` emits its
@@ -1432,7 +1454,7 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args
   let public_t =
     if lowstar_api ()
     then Printf.sprintf "val validate_%s %s : %s.validator_of %s %b (def'_%s %s)"
-      root_name binders (pulse_adapter_module ()) sd (use_error_handler ()) root_name args
+      root_name public_binders (pulse_adapter_module ()) sd (use_error_handler ()) root_name public_args
     else ""
   in
   let dtyp_t =
@@ -1502,16 +1524,20 @@ let print_binders_as_args mname binders =
     List.map (fun (i, _) -> print_ident mname i) binders |>
     String.concat " "
 
-let pulse_validator_attributes (is_entrypoint exported compatible: bool) : ML string =
+let pulse_validator_attributes (cname:option string) (is_entrypoint exported compatible: bool) : ML string =
   let cinline = if is_entrypoint || exported then "" else "; CInline" in
   let private_attr = if compatible then "; \"KrmlPrivate\"" else "" in
-  Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s]" cinline private_attr
+  let name_attr = match cname with
+    | None -> ""
+    | Some name -> Printf.sprintf "; FStar.Attributes.rename_let \"%s\"" name
+  in
+  Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s%s]" cinline private_attr name_attr
 
-let print_public_adapter_binding compatible root_name binders allow_reading worker_name args : ML string =
+let print_public_adapter_binding compatible cname root_name binders allow_reading worker_name args : ML string =
   if compatible
-  then Printf.sprintf "[@@normalize_for_extraction specialization_steps]\n\
+  then Printf.sprintf "[@@FStar.Attributes.rename_let \"%s\"; normalize_for_extraction specialization_steps]\n\
     let validate_%s %s = %s.adapt %b (validate_%s %s)\n"
-    root_name binders (pulse_adapter_module ()) allow_reading worker_name args
+    cname root_name binders (pulse_adapter_module ()) allow_reading worker_name args
   else ""
 
 // This large ML pretty-printer builds its result through ~20 chained
@@ -1530,12 +1556,19 @@ let print_binding mname (td:type_decl)
   let root_name = print_ident mname tdn.td_name in
   let compatible = lowstar_api () in
   let worker_name = pulse_worker_name root_name in
+  let cname = T.validator_name mname tdn.td_name.A.v.A.name in
   let print_binders = print_binders mname in
   let print_args = print_binders_as_args mname in
   (* Record the parameters in scope before printing anything that mentions a
      `state_dict`: a leaf that is a parameter is keyed by that parameter's
      erased key rather than by a literal. *)
   let _ = set_pulse_kenv (List.map (fun p -> print_ident mname (fst p)) tdn.td_params) in
+  let _ = boolean_pointer_params :=
+    List.collect (fun (i, t) ->
+      match t with
+      | T.T_pointer t _ -> if is_boolean_param t then [i] else []
+      | _ -> []) tdn.td_params
+  in
   let binders, args =
     if pulse ()
     then
@@ -1549,6 +1582,26 @@ let print_binding mname (td:type_decl)
         (pulse_key_binder_args mname tdn.td_params)
         (print_args tdn.td_params)
     else print_binders tdn.td_params, print_args tdn.td_params
+  in
+  let public_binders, public_args =
+    if compatible
+    then
+      let params = List.map (fun (i, t) ->
+        Printf.sprintf "(%s:%s)" (print_ident mname i)
+          (if is_boolean_param t then "EverParse3d.CAbi.Boolean.t" else T.print_typ mname t))
+        tdn.td_params |> String.concat " "
+      in
+      let args = List.map (fun (i, t) ->
+        let id = print_ident mname i in
+        if is_boolean_param t
+        then Printf.sprintf "(EverParse3d.CAbi.Boolean.to_bool %s)" id
+        else id) tdn.td_params |> String.concat " "
+      in
+      let inv, _, _, _ = td.typ_indexes in
+      Printf.sprintf "%s %s %s%s"
+        (pulse_key_binders mname tdn.td_params) params (pulse_keys_binder mname inv) (pulse_extra_binder ()),
+      Printf.sprintf "%s %s ___sq_keys" (pulse_key_binder_args mname tdn.td_params) args
+    else binders, args
   in
   let def = print_type_decl mname binders td in
   let weak_kind = A.print_weak_kind k.pk_weak_kind in
@@ -1659,7 +1712,8 @@ let print_binding mname (td:type_decl)
         args
   in
   let validate_binding =
-    let attribs = pulse_validator_attributes td.name.td_entrypoint td.attrs.is_exported compatible in
+    let attribs = pulse_validator_attributes (if compatible then None else Some cname)
+      td.name.td_entrypoint td.attrs.is_exported compatible in
     if pulse ()
     then
       Printf.sprintf "%s\n\
@@ -1682,7 +1736,7 @@ let print_binding mname (td:type_decl)
                     args
   in
   let public_binding =
-    print_public_adapter_binding compatible root_name binders td.allow_reading worker_name args
+    print_public_adapter_binding compatible cname root_name public_binders td.allow_reading worker_name public_args
   in
   let dtyp : string =
     let reader =
@@ -1806,7 +1860,7 @@ let print_binding mname (td:type_decl)
       if td.name.td_entrypoint || td.attrs.is_exported
       then
         print_td_iface_pulse td.name.td_entrypoint
-                    mname root_name binders args
+                    mname root_name binders args public_binders public_args
                     sd td.has_action td.allow_reading
                     weak_kind k.pk_nz
       else ""
@@ -1844,9 +1898,10 @@ let print_decl mname (d:decl)
       let impl =
         if pulse ()
         then
-          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #%b %s <| %s\n\n"
+          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer%s #%b %s <| %s\n\n"
             (T.print_ident id)
             (T.print_params mname params)
+            (T.print_boolean_inst_args ())
             (use_error_handler ())
             (pulse_ehm ())
             (T.print_probe_action mname body)

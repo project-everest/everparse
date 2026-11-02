@@ -24,7 +24,7 @@ args=()
 for f in \
     "$opt/hashes.Makefile" \
     "$opt/FStar/Makefile" \
-    "$opt/karamel/Makefile" \
+    "$opt/FStar/karamel/Makefile" \
     "$opt/opam/opam-init/init.sh" \
     "$opt/opam.done" \
     "$opt/FStar.done" \
@@ -44,7 +44,7 @@ done
 # healthy and a sibling job sharing the same image passed, so the binary went
 # away underneath a live build.  Forty lines of ENOENT from make do not say
 # that; this does.
-deps=("$opt/FStar/out/bin/fstar.exe" "$opt/karamel/out/bin/krml")
+deps=("$opt/FStar/out/bin/fstar.exe" "$opt/FStar/karamel/out/bin/krml")
 
 check_deps () {
     local missing=0 f

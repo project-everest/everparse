@@ -66,7 +66,7 @@ BOOLEAN ProbeAndCopyLenAux(
     return true;
   }
   
-BOOLEAN WriteU64(uint64_t src, uint64_t write_offset, EVERPARSE_COPY_BUFFER_T dst)
+bool WriteU64(uint64_t src, uint64_t write_offset, EVERPARSE_COPY_BUFFER_T dst)
 {
     if (write_offset + sizeof(uint64_t) > ((uint64_t) CB(dst).cb_len))
     {

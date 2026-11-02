@@ -600,3 +600,7 @@ val unpack_precedes
 val cbor_map_depth : cbor -> Tot nat
 
 val cbor_map_key_depth : cbor -> Tot nat
+
+(** `cbor_map_length_bounded n c` holds iff every map appearing in `c`
+    (including nested ones, in keys or values) has at most `n` entries *)
+val cbor_map_length_bounded (n: nat) (c: cbor) : Tot bool

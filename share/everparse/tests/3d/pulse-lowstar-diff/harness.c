@@ -163,7 +163,7 @@ static int src_ok(uint64_t addr, uint64_t off, uint64_t n) {
   return n <= HX_SRC_SIZE - rel - off;
 }
 
-static BOOLEAN probe_copy(uint64_t n, uint64_t ro, uint64_t wo, uint64_t src,
+static HX_API_BOOL probe_copy(uint64_t n, uint64_t ro, uint64_t wo, uint64_t src,
                           EVERPARSE_COPY_BUFFER_T dst) {
   hx_cb_t *d = dst;
   if (!src_ok(src, ro, n))
@@ -174,7 +174,7 @@ static BOOLEAN probe_copy(uint64_t n, uint64_t ro, uint64_t wo, uint64_t src,
   return 1;
 }
 
-static uint32_t probe_read32(BOOLEAN *failed, uint64_t ro, uint64_t src,
+static uint32_t probe_read32(HX_API_BOOL *failed, uint64_t ro, uint64_t src,
                              EVERPARSE_COPY_BUFFER_T dst) {
   (void)dst;
   uint32_t v = 0;
@@ -186,7 +186,7 @@ static uint32_t probe_read32(BOOLEAN *failed, uint64_t ro, uint64_t src,
   return v;
 }
 
-static uint64_t probe_read64(BOOLEAN *failed, uint64_t ro, uint64_t src,
+static uint64_t probe_read64(HX_API_BOOL *failed, uint64_t ro, uint64_t src,
                              EVERPARSE_COPY_BUFFER_T dst) {
   (void)dst;
   uint64_t v = 0;
@@ -198,7 +198,7 @@ static uint64_t probe_read64(BOOLEAN *failed, uint64_t ro, uint64_t src,
   return v;
 }
 
-static BOOLEAN write32(uint32_t v, uint64_t wo, EVERPARSE_COPY_BUFFER_T dst) {
+static HX_API_BOOL write32(uint32_t v, uint64_t wo, EVERPARSE_COPY_BUFFER_T dst) {
   hx_cb_t *d = dst;
   if (wo > d->len || 4 > d->len - wo)
     return 0;
@@ -206,7 +206,7 @@ static BOOLEAN write32(uint32_t v, uint64_t wo, EVERPARSE_COPY_BUFFER_T dst) {
   return 1;
 }
 
-static BOOLEAN write64(uint64_t v, uint64_t wo, EVERPARSE_COPY_BUFFER_T dst) {
+static HX_API_BOOL write64(uint64_t v, uint64_t wo, EVERPARSE_COPY_BUFFER_T dst) {
   hx_cb_t *d = dst;
   if (wo > d->len || 8 > d->len - wo)
     return 0;
@@ -214,7 +214,7 @@ static BOOLEAN write64(uint64_t v, uint64_t wo, EVERPARSE_COPY_BUFFER_T dst) {
   return 1;
 }
 
-static BOOLEAN probe_init(EVERPARSE_STRING name, uint64_t n,
+static HX_API_BOOL probe_init(EVERPARSE_STRING name, uint64_t n,
                           EVERPARSE_COPY_BUFFER_T dst) {
   (void)name;
   hx_cb_t *d = dst;
@@ -227,19 +227,19 @@ static BOOLEAN probe_init(EVERPARSE_STRING name, uint64_t n,
 /* 3D emits one numbered copy of each extern per probe site; all of them get
    the same implementation. */
 #define PROBE_SET(SUF)                                                        \
-  BOOLEAN ProbeAndCopy##SUF(uint64_t n, uint64_t ro, uint64_t wo,             \
+  HX_API_BOOL ProbeAndCopy##SUF(uint64_t n, uint64_t ro, uint64_t wo,             \
                             uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {      \
     return probe_copy(n, ro, wo, src, dst);                                   \
   }                                                                           \
-  uint32_t ProbeAndReadU32##SUF(BOOLEAN *f, uint64_t ro, uint64_t src,        \
+  uint32_t ProbeAndReadU32##SUF(HX_API_BOOL *f, uint64_t ro, uint64_t src,        \
                                 EVERPARSE_COPY_BUFFER_T dst) {                \
     return probe_read32(f, ro, src, dst);                                     \
   }                                                                           \
-  uint64_t ProbeAndReadU64##SUF(BOOLEAN *f, uint64_t ro, uint64_t src,        \
+  uint64_t ProbeAndReadU64##SUF(HX_API_BOOL *f, uint64_t ro, uint64_t src,        \
                                 EVERPARSE_COPY_BUFFER_T dst) {                \
     return probe_read64(f, ro, src, dst);                                     \
   }                                                                           \
-  BOOLEAN ProbeInit##SUF(EVERPARSE_STRING s, uint64_t n,                      \
+  HX_API_BOOL ProbeInit##SUF(EVERPARSE_STRING s, uint64_t n,                      \
                          EVERPARSE_COPY_BUFFER_T dst) {                       \
     return probe_init(s, n, dst);                                             \
   }                                                                           \
@@ -247,7 +247,7 @@ static BOOLEAN probe_init(EVERPARSE_STRING name, uint64_t n,
      a copy of it. Modelling it as a copy is behaviourally equivalent from    \
      the validator's point of view, and keeps both backends on exactly the    \
      same implementation, which is what the comparison needs. */              \
-  BOOLEAN ProbeInPlace##SUF(uint64_t n, uint64_t ro, uint64_t wo,             \
+  HX_API_BOOL ProbeInPlace##SUF(uint64_t n, uint64_t ro, uint64_t wo,             \
                             uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {      \
     return probe_copy(n, ro, wo, src, dst);                                   \
   }                                                                           \
@@ -260,14 +260,14 @@ PROBE_SET(2)
 PROBE_SET(3)
 PROBE_SET(4)
 
-BOOLEAN WriteU64(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
-BOOLEAN WriteU640(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
-BOOLEAN WriteU641(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
-BOOLEAN WriteU642(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
-BOOLEAN WriteU643(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
-BOOLEAN WriteU644(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
-BOOLEAN WriteU32(uint32_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write32(v, w, d); }
-BOOLEAN WriteU320(uint32_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write32(v, w, d); }
+HX_API_BOOL WriteU64(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
+HX_API_BOOL WriteU640(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
+HX_API_BOOL WriteU641(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
+HX_API_BOOL WriteU642(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
+HX_API_BOOL WriteU643(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
+HX_API_BOOL WriteU644(uint64_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write64(v, w, d); }
+HX_API_BOOL WriteU32(uint32_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write32(v, w, d); }
+HX_API_BOOL WriteU320(uint32_t v, uint64_t w, EVERPARSE_COPY_BUFFER_T d) { return write32(v, w, d); }
 
 void hx_init(void) {
   void *p = mmap((void *)HX_SRC_ADDR, HX_SRC_SIZE, PROT_READ | PROT_WRITE,

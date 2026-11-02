@@ -83,7 +83,7 @@ let valid_micro_step (str: string) : Tot bool = match str with
 
 let _micro_step : ref (option (valid_string valid_micro_step)) = alloc None
 
-let _produce_c_from_existing_krml : ref bool = alloc false
+let _produce_c_from_existing_checked : ref bool = alloc false
 
 let valid_makefile (str: string) : Tot bool = match str with
   | "gmake"
@@ -404,13 +404,13 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "clang_format" (OptBool _clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid _clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "clang_format_use_custom_config" (OptBool clang_format_use_custom_config) "Skip copying .clang-format from EverParse, use existing one instead" ["batch"; "clang_format"];
-    CmdOption "cleanup" (OptBool _cleanup) "Remove *.fst*, generated *.json and krml-args.rsp (--batch only)" [];
+    CmdOption "cleanup" (OptBool _cleanup) "Remove generated F* sources, checked caches and CUI files (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name _config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "complete_wrappers" (OptBool complete_wrappers) "In addition to the usual entrypoint wrappers, generate `Complete' wrappers that also check that the validator consumed the whole input buffer (--input_stream buffer only)" [];
     CmdOption "emit_output_types_defs" (OptBool _emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool _emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
-    CmdOption "karamel" (OptStringOption "executable" always_valid karamel_exe) "The KaRaMeL executable to run (default: automatically located in the source tree or binary package)" [];
+    CmdOption "karamel" (OptStringOption "executable" always_valid karamel_exe) "Legacy KaRaMeL executable (unused for direct-C extraction)" [];
     CmdOption "blank_lines" (OptBool blank_lines) "Insert blank lines between declaration blocks for readability in generated C code (--batch only)" ["batch"];
     CmdOption "goto_for_early_return" (OptBool goto_for_early_return) "Use goto for early return in generated C code (--batch only)" ["batch"];
     CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];
@@ -448,7 +448,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid _z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid _arg0) "executable name to use for the help message" [];
     CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config|save_hashes" valid_micro_step _micro_step) "micro step" [];
-    CmdOption "__produce_c_from_existing_krml" (OptBool _produce_c_from_existing_krml) "produce C from .krml files" [];
+    CmdOption "__produce_c_from_existing_checked" (OptBool _produce_c_from_existing_checked) "produce C and a Custard unit from verified F* files" [];
     CmdOption "__skip_deps" (OptBool _skip_deps) "skip dependency analysis, assume all dependencies are specified on the command line" [];
   ];
   let fstar_options =
@@ -464,7 +464,20 @@ let parse_cmd_line () : ML (list string) =
   let open Getopt in
   let res = Getopt.parse_cmdline (List.Tot.map fst fstar_options) (fun file -> _input_file := file :: !_input_file; Success) in
   match res with
-  | Success -> !_input_file
+  | Success ->
+    let unsupported =
+      List.Tot.filter fst
+        [(!hoist_locals, "hoist_locals");
+         (!goto_for_early_return, "goto_for_early_return");
+         (!blank_lines, "blank_lines");
+         (!line_comments, "line_comments");
+         (Some? !init_locals, "init_locals")]
+    in
+    (match unsupported with
+     | (_, name)::_ ->
+       FStar.IO.print_string ("--" ^ name ^ ": not implemented yet for Custard direct-to-C extraction\n");
+       exit 1
+     | [] -> !_input_file)
   | Help -> display_usage(); exit 0
   | Error s -> FStar.IO.print_string s; exit 1
   | _ -> exit 2

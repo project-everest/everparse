@@ -29,7 +29,7 @@ module EverParse3d.Interpreter
         to the parser denotation of `t`.
 
    Partially evaluating `as_validator` at a concrete `t` yields an EverParse
-   validator specialized to `t`, which KaRaMeL extracts to C (an instance of
+   validator specialized to `t`, which Custard extracts to C (an instance of
    the 1st Futamura projection).
 
    Differences with the Low* interpreter:
@@ -71,6 +71,7 @@ module T = FStar.Tactics
 module I = EverParse3d.InputStream.Base
 module CP = EverParse3d.CopyBuffer
 module PA = EverParse3d.ProbeActions
+module Bool = EverParse3d.Boolean
 open Pulse.Lib.Pervasives
 open EverParse3d.State
 open EverParse3d.Actions.Common
@@ -197,6 +198,7 @@ let itype_as_validator
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#[@@@erasable] d: state_dict)
   (#use_error_handler:bool)
+  (name: string)
   (i:itype)
   : A.validate_with_action_t #base_t #len_t #pos_t
       (itype_as_parser i)
@@ -213,14 +215,14 @@ let itype_as_validator
         (allow_reader_of_itype i)
         use_error_handler
     with
-    | UInt8 -> A.validate____UINT8
-    | UInt16 -> A.validate____UINT16
-    | UInt32 -> A.validate____UINT32
-    | UInt64 -> A.validate____UINT64
-    | UInt8BE -> A.validate____UINT8BE
-    | UInt16BE -> A.validate____UINT16BE
-    | UInt32BE -> A.validate____UINT32BE
-    | UInt64BE -> A.validate____UINT64BE
+    | UInt8 -> A.validate____UINT8 name
+    | UInt16 -> A.validate____UINT16 name
+    | UInt32 -> A.validate____UINT32 name
+    | UInt64 -> A.validate____UINT64 name
+    | UInt8BE -> A.validate____UINT8BE name
+    | UInt16BE -> A.validate____UINT16BE name
+    | UInt32BE -> A.validate____UINT32BE name
+    | UInt64BE -> A.validate____UINT64BE name
     | Unit -> A.validate_unit_no_read
     | AllBytes -> A.validate_all_bytes
     | AllZeros -> A.validate_all_zeros
@@ -362,6 +364,7 @@ let dtyp_as_parser #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
 [@@specialize]
 let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                       #nz #wk (#pk:P.parser_kind nz wk) (#ha #hr:_)
+                      (name: string)
                       (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha hr)
   : A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(dtyp_as_type t)
         (dtyp_as_parser t)
@@ -374,7 +377,7 @@ let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t l
         d
         ha hr use_error_handler
     with
-    | DT_IType i -> itype_as_validator #base_t #len_t #pos_t #inst #_extra #d #use_error_handler i
+    | DT_IType i -> itype_as_validator #base_t #len_t #pos_t #inst #_extra #d #use_error_handler name i
     | DT_App _ _ _ b _ -> validator_of_binding b
 
 (* At `hr = true`, `validate_with_action_t` reduces to the non-consuming
@@ -383,12 +386,13 @@ let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t l
 [@@specialize]
 let dtyp_as_validator_no_read #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                       #nz #wk (#pk:P.parser_kind nz wk) (#ha:_)
+                      (name: string)
                       (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha true)
   : A.validate_with_action_no_read #base_t #len_t #pos_t #inst
         (dtyp_as_parser t)
         d
         ha use_error_handler
-  = dtyp_as_validator t
+  = dtyp_as_validator name t
 
 [@@specialize]
 let dtyp_as_leaf_reader #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
@@ -415,48 +419,52 @@ type atomic_probe_action
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
   (inst: I.input_stream_inst base_t len_t pos_t)
   (cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+  (boolean_t: Type0)
+  (boolean_inst: Bool.boolean_repr boolean_t)
   : Type0 -> Type u#1 =
   | Atomic_probe_and_copy :
       bytes_to_read : U64.t ->
-      probe_fn: PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      probe_fn: PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst ->
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_and_read :
       #t:Type0 ->
       #sz:U64.t { sz <> 0uL } ->
-      reader : PA.probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t sz ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t
+      reader : PA.probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst t sz ->
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t
   | Atomic_probe_write_at_offset :
       #t:Type0 ->
       #sz:U64.t { sz <> 0uL } ->
       v:t ->
-      writer : PA.write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t sz ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      writer : PA.write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst t sz ->
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_call_pure :
       #t:Type0 ->
       f:PA.pure_external_action t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t
   | Atomic_probe_skip_read:
       n:U64.t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_skip_write:
       n:U64.t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
   | Atomic_probe_return:
       #t:Type0 ->
       v:t ->
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t
   | Atomic_probe_fail:
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit
 
 [@@specialize]
 let atomic_probe_action_as_probe_m
       (#copy_buffer_t #base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
       (#cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool) (#t:Type0)
       (error_handler_macro: error_handler #base_t #len_t #pos_t #inst)
-      (p:atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t)
-: PA.probe_m #_ #_ #_ #_ #inst #cbinst t true false use_error_handler
+      (p:atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t)
+: PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst t true false use_error_handler
 = match p with
   | Atomic_probe_and_copy bytes_to_read probe_fn_incremental ->
     PA.probe_fn_incremental_as_probe_m probe_fn_incremental bytes_to_read
@@ -481,47 +489,51 @@ type probe_action
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
   (inst: I.input_stream_inst base_t len_t pos_t)
   (cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+  (boolean_t: Type0)
+  (boolean_inst: Bool.boolean_repr boolean_t)
   (use_error_handler:bool)
   : bool -> Type u#1 =
   | Probe_action_atomic :
-      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst unit ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst unit ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_var :
-      PA.probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_seq:
       detail:string ->
-      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_let:
       #t:Type0 ->
       detail:string ->
-      m1: atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst t ->
-      m2: (t -> probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false) ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      m1: atomic_probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst t ->
+      m2: (t -> probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false) ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_ite:
       cond:bool ->
-      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      m1: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      m2: probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_array:
       bytes_len:U64.t ->
-      element_probe:probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      element_probe:probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
   | Probe_action_copy_init_sz:
-      probe_fn:PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t ->
-      probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler false
+      probe_fn:PA.probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cbinst #boolean_t #boolean_inst ->
+      probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler false
 
 [@@specialize]
 let rec probe_action_as_probe_m
       (#copy_buffer_t #base_t #len_t #pos_t: Type0)
       (#inst: I.input_stream_inst base_t len_t pos_t)
       (#cbinst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool) (#maybe_zero:bool)
       (error_handler_macro: error_handler #base_t #len_t #pos_t #inst)
-      (p:probe_action copy_buffer_t base_t len_t pos_t inst cbinst use_error_handler maybe_zero)
-: Tot (PA.probe_m #_ #_ #_ #_ #inst #cbinst unit true maybe_zero use_error_handler)
+      (p:probe_action copy_buffer_t base_t len_t pos_t inst cbinst boolean_t boolean_inst use_error_handler maybe_zero)
+: Tot (PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true maybe_zero use_error_handler)
       (decreases p)
 = match p with
   | Probe_action_atomic a ->
@@ -533,7 +545,7 @@ let rec probe_action_as_probe_m
       (probe_action_as_probe_m error_handler_macro m1)
       (probe_action_as_probe_m error_handler_macro m2)
   | Probe_action_let detail m1 m2 ->
-    let k x : PA.probe_m #_ #_ #_ #_ #inst #cbinst unit true false use_error_handler =
+    let k x : PA.probe_m #_ #_ #_ #_ #inst #cbinst #boolean_t #boolean_inst unit true false use_error_handler =
       probe_action_as_probe_m error_handler_macro (m2 x)
     in
     PA.bind_probe_m error_handler_macro detail ()
@@ -663,6 +675,15 @@ type atomic_action
       _:squash (state_dict_weaken_prop (state_dict_singleton name (pts_to x #1.0R)) d) ->
       atomic_action base_t len_t pos_t inst d use_error_handler false false a
 
+  | Action_deref_map:
+      #a:Type0 ->
+      #b:Type0 ->
+      decode:(a -> Tot b) ->
+      name:Ghost.erased string ->
+      x:ref a ->
+      _:squash (state_dict_weaken_prop (state_dict_singleton name (pts_to x #1.0R)) d) ->
+      atomic_action base_t len_t pos_t inst d use_error_handler false false b
+
   | Action_assignment:
       #a:Type0 ->
       name:Ghost.erased string ->
@@ -711,6 +732,8 @@ let atomic_action_as_action
       A.action_weaken (A.action_field_ptr_after (Some?.v f) name sz write_to) d sq'
     | Action_deref name x sq ->
       A.action_weaken (A.action_deref name x) d sq
+    | Action_deref_map decode name x sq ->
+      A.action_weaken (A.action_deref_map decode name x) d sq
     | Action_assignment name x rhs sq ->
       A.action_weaken (A.action_assignment name x rhs) d sq
     | Action_call c ->
@@ -1195,7 +1218,7 @@ let rec as_validator
       assert_norm (as_type (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_type td);
       assert_norm (as_parser (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_parser td);
       A.validate_with_error_handler_gen ehm typename fldname _
-        (A.validate_eta_gen _ (dtyp_as_validator td))
+        (A.validate_eta_gen _ (dtyp_as_validator fldname td))
 
     | T_pair fldname k1_const t1 k2_const t2 ->
       assert_norm (as_type (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == as_type t1 & as_type t2);
@@ -1211,7 +1234,7 @@ let rec as_validator
       assert_norm (as_parser (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) ==
                    P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
       A.validate_dep_pair fldname
-          (A.validate_with_error_handler_no_read ehm typename fldname (dtyp_as_validator_no_read i))
+          (A.validate_with_error_handler_no_read ehm typename fldname (dtyp_as_validator_no_read fldname i))
           (dtyp_as_leaf_reader i)
           (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x)))
 
@@ -1220,7 +1243,7 @@ let rec as_validator
       assert_norm (as_parser (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f) == P.parse_filter (dtyp_as_parser t) f);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_filter fldname
-          (dtyp_as_validator_no_read t)
+          (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
           f "reading field_value" "checking constraint")
 
@@ -1229,7 +1252,7 @@ let rec as_validator
       assert_norm (as_parser (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f a) == P.parse_filter (dtyp_as_parser t) f);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_filter_with_action fldname
-          (dtyp_as_validator_no_read t)
+          (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
           f "reading field_value" "checking constraint"
           (fun x -> action_as_action (a x)))
@@ -1241,7 +1264,7 @@ let rec as_validator
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_dep_pair_with_refinement (not ha1) fldname
-            (dtyp_as_validator_no_read base)
+            (dtyp_as_validator_no_read fldname base)
             (dtyp_as_leaf_reader base)
             refinement
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x))))
@@ -1253,7 +1276,7 @@ let rec as_validator
                         P.(dtyp_as_parser base `parse_dep_pair` (fun x -> as_parser (t x))));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_dep_pair_with_action
-            (dtyp_as_validator_no_read base)
+            (dtyp_as_validator_no_read fldname base)
             (dtyp_as_leaf_reader base)
             (fun x -> action_as_action (act x))
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x))))
@@ -1265,7 +1288,7 @@ let rec as_validator
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_dep_pair_with_refinement_and_action (not ha1) fldname
             (A.validate_with_error_handler_no_read ehm typename fldname
-              (dtyp_as_validator_no_read base))
+              (dtyp_as_validator_no_read fldname base))
             (dtyp_as_leaf_reader base)
             refinement
             (fun x -> action_as_action (act x))
@@ -1310,7 +1333,7 @@ let rec as_validator
       assert_norm (as_parser (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == dtyp_as_parser i);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_with_dep_action fldname
-            (dtyp_as_validator_no_read i)
+            (dtyp_as_validator_no_read fldname i)
             (dtyp_as_leaf_reader i)
             (fun x -> action_as_action (a typename x)))
 
@@ -1351,7 +1374,7 @@ let rec as_validator
       assert_norm (as_type (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.cstring (dtyp_as_type elt_t) terminator);
       assert_norm (as_parser (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.parse_string (dtyp_as_parser elt_t) terminator);
       A.validate_with_error_handler ehm typename fldname
-        (A.validate_string (dtyp_as_validator_no_read elt_t)
+        (A.validate_string (dtyp_as_validator_no_read fldname elt_t)
                            (dtyp_as_leaf_reader elt_t)
                            terminator)
 #pop-options
@@ -1414,15 +1437,17 @@ let t_probe_then_validate
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst #boolean_t #boolean_inst unit true mz use_error_handler)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
@@ -1444,7 +1469,7 @@ let t_probe_then_validate
      (fun typename src ->
         Atomic_action (atomic_action_call
           (A.probe_then_validate ehm typename fldname
-             (A.validate_without_reading_gen has_reader (dtyp_as_validator td))
+             (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
              src as_u64 nullable dest_name dest init_cb dest_sz probe sq)))
 
 [@@specialize]
@@ -1454,15 +1479,17 @@ let t_probe_then_validate_alt
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst use_error_handler mz)
+      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst boolean_t boolean_inst use_error_handler mz)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
@@ -1497,15 +1524,17 @@ let t_probe_then_validate_gen
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst unit true mz use_error_handler)
+      (probe:PA.probe_m #_ #_ #_ #_ #inst #cb_inst #boolean_t #boolean_inst unit true mz use_error_handler)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
@@ -1531,7 +1560,7 @@ let t_probe_then_validate_gen
         Atomic_action (atomic_action_call
           (A.action_weaken
             (A.probe_then_validate ehm typename fldname
-               (A.validate_without_reading_gen has_reader (dtyp_as_validator td))
+               (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
                src as_u64 nullable dest_name dest init_cb dest_sz probe sq)
             d
             sq_weaken)))
@@ -1543,15 +1572,17 @@ let t_probe_then_validate_alt_gen
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#copy_buffer_t: Type0)
       (#cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t)
+      (#boolean_t: Type0)
+      {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (ehm: error_handler #base_t #len_t #pos_t #inst)
       (pointer_size:pointer_size_t)
       (nullable:bool)
       (fldname:string)
-      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
+      (init_cb:PA.init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
       (dest_sz:U64.t)
       (#mz:bool)
-      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst use_error_handler mz)
+      (probe:probe_action copy_buffer_t base_t len_t pos_t inst cb_inst boolean_t boolean_inst use_error_handler mz)
       (dest_name:Ghost.erased string)
       (dest:copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)

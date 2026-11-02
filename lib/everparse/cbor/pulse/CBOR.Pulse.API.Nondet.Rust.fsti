@@ -21,6 +21,18 @@ val cbor_nondet_gather () : Base.gather_t cbor_nondet_match
 
 val cbor_nondet_parse (_: unit) : Base.cbor_nondet_parse_t cbor_nondet_match
 
+(* Like cbor_nondet_parse, but additionally rejects any input containing
+   a map (at any nesting depth) with more than map_length_bound
+   entries. *)
+val cbor_nondet_parse_map_length_bounded (_: unit) : Base.cbor_nondet_parse_map_length_bounded_t cbor_nondet_match
+
+(* Like cbor_nondet_parse, but only accepts CBOR objects whose map
+   nesting depth is at most map_depth_bound, and in which every map has
+   at most map_length_bound entries; there is no map key depth bound,
+   as it is implied by the map depth bound. Validation fails as soon as
+   either bound is exceeded. *)
+val cbor_nondet_parse_bounded (_: unit) : Base.cbor_nondet_parse_bounded_t cbor_nondet_match
+
 val cbor_nondet_match_with_size
   (size: nat)
   (p: perm)

@@ -5,7 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "EverParse.h"
+
+#ifdef HX_API_LOWSTAR
+typedef BOOLEAN HX_API_BOOL;
+#else
+typedef bool HX_API_BOOL;
+#endif
 
 /* Large enough to hold the longest solver-derived seed in seeds.inc; the
    witness generator emits fixed 256-byte inputs. */
@@ -29,7 +36,7 @@ typedef struct {
   int slot;
 } hx_cb_t;
 
-typedef BOOLEAN (*hx_call_t)(const uint64_t *args, uint8_t *buf, uint32_t len,
+typedef HX_API_BOOL (*hx_call_t)(const uint64_t *args, uint8_t *buf, uint32_t len,
                              char *desc);
 
 typedef struct {
