@@ -154,23 +154,29 @@ holding fractional permission `pm` on the input bytes it borrows.
   values are likewise validated on the input slice before being copied.
   ANY DEFINED BY prefix items and payloads are checked by their own JIT
   writers (and a fallback key by the terminal checks), with acceptance
-  proven structurally (`ASN1.Pulse.JitAdb`); only the written key is read
-  back, to check its identifier, length and (dis)equality with the
-  literals of the alternatives. Only DEFAULT components of PREFIXED type
+  proven structurally (`ASN1.Pulse.JitAdb`); a literal key is written as a
+  constant, and only a fallback key, once written, is read back, to check
+  its disequality with the literals. Only DEFAULT components of PREFIXED type
   are still validated locally, right after being written, within their
   own bounds (so, still in the cache). Each byte is
-  validated at most once. The JIT writer returns `JIT_OK`, `JIT_NO_SPACE`
-  (the encoding does not fit), `JIT_INVALID` (the value is not
-  conforming), or `JIT_RETRY` (it could not decide); only on `JIT_RETRY`
-  does `check_write_jit_k` fall back to `check_write_raw_k`. A failed
-  check is reported as `JIT_INVALID` through terminals, TLVs, PREFIXED
-  types, SEQUENCEs and those SEQUENCE components that are present and not
-  ANY (each is one TLV with one of its own identifiers,
-  `ASN1.Pulse.JitFrame`, so the SEQUENCE is invalid as soon as it or the
-  rest is); under CHOICE, ANY, absent components, SET, SET OF, SEQUENCE
-  OF and ANY DEFINED BY, it is `JIT_RETRY`. Accordingly,
-  `cw_post` only requires `CW_NO_SPACE` to imply that the encoding does
-  not fit, and `CW_INVALID` that the value is not conforming (`CW_OK`
+  validated at most once, and `check_write_jit_k` returns the exact
+  result, with no second pass. Internally, a JIT writer returns `JIT_OK`,
+  `JIT_NO_SPACE` (the encoding does not fit), `JIT_INVALID` (the value is
+  not conforming), or `JIT_RETRY` (it could not decide). Validity is
+  compositional through terminals, TLVs, PREFIXED types, CHOICEs,
+  SEQUENCEs and their components (by the well-formedness of the tags,
+  `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitWriter.SeqLemmas`), SET, SET OF,
+  SEQUENCE OF and ANY DEFINED BY (`ASN1.Pulse.JitAdbSeq`,
+  `ASN1.Pulse.JitAdbKey`), so a failed check is reported as `JIT_INVALID`.
+  `JIT_RETRY` only arises because of ANY, whose presence cannot be told
+  from its tag (an ANY SEQUENCE component or ANY DEFINED BY prefix item,
+  ANY SET components or SEQUENCE OF / SET OF elements, and an ANY DEFINED
+  BY fallback whose key is one of the literals); it is caught by the
+  smallest enclosing content, which is then written again by the raw
+  writer and validated within its own bounds (`jit_fix`, `jit_local`), so
+  the top-level JIT writer never returns `JIT_RETRY`. `cw_post` requires
+  `CW_NO_SPACE` to imply that the encoding does not fit, and `CW_INVALID`
+  that the value is not conforming (`CW_OK`
   still holds exactly when both hold). Proofs:
   `ASN1.Pulse.JitWriter.Lemmas`.
 

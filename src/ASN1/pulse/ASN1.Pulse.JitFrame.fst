@@ -168,3 +168,189 @@ let fr_k (#s: _) (k: asn1_k s) (u: squash (~ (ASN1_ANY_ILC? k))) : fr_t (raw_rel
     rel_choice_equiv lc pf;
     fr_ext (raw_lc_rel lc) (raw_rel k) () s
       (fun pm y x -> fr_sub (raw_lc_rel lc) (lc_set lc) s () (fr_lc lc) pm y x)
+
+(* SEQUENCE components: the raw bytes of a component other than ANY are
+   either framed, or empty if it is absent (`SL.dfe`); and, by the
+   well-formedness of the tags, those of the components after an absent
+   component do not start with any of its identifiers (`SL.avoids`) *)
+
+module SL = ASN1.Pulse.JitWriter.SeqLemmas
+module Sq = ASN1.Pulse.Sequence
+module In = ASN1.Pulse.Interpreter
+module PS = ASN1.Pulse.ParseSequence
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let any_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : bool =
+  match dk with
+  | ASN1_PLAIN_ILC k -> ASN1_ANY_ILC? k
+  | ASN1_OPTION_ILC k -> ASN1_ANY_ILC? k
+  | _ -> false
+
+let fe_t (#t: Type0) (r: bprel t) (hd: gen_decorated_parser_twin) =
+  (pm: perm) -> (y: t) -> (x: Ghost.erased SB.bytes) ->
+  stt_ghost unit emp_inames (r pm y x) (fun _ -> r pm y x ** pure (SL.dfe hd x))
+
+let av_t (#t: Type0) (r: bprel t) (s: FS.set asn1_id_t) =
+  (pm: perm) -> (y: t) -> (x: Ghost.erased SB.bytes) ->
+  stt_ghost unit emp_inames (r pm y x) (fun _ -> r pm y x ** pure (SL.avoids s x))
+
+ghost
+fn fe_ext (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r2)) (hd: gen_decorated_parser_twin) (f: fe_t r1 hd)
+  (pm: perm) (y: t) (x: Ghost.erased SB.bytes)
+requires r2 pm y x
+ensures r2 pm y x ** pure (SL.dfe hd x)
+{
+  rewrite (r2 pm y x) as (r1 pm y x);
+  f pm y x;
+  rewrite (r1 pm y x) as (r2 pm y x);
+}
+
+ghost
+fn fe_framed (#t: Type0) (r: bprel t) (#s: _) (#d: _) (dk: asn1_decorated_k s d) (f: fr_t r s)
+  (pm: perm) (y: t) (x: Ghost.erased SB.bytes)
+requires r pm y x
+ensures r pm y x ** pure (SL.dfe (In.twin_of dk) x)
+{
+  f pm y x;
+  SL.dfe_framed dk x;
+}
+
+ghost
+fn fe_opt (#t: Type0) (r: bprel t) (#s: _) (#d: _) (dk: asn1_decorated_k s d)
+  (sq: squash (ASN1_OPTION_ILC? dk \/ ASN1_DEFAULT_TERMINAL? dk \/ ASN1_DEFAULT_RESTRICTED_TERMINAL? dk)) (f: fr_t r s)
+  (pm: perm) (y: option t) (x: Ghost.erased SB.bytes)
+requires raw_opt r pm y x
+ensures raw_opt r pm y x ** pure (SL.dfe (In.twin_of dk) x)
+{
+  match y {
+    None -> {
+      rewrite (raw_opt r pm y x) as (pure (Ghost.reveal x == Seq.empty));
+      SL.dfe_empty dk;
+      rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt r pm y x);
+    }
+    Some z -> {
+      rewrite (raw_opt r pm y x) as (r pm z x);
+      f pm z x;
+      SL.dfe_framed dk x;
+      rewrite (r pm z x) as (raw_opt r pm y x);
+    }
+  }
+}
+
+let fe_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (any_dec dk == false)) : fe_t (raw_dec_rel dk) (In.twin_of dk) =
+  match dk with
+  | ASN1_PLAIN_ILC k ->
+    dec_plain_equiv k;
+    fe_ext (raw_rel k) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_framed (raw_rel k) dk (fr_k k ()) pm y x)
+  | ASN1_OPTION_ILC k ->
+    dec_option_equiv k;
+    fe_ext (raw_opt (raw_rel k)) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_rel k) dk () (fr_k k ()) pm y x)
+  | ASN1_DEFAULT_TERMINAL id0 #k defl ->
+    dec_default_equiv id0 #k defl;
+    fe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_terminal_rel id0 k) dk () (fr_terminal id0 k) pm y x)
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl ->
+    dec_default_restricted_equiv id0 #k r defl;
+    fe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_terminal_rel id0 k) dk () (fr_terminal id0 k) pm y x)
+
+ghost
+fn av_ext (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r2)) (s: FS.set asn1_id_t) (f: av_t r1 s)
+  (pm: perm) (y: t) (x: Ghost.erased SB.bytes)
+requires r2 pm y x
+ensures r2 pm y x ** pure (SL.avoids s x)
+{
+  rewrite (r2 pm y x) as (r1 pm y x);
+  f pm y x;
+  rewrite (r1 pm y x) as (r2 pm y x);
+}
+
+ghost
+fn av_none (#t: Type0) (r: bprel t) (s: FS.set asn1_id_t) (sq: squash (forall id . ~ (FS.mem id s)))
+  (pm: perm) (y: t) (x: Ghost.erased SB.bytes)
+requires r pm y x
+ensures r pm y x ** pure (SL.avoids s x)
+{
+  SL.avoids_none s x;
+}
+
+ghost
+fn av_nil (s: FS.set asn1_id_t) (pm: perm) (y: unit) (x: Ghost.erased SB.bytes)
+requires raw_pure null_enc pm y x
+ensures raw_pure null_enc pm y x ** pure (SL.avoids s x)
+{
+  unfold (raw_pure null_enc pm y x);
+  SL.avoids_empty s x;
+  fold (raw_pure null_enc pm y x);
+}
+
+ghost
+fn av_fe (#t: Type0) (r: bprel t) (hd: gen_decorated_parser_twin) (s: FS.set asn1_id_t)
+  (sq: squash (FS.disjoint s (Sq.item_set hd))) (f: fe_t r hd)
+  (pm: perm) (y: t) (x: Ghost.erased SB.bytes)
+requires r pm y x
+ensures r pm y x ** pure (SL.avoids s x)
+{
+  f pm y x;
+  let xx = Ghost.reveal x;
+  SL.avoids_dfe s hd xx;
+  ()
+}
+
+ghost
+fn av_cons_plain (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (hd: gen_decorated_parser_twin) (s: FS.set asn1_id_t)
+  (sq: squash (FS.disjoint s (Sq.item_set hd) /\ PLAIN? (Sq.item_dec hd))) (f: fe_t r1 hd)
+  (pm: perm) (y: t1 & t2) (x: Ghost.erased SB.bytes)
+requires raw_cat r1 r2 pm y x
+ensures raw_cat r1 r2 pm y x ** pure (SL.avoids s x)
+{
+  unfold (raw_cat r1 r2 pm y x);
+  with w1 w2 . assert (r1 pm (fst y) w1 ** r2 pm (snd y) w2);
+  f pm (fst y) w1;
+  SL.dfe_plain_ne hd w1;
+  SL.avoids_dfe_cat s hd w1 w2;
+  fold (raw_cat r1 r2 pm y x);
+}
+
+ghost
+fn av_cons_opt (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (hd: gen_decorated_parser_twin) (s s': FS.set asn1_id_t)
+  (sq: squash (FS.disjoint s (Sq.item_set hd) /\ s' == FS.union s (Sq.item_set hd))) (f: fe_t r1 hd) (a: av_t r2 s')
+  (pm: perm) (y: t1 & t2) (x: Ghost.erased SB.bytes)
+requires raw_cat r1 r2 pm y x
+ensures raw_cat r1 r2 pm y x ** pure (SL.avoids s x)
+{
+  unfold (raw_cat r1 r2 pm y x);
+  with w1 w2 . assert (r1 pm (fst y) w1 ** r2 pm (snd y) w2);
+  f pm (fst y) w1;
+  a pm (snd y) w2;
+  SL.avoids_sub s s' w2;
+  SL.avoids_dfe_cat s hd w1 w2;
+  fold (raw_cat r1 r2 pm y x);
+}
+
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
+let rec av_items (#i: id_decs) (ls: asn1_gen_items_l i) (s: FS.set asn1_id_t) (wf: squash (asn1_sequence_k_wf' i s))
+: Tot (av_t (raw_items_rel false ls) s) (decreases ls)
+= match ls with
+  | ASN1_GEN_ITEMS_NIL ->
+    items_nil_equiv false;
+    av_ext (raw_pure null_enc) (raw_items_rel false ls) () s (av_nil s)
+  | ASN1_GEN_ITEMS_CONS s1 d1 dk _ ASN1_GEN_ITEMS_NIL ->
+    items_single_equiv false dk;
+    L.item_set_twin dk;
+    if any_dec dk
+    then av_none (raw_items_rel false ls) s ()
+    else av_ext (raw_dec_rel dk) (raw_items_rel false ls) () s (fun pm y x -> av_fe (raw_dec_rel dk) (In.twin_of dk) s () (fe_dec dk ()) pm y x)
+  | ASN1_GEN_ITEMS_CONS s1 d1 dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
+    items_cons_equiv false dk dk2 tl2;
+    join_cat_equiv false (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2));
+    L.item_set_twin dk;
+    SL.item_dec_twin dk;
+    if any_dec dk
+    then av_none (raw_items_rel false ls) s ()
+    else if PLAIN? d1
+    then av_ext (raw_cat (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (raw_items_rel false ls) () s
+      (fun pm y x -> av_cons_plain (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.twin_of dk) s () (fe_dec dk ()) pm y x)
+    else av_ext (raw_cat (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (raw_items_rel false ls) () s
+      (fun pm y x -> av_cons_opt (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.twin_of dk) s (FS.union s s1) () (fe_dec dk ())
+        (av_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) (FS.union s s1) ()) pm y x)
+#pop-options

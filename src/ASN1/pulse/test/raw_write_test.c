@@ -12,9 +12,9 @@
    whole output after writing it, and `check_write_jit_<name>`, which checks
    the output while writing it. Moreover, the JIT writer alone,
    `jit_<name>`, must succeed exactly on the CW_OK cases, with the same
-   bytes, and report JIT_NO_SPACE on a buffer one byte too short, so that
-   `check_write_jit_<name>` never falls back to full validation on valid
-   inputs. */
+   bytes, report JIT_NO_SPACE on a buffer one byte too short, and
+   JIT_INVALID exactly on the CW_INVALID cases: it never returns JIT_RETRY,
+   any non-compositional check (because of ANY) being done locally. */
 #include "ASN1.Pulse.RawWriteTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -100,20 +100,8 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
     }                                                                         \
   } while (0)
 
-/* The JIT writer alone, on an invalid input: never JIT_OK nor JIT_NO_SPACE
-   (with enough room) */
-#define JIT_BAD(name, x) do {                                                 \
-    uint8_t out_[BUF];                                                        \
-    size_t pos_ = BUF;                                                        \
-    Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_, .len = BUF };            \
-    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_jit_##name(x, o_, &pos_); \
-    if (r_ == ASN1_PULSE_JITWRITER_JIT_OK || r_ == ASN1_PULSE_JITWRITER_JIT_NO_SPACE) { \
-      printf("%s:%d: jit_%s: expected INVALID or RETRY, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
-    }                                                                         \
-  } while (0)
-
-/* The JIT writer alone, on an invalid input that it reports as such
-   without falling back */
+/* The JIT writer alone, on an invalid input: exactly JIT_INVALID (it never
+   returns JIT_RETRY) */
 #define JIT_INV(name, x) do {                                                 \
     uint8_t out_[BUF];                                                        \
     size_t pos_ = BUF;                                                        \
@@ -131,7 +119,7 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
 
 #define INVALID(name, x) do {                                                 \
     INVALID1(raw, name, x); INVALID1(jit, name, x);                           \
-    JIT_BAD(name, x);                                                         \
+    JIT_INV(name, x);                                                         \
   } while (0)
 
 #define SMALL(n) ((ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = (n) } })
@@ -355,7 +343,7 @@ int main(void) {
 
   /* ANY DEFINED BY, OBJECT IDENTIFIER keys after an INTEGER prefix:
      1.2.3 -> NULL, 1.2.4 -> INTEGER. The key literal is written as a
-     constant, then the content of the TLV is validated locally. */
+     constant; nothing is read back. */
   OK(adbP, adbP_null(5), V(0x30, 0x09, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x03, 0x05, 0x00));
   OK(adbP, adbP_int(5, 7), V(0x30, 0x0a, 0x02, 0x01, 0x05, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
   OK(adbP, adbP_int(-1, 300), V(0x30, 0x0b, 0x02, 0x01, 0xff, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x02, 0x01, 0x2c));
@@ -371,7 +359,7 @@ int main(void) {
     OK(adbF, adbF_int(7), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
     OK(adbF, adbF_fb(SL(k125), NONE_SL), V(0x30, 0x04, 0x06, 0x02, 0x2a, 0x05));
     OK(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_ok))), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x05, 0x01, 0x01, 0xff));
-    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback */
+    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback: local validation */
     INVALID(adbF, adbF_fb(SL(kbad), NONE_SL));          /* not a DER OID */
     INVALID(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_bad)))); /* not a TLV */
   }

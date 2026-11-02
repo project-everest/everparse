@@ -1152,3 +1152,332 @@ let acc_sequence_inv (g: asn1_gen_items_lk) (b: bytes)
 : Lemma (requires (acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE g)) b)) (ensures (iacc (In.twins_of (dsnd g)) b))
 = ()
 #pop-options
+
+(* CHOICE: converses *)
+
+let framed_pid (s: FStar.Set.set asn1_id_t) (b: bytes)
+: Lemma (requires (framed s b))
+  (ensures (match parse parse_asn1_identifier_U32 b with Some (id, _) -> FStar.Set.mem id s | None -> False))
+= eliminate exists (id: asn1_id_t) (c: bytes) . FStar.Set.mem id s /\ b == enc_tlv id true c
+  with begin
+    let r1 = enc_hdr true (Seq.length c) `Seq.append` c in
+    assert (enc_tlv id true c == IE.asn1_id_enc id `Seq.append` r1);
+    IE.parse_asn1_identifier_U32_enc id r1
+  end
+
+let lacc_choice_inv (lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) (b: bytes)
+: Lemma (requires (acc #asn1_strong_parser_kind (asn1_as_parser (ASN1_CHOICE_ILC lc pf)) b)) (ensures (lacc lc b))
+= PSL.k_id_then (ASN1_CHOICE_ILC lc pf) b;
+  assert (Some? (parse parse_asn1_identifier_U32 b));
+  let Some (id, c1) = parse parse_asn1_identifier_U32 b in
+  let b1 = Seq.slice b c1 (Seq.length b) in
+  let p1 = snd (asn1_as_parser_twin (ASN1_CHOICE_ILC lc pf)) id in
+  assert (Sq.consumed #asn1_strong_parser_kind p1 b1 == Some (Seq.length b1));
+  Co.asn1_choice_twin_consumed lc pf id b1
+
+let lacc_hd_inv (id': asn1_id_t) (c: asn1_content_k) (tl: list (asn1_id_t & asn1_content_k)) (b: bytes)
+: Lemma (requires (lacc ((id', c) :: tl) b /\ framed (FStar.Set.singleton id') b))
+  (ensures (acc #asn1_strong_parser_kind (parse_asn1_ILC id' (asn1_content_as_parser c)) b))
+= framed_pid (FStar.Set.singleton id') b;
+  ILC.ilc_eq id' (asn1_content_as_parser c) b;
+  let Some (id, c1) = parse parse_asn1_identifier_U32 b in
+  Co.asn1_choice_payload_cons id' c tl id (Seq.slice b c1 (Seq.length b))
+
+let rec as_set'_mem (l: list asn1_id_t) (x: asn1_id_t)
+: Lemma (FStar.Set.mem x (FStar.Set.as_set' l) <==> List.Tot.mem x l)
+= match l with
+  | [] -> ()
+  | _ :: q -> as_set'_mem q x
+
+#push-options "--fuel 2 --ifuel 1"
+let lacc_tl_inv (id': asn1_id_t) (c: asn1_content_k) (tl: list (asn1_id_t & asn1_content_k)) (b: bytes)
+: Lemma
+  (requires (lacc ((id', c) :: tl) b /\ framed (FStar.Set.as_set' (List.Tot.map fst tl)) b /\
+    List.Tot.noRepeats (List.Tot.map fst ((id', c) :: tl))))
+  (ensures (lacc tl b))
+= framed_pid (FStar.Set.as_set' (List.Tot.map fst tl)) b;
+  let Some (id, c1) = parse parse_asn1_identifier_U32 b in
+  as_set'_mem (List.Tot.map fst tl) id;
+  Co.asn1_choice_payload_cons id' c tl id (Seq.slice b c1 (Seq.length b))
+#pop-options
+
+(* SEQUENCE OF: converses. Each element is parsed as one TLV
+   (`tlv_shaped`), so if an element that is one TLV (`tlvish`) is
+   rejected on its own, then so is the whole list. *)
+
+let tlv_shaped (#t: Type) (pp: asn1_strong_parser t) : prop =
+  forall (b: bytes) . match SB.parse pp b with
+    | Some (_, n) -> PSL.tlv_size b == Some n
+    | None -> True
+
+#push-options "--fuel 1 --ifuel 1"
+let tlv_shaped_k' (#s: _) (k: asn1_k s) (b: bytes)
+: Lemma (match SB.parse (asn1_as_parser k) b with
+    | Some (_, n) -> PSL.tlv_size b == Some n
+    | None -> True)
+= PSL.k_id_then k b;
+  match SB.parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id, c1) -> PSL.k_twin_shaped' k id (Seq.slice b c1 (Seq.length b))
+#pop-options
+
+let tlv_shaped_k (#s: _) (k: asn1_k s)
+: Lemma (tlv_shaped (asn1_as_parser k))
+= Classical.forall_intro (tlv_shaped_k' k)
+
+let tlv_ne (b: bytes)
+: Lemma (requires (Some? (PSL.tlv_size b))) (ensures (Seq.length b > 0))
+= PSL.identifier_nonempty b
+
+let acc_tlv_ne (#t: Type) (pp: asn1_strong_parser t) (b: bytes)
+: Lemma (requires (tlv_shaped pp /\ acc #asn1_strong_parser_kind pp b)) (ensures (Seq.length b > 0))
+= assert (match SB.parse pp b with Some (_, n) -> PSL.tlv_size b == Some n | None -> True);
+  tlv_ne b
+
+let tlvish (y: bytes) : prop =
+  (exists (id: asn1_id_t) (c: bytes) . y == enc_tlv id true c) \/ PSL.tlv_size y == Some (Seq.length y)
+
+let framed_tlvish (s: FStar.Set.set asn1_id_t) (y: bytes)
+: Lemma (requires (framed s y)) (ensures (tlvish y))
+= ()
+
+let tlv_size_ext (b x: bytes)
+: Lemma (requires (Some? (PSL.tlv_size b))) (ensures (PSL.tlv_size (Seq.append b x) == PSL.tlv_size b))
+= let Some (_, c1) = parse parse_asn1_identifier_U32 b in
+  strong_ext #asn1_strong_parser_kind parse_asn1_identifier_U32 b x;
+  let b1 = Seq.slice b c1 (Seq.length b) in
+  assert (Seq.equal (Seq.slice (Seq.append b x) c1 (Seq.length b + Seq.length x)) (Seq.append b1 x));
+  strong_ext #parse_asn1_length_u32_t_kind parse_asn1_length_u32_t b1 x
+
+let tlv_enc_ext (id: asn1_id_t) (c x: bytes)
+: Lemma (Seq.length (enc_tlv id true c) > 0 /\
+    (PSL.tlv_size (Seq.append (enc_tlv id true c) x) == Some (Seq.length (enc_tlv id true c)) \/
+     PSL.tlv_size (Seq.append (enc_tlv id true c) x) == None))
+= let r1 = enc_hdr true (Seq.length c) `Seq.append` c in
+  let ie = IE.asn1_id_enc id in
+  let rr = r1 `Seq.append` x in
+  Seq.append_assoc ie r1 x;
+  IE.parse_asn1_identifier_U32_enc id rr;
+  enc_tlv_ne id c;
+  assert (enc_tlv id true c == ie `Seq.append` r1);
+  let b = Seq.append (enc_tlv id true c) x in
+  assert (b == ie `Seq.append` rr);
+  Seq.append_slices ie rr;
+  lc_size_tlv c x
+
+let tlvish_ext (y x: bytes)
+: Lemma (requires (tlvish y))
+  (ensures (Seq.length y > 0 /\
+    (PSL.tlv_size (Seq.append y x) == Some (Seq.length y) \/ PSL.tlv_size (Seq.append y x) == None)))
+= Classical.forall_intro_2 (fun id c -> tlv_enc_ext id c x);
+  Classical.move_requires (tlv_size_ext y) x;
+  Classical.move_requires tlv_ne y
+
+let tlvish_inv (#t: Type) (pp: asn1_strong_parser t) (y x: bytes)
+: Lemma (requires (tlv_shaped pp /\ tlvish y /\ ~ (acc #asn1_strong_parser_kind pp y)))
+  (ensures (None? (SB.parse pp (Seq.append y x))))
+= tlvish_ext y x;
+  let b = Seq.append y x in
+  match SB.parse pp b with
+  | None -> ()
+  | Some (_, n) ->
+    assert (PSL.tlv_size b == Some n);
+    assert (Seq.equal (Seq.slice b 0 (Seq.length y)) y);
+    strong_prefix_down pp y b n
+
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 32"
+let rec list_invalid (#t: Type) (pp: asn1_strong_parser t) (ld: list bytes) (y: bytes) (tl: list bytes)
+: Lemma (requires (all_eacc pp ld /\ tlv_shaped pp /\ tlvish y /\ ~ (acc #asn1_strong_parser_kind pp y)))
+  (ensures (None? (SB.parse (parse_list pp) (W.enc_list RR.id_enc (List.Tot.append ld (y :: tl))))))
+  (decreases ld)
+= match ld with
+  | [] ->
+    let bt = W.enc_list RR.id_enc tl in
+    let b = W.enc_list RR.id_enc (y :: tl) in
+    assert (b == Seq.append y bt);
+    tlvish_inv pp y bt;
+    tlvish_ext y bt;
+    tot_parse_list_eq pp b
+  | a :: q ->
+    list_invalid pp q y tl;
+    let b = W.enc_list RR.id_enc (List.Tot.append ld (y :: tl)) in
+    let bq = W.enc_list RR.id_enc (List.Tot.append q (y :: tl)) in
+    assert (b == Seq.append a bq);
+    assert (Seq.equal (Seq.slice b (Seq.length a) (Seq.length b)) bq);
+    strong_ext #asn1_strong_parser_kind pp a bq;
+    tot_parse_list_eq pp b
+#pop-options
+
+let sized_list_none (ne: bool) (#t: Type) (pp: asn1_strong_parser t) (b: bytes)
+: Lemma (requires (None? (SB.parse (parse_list pp) b)))
+  (ensures (~ (acc #asn1_weak_parser_kind (parse_sized_list ne pp) b)))
+= parse_filter_eq (parse_list pp) (list_size_ok ne) b
+
+let sized_list_empty (#t: Type) (pp: asn1_strong_parser t) (b: bytes)
+: Lemma (requires (Seq.length b == 0))
+  (ensures (~ (acc #asn1_weak_parser_kind (parse_sized_list true pp) b)))
+= tot_parse_list_eq pp b;
+  parse_filter_eq (parse_list pp) (list_size_ok true) b
+
+let p_raw_tlvish (w y: bytes)
+: Lemma (requires (match SB.parse RR.p_raw w with Some (y', n) -> y' == y /\ n == Seq.length w | None -> False))
+  (ensures (tlvish y))
+= RR.any_enc_injective ();
+  LowParse.Spec.Combinators.parse_synth_eq RR.p_any RR.any_enc w;
+  tlv_shaped_k' ASN1_ANY_ILC w;
+  ASN1.Spec.Serializer.asn1_as_parser_consumed ASN1_ANY_ILC w;
+  assert (Seq.equal (Seq.slice w 0 (Seq.length w)) w)
+
+(* SET OF: converses. An accepted element is one frame, so that the
+   runtime frame check is not needed. If all the elements are one TLV,
+   then their sorted concatenation is a concatenation of all of them in
+   some order (`sort_acc_l`), which is rejected as soon as one of them
+   is. *)
+
+let frame_len_tlv_size (b: bytes)
+: Lemma (SI.frame_len b == (match PSL.tlv_size b with Some n -> if n <= Seq.length b then n else 0 | None -> 0))
+= assert_norm (ILC.asn1_length_max == 4294967295)
+
+let acc_frame (#t: Type) (pp: asn1_strong_parser t) (b: bytes)
+: Lemma (requires (tlv_shaped pp /\ acc #asn1_strong_parser_kind pp b))
+  (ensures (SI.frame_len b == Seq.length b /\ Seq.length b > 0))
+= assert (match SB.parse pp b with Some (_, n) -> PSL.tlv_size b == Some n | None -> True);
+  tlv_ne b;
+  frame_len_tlv_size b
+
+let rec all_tlvish (l: list bytes) : prop =
+  match l with
+  | [] -> True
+  | a :: q -> tlvish a /\ all_tlvish q
+
+let rec has_bad (#t: Type) (pp: asn1_strong_parser t) (l: list bytes) : prop =
+  match l with
+  | [] -> False
+  | a :: q -> ~ (acc #asn1_strong_parser_kind pp a) \/ has_bad pp q
+
+let rec all_tlvish_snoc (l: list bytes) (y: bytes)
+: Lemma (requires (all_tlvish l /\ tlvish y)) (ensures (all_tlvish (List.Tot.append l [y])))
+= match l with
+  | [] -> ()
+  | _ :: q -> all_tlvish_snoc q y
+
+let rec has_bad_snoc (#t: Type) (pp: asn1_strong_parser t) (l: list bytes) (y: bytes)
+: Lemma (has_bad pp (List.Tot.append l [y]) <==> (has_bad pp l \/ ~ (acc #asn1_strong_parser_kind pp y)))
+= match l with
+  | [] -> ()
+  | _ :: q -> has_bad_snoc pp q y
+
+let rec ins_l (lt: SI.lt_t) (e: bytes) (l: list bytes) : GTot (list bytes) (decreases l) =
+  match l with
+  | [] -> [e]
+  | a :: q ->
+    if PSL.tlv_size (Seq.append a (W.enc_list RR.id_enc q)) = Some (Seq.length a) && lt a e
+    then a :: ins_l lt e q
+    else e :: l
+
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 64"
+let rec ins_enc (#t: Type) (pp: asn1_strong_parser t) (lt: SI.lt_t) (e: bytes) (l: list bytes)
+: Lemma (requires (tlvish e /\ all_tlvish l))
+  (ensures (SI.ins lt e (W.enc_list RR.id_enc l) == W.enc_list RR.id_enc (ins_l lt e l) /\
+    all_tlvish (ins_l lt e l) /\
+    (has_bad pp (ins_l lt e l) <==> (~ (acc #asn1_strong_parser_kind pp e) \/ has_bad pp l))))
+  (decreases l)
+= let r = W.enc_list RR.id_enc l in
+  SI.ins_unfold lt e r;
+  match l with
+  | [] -> ()
+  | a :: q ->
+    let rq = W.enc_list RR.id_enc q in
+    assert (r == Seq.append a rq);
+    tlvish_ext a rq;
+    frame_len_tlv_size r;
+    if PSL.tlv_size r = Some (Seq.length a)
+    then begin
+      Seq.append_slices a rq;
+      assert (SI.frame_len r == Seq.length a);
+      assert (Seq.slice r 0 (Seq.length a) == a);
+      assert (Seq.slice r (Seq.length a) (Seq.length r) == rq);
+      if lt a e
+      then ins_enc pp lt e q
+      else ()
+    end
+    else assert (SI.frame_len r == 0)
+#pop-options
+
+let rec sort_acc_l (lt: SI.lt_t) (la: list bytes) (l: list bytes) : GTot (list bytes) (decreases l) =
+  match l with
+  | [] -> la
+  | a :: q -> sort_acc_l lt (ins_l lt a la) q
+
+#push-options "--fuel 2 --ifuel 1"
+let rec sort_enc (#t: Type) (pp: asn1_strong_parser t) (lt: SI.lt_t) (la: list bytes) (l: list bytes)
+: Lemma (requires (all_tlvish la /\ all_tlvish l))
+  (ensures (SI.sort_acc lt RR.id_enc (W.enc_list RR.id_enc la) l == W.enc_list RR.id_enc (sort_acc_l lt la l) /\
+    all_tlvish (sort_acc_l lt la l) /\
+    (has_bad pp (sort_acc_l lt la l) <==> (has_bad pp la \/ has_bad pp l))))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    ins_enc pp lt a la;
+    sort_enc pp lt (ins_l lt a la) q
+#pop-options
+
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 64"
+let rec sorted_aux_invalid (#t: Type) (tbo: bytes -> bytes -> bool) (pp: asn1_strong_parser t) (prev: bytes) (l: list bytes)
+: Lemma (requires (tlv_shaped pp /\ all_tlvish l /\ has_bad pp l))
+  (ensures (None? (Set.tot_parse_byte_sorted_list_aux tbo pp prev (W.enc_list RR.id_enc l))))
+  (decreases l)
+= match l with
+  | a :: q ->
+    let b = W.enc_list RR.id_enc l in
+    let bq = W.enc_list RR.id_enc q in
+    assert (b == Seq.append a bq);
+    tlvish_ext a bq;
+    if Sq.consumed #asn1_strong_parser_kind pp a = Some (Seq.length a)
+    then begin
+      strong_ext #asn1_strong_parser_kind pp a bq;
+      Seq.append_slices a bq;
+      sorted_aux_invalid tbo pp a q
+    end
+    else tlvish_inv pp a bq
+#pop-options
+
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 64"
+let set_invalid (ne: bool) (#t: Type) (pp: asn1_strong_parser t) (l: list bytes)
+: Lemma (requires (tlv_shaped pp /\ all_tlvish l /\ has_bad pp l))
+  (ensures (~ (acc #asn1_weak_parser_kind (parse_sized_set ne pp) (SI.sort_list SI.lt_lex RR.id_enc l))))
+= sort_enc pp SI.lt_lex [] l;
+  let l' = sort_acc_l SI.lt_lex [] l in
+  let r = W.enc_list RR.id_enc l' in
+  assert (SI.sort_list SI.lt_lex RR.id_enc l == r);
+  let tbo : (x: bytes) -> (y: bytes) -> Pure bool True (fun z -> z == true <==> Set.prop_order_of_bool_order Set.lex_byte_order x y) =
+    fun x1 x2 -> Set.lex_byte_order x1 x2
+  in
+  Set.tot_parse_byte_sorted_list_correct (Set.prop_order_of_bool_order Set.lex_byte_order) tbo pp r;
+  set_of_eq pp r;
+  match l' with
+  | a :: q ->
+    let bq = W.enc_list RR.id_enc q in
+    assert (r == Seq.append a bq);
+    tlvish_ext a bq;
+    if Sq.consumed #asn1_strong_parser_kind pp a = Some (Seq.length a)
+    then begin
+      strong_ext #asn1_strong_parser_kind pp a bq;
+      Seq.append_slices a bq;
+      sorted_aux_invalid tbo pp a q
+    end
+    else tlvish_inv pp a bq
+#pop-options
+
+let set_empty (#t: Type) (pp: asn1_strong_parser t) (r: bytes)
+: Lemma (requires (Seq.length r == 0))
+  (ensures (~ (acc #asn1_weak_parser_kind (parse_sized_set true pp) r)))
+= let tbo : (x: bytes) -> (y: bytes) -> Pure bool True (fun z -> z == true <==> Set.prop_order_of_bool_order Set.lex_byte_order x y) =
+    fun x1 x2 -> Set.lex_byte_order x1 x2
+  in
+  Set.tot_parse_byte_sorted_list_correct (Set.prop_order_of_bool_order Set.lex_byte_order) tbo pp r;
+  set_of_eq pp r;
+  let p' = Set.tot_parse_byte_sorted_list Set.lex_byte_order pp in
+  assert (SB.parse p' r == SB.parse (Set.parse_byte_sorted_list (Set.prop_order_of_bool_order Set.lex_byte_order) #_ #asn1_strong_parser_kind pp) r);
+  assert (SB.parse (Set.parse_asn1_set_of pp) r == SB.parse p' r)

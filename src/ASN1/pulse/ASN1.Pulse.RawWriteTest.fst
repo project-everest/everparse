@@ -14,8 +14,8 @@ open ASN1.Syntax
    write raw Pulse representations with no precondition on their contents,
    then check the written bytes against the schema; and their just-in-time
    variants (ASN1.Pulse.JitWriter), which check the bytes while writing
-   them: `jit_<name>` alone, and `check_write_jit_<name>`, which falls back
-   to `check_write_raw_k` when `jit_<name>` gives up *)
+   them: `jit_<name>` alone, which never returns JIT_RETRY, and
+   `check_write_jit_<name>`, which turns its result into a `cw_result` *)
 
 (* SEQUENCE { a INTEGER DEFAULT 0, b OCTET STRING DEFAULT 'ABCD'H,
    s PrintableString DEFAULT "ab", t [0] INTEGER DEFAULT 5,
@@ -51,7 +51,7 @@ let check_write_raw_defL : checked_raw_writer_t defL 1.0R =
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_defL : jw (raw_rel defL) (kacc defL) 1.0R =
+let jit_defL : jwx (raw_rel defL) (kacc defL) 1.0R =
   fun x' #y out pos #v #p -> jit_writer defL defL_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -62,7 +62,7 @@ let jit_defL : jw (raw_rel defL) (kacc defL) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_defL : checked_raw_writer_t defL 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k defL defL_ok 1.0R (jit_writer defL defL_ok 1.0R) (raw_writer defL 1.0R) (raw_validator defL defL_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k defL defL_ok 1.0R (jit_writer defL defL_ok 1.0R) x' #y out pos #v #p
 
 (* SEQUENCE { i [0] IMPLICIT IA5String, r INTEGER (0..10), s INTEGER (-128..127) } *)
 noextract
@@ -92,7 +92,7 @@ let check_write_raw_tagS : checked_raw_writer_t tagS 1.0R =
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_tagS : jw (raw_rel tagS) (kacc tagS) 1.0R =
+let jit_tagS : jwx (raw_rel tagS) (kacc tagS) 1.0R =
   fun x' #y out pos #v #p -> jit_writer tagS tagS_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -103,7 +103,7 @@ let jit_tagS : jw (raw_rel tagS) (kacc tagS) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_tagS : checked_raw_writer_t tagS 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k tagS tagS_ok 1.0R (jit_writer tagS tagS_ok 1.0R) (raw_writer tagS 1.0R) (raw_validator tagS tagS_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k tagS tagS_ok 1.0R (jit_writer tagS tagS_ok 1.0R) x' #y out pos #v #p
 
 (* SEQUENCE SIZE (1..MAX) OF INTEGER *)
 noextract
@@ -129,7 +129,7 @@ let check_write_raw_neSeqOfInt : checked_raw_writer_t neSeqOfInt 1.0R =
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_neSeqOfInt : jw (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
+let jit_neSeqOfInt : jwx (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
   fun x' #y out pos #v #p -> jit_writer neSeqOfInt neSeqOfInt_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -140,7 +140,7 @@ let jit_neSeqOfInt : jw (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_neSeqOfInt : checked_raw_writer_t neSeqOfInt 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k neSeqOfInt neSeqOfInt_ok 1.0R (jit_writer neSeqOfInt neSeqOfInt_ok 1.0R) (raw_writer neSeqOfInt 1.0R) (raw_validator neSeqOfInt neSeqOfInt_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k neSeqOfInt neSeqOfInt_ok 1.0R (jit_writer neSeqOfInt neSeqOfInt_ok 1.0R) x' #y out pos #v #p
 
 (* SET OF OCTET STRING *)
 noextract
@@ -166,7 +166,7 @@ let check_write_raw_setOfOctets : checked_raw_writer_t setOfOctets 1.0R =
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_setOfOctets : jw (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
+let jit_setOfOctets : jwx (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
   fun x' #y out pos #v #p -> jit_writer setOfOctets setOfOctets_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -177,7 +177,7 @@ let jit_setOfOctets : jw (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_setOfOctets : checked_raw_writer_t setOfOctets 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k setOfOctets setOfOctets_ok 1.0R (jit_writer setOfOctets setOfOctets_ok 1.0R) (raw_writer setOfOctets 1.0R) (raw_validator setOfOctets setOfOctets_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k setOfOctets setOfOctets_ok 1.0R (jit_writer setOfOctets setOfOctets_ok 1.0R) x' #y out pos #v #p
 
 (* SEQUENCE { p PrintableString, a ANY, bs BIT STRING, n INTEGER,
    c CHOICE { i INTEGER, o OCTET STRING }, t UTCTime OPTIONAL,
@@ -215,7 +215,7 @@ let check_write_raw_mix : checked_raw_writer_t mix 1.0R =
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_mix : jw (raw_rel mix) (kacc mix) 1.0R =
+let jit_mix : jwx (raw_rel mix) (kacc mix) 1.0R =
   fun x' #y out pos #v #p -> jit_writer mix mix_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -226,7 +226,7 @@ let jit_mix : jw (raw_rel mix) (kacc mix) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_mix : checked_raw_writer_t mix 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k mix mix_ok 1.0R (jit_writer mix mix_ok 1.0R) (raw_writer mix 1.0R) (raw_validator mix mix_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k mix mix_ok 1.0R (jit_writer mix mix_ok 1.0R) x' #y out pos #v #p
 
 (* SET { c [1] IMPLICIT OCTET STRING, a [0] IMPLICIT INTEGER OPTIONAL,
    b INTEGER DEFAULT 0 }, declared in the reverse of the canonical order of
@@ -258,7 +258,7 @@ let check_write_raw_setCAB : checked_raw_writer_t setCAB 1.0R =
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_setCAB : jw (raw_rel setCAB) (kacc setCAB) 1.0R =
+let jit_setCAB : jwx (raw_rel setCAB) (kacc setCAB) 1.0R =
   fun x' #y out pos #v #p -> jit_writer setCAB setCAB_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -269,7 +269,7 @@ let jit_setCAB : jw (raw_rel setCAB) (kacc setCAB) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_setCAB : checked_raw_writer_t setCAB 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k setCAB setCAB_ok 1.0R (jit_writer setCAB setCAB_ok 1.0R) (raw_writer setCAB 1.0R) (raw_validator setCAB setCAB_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k setCAB setCAB_ok 1.0R (jit_writer setCAB setCAB_ok 1.0R) x' #y out pos #v #p
 
 (* ANY DEFINED BY: written raw, then its content validated locally *)
 
@@ -316,7 +316,7 @@ let check_write_raw_adbP : checked_raw_writer_t adbP 1.0R =
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_adbP : jw (raw_rel adbP) (kacc adbP) 1.0R =
+let jit_adbP : jwx (raw_rel adbP) (kacc adbP) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbP adbP_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -328,7 +328,7 @@ let jit_adbP : jw (raw_rel adbP) (kacc adbP) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_adbP : checked_raw_writer_t adbP 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k adbP adbP_ok 1.0R (jit_writer adbP adbP_ok 1.0R) (raw_writer adbP 1.0R) (raw_validator adbP adbP_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k adbP adbP_ok 1.0R (jit_writer adbP adbP_ok 1.0R) x' #y out pos #v #p
 
 (* SEQUENCE { alg OBJECT IDENTIFIER, p ANY DEFINED BY alg OPTIONAL }
    with 1.2.3 -> NULL, 1.2.4 -> INTEGER, and a fallback *)
@@ -362,7 +362,7 @@ let check_write_raw_adbF : checked_raw_writer_t adbF 1.0R =
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_adbF : jw (raw_rel adbF) (kacc adbF) 1.0R =
+let jit_adbF : jwx (raw_rel adbF) (kacc adbF) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbF adbF_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -374,7 +374,7 @@ let jit_adbF : jw (raw_rel adbF) (kacc adbF) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_adbF : checked_raw_writer_t adbF 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k adbF adbF_ok 1.0R (jit_writer adbF adbF_ok 1.0R) (raw_writer adbF 1.0R) (raw_validator adbF adbF_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k adbF adbF_ok 1.0R (jit_writer adbF adbF_ok 1.0R) x' #y out pos #v #p
 
 (* SEQUENCE { k [0] EXPLICIT INTEGER, p ANY DEFINED BY k }
    with 1 -> NULL, -1 -> INTEGER, no fallback *)
@@ -406,7 +406,7 @@ let check_write_raw_adbT : checked_raw_writer_t adbT 1.0R =
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
-let jit_adbT : jw (raw_rel adbT) (kacc adbT) 1.0R =
+let jit_adbT : jwx (raw_rel adbT) (kacc adbT) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbT adbT_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -418,4 +418,4 @@ let jit_adbT : jw (raw_rel adbT) (kacc adbT) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
   zeta; iota; primops]]
 let check_write_jit_adbT : checked_raw_writer_t adbT 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k adbT adbT_ok 1.0R (jit_writer adbT adbT_ok 1.0R) (raw_writer adbT 1.0R) (raw_validator adbT adbT_ok) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> check_write_jit_k adbT adbT_ok 1.0R (jit_writer adbT adbT_ok 1.0R) x' #y out pos #v #p
