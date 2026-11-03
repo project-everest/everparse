@@ -61,6 +61,32 @@ inline_for_extraction
 let r2l_leaf_writer (#t: Type0) (enc: t -> GTot bytes) =
   r2l_writer_f (eq_as_slprop t) enc
 
+type jit_writer_result =
+| JIT_WRITER_OK
+| JIT_WRITER_NO_SPACE
+| JIT_WRITER_INVALID
+
+let r2l_jit_post (#t #t0: Type0) (f: (t -> GTot (option t0))) (enc: t0 -> GTot bytes) (x: t) (p: nat) (v: bytes) (res: jit_writer_result) (p': nat) (v': bytes) : prop =
+  Seq.length v' == Seq.length v /\
+  p <= Seq.length v /\
+  Seq.slice v' p (Seq.length v) == Seq.slice v p (Seq.length v) /\
+  begin match res with
+  | JIT_WRITER_OK -> Some? (f x) /\ Seq.length (enc (Some?.v (f x))) <= p
+  | JIT_WRITER_NO_SPACE -> Some? (f x) ==> Seq.length (enc (Some?.v (f x))) > p
+  | JIT_WRITER_INVALID -> None? (f x)
+  end /\
+  (res == JIT_WRITER_OK ==> (p' + Seq.length (enc (Some?.v (f x))) == p /\ Seq.slice v' p' p == enc (Some?.v (f x))))
+
+inline_for_extraction
+let r2l_jit_writer (#t' #t #t0: Type0) (vmatch: t' -> t -> slprop) (#k: parser_kind) (#p: parser k t0) (s: serializer p) (f: (t -> GTot (option t0))) =
+  (x': t') -> (#x: Ghost.erased t) ->
+  (out: slice byte) -> (pos: ref SZ.t) -> (#v: Ghost.erased bytes) -> (#p: Ghost.erased SZ.t) ->
+  stt jit_writer_result
+    (pts_to out v ** pts_to pos p ** vmatch x' x ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** vmatch x' x **
+       pure (r2l_jit_post f s x (SZ.v p) v res (SZ.v p') v'))
+
+
 (* Sequence lemmas *)
 
 let r2l_post_append
