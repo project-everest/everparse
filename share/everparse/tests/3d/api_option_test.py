@@ -1,7 +1,9 @@
 """Check API selection, generated command propagation, and hash separation."""
 
+import os
 import pathlib
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -30,10 +32,9 @@ def main():
     assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
     for api in ["pulse", "lowstar"]:
-        for option in ["hoist_locals", "goto_for_early_return", "blank_lines",
-                       "line_comments", "init_locals"]:
-            arguments = [f"--{option}"] + (["c99"] if option == "init_locals" else [])
-            message = run("--api", api, *arguments, succeeds=False)
+        for option in ["goto_for_early_return", "blank_lines",
+                       "line_comments"]:
+            message = run("--api", api, f"--{option}", succeeds=False)
             assert f"--{option}: not implemented yet" in message
     # The legacy Low* backend is gone: lowstar is the default, and
     # legacy_lowstar is rejected like any other unknown backend because
@@ -171,6 +172,151 @@ def main():
                 assert (output / "EverParse.h").is_file()
                 assert companion.stat().st_mtime_ns == previous
 
+        for api in ["pulse", "lowstar"]:
+            outputs = {}
+            for mode, flags in [
+                    ("normal", ["--batch"]),
+                    ("hoisted", ["--hoist_locals"]),
+                    ("reset", ["--hoist_locals", "--no_hoist_locals", "--batch"])]:
+                output = root / f"{api}-{mode}"
+                output.mkdir()
+                outputs[mode] = output
+                log = run("--api", api, *flags, "--odir", output,
+                          "--save_hashes", source)
+                extraction_commands = [
+                    line for line in log.splitlines()
+                    if line.startswith("Running: ") and "--codegen C" in line
+                ]
+                assert extraction_commands, log
+                assert all(("--custard_hoist_locals" in line) == (mode == "hoisted")
+                           for line in extraction_commands), log
+                verification_commands = [
+                    line for line in log.splitlines()
+                    if line.startswith("Running: ") and "--cache_checked_modules" in line
+                ]
+                assert verification_commands, log
+                assert all("--custard_hoist_locals" not in line
+                           for line in verification_commands), log
+
+            for suffix in [".c", ".h", "Wrapper.c", "Wrapper.h"]:
+                expected = (outputs["normal"] / f"ApiChoice{suffix}").read_bytes()
+                assert (outputs["reset"] / f"ApiChoice{suffix}").read_bytes() == expected
+            assert (outputs["normal"] / "ApiChoice.c").read_bytes() != (
+                outputs["hoisted"] / "ApiChoice.c"
+            ).read_bytes()
+            if api == "lowstar":
+                assert (outputs["normal"] / "ApiChoiceWrapper.c").read_bytes() != (
+                    outputs["hoisted"] / "ApiChoiceWrapper.c"
+                ).read_bytes()
+
+            output = outputs["hoisted"]
+            generated = (output / "ApiChoice.c").read_text()
+            generated = re.sub(r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"',
+                               "", generated, flags=re.DOTALL)
+            depth = 0
+            declarations = 0
+            for line in generated.splitlines():
+                if depth and re.match(
+                        r"\s*(?:u?int(?:8|16|32|64)_t|size_t|bool)\s+[*]?\s*\w+",
+                        line):
+                    assert depth == 1, line
+                    declarations += 1
+                depth += line.count("{") - line.count("}")
+            assert declarations and depth == 0, generated
+            for c_file in ["ApiChoice.c", "ApiChoiceWrapper.c"]:
+                subprocess.run(
+                    shlex.split(os.environ.get("CC", "cc")) +
+                    ["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only",
+                     "-I", str(output), str(output / c_file)],
+                    check=True,
+                )
+            run("--api", api, "--hoist_locals", "--odir", output,
+                "--check_hashes", "strong", source)
+            for make in ["gmake", "nmake"]:
+                run("--api", api, "--hoist_locals", "--odir", output,
+                    "--makefile", make, source)
+                makefile = (output / "EverParse.Makefile").read_text()
+                recipes = [
+                    line for line in makefile.splitlines()
+                    if line.startswith("\t$(EVERPARSE_CMD)")
+                ]
+                assert recipes
+                assert all("--hoist_locals" in line for line in recipes), makefile
+
+        for api in ["pulse", "lowstar"]:
+            outputs = {}
+            for mode, flags, init in [
+                    ("normal", ["--batch"], None),
+                    ("c99", ["--init_locals", "c99", "--batch"], "c99"),
+                    ("hoisted-c89", ["--hoist_locals", "--init_locals", "c89"], "c89"),
+                    ("hoisted-c23", ["--hoist_locals", "--init_locals", "c23"], "c23"),
+                    ("reset", ["--init_locals", "c99", "--no_init_locals", "--batch"], None)]:
+                output = root / f"{api}-init-{mode}"
+                output.mkdir()
+                outputs[mode] = output
+                log = run("--api", api, *flags, "--odir", output,
+                          "--save_hashes", source)
+                running = [line for line in log.splitlines()
+                           if line.startswith("Running: ")]
+                extraction_commands = [l for l in running if "--codegen C" in l]
+                assert extraction_commands, log
+                expected = f"--custard_init_locals {init}" if init else None
+                assert all((expected in line) if expected
+                           else "--custard_init_locals" not in line
+                           for line in extraction_commands), log
+                verification_commands = [
+                    l for l in running if "--cache_checked_modules" in l]
+                assert verification_commands, log
+                assert all("--custard_init_locals" not in line
+                           for line in verification_commands), log
+
+            for suffix in [".c", ".h", "Wrapper.c", "Wrapper.h"]:
+                expected = (outputs["normal"] / f"ApiChoice{suffix}").read_bytes()
+                assert (outputs["reset"] / f"ApiChoice{suffix}").read_bytes() == expected
+
+            # After hoisting, every function-level declaration is zeroed.
+            for mode in ["hoisted-c89", "hoisted-c23"]:
+                output = outputs[mode]
+                generated = (output / "ApiChoice.c").read_text()
+                generated = re.sub(r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"',
+                                   "", generated, flags=re.DOTALL)
+                depth = 0
+                declarations = 0
+                for line in generated.splitlines():
+                    if depth and re.match(
+                            r"\s*(?:u?int(?:8|16|32|64)_t|size_t|bool)\s+[*]?\s*\w+",
+                            line):
+                        assert "=" in line, line
+                        declarations += 1
+                    depth += line.count("{") - line.count("}")
+                assert declarations and depth == 0, generated
+                standard = "c2x" if mode == "hoisted-c23" else "c11"
+                for c_file in ["ApiChoice.c", "ApiChoiceWrapper.c"]:
+                    subprocess.run(
+                        shlex.split(os.environ.get("CC", "cc")) +
+                        [f"-std={standard}", "-Wall", "-Wextra", "-Werror",
+                         "-fsyntax-only", "-I", str(output), str(output / c_file)],
+                        check=True,
+                    )
+            assert (outputs["normal"] / "ApiChoiceWrapper.c").read_bytes() != (
+                outputs["c99"] / "ApiChoiceWrapper.c"
+            ).read_bytes()
+
+            output = outputs["hoisted-c89"]
+            run("--api", api, "--hoist_locals", "--init_locals", "c89",
+                "--odir", output, "--check_hashes", "strong", source)
+            for make in ["gmake", "nmake"]:
+                run("--api", api, "--hoist_locals", "--init_locals", "c89",
+                    "--odir", output, "--makefile", make, source)
+                makefile = (output / "EverParse.Makefile").read_text()
+                recipes = [
+                    line for line in makefile.splitlines()
+                    if line.startswith("\t$(EVERPARSE_CMD)")
+                ]
+                assert recipes
+                assert all("--hoist_locals --init_locals c89 " in line
+                           for line in recipes), makefile
+
         # Weak hashes require no extraction, and must reject another API
         # even when its grammar and tool versions are identical.
         for name, options in modes.items():
@@ -192,7 +338,7 @@ def main():
                     run(*modes[name], "--odir", root / other,
                         "--check_hashes", "weak", source, succeeds=False)
 
-    print("API selection, generated commands, and hash isolation: PASS")
+    print("API selection, hoisting, local initialization, generated commands, and hash isolation: PASS")
 
 
 if __name__ == "__main__":

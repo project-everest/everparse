@@ -37,6 +37,8 @@ let print_make_rule
   everparse_h
   input_stream_binding
   (api: HashingOptions.api_t)
+  (hoist_locals: bool)
+  (init_locals: option string)
   (makefile: string)
   (r: rule_t)
 : Tot string
@@ -63,7 +65,12 @@ let print_make_rule
   | _ ->
     let cmd =
       match r.ty with
-      | EverParse | EverParseVerify | EverParseGroup _ -> Printf.sprintf "$(EVERPARSE_CMD) --api %s --odir %s" (HashingOptions.string_of_api api) output_dir
+      | EverParse | EverParseVerify | EverParseGroup _ ->
+        Printf.sprintf "$(EVERPARSE_CMD) --api %s%s%s --odir %s"
+          (HashingOptions.string_of_api api)
+          (if hoist_locals then " --hoist_locals" else "")
+          (match init_locals with Some mode -> " --init_locals " ^ mode | None -> "")
+          output_dir
       | CC ->
         let iopt = match mtype with
           | HashingOptions.MakefileGMake -> "-I"
@@ -602,7 +609,7 @@ let write_makefile
        "ifeq (,$(filter grouped-target,$(.FEATURES)))\n$(error EverParse requires GNU Make 4.3 or newer)\nendif\n\n"
    | _ -> ());
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding (Options.get_api ()) makefile_final) rules));
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding (Options.get_api ()) (Options.get_hoist_locals ()) (Options.get_init_locals ()) makefile_final) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext = "h" && everparse_h
