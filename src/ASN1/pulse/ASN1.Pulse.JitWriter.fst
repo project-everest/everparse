@@ -109,6 +109,7 @@ module PA = ASN1.Pulse.ParseAdb
 module ADB = ASN1.Pulse.AnyDefinedBy
 module WA = ASN1.Pulse.WriteAdb
 module JF = ASN1.Pulse.JitFrame
+module DE = ASN1.Pulse.DefaultEq
 module PSL = ASN1.Pulse.ParseSequence.Lemmas
 module SL = ASN1.Pulse.JitWriter.SeqLemmas
 module SetL = ASN1.Pulse.JitWriter.SetLemmas
@@ -406,6 +407,42 @@ fn jit_opt_ne (#t: Type0) (r: bprel t) (s: Ghost.erased (Set.set asn1_id_t)) (fr
         JIT_OK
       } else {
         Classical.move_requires back x;
+        res
+      }
+    }
+  }
+}
+
+(* An explicit default value: nothing is written *)
+inline_for_extraction
+fn jit_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (none: squash (a Seq.empty))
+  (#ex: bool) (pm: perm) (dec: DE.dd r d pm) (w: jwg ex (raw_opt r) a pm)
+: jwg ex #(option t) (raw_opt_nd d r) a pm
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  match x' {
+    None -> {
+      rewrite (raw_opt_nd d r pm x' x) as (pure (Ghost.reveal x == Seq.empty));
+      W.r2l_post_empty (SZ.v p) v;
+      rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt_nd d r pm x' x);
+      JIT_OK
+    }
+    Some y -> {
+      rewrite (raw_opt_nd d r pm x' x) as (raw_opt_nd d r pm (Some y) x);
+      unfold (raw_opt_nd d r pm (Some y) x);
+      with c . assert (r pm y c);
+      let isd = dec y #c;
+      if isd {
+        W.r2l_post_empty (SZ.v p) v;
+        fold (raw_opt_nd d r pm (Some y) x);
+        rewrite (raw_opt_nd d r pm (Some y) x) as (raw_opt_nd d r pm x' x);
+        JIT_OK
+      } else {
+        rewrite (r pm y c) as (raw_opt r pm (Some y) x);
+        let res = w (Some y) #x out pos;
+        rewrite (raw_opt r pm (Some y) x) as (r pm y c);
+        fold (raw_opt_nd d r pm (Some y) x);
+        rewrite (raw_opt_nd d r pm (Some y) x) as (raw_opt_nd d r pm x' x);
         res
       }
     }
@@ -732,6 +769,28 @@ fn probe_opt (#t: Type0) (r: bprel t) (s: Set.set asn1_id_t) (fr: JF.fr_t r s) (
       fr pm z x;
       rewrite (r pm z x) as (raw_opt r pm y x);
       true
+    }
+  }
+}
+
+inline_for_extraction
+fn probe_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (s: Set.set asn1_id_t) (fr: JF.fr_t r s) (pm: perm) (dec: DE.dd r d pm)
+: probe_t (raw_opt_nd d r) s pm
+= (y: option t) (x: Ghost.erased SB.bytes)
+{
+  match y {
+    None -> {
+      false
+    }
+    Some z -> {
+      rewrite (raw_opt_nd d r pm y x) as (raw_opt_nd d r pm (Some z) x);
+      unfold (raw_opt_nd d r pm (Some z) x);
+      with c . assert (r pm z c);
+      let isd = dec z #c;
+      fr pm z c;
+      fold (raw_opt_nd d r pm (Some z) x);
+      rewrite (raw_opt_nd d r pm (Some z) x) as (raw_opt_nd d r pm y x);
+      not isd
     }
   }
 }
@@ -1915,6 +1974,22 @@ fn probe_eq (#t: Type0) (r: bprel t) (s1 s2: Set.set asn1_id_t) (sq: squash (s1 
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction
+let probe_default (id0: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] defl: asn1_key_lit k) (s: Set.set asn1_id_t) (u: squash (s == Set.singleton id0)) (pm: perm)
+  (y: option (asn1_terminal_impl_t k)) (x: Ghost.erased SB.bytes)
+: stt bool (raw_default_rel id0 k defl pm y x) (fun b -> raw_default_rel id0 k defl pm y x ** pure (b == true ==> L.framed s x))
+= if In.adb_key_supported k
+  then begin
+    default_nd_equiv id0 k defl;
+    probe_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () s pm
+      (probe_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) s (JF.fr_terminal id0 k) pm
+        (fun x' #c -> DE.dd_term id0 k defl () pm x' #c)) y x
+  end else begin
+    default_opt_equiv id0 k defl;
+    probe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () s pm (probe_opt (raw_terminal_rel id0 k) s (JF.fr_terminal id0 k) pm) y x
+  end
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
 let probe_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (pm: perm) : probe_t (raw_dec_rel dk) (Sq.item_set (In.twin_of dk)) pm =
   L.item_set_twin dk;
   probe_eq (raw_dec_rel dk) s (Sq.item_set (In.twin_of dk)) () pm
@@ -1935,10 +2010,10 @@ let probe_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (pm: perm) : probe_t (r
     end
   | ASN1_DEFAULT_TERMINAL id0 #k defl ->
     dec_default_equiv id0 #k defl;
-    probe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel dk) () s pm (probe_opt (raw_terminal_rel id0 k) s (JF.fr_terminal id0 k) pm)
+    probe_ext (raw_default_rel id0 k defl) (raw_dec_rel dk) () s pm (fun y x -> probe_default id0 k defl s () pm y x)
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl ->
     dec_default_restricted_equiv id0 #k r defl;
-    probe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel dk) () s pm (probe_opt (raw_terminal_rel id0 k) s (JF.fr_terminal id0 k) pm)
+    probe_ext (raw_default_rel id0 k defl) (raw_dec_rel dk) () s pm (fun y x -> probe_default id0 k defl s () pm y x)
   | _ -> probe_false (raw_dec_rel dk) s pm)
 
 [@@In.asn1_pulse_attr]
@@ -1991,8 +2066,11 @@ let jit_default (id0: asn1_id_t) (k: E.leaf_k) (defl: asn1_key_lit k) (u: squash
   dec_default_equiv id0 #k defl;
   terminal_leaf_equiv id0 k;
   L.iacc_default_none (ASN1_DEFAULT_TERMINAL id0 #k defl);
-  jit_iff (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defl)) ()
+  default_nd_equiv id0 k defl;
+  jit_iff (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defl)) ()
     (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (fun _ -> ()) (fun _ -> ()) pm
+    (jit_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) () pm
+      (fun x' #c -> DE.dd_term id0 k defl () pm x' #c)
     (jit_opt_ne (raw_terminal_rel id0 k) (Set.singleton id0) (JF.fr_terminal id0 k) (cacc id0 (Co.default_content k defv)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) ()
       (L.iacc_default id0 #k defl) (fun w -> L.iacc_default_iff id0 #k defl w) pm
       (jit_iff (raw_tlv id0 (raw_leaf k)) (raw_terminal_rel id0 k) ()
@@ -2002,7 +2080,7 @@ let jit_default (id0: asn1_id_t) (k: E.leaf_k) (defl: asn1_key_lit k) (u: squash
             (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_content k defv))) (fun w -> L.acc_default k defv w) pm
             (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (defaultv_filter defv)) (fun _ -> ()) pm
               (JT.pv k () pm) (JT.pn k defl () pm))
-            (RW.raw_write_leaf k pm)))))
+            (RW.raw_write_leaf k pm))))))
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction
@@ -2013,8 +2091,11 @@ let jit_default_restricted (id0: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k
   dec_default_restricted_equiv id0 #k r defl;
   terminal_leaf_equiv id0 k;
   L.iacc_default_none (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl);
-  jit_iff (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) ()
+  default_nd_equiv id0 k defl;
+  jit_iff (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) ()
     (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) (fun _ -> ()) (fun _ -> ()) pm
+    (jit_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) () pm
+      (fun x' #c -> DE.dd_term id0 k defl () pm x' #c)
     (jit_opt_ne (raw_terminal_rel id0 k) (Set.singleton id0) (JF.fr_terminal id0 k) (cacc id0 (Co.default_restricted_content k r defv)) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) ()
       (L.iacc_default_restricted id0 #k r defl) (fun w -> L.iacc_default_restricted_iff id0 #k r defl w) pm
       (jit_iff (raw_tlv id0 (raw_leaf k)) (raw_terminal_rel id0 k) ()
@@ -2026,7 +2107,7 @@ let jit_default_restricted (id0: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k
               (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (restriction_pred r)) (fun _ -> ()) pm
                 (JT.pv k () pm) (JT.pr k r () pm))
               (JT.pn k defl () pm))
-            (RW.raw_write_leaf k pm)))))
+            (RW.raw_write_leaf k pm))))))
 
 (* The local fallback of constructed contents: write, then validate *)
 [@@In.asn1_pulse_attr]

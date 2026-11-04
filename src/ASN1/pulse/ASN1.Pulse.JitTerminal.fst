@@ -546,12 +546,10 @@ let pv (k: E.leaf_k) (u: squash (In.supported_terminal k)) (pm: perm)
 inline_for_extraction
 let pr_integer (bound: pos) (r: asn1_restriction (ASN1_INTEGER bound)) (u: squash (In.supported_restriction (ASN1_INTEGER bound) r)) (pm: perm)
 : pcg (raw_integer bound) (L.tacc (ASN1_INTEGER bound)) (L.holds (ASN1_INTEGER bound) (restriction_pred r)) pm
-= let g = L.tacc (ASN1_INTEGER bound) in
-  let a = L.holds (ASN1_INTEGER bound) (restriction_pred r) in
-  if small_integer bound
-  then coerce_eq () (pc_pure i64_enc g a (i64_restr r) (i64_restr_holds bound r) pm)
-  else coerce_eq () (pc_int g a (i64_restr r) (i64_restr_holds bound r) pm
-    (pc_slice (In.validate_restricted (ASN1_INTEGER bound) r ()) g a (fun w -> L.restricted_iff (ASN1_INTEGER bound) r w) pm))
+= if small_integer bound
+  then coerce_eq () (pc_pure i64_enc (L.tacc (ASN1_INTEGER bound)) (L.holds (ASN1_INTEGER bound) (restriction_pred r)) (i64_restr r) (i64_restr_holds bound r) pm)
+  else coerce_eq () (pc_int (L.tacc (ASN1_INTEGER bound)) (L.holds (ASN1_INTEGER bound) (restriction_pred r)) (i64_restr r) (i64_restr_holds bound r) pm
+    (pc_slice (In.validate_restricted (ASN1_INTEGER bound) r ()) (L.tacc (ASN1_INTEGER bound)) (L.holds (ASN1_INTEGER bound) (restriction_pred r)) (fun w -> L.restricted_iff (ASN1_INTEGER bound) r w) pm))
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction
@@ -568,12 +566,10 @@ let pr (k: E.leaf_k) (r: asn1_restriction k) (u: squash (In.supported_restrictio
 inline_for_extraction
 let pn_integer (bound: pos) (defl: asn1_key_lit (ASN1_INTEGER bound)) (u: squash (In.adb_key_supported (ASN1_INTEGER bound))) (pm: perm)
 : pcg (raw_integer bound) (L.tacc (ASN1_INTEGER bound)) (L.holds (ASN1_INTEGER bound) (defaultv_filter (key_of_lit (ASN1_INTEGER bound) defl))) pm
-= let g = L.tacc (ASN1_INTEGER bound) in
-  let a = L.holds (ASN1_INTEGER bound) (defaultv_filter (key_of_lit (ASN1_INTEGER bound) defl)) in
-  if small_integer bound
-  then coerce_eq () (pc_pure i64_enc g a (fun i -> not (lit_eq i defl)) (i64_neq_holds bound defl) pm)
-  else coerce_eq () (pc_int g a (fun i -> not (lit_eq i defl)) (i64_neq_holds bound defl) pm
-    (pn_slice (ASN1_INTEGER bound) () defl g pm))
+= if small_integer bound
+  then coerce_eq () (pc_pure i64_enc (L.tacc (ASN1_INTEGER bound)) (L.holds (ASN1_INTEGER bound) (defaultv_filter (key_of_lit (ASN1_INTEGER bound) defl))) (fun i -> not (lit_eq i defl)) (i64_neq_holds bound defl) pm)
+  else coerce_eq () (pc_int (L.tacc (ASN1_INTEGER bound)) (L.holds (ASN1_INTEGER bound) (defaultv_filter (key_of_lit (ASN1_INTEGER bound) defl))) (fun i -> not (lit_eq i defl)) (i64_neq_holds bound defl) pm
+    (pn_slice (ASN1_INTEGER bound) () defl (L.tacc (ASN1_INTEGER bound)) pm))
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction

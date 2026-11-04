@@ -92,7 +92,7 @@ let supported_restriction (k: asn1_terminal_k) (r: asn1_restriction k) : Tot boo
   | _ -> false
 
 (* ANY DEFINED BY: the kinds of keys that can be compared with a constant *)
-[@@asn1_pulse_attr]
+[@@asn1_pulse_attr; FStar.Attributes.custard_compile_time]
 let rec adb_key_supported (k: asn1_terminal_k) : Tot bool (decreases k) =
   match k with
   | ASN1_INTEGER _ -> supported_terminal k

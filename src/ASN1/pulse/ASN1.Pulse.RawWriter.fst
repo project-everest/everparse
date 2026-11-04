@@ -43,6 +43,7 @@ module CW = ASN1.Pulse.CheckedWriter
 module SI = ASN1.Pulse.SortedInsert
 module WA = ASN1.Pulse.WriteAdb
 module PA = ASN1.Pulse.ParseAdb
+module DE = ASN1.Pulse.DefaultEq
 
 inline_for_extraction
 let rw (#t: Type0) (r: bprel t) (pm: perm) = W.r2l_writer_f #t #SB.bytes (r pm) id_enc
@@ -162,6 +163,41 @@ fn raw_write_opt (#t: Type0) (r: bprel t) (pm: perm) (w: rw r pm)
       let res = w a #x out pos;
       rewrite (r pm a x) as (raw_opt r pm x' x);
       res
+    }
+  }
+}
+
+(* An explicit default value is not written *)
+inline_for_extraction
+fn raw_write_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (pm: perm) (dec: DE.dd r d pm) (w: rw r pm)
+: rw #(option t) (raw_opt_nd d r) pm
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  match x' {
+    None -> {
+      rewrite (raw_opt_nd d r pm x' x) as (pure (Ghost.reveal x == Seq.empty));
+      W.r2l_post_empty (SZ.v p) v;
+      rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt_nd d r pm x' x);
+      true
+    }
+    Some a -> {
+      rewrite (raw_opt_nd d r pm x' x) as (raw_opt_nd d r pm (Some a) x);
+      unfold (raw_opt_nd d r pm (Some a) x);
+      with c . assert (r pm a c);
+      let isd = dec a #c;
+      if isd {
+        W.r2l_post_empty (SZ.v p) v;
+        fold (raw_opt_nd d r pm (Some a) x);
+        rewrite (raw_opt_nd d r pm (Some a) x) as (raw_opt_nd d r pm x' x);
+        true
+      } else {
+        rewrite (r pm a c) as (r pm a x);
+        let res = w a #x out pos;
+        rewrite (r pm a x) as (r pm a c);
+        fold (raw_opt_nd d r pm (Some a) x);
+        rewrite (raw_opt_nd d r pm (Some a) x) as (raw_opt_nd d r pm x' x);
+        res
+      }
     }
   }
 }
@@ -421,6 +457,27 @@ let rec raw_write_terminal (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k
   | ASN1_DATE_TIME -> raw_write_leaf_tlv id k pm)
   in vf x' #x out pos #v #p
 
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let raw_write_default (id0: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] defl: asn1_key_lit k) (pm: perm)
+  (x': option (asn1_terminal_impl_t k)) (#x: Ghost.erased SB.bytes)
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+: Tot (wres (raw_default_rel id0 k defl) pm x' x out pos v p)
+= if In.adb_key_supported k
+  then begin
+    default_nd_equiv id0 k defl;
+    raw_write_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () pm
+      (raw_write_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) pm
+        (fun x' #c -> DE.dd_term id0 k defl () pm x' #c)
+        (fun x' #x out pos #v #p -> raw_write_terminal id0 k pm x' #x out pos #v #p))
+      x' #x out pos #v #p
+  end else begin
+    default_opt_equiv id0 k defl;
+    raw_write_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () pm
+      (raw_write_opt (raw_terminal_rel id0 k) pm (fun x' #x out pos #v #p -> raw_write_terminal id0 k pm x' #x out pos #v #p))
+      x' #x out pos #v #p
+  end
+
 (* The whole schema *)
 
 let rec raw_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (pm: perm)
@@ -614,12 +671,12 @@ and raw_write_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attribu
       (raw_write_opt (raw_rel k) pm (fun x' #x out pos #v #p -> raw_write_k k pm x' #x out pos #v #p))
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     dec_default_equiv id0 defv;
-    raw_write_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () pm
-      (raw_write_opt (raw_terminal_rel id0 k) pm (fun x' #x out pos #v #p -> raw_write_terminal id0 k pm x' #x out pos #v #p))
+    raw_write_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () pm
+      (fun x' #x out pos #v #p -> raw_write_default id0 k defv pm x' #x out pos #v #p)
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    raw_write_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () pm
-      (raw_write_opt (raw_terminal_rel id0 k) pm (fun x' #x out pos #v #p -> raw_write_terminal id0 k pm x' #x out pos #v #p)))
+    raw_write_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () pm
+      (fun x' #x out pos #v #p -> raw_write_default id0 k defv pm x' #x out pos #v #p))
   in vf x' #x out pos #v #p
 
 and raw_write_k (#[@@@FStar.Attributes.monomorphize] s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (pm: perm)

@@ -26,8 +26,12 @@ module LPC = LowParse.Spec.Combinators
 
 let raw_byte_enc (b: U8.t) : Tot bytes = Seq.create 1 b
 
+(* A raw OBJECT IDENTIFIER that is not well-formed is encoded with a
+   leading 0x80 byte, which never starts a (minimal) base-128 subidentifier:
+   this makes `raw_oid_enc` injective, and its result is always rejected by
+   the DER OBJECT IDENTIFIER parser. *)
 let raw_oid_enc (l: list U32.t) : Tot bytes =
-  if asn1_OID_wf l then oid_enc l else list_enc enc_arc l
+  if asn1_OID_wf l then oid_enc l else Seq.cons 0x80uy (list_enc enc_arc l)
 
 let raw_leaf_enc (k: leaf_k) (x: asn1_raw_terminal_t k) : Tot bytes =
   match k with

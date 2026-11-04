@@ -15,6 +15,7 @@ open ASN1.Pulse.RawRel
 module SB = LowParse.Spec.Base
 module L = ASN1.Pulse.JitWriter.Lemmas
 module PA = ASN1.Pulse.ParseAdb
+module WA = ASN1.Pulse.WriteAdb
 module FS = FStar.Set
 
 let fr_t (#t: Type0) (r: bprel t) (s: FS.set asn1_id_t) =
@@ -238,6 +239,46 @@ ensures raw_opt r pm y x ** pure (SL.dfe (In.twin_of dk) x)
   }
 }
 
+ghost
+fn fe_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (#s: _) (#d': _) (dk: asn1_decorated_k s d')
+  (sq: squash (ASN1_OPTION_ILC? dk \/ ASN1_DEFAULT_TERMINAL? dk \/ ASN1_DEFAULT_RESTRICTED_TERMINAL? dk)) (f: fr_t r s)
+  (pm: perm) (y: option t) (x: Ghost.erased SB.bytes)
+requires raw_opt_nd d r pm y x
+ensures raw_opt_nd d r pm y x ** pure (SL.dfe (In.twin_of dk) x)
+{
+  match y {
+    None -> {
+      rewrite (raw_opt_nd d r pm y x) as (pure (Ghost.reveal x == Seq.empty));
+      SL.dfe_empty dk;
+      rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt_nd d r pm y x);
+    }
+    Some z -> {
+      rewrite (raw_opt_nd d r pm y x) as (raw_opt_nd d r pm (Some z) x);
+      unfold (raw_opt_nd d r pm (Some z) x);
+      with c . assert (r pm z c);
+      f pm z c;
+      SL.dfe_empty dk;
+      SL.dfe_framed dk c;
+      fold (raw_opt_nd d r pm (Some z) x);
+      rewrite (raw_opt_nd d r pm (Some z) x) as (raw_opt_nd d r pm y x);
+    }
+  }
+}
+
+let fe_default (#s: _) (#d: _) (dk: asn1_decorated_k s d) (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
+  (sq: squash ((ASN1_DEFAULT_TERMINAL? dk \/ ASN1_DEFAULT_RESTRICTED_TERMINAL? dk) /\ s == FS.singleton id0))
+: fe_t (raw_default_rel id0 k defl) (In.twin_of dk) =
+  if In.adb_key_supported k
+  then begin
+    default_nd_equiv id0 k defl;
+    fe_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (In.twin_of dk)
+      (fun pm y x -> fe_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) dk () (fr_terminal id0 k) pm y x)
+  end else begin
+    default_opt_equiv id0 k defl;
+    fe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (In.twin_of dk)
+      (fun pm y x -> fe_opt (raw_terminal_rel id0 k) dk () (fr_terminal id0 k) pm y x)
+  end
+
 let fe_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (any_dec dk == false)) : fe_t (raw_dec_rel dk) (In.twin_of dk) =
   match dk with
   | ASN1_PLAIN_ILC k ->
@@ -248,10 +289,10 @@ let fe_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (any_dec dk == 
     fe_ext (raw_opt (raw_rel k)) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_rel k) dk () (fr_k k ()) pm y x)
   | ASN1_DEFAULT_TERMINAL id0 #k defl ->
     dec_default_equiv id0 #k defl;
-    fe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_terminal_rel id0 k) dk () (fr_terminal id0 k) pm y x)
+    fe_ext (raw_default_rel id0 k defl) (raw_dec_rel dk) () (In.twin_of dk) (fe_default dk id0 k defl ())
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl ->
     dec_default_restricted_equiv id0 #k r defl;
-    fe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_terminal_rel id0 k) dk () (fr_terminal id0 k) pm y x)
+    fe_ext (raw_default_rel id0 k defl) (raw_dec_rel dk) () (In.twin_of dk) (fe_default dk id0 k defl ())
 
 ghost
 fn av_ext (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r2)) (s: FS.set asn1_id_t) (f: av_t r1 s)

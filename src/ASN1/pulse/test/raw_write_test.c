@@ -250,12 +250,12 @@ int main(void) {
      V(0x30, 0x13, 0x02, 0x01, 0x01, 0x04, 0x02, 0xab, 0xce, 0x13, 0x02, 'a', 'c',
        0xa0, 0x03, 0x02, 0x01, 0x06, 0x81, 0x01, 0x04));
   OK(defL, defL(SOME_BIG(SL(i256)), NONE_SL, NONE_SL, NONE_INT, NONE_INT), V(0x30, 0x04, 0x02, 0x02, 0x01, 0x00));
-  INVALID(defL, defL(SOME_INT(0), NONE_SL, NONE_SL, NONE_INT, NONE_INT));   /* a = default */
-  JIT_INV(defL, defL(SOME_INT(0), NONE_SL, NONE_SL, NONE_INT, NONE_INT));
-  INVALID(defL, defL(NONE_INT, SOME_SL(SL(abcd)), NONE_SL, NONE_INT, NONE_INT)); /* b = default */
-  INVALID(defL, defL(NONE_INT, NONE_SL, SOME_SL(SL(ab)), NONE_INT, NONE_INT)); /* s = default */
-  INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, SOME_INT(5), NONE_INT));   /* t = default */
-  INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(3)));   /* r = default */
+  /* explicit default values are not written, as in DER */
+  OK(defL, defL(SOME_INT(0), NONE_SL, NONE_SL, NONE_INT, NONE_INT), V(0x30, 0x00));   /* a = default */
+  OK(defL, defL(NONE_INT, SOME_SL(SL(abcd)), NONE_SL, NONE_INT, NONE_INT), V(0x30, 0x00)); /* b = default */
+  OK(defL, defL(NONE_INT, NONE_SL, SOME_SL(SL(ab)), NONE_INT, NONE_INT), V(0x30, 0x00)); /* s = default */
+  OK(defL, defL(NONE_INT, NONE_SL, NONE_SL, SOME_INT(5), NONE_INT), V(0x30, 0x00));   /* t = default */
+  OK(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(3)), V(0x30, 0x00));   /* r = default */
   INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(11)));  /* r > 10 */
   INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(-1)));  /* r < 0 */
   INVALID(defL, defL(SOME_BIG(SL(nm1)), NONE_SL, NONE_SL, NONE_INT, NONE_INT)); /* non-minimal */
@@ -312,7 +312,7 @@ int main(void) {
   OK(setCAB, setCAB(SL(abcd), NONE_INT, NONE_INT), V(0x31, 0x04, 0x81, 0x02, 0xab, 0xcd));
   OK(setCAB, setCAB(SL(abcd), NONE_INT, SOME_INT(-1)), V(0x31, 0x07, 0x02, 0x01, 0xff, 0x81, 0x02, 0xab, 0xcd));
   OK(setCAB, setCAB(none, SOME_INT(7), NONE_INT), V(0x31, 0x05, 0x80, 0x01, 0x07, 0x81, 0x00));
-  INVALID(setCAB, setCAB(SL(abcd), NONE_INT, SOME_INT(0)));   /* b = default */
+  OK(setCAB, setCAB(SL(abcd), NONE_INT, SOME_INT(0)), V(0x31, 0x04, 0x81, 0x02, 0xab, 0xcd));   /* b = default, not written */
   INVALID(setCAB, setCAB(SL(abcd), SOME_BIG(SL(nm1)), NONE_INT)); /* non-minimal */
 
   /* mix: strings, ANY, BIT STRING, big INTEGER, CHOICE, OPTIONAL, BOOLEAN DEFAULT */
@@ -337,7 +337,9 @@ int main(void) {
   INVALID(mix, mix(SL(hi), SL(null_), BITS(0, SL(aa)), BIG(SL(nm1)), INL(SMALL(1)), NONE_SL, NONE_B)); /* non-minimal */
   INVALID(mix, mix(SL(hi), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(BIG(SL(nm2))), NONE_SL, NONE_B)); /* non-minimal */
   INVALID(mix, mix(SL(hi), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), SOME_SL(SL(notutc)), NONE_B)); /* bad UTCTime */
-  INVALID(mix, mix(SL(hi), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, SOME_B(false))); /* b = default */
+  OK(mix, mix(SL(hi), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, SOME_B(false)),  /* b = default, not written */
+     V(0x30, 0x10, 0x13, 0x02, 'h', 'i', 0x05, 0x00, 0x03, 0x02, 0x00, 0xaa,
+       0x02, 0x01, 0x00, 0x02, 0x01, 0x01));
 
   printf(fails ? "FAIL\n" : "OK\n");
 

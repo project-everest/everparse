@@ -52,6 +52,7 @@ module T = FStar.Tactics.V2
 module SI = ASN1.Pulse.SortedInsert
 module WA = ASN1.Pulse.WriteAdb
 module PA = ASN1.Pulse.ParseAdb
+module In = ASN1.Pulse.Interpreter
 
 let bprel (t: Type0) = prel t SB.bytes
 
@@ -84,6 +85,13 @@ let raw_opt (#t: Type0) (r: bprel t) (pm: perm) (x: option t) (w: SB.bytes) : sl
   match x with
   | None -> pure (w == Seq.empty)
   | Some a -> r pm a w
+
+(* An optional value whose bytes are dropped when they are exactly `d`: a
+   DEFAULT component whose value is explicitly the default one is absent *)
+let raw_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (pm: perm) (x: option t) (w: SB.bytes) : slprop =
+  match x with
+  | None -> pure (w == Seq.empty)
+  | Some a -> exists* c . r pm a c ** pure ((c == d ==> w == Seq.empty) /\ (~ (c == d) ==> w == c))
 
 (* `w` preceded by the constant `e` *)
 let raw_pre (e: SB.bytes) (#t: Type0) (r: bprel t) (pm: perm) (x: t) (w: SB.bytes) : slprop =
@@ -186,6 +194,24 @@ let rec raw_terminal_rel (id: asn1_id_t) (k: asn1_terminal_k) (pm: perm) (x: asn
   | ASN1_PREFIXED_TERMINAL id2 k2 -> let x' : asn1_terminal_impl_t k2 = coerce_eq () x in raw_tlv id (raw_terminal_rel id2 k2) pm x' w
   | _ -> raw_tlv id (raw_leaf k) pm x w
 
+(* DEFAULT components: when the default literal can be compared at runtime
+   (`In.adb_key_supported`), an explicit default value is not written, as
+   in DER *)
+let raw_default_rel (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) : bprel (option (asn1_terminal_impl_t k)) =
+  if In.adb_key_supported k
+  then raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)
+  else raw_opt (raw_terminal_rel id0 k)
+
+let default_rel_nd (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
+: Lemma (requires (In.adb_key_supported k))
+  (ensures (raw_default_rel id0 k defl == raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)))
+= ()
+
+let default_rel_opt (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
+: Lemma (requires (~ (In.adb_key_supported k)))
+  (ensures (raw_default_rel id0 k defl == raw_opt (raw_terminal_rel id0 k)))
+= ()
+
 (* The whole schema *)
 
 let rec raw_content_rel (id: asn1_id_t) (k: asn1_content_k) (pm: perm) (x: asn1_content_impl_t k) (w: SB.bytes) : Tot slprop (decreases k) =
@@ -257,8 +283,8 @@ and raw_dec_rel (#s: _) (#d: _) (dk: asn1_decorated_k s d) (pm: perm) (x: asn1_d
   match dk with
   | ASN1_PLAIN_ILC k -> raw_rel k pm x w
   | ASN1_OPTION_ILC k -> let x' : option (asn1_impl_t k) = coerce_eq () x in raw_opt (raw_rel k) pm x' w
-  | ASN1_DEFAULT_TERMINAL id0 #k _ -> let x' : option (asn1_terminal_impl_t k) = coerce_eq () x in raw_opt (raw_terminal_rel id0 k) pm x' w
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k _ _ -> let x' : option (asn1_terminal_impl_t k) = coerce_eq () x in raw_opt (raw_terminal_rel id0 k) pm x' w
+  | ASN1_DEFAULT_TERMINAL id0 #k defl -> let x' : option (asn1_terminal_impl_t k) = coerce_eq () x in raw_default_rel id0 k defl pm x' w
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k _ defl -> let x' : option (asn1_terminal_impl_t k) = coerce_eq () x in raw_default_rel id0 k defl pm x' w
 
 and raw_items_rel (srt: bool) (#ids: _) (items: asn1_gen_items_l ids) (pm: perm) (x: asn1_items_impl_t items) (w: SB.bytes) : Tot slprop (decreases items) =
   match items with
@@ -463,6 +489,54 @@ fn gather_raw_opt (#t: Type0) (r: bprel t) (g: gather_t r)
       rewrite (raw_opt r p' x y') as (r p' a y');
       g a #p #y #p' #y';
       rewrite (r (p +. p') a y) as (raw_opt r (p +. p') x y);
+    }
+  }
+}
+
+ghost
+fn share_raw_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (sh: share_t r)
+: share_t #(option t) (raw_opt_nd d r)
+= (x: option t) (#p: perm) (#y: SB.bytes)
+{
+  match x {
+    None -> {
+      rewrite (raw_opt_nd d r p x y) as pure (y == Seq.empty);
+      rewrite (pure (y == Seq.empty)) as (raw_opt_nd d r (p /. 2.0R) x y);
+      rewrite (pure (y == Seq.empty)) as (raw_opt_nd d r (p /. 2.0R) x y);
+    }
+    Some a -> {
+      rewrite (raw_opt_nd d r p x y) as (raw_opt_nd d r p (Some a) y);
+      unfold (raw_opt_nd d r p (Some a) y);
+      with c . assert (r p a c);
+      sh a #p #c;
+      fold (raw_opt_nd d r (p /. 2.0R) (Some a) y);
+      fold (raw_opt_nd d r (p /. 2.0R) (Some a) y);
+      rewrite each (Some a) as x;
+    }
+  }
+}
+
+ghost
+fn gather_raw_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (g: gather_t r)
+: gather_t #(option t) (raw_opt_nd d r)
+= (x: option t) (#p: perm) (#y: SB.bytes) (#p': perm) (#y': SB.bytes)
+{
+  match x {
+    None -> {
+      rewrite (raw_opt_nd d r p x y) as pure (y == Seq.empty);
+      rewrite (raw_opt_nd d r p' x y') as pure (y' == Seq.empty);
+      rewrite (pure (y == Seq.empty)) as (raw_opt_nd d r (p +. p') x y);
+    }
+    Some a -> {
+      rewrite (raw_opt_nd d r p x y) as (raw_opt_nd d r p (Some a) y);
+      rewrite (raw_opt_nd d r p' x y') as (raw_opt_nd d r p' (Some a) y');
+      unfold (raw_opt_nd d r p (Some a) y);
+      unfold (raw_opt_nd d r p' (Some a) y');
+      with c . assert (r p a c);
+      with c' . assert (r p' a c');
+      g a #p #c #p' #c';
+      fold (raw_opt_nd d r (p +. p') (Some a) y);
+      rewrite (raw_opt_nd d r (p +. p') (Some a) y) as (raw_opt_nd d r (p +. p') x y);
     }
   }
 }
@@ -839,12 +913,22 @@ let dec_option_equiv (#s: _) (k: asn1_k s)
 = assert (prel_equiv #(option (asn1_impl_t k)) (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k))) by (solve_equiv ())
 
 let dec_default_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k)
-: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)))
-= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv))) by (solve_equiv ())
+: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)))
+= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv))) by (solve_equiv ())
 
 let dec_default_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) })
-: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)))
-= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv))) by (solve_equiv ())
+: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)))
+= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv))) by (solve_equiv ())
+
+let default_nd_equiv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
+: Lemma (requires (In.adb_key_supported k))
+  (ensures (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl)))
+= default_rel_nd id0 k defl
+
+let default_opt_equiv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
+: Lemma (requires (~ (In.adb_key_supported k)))
+  (ensures (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl)))
+= default_rel_opt id0 k defl
 
 let items_nil_equiv (srt: bool)
 : Lemma (prel_equiv #unit (raw_pure null_enc) (raw_items_rel srt ASN1_GEN_ITEMS_NIL))
@@ -935,6 +1019,16 @@ let rec gather_terminal (id: asn1_id_t) (k: asn1_terminal_k) : Tot (gather_t (ra
     terminal_leaf_equiv id k;
     gather_ext (raw_tlv id (raw_leaf k)) (raw_terminal_rel id k) () (gather_raw_tlv id (raw_leaf k) (gather_raw_leaf k))
 
+let share_default (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) : Tot (share_t (raw_default_rel id0 k defl)) =
+  if In.adb_key_supported k
+  then (default_nd_equiv id0 k defl; share_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (share_raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (share_terminal id0 k)))
+  else (default_opt_equiv id0 k defl; share_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (share_raw_opt (raw_terminal_rel id0 k) (share_terminal id0 k)))
+
+let gather_default (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) : Tot (gather_t (raw_default_rel id0 k defl)) =
+  if In.adb_key_supported k
+  then (default_nd_equiv id0 k defl; gather_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (gather_raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (gather_terminal id0 k)))
+  else (default_opt_equiv id0 k defl; gather_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (gather_raw_opt (raw_terminal_rel id0 k) (gather_terminal id0 k)))
+
 let rec share_content (id: asn1_id_t) (k: asn1_content_k)
 : Tot (share_t (raw_content_rel id k)) (decreases k)
 = match k with
@@ -1006,10 +1100,10 @@ and share_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d)
     share_ext (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k)) () (share_raw_opt (raw_rel k) (share_k k))
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     dec_default_equiv id0 defv;
-    share_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (share_raw_opt (raw_terminal_rel id0 k) (share_terminal id0 k))
+    share_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (share_default id0 k defv)
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    share_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (share_raw_opt (raw_terminal_rel id0 k) (share_terminal id0 k))
+    share_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (share_default id0 k defv)
 
 and share_items (srt: bool) (#i: _) (ls: asn1_gen_items_l i)
 : Tot (share_t (raw_items_rel srt ls)) (decreases ls)
@@ -1144,10 +1238,10 @@ and gather_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d)
     gather_ext (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k)) () (gather_raw_opt (raw_rel k) (gather_k k))
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
     dec_default_equiv id0 defv;
-    gather_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (gather_raw_opt (raw_terminal_rel id0 k) (gather_terminal id0 k))
+    gather_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (gather_default id0 k defv)
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    gather_ext (raw_opt (raw_terminal_rel id0 k)) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (gather_raw_opt (raw_terminal_rel id0 k) (gather_terminal id0 k))
+    gather_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (gather_default id0 k defv)
 
 and gather_items (srt: bool) (#i: _) (ls: asn1_gen_items_l i)
 : Tot (gather_t (raw_items_rel srt ls)) (decreases ls)
