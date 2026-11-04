@@ -14,7 +14,9 @@
    `jit_<name>`, must succeed exactly on the CW_OK cases, with the same
    bytes, report JIT_NO_SPACE on a buffer one byte too short, and
    JIT_INVALID exactly on the CW_INVALID cases: it never returns JIT_RETRY,
-   any non-compositional check (because of ANY) being done locally. */
+   any non-compositional check (because of ANY) being done locally. So
+   must `jit_raw_<name>`, the same JIT writer seen as a writer of raw
+   values (ASN1.Pulse.RawJitWriter), specified against `check_ser`. */
 #include "ASN1.Pulse.RawWriteTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -98,6 +100,17 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
     if (r_ != ASN1_PULSE_JITWRITER_JIT_NO_SPACE) {                            \
       printf("%s:%d: jit_%s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
     }                                                                         \
+    pos_ = BUF;                                                               \
+    r_ = ASN1_Pulse_RawWriteTest_jit_raw_##name(x, o_, &pos_);                \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_OK || pos_ != BUF - sizeof(exp_)       \
+        || memcmp(out_ + pos_, exp_, sizeof(exp_)) != 0) {                    \
+      printf("%s:%d: jit_raw_%s: expected OK, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
+    pos_ = sizeof(exp_) - 1;                                                  \
+    r_ = ASN1_Pulse_RawWriteTest_jit_raw_##name(x, s_, &pos_);                \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_NO_SPACE) {                            \
+      printf("%s:%d: jit_raw_%s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
   } while (0)
 
 /* The JIT writer alone, on an invalid input: exactly JIT_INVALID (it never
@@ -109,6 +122,11 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
     ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_jit_##name(x, o_, &pos_); \
     if (r_ != ASN1_PULSE_JITWRITER_JIT_INVALID) {                             \
       printf("%s:%d: jit_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
+    pos_ = BUF;                                                               \
+    r_ = ASN1_Pulse_RawWriteTest_jit_raw_##name(x, o_, &pos_);                \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_INVALID) {                             \
+      printf("%s:%d: jit_raw_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
     }                                                                         \
   } while (0)
 
