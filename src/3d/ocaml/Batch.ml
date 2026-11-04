@@ -220,7 +220,9 @@ let produce_unit
   let args =
     ["--smt"; Z3Executable.resolve fstar_exe;
      "--codegen"; "C"; "--custard_unit"; modul;
-     "--custard_monomorphize_types"; "true"] @ roots @ links @
+     "--custard_monomorphize_types"; "true"] @
+    (if Options.get_hoist_locals () then ["--custard_hoist_locals"] else []) @
+    roots @ links @
     fstar_args ~output_dir:staging input_stream_binding out_dir @
     [module_file ".fst"; "-o"; staged (modul ^ ".c")]
   in

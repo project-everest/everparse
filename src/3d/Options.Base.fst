@@ -413,7 +413,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "karamel" (OptStringOption "executable" always_valid karamel_exe) "Legacy KaRaMeL executable (unused for direct-C extraction)" [];
     CmdOption "blank_lines" (OptBool blank_lines) "Insert blank lines between declaration blocks for readability in generated C code (--batch only)" ["batch"];
     CmdOption "goto_for_early_return" (OptBool goto_for_early_return) "Use goto for early return in generated C code (--batch only)" ["batch"];
-    CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];
+    CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local declarations to the beginning of each generated C function, preserving initialization points (--batch only)" ["batch"];
     CmdOption "line_comments" (OptBool line_comments) "Use C line comments (// ...) instead of block comments (/* ... */) in generated C code (--batch only)" ["batch"];
     CmdOption "init_locals" (OptStringOption "c23|c99|c89" valid_init_locals init_locals) "Initialize all local variable declarations with zero values" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding _input_stream_binding) "Input stream binding (default buffer)" [];
@@ -467,8 +467,7 @@ let parse_cmd_line () : ML (list string) =
   | Success ->
     let unsupported =
       List.Tot.filter fst
-        [(!hoist_locals, "hoist_locals");
-         (!goto_for_early_return, "goto_for_early_return");
+        [(!goto_for_early_return, "goto_for_early_return");
          (!blank_lines, "blank_lines");
          (!line_comments, "line_comments");
          (Some? !init_locals, "init_locals")]
