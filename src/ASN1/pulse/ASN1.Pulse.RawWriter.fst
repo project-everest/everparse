@@ -1,17 +1,14 @@
 module ASN1.Pulse.RawWriter
 #lang-pulse
 
-(* Raw right-to-left writers, and checked writers that check all of their
-   input at runtime.
+(* Raw right-to-left writers.
 
    The raw writer `raw_write_k k` writes the bytes `w` of a raw Pulse
    representation `x` (`ASN1.Pulse.RawRel.raw_rel k pm x w`), with no
    semantic precondition on `x`: any slice, any integer, any number of
-   unused bits, any DEFAULT component, etc. The checked raw writer
-   `check_write_raw_k` then validates `w` against `k`, so it reports
-   `CW_OK` exactly when `w` is the DER encoding of a value of `k`, and
-   `CW_INVALID` otherwise. The only static requirement on `k` is that the
-   validator supports it. *)
+   unused bits, any DEFAULT component, etc. It is used by the JIT writer
+   (`ASN1.Pulse.JitWriter`) to write again, then validate, the contents
+   whose validity it could not check while writing them. *)
 
 open Pulse.Lib.Pervasives
 open ASN1.Base
@@ -39,7 +36,6 @@ module RS = ASN1.Pulse.RelShare
 module PS = ASN1.Pulse.ParseSequence
 module Conf = ASN1.Spec.Conformance
 module In = ASN1.Pulse.Interpreter
-module CW = ASN1.Pulse.CheckedWriter
 module SI = ASN1.Pulse.SortedInsert
 module WA = ASN1.Pulse.WriteAdb
 module PA = ASN1.Pulse.ParseAdb
@@ -721,60 +717,7 @@ and raw_write_lc ([@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_
         (fun x' #x out pos #v #p -> raw_write_lc (hd2 :: tl2) pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
-(* Checked raw writers: write the raw bytes, then validate them against `k` *)
+(* The static requirement on `k`: the validator supports it *)
 
 let raw_ok (#s: _) (k: asn1_k s) : prop =
   In.supported_k k /\ Conf.wf k
-
-inline_for_extraction
-let raw_writer (#s: _) (k: asn1_k s) (pm: perm) : rw (raw_rel k) pm =
-  fun x' #x out pos #v #p -> raw_write_k k pm x' #x out pos #v #p
-
-inline_for_extraction
-let raw_validator (#s: _) (k: asn1_k s) (u: squash (raw_ok k))
-: LPS.validator #(asn1_t k) #asn1_strong_parser_kind (asn1_as_parser k)
-= fun input poffset #offset #pm #v -> In.validate_k k () input poffset #offset #pm #v
-
-(* `w` and `vf` are meant to be `raw_writer k pm` and `raw_validator k u`,
-   passed by the extraction root *)
-inline_for_extraction
-fn check_write_raw_k (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (pm: perm)
-  (w: rw (raw_rel k) pm)
-  (vf: LPS.validator #(asn1_t k) #asn1_strong_parser_kind (asn1_as_parser k))
-  (x': asn1_impl_t k) (#y: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-requires pts_to out v ** pts_to pos p ** raw_rel k pm x' y ** pure (SZ.v p <= Seq.length v)
-returns res: CW.cw_result
-ensures exists* v' p' . pts_to out v' ** pts_to pos p' ** raw_rel k pm x' y **
-  pure (CW.cw_post k y (SZ.v p) v res (SZ.v p') v')
-{
-  let p0 = !pos;
-  let ok = w x' #y out pos;
-  if (not ok) {
-    CW.CW_NO_SPACE
-  } else {
-    let p1 = !pos;
-    with v1 . assert (pts_to out v1);
-    let mut off = p1;
-    let valid = vf out off;
-    let off1 = !off;
-    CW.check_correct k y (SZ.v p0) p1 v1 valid off1;
-    if (valid && off1 = p0) {
-      CW.CW_OK
-    } else {
-      CW.CW_INVALID
-    }
-  }
-}
-
-(* The type of a checked raw writer for a schema `k`: `y` is the raw bytes
-   of `x'`, and the result is `CW_OK` iff they are the DER encoding of a
-   value of `k` and fit in the output *)
-inline_for_extraction
-let checked_raw_writer_t (#s: _) (k: asn1_k s) (pm: perm) =
-  (x': asn1_impl_t k) -> (#y: Ghost.erased SB.bytes) ->
-  (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
-  stt CW.cw_result
-    (pts_to out v ** pts_to pos p ** raw_rel k pm x' y ** pure (SZ.v p <= Seq.length v))
-    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** raw_rel k pm x' y **
-      pure (CW.cw_post k y (SZ.v p) v res (SZ.v p') v'))

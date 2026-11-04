@@ -1,11 +1,13 @@
 module ASN1.Pulse.JitWriter
 #lang-pulse
 
-(* Checked raw writers with just-in-time checks.
+(* Raw right-to-left writers with just-in-time checks.
 
-   `check_write_jit_k` has the same specification as
-   `ASN1.Pulse.RawWriter.check_write_raw_k`, but instead of validating the
-   whole output after writing it, it checks each chunk while writing it:
+   `jit_writer k` writes the bytes `w` of a raw Pulse representation `x`
+   (`ASN1.Pulse.RawRel.raw_rel k pm x w`), like the raw writer
+   `ASN1.Pulse.RawWriter.raw_write_k`, but it also checks that `w` is the
+   DER encoding of a value of `k`: instead of validating the whole output
+   after writing it, it checks each chunk while writing it:
 
    - TLVs of PREFIXED types and SEQUENCEs, CHOICEs, and SEQUENCE
      components are checked structurally: their framing is correct by
@@ -41,8 +43,8 @@ module ASN1.Pulse.JitWriter
      after being written, within their own bounds.
 
    So each byte is validated at most once, while it is still in the cache.
-   `check_write_jit_k` returns the exact result: CW_OK, CW_NO_SPACE (the
-   encoding does not fit) or CW_INVALID (the value is not conforming),
+   `jit_writer` returns the exact result: JIT_OK, JIT_NO_SPACE (the
+   encoding does not fit) or JIT_INVALID (the value is not conforming),
    without any second pass over the whole value.
 
    Internally, a JIT writer returns JIT_OK, JIT_NO_SPACE, JIT_INVALID or
@@ -90,7 +92,6 @@ module Sq = ASN1.Pulse.Sequence
 module Conf = ASN1.Spec.Conformance
 module Ser = ASN1.Spec.Serializer
 module In = ASN1.Pulse.Interpreter
-module CW = ASN1.Pulse.CheckedWriter
 module RW = ASN1.Pulse.RawWriter
 module I = ASN1.Pulse.Identifier
 module ILC = ASN1.Pulse.ILC
@@ -349,35 +350,6 @@ fn jit_tlv (#ex: bool) (id: asn1_id_t) (#t: Type0) (r: bprel t)
   }
 }
 
-inline_for_extraction
-fn jit_opt (#t: Type0) (r: bprel t) (a1 a2: SB.bytes -> prop)
-  (none: squash (a2 Seq.empty))
-  (imp: (x: SB.bytes) -> Lemma (requires (a1 x)) (ensures (a2 x)))
-  (#ex: bool) (pm: perm) (w: jwg ex r a1 pm)
-: jw #(option t) (raw_opt r) a2 pm
-= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  match x' {
-    None -> {
-      rewrite (raw_opt r pm x' x) as (pure (Ghost.reveal x == Seq.empty));
-      W.r2l_post_empty (SZ.v p) v;
-      rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt r pm x' x);
-      JIT_OK
-    }
-    Some y -> {
-      rewrite (raw_opt r pm x' x) as (r pm y x);
-      let res = w y #x out pos;
-      rewrite (r pm y x) as (raw_opt r pm x' x);
-      if (JIT_OK? res) {
-        imp x;
-        JIT_OK
-      } else {
-        ns_or_retry res
-      }
-    }
-  }
-}
-
 (* Same, when `a1` and `a2` are equivalent on the nonempty encodings of
    present values *)
 inline_for_extraction
@@ -567,40 +539,6 @@ fn jit_either_x (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a1 a2 a: SB.byte
       } else {
         Classical.move_requires back2 x;
         res
-      }
-    }
-  }
-}
-
-inline_for_extraction
-fn jit_either (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a1 a2 a: SB.bytes -> prop)
-  (imp1: (x: SB.bytes) -> Lemma (requires (a1 x)) (ensures (a x)))
-  (imp2: (x: SB.bytes) -> Lemma (requires (a2 x)) (ensures (a x)))
-  (#ex1 #ex2: bool) (pm: perm) (w1: jwg ex1 r1 a1 pm) (w2: jwg ex2 r2 a2 pm)
-: jw #(either t1 t2) (raw_either r1 r2) a pm
-= (x': either t1 t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  match x' {
-    Inl y -> {
-      rewrite (raw_either r1 r2 pm x' x) as (r1 pm y x);
-      let res = w1 y #x out pos;
-      rewrite (r1 pm y x) as (raw_either r1 r2 pm x' x);
-      if (JIT_OK? res) {
-        imp1 x;
-        JIT_OK
-      } else {
-        ns_or_retry res
-      }
-    }
-    Inr y -> {
-      rewrite (raw_either r1 r2 pm x' x) as (r2 pm y x);
-      let res = w2 y #x out pos;
-      rewrite (r2 pm y x) as (raw_either r1 r2 pm x' x);
-      if (JIT_OK? res) {
-        imp2 x;
-        JIT_OK
-      } else {
-        ns_or_retry res
       }
     }
   }
@@ -1630,36 +1568,6 @@ fn jit_acons_x (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twin) (t
   }
 }
 
-(* Write `snd x`, then `fst x` *)
-inline_for_extraction
-fn jit_cat (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a1 a2 a: SB.bytes -> prop)
-  (lem: (c1: SB.bytes) -> (c2: SB.bytes) -> Lemma (requires (a1 c1 /\ a2 c2)) (ensures (a (Seq.append c1 c2))))
-  (pm: perm) (w1: jw r1 a1 pm) (w2: jw r2 a2 pm)
-: jw #(t1 & t2) (raw_cat r1 r2) a pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  unfold (raw_cat r1 r2 pm x' x);
-  with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
-  let ok = w2 (snd x') #c2 out pos;
-  if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-    let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
-    frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
-    fold (raw_cat r1 r2 pm x' x);
-    if (JIT_OK? res) {
-      W.r2l_post_append c1 c2 (SZ.v p) v (SZ.v p1) v1 true (SZ.v p2) v2;
-      lem c1 c2;
-      JIT_OK
-    } else {
-      ns_or_retry res
-    }
-  } else {
-    fold (raw_cat r1 r2 pm x' x);
-    ns_or_retry ok
-  }
-}
-
 (* A literal key, then its payload: the payload is written and checked,
    then the key, as a TLV whose contents are those of the literal. The
    dispatch then selects exactly the payload of the literal, so nothing
@@ -2615,42 +2523,3 @@ and jit_write_lc ([@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_
 inline_for_extraction
 let jit_writer (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm) : jwx (raw_rel k) (kacc k) pm =
   fun x' #x out pos #v #p -> jit_write_k k () pm x' #x out pos #v #p
-
-let jit_ok_correct (#s: _) (k: asn1_k s) (enc: SB.bytes) (p: nat) (v: SB.bytes) (p': nat) (v': SB.bytes)
-: Lemma
-  (requires (Conf.wf k /\ jit_post enc (kacc k enc) p v JIT_OK p' v'))
-  (ensures (CW.cw_post k enc p v CW.CW_OK p' v'))
-= Ser.parsed_spec_correct k enc;
-  assert (Seq.equal (Seq.slice enc 0 (Seq.length enc)) enc)
-
-let jit_invalid_correct (#s: _) (k: asn1_k s) (enc: SB.bytes)
-: Lemma
-  (requires (Conf.wf k /\ ~ (kacc k enc)))
-  (ensures (~ (CW.conforming k enc)))
-= let prf (x: asn1_t k) : Lemma (requires (Ser.encodable k x /\ Ser.asn1_enc k x == enc)) (ensures (kacc k enc)) =
-    Ser.serialize_asn1_correct k;
-    LowParse.Spec.Combinators.parse_filter_eq #asn1_strong_parser_kind (asn1_as_parser k) (Ser.encodable_b k) enc
-  in
-  Classical.forall_intro (Classical.move_requires prf)
-
-(* `wj` is meant to be `jit_writer k u pm`, passed by the extraction
-   root *)
-inline_for_extraction
-fn check_write_jit_k (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm)
-  (wj: jwx (raw_rel k) (kacc k) pm)
-: RW.checked_raw_writer_t k pm
-= (x': asn1_impl_t k) (#y: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  let ok = wj x' #y out pos;
-  with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-  if (JIT_OK? ok) {
-    jit_ok_correct k y (SZ.v p) v (SZ.v p1) v1;
-    CW.CW_OK
-  } else if (JIT_NO_SPACE? ok) {
-    CW.CW_NO_SPACE
-  } else {
-    jit_invalid_correct k y;
-    CW.CW_INVALID
-  }
-}

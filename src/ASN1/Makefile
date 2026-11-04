@@ -50,7 +50,7 @@ test: pulse-test
 endif
 
 pulse-test: compile
-	+$(MAKE) -C pulse test test-oracle test-corpus test-deep-any stack-check test-parse test-write test-checked-write
+	+$(MAKE) -C pulse test test-oracle test-corpus test-deep-any stack-check test-parse
 
 eval: compile
 	$(MAKE) -C evaluation

@@ -1,22 +1,19 @@
-/* Test of the extracted checked raw writers (ASN1.Pulse.RawWriteTest): raw
-   values built in C, with no precondition on their contents, are written
-   as is, then the written bytes are validated against the schema. Check
-   CW_OK with the expected DER bytes, CW_INVALID on values that are not
-   DER encodings of the schema (invalid strings, non-minimal INTEGERs, bad
-   BIT STRING padding, DEFAULT values, restrictions, etc.), and CW_NO_SPACE
-   on a short buffer. The components of a SET and the elements of a SET OF
-   are sorted while writing, whatever their order in the schema or in the
+/* Test of the extracted JIT writers (ASN1.Pulse.RawWriteTest): raw values
+   built in C, with no precondition on their contents, are written while
+   checking that the written bytes are the DER encoding of a value of the
+   schema. Check JIT_OK with the expected DER bytes, JIT_INVALID on values
+   that are not DER encodings of the schema (invalid strings, non-minimal
+   INTEGERs, bad BIT STRING padding, DEFAULT values, restrictions, etc.),
+   and JIT_NO_SPACE on a buffer one byte too short; the writers never
+   return JIT_RETRY, any non-compositional check (because of ANY) being
+   done locally. The components of a SET and the elements of a SET OF are
+   sorted while writing, whatever their order in the schema or in the
    input.
 
-   Each test is run on both `check_write_raw_<name>`, which validates the
-   whole output after writing it, and `check_write_jit_<name>`, which checks
-   the output while writing it. Moreover, the JIT writer alone,
-   `jit_<name>`, must succeed exactly on the CW_OK cases, with the same
-   bytes, report JIT_NO_SPACE on a buffer one byte too short, and
-   JIT_INVALID exactly on the CW_INVALID cases: it never returns JIT_RETRY,
-   any non-compositional check (because of ANY) being done locally. So
-   must `jit_raw_<name>`, the same JIT writer seen as a writer of raw
-   values (ASN1.Pulse.RawJitWriter), specified against `check_ser`. */
+   Each test is run on both `jit_<name>`, the JIT writer of raw bytes
+   (ASN1.Pulse.JitWriter), and `jit_raw_<name>`, the same JIT writer seen
+   as a writer of raw values (ASN1.Pulse.RawJitWriter), specified against
+   `check_ser`. */
 #include "ASN1.Pulse.RawWriteTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -25,53 +22,6 @@
 #define V(...) { __VA_ARGS__ }
 
 static int fails = 0;
-
-static const char *res_name(ASN1_Pulse_CheckedWriter_cw_result r) {
-  switch (r) {
-    case ASN1_PULSE_CHECKEDWRITER_CW_OK: return "OK";
-    case ASN1_PULSE_CHECKEDWRITER_CW_NO_SPACE: return "NO_SPACE";
-    default: return "INVALID";
-  }
-}
-
-/* Write `x` at the right edge of a BUF-byte buffer. On CW_OK, compare with
-   `vec`; then retry with a buffer one byte too short and expect CW_NO_SPACE.
-   Check that nothing is written left of the final position. */
-#define OK1(kind, name, x, ...) do {                                          \
-    uint8_t exp_[] = __VA_ARGS__;                                             \
-    uint8_t out_[BUF + 1];                                                    \
-    memset(out_, 0xcc, sizeof(out_));                                         \
-    size_t pos_ = BUF;                                                        \
-    Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_ + 1, .len = BUF };        \
-    ASN1_Pulse_CheckedWriter_cw_result r_ =                                   \
-      ASN1_Pulse_RawWriteTest_check_write_##kind##_##name(x, o_, &pos_);       \
-    if (r_ != ASN1_PULSE_CHECKEDWRITER_CW_OK || pos_ != BUF - sizeof(exp_)    \
-        || memcmp(out_ + 1 + pos_, exp_, sizeof(exp_)) != 0) {                \
-      printf("%s:%d: %s %s: expected OK, got %s:", __FILE__, __LINE__, #kind, #name, res_name(r_)); \
-      for (size_t i_ = pos_; i_ < BUF; i_++) printf(" %02x", out_[1 + i_]);   \
-      printf("\n"); fails++;                                                  \
-    }                                                                         \
-    for (size_t i_ = 0; i_ < 1 + pos_ && i_ <= BUF; i_++)                     \
-      if (out_[i_] != 0xcc) { printf("%s:%d: %s %s: wrote left of pos\n", __FILE__, __LINE__, #kind, #name); fails++; break; } \
-    memset(out_, 0xcc, sizeof(out_));                                         \
-    pos_ = sizeof(exp_) - 1;                                                  \
-    Pulse_Lib_Slice_slice__uint8 s_ = { .elt = out_ + 1, .len = sizeof(exp_) - 1 }; \
-    r_ = ASN1_Pulse_RawWriteTest_check_write_##kind##_##name(x, s_, &pos_);    \
-    if (r_ != ASN1_PULSE_CHECKEDWRITER_CW_NO_SPACE || out_[0] != 0xcc) {      \
-      printf("%s:%d: %s %s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #kind, #name, res_name(r_)); fails++; \
-    }                                                                         \
-  } while (0)
-
-#define INVALID1(kind, name, x) do {                                                 \
-    uint8_t out_[BUF];                                                        \
-    size_t pos_ = BUF;                                                        \
-    Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_, .len = BUF };            \
-    ASN1_Pulse_CheckedWriter_cw_result r_ =                                   \
-      ASN1_Pulse_RawWriteTest_check_write_##kind##_##name(x, o_, &pos_);       \
-    if (r_ != ASN1_PULSE_CHECKEDWRITER_CW_INVALID) {                          \
-      printf("%s:%d: %s %s: expected INVALID, got %s\n", __FILE__, __LINE__, #kind, #name, res_name(r_)); fails++; \
-    }                                                                         \
-  } while (0)
 
 static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
   switch (r) {
@@ -82,62 +32,53 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
   }
 }
 
-/* The JIT writer alone: on a valid input, JIT_OK with the bytes `vec`, and
-   JIT_NO_SPACE (with no fallback) on a buffer one byte too short */
-#define JIT_OK(name, x, ...) do {                                             \
+/* Write `x` at the right edge of a BUF-byte buffer with `<kind>_<name>`:
+   expect JIT_OK with the bytes `vec`; then retry with a buffer one byte
+   too short and expect JIT_NO_SPACE. Check that nothing is written left
+   of the final position. */
+#define OK1(kind, name, x, ...) do {                                          \
     uint8_t exp_[] = __VA_ARGS__;                                             \
-    uint8_t out_[BUF];                                                        \
+    uint8_t out_[BUF + 1];                                                    \
+    memset(out_, 0xcc, sizeof(out_));                                         \
     size_t pos_ = BUF;                                                        \
-    Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_, .len = BUF };            \
-    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_jit_##name(x, o_, &pos_); \
+    Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_ + 1, .len = BUF };        \
+    ASN1_Pulse_JitWriter_jit_result r_ =                                      \
+      ASN1_Pulse_RawWriteTest_##kind##_##name(x, o_, &pos_);                  \
     if (r_ != ASN1_PULSE_JITWRITER_JIT_OK || pos_ != BUF - sizeof(exp_)       \
-        || memcmp(out_ + pos_, exp_, sizeof(exp_)) != 0) {                    \
-      printf("%s:%d: jit_%s: expected OK, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+        || memcmp(out_ + 1 + pos_, exp_, sizeof(exp_)) != 0) {                \
+      printf("%s:%d: %s_%s: expected OK, got %s:", __FILE__, __LINE__, #kind, #name, jit_name(r_)); \
+      for (size_t i_ = pos_; i_ < BUF; i_++) printf(" %02x", out_[1 + i_]);   \
+      printf("\n"); fails++;                                                  \
     }                                                                         \
+    for (size_t i_ = 0; i_ < 1 + pos_ && i_ <= BUF; i_++)                     \
+      if (out_[i_] != 0xcc) { printf("%s:%d: %s_%s: wrote left of pos\n", __FILE__, __LINE__, #kind, #name); fails++; break; } \
+    memset(out_, 0xcc, sizeof(out_));                                         \
     pos_ = sizeof(exp_) - 1;                                                  \
-    Pulse_Lib_Slice_slice__uint8 s_ = { .elt = out_, .len = sizeof(exp_) - 1 }; \
-    r_ = ASN1_Pulse_RawWriteTest_jit_##name(x, s_, &pos_);                    \
-    if (r_ != ASN1_PULSE_JITWRITER_JIT_NO_SPACE) {                            \
-      printf("%s:%d: jit_%s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
-    }                                                                         \
-    pos_ = BUF;                                                               \
-    r_ = ASN1_Pulse_RawWriteTest_jit_raw_##name(x, o_, &pos_);                \
-    if (r_ != ASN1_PULSE_JITWRITER_JIT_OK || pos_ != BUF - sizeof(exp_)       \
-        || memcmp(out_ + pos_, exp_, sizeof(exp_)) != 0) {                    \
-      printf("%s:%d: jit_raw_%s: expected OK, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
-    }                                                                         \
-    pos_ = sizeof(exp_) - 1;                                                  \
-    r_ = ASN1_Pulse_RawWriteTest_jit_raw_##name(x, s_, &pos_);                \
-    if (r_ != ASN1_PULSE_JITWRITER_JIT_NO_SPACE) {                            \
-      printf("%s:%d: jit_raw_%s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    Pulse_Lib_Slice_slice__uint8 s_ = { .elt = out_ + 1, .len = sizeof(exp_) - 1 }; \
+    r_ = ASN1_Pulse_RawWriteTest_##kind##_##name(x, s_, &pos_);               \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_NO_SPACE || out_[0] != 0xcc) {         \
+      printf("%s:%d: %s_%s: short buffer: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #kind, #name, jit_name(r_)); fails++; \
     }                                                                         \
   } while (0)
 
-/* The JIT writer alone, on an invalid input: exactly JIT_INVALID (it never
-   returns JIT_RETRY) */
-#define JIT_INV(name, x) do {                                                 \
+/* On an invalid input: exactly JIT_INVALID */
+#define INVALID1(kind, name, x) do {                                          \
     uint8_t out_[BUF];                                                        \
     size_t pos_ = BUF;                                                        \
     Pulse_Lib_Slice_slice__uint8 o_ = { .elt = out_, .len = BUF };            \
-    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_jit_##name(x, o_, &pos_); \
+    ASN1_Pulse_JitWriter_jit_result r_ =                                      \
+      ASN1_Pulse_RawWriteTest_##kind##_##name(x, o_, &pos_);                  \
     if (r_ != ASN1_PULSE_JITWRITER_JIT_INVALID) {                             \
-      printf("%s:%d: jit_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
-    }                                                                         \
-    pos_ = BUF;                                                               \
-    r_ = ASN1_Pulse_RawWriteTest_jit_raw_##name(x, o_, &pos_);                \
-    if (r_ != ASN1_PULSE_JITWRITER_JIT_INVALID) {                             \
-      printf("%s:%d: jit_raw_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+      printf("%s:%d: %s_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #kind, #name, jit_name(r_)); fails++; \
     }                                                                         \
   } while (0)
 
 #define OK(name, x, ...) do {                                                 \
-    OK1(raw, name, x, __VA_ARGS__); OK1(jit, name, x, __VA_ARGS__);     \
-    JIT_OK(name, x, __VA_ARGS__);  \
+    OK1(jit, name, x, __VA_ARGS__); OK1(jit_raw, name, x, __VA_ARGS__);       \
   } while (0)
 
 #define INVALID(name, x) do {                                                 \
-    INVALID1(raw, name, x); INVALID1(jit, name, x);                           \
-    JIT_INV(name, x);                                                         \
+    INVALID1(jit, name, x); INVALID1(jit_raw, name, x);                       \
   } while (0)
 
 #define SMALL(n) ((ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = (n) } })
@@ -277,21 +218,15 @@ int main(void) {
   INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(11)));  /* r > 10 */
   INVALID(defL, defL(NONE_INT, NONE_SL, NONE_SL, NONE_INT, SOME_INT(-1)));  /* r < 0 */
   INVALID(defL, defL(SOME_BIG(SL(nm1)), NONE_SL, NONE_SL, NONE_INT, NONE_INT)); /* non-minimal */
-  JIT_INV(defL, defL(SOME_BIG(SL(nm1)), NONE_SL, NONE_SL, NONE_INT, NONE_INT));
   INVALID(defL, defL(SOME_BIG(none), NONE_SL, NONE_SL, NONE_INT, NONE_INT));    /* empty INTEGER */
-  JIT_INV(defL, defL(SOME_BIG(none), NONE_SL, NONE_SL, NONE_INT, NONE_INT));
   INVALID(defL, defL(NONE_INT, NONE_SL, SOME_SL(SL(hat)), NONE_INT, NONE_INT)); /* not printable */
 
   /* tagS: restriction, implicitly tagged IA5String, 1-byte INTEGER */
   OK(tagS, tagS(SL(hi), 10, -128), V(0x30, 0x0a, 0x80, 0x02, 'h', 'i', 0x02, 0x01, 0x0a, 0x02, 0x01, 0x80));
   INVALID(tagS, tagS(SL(hi), 11, 0));     /* r > 10 */
-  JIT_INV(tagS, tagS(SL(hi), 11, 0));
   INVALID(tagS, tagS(SL(hi80), 0, 0));    /* not IA5 */
-  JIT_INV(tagS, tagS(SL(hi80), 0, 0));
   INVALID(tagS, tagS(SL(hi), 0, 200));    /* s out of 1-byte bound */
-  JIT_INV(tagS, tagS(SL(hi), 0, 200));
   INVALID(tagS, tagS(SL(hi), 0, -129));
-  JIT_INV(tagS, tagS(SL(hi), 0, -129));
 
   /* neSeqOfInt: SIZE (1..MAX), big INTEGERs */
   {
@@ -346,7 +281,6 @@ int main(void) {
      V(0x30, 0x0f, 0x13, 0x02, 'h', 'i', 0x05, 0x00, 0x03, 0x01, 0x00,
        0x02, 0x01, 0x00, 0x02, 0x01, 0x01));
   INVALID(mix, mix(SL(hat), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));     /* not printable */
-  JIT_INV(mix, mix(SL(hat), SL(null_), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));
   INVALID(mix, mix(SL(hi), SL(badint), BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));    /* bad ANY */
   INVALID(mix, mix(SL(hi), none, BITS(0, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));          /* empty ANY */
   INVALID(mix, mix(SL(hi), SL(null_), BITS(8, SL(aa)), SMALL(0), INL(SMALL(1)), NONE_SL, NONE_B));     /* unused > 7 */

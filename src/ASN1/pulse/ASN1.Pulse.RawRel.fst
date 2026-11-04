@@ -45,7 +45,6 @@ module W = LowParse.Pulse.R2L
 module RS = ASN1.Pulse.RelShare
 module INT = ASN1.Spec.Content.INTEGER
 module Conf = ASN1.Spec.Conformance
-module WLm = ASN1.Pulse.Writer.Lemmas
 module Ser = ASN1.Spec.Serializer
 module PS = ASN1.Pulse.ParseSequence
 module T = FStar.Tactics.V2

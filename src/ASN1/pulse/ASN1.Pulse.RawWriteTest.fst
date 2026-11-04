@@ -13,15 +13,13 @@ open ASN1.Syntax
 
 let half_perm : perm = 1.0R /. 2.0R
 
-(* Extraction roots: checked raw writers (ASN1.Pulse.RawWriter), which
-   write raw Pulse representations with no precondition on their contents,
-   then check the written bytes against the schema; and their just-in-time
-   variants (ASN1.Pulse.JitWriter), which check the bytes while writing
-   them: `jit_<name>` alone, which never returns JIT_RETRY, and
-   `check_write_jit_<name>`, which turns its result into a `cw_result`;
-   and `jit_raw_<name>` (ASN1.Pulse.RawJitWriter), the same JIT writer
-   seen as a writer of raw values, whose result is specified against
-   `ASN1.Spec.Raw.check_ser` and `ASN1.Spec.Serializer.asn1_enc` *)
+(* Extraction roots: the just-in-time writers of raw bytes
+   (ASN1.Pulse.JitWriter), which write raw Pulse representations with no
+   precondition on their contents, checking the bytes while writing them:
+   `jit_<name>`, which never returns JIT_RETRY; and `jit_raw_<name>`
+   (ASN1.Pulse.RawJitWriter), the same JIT writer seen as a writer of raw
+   values, whose result is specified against `ASN1.Spec.Raw.check_ser` and
+   `ASN1.Spec.Serializer.asn1_enc` *)
 
 (* SEQUENCE { a INTEGER DEFAULT 0, b OCTET STRING DEFAULT 'ABCD'H,
    s PrintableString DEFAULT "ab", t [0] INTEGER DEFAULT 5,
@@ -45,17 +43,7 @@ let defL_ok : squash (raw_ok defL) = _ by (FStar.Tactics.norm [delta; zeta; iota
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator];
-  zeta; iota; primops]]
-let check_write_raw_defL : checked_raw_writer_t defL 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k defL defL_ok 1.0R (raw_writer defL 1.0R) (raw_validator defL defL_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_defL : jwx (raw_rel defL) (kacc defL) 1.0R =
   fun x' #y out pos #v #p -> jit_writer defL defL_ok 1.0R x' #y out pos #v #p
@@ -65,17 +53,7 @@ let jit_defL : jwx (raw_rel defL) (kacc defL) 1.0R =
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_defL : checked_raw_writer_t defL 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k defL defL_ok 1.0R (jit_writer defL defL_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_defL : raw_jit_writer_t defL defL_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw defL defL_ok 1.0R (jit_writer defL defL_ok half_perm) x' #y out pos #v #p
@@ -96,17 +74,7 @@ let tagS_ok : squash (raw_ok tagS) = _ by (FStar.Tactics.norm [delta; zeta; iota
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator];
-  zeta; iota; primops]]
-let check_write_raw_tagS : checked_raw_writer_t tagS 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k tagS tagS_ok 1.0R (raw_writer tagS 1.0R) (raw_validator tagS tagS_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_tagS : jwx (raw_rel tagS) (kacc tagS) 1.0R =
   fun x' #y out pos #v #p -> jit_writer tagS tagS_ok 1.0R x' #y out pos #v #p
@@ -116,17 +84,7 @@ let jit_tagS : jwx (raw_rel tagS) (kacc tagS) 1.0R =
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_tagS : checked_raw_writer_t tagS 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k tagS tagS_ok 1.0R (jit_writer tagS tagS_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_tagS : raw_jit_writer_t tagS tagS_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw tagS tagS_ok 1.0R (jit_writer tagS tagS_ok half_perm) x' #y out pos #v #p
@@ -143,17 +101,7 @@ let neSeqOfInt_ok : squash (raw_ok neSeqOfInt) = _ by (FStar.Tactics.norm [delta
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator];
-  zeta; iota; primops]]
-let check_write_raw_neSeqOfInt : checked_raw_writer_t neSeqOfInt 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k neSeqOfInt neSeqOfInt_ok 1.0R (raw_writer neSeqOfInt 1.0R) (raw_validator neSeqOfInt neSeqOfInt_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_neSeqOfInt : jwx (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
   fun x' #y out pos #v #p -> jit_writer neSeqOfInt neSeqOfInt_ok 1.0R x' #y out pos #v #p
@@ -163,17 +111,7 @@ let jit_neSeqOfInt : jwx (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_neSeqOfInt : checked_raw_writer_t neSeqOfInt 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k neSeqOfInt neSeqOfInt_ok 1.0R (jit_writer neSeqOfInt neSeqOfInt_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_neSeqOfInt : raw_jit_writer_t neSeqOfInt neSeqOfInt_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw neSeqOfInt neSeqOfInt_ok 1.0R (jit_writer neSeqOfInt neSeqOfInt_ok half_perm) x' #y out pos #v #p
@@ -190,17 +128,7 @@ let setOfOctets_ok : squash (raw_ok setOfOctets) = _ by (FStar.Tactics.norm [del
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator];
-  zeta; iota; primops]]
-let check_write_raw_setOfOctets : checked_raw_writer_t setOfOctets 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k setOfOctets setOfOctets_ok 1.0R (raw_writer setOfOctets 1.0R) (raw_validator setOfOctets setOfOctets_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_setOfOctets : jwx (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
   fun x' #y out pos #v #p -> jit_writer setOfOctets setOfOctets_ok 1.0R x' #y out pos #v #p
@@ -210,17 +138,7 @@ let jit_setOfOctets : jwx (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_setOfOctets : checked_raw_writer_t setOfOctets 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k setOfOctets setOfOctets_ok 1.0R (jit_writer setOfOctets setOfOctets_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_setOfOctets : raw_jit_writer_t setOfOctets setOfOctets_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw setOfOctets setOfOctets_ok 1.0R (jit_writer setOfOctets setOfOctets_ok half_perm) x' #y out pos #v #p
@@ -249,17 +167,7 @@ let mix_ok : squash (raw_ok mix) = _ by (FStar.Tactics.norm [delta; zeta; iota; 
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator];
-  zeta; iota; primops]]
-let check_write_raw_mix : checked_raw_writer_t mix 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k mix mix_ok 1.0R (raw_writer mix 1.0R) (raw_validator mix mix_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_mix : jwx (raw_rel mix) (kacc mix) 1.0R =
   fun x' #y out pos #v #p -> jit_writer mix mix_ok 1.0R x' #y out pos #v #p
@@ -269,17 +177,7 @@ let jit_mix : jwx (raw_rel mix) (kacc mix) 1.0R =
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_mix : checked_raw_writer_t mix 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k mix mix_ok 1.0R (jit_writer mix mix_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_mix : raw_jit_writer_t mix mix_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw mix mix_ok 1.0R (jit_writer mix mix_ok half_perm) x' #y out pos #v #p
@@ -302,17 +200,7 @@ let setCAB_ok : squash (raw_ok setCAB) = _ by (FStar.Tactics.norm [delta; zeta; 
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator];
-  zeta; iota; primops]]
-let check_write_raw_setCAB : checked_raw_writer_t setCAB 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k setCAB setCAB_ok 1.0R (raw_writer setCAB 1.0R) (raw_validator setCAB setCAB_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_setCAB : jwx (raw_rel setCAB) (kacc setCAB) 1.0R =
   fun x' #y out pos #v #p -> jit_writer setCAB setCAB_ok 1.0R x' #y out pos #v #p
@@ -322,17 +210,7 @@ let jit_setCAB : jwx (raw_rel setCAB) (kacc setCAB) 1.0R =
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_setCAB : checked_raw_writer_t setCAB 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k setCAB setCAB_ok 1.0R (jit_writer setCAB setCAB_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_setCAB : raw_jit_writer_t setCAB setCAB_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw setCAB setCAB_ok 1.0R (jit_writer setCAB setCAB_ok half_perm) x' #y out pos #v #p
@@ -369,18 +247,7 @@ let adbP_ok : squash (raw_ok adbP) = _ by (FStar.Tactics.norm [delta; zeta; iota
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_raw_adbP : checked_raw_writer_t adbP 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k adbP adbP_ok 1.0R (raw_writer adbP 1.0R) (raw_validator adbP adbP_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_adbP : jwx (raw_rel adbP) (kacc adbP) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbP adbP_ok 1.0R x' #y out pos #v #p
@@ -391,18 +258,7 @@ let jit_adbP : jwx (raw_rel adbP) (kacc adbP) 1.0R =
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_adbP : checked_raw_writer_t adbP 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k adbP adbP_ok 1.0R (jit_writer adbP adbP_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_adbP : raw_jit_writer_t adbP adbP_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw adbP adbP_ok 1.0R (jit_writer adbP adbP_ok half_perm) x' #y out pos #v #p
@@ -426,18 +282,7 @@ let adbF_ok : squash (raw_ok adbF) = _ by (FStar.Tactics.norm [delta; zeta; iota
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_raw_adbF : checked_raw_writer_t adbF 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k adbF adbF_ok 1.0R (raw_writer adbF 1.0R) (raw_validator adbF adbF_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_adbF : jwx (raw_rel adbF) (kacc adbF) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbF adbF_ok 1.0R x' #y out pos #v #p
@@ -448,18 +293,7 @@ let jit_adbF : jwx (raw_rel adbF) (kacc adbF) 1.0R =
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_adbF : checked_raw_writer_t adbF 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k adbF adbF_ok 1.0R (jit_writer adbF adbF_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_adbF : raw_jit_writer_t adbF adbF_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw adbF adbF_ok 1.0R (jit_writer adbF adbF_ok half_perm) x' #y out pos #v #p
@@ -481,18 +315,7 @@ let adbT_ok : squash (raw_ok adbT) = _ by (FStar.Tactics.norm [delta; zeta; iota
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_raw_adbT : checked_raw_writer_t adbT 1.0R =
-  fun x' #y out pos #v #p -> check_write_raw_k adbT adbT_ok 1.0R (raw_writer adbT 1.0R) (raw_validator adbT adbT_ok) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_adbT : jwx (raw_rel adbT) (kacc adbT) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbT adbT_ok 1.0R x' #y out pos #v #p
@@ -503,18 +326,7 @@ let jit_adbT : jwx (raw_rel adbT) (kacc adbT) 1.0R =
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
-  zeta; iota; primops]]
-let check_write_jit_adbT : checked_raw_writer_t adbT 1.0R =
-  fun x' #y out pos #v #p -> check_write_jit_k adbT adbT_ok 1.0R (jit_writer adbT adbT_ok 1.0R) x' #y out pos #v #p
-
-[@@normalize_for_extraction [
-  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
-  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
-    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
-    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
-    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%raw_writer; `%raw_validator; `%jit_writer];
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
 let jit_raw_adbT : raw_jit_writer_t adbT adbT_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw adbT adbT_ok 1.0R (jit_writer adbT adbT_ok half_perm) x' #y out pos #v #p

@@ -1110,6 +1110,9 @@ let iacc_cons_inv' (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parse
   Sq.seq_cons_none (hd :: tl) x;
   Sq.seq_cons_none [hd] x1;
   let c1 = Seq.length ie in
+  assert (x1 == ie `Seq.append` r1);
+  assert (x == ie `Seq.append` rr);
+  Seq.lemma_split (ie `Seq.append` rr) c1;
   assert (Seq.equal (Seq.slice x c1 (Seq.length x)) rr);
   assert (Seq.equal (Seq.slice x1 c1 (Seq.length x1)) r1);
   Sq.seq_cons_cons_some hd tl id rr;

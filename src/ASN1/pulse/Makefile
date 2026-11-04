@@ -151,23 +151,8 @@ $(C_OUTPUT_DIR)/parse_test.exe: $(C_OUTPUT_DIR)/ASN1.Pulse.ParseTest.c test/pars
 test-parse: $(C_OUTPUT_DIR)/parse_test.exe
 	$<
 
-# Right-to-left writers (ASN1.Pulse.Writer): parse/write round trips
-$(C_OUTPUT_DIR)/write_test.exe: $(C_OUTPUT_DIR)/ASN1.Pulse.ParseTest.c test/write_test.c
-	$(CC) $(TEST_CFLAGS) -I $(C_OUTPUT_DIR) -o $@ $< test/write_test.c
-
-test-write: $(C_OUTPUT_DIR)/write_test.exe
-	$<
-
-# Checked writers (ASN1.Pulse.CheckedWriter): write with the relaxed schema,
-# then validate against the original one
-$(C_OUTPUT_DIR)/checked_write_test.exe: $(C_OUTPUT_DIR)/ASN1.Pulse.CheckedWriteTest.c test/checked_write_test.c
-	$(CC) $(TEST_CFLAGS) -I $(C_OUTPUT_DIR) -o $@ $< test/checked_write_test.c
-
-test-checked-write: $(C_OUTPUT_DIR)/checked_write_test.exe
-	$<
-
-# Checked raw writers (ASN1.Pulse.RawWriter): write raw values with no
-# precondition, then validate against the schema
+# JIT writers (ASN1.Pulse.JitWriter, ASN1.Pulse.RawJitWriter): write raw
+# values with no precondition, checking them against the schema
 $(C_OUTPUT_DIR)/raw_write_test.exe: $(C_OUTPUT_DIR)/ASN1.Pulse.RawWriteTest.c test/raw_write_test.c
 	$(CC) $(TEST_CFLAGS) -I $(C_OUTPUT_DIR) -o $@ $< test/raw_write_test.c
 
@@ -187,5 +172,5 @@ stack-check: $(C_OUTPUT_DIR)/ASN1.Pulse.X509.c test/stack.py
 	python3 test/stack.py --budget $(STACK_BUDGET) $(C_OUTPUT_DIR)/stack.ci \
 	  ASN1_Pulse_X509_validate_certificate ASN1_Pulse_X509_validate_crl
 
-.PRECIOUS: $(C_OUTPUT_DIR)/%.c $(C_OUTPUT_DIR)/%.h $(C_OUTPUT_DIR)/test_%.exe $(C_OUTPUT_DIR)/corpus_%.exe $(C_OUTPUT_DIR)/parse_test.exe $(C_OUTPUT_DIR)/write_test.exe $(C_OUTPUT_DIR)/checked_write_test.exe $(C_OUTPUT_DIR)/raw_write_test.exe
-.PHONY: test test-oracle test-parse test-write test-checked-write test-raw-write test-corpus test-deep-any stack-check FORCE
+.PRECIOUS: $(C_OUTPUT_DIR)/%.c $(C_OUTPUT_DIR)/%.h $(C_OUTPUT_DIR)/test_%.exe $(C_OUTPUT_DIR)/corpus_%.exe $(C_OUTPUT_DIR)/parse_test.exe $(C_OUTPUT_DIR)/raw_write_test.exe
+.PHONY: test test-oracle test-parse test-raw-write test-corpus test-deep-any stack-check FORCE
