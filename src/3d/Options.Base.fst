@@ -469,8 +469,7 @@ let parse_cmd_line () : ML (list string) =
       List.Tot.filter fst
         [(!goto_for_early_return, "goto_for_early_return");
          (!blank_lines, "blank_lines");
-         (!line_comments, "line_comments");
-         (Some? !init_locals, "init_locals")]
+         (!line_comments, "line_comments")]
     in
     (match unsupported with
      | (_, name)::_ ->
