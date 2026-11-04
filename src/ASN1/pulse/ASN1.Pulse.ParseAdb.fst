@@ -347,7 +347,7 @@ let adb_rel_cons_inr_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: a
     (if key = key_of_lit key_k x then pure False else asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
 = assert (asn1_adb_rel key_k ((x, y) :: hd2 :: tl2) pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) b) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ==
     (if key = key_of_lit key_k x then pure False else asn1_adb_rel key_k (hd2 :: tl2) pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
-  by (T.norm [delta_only [`%asn1_adb_rel; `%AL.ady_tail_val]; zeta; iota]; T.trefl ())
+  by (T.norm [delta_only [`%asn1_adb_rel; `%AL.ady_tail_val; `%sxrel; `%legacy_sxdesc]; zeta; iota]; T.trefl ())
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
 let adb_rel_cons_inr_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
@@ -483,7 +483,7 @@ let afb_rel_cons_inl_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: a
 let afb_rel_cons_inr_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (pm: perm) (b: asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ((x, y) :: hd2 :: tl2)) (asn1_sequence_t_core (dsnd fb)))
 : Lemma (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) b) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = key_of_lit key_k x then pure False else afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
 = assert (afb_rel key_k ((x, y) :: hd2 :: tl2) fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (fbt key_k fb))) b) ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) == (if key = key_of_lit key_k x then pure False else afb_rel key_k (hd2 :: tl2) fb pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
-  by (T.norm [delta_only [`%afb_rel; `%asn1_adb_fb_rel; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val]; zeta; iota]; T.trefl ())
+  by (T.norm [delta_only [`%afb_rel; `%asn1_adb_fb_rel; `%fxrel; `%legacy_fxdesc; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val]; zeta; iota]; T.trefl ())
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
 let afb_rel_single_inl_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
@@ -736,7 +736,7 @@ let adb_rel_none_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_
   (pm: perm) (x: asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls None)) (y: asn1_sequence_any_t_core prefix (AL.ady key_k ls))
 : Lemma (asn1_content_rel (adb_k_none ipd prefix kid key_k ls pf pf') pm x y == asn1_items_any_rel prefix (asn1_adb_rel key_k ls) pm x y)
 = assert (asn1_content_rel (adb_k_none ipd prefix kid key_k ls pf pf') pm x y == asn1_items_any_rel prefix (asn1_adb_rel key_k ls) pm x y)
-    by (T.norm [delta_only [`%adb_k_none; `%asn1_content_rel]; zeta; iota]; T.trefl ())
+    by (T.norm [delta_only [`%adb_k_none; `%asn1_content_rel; `%crel; `%legacy_cdesc; `%asn1_items_any_rel; `%asn1_adb_rel]; zeta; iota]; T.trefl ())
 
 let adb_rel_some_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
   (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
@@ -745,7 +745,7 @@ let adb_rel_some_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_
   (pm: perm) (x: asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (fbt key_k fb)))) (y: asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb))
 : Lemma (asn1_content_rel (adb_k_some ipd prefix kid key_k ls fb pf pf') pm x y == asn1_items_any_rel prefix (afb_rel key_k ls fb) pm x y)
 = assert (asn1_content_rel (adb_k_some ipd prefix kid key_k ls fb pf pf') pm x y == asn1_items_any_rel prefix (afb_rel key_k ls fb) pm x y)
-    by (T.norm [delta_only [`%adb_k_some; `%asn1_content_rel; `%afb_rel; `%fbt; `%fbs; `%fbr]; zeta; iota]; T.trefl ())
+    by (T.norm [delta_only [`%adb_k_some; `%asn1_content_rel; `%afb_rel; `%fbt; `%fbs; `%fbr; `%crel; `%legacy_cdesc; `%asn1_items_any_rel; `%asn1_adb_fb_rel; `%asn1_items_rel]; zeta; iota]; T.trefl ())
 
 inline_for_extraction
 let adb_none_aparser (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
