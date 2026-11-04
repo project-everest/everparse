@@ -222,6 +222,9 @@ let produce_unit
      "--codegen"; "C"; "--custard_unit"; modul;
      "--custard_monomorphize_types"; "true"] @
     (if Options.get_hoist_locals () then ["--custard_hoist_locals"] else []) @
+    (match Options.get_init_locals () with
+     | Some mode -> ["--custard_init_locals"; mode]
+     | None -> []) @
     roots @ links @
     fstar_args ~output_dir:staging input_stream_binding out_dir @
     [module_file ".fst"; "-o"; staged (modul ^ ".c")]

@@ -22,6 +22,7 @@ CUSTARD_ENTRIES += Options.config_module_name
 CUSTARD_ENTRIES += Options.Base.module_name
 CUSTARD_ENTRIES += Options.get_fstar_exe
 CUSTARD_ENTRIES += Options.get_hoist_locals
+CUSTARD_ENTRIES += Options.get_init_locals
 CUSTARD_ENTRIES += Deps.collect_and_sort_dependencies
 CUSTARD_ENTRIES += Options.z3_executable
 CUSTARD_ENTRIES += Options.z3_options
