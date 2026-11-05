@@ -18,7 +18,7 @@ let int64_ = ASN1.Syntax.asn1_bounded_integer 8
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_int64 : aparser #(asn1_impl_t int64_) #(asn1_t int64_) (asn1_rel int64_) #asn1_strong_parser_kind (asn1_as_parser int64_) =
@@ -27,7 +27,7 @@ let parse_int64 : aparser #(asn1_impl_t int64_) #(asn1_t int64_) (asn1_rel int64
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_int_ : aparser #(asn1_impl_t D.int_) #(asn1_t D.int_) (asn1_rel D.int_) #asn1_strong_parser_kind (asn1_as_parser D.int_) =
@@ -36,7 +36,7 @@ let parse_int_ : aparser #(asn1_impl_t D.int_) #(asn1_t D.int_) (asn1_rel D.int_
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_enum_ : aparser #(asn1_impl_t D.enum_) #(asn1_t D.enum_) (asn1_rel D.enum_) #asn1_strong_parser_kind (asn1_as_parser D.enum_) =
@@ -45,7 +45,7 @@ let parse_enum_ : aparser #(asn1_impl_t D.enum_) #(asn1_t D.enum_) (asn1_rel D.e
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_bits : aparser #(asn1_impl_t D.bits) #(asn1_t D.bits) (asn1_rel D.bits) #asn1_strong_parser_kind (asn1_as_parser D.bits) =
@@ -54,7 +54,7 @@ let parse_bits : aparser #(asn1_impl_t D.bits) #(asn1_t D.bits) (asn1_rel D.bits
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_bool_ : aparser #(asn1_impl_t D.bool_) #(asn1_t D.bool_) (asn1_rel D.bool_) #asn1_strong_parser_kind (asn1_as_parser D.bool_) =
@@ -63,7 +63,7 @@ let parse_bool_ : aparser #(asn1_impl_t D.bool_) #(asn1_t D.bool_) (asn1_rel D.b
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_octets : aparser #(asn1_impl_t D.octets) #(asn1_t D.octets) (asn1_rel D.octets) #asn1_strong_parser_kind (asn1_as_parser D.octets) =
@@ -74,7 +74,7 @@ module DC = ASN1.DiffTest.Constructed
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_choice_ : aparser #(asn1_impl_t DC.choice) #(asn1_t DC.choice) (asn1_rel DC.choice) #asn1_strong_parser_kind (asn1_as_parser DC.choice) =
@@ -90,7 +90,7 @@ let seqAB = ASN1.Syntax.asn1_sequence [ "a" *^ (PLAIN ^: ASN1.Syntax.asn1_intege
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_seqA : aparser #(asn1_impl_t seqA) #(asn1_t seqA) (asn1_rel seqA) #asn1_strong_parser_kind (asn1_as_parser seqA) =
@@ -99,7 +99,7 @@ let parse_seqA : aparser #(asn1_impl_t seqA) #(asn1_t seqA) (asn1_rel seqA) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_seqAB : aparser #(asn1_impl_t seqAB) #(asn1_t seqAB) (asn1_rel seqAB) #asn1_strong_parser_kind (asn1_as_parser seqAB) =
@@ -108,7 +108,7 @@ let parse_seqAB : aparser #(asn1_impl_t seqAB) #(asn1_t seqAB) (asn1_rel seqAB) 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
 let parse_seq : aparser #(asn1_impl_t DC.seq) #(asn1_t DC.seq) (asn1_rel DC.seq) #asn1_strong_parser_kind (asn1_as_parser DC.seq) =
@@ -123,7 +123,7 @@ let setOfOctets = ASN1.Syntax.asn1_set_of ASN1.Syntax.asn1_octetstring
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
 let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_rel seqOfInt) #asn1_strong_parser_kind (asn1_as_parser seqOfInt) =
@@ -132,7 +132,7 @@ let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_re
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
 let parse_setOfOctets : aparser #(asn1_impl_t setOfOctets) #(asn1_t setOfOctets) (asn1_rel setOfOctets) #asn1_strong_parser_kind (asn1_as_parser setOfOctets) =
@@ -150,7 +150,7 @@ let setBAC = ASN1.Syntax.asn1_set [
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
 let parse_setBAC : aparser #(asn1_impl_t setBAC) #(asn1_t setBAC) (asn1_rel setBAC) #asn1_strong_parser_kind (asn1_as_parser setBAC) =
@@ -192,7 +192,7 @@ let adbF = ASN1.Syntax.asn1_any_oid_with_fallback
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.DiffTest.Any"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -202,7 +202,7 @@ let parse_algId : aparser #(asn1_impl_t ASN1.DiffTest.Any.algId) #(asn1_t ASN1.D
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -212,7 +212,7 @@ let parse_adbP : aparser #(asn1_impl_t adbP) #(asn1_t adbP) (asn1_rel adbP) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -285,7 +285,7 @@ let defL = ASN1.Syntax.asn1_sequence [
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -295,7 +295,7 @@ let parse_adbO : aparser #(asn1_impl_t adbO) #(asn1_t adbO) (asn1_rel adbO) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -305,7 +305,7 @@ let parse_adbB : aparser #(asn1_impl_t adbB) #(asn1_t adbB) (asn1_rel adbB) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -315,7 +315,7 @@ let parse_adbS : aparser #(asn1_impl_t adbS) #(asn1_t adbS) (asn1_rel adbS) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -325,7 +325,7 @@ let parse_adbI : aparser #(asn1_impl_t adbI) #(asn1_t adbI) (asn1_rel adbI) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -335,7 +335,7 @@ let parse_adbT : aparser #(asn1_impl_t adbT) #(asn1_t adbT) (asn1_rel adbT) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_adbO : LowParse.Pulse.Base.validator #(asn1_t adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
   validate_k adbO (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
@@ -343,7 +343,7 @@ let validate_adbO : LowParse.Pulse.Base.validator #(asn1_t adbO) #asn1_strong_pa
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_adbB : LowParse.Pulse.Base.validator #(asn1_t adbB) #asn1_strong_parser_kind (asn1_as_parser adbB) =
   validate_k adbB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
@@ -351,7 +351,7 @@ let validate_adbB : LowParse.Pulse.Base.validator #(asn1_t adbB) #asn1_strong_pa
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_adbS : LowParse.Pulse.Base.validator #(asn1_t adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
   validate_k adbS (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
@@ -359,7 +359,7 @@ let validate_adbS : LowParse.Pulse.Base.validator #(asn1_t adbS) #asn1_strong_pa
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_adbI : LowParse.Pulse.Base.validator #(asn1_t adbI) #asn1_strong_parser_kind (asn1_as_parser adbI) =
   validate_k adbI (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
@@ -367,7 +367,7 @@ let validate_adbI : LowParse.Pulse.Base.validator #(asn1_t adbI) #asn1_strong_pa
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_adbT : LowParse.Pulse.Base.validator #(asn1_t adbT) #asn1_strong_parser_kind (asn1_as_parser adbT) =
   validate_k adbT (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
@@ -375,7 +375,7 @@ let validate_adbT : LowParse.Pulse.Base.validator #(asn1_t adbT) #asn1_strong_pa
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
@@ -385,7 +385,7 @@ let parse_defL : aparser #(asn1_impl_t defL) #(asn1_t defL) (asn1_rel defL) #asn
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_defL : LowParse.Pulse.Base.validator #(asn1_t defL) #asn1_strong_parser_kind (asn1_as_parser defL) =
   validate_k defL (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
@@ -406,7 +406,7 @@ let setCAB = ASN1.Syntax.asn1_set [
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
 let parse_setCAB : aparser #(asn1_impl_t setCAB) #(asn1_t setCAB) (asn1_rel setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
@@ -415,7 +415,7 @@ let parse_setCAB : aparser #(asn1_impl_t setCAB) #(asn1_t setCAB) (asn1_rel setC
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
   delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
-  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
   zeta; iota; primops]]
 let validate_setCAB : LowParse.Pulse.Base.validator #(asn1_t setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
   validate_k setCAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))

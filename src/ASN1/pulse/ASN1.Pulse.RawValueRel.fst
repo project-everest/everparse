@@ -1145,8 +1145,8 @@ let raw_afb_cons_inr_eq (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: a
 
 let afb_single_inr_eq' (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk) (pm: perm)
   (bb: PA.fbt key_k fb) (v: AL.ady_fb key_k [(kx, y)] fb)
-: Lemma (PA.afb_rel key_k [(kx, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(PA.fbt key_k fb) bb) v ==
-    (if dfst v = key_of_lit key_k kx then pure False else PA.afb_rel key_k [] fb pm bb (AL.ady_fb_tail_val kx y [] fb v ())))
+: Lemma (RS.lafb_rel key_k [(kx, y)] fb pm (Inr #(asn1_items_impl_t (Mkdtuple2?._2 y)) #(PA.fbt key_k fb) bb) v ==
+    (if dfst v = key_of_lit key_k kx then pure False else RS.lafb_rel key_k [] fb pm bb (AL.ady_fb_tail_val kx y [] fb v ())))
 = RS.afb_single_inr_eq kx y fb pm bb v;
   if dfst v = key_of_lit key_k kx then ()
   else RS.afb_nil_eq fb pm bb (AL.ady_fb_tail_val kx y [] fb v ())
@@ -1183,7 +1183,7 @@ let afb_forget_tail (k0: asn1_content_k) (#key_k: asn1_terminal_k) (kx: asn1_key
 let conv_afb_t (b: bool) (k0: asn1_content_k) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (sq: squash (ls << k0 /\ dsnd fb << k0))
 : Type
-= conv_t b #(asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k ls fb) #(rady_fb key_k ls fb) (PA.afb_rel key_k ls fb) (raw_afb_rel key_k ls fb) (afb_forget k0 key_k ls fb sq)
+= conv_t b #(asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))) #(AL.ady_fb key_k ls fb) #(rady_fb key_k ls fb) (RS.lafb_rel key_k ls fb) (raw_afb_rel key_k ls fb) (afb_forget k0 key_k ls fb sq)
 
 ghost
 fn conv_afb_nil (b: bool) (k0: asn1_content_k) (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (sq: squash ([] << k0 /\ dsnd fb << k0))
@@ -1199,7 +1199,7 @@ fn conv_afb_nil (b: bool) (k0: asn1_content_k) (key_k: asn1_terminal_k) (fb: asn
   afb_forget_nil k0 key_k fb sq v;
   cv_star b (asn1_terminal_rel key_k pm (fst z') (dfst v)) (asn1_items_rel (dsnd fb) pm (snd z') (AL.ady_fb_nil_val fb v))
     (asn1_raw_terminal_rel key_k pm (fst z') (forget_terminal key_k (dfst v))) (asn1_raw_items_rel (dsnd fb) pm (snd z') (forget_items (dsnd fb) (AL.ady_fb_nil_val fb v)));
-  rewrite (cv b (PA.afb_rel key_k [] fb pm z v) (raw_afb_rel key_k [] fb pm z (afb_forget k0 key_k [] fb sq v)))
+  rewrite (cv b (RS.lafb_rel key_k [] fb pm z v) (raw_afb_rel key_k [] fb pm z (afb_forget k0 key_k [] fb sq v)))
     as (cv b (asn1_terminal_rel key_k pm (fst z') (dfst v)) (asn1_raw_terminal_rel key_k pm (fst z') (forget_terminal key_k (dfst v))) **
         cv b (asn1_items_rel (dsnd fb) pm (snd z') (AL.ady_fb_nil_val fb v)) (asn1_raw_items_rel (dsnd fb) pm (snd z') (forget_items (dsnd fb) (AL.ady_fb_nil_val fb v))));
   conv_terminal b key_k pm (fst z') (dfst v);
@@ -1208,7 +1208,7 @@ fn conv_afb_nil (b: bool) (k0: asn1_content_k) (key_k: asn1_terminal_k) (fb: asn
     (asn1_terminal_rel key_k pm (fst z') (dfst v)) (asn1_items_rel (dsnd fb) pm (snd z') (AL.ady_fb_nil_val fb v));
   rewrite (cv b (asn1_raw_terminal_rel key_k pm (fst z') (forget_terminal key_k (dfst v))) (asn1_terminal_rel key_k pm (fst z') (dfst v)) **
         cv b (asn1_raw_items_rel (dsnd fb) pm (snd z') (forget_items (dsnd fb) (AL.ady_fb_nil_val fb v))) (asn1_items_rel (dsnd fb) pm (snd z') (AL.ady_fb_nil_val fb v)))
-    as (cv b (raw_afb_rel key_k [] fb pm z (afb_forget k0 key_k [] fb sq v)) (PA.afb_rel key_k [] fb pm z v))
+    as (cv b (raw_afb_rel key_k [] fb pm z (afb_forget k0 key_k [] fb sq v)) (RS.lafb_rel key_k [] fb pm z v))
 }
 
 ghost
@@ -1226,14 +1226,14 @@ fn conv_afb_single (b: bool) (k0: asn1_content_k) (#key_k: asn1_terminal_k) (kx:
       raw_afb_single_inl_eq kx y fb pm a (afb_forget k0 key_k [(kx, y)] fb sq v);
       if (dfst v = key_of_lit key_k kx) {
         afb_forget_head k0 kx y [] fb sq v;
-        rewrite (cv b (PA.afb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)))
+        rewrite (cv b (RS.lafb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)))
           as (cv b (asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val kx y [] fb v ())) (asn1_raw_items_rel (dsnd y) pm a (forget_items (dsnd y) (AL.ady_fb_head_val kx y [] fb v ()))));
         ci pm a (AL.ady_fb_head_val kx y [] fb v ());
         rewrite (cv b (asn1_raw_items_rel (dsnd y) pm a (forget_items (dsnd y) (AL.ady_fb_head_val kx y [] fb v ()))) (asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val kx y [] fb v ())))
-          as (cv b (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)) (PA.afb_rel key_k [(kx, y)] fb pm x v))
+          as (cv b (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)) (RS.lafb_rel key_k [(kx, y)] fb pm x v))
       } else {
         forget_key_ne key_k (dfst v) kx;
-        rewrite (cv b (PA.afb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v))) as (pure False);
+        rewrite (cv b (RS.lafb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v))) as (pure False);
         unreachable ()
       }
     }
@@ -1241,16 +1241,16 @@ fn conv_afb_single (b: bool) (k0: asn1_content_k) (#key_k: asn1_terminal_k) (kx:
       afb_single_inr_eq' kx y fb pm bb v;
       raw_afb_single_inr_eq kx y fb pm bb (afb_forget k0 key_k [(kx, y)] fb sq v);
       if (dfst v = key_of_lit key_k kx) {
-        rewrite (cv b (PA.afb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v))) as (pure False);
+        rewrite (cv b (RS.lafb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v))) as (pure False);
         unreachable ()
       } else {
         forget_key_ne key_k (dfst v) kx;
         afb_forget_tail k0 kx y [] fb sq v;
-        rewrite (cv b (PA.afb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)))
-          as (cv b (PA.afb_rel key_k [] fb pm bb (AL.ady_fb_tail_val kx y [] fb v ())) (raw_afb_rel key_k [] fb pm bb (afb_forget k0 key_k [] fb () (AL.ady_fb_tail_val kx y [] fb v ()))));
+        rewrite (cv b (RS.lafb_rel key_k [(kx, y)] fb pm x v) (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)))
+          as (cv b (RS.lafb_rel key_k [] fb pm bb (AL.ady_fb_tail_val kx y [] fb v ())) (raw_afb_rel key_k [] fb pm bb (afb_forget k0 key_k [] fb () (AL.ady_fb_tail_val kx y [] fb v ()))));
         cn pm bb (AL.ady_fb_tail_val kx y [] fb v ());
-        rewrite (cv b (raw_afb_rel key_k [] fb pm bb (afb_forget k0 key_k [] fb () (AL.ady_fb_tail_val kx y [] fb v ()))) (PA.afb_rel key_k [] fb pm bb (AL.ady_fb_tail_val kx y [] fb v ())))
-          as (cv b (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)) (PA.afb_rel key_k [(kx, y)] fb pm x v))
+        rewrite (cv b (raw_afb_rel key_k [] fb pm bb (afb_forget k0 key_k [] fb () (AL.ady_fb_tail_val kx y [] fb v ()))) (RS.lafb_rel key_k [] fb pm bb (AL.ady_fb_tail_val kx y [] fb v ())))
+          as (cv b (raw_afb_rel key_k [(kx, y)] fb pm x (afb_forget k0 key_k [(kx, y)] fb sq v)) (RS.lafb_rel key_k [(kx, y)] fb pm x v))
       }
     }
   }
@@ -1271,14 +1271,14 @@ fn conv_afb_cons (b: bool) (k0: asn1_content_k) (#key_k: asn1_terminal_k) (kx: a
       raw_afb_cons_inl_eq kx y hd2 tl2 fb pm a (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v);
       if (dfst v = key_of_lit key_k kx) {
         afb_forget_head k0 kx y (hd2 :: tl2) fb sq v;
-        rewrite (cv b (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)))
+        rewrite (cv b (RS.lafb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)))
           as (cv b (asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ())) (asn1_raw_items_rel (dsnd y) pm a (forget_items (dsnd y) (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()))));
         ci pm a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ());
         rewrite (cv b (asn1_raw_items_rel (dsnd y) pm a (forget_items (dsnd y) (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ()))) (asn1_items_rel (dsnd y) pm a (AL.ady_fb_head_val kx y (hd2 :: tl2) fb v ())))
-          as (cv b (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)) (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v))
+          as (cv b (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)) (RS.lafb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v))
       } else {
         forget_key_ne key_k (dfst v) kx;
-        rewrite (cv b (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v))) as (pure False);
+        rewrite (cv b (RS.lafb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v))) as (pure False);
         unreachable ()
       }
     }
@@ -1286,16 +1286,16 @@ fn conv_afb_cons (b: bool) (k0: asn1_content_k) (#key_k: asn1_terminal_k) (kx: a
       RS.afb_cons_inr_eq kx y hd2 tl2 fb pm bb v;
       raw_afb_cons_inr_eq kx y hd2 tl2 fb pm bb (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v);
       if (dfst v = key_of_lit key_k kx) {
-        rewrite (cv b (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v))) as (pure False);
+        rewrite (cv b (RS.lafb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v))) as (pure False);
         unreachable ()
       } else {
         forget_key_ne key_k (dfst v) kx;
         afb_forget_tail k0 kx y (hd2 :: tl2) fb sq v;
-        rewrite (cv b (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)))
-          as (cv b (PA.afb_rel key_k (hd2 :: tl2) fb pm bb (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ())) (raw_afb_rel key_k (hd2 :: tl2) fb pm bb (afb_forget k0 key_k (hd2 :: tl2) fb () (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()))));
+        rewrite (cv b (RS.lafb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v) (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)))
+          as (cv b (RS.lafb_rel key_k (hd2 :: tl2) fb pm bb (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ())) (raw_afb_rel key_k (hd2 :: tl2) fb pm bb (afb_forget k0 key_k (hd2 :: tl2) fb () (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()))));
         ct pm bb (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ());
-        rewrite (cv b (raw_afb_rel key_k (hd2 :: tl2) fb pm bb (afb_forget k0 key_k (hd2 :: tl2) fb () (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()))) (PA.afb_rel key_k (hd2 :: tl2) fb pm bb (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ())))
-          as (cv b (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)) (PA.afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v))
+        rewrite (cv b (raw_afb_rel key_k (hd2 :: tl2) fb pm bb (afb_forget k0 key_k (hd2 :: tl2) fb () (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ()))) (RS.lafb_rel key_k (hd2 :: tl2) fb pm bb (AL.ady_fb_tail_val kx y (hd2 :: tl2) fb v ())))
+          as (cv b (raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x (afb_forget k0 key_k ((kx, y) :: hd2 :: tl2) fb sq v)) (RS.lafb_rel key_k ((kx, y) :: hd2 :: tl2) fb pm x v))
       }
     }
   }
@@ -1424,11 +1424,11 @@ let rec conv_content (b: bool) (k: asn1_content_k)
       raw_adb_some_equiv ipd prefix kid key_k ls fb pf pf';
       forget_content_adb_some ipd prefix kid key_k ls fb pf pf' sq;
       conv_ext b
-        (asn1_items_any_rel prefix (PA.afb_rel key_k ls fb)) (asn1_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf'))
+        (asn1_items_any_rel prefix (RS.lafb_rel key_k ls fb)) (asn1_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf'))
         (asn1_raw_items_any_rel prefix (raw_afb_rel key_k ls fb)) (asn1_raw_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf'))
         (items_any_forget prefix #(AL.ady_fb key_k ls fb) #(rady_fb key_k ls fb) (afb_forget (PA.adb_k_some ipd prefix kid key_k ls fb pf pf') key_k ls fb sq))
         (forget_content (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) ()
-        (conv_items_any b prefix (PA.afb_rel key_k ls fb) (raw_afb_rel key_k ls fb) (afb_forget (PA.adb_k_some ipd prefix kid key_k ls fb pf pf') key_k ls fb sq)
+        (conv_items_any b prefix (RS.lafb_rel key_k ls fb) (raw_afb_rel key_k ls fb) (afb_forget (PA.adb_k_some ipd prefix kid key_k ls fb pf pf') key_k ls fb sq)
           (conv_afb b (PA.adb_k_some ipd prefix kid key_k ls fb pf pf') key_k ls fb sq (conv_items b (dsnd fb))))
     end
 

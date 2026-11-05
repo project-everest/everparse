@@ -27,6 +27,8 @@ module Trade = Pulse.Lib.Trade.Util
 module SB = LowParse.Spec.Base
 module ILC = ASN1.Pulse.ILC
 module AL = ASN1.Pulse.ParseAdb.Lemmas
+module SC = ASN1.Pulse.SetComp
+module In = ASN1.Pulse.Interpreter
 
 let ares (#t: Type0) (#u: Type0) (r: prel t u) (#k: SB.parser_kind) (p: SB.parser k u)
   (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased u) : Type
@@ -34,26 +36,42 @@ let ares (#t: Type0) (#u: Type0) (r: prel t u) (#k: SB.parser_kind) (p: SB.parse
     (S.pts_to input #pm w ** pure (parsed p w v))
     (fun res -> r pm res v ** Trade.trade (r pm res v) (S.pts_to input #pm w))
 
-let sares (#i: _) (ls: asn1_gen_items_l i) (#sfxi: Type0) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) (sfx: parser_twin asn1_weak_parser_kind sfxs)
+let sares (#i: _) (#ls: asn1_gen_items_l i) (#sfxi: Type0) (#t: Type0) (dia: iadesc ls sfxi t) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) (sfx: parser_twin asn1_weak_parser_kind sfxs)
   (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased (asn1_sequence_any_t_core ls sfxs)) : Type
-= stt (asn1_items_any_impl_t ls sfxi)
+= stt t
     (S.pts_to input #pm w ** pure (seqa_parsed_core ls sfx w v /\ AL.sfx_shaped sfx))
-    (fun res -> asn1_items_any_rel ls sfxr pm res v ** Trade.trade (asn1_items_any_rel ls sfxr pm res v) (S.pts_to input #pm w))
+    (fun res -> iarel dia sfxr pm res v ** Trade.trade (iarel dia sfxr pm res v) (S.pts_to input #pm w))
 
-let ndres (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+let ndres (key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (dsx: sxdesc key_k ls t)
   (kc pin: S.slice U8.t) (pm: perm) (wk wp: Ghost.erased SB.bytes) (v: Ghost.erased (AL.ady key_k ls)) : Type
-= stt (asn1_adb_suffix_impl_t key_k ls None)
+= stt t
     (S.pts_to kc #pm wk ** S.pts_to pin #pm wp ** pure (parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk (dfst (Ghost.reveal v)) /\ AL.pl_parsed key_k ls wp v))
-    (fun res -> asn1_adb_rel key_k ls pm res v ** Trade.trade (asn1_adb_rel key_k ls pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
+    (fun res -> sxrel dsx pm res v ** Trade.trade (sxrel dsx pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
 
-let sdres (#i: _) (ls: asn1_gen_items_l i) (id: asn1_id_t) (e: S.slice U8.t) (pm: perm) (we: Ghost.erased SB.bytes) (st: opt_tuple ls) (v: Ghost.erased (asn1_sequence_t_core ls)) : Type
-= ddres ls id e pm we st v
+let sdres (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (di: idesc ls t)
+  (id: asn1_id_t) (e: S.slice U8.t) (pm: perm) (we: Ghost.erased SB.bytes) (st: dtuple di) (v: Ghost.erased (asn1_sequence_t_core ls)) : Type
+= stt (dtuple di)
+    (S.pts_to e #pm we ** partial_rel di pm st v ** pure (dpre ls id we (pres_of di st) v))
+    (fun st' -> partial_rel di pm st' v ** Trade.trade (partial_rel di pm st' v) (partial_rel di pm st v ** S.pts_to e #pm we) **
+      pure (forall (c: nat) . is_some ls (pres_of di st') c == (is_some ls (pres_of di st) c || SC.comp_of_id (In.twins_of ls) id = Some c)))
 
-let fdres (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+let fres (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (di: idesc ls t) (st: dtuple di) (pm: perm) (v: Ghost.erased (asn1_sequence_t_core ls)) : Type
+= stt t
+    (partial_rel di pm st v ** pure (fin_pre ls (pres_of di st) v))
+    (fun res -> irel di pm res v ** Trade.trade (irel di pm res v) (partial_rel di pm st v))
+
+let cres (#lc: list (asn1_id_t & asn1_content_k)) (#t: Type0) (ld: lcdesc lc t) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc)))
+  (id: asn1_id_t) (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased (make_gen_choice_type (asn1_lc_t lc))) : Type
+= stt t
+    (S.pts_to input #pm w ** pure (parsed #asn1_strong_parser_kind (asn1_as_parser (choice_k lc pf)) w v /\ dfst (Ghost.reveal v) == id))
+    (fun res -> lcrel ld pm res v ** Trade.trade (lcrel ld pm res v) (S.pts_to input #pm w))
+
+let fdres (key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb)
+  (#ts: Type0) (dfx: fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) ts)
   (kc pin: S.slice U8.t) (pm: perm) (wk wp: Ghost.erased SB.bytes) (v: Ghost.erased (AL.ady_fb key_k ls fb)) : Type
-= stt (asn1_adb_suffix_impl_t key_k ls (Some (fbt key_k fb)))
+= stt ts
     (S.pts_to kc #pm wk ** S.pts_to pin #pm wp ** pure (parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk (dfst (Ghost.reveal v)) /\ AL.pl_fb_parsed key_k ls fb wp v))
-    (fun res -> afb_rel key_k ls fb pm res v ** Trade.trade (afb_rel key_k ls fb pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
+    (fun res -> afb_rel fb dfb dfx pm res v ** Trade.trade (afb_rel fb dfb dfx pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
 
 (* The subset of schemas currently supported *)
 
@@ -174,190 +192,239 @@ let phas_id_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (id: asn1_id_t)
   | ASN1_DEFAULT_TERMINAL id0 _ -> ILC.asn1_id_eq id id0
   | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 _ _ -> ILC.asn1_id_eq id id0
 
+(* VIEW nodes: parse the underlying value, then build the view type *)
+
+inline_for_extraction
+fn parse_view
+  (#t: Type0) (#u: Type0) (#r: prel t u) (#k: Ghost.erased SB.parser_kind) (#p: SB.parser k u)
+  (f: aparser r p)
+  (ty: Type0) (view: Ghost.erased (ty -> t)) (mk: t -> ty) (law: squash (view_law (Ghost.reveal view) mk))
+  (r': prel ty u { forall pm x y . r' pm x y == r pm (Ghost.reveal view x) y })
+: aparser #ty #u r' #k p
+= (input: _) (#pm: _) (#w: _) (#v: _)
+{
+  let x = f input #pm #w #v;
+  let res = mk x;
+  assert (pure (r' pm res v == r pm x v));
+  rewrite (r pm x v) as (r' pm res v);
+  rewrite (Trade.trade (r pm x v) (S.pts_to input #pm w)) as (Trade.trade (r' pm res v) (S.pts_to input #pm w));
+  res
+}
+
 (* Absent items *)
 
 [@@asn1_pulse_attr]
-inline_for_extraction
-let dec_absent (#s: _) (#d: _) (dk: asn1_decorated_k s d)
-: dabsent dk
-= match dk with
-  | ASN1_PLAIN_ILC k -> dec_plain_absent k
-  | ASN1_OPTION_ILC k -> dec_option_absent k
-  | ASN1_DEFAULT_TERMINAL id0 #k defv -> dec_default_absent id0 #k defv
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv -> dec_default_restricted_absent id0 #k r defv
+let rec dd_absent (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) (#[@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] dd: ddesc dk t)
+  (pm: perm) (v: Ghost.erased (asn1_decorated_t_core dk))
+: Tot (stt t (pure (absent_core dk v)) (fun res -> drel dd pm res v ** pure (drel dd pm res v == emp)))
+  (decreases dd)
+= [@inline_let] let vf : dabsent dd =
+  (match dd with
+  | DD_PLAIN da -> dec_plain_absent da
+  | DD_OPTION da -> dec_option_absent da
+  | DD_DEFAULT id0 #k defv -> dec_default_absent id0 #k defv
+  | DD_DEFAULT_RESTRICTED id0 #k r defv -> dec_default_restricted_absent id0 #k r defv
+  | DD_VIEW dd' ty view mk law -> dec_view_absent dd' ty view mk law (fun pm v -> dd_absent dd' pm v))
+  in vf pm v
 
 (* Filling the empty slots of a SET *)
 
 [@@asn1_pulse_attr]
-let rec parse_sfin (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i)
-  (st: opt_tuple ls) (#pm: perm) (#v: Ghost.erased (asn1_sequence_t_core ls))
-: Tot (fres ls st pm v)
-  (decreases ls)
-= [@inline_let] let vf : fin_t ls =
-  (match ls with
-  | ASN1_GEN_ITEMS_NIL -> fin_nil ()
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL -> fin_single dk (dec_absent dk)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    fin_cons2 dk dk2 tl2 (dec_absent dk)
-      (fun st #pm #v -> parse_sfin (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) st #pm #v))
+let rec parse_sfin (#[@@@FStar.Attributes.monomorphize] ids: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l ids) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] di: idesc ls t)
+  (st: dtuple di) (#pm: perm) (#v: Ghost.erased (asn1_sequence_t_core ls))
+: Tot (fres di st pm v)
+  (decreases di)
+= [@inline_let] let vf : fin_t di =
+  (match di with
+  | ID_NIL -> fin_nil ()
+  | ID_SINGLE dd -> fin_single dd (fun pm v -> dd_absent dd pm v)
+  | ID_CONS dd #_ #_ #dk2 #_ #tl2 dtl ->
+    fin_cons dd dk2 tl2 dtl (fun pm v -> dd_absent dd pm v)
+      (fun st #pm #v -> parse_sfin dtl st #pm #v))
   in vf st #pm #v
 
-let rec parse_content ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (u: squash (psupported_content k))
+(* The parser interpreter over descriptors *)
+
+let rec parse_cd (#[@@@FStar.Attributes.monomorphize] k: asn1_content_k) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] cd: cdesc k t) (u: squash (psupported_content k))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_content_t k))
-: Tot (ares (asn1_content_rel k) (asn1_content_as_parser k) input pm w v)
-  (decreases %[k; 2])
-= [@inline_let] let vf : aparser #(asn1_content_impl_t k) #(asn1_content_t k) (asn1_content_rel k) #asn1_weak_parser_kind (asn1_content_as_parser k) =
-  (match k with
-  | ASN1_TERMINAL k' -> parse_terminal k'
-  | ASN1_RESTRICTED_TERMINAL k' r -> parse_restricted k' r
-  | ASN1_PREFIXED k' ->
-    parse_ext #_ #_ #_ #_ #(asn1_as_parser k') (fun input #pm #w #v -> parse_k k' () input #pm #w #v) #asn1_weak_parser_kind (asn1_content_as_parser k)
-  | ASN1_SEQUENCE gitems ->
-    seq_parser gitems (fun input #pm #w #v -> parse_items (dsnd gitems) () input #pm #w #v)
-  | ASN1_SEQUENCE_OF ne k' -> seq_of_parser ne k'
-  | ASN1_SET_OF ne k' -> set_of_parser ne k'
-  | ASN1_SET _ items pf ->
-    set_any_parser items pf (none_tuple items)
-      (fun id e #pm #we st #v -> parse_sdisp items () id e #pm #we st #v)
-      (fun st #pm #v -> parse_sfin items st #pm #v)
-  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
-    begin match ofb with
-    | None ->
-      adb_none_parser ipd prefix kid key_k ls pf pf'
-        (fun input #pm #w #v -> parse_seqa prefix () (asn1_adb_rel key_k ls) (sfx_none kid key_k ls)
-          (sfx_none_parser kid key_k ls (fun kc pin #pm #wk #wp #v -> parse_ndisp key_k () ls () kc pin #pm #wk #wp #v))
-          input #pm #w #v)
-    | Some fb ->
-      adb_some_parser ipd prefix kid key_k ls fb pf pf'
-        (fun input #pm #w #v -> parse_seqa prefix () (afb_rel key_k ls fb) (sfx_some kid key_k ls fb)
-          (sfx_some_parser kid key_k ls fb (fun kc pin #pm #wk #wp #v -> parse_fdisp key_k () ls () fb (Ghost.hide k) () kc pin #pm #wk #wp #v))
-          input #pm #w #v)
-    end)
+: Tot (ares (crel cd) (asn1_content_as_parser k) input pm w v)
+  (decreases cd)
+= [@inline_let] let vf : aparser #t #(asn1_content_t k) (crel cd) #asn1_weak_parser_kind (asn1_content_as_parser k) =
+  (match cd with
+  | CD_TERMINAL k' ->
+    parse_rel_ext (parse_ext (parse_terminal k') #asn1_weak_parser_kind (asn1_content_as_parser k)) (crel cd)
+  | CD_RESTRICTED k' r ->
+    parse_rel_ext (parse_restricted k' r) (crel cd)
+  | CD_PREFIXED #_ #k' d' ->
+    parse_ext #_ #_ #_ #_ #(asn1_as_parser k') (fun input #pm #w #v -> parse_d d' () input #pm #w #v) #asn1_weak_parser_kind (asn1_content_as_parser k)
+  | CD_SEQUENCE gitems di ->
+    seq_parser gitems di (fun input #pm #w #v -> parse_id di () input #pm #w #v)
+  | CD_SEQUENCE_OF ne d' -> seq_of_parser ne d'
+  | CD_SET_OF ne d' -> set_of_parser ne d'
+  | CD_SET _ items pf di ->
+    set_any_parser items pf di (dnone di)
+      (fun id e #pm #we st #v -> parse_sdisp di () id e #pm #we st #v)
+      (fun st #pm #v -> parse_sfin di st #pm #v)
+  | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->
+    adb_none_parser ipd prefix kid key_k ls pf pf' dsx dpre
+      (fun input #pm #w #v -> parse_iad dpre () (sxrel dsx) (sfx_none kid key_k ls)
+        (sfx_none_parser kid key_k dsx (fun kc pin #pm #wk #wp #v -> parse_sx dsx () kc pin #pm #wk #wp #v))
+        input #pm #w #v)
+  | CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre ->
+    adb_some_parser ipd prefix kid key_k ls fb pf pf' dfb dfx dpre
+      (fun input #pm #w #v -> parse_iad dpre () (afb_rel fb dfb dfx) (sfx_some kid key_k ls fb)
+        (sfx_some_parser kid key_k fb dfb dfx (fun kc pin #pm #wk #wp #v ->
+          parse_fx dfx () fb dfb (seq_parser fb dfb (fun input #pm #w #v -> parse_id dfb () input #pm #w #v)) kc pin #pm #wk #wp #v))
+        input #pm #w #v)
+  | CD_VIEW d' ty view mk law ->
+    parse_view (fun input #pm #w #v -> parse_cd d' () input #pm #w #v) ty view mk law (crel cd))
   in vf input #pm #w #v
 
-and parse_seqa (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (psupported_items ls))
-  (#sfxi: Type0) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) (sfx: Ghost.erased (parser_twin asn1_weak_parser_kind sfxs))
+and parse_iad (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] sfxi: Type0) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] dia: iadesc ls sfxi t) (u: squash (psupported_items ls))
+  (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) (sfx: Ghost.erased (parser_twin asn1_weak_parser_kind sfxs))
   ([@@@FStar.Attributes.monomorphize] psfx: aparser #sfxi #sfxs sfxr #asn1_weak_parser_kind (Mkparsertwin?.p (Ghost.reveal sfx)))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_any_t_core ls sfxs))
-: Tot (sares ls sfxr sfx input pm w v)
-  (decreases ls)
-= [@inline_let] let vf : saparser ls sfxr sfx =
-  (match ls with
-  | ASN1_GEN_ITEMS_NIL -> seqa_nil psfx
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl ->
-    seqa_cons dk tl (phas_id_dec dk)
-      (fun input #pm #w #v -> parse_dec dk () input #pm #w #v)
-      (dec_absent dk)
-      (fun input #pm #w #v -> parse_seqa tl () sfxr sfx psfx input #pm #w #v))
+: Tot (sares dia sfxr sfx input pm w v)
+  (decreases dia)
+= [@inline_let] let vf : saparser dia sfxr sfx =
+  (match dia with
+  | IA_NIL -> seqa_nil psfx
+  | IA_SINGLE #_ #_ #dk dd ->
+    seqa_cons dd (IA_NIL #sfxi) (IA_SINGLE dd) (ia_single_prop dd sfxr) (phas_id_dec dk)
+      (fun input #pm #w #v -> parse_dd dd () input #pm #w #v)
+      (fun pm v -> dd_absent dd pm v)
+      (seqa_nil psfx)
+  | IA_CONS #_ #_ #dk dd dtl ->
+    seqa_cons dd dtl (IA_CONS dd dtl) (ia_cons_cons_prop dd dtl sfxr) (phas_id_dec dk)
+      (fun input #pm #w #v -> parse_dd dd () input #pm #w #v)
+      (fun pm v -> dd_absent dd pm v)
+      (fun input #pm #w #v -> parse_iad dtl () sfxr sfx psfx input #pm #w #v))
   in vf input #pm #w #v
 
-and parse_ndisp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k))
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (psupported_ls ls))
+and parse_sx (#[@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (#[@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] dsx: sxdesc key_k ls t)
+  (u: squash (adb_key_supported key_k /\ psupported_ls ls))
   (kc pin: S.slice U8.t) (#pm: perm) (#wk #wp: Ghost.erased SB.bytes) (#v: Ghost.erased (AL.ady key_k ls))
-: Tot (ndres key_k ls kc pin pm wk wp v)
-  (decreases %[ls; 1])
-= [@inline_let] let vf : ndisp key_k ls =
-  (match ls with
-  | [] -> ndisp_nil key_k
-  | [(x, y)] ->
-    ndisp_single key_k x y (seq_parser y (fun input #pm #w #v -> parse_items (dsnd y) () input #pm #w #v))
-  | (x, y) :: hd2 :: tl2 ->
-    ndisp_cons key_k () x y hd2 tl2
-      (seq_parser y (fun input #pm #w #v -> parse_items (dsnd y) () input #pm #w #v))
-      (fun kc pin #pm #wk #wp #v -> parse_ndisp key_k () (hd2 :: tl2) () kc pin #pm #wk #wp #v))
+: Tot (ndres key_k dsx kc pin pm wk wp v)
+  (decreases dsx)
+= [@inline_let] let vf : ndisp key_k dsx =
+  (match dsx with
+  | SX_NIL _ -> ndisp_nil key_k
+  | SX_SINGLE _ x y di ->
+    ndisp_single key_k x y di (seq_parser y di (fun input #pm #w #v -> parse_id di () input #pm #w #v))
+  | SX_CONS _ x y di dtl ->
+    ndisp_cons key_k () x y di dtl
+      (seq_parser y di (fun input #pm #w #v -> parse_id di () input #pm #w #v))
+      (fun kc pin #pm #wk #wp #v -> parse_sx dtl () kc pin #pm #wk #wp #v))
   in vf kc pin #pm #wk #wp #v
 
-and parse_fdisp ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (adb_key_supported key_k))
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (u': squash (psupported_ls ls))
-  ([@@@FStar.Attributes.monomorphize] fb: asn1_gen_items_lk)
-  (kt: Ghost.erased asn1_content_k)
-  (u'': squash (ls << Ghost.reveal kt /\ fb << Ghost.reveal kt /\ psupported_items (dsnd fb)))
+and parse_fx (#[@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (#[@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#[@@@FStar.Attributes.monomorphize] tfb: Type0) (#[@@@FStar.Attributes.monomorphize] ts: Type0)
+  ([@@@FStar.Attributes.monomorphize] dfx: fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) ts)
+  (u: squash (adb_key_supported key_k /\ psupported_ls ls))
+  (fb: Ghost.erased asn1_gen_items_lk) (dfb: Ghost.erased (idesc (dsnd fb) tfb))
+  ([@@@FStar.Attributes.monomorphize] pfb: items_parser fb dfb)
   (kc pin: S.slice U8.t) (#pm: perm) (#wk #wp: Ghost.erased SB.bytes) (#v: Ghost.erased (AL.ady_fb key_k ls fb))
-: Tot (fdres key_k ls fb kc pin pm wk wp v)
-  (decreases %[Ghost.reveal kt; 1; ls])
-= [@inline_let] let vf : fdisp key_k ls fb =
-  (match ls with
-  | [] ->
-    fdisp_nil key_k fb
+: Tot (fdres key_k fb dfb dfx kc pin pm wk wp v)
+  (decreases dfx)
+= [@inline_let] let vf : fdisp key_k fb dfb dfx =
+  (match dfx with
+  | FX_NIL _ ->
+    fdisp_nil key_k fb dfb (fun input #pm #w #v -> parse_terminal key_k input #pm #w #v) pfb
+  | FX_SINGLE _ x y di ->
+    fdisp_single key_k () x y di fb dfb
+      (seq_parser y di (fun input #pm #w #v -> parse_id di () input #pm #w #v))
       (fun input #pm #w #v -> parse_terminal key_k input #pm #w #v)
-      (seq_parser fb (fun input #pm #w #v -> parse_items (dsnd fb) () input #pm #w #v))
-  | [(x, y)] ->
-    fdisp_single key_k () x y fb
-      (seq_parser y (fun input #pm #w #v -> parse_items (dsnd y) () input #pm #w #v))
-      (fun input #pm #w #v -> parse_terminal key_k input #pm #w #v)
-      (seq_parser fb (fun input #pm #w #v -> parse_items (dsnd fb) () input #pm #w #v))
-  | (x, y) :: hd2 :: tl2 ->
-    fdisp_cons key_k () x y hd2 tl2 fb
-      (seq_parser y (fun input #pm #w #v -> parse_items (dsnd y) () input #pm #w #v))
-      (fun kc pin #pm #wk #wp #v -> parse_fdisp key_k () (hd2 :: tl2) () fb kt () kc pin #pm #wk #wp #v))
+      pfb
+  | FX_CONS _ x y di dtl ->
+    fdisp_cons key_k () x y di fb dfb dtl
+      (seq_parser y di (fun input #pm #w #v -> parse_id di () input #pm #w #v))
+      (fun kc pin #pm #wk #wp #v -> parse_fx dtl () fb dfb pfb kc pin #pm #wk #wp #v))
   in vf kc pin #pm #wk #wp #v
 
-and parse_items (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (psupported_items ls))
+and parse_id (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] di: idesc ls t) (u: squash (psupported_items ls))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_t_core ls))
-: Tot (sres ls input pm w v)
-  (decreases ls)
-= [@inline_let] let vf : sparser ls =
-  (match ls with
-  | ASN1_GEN_ITEMS_NIL -> seq_nil ()
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    seq_single dk (fun input #pm #w #v -> parse_dec dk () input #pm #w #v) (dec_absent dk)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    seq_cons dk dk2 tl2 (phas_id_dec dk)
-      (fun input #pm #w #v -> parse_dec dk () input #pm #w #v)
-      (dec_absent dk)
-      (fun input #pm #w #v -> parse_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () input #pm #w #v))
+: Tot (sres di input pm w v)
+  (decreases di)
+= [@inline_let] let vf : sparser di =
+  (match di with
+  | ID_NIL -> seq_nil ()
+  | ID_SINGLE dd ->
+    seq_single dd (fun input #pm #w #v -> parse_dd dd () input #pm #w #v) (fun pm v -> dd_absent dd pm v)
+  | ID_CONS #_ #_ #dk dd #_ #_ #dk2 #_ #tl2 dtl ->
+    seq_cons dd dk2 tl2 dtl (phas_id_dec dk)
+      (fun input #pm #w #v -> parse_dd dd () input #pm #w #v)
+      (fun pm v -> dd_absent dd pm v)
+      (fun input #pm #w #v -> parse_id dtl () input #pm #w #v))
   in vf input #pm #w #v
 
-and parse_sdisp (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (psupported_items ls))
-  (id: asn1_id_t) (e: S.slice U8.t) (#pm: perm) (#we: Ghost.erased SB.bytes) (st: opt_tuple ls) (#v: Ghost.erased (asn1_sequence_t_core ls))
-: Tot (sdres ls id e pm we st v)
-  (decreases ls)
-= [@inline_let] let vf : disp_t ls =
-  (match ls with
-  | ASN1_GEN_ITEMS_NIL -> disp_nil ()
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl ->
-    disp_cons dk tl (phas_id_dec dk)
-      (fun input #pm #w #v -> parse_dec dk () input #pm #w #v)
-      (fun id e #pm #we st #v -> parse_sdisp tl () id e #pm #we st #v))
+and parse_sdisp (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] di: idesc ls t) (u: squash (psupported_items ls))
+  (id: asn1_id_t) (e: S.slice U8.t) (#pm: perm) (#we: Ghost.erased SB.bytes) (st: dtuple di) (#v: Ghost.erased (asn1_sequence_t_core ls))
+: Tot (sdres di id e pm we st v)
+  (decreases di)
+= [@inline_let] let vf : disp_t di =
+  (match di with
+  | ID_NIL -> disp_nil ()
+  | ID_SINGLE dd ->
+    disp_single dd (fun input #pm #w #v -> parse_dd dd () input #pm #w #v)
+  | ID_CONS #_ #_ #dk dd #_ #_ #dk2 #_ #tl2 dtl ->
+    disp_cons dd dk2 tl2 dtl (phas_id_dec dk)
+      (fun input #pm #w #v -> parse_dd dd () input #pm #w #v)
+      (fun id e #pm #we st #v -> parse_sdisp dtl () id e #pm #we st #v))
   in vf id e #pm #we st #v
 
-and parse_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) ([@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (u: squash (psupported_dec dk))
+and parse_dd (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) (#[@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] dd: ddesc dk t) (u: squash (psupported_dec dk))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_decorated_t_core dk))
-: Tot (dres dk input pm w v)
-  (decreases dk)
-= [@inline_let] let vf : dpresent dk =
-  (match dk with
-  | ASN1_PLAIN_ILC k -> dec_plain_present k (fun input #pm #w #v -> parse_k k () input #pm #w #v)
-  | ASN1_OPTION_ILC k -> dec_option_present k (fun input #pm #w #v -> parse_k k () input #pm #w #v)
-  | ASN1_DEFAULT_TERMINAL id0 #k defv -> dec_default_present id0 #k defv (fun input #pm #w #v -> parse_terminal k input #pm #w #v)
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv -> dec_default_restricted_present id0 #k r defv (parse_restricted k r))
+: Tot (dres dd input pm w v)
+  (decreases dd)
+= [@inline_let] let vf : dpresent dd =
+  (match dd with
+  | DD_PLAIN da -> dec_plain_present da (fun input #pm #w #v -> parse_d da () input #pm #w #v)
+  | DD_OPTION da -> dec_option_present da (fun input #pm #w #v -> parse_d da () input #pm #w #v)
+  | DD_DEFAULT id0 #k defv -> dec_default_present id0 #k defv (fun input #pm #w #v -> parse_terminal k input #pm #w #v)
+  | DD_DEFAULT_RESTRICTED id0 #k r defv -> dec_default_restricted_present id0 #k r defv (parse_restricted k r)
+  | DD_VIEW dd' ty view mk law -> dec_view_present dd' ty view mk law (fun input #pm #w #v -> parse_dd dd' () input #pm #w #v))
   in vf input #pm #w #v
 
-and parse_k (#s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (u: squash (psupported_k k))
+and parse_d (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] k: asn1_k s) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: adesc k t) (u: squash (psupported_k k))
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_t k))
-: Tot (ares (asn1_rel k) (asn1_as_parser k) input pm w v)
-  (decreases k)
-= [@inline_let] let vf : aparser #(asn1_impl_t k) #(asn1_t k) (asn1_rel k) #asn1_strong_parser_kind (asn1_as_parser k) =
-  (match k with
-  | ASN1_ILC id k' ->
-    parse_ilc id #k' #_ #_ #(asn1_content_as_parser k') (fun input #pm #w #v -> parse_content k' () input #pm #w #v)
-  | ASN1_CHOICE_ILC lc pf ->
-    choice_parser lc pf (fun id input #pm #w #v -> parse_choice lc pf () id input #pm #w #v)
-  | ASN1_ANY_ILC ->
-    parse_ext (parse_any ()) #asn1_strong_parser_kind (asn1_as_parser k))
+: Tot (ares (arel d) (asn1_as_parser k) input pm w v)
+  (decreases d)
+= [@inline_let] let vf : aparser #t #(asn1_t k) (arel d) #asn1_strong_parser_kind (asn1_as_parser k) =
+  (match d with
+  | D_ILC id #k' cd ->
+    parse_rel_ext (parse_ilc id #k' #_ #_ #(asn1_content_as_parser k') (fun input #pm #w #v -> parse_cd cd () input #pm #w #v)) (arel d)
+  | D_CHOICE lc pf ld ->
+    parse_rel_ext (choice_parser lc pf ld (fun id input #pm #w #v -> parse_lc ld pf () id input #pm #w #v)) (arel d)
+  | D_ANY ->
+    parse_rel_ext (parse_ext (parse_any ()) #asn1_strong_parser_kind (asn1_as_parser k)) (arel d)
+  | D_VIEW d' ty view mk law ->
+    parse_view (fun input #pm #w #v -> parse_d d' () input #pm #w #v) ty view mk law (arel d))
   in vf input #pm #w #v
 
-and parse_choice ([@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) (u: squash (psupported_lc lc))
+and parse_lc (#[@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] ld: lcdesc lc t) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) (u: squash (psupported_lc lc))
   (id: asn1_id_t) (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (make_gen_choice_type (asn1_lc_t lc)))
-: Tot (cres lc pf id input pm w v)
-  (decreases lc)
-= [@inline_let] let vf : cparser lc pf =
-  (match lc with
-  | [] -> choice_nil pf
-  | [(id', c)] ->
-    choice_single id' c pf (parse_ilc id' #c #_ #_ #(asn1_content_as_parser c) (fun input #pm #w #v -> parse_content c () input #pm #w #v))
-  | (id', c) :: hd2 :: tl2 ->
-    choice_cons id' c hd2 tl2 pf
-      (parse_ilc id' #c #_ #_ #(asn1_content_as_parser c) (fun input #pm #w #v -> parse_content c () input #pm #w #v))
-      (fun id input #pm #w #v -> parse_choice (hd2 :: tl2) () () id input #pm #w #v))
+: Tot (cres ld pf id input pm w v)
+  (decreases ld)
+= [@inline_let] let vf : cparser pf ld =
+  (match ld with
+  | LC_NIL -> choice_nil pf
+  | LC_SINGLE id' #c cd ->
+    choice_single id' cd pf (parse_ilc id' #c #_ #_ #(asn1_content_as_parser c) (fun input #pm #w #v -> parse_cd cd () input #pm #w #v))
+  | LC_CONS id' #c cd dtl ->
+    choice_cons id' cd dtl pf
+      (parse_ilc id' #c #_ #_ #(asn1_content_as_parser c) (fun input #pm #w #v -> parse_cd cd () input #pm #w #v))
+      (fun id input #pm #w #v -> parse_lc dtl () () id input #pm #w #v))
   in vf id input #pm #w #v
+
+(* The legacy interpreters: nested pairs and `either` *)
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let parse_k (#s: _) (k: asn1_k s) (u: squash (psupported_k k))
+: aparser #(asn1_impl_t k) #(asn1_t k) (asn1_rel k) #asn1_strong_parser_kind (asn1_as_parser k)
+= fun input #pm #w #v -> parse_d (legacy_adesc k) u input #pm #w #v
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let parse_content (k: asn1_content_k) (u: squash (psupported_content k))
+: aparser #(asn1_content_impl_t k) #(asn1_content_t k) (asn1_content_rel k) #asn1_weak_parser_kind (asn1_content_as_parser k)
+= fun input #pm #w #v -> parse_cd (legacy_cdesc k) u input #pm #w #v

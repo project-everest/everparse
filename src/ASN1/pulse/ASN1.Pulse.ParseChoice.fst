@@ -151,50 +151,44 @@ let choice_tail_val (hd: asn1_id_t & asn1_content_k) (tl: list (asn1_id_t & asn1
 
 (* Unfolding the relation *)
 
-let lc_rel_single_eq (id': asn1_id_t) (c: asn1_content_k)
+let lc_rel_single_eq (id': asn1_id_t) (#c: asn1_content_k) (#t: Type0) (cd: cdesc c t)
   (pf: squash (List.Tot.noRepeats (List.Tot.map fst [(id', c)])))
-  (pm: perm) (x: asn1_lc_impl_t [(id', c)])
+  (pm: perm) (x: t)
   (v: make_gen_choice_type (asn1_lc_t [(id', c)])) (sq: squash (dfst v == id'))
-: Lemma (asn1_lc_rel [(id', c)] pm x v == asn1_content_rel c pm x (choice_head_val id' c [] pf v ()))
-= assert_norm (asn1_lc_rel [(id', c)] pm x v == (let (| id, v |) = v in if id = id' then asn1_content_rel c pm x v else pure False))
+: Lemma (lcrel (LC_SINGLE id' cd) pm x v == crel cd pm x (choice_head_val id' c [] pf v ()))
+= assert_norm (lcrel (LC_SINGLE id' cd) pm x v == (let (| id, v |) = v in if id = id' then crel cd pm x v else pure False))
 
-let lc_rel_cons_eq' (id': asn1_id_t) (c: asn1_content_k) (hd2: asn1_id_t & asn1_content_k) (tl2: list (asn1_id_t & asn1_content_k))
-  (pm: perm) (x: asn1_lc_impl_t ((id', c) :: hd2 :: tl2)) (v: make_gen_choice_type (asn1_lc_t ((id', c) :: hd2 :: tl2)))
-: Lemma (asn1_lc_rel ((id', c) :: hd2 :: tl2) pm x v == (
+let lc_rel_cons_eq' (id': asn1_id_t) (#c: asn1_content_k) (#t1: Type0) (cd: cdesc c t1)
+  (#hd2: asn1_id_t & asn1_content_k) (#tl2: list (asn1_id_t & asn1_content_k)) (#t2: Type0) (dtl: lcdesc (hd2 :: tl2) t2)
+  (pm: perm) (x: either t1 t2) (v: make_gen_choice_type (asn1_lc_t ((id', c) :: hd2 :: tl2)))
+: Lemma (lcrel (LC_CONS id' cd dtl) pm x v == (
     let (| id, v |) = v in
-    let x' : either (asn1_content_impl_t c) (asn1_lc_impl_t (hd2 :: tl2)) = x in
-    match x' with
-    | Inl a -> if id = id' then asn1_content_rel c pm a v else pure False
-    | Inr b -> if id = id' then pure False else asn1_lc_rel (hd2 :: tl2) pm b (| id, v |)))
-= assert_norm (asn1_lc_rel ((id', c) :: hd2 :: tl2) pm x v == (
+    match x with
+    | Inl a -> if id = id' then crel cd pm a v else pure False
+    | Inr b -> if id = id' then pure False else lcrel dtl pm b (| id, v |)))
+= assert_norm (lcrel (LC_CONS id' cd dtl) pm x v == (
     let (| id, v |) = v in
-    let x' : either (asn1_content_impl_t c) (asn1_lc_impl_t (hd2 :: tl2)) = x in
+    let x' : either t1 t2 = x in
     match x' with
-    | Inl a -> if id = id' then asn1_content_rel c pm a v else pure False
-    | Inr b -> if id = id' then pure False else asn1_lc_rel (hd2 :: tl2) pm b (| id, v |)))
+    | Inl a -> if id = id' then crel cd pm a v else pure False
+    | Inr b -> if id = id' then pure False else lcrel dtl pm b (| id, v |)))
 
 (* A parser for a CHOICE whose identifier has already been read *)
 
 inline_for_extraction
-let cparser (lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) : Type =
+let cparser (#lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) (#t: Type0) (ld: lcdesc lc t) : Type =
   (id: asn1_id_t) ->
   (input: S.slice U8.t) ->
   (#pm: perm) ->
   (#w: Ghost.erased SB.bytes) ->
   (#v: Ghost.erased (make_gen_choice_type (asn1_lc_t lc))) ->
-  stt (asn1_lc_impl_t lc)
+  stt t
     (S.pts_to input #pm w ** pure (parsed #asn1_strong_parser_kind (asn1_as_parser (choice_k lc pf)) w v /\ dfst (Ghost.reveal v) == id))
-    (fun res -> asn1_lc_rel lc pm res v ** Trade.trade (asn1_lc_rel lc pm res v) (S.pts_to input #pm w))
-
-let cres (lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc)))
-  (id: asn1_id_t) (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased (make_gen_choice_type (asn1_lc_t lc))) : Type
-= stt (asn1_lc_impl_t lc)
-    (S.pts_to input #pm w ** pure (parsed #asn1_strong_parser_kind (asn1_as_parser (choice_k lc pf)) w v /\ dfst (Ghost.reveal v) == id))
-    (fun res -> asn1_lc_rel lc pm res v ** Trade.trade (asn1_lc_rel lc pm res v) (S.pts_to input #pm w))
+    (fun res -> lcrel ld pm res v ** Trade.trade (lcrel ld pm res v) (S.pts_to input #pm w))
 
 inline_for_extraction
 fn choice_nil (pf: squash (List.Tot.noRepeats (List.Tot.map fst ([] <: list (asn1_id_t & asn1_content_k)))))
-: cparser [] pf
+: cparser pf LC_NIL
 = (id: _) (input: _) (#pm: _) (#w: _) (#v: _)
 {
   let x : squash False = ();
@@ -203,42 +197,42 @@ fn choice_nil (pf: squash (List.Tot.noRepeats (List.Tot.map fst ([] <: list (asn
 
 inline_for_extraction
 fn choice_single
-  (id': Ghost.erased asn1_id_t) (c: Ghost.erased asn1_content_k)
+  (id': Ghost.erased asn1_id_t) (#c: Ghost.erased asn1_content_k) (#t: Type0) (cd: Ghost.erased (cdesc c t))
   (pf: squash (List.Tot.noRepeats (List.Tot.map fst [(Ghost.reveal id', Ghost.reveal c)])))
-  (phead: aparser #(asn1_content_impl_t c) #(asn1_t (ASN1_ILC id' c)) (asn1_content_rel c) #asn1_strong_parser_kind (asn1_as_parser (ASN1_ILC id' c)))
-: cparser [(Ghost.reveal id', Ghost.reveal c)] pf
+  (phead: aparser #t #(asn1_t (ASN1_ILC id' c)) (crel cd) #asn1_strong_parser_kind (asn1_as_parser (ASN1_ILC id' c)))
+: cparser pf (LC_SINGLE (Ghost.reveal id') (Ghost.reveal cd))
 = (id: _) (input: _) (#pm: _) (#w: _) (#v: _)
 {
   choice_head id' c [] pf w v;
   let res = phead input #pm #w #(choice_head_val id' c [] pf v ());
-  lc_rel_single_eq id' c pf pm res v ();
-  rewrite each (asn1_content_rel c pm res (choice_head_val id' c [] pf v ())) as (asn1_lc_rel [(Ghost.reveal id', Ghost.reveal c)] pm res v);
+  lc_rel_single_eq id' cd pf pm res v ();
+  rewrite each (crel cd pm res (choice_head_val id' c [] pf v ())) as (lcrel (LC_SINGLE (Ghost.reveal id') (Ghost.reveal cd)) pm res v);
   res
 }
 
 inline_for_extraction
 fn choice_cons
-  (id': asn1_id_t) (c: Ghost.erased asn1_content_k)
-  (hd2: Ghost.erased (asn1_id_t & asn1_content_k)) (tl2: Ghost.erased (list (asn1_id_t & asn1_content_k)))
+  (id': asn1_id_t) (#c: Ghost.erased asn1_content_k) (#t1: Type0) (cd: Ghost.erased (cdesc c t1))
+  (#hd2: Ghost.erased (asn1_id_t & asn1_content_k)) (#tl2: Ghost.erased (list (asn1_id_t & asn1_content_k))) (#t2: Type0) (dtl: Ghost.erased (lcdesc (Ghost.reveal hd2 :: Ghost.reveal tl2) t2))
   (pf: squash (List.Tot.noRepeats (List.Tot.map fst ((id', Ghost.reveal c) :: (Ghost.reveal hd2 :: Ghost.reveal tl2)))))
-  (phead: aparser #(asn1_content_impl_t c) #(asn1_t (ASN1_ILC id' c)) (asn1_content_rel c) #asn1_strong_parser_kind (asn1_as_parser (ASN1_ILC id' c)))
-  (ptail: cparser (Ghost.reveal hd2 :: Ghost.reveal tl2) ())
-: cparser ((id', Ghost.reveal c) :: (Ghost.reveal hd2 :: Ghost.reveal tl2)) pf
+  (phead: aparser #t1 #(asn1_t (ASN1_ILC id' c)) (crel cd) #asn1_strong_parser_kind (asn1_as_parser (ASN1_ILC id' c)))
+  (ptail: cparser #(Ghost.reveal hd2 :: Ghost.reveal tl2) () dtl)
+: cparser pf (LC_CONS id' (Ghost.reveal cd) (Ghost.reveal dtl))
 = (id: _) (input: _) (#pm: _) (#w: _) (#v: _)
 {
   if (ILC.asn1_id_eq id id') {
     choice_head id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf w v;
     let r = phead input #pm #w #(choice_head_val id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ());
-    let res : asn1_lc_impl_t ((id', Ghost.reveal c) :: (Ghost.reveal hd2 :: Ghost.reveal tl2)) = Inl #_ #(asn1_lc_impl_t (Ghost.reveal hd2 :: Ghost.reveal tl2)) r;
-    lc_rel_cons_eq' id' c hd2 tl2 pm res v;
-    rewrite each (asn1_content_rel c pm r (choice_head_val id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ())) as (asn1_lc_rel ((id', Ghost.reveal c) :: (Ghost.reveal hd2 :: Ghost.reveal tl2)) pm res v);
+    let res : either t1 t2 = Inl #_ #t2 r;
+    lc_rel_cons_eq' id' cd dtl pm res v;
+    rewrite each (crel cd pm r (choice_head_val id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ())) as (lcrel (LC_CONS id' (Ghost.reveal cd) (Ghost.reveal dtl)) pm res v);
     res
   } else {
     choice_tail (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf w v;
     let r = ptail id input #pm #w #(choice_tail_val (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ());
-    let res : asn1_lc_impl_t ((id', Ghost.reveal c) :: (Ghost.reveal hd2 :: Ghost.reveal tl2)) = Inr #(asn1_content_impl_t c) r;
-    lc_rel_cons_eq' id' c hd2 tl2 pm res v;
-    rewrite each (asn1_lc_rel (Ghost.reveal hd2 :: Ghost.reveal tl2) pm r (choice_tail_val (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ())) as (asn1_lc_rel ((id', Ghost.reveal c) :: (Ghost.reveal hd2 :: Ghost.reveal tl2)) pm res v);
+    let res : either t1 t2 = Inr #t1 r;
+    lc_rel_cons_eq' id' cd dtl pm res v;
+    rewrite each (lcrel dtl pm r (choice_tail_val (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ())) as (lcrel (LC_CONS id' (Ghost.reveal cd) (Ghost.reveal dtl)) pm res v);
     res
   }
 }
@@ -249,8 +243,9 @@ inline_for_extraction
 fn choice_parser
   (lc: Ghost.erased (list (asn1_id_t & asn1_content_k)))
   (pf: squash (List.Tot.noRepeats (List.Tot.map fst (Ghost.reveal lc))))
-  (f: cparser lc pf)
-: aparser #(asn1_lc_impl_t lc) #(asn1_t (choice_k lc pf)) (asn1_lc_rel lc) #asn1_strong_parser_kind (asn1_as_parser (choice_k lc pf))
+  (#t: Type0) (ld: Ghost.erased (lcdesc lc t))
+  (f: cparser pf ld)
+: aparser #t #(asn1_t (choice_k lc pf)) (lcrel ld) #asn1_strong_parser_kind (asn1_as_parser (choice_k lc pf))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   choice_id lc pf w v;

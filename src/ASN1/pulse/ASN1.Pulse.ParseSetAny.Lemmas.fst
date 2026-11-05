@@ -35,40 +35,33 @@ module SL = ASN1.Pulse.ParseSet.Lemmas
 module P = ASN1.Pulse.Parse
 module In = ASN1.Pulse.Interpreter
 
-(* Slots: one optional value per component *)
+(* Slots: the presence of a value for each component *)
 
 let cons_l (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2)
 : Tot (asn1_gen_items_l ((s, d) :: i2))
 = ASN1_GEN_ITEMS_CONS s d dk i2 tl
 
-[@@asn1_pulse_attr]
-let rec opt_tuple (#i: _) (ls: asn1_gen_items_l i) : Tot Type0 (decreases ls) =
-  match ls with
-  | ASN1_GEN_ITEMS_NIL -> unit
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl -> option (asn1_decorated_impl_t dk) & opt_tuple tl
+let opt_tuple (#i: _) (ls: asn1_gen_items_l i) : Tot Type0 = list (option unit)
 
-[@@asn1_pulse_attr]
-inline_for_extraction
 let sfst (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2) (st: opt_tuple (cons_l dk tl))
-: Tot (option (asn1_decorated_impl_t dk))
-= fst #(option (asn1_decorated_impl_t dk)) #(opt_tuple tl) st
+: Tot (option unit)
+= match st with
+  | [] -> None
+  | o :: _ -> o
 
-[@@asn1_pulse_attr]
-inline_for_extraction
 let ssnd (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2) (st: opt_tuple (cons_l dk tl))
 : Tot (opt_tuple tl)
-= snd #(option (asn1_decorated_impl_t dk)) #(opt_tuple tl) st
+= match st with
+  | [] -> []
+  | _ :: r -> r
 
-[@@asn1_pulse_attr]
-inline_for_extraction
-let scons (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2) (o: option (asn1_decorated_impl_t dk)) (r: opt_tuple tl)
+let scons (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2) (o: option unit) (r: opt_tuple tl)
 : Tot (opt_tuple (cons_l dk tl))
-= (o, r)
+= o :: r
 
-[@@asn1_pulse_attr]
-let rec none_tuple (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) : Tot (opt_tuple ls) (decreases ls) =
+let rec none_tuple (#i: _) (ls: asn1_gen_items_l i) : Tot (opt_tuple ls) (decreases ls) =
   match ls with
-  | ASN1_GEN_ITEMS_NIL -> ()
+  | ASN1_GEN_ITEMS_NIL -> []
   | ASN1_GEN_ITEMS_CONS _ _ dk _ tl -> scons dk tl None (none_tuple tl)
 
 let rec is_some (#i: _) (ls: asn1_gen_items_l i) (st: opt_tuple ls) (c: nat) : Tot bool (decreases ls) =
@@ -119,10 +112,10 @@ let rec fin_pre (#i: _) (ls: asn1_gen_items_l i) (st: opt_tuple ls) (v: asn1_seq
 (* Updating the slots *)
 
 let is_some_fill (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2)
-  (st: opt_tuple (cons_l dk tl)) (x: asn1_decorated_impl_t dk) (id: asn1_id_t)
+  (st: opt_tuple (cons_l dk tl)) (id: asn1_id_t)
 : Lemma
   (requires (Set.mem id s))
-  (ensures (forall (c: nat) . is_some (cons_l dk tl) (scons dk tl (Some x) (ssnd dk tl st)) c ==
+  (ensures (forall (c: nat) . is_some (cons_l dk tl) (scons dk tl (Some ()) (ssnd dk tl st)) c ==
     (is_some (cons_l dk tl) st c || SC.comp_of_id (In.twins_of (cons_l dk tl)) id = Some c)))
 = PS.twin_d_eq dk
 

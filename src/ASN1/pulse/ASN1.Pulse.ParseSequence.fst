@@ -149,16 +149,16 @@ let seq_nil_core (w: SB.bytes) (v: asn1_sequence_t_core ASN1_GEN_ITEMS_NIL)
 
 (* Unfolding the relation *)
 
-let items_rel_single_eq (#s: _) (#d: _) (dk: asn1_decorated_k s d) (pm: perm) (x: asn1_items_impl_t (single dk)) (y: asn1_sequence_t_core (single dk))
-: Lemma (asn1_items_rel (single dk) pm x y == asn1_decorated_rel dk pm x y)
-= assert_norm (asn1_items_rel (single dk) pm x y == asn1_decorated_rel dk pm x y)
+let items_rel_single_eq (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t) (pm: perm) (x: t) (y: asn1_sequence_t_core (single dk))
+: Lemma (irel (ID_SINGLE dd) pm x y == drel dd pm x y)
+= assert_norm (irel (ID_SINGLE dd) pm x y == drel dd pm x y)
 
-let items_rel_cons_eq (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#s2: _) (#d2: _) (dk2: asn1_decorated_k s2 d2) (#ids2: _) (tl2: asn1_gen_items_l ids2)
-  (pm: perm) (x1: asn1_decorated_impl_t dk) (x2: asn1_items_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (y: asn1_sequence_t_core (cons2 dk dk2 tl2))
-: Lemma (asn1_items_rel (cons2 dk dk2 tl2) pm (x1, x2) y ==
-    asn1_decorated_rel dk pm x1 (vfst dk dk2 tl2 y) ** asn1_items_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) pm x2 (vsnd dk dk2 tl2 y))
-= assert_norm (asn1_items_rel (cons2 dk dk2 tl2) pm (x1, x2) y ==
-    asn1_decorated_rel dk pm x1 (vfst dk dk2 tl2 y) ** asn1_items_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) pm x2 (vsnd dk dk2 tl2 y))
+let items_rel_cons_eq (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (dd: ddesc dk t1) (#s2: _) (#d2: _) (dk2: asn1_decorated_k s2 d2) (#ids2: _) (tl2: asn1_gen_items_l ids2) (#t2: Type0) (dtl: idesc (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) t2)
+  (pm: perm) (x1: t1) (x2: t2) (y: asn1_sequence_t_core (cons2 dk dk2 tl2))
+: Lemma (irel (ID_CONS dd dtl) pm (x1, x2) y ==
+    drel dd pm x1 (vfst dk dk2 tl2 y) ** irel dtl pm x2 (vsnd dk dk2 tl2 y))
+= assert_norm (irel (ID_CONS dd dtl) pm (x1, x2) y ==
+    drel dd pm x1 (vfst dk dk2 tl2 y) ** irel dtl pm x2 (vsnd dk dk2 tl2 y))
 
 (* Item parsers *)
 
@@ -172,27 +172,27 @@ fn rel_rewrite (#p: slprop) (q: slprop) (#r: slprop)
 }
 
 inline_for_extraction
-let dpresent (#s: _) (#d: _) (dk: asn1_decorated_k s d) : Type =
+let dpresent (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t) : Type =
   (input: S.slice U8.t) ->
   (#pm: perm) ->
   (#w: Ghost.erased SB.bytes) ->
   (#v: Ghost.erased (asn1_decorated_t_core dk)) ->
-  stt (asn1_decorated_impl_t dk)
+  stt t
     (S.pts_to input #pm w ** pure (item_parsed_core dk w v))
-    (fun res -> asn1_decorated_rel dk pm res v ** Trade.trade (asn1_decorated_rel dk pm res v) (S.pts_to input #pm w))
+    (fun res -> drel dd pm res v ** Trade.trade (drel dd pm res v) (S.pts_to input #pm w))
 
-let dres (#s: _) (#d: _) (dk: asn1_decorated_k s d) (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased (asn1_decorated_t_core dk)) : Type =
-  stt (asn1_decorated_impl_t dk)
+let dres (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t) (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased (asn1_decorated_t_core dk)) : Type =
+  stt t
     (S.pts_to input #pm w ** pure (item_parsed_core dk w v))
-    (fun res -> asn1_decorated_rel dk pm res v ** Trade.trade (asn1_decorated_rel dk pm res v) (S.pts_to input #pm w))
+    (fun res -> drel dd pm res v ** Trade.trade (drel dd pm res v) (S.pts_to input #pm w))
 
 inline_for_extraction
-let dabsent (#s: _) (#d: _) (dk: asn1_decorated_k s d) : Type =
+let dabsent (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t) : Type =
   (pm: perm) ->
   (v: Ghost.erased (asn1_decorated_t_core dk)) ->
-  stt (asn1_decorated_impl_t dk)
+  stt t
     (pure (absent_core dk v))
-    (fun res -> asn1_decorated_rel dk pm res v ** pure (asn1_decorated_rel dk pm res v == emp))
+    (fun res -> drel dd pm res v ** pure (drel dd pm res v == emp))
 
 (* PLAIN *)
 
@@ -202,21 +202,21 @@ let dec_plain_lemma (#s: _) (k: asn1_k s) (w: SB.bytes) (v: asn1_t k)
   (ensures parsed #asn1_strong_parser_kind (asn1_as_parser k) w v)
 = L.dec_plain k w v
 
-let dec_rel_plain_eq (#s: _) (k: asn1_k s) (pm: perm) (x: asn1_impl_t k) (y: asn1_t k)
-: Lemma (asn1_decorated_rel (ASN1_PLAIN_ILC k) pm x y == asn1_rel k pm x y)
-= assert_norm (asn1_decorated_rel (ASN1_PLAIN_ILC k) pm x y == asn1_rel k pm x y)
+let dec_rel_plain_eq (#s: _) (#k: asn1_k s) (#t: Type0) (da: adesc k t) (pm: perm) (x: t) (y: asn1_t k)
+: Lemma (drel (DD_PLAIN da) pm x y == arel da pm x y)
+= assert_norm (drel (DD_PLAIN da) pm x y == arel da pm x y)
 
 inline_for_extraction
 fn dec_plain_present
-  (#s: Ghost.erased (Set.set asn1_id_t)) (k: Ghost.erased (asn1_k s))
-  (pk: aparser #(asn1_impl_t k) #(asn1_t k) (asn1_rel k) #asn1_strong_parser_kind (asn1_as_parser k))
-: dpresent #s #PLAIN (ASN1_PLAIN_ILC k)
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#k: Ghost.erased (asn1_k s)) (#t: Type0) (da: Ghost.erased (adesc k t))
+  (pk: aparser #t #(asn1_t k) (arel da) #asn1_strong_parser_kind (asn1_as_parser k))
+: dpresent (DD_PLAIN (Ghost.reveal da))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_plain_lemma k w v;
   let r = pk input #pm #w #v;
-  dec_rel_plain_eq k pm r v;
-  rel_rewrite (asn1_decorated_rel (ASN1_PLAIN_ILC (Ghost.reveal k)) pm r v);
+  dec_rel_plain_eq da pm r v;
+  rel_rewrite (drel (DD_PLAIN (Ghost.reveal da)) pm r v);
   r
 }
 
@@ -226,8 +226,8 @@ let absent_plain (#s: _) (k: asn1_k s) (v: asn1_t k)
 
 inline_for_extraction
 fn dec_plain_absent
-  (#s: Ghost.erased (Set.set asn1_id_t)) (k: Ghost.erased (asn1_k s))
-: dabsent #s #PLAIN (ASN1_PLAIN_ILC k)
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#k: Ghost.erased (asn1_k s)) (#t: Type0) (da: Ghost.erased (adesc k t))
+: dabsent (DD_PLAIN (Ghost.reveal da))
 = (pm: _) (v: _)
 {
   absent_plain k v;
@@ -244,43 +244,43 @@ let dec_option_lemma (#s: _) (k: asn1_k s) (w: SB.bytes) (v: option (asn1_t k))
   (ensures Some? v /\ parsed #asn1_strong_parser_kind (asn1_as_parser k) w (Some?.v v))
 = L.dec_option k w v
 
-let dec_rel_option_some (#s: _) (k: asn1_k s) (pm: perm) (a: asn1_impl_t k) (y: option (asn1_t k))
-: Lemma (requires Some? y) (ensures asn1_decorated_rel (ASN1_OPTION_ILC k) pm (Some a) y == asn1_rel k pm a (Some?.v y))
+let dec_rel_option_some (#s: _) (#k: asn1_k s) (#t: Type0) (da: adesc k t) (pm: perm) (a: t) (y: option (asn1_t k))
+: Lemma (requires Some? y) (ensures drel (DD_OPTION da) pm (Some a) y == arel da pm a (Some?.v y))
 = let Some b = y in
-  assert_norm (asn1_decorated_rel (ASN1_OPTION_ILC k) pm (Some a) (Some b) == asn1_rel k pm a b)
+  assert_norm (drel (DD_OPTION da) pm (Some a) (Some b) == arel da pm a b)
 
 let some_v (#t: Type) (v: option t { Some? v }) : Tot t = Some?.v v
 
 inline_for_extraction
 fn dec_option_present
-  (#s: Ghost.erased (Set.set asn1_id_t)) (k: Ghost.erased (asn1_k s))
-  (pk: aparser #(asn1_impl_t k) #(asn1_t k) (asn1_rel k) #asn1_strong_parser_kind (asn1_as_parser k))
-: dpresent #s #OPTION (ASN1_OPTION_ILC k)
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#k: Ghost.erased (asn1_k s)) (#t: Type0) (da: Ghost.erased (adesc k t))
+  (pk: aparser #t #(asn1_t k) (arel da) #asn1_strong_parser_kind (asn1_as_parser k))
+: dpresent (DD_OPTION (Ghost.reveal da))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_option_lemma k w v;
   let gv : Ghost.erased (option (asn1_t k)) = v;
   assert (pure (Some? (Ghost.reveal gv)));
   let r = pk input #pm #w #(some_v (Ghost.reveal gv));
-  let res : option (asn1_impl_t k) = Some r;
-  dec_rel_option_some k pm r v;
-  rel_rewrite (asn1_decorated_rel (ASN1_OPTION_ILC (Ghost.reveal k)) pm res v);
+  let res : option t = Some r;
+  dec_rel_option_some da pm r v;
+  rel_rewrite (drel (DD_OPTION (Ghost.reveal da)) pm res v);
   res
 }
 
-let dec_rel_option_none (#s: _) (k: asn1_k s) (pm: perm) (y: option (asn1_t k))
-: Lemma (requires absent_core (ASN1_OPTION_ILC k) y) (ensures asn1_decorated_rel (ASN1_OPTION_ILC k) pm None y == emp)
-= assert_norm (asn1_decorated_rel (ASN1_OPTION_ILC k) pm None None == emp)
+let dec_rel_option_none (#s: _) (#k: asn1_k s) (#t: Type0) (da: adesc k t) (pm: perm) (y: option (asn1_t k))
+: Lemma (requires absent_core (ASN1_OPTION_ILC k) y) (ensures drel (DD_OPTION da) pm None y == emp)
+= assert_norm (drel (DD_OPTION da) pm None None == emp)
 
 inline_for_extraction
 fn dec_option_absent
-  (#s: Ghost.erased (Set.set asn1_id_t)) (k: Ghost.erased (asn1_k s))
-: dabsent #s #OPTION (ASN1_OPTION_ILC k)
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#k: Ghost.erased (asn1_k s)) (#t: Type0) (da: Ghost.erased (adesc k t))
+: dabsent (DD_OPTION (Ghost.reveal da))
 = (pm: _) (v: _)
 {
-  let res : option (asn1_impl_t k) = None;
-  dec_rel_option_none k pm v;
-  rewrite emp as (asn1_decorated_rel (ASN1_OPTION_ILC (Ghost.reveal k)) pm res v);
+  let res : option t = None;
+  dec_rel_option_none da pm v;
+  rewrite emp as (drel (DD_OPTION (Ghost.reveal da)) pm res v);
   res
 }
 
@@ -295,15 +295,15 @@ let dec_default_lemma (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit
 let nondefault_v (#t: eqtype) (#defv: t) (v: default_tv defv { Nondefault? v }) : Tot t = Nondefault?.v' v
 
 let dec_rel_default_some (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv (key_of_lit k defv))
-: Lemma (requires Nondefault? y) (ensures asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm (Some a) y == asn1_terminal_rel k pm a (nondefault_v y))
+: Lemma (requires Nondefault? y) (ensures drel (DD_DEFAULT id0 #k defv) pm (Some a) y == asn1_terminal_rel k pm a (nondefault_v y))
 = let Nondefault b = y in
-  assert_norm (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm (Some a) (Nondefault b) == asn1_terminal_rel k pm a b)
+  assert_norm (drel (DD_DEFAULT id0 #k defv) pm (Some a) (Nondefault b) == asn1_terminal_rel k pm a b)
 
 inline_for_extraction
 fn dec_default_present
   (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k))
   (pt: aparser #(asn1_terminal_impl_t k) #(asn1_terminal_t k) (asn1_terminal_rel k) #asn1_weak_parser_kind (asn1_terminal_as_parser k))
-: dpresent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_TERMINAL id0 #k defv)
+: dpresent (DD_DEFAULT (Ghost.reveal id0) #(Ghost.reveal k) defv)
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_default_lemma id0 #k defv w v;
@@ -311,23 +311,23 @@ fn dec_default_present
   let r = parse_ilc id0 #(ASN1_TERMINAL k) #_ #_ #(asn1_terminal_as_parser k) pt input #pm #w #(nondefault_v (Ghost.reveal gv));
   let res : option (asn1_terminal_impl_t k) = Some r;
   dec_rel_default_some id0 #k defv pm r v;
-  rel_rewrite (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL (Ghost.reveal id0) #(Ghost.reveal k) defv) pm res v);
+  rel_rewrite (drel (DD_DEFAULT (Ghost.reveal id0) #(Ghost.reveal k) defv) pm res v);
   res
 }
 
 let dec_rel_default_none (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (pm: perm) (y: default_tv (key_of_lit k defv))
-: Lemma (requires absent_core (ASN1_DEFAULT_TERMINAL id0 #k defv) y) (ensures asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm None y == emp)
-= assert_norm (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL id0 #k defv) pm None (Default #_ #(key_of_lit k defv)) == emp)
+: Lemma (requires absent_core (ASN1_DEFAULT_TERMINAL id0 #k defv) y) (ensures drel (DD_DEFAULT id0 #k defv) pm None y == emp)
+= assert_norm (drel (DD_DEFAULT id0 #k defv) pm None (Default #_ #(key_of_lit k defv)) == emp)
 
 inline_for_extraction
 fn dec_default_absent
   (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k))
-: dabsent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_TERMINAL id0 #k defv)
+: dabsent (DD_DEFAULT (Ghost.reveal id0) #(Ghost.reveal k) defv)
 = (pm: _) (v: _)
 {
   let res : option (asn1_terminal_impl_t k) = None;
   dec_rel_default_none id0 #k defv pm v;
-  rewrite emp as (asn1_decorated_rel (ASN1_DEFAULT_TERMINAL (Ghost.reveal id0) #(Ghost.reveal k) defv) pm res v);
+  rewrite emp as (drel (DD_DEFAULT (Ghost.reveal id0) #(Ghost.reveal k) defv) pm res v);
   res
 }
 
@@ -344,15 +344,15 @@ let nondefault_r (#k: asn1_terminal_k) (r: asn1_restriction k) (#defv: parse_fil
 = Nondefault?.v' v
 
 let dec_rel_default_restricted_some (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
-: Lemma (requires Nondefault? y) (ensures asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm (Some a) y == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a (nondefault_r r y))
+: Lemma (requires Nondefault? y) (ensures drel (DD_DEFAULT_RESTRICTED id0 #k r defv) pm (Some a) y == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a (nondefault_r r y))
 = let Nondefault b = y in
-  assert_norm (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm (Some a) (Nondefault b) == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a b)
+  assert_norm (drel (DD_DEFAULT_RESTRICTED id0 #k r defv) pm (Some a) (Nondefault b) == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a b)
 
 inline_for_extraction
 fn dec_default_restricted_present
   (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) }))
   (pc: aparser #(asn1_content_impl_t (ASN1_RESTRICTED_TERMINAL k r)) #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)))
-: dpresent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)
+: dpresent (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #(Ghost.reveal k) r defv)
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_default_restricted_lemma id0 #k r defv w v;
@@ -360,44 +360,83 @@ fn dec_default_restricted_present
   let x = parse_ilc id0 #(ASN1_RESTRICTED_TERMINAL k r) #_ #_ #(asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) pc input #pm #w #(nondefault_r r (Ghost.reveal gv));
   let res : option (asn1_terminal_impl_t k) = Some x;
   dec_rel_default_restricted_some id0 #k r defv pm x v;
-  rel_rewrite (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL (Ghost.reveal id0) #(Ghost.reveal k) r defv) pm res v);
+  rel_rewrite (drel (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #(Ghost.reveal k) r defv) pm res v);
   res
 }
 
 let dec_rel_default_restricted_none (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (pm: perm) (y: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
-: Lemma (requires absent_core (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) y) (ensures asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm None y == emp)
-= assert_norm (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) pm None (Default #(parse_filter_refine (restriction_pred r)) #(key_of_lit k defv)) == emp)
+: Lemma (requires absent_core (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) y) (ensures drel (DD_DEFAULT_RESTRICTED id0 #k r defv) pm None y == emp)
+= assert_norm (drel (DD_DEFAULT_RESTRICTED id0 #k r defv) pm None (Default #(parse_filter_refine (restriction_pred r)) #(key_of_lit k defv)) == emp)
 
 inline_for_extraction
 fn dec_default_restricted_absent
   (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) }))
-: dabsent #(Set.singleton (Ghost.reveal id0)) #DEFAULT (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)
+: dabsent (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #(Ghost.reveal k) r defv)
 = (pm: _) (v: _)
 {
   let res : option (asn1_terminal_impl_t k) = None;
   dec_rel_default_restricted_none id0 #k r defv pm v;
-  rewrite emp as (asn1_decorated_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL (Ghost.reveal id0) #(Ghost.reveal k) r defv) pm res v);
+  rewrite emp as (drel (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #(Ghost.reveal k) r defv) pm res v);
   res
 }
 
 #pop-options
 
+(* VIEW *)
+
+let dec_rel_view_eq (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
+  (pm: perm) (x: ty) (y: asn1_decorated_t_core dk)
+: Lemma (drel (DD_VIEW dd ty view mk law) pm x y == drel dd pm (view x) y)
+= assert_norm (drel (DD_VIEW dd ty view mk law) pm x y == drel dd pm (view x) y)
+
+inline_for_extraction
+fn dec_view_present
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (#dk: Ghost.erased (asn1_decorated_k s d)) (#t: Type0) (dd: Ghost.erased (ddesc dk t))
+  (ty: Type0) (view: Ghost.erased (ty -> t)) (mk: t -> ty) (law: squash (view_law (Ghost.reveal view) mk))
+  (p: dpresent dd)
+: dpresent (DD_VIEW (Ghost.reveal dd) ty (Ghost.reveal view) mk law)
+= (input: _) (#pm: _) (#w: _) (#v: _)
+{
+  let x = p input #pm #w #v;
+  let res = mk x;
+  dec_rel_view_eq dd ty view mk law pm res v;
+  rewrite (drel dd pm x v) as (drel (DD_VIEW (Ghost.reveal dd) ty (Ghost.reveal view) mk law) pm res v);
+  rewrite (Trade.trade (drel dd pm x v) (S.pts_to input #pm w))
+    as (Trade.trade (drel (DD_VIEW (Ghost.reveal dd) ty (Ghost.reveal view) mk law) pm res v) (S.pts_to input #pm w));
+  res
+}
+
+inline_for_extraction
+fn dec_view_absent
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (#dk: Ghost.erased (asn1_decorated_k s d)) (#t: Type0) (dd: Ghost.erased (ddesc dk t))
+  (ty: Type0) (view: Ghost.erased (ty -> t)) (mk: t -> ty) (law: squash (view_law (Ghost.reveal view) mk))
+  (a: dabsent dd)
+: dabsent (DD_VIEW (Ghost.reveal dd) ty (Ghost.reveal view) mk law)
+= (pm: _) (v: _)
+{
+  let x = a pm v;
+  let res = mk x;
+  dec_rel_view_eq dd ty view mk law pm res v;
+  rewrite (drel dd pm x v) as (drel (DD_VIEW (Ghost.reveal dd) ty (Ghost.reveal view) mk law) pm res v);
+  res
+}
+
 (* Sequence parsers *)
 
 inline_for_extraction
-let sparser (#i: _) (ls: asn1_gen_items_l i) : Type =
+let sparser (#i: _) (#ls: asn1_gen_items_l i) (#t: Type0) (di: idesc ls t) : Type =
   (input: S.slice U8.t) ->
   (#pm: perm) ->
   (#w: Ghost.erased SB.bytes) ->
   (#v: Ghost.erased (asn1_sequence_t_core ls)) ->
-  stt (asn1_items_impl_t ls)
+  stt t
     (S.pts_to input #pm w ** pure (seq_parsed_core ls w v))
-    (fun res -> asn1_items_rel ls pm res v ** Trade.trade (asn1_items_rel ls pm res v) (S.pts_to input #pm w))
+    (fun res -> irel di pm res v ** Trade.trade (irel di pm res v) (S.pts_to input #pm w))
 
-let sres (#i: _) (ls: asn1_gen_items_l i) (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased (asn1_sequence_t_core ls)) : Type =
-  stt (asn1_items_impl_t ls)
+let sres (#i: _) (#ls: asn1_gen_items_l i) (#t: Type0) (di: idesc ls t) (input: S.slice U8.t) (pm: perm) (w: Ghost.erased SB.bytes) (v: Ghost.erased (asn1_sequence_t_core ls)) : Type =
+  stt t
     (S.pts_to input #pm w ** pure (seq_parsed_core ls w v))
-    (fun res -> asn1_items_rel ls pm res v ** Trade.trade (asn1_items_rel ls pm res v) (S.pts_to input #pm w))
+    (fun res -> irel di pm res v ** Trade.trade (irel di pm res v) (S.pts_to input #pm w))
 
 ghost
 fn trade_emp_intro (p r: slprop)
@@ -420,42 +459,42 @@ fn trade_emp_l (p q r: slprop)
   };
 }
 
-let items_rel_nil_eq (pm: perm) (x: asn1_items_impl_t ASN1_GEN_ITEMS_NIL) (y: asn1_sequence_t_core ASN1_GEN_ITEMS_NIL)
-: Lemma (asn1_items_rel ASN1_GEN_ITEMS_NIL pm x y == emp)
-= assert_norm (asn1_items_rel ASN1_GEN_ITEMS_NIL pm x y == emp)
+let items_rel_nil_eq (pm: perm) (x: unit) (y: asn1_sequence_t_core ASN1_GEN_ITEMS_NIL)
+: Lemma (irel ID_NIL pm x y == emp)
+= assert_norm (irel ID_NIL pm x y == emp)
 
 inline_for_extraction
 fn seq_nil (_: unit)
-: sparser ASN1_GEN_ITEMS_NIL
+: sparser ID_NIL
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   seq_nil_core w v;
-  let res : asn1_items_impl_t ASN1_GEN_ITEMS_NIL = ();
+  let res : unit = ();
   items_rel_nil_eq pm res v;
-  trade_emp_intro (asn1_items_rel ASN1_GEN_ITEMS_NIL pm res v) (S.pts_to input #pm w);
-  rewrite emp as (asn1_items_rel ASN1_GEN_ITEMS_NIL pm res v);
+  trade_emp_intro (irel ID_NIL pm res v) (S.pts_to input #pm w);
+  rewrite emp as (irel ID_NIL pm res v);
   res
 }
 
 inline_for_extraction
 fn seq_single
-  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (dk: Ghost.erased (asn1_decorated_k s d))
-  (pres: dpresent dk) (abs: dabsent dk)
-: sparser (single (Ghost.reveal dk))
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (#dk: Ghost.erased (asn1_decorated_k s d)) (#t: Type0) (dd: Ghost.erased (ddesc dk t))
+  (pres: dpresent dd) (abs: dabsent dd)
+: sparser (ID_SINGLE (Ghost.reveal dd))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   seq_single_core dk w v;
   S.pts_to_len input;
   if (SZ.eq (S.len input) 0sz) {
     let r = abs pm v;
-    trade_emp_intro (asn1_decorated_rel dk pm r v) (S.pts_to input #pm w);
-    items_rel_single_eq dk pm r v;
-    rel_rewrite (asn1_items_rel (single (Ghost.reveal dk)) pm r v);
+    trade_emp_intro (drel dd pm r v) (S.pts_to input #pm w);
+    items_rel_single_eq dd pm r v;
+    rel_rewrite (irel (ID_SINGLE (Ghost.reveal dd)) pm r v);
     r
   } else {
     let r = pres input #pm #w #v;
-    items_rel_single_eq dk pm r v;
-    rel_rewrite (asn1_items_rel (single (Ghost.reveal dk)) pm r v);
+    items_rel_single_eq dd pm r v;
+    rel_rewrite (irel (ID_SINGLE (Ghost.reveal dd)) pm r v);
     r
   }
 }
@@ -464,61 +503,66 @@ let tail_of (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#s2: _) (#d2: _) (dk2: a
 : Tot (asn1_gen_items_l ((s2, d2) :: ids2))
 = ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2
 
+let id_cons (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (dd: ddesc dk t1)
+  (#s2: _) (#d2: _) (dk2: asn1_decorated_k s2 d2) (#ids2: _) (tl2: asn1_gen_items_l ids2) (#t2: Type0) (dtl: idesc (tail_of dk dk2 tl2) t2)
+: Tot (idesc (cons2 dk dk2 tl2) (t1 & t2))
+= ID_CONS dd dtl
+
 #push-options "--z3rlimit 64"
 
 inline_for_extraction
 fn seq_cons_absent
-  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (dk: Ghost.erased (asn1_decorated_k s d))
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (#dk: Ghost.erased (asn1_decorated_k s d)) (#t1: Type0) (dd: Ghost.erased (ddesc dk t1))
   (#s2: Ghost.erased (Set.set asn1_id_t)) (#d2: Ghost.erased asn1_decorator) (dk2: Ghost.erased (asn1_decorated_k s2 d2))
-  (#ids2: Ghost.erased id_decs) (tl2: Ghost.erased (asn1_gen_items_l ids2))
-  (abs: dabsent dk)
-  (ptail: sparser (tail_of dk dk2 tl2))
+  (#ids2: Ghost.erased id_decs) (tl2: Ghost.erased (asn1_gen_items_l ids2)) (#t2: Type0) (dtl: Ghost.erased (idesc (tail_of dk dk2 tl2) t2))
+  (abs: dabsent dd)
+  (ptail: sparser dtl)
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_t_core (cons2 dk dk2 tl2)))
   requires S.pts_to input #pm w ** pure (absent_core dk (vfst dk dk2 tl2 v) /\ seq_parsed_core (tail_of dk dk2 tl2) w (vsnd dk dk2 tl2 v))
-  returns res: asn1_items_impl_t (cons2 dk dk2 tl2)
-  ensures asn1_items_rel (cons2 dk dk2 tl2) pm res v ** Trade.trade (asn1_items_rel (cons2 dk dk2 tl2) pm res v) (S.pts_to input #pm w)
+  returns res: (t1 & t2)
+  ensures irel (id_cons dd dk2 tl2 dtl) pm res v ** Trade.trade (irel (id_cons dd dk2 tl2 dtl) pm res v) (S.pts_to input #pm w)
 {
   let r1 = abs pm (vfst dk dk2 tl2 v);
   let r2 = ptail input #pm #w #(vsnd dk dk2 tl2 v);
-  trade_emp_l (asn1_decorated_rel dk pm r1 (vfst dk dk2 tl2 v)) (asn1_items_rel (tail_of dk dk2 tl2) pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to input #pm w);
-  let res : asn1_items_impl_t (cons2 dk dk2 tl2) = (r1, r2);
-  items_rel_cons_eq dk dk2 tl2 pm r1 r2 v;
-  rewrite (asn1_decorated_rel dk pm r1 (vfst dk dk2 tl2 v) ** asn1_items_rel (tail_of dk dk2 tl2) pm r2 (vsnd dk dk2 tl2 v))
-    as (asn1_items_rel (cons2 dk dk2 tl2) pm res v);
-  rewrite (Trade.trade (asn1_decorated_rel dk pm r1 (vfst dk dk2 tl2 v) ** asn1_items_rel (tail_of dk dk2 tl2) pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to input #pm w))
-    as (Trade.trade (asn1_items_rel (cons2 dk dk2 tl2) pm res v) (S.pts_to input #pm w));
+  trade_emp_l (drel dd pm r1 (vfst dk dk2 tl2 v)) (irel dtl pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to input #pm w);
+  let res : (t1 & t2) = (r1, r2);
+  items_rel_cons_eq dd dk2 tl2 dtl pm r1 r2 v;
+  rewrite (drel dd pm r1 (vfst dk dk2 tl2 v) ** irel dtl pm r2 (vsnd dk dk2 tl2 v))
+    as (irel (id_cons dd dk2 tl2 dtl) pm res v);
+  rewrite (Trade.trade (drel dd pm r1 (vfst dk dk2 tl2 v) ** irel dtl pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to input #pm w))
+    as (Trade.trade (irel (id_cons dd dk2 tl2 dtl) pm res v) (S.pts_to input #pm w));
   res
 }
 
 inline_for_extraction
 fn seq_cons_present
-  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (dk: Ghost.erased (asn1_decorated_k s d))
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (#dk: Ghost.erased (asn1_decorated_k s d)) (#t1: Type0) (dd: Ghost.erased (ddesc dk t1))
   (#s2: Ghost.erased (Set.set asn1_id_t)) (#d2: Ghost.erased asn1_decorator) (dk2: Ghost.erased (asn1_decorated_k s2 d2))
-  (#ids2: Ghost.erased id_decs) (tl2: Ghost.erased (asn1_gen_items_l ids2))
-  (pres: dpresent dk)
-  (ptail: sparser (tail_of dk dk2 tl2))
+  (#ids2: Ghost.erased id_decs) (tl2: Ghost.erased (asn1_gen_items_l ids2)) (#t2: Type0) (dtl: Ghost.erased (idesc (tail_of dk dk2 tl2) t2))
+  (pres: dpresent dd)
+  (ptail: sparser dtl)
   (n: SZ.t)
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_t_core (cons2 dk dk2 tl2)))
   requires S.pts_to input #pm w ** pure (SZ.v n <= Seq.length w /\ item_parsed_core dk (Seq.slice w 0 (SZ.v n)) (vfst dk dk2 tl2 v) /\ seq_parsed_core (tail_of dk dk2 tl2) (Seq.slice w (SZ.v n) (Seq.length w)) (vsnd dk dk2 tl2 v))
-  returns res: asn1_items_impl_t (cons2 dk dk2 tl2)
-  ensures asn1_items_rel (cons2 dk dk2 tl2) pm res v ** Trade.trade (asn1_items_rel (cons2 dk dk2 tl2) pm res v) (S.pts_to input #pm w)
+  returns res: (t1 & t2)
+  ensures irel (id_cons dd dk2 tl2 dtl) pm res v ** Trade.trade (irel (id_cons dd dk2 tl2 dtl) pm res v) (S.pts_to input #pm w)
 {
   let in1, in2 = SU.split_trade input n;
   let r1 = pres in1 #pm #(Seq.slice w 0 (SZ.v n)) #(vfst dk dk2 tl2 v);
   let r2 = ptail in2 #pm #(Seq.slice w (SZ.v n) (Seq.length w)) #(vsnd dk dk2 tl2 v);
   Trade.prod
-    (asn1_decorated_rel dk pm r1 (vfst dk dk2 tl2 v)) (S.pts_to in1 #pm (Seq.slice w 0 (SZ.v n)))
-    (asn1_items_rel (tail_of dk dk2 tl2) pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to in2 #pm (Seq.slice w (SZ.v n) (Seq.length w)));
+    (drel dd pm r1 (vfst dk dk2 tl2 v)) (S.pts_to in1 #pm (Seq.slice w 0 (SZ.v n)))
+    (irel dtl pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to in2 #pm (Seq.slice w (SZ.v n) (Seq.length w)));
   Trade.trans
-    (asn1_decorated_rel dk pm r1 (vfst dk dk2 tl2 v) ** asn1_items_rel (tail_of dk dk2 tl2) pm r2 (vsnd dk dk2 tl2 v))
+    (drel dd pm r1 (vfst dk dk2 tl2 v) ** irel dtl pm r2 (vsnd dk dk2 tl2 v))
     (S.pts_to in1 #pm (Seq.slice w 0 (SZ.v n)) ** S.pts_to in2 #pm (Seq.slice w (SZ.v n) (Seq.length w)))
     (S.pts_to input #pm w);
-  let res : asn1_items_impl_t (cons2 dk dk2 tl2) = (r1, r2);
-  items_rel_cons_eq dk dk2 tl2 pm r1 r2 v;
-  rewrite (asn1_decorated_rel dk pm r1 (vfst dk dk2 tl2 v) ** asn1_items_rel (tail_of dk dk2 tl2) pm r2 (vsnd dk dk2 tl2 v))
-    as (asn1_items_rel (cons2 dk dk2 tl2) pm res v);
-  rewrite (Trade.trade (asn1_decorated_rel dk pm r1 (vfst dk dk2 tl2 v) ** asn1_items_rel (tail_of dk dk2 tl2) pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to input #pm w))
-    as (Trade.trade (asn1_items_rel (cons2 dk dk2 tl2) pm res v) (S.pts_to input #pm w));
+  let res : (t1 & t2) = (r1, r2);
+  items_rel_cons_eq dd dk2 tl2 dtl pm r1 r2 v;
+  rewrite (drel dd pm r1 (vfst dk dk2 tl2 v) ** irel dtl pm r2 (vsnd dk dk2 tl2 v))
+    as (irel (id_cons dd dk2 tl2 dtl) pm res v);
+  rewrite (Trade.trade (drel dd pm r1 (vfst dk dk2 tl2 v) ** irel dtl pm r2 (vsnd dk dk2 tl2 v)) (S.pts_to input #pm w))
+    as (Trade.trade (irel (id_cons dd dk2 tl2 dtl) pm res v) (S.pts_to input #pm w));
   res
 }
 
@@ -533,19 +577,19 @@ let tlv_size_eq (w: SB.bytes) (c1: nat) (c2: nat) (len: U32.t)
 
 inline_for_extraction
 fn seq_cons
-  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (dk: Ghost.erased (asn1_decorated_k s d))
+  (#s: Ghost.erased (Set.set asn1_id_t)) (#d: Ghost.erased asn1_decorator) (#dk: Ghost.erased (asn1_decorated_k s d)) (#t1: Type0) (dd: Ghost.erased (ddesc dk t1))
   (#s2: Ghost.erased (Set.set asn1_id_t)) (#d2: Ghost.erased asn1_decorator) (dk2: Ghost.erased (asn1_decorated_k s2 d2))
-  (#ids2: Ghost.erased id_decs) (tl2: Ghost.erased (asn1_gen_items_l ids2))
+  (#ids2: Ghost.erased id_decs) (tl2: Ghost.erased (asn1_gen_items_l ids2)) (#t2: Type0) (dtl: Ghost.erased (idesc (tail_of dk dk2 tl2) t2))
   (has_id: (id: asn1_id_t) -> Tot (b: bool { b == Set.mem id s }))
-  (pres: dpresent dk) (abs: dabsent dk)
-  (ptail: sparser (tail_of dk dk2 tl2))
-: sparser (cons2 (Ghost.reveal dk) (Ghost.reveal dk2) (Ghost.reveal tl2))
+  (pres: dpresent dd) (abs: dabsent dd)
+  (ptail: sparser dtl)
+: sparser (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   seq_cons_core dk dk2 tl2 w v;
   S.pts_to_len input;
   if (SZ.eq (S.len input) 0sz) {
-    seq_cons_absent dk dk2 tl2 abs ptail input #pm #w #v
+    seq_cons_absent dd dk2 tl2 dtl abs ptail input #pm #w #v
   } else {
     let mut poff = 0sz;
     let oid = I.vread_identifier input poff;
@@ -560,14 +604,14 @@ fn seq_cons
               tlv_size_eq w (SZ.v c1) (SZ.v off2 - SZ.v c1) len;
               SZ.fits_lte (SZ.v off2 + U32.v len) (Seq.length w);
               let n = SZ.add off2 (SZ.uint32_to_sizet len);
-              seq_cons_present dk dk2 tl2 pres ptail n input #pm #w #v
+              seq_cons_present dd dk2 tl2 dtl pres ptail n input #pm #w #v
             }
             None -> {
               unreachable ()
             }
           }
         } else {
-          seq_cons_absent dk dk2 tl2 abs ptail input #pm #w #v
+          seq_cons_absent dd dk2 tl2 dtl abs ptail input #pm #w #v
         }
       }
       None -> {
@@ -583,9 +627,9 @@ fn seq_cons
 
 inline_for_extraction
 fn seq_parser
-  (gitems: Ghost.erased asn1_gen_items_lk)
-  (f: sparser (dsnd (Ghost.reveal gitems)))
-: aparser #(asn1_items_impl_t (dsnd (Ghost.reveal gitems))) #(asn1_sequence_t_core (dsnd (Ghost.reveal gitems))) (asn1_items_rel (dsnd (Ghost.reveal gitems))) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE gitems))
+  (gitems: Ghost.erased asn1_gen_items_lk) (#t: Type0) (di: Ghost.erased (idesc (dsnd (Ghost.reveal gitems)) t))
+  (f: sparser di)
+: aparser #t #(asn1_sequence_t_core (dsnd (Ghost.reveal gitems))) (irel di) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE gitems))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   seq_content gitems w v;
