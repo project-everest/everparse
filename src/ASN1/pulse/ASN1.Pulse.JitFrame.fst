@@ -105,70 +105,90 @@ let fr_terminal (id: asn1_id_t) (k: asn1_terminal_k) : fr_t (raw_terminal_rel id
     terminal_leaf_equiv id k;
     fr_ext (raw_tlv id (raw_leaf k)) (raw_terminal_rel id k) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_leaf k) pm y x)
 
-let fr_content (id: asn1_id_t) (k: asn1_content_k) : fr_t (raw_content_rel id k) (FS.singleton id) =
-  match k with
-  | ASN1_TERMINAL k' ->
+ghost
+fn fr_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (s: FS.set asn1_id_t) (f: fr_t r s)
+  (pm: perm) (y: ty) (x: Ghost.erased SB.bytes)
+requires raw_view r view pm y x
+ensures raw_view r view pm y x ** pure (L.framed s x)
+{
+  unfold (raw_view r view pm y x);
+  f pm (view y) x;
+  fold (raw_view r view pm y x);
+}
+
+let rec fr_crel (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) : Tot (fr_t (raw_crel id d) (FS.singleton id)) (decreases d) =
+  match d with
+  | CD_TERMINAL k' ->
     content_terminal_equiv id k';
-    fr_ext (raw_terminal_rel id k') (raw_content_rel id k) () (FS.singleton id) (fr_terminal id k')
-  | ASN1_RESTRICTED_TERMINAL k' r ->
+    fr_ext (raw_terminal_rel id k') (raw_crel id d) () (FS.singleton id) (fr_terminal id k')
+  | CD_RESTRICTED k' r ->
     content_restricted_equiv id k' r;
-    fr_ext (raw_terminal_rel id k') (raw_content_rel id k) () (FS.singleton id) (fr_terminal id k')
-  | ASN1_PREFIXED k' ->
-    content_prefixed_equiv id k';
-    fr_ext (raw_tlv id (raw_rel k')) (raw_content_rel id k) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_rel k') pm y x)
-  | ASN1_SEQUENCE gitems ->
-    content_sequence_equiv id gitems;
-    fr_ext (raw_tlv id (raw_items_rel false (dsnd gitems))) (raw_content_rel id k) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_items_rel false (dsnd gitems)) pm y x)
-  | ASN1_SET ids items pf ->
-    content_set_equiv id ids items pf;
-    fr_ext (raw_tlv id (raw_items_rel true items)) (raw_content_rel id k) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_items_rel true items) pm y x)
-  | ASN1_SEQUENCE_OF ne k' ->
-    content_seq_of_equiv id ne k';
-    fr_ext (raw_tlv id (raw_ml (raw_rel k'))) (raw_content_rel id k) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_ml (raw_rel k')) pm y x)
-  | ASN1_SET_OF ne k' ->
-    content_set_of_equiv id ne k';
-    fr_ext (raw_tlv id (raw_ml_sorted (raw_rel k'))) (raw_content_rel id k) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_ml_sorted (raw_rel k')) pm y x)
-  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
-    begin match ofb with
-    | None ->
-      content_adb_none_equiv id ipd prefix kid key_k ls pf pf';
-      fr_ext (raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls))) (raw_content_rel id k) () (FS.singleton id)
-        (fun pm y x -> fr_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)) pm y x)
-    | Some fb ->
-      content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf';
-      fr_ext (raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb))) (raw_content_rel id k) () (FS.singleton id)
-        (fun pm y x -> fr_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)) pm y x)
-    end
+    fr_ext (raw_terminal_rel id k') (raw_crel id d) () (FS.singleton id) (fr_terminal id k')
+  | CD_PREFIXED d' ->
+    content_prefixed_equiv id d';
+    fr_ext (raw_tlv id (raw_arel d')) (raw_crel id d) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_arel d') pm y x)
+  | CD_SEQUENCE gitems di ->
+    content_sequence_equiv id gitems di;
+    fr_ext (raw_tlv id (raw_irel false di)) (raw_crel id d) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_irel false di) pm y x)
+  | CD_SET ids items pf di ->
+    content_set_equiv id ids items pf di;
+    fr_ext (raw_tlv id (raw_irel true di)) (raw_crel id d) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_irel true di) pm y x)
+  | CD_SEQUENCE_OF ne d' ->
+    content_seq_of_equiv id ne d';
+    fr_ext (raw_tlv id (raw_ml (raw_arel d'))) (raw_crel id d) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_ml (raw_arel d')) pm y x)
+  | CD_SET_OF ne d' ->
+    content_set_of_equiv id ne d';
+    fr_ext (raw_tlv id (raw_ml_sorted (raw_arel d'))) (raw_crel id d) () (FS.singleton id) (fun pm y x -> fr_tlv id (raw_ml_sorted (raw_arel d')) pm y x)
+  | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->
+    content_adb_none_equiv id ipd prefix kid key_k ls pf pf' dsx dpre;
+    fr_ext (raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx))) (raw_crel id d) () (FS.singleton id)
+      (fun pm y x -> fr_tlv id (raw_iarel dpre (raw_sxrel kid dsx)) pm y x)
+  | CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre ->
+    content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf' dfb dfx dpre;
+    fr_ext (raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))) (raw_crel id d) () (FS.singleton id)
+      (fun pm y x -> fr_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb))) pm y x)
+  | CD_VIEW d' ty view mk law ->
+    content_view_equiv id d' ty view mk law;
+    fr_ext (raw_view (raw_crel id d') view) (raw_crel id d) () (FS.singleton id)
+      (fun pm y x -> fr_view (raw_crel id d') view (FS.singleton id) (fr_crel id d') pm y x)
 
 let lc_set (lc: list (asn1_id_t & asn1_content_k)) : FS.set asn1_id_t =
   FS.as_set' (List.Tot.map fst lc)
 
-let rec fr_lc (lc: list (asn1_id_t & asn1_content_k)) : Tot (fr_t (raw_lc_rel lc) (lc_set lc)) (decreases lc) =
-  match lc with
-  | [] ->
+let rec fr_lcrel (#lc: list (asn1_id_t & asn1_content_k)) (#t: Type0) (d: lcdesc lc t) : Tot (fr_t (raw_lcrel d) (lc_set lc)) (decreases d) =
+  match d with
+  | LC_NIL ->
     lc_nil_equiv ();
-    fr_ext (raw_false unit) (raw_lc_rel []) () (lc_set lc) (fun pm y x -> fr_false unit (lc_set lc) pm y x)
-  | [(id', c)] ->
-    lc_single_equiv id' c;
+    fr_ext (raw_false unit) (raw_lcrel d) () (lc_set lc) (fun pm y x -> fr_false unit (lc_set lc) pm y x)
+  | LC_SINGLE id' #c cd ->
+    lc_single_equiv id' cd;
     assert_norm (lc_set [(id', c)] == FS.union (FS.singleton id') FS.empty);
-    fr_ext (raw_content_rel id' c) (raw_lc_rel lc) () (lc_set lc)
-      (fun pm y x -> fr_sub (raw_content_rel id' c) (FS.singleton id') (lc_set lc) () (fr_content id' c) pm y x)
-  | (id', c) :: hd2 :: tl2 ->
-    lc_cons_equiv id' c hd2 tl2;
+    fr_ext (raw_crel id' cd) (raw_lcrel d) () (lc_set lc)
+      (fun pm y x -> fr_sub (raw_crel id' cd) (FS.singleton id') (lc_set lc) () (fr_crel id' cd) pm y x)
+  | LC_CONS id' #c cd #hd2 #tl2 dtl ->
+    lc_cons_equiv id' cd dtl;
     assert_norm (lc_set ((id', c) :: hd2 :: tl2) == FS.union (FS.singleton id') (lc_set (hd2 :: tl2)));
-    fr_ext (raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2))) (raw_lc_rel lc) () (lc_set lc)
-      (fun pm y x -> fr_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2)) (FS.singleton id') (lc_set (hd2 :: tl2)) (lc_set lc) ()
-        (fr_content id' c) (fr_lc (hd2 :: tl2)) pm y x)
+    fr_ext (raw_either (raw_crel id' cd) (raw_lcrel dtl)) (raw_lcrel d) () (lc_set lc)
+      (fun pm y x -> fr_either (raw_crel id' cd) (raw_lcrel dtl) (FS.singleton id') (lc_set (hd2 :: tl2)) (lc_set lc) ()
+        (fr_crel id' cd) (fr_lcrel dtl) pm y x)
 
-let fr_k (#s: _) (k: asn1_k s) (u: squash (~ (ASN1_ANY_ILC? k))) : fr_t (raw_rel k) s =
-  match k with
-  | ASN1_ILC id k' ->
-    rel_ilc_equiv id k';
-    fr_ext (raw_content_rel id k') (raw_rel k) () s (fr_content id k')
-  | ASN1_CHOICE_ILC lc pf ->
-    rel_choice_equiv lc pf;
-    fr_ext (raw_lc_rel lc) (raw_rel k) () s
-      (fun pm y x -> fr_sub (raw_lc_rel lc) (lc_set lc) s () (fr_lc lc) pm y x)
+let rec fr_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (~ (ASN1_ANY_ILC? k))) : Tot (fr_t (raw_arel d) s) (decreases d) =
+  match d with
+  | D_ILC id cd ->
+    rel_ilc_equiv id cd;
+    fr_ext (raw_crel id cd) (raw_arel d) () s (fr_crel id cd)
+  | D_CHOICE lc pf ld ->
+    rel_choice_equiv lc pf ld;
+    fr_ext (raw_lcrel ld) (raw_arel d) () s
+      (fun pm y x -> fr_sub (raw_lcrel ld) (lc_set lc) s () (fr_lcrel ld) pm y x)
+  | D_VIEW d' ty view mk law ->
+    rel_view_equiv d' ty view mk law;
+    fr_ext (raw_view (raw_arel d') view) (raw_arel d) () s
+      (fun pm y x -> fr_view (raw_arel d') view s (fr_arel d' ()) pm y x)
+
+let fr_content (id: asn1_id_t) (k: asn1_content_k) : fr_t (raw_content_rel id k) (FS.singleton id) = fr_crel id (legacy_cdesc k)
+let fr_lc (lc: list (asn1_id_t & asn1_content_k)) : fr_t (raw_lc_rel lc) (lc_set lc) = fr_lcrel (legacy_lcdesc lc)
+let fr_k (#s: _) (k: asn1_k s) (u: squash (~ (ASN1_ANY_ILC? k))) : fr_t (raw_rel k) s = fr_arel (legacy_adesc k) u
 
 (* SEQUENCE components: the raw bytes of a component other than ANY are
    either framed, or empty if it is absent (`SL.dfe`); and, by the
@@ -279,20 +299,39 @@ let fe_default (#s: _) (#d: _) (dk: asn1_decorated_k s d) (id0: asn1_id_t) (k: a
       (fun pm y x -> fe_opt (raw_terminal_rel id0 k) dk () (fr_terminal id0 k) pm y x)
   end
 
-let fe_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (any_dec dk == false)) : fe_t (raw_dec_rel dk) (In.twin_of dk) =
-  match dk with
-  | ASN1_PLAIN_ILC k ->
-    dec_plain_equiv k;
-    fe_ext (raw_rel k) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_framed (raw_rel k) dk (fr_k k ()) pm y x)
-  | ASN1_OPTION_ILC k ->
-    dec_option_equiv k;
-    fe_ext (raw_opt (raw_rel k)) (raw_dec_rel dk) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_rel k) dk () (fr_k k ()) pm y x)
-  | ASN1_DEFAULT_TERMINAL id0 #k defl ->
+ghost
+fn fe_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (hd: gen_decorated_parser_twin) (f: fe_t r hd)
+  (pm: perm) (y: ty) (x: Ghost.erased SB.bytes)
+requires raw_view r view pm y x
+ensures raw_view r view pm y x ** pure (SL.dfe hd x)
+{
+  unfold (raw_view r view pm y x);
+  f pm (view y) x;
+  fold (raw_view r view pm y x);
+}
+
+let rec fe_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (u: squash (any_dec dk == false))
+: Tot (fe_t (raw_drel d) (In.twin_of dk)) (decreases d)
+= match d with
+  | DD_PLAIN d' ->
+    dec_plain_equiv d';
+    fe_ext (raw_arel d') (raw_drel d) () (In.twin_of dk) (fun pm y x -> fe_framed (raw_arel d') dk (fr_arel d' ()) pm y x)
+  | DD_OPTION d' ->
+    dec_option_equiv d';
+    fe_ext (raw_opt (raw_arel d')) (raw_drel d) () (In.twin_of dk) (fun pm y x -> fe_opt (raw_arel d') dk () (fr_arel d' ()) pm y x)
+  | DD_DEFAULT id0 #k defl ->
     dec_default_equiv id0 #k defl;
-    fe_ext (raw_default_rel id0 k defl) (raw_dec_rel dk) () (In.twin_of dk) (fe_default dk id0 k defl ())
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl ->
+    fe_ext (raw_default_rel id0 k defl) (raw_drel d) () (In.twin_of dk) (fe_default dk id0 k defl ())
+  | DD_DEFAULT_RESTRICTED id0 #k r defl ->
     dec_default_restricted_equiv id0 #k r defl;
-    fe_ext (raw_default_rel id0 k defl) (raw_dec_rel dk) () (In.twin_of dk) (fe_default dk id0 k defl ())
+    fe_ext (raw_default_rel id0 k defl) (raw_drel d) () (In.twin_of dk) (fe_default dk id0 k defl ())
+  | DD_VIEW d' ty view mk law ->
+    dec_view_equiv d' ty view mk law;
+    fe_ext (raw_view (raw_drel d') view) (raw_drel d) () (In.twin_of dk)
+      (fun pm y x -> fe_view (raw_drel d') view (In.twin_of dk) (fe_drel d' ()) pm y x)
+
+let fe_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (any_dec dk == false)) : fe_t (raw_dec_rel dk) (In.twin_of dk) =
+  fe_drel (legacy_ddesc dk) u
 
 ghost
 fn av_ext (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r2)) (s: FS.set asn1_id_t) (f: av_t r1 s)
@@ -369,29 +408,33 @@ ensures raw_cat r1 r2 pm y x ** pure (SL.avoids s x)
 }
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
-let rec av_items (#i: id_decs) (ls: asn1_gen_items_l i) (s: FS.set asn1_id_t) (wf: squash (asn1_sequence_k_wf' i s))
-: Tot (av_t (raw_items_rel false ls) s) (decreases ls)
-= match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+let rec av_irel (#i: id_decs) (#ls: asn1_gen_items_l i) (#t: Type0) (d: idesc ls t) (s: FS.set asn1_id_t) (wf: squash (asn1_sequence_k_wf' i s))
+: Tot (av_t (raw_irel false d) s) (decreases d)
+= match d with
+  | ID_NIL ->
     items_nil_equiv false;
-    av_ext (raw_pure null_enc) (raw_items_rel false ls) () s (av_nil s)
-  | ASN1_GEN_ITEMS_CONS s1 d1 dk _ ASN1_GEN_ITEMS_NIL ->
-    items_single_equiv false dk;
+    av_ext (raw_pure null_enc) (raw_irel false d) () s (av_nil s)
+  | ID_SINGLE #_ #_ #dk dd ->
+    items_single_equiv false dd;
     L.item_set_twin dk;
     if any_dec dk
-    then av_none (raw_items_rel false ls) s ()
-    else av_ext (raw_dec_rel dk) (raw_items_rel false ls) () s (fun pm y x -> av_fe (raw_dec_rel dk) (In.twin_of dk) s () (fe_dec dk ()) pm y x)
-  | ASN1_GEN_ITEMS_CONS s1 d1 dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_cons_equiv false dk dk2 tl2;
-    join_cat_equiv false (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2));
+    then av_none (raw_irel false d) s ()
+    else av_ext (raw_drel dd) (raw_irel false d) () s (fun pm y x -> av_fe (raw_drel dd) (In.twin_of dk) s () (fe_drel dd ()) pm y x)
+  | ID_CONS #s1 #d1 #dk dd dtl ->
+    items_cons_equiv false dd dtl;
+    join_cat_equiv false (raw_drel dd) (raw_irel false dtl);
     L.item_set_twin dk;
     SL.item_dec_twin dk;
     if any_dec dk
-    then av_none (raw_items_rel false ls) s ()
+    then av_none (raw_irel false d) s ()
     else if PLAIN? d1
-    then av_ext (raw_cat (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (raw_items_rel false ls) () s
-      (fun pm y x -> av_cons_plain (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.twin_of dk) s () (fe_dec dk ()) pm y x)
-    else av_ext (raw_cat (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (raw_items_rel false ls) () s
-      (fun pm y x -> av_cons_opt (raw_dec_rel dk) (raw_items_rel false (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.twin_of dk) s (FS.union s s1) () (fe_dec dk ())
-        (av_items (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) (FS.union s s1) ()) pm y x)
+    then av_ext (raw_cat (raw_drel dd) (raw_irel false dtl)) (raw_irel false d) () s
+      (fun pm y x -> av_cons_plain (raw_drel dd) (raw_irel false dtl) (In.twin_of dk) s () (fe_drel dd ()) pm y x)
+    else av_ext (raw_cat (raw_drel dd) (raw_irel false dtl)) (raw_irel false d) () s
+      (fun pm y x -> av_cons_opt (raw_drel dd) (raw_irel false dtl) (In.twin_of dk) s (FS.union s s1) () (fe_drel dd ())
+        (av_irel dtl (FS.union s s1) ()) pm y x)
 #pop-options
+
+let av_items (#i: id_decs) (ls: asn1_gen_items_l i) (s: FS.set asn1_id_t) (wf: squash (asn1_sequence_k_wf' i s))
+: av_t (raw_items_rel false ls) s
+= av_irel (legacy_idesc ls) s wf

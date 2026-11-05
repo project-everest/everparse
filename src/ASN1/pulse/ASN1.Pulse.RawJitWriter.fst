@@ -107,3 +107,32 @@ fn jit_write_raw (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (pm: perm)
   raw_jit_correct k u y (SZ.v p) v res (SZ.v p1) v1;
   res
 }
+
+(* The same, for the Pulse type `t` of a descriptor `d` (with named
+   structs and case types): a value `x': t` written as the raw bytes
+   `rb k y` of a raw value `y` (`raw_arel d pm x' (rb k y)`), for which the
+   writer reports the same outcomes as above. With the legacy descriptor,
+   `asn1_raw_rel k pm x' y` implies this relation (`split_k`).
+   `wj` is meant to be `jit_writer_d d u pm`. *)
+
+inline_for_extraction
+let raw_jit_writer_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm) =
+  (x': t) -> (#y: Ghost.erased (asn1_raw_t k)) ->
+  (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
+  stt jit_result
+    (pts_to out v ** pts_to pos p ** raw_arel d pm x' (rb k y) ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** raw_arel d pm x' (rb k y) **
+      pure (raw_jit_post k u y (SZ.v p) v res (SZ.v p') v'))
+
+inline_for_extraction
+fn jit_write_raw_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
+  (wj: jwx (raw_arel d) (kacc k) pm)
+: raw_jit_writer_d_t d u pm
+= (x': t) (#y: Ghost.erased (asn1_raw_t k))
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  let res = wj x' #(rb k y) out pos;
+  with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+  raw_jit_correct k u y (SZ.v p) v res (SZ.v p1) v1;
+  res
+}

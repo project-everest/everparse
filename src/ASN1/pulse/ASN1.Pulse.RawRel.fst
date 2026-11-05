@@ -211,87 +211,105 @@ let default_rel_opt (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
   (ensures (raw_default_rel id0 k defl == raw_opt (raw_terminal_rel id0 k)))
 = ()
 
-(* The whole schema *)
+(* The whole schema, along an impl descriptor (`ASN1.Pulse.Rel.adesc`): a
+   VIEW node relates a value through its view *)
 
-let rec raw_content_rel (id: asn1_id_t) (k: asn1_content_k) (pm: perm) (x: asn1_content_impl_t k) (w: SB.bytes) : Tot slprop (decreases k) =
-  match k with
-  | ASN1_RESTRICTED_TERMINAL k' _ -> raw_terminal_rel id k' pm x w
-  | ASN1_TERMINAL k' -> raw_terminal_rel id k' pm x w
-  | ASN1_SEQUENCE gitems -> let x' : asn1_items_impl_t (dsnd gitems) = coerce_eq () x in raw_tlv id (raw_items_rel false (dsnd gitems)) pm x' w
-  | ASN1_SET _ items _ -> let x' : asn1_items_impl_t items = coerce_eq () x in raw_tlv id (raw_items_rel true items) pm x' w
-  | ASN1_SEQUENCE_OF _ k' -> let x' : ml (asn1_impl_t k') = coerce_eq () x in raw_tlv id (raw_ml (raw_rel k')) pm x' w
-  | ASN1_SET_OF _ k' -> let x' : ml (asn1_impl_t k') = coerce_eq () x in raw_tlv id (raw_ml_sorted (raw_rel k')) pm x' w
-  | ASN1_PREFIXED k' -> let x' : asn1_impl_t k' = coerce_eq () x in raw_tlv id (raw_rel k') pm x' w
-  | ASN1_ANY_DEFINED_BY _ prefix kid key_k ls ofb _ _ ->
-    begin match ofb with
-    | None ->
-      raw_tlv id (raw_items_any_rel prefix #(asn1_adb_suffix_impl_t key_k ls None) (raw_adb_rel kid key_k ls)) pm x w
-    | Some fb ->
-      let fbt = asn1_terminal_impl_t key_k & asn1_items_impl_t (dsnd fb) in
-      raw_tlv id (raw_items_any_rel prefix #(asn1_adb_suffix_impl_t key_k ls (Some fbt))
-        (raw_adb_fb_rel kid key_k ls fbt (raw_cat (raw_terminal_rel kid key_k) (raw_items_rel false (dsnd fb))))) pm x w
-    end
+let raw_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (pm: perm) (x: ty) (w: SB.bytes) : slprop =
+  r pm (view x) w
 
-and raw_adb_rel (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
-  (pm: perm) (x: asn1_adb_suffix_impl_t key_k ls None) (w: SB.bytes)
-: Tot slprop (decreases ls)
-= match ls with
-  | [] -> pure False
-  | [(key', it)] -> raw_pre (WA.raw_key_enc kid key_k key') (raw_items_rel false (dsnd it)) pm x w
-  | (key', it) :: tl ->
-    let x' : either (asn1_items_impl_t (dsnd it)) (asn1_adb_suffix_impl_t key_k tl None) = x in
-    raw_either (raw_pre (WA.raw_key_enc kid key_k key') (raw_items_rel false (dsnd it))) (raw_adb_rel kid key_k tl) pm x' w
+let rec raw_crel (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) (pm: perm) (x: t) (w: SB.bytes) : Tot slprop (decreases d) =
+  match d with
+  | CD_RESTRICTED k' _ -> raw_terminal_rel id k' pm x w
+  | CD_TERMINAL k' -> raw_terminal_rel id k' pm x w
+  | CD_SEQUENCE _ di -> raw_tlv id (raw_irel false di) pm x w
+  | CD_SET _ _ _ di -> raw_tlv id (raw_irel true di) pm x w
+  | CD_SEQUENCE_OF _ d' -> raw_tlv id (raw_ml (raw_arel d')) pm x w
+  | CD_SET_OF _ d' -> raw_tlv id (raw_ml_sorted (raw_arel d')) pm x w
+  | CD_PREFIXED d' -> raw_tlv id (raw_arel d') pm x w
+  | CD_ADB_NONE _ _ kid _ _ _ _ dsx dpre -> raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx)) pm x w
+  | CD_ADB_SOME _ _ kid key_k _ _ _ _ dfb dfx dpre ->
+    raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb)))) pm x w
+  | CD_VIEW d' _ view _ _ -> raw_crel id d' pm (view x) w
 
-and raw_adb_fb_rel (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
-  (fbt: Type0) (fbr: bprel fbt)
-  (pm: perm) (x: asn1_adb_suffix_impl_t key_k ls (Some fbt)) (w: SB.bytes)
-: Tot slprop (decreases ls)
-= match ls with
-  | [] -> fbr pm x w
-  | [(key', it)] ->
-    let x' : either (asn1_items_impl_t (dsnd it)) fbt = x in
-    raw_either (raw_pre (WA.raw_key_enc kid key_k key') (raw_items_rel false (dsnd it))) fbr pm x' w
-  | (key', it) :: tl ->
-    let x' : either (asn1_items_impl_t (dsnd it)) (asn1_adb_suffix_impl_t key_k tl (Some fbt)) = x in
-    raw_either (raw_pre (WA.raw_key_enc kid key_k key') (raw_items_rel false (dsnd it))) (raw_adb_fb_rel kid key_k tl fbt fbr) pm x' w
+and raw_sxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (d: sxdesc key_k ls t)
+  (pm: perm) (x: t) (w: SB.bytes)
+: Tot slprop (decreases d)
+= match d with
+  | SX_NIL _ -> pure False
+  | SX_SINGLE _ key' _ di -> raw_pre (WA.raw_key_enc kid key_k key') (raw_irel false di) pm x w
+  | SX_CONS _ key' _ di dtl -> raw_either (raw_pre (WA.raw_key_enc kid key_k key') (raw_irel false di)) (raw_sxrel kid dtl) pm x w
 
-and raw_items_any_rel (#ids: _) (items: asn1_gen_items_l ids) (#sfx: Type0) (sr: bprel sfx) (pm: perm) (x: asn1_items_any_impl_t items sfx) (w: SB.bytes)
-: Tot slprop (decreases items)
-= match items with
-  | ASN1_GEN_ITEMS_NIL -> sr pm x w
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    let x' : asn1_decorated_impl_t dk & sfx = x in
-    raw_cat (raw_dec_rel dk) sr pm x' w
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl ->
-    let x' : asn1_decorated_impl_t dk & asn1_items_any_impl_t tl sfx = x in
-    raw_cat (raw_dec_rel dk) (raw_items_any_rel tl sr) pm x' w
+and raw_fxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#fbt: Type0) (#t: Type0) (d: fxdesc key_k ls fbt t)
+  (fbr: bprel fbt) (pm: perm) (x: t) (w: SB.bytes)
+: Tot slprop (decreases d)
+= match d with
+  | FX_NIL _ -> fbr pm x w
+  | FX_SINGLE _ key' _ di -> raw_either (raw_pre (WA.raw_key_enc kid key_k key') (raw_irel false di)) fbr pm x w
+  | FX_CONS _ key' _ di dtl -> raw_either (raw_pre (WA.raw_key_enc kid key_k key') (raw_irel false di)) (raw_fxrel kid dtl fbr) pm x w
 
-and raw_lc_rel (lc: list (asn1_id_t & asn1_content_k)) (pm: perm) (x: asn1_lc_impl_t lc) (w: SB.bytes) : Tot slprop (decreases lc) =
-  match lc with
-  | [] -> pure False
-  | [(id', c)] -> raw_content_rel id' c pm x w
-  | (id', c) :: tl -> let x' : either (asn1_content_impl_t c) (asn1_lc_impl_t tl) = coerce_eq () x in raw_either (raw_content_rel id' c) (raw_lc_rel tl) pm x' w
+and raw_iarel (#ids: _) (#items: asn1_gen_items_l ids) (#sfx: Type0) (#t: Type0) (d: iadesc items sfx t) (sr: bprel sfx) (pm: perm) (x: t) (w: SB.bytes)
+: Tot slprop (decreases d)
+= match d with
+  | IA_NIL -> sr pm x w
+  | IA_SINGLE dd -> raw_cat (raw_drel dd) sr pm x w
+  | IA_CONS dd dtl -> raw_cat (raw_drel dd) (raw_iarel dtl sr) pm x w
 
-and raw_rel (#s: _) (k: asn1_k s) (pm: perm) (x: asn1_impl_t k) (w: SB.bytes) : Tot slprop (decreases k) =
-  match k with
-  | ASN1_ILC id k' -> raw_content_rel id k' pm x w
-  | ASN1_CHOICE_ILC lc _ -> raw_lc_rel lc pm x w
-  | ASN1_ANY_ILC -> raw_slice pm x w
+and raw_lcrel (#lc: list (asn1_id_t & asn1_content_k)) (#t: Type0) (d: lcdesc lc t) (pm: perm) (x: t) (w: SB.bytes) : Tot slprop (decreases d) =
+  match d with
+  | LC_NIL -> pure False
+  | LC_SINGLE id' cd -> raw_crel id' cd pm x w
+  | LC_CONS id' cd dtl -> raw_either (raw_crel id' cd) (raw_lcrel dtl) pm x w
 
-and raw_dec_rel (#s: _) (#d: _) (dk: asn1_decorated_k s d) (pm: perm) (x: asn1_decorated_impl_t dk) (w: SB.bytes) : Tot slprop (decreases dk) =
-  match dk with
-  | ASN1_PLAIN_ILC k -> raw_rel k pm x w
-  | ASN1_OPTION_ILC k -> let x' : option (asn1_impl_t k) = coerce_eq () x in raw_opt (raw_rel k) pm x' w
-  | ASN1_DEFAULT_TERMINAL id0 #k defl -> let x' : option (asn1_terminal_impl_t k) = coerce_eq () x in raw_default_rel id0 k defl pm x' w
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k _ defl -> let x' : option (asn1_terminal_impl_t k) = coerce_eq () x in raw_default_rel id0 k defl pm x' w
+and raw_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: t) (w: SB.bytes) : Tot slprop (decreases d) =
+  match d with
+  | D_ILC id cd -> raw_crel id cd pm x w
+  | D_CHOICE _ _ ld -> raw_lcrel ld pm x w
+  | D_ANY -> raw_slice pm x w
+  | D_VIEW d' _ view _ _ -> raw_arel d' pm (view x) w
 
-and raw_items_rel (srt: bool) (#ids: _) (items: asn1_gen_items_l ids) (pm: perm) (x: asn1_items_impl_t items) (w: SB.bytes) : Tot slprop (decreases items) =
-  match items with
-  | ASN1_GEN_ITEMS_NIL -> pure (w == Seq.empty)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL -> raw_dec_rel dk pm x w
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl -> let x' : asn1_decorated_impl_t dk & asn1_items_impl_t tl = coerce_eq () x in raw_join srt (raw_dec_rel dk) (raw_items_rel srt tl) pm x' w
+and raw_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (pm: perm) (x: t) (w: SB.bytes) : Tot slprop (decreases d) =
+  match d with
+  | DD_PLAIN d' -> raw_arel d' pm x w
+  | DD_OPTION d' -> raw_opt (raw_arel d') pm x w
+  | DD_DEFAULT id0 #k defl -> raw_default_rel id0 k defl pm x w
+  | DD_DEFAULT_RESTRICTED id0 #k _ defl -> raw_default_rel id0 k defl pm x w
+  | DD_VIEW d' _ view _ _ -> raw_drel d' pm (view x) w
+
+and raw_irel (srt: bool) (#ids: _) (#items: asn1_gen_items_l ids) (#t: Type0) (d: idesc items t) (pm: perm) (x: t) (w: SB.bytes) : Tot slprop (decreases d) =
+  match d with
+  | ID_NIL -> pure (w == Seq.empty)
+  | ID_SINGLE dd -> raw_drel dd pm x w
+  | ID_CONS dd dtl -> raw_join srt (raw_drel dd) (raw_irel srt dtl) pm x w
 
 (* The fallback of an ANY DEFINED BY: the key, then the payload *)
+
+let raw_dfbr (kid: asn1_id_t) (key_k: asn1_terminal_k) (#gfb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd gfb) tfb)
+: bprel (asn1_terminal_impl_t key_k & tfb)
+= raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb)
+
+(* The relations of today's representations: those of the legacy descriptors *)
+
+let raw_content_rel (id: asn1_id_t) (k: asn1_content_k) : bprel (asn1_content_impl_t k) = raw_crel id (legacy_cdesc k)
+
+let raw_adb_rel (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+: bprel (asn1_adb_suffix_impl_t key_k ls None)
+= raw_sxrel kid (legacy_sxdesc key_k ls)
+
+let raw_adb_fb_rel (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (fbt: Type0) (fbr: bprel fbt)
+: bprel (asn1_adb_suffix_impl_t key_k ls (Some fbt))
+= raw_fxrel kid (legacy_fxdesc key_k ls fbt) fbr
+
+let raw_items_any_rel (#ids: _) (items: asn1_gen_items_l ids) (#sfx: Type0) (sr: bprel sfx) : bprel (asn1_items_any_impl_t items sfx) =
+  raw_iarel (legacy_iadesc items sfx) sr
+
+let raw_lc_rel (lc: list (asn1_id_t & asn1_content_k)) : bprel (asn1_lc_impl_t lc) = raw_lcrel (legacy_lcdesc lc)
+
+let raw_rel (#s: _) (k: asn1_k s) : bprel (asn1_impl_t k) = raw_arel (legacy_adesc k)
+
+let raw_dec_rel (#s: _) (#d: _) (dk: asn1_decorated_k s d) : bprel (asn1_decorated_impl_t dk) = raw_drel (legacy_ddesc dk)
+
+let raw_items_rel (srt: bool) (#ids: _) (items: asn1_gen_items_l ids) : bprel (asn1_items_impl_t items) = raw_irel srt (legacy_idesc items)
 
 let raw_fbr (kid: asn1_id_t) (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) : bprel (PA.fbt key_k fb) =
   raw_cat (raw_terminal_rel kid key_k) (raw_items_rel false (dsnd fb))
@@ -724,10 +742,16 @@ let gather_raw_leaf (k: leaf_k) : gather_t (raw_leaf k) =
 
 let prel_equiv (#t: Type0) (r1 r2: bprel t) : prop = RS.prel_equiv #t #SB.bytes r1 r2
 
+let raw_dlit (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (#y: asn1_gen_items_lk) (#t: Type0) (di: idesc (dsnd y) t) : bprel t =
+  raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di)
+
+let raw_lit (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) : bprel (asn1_items_impl_t (dsnd y)) =
+  raw_dlit kid kx #y (legacy_idesc (dsnd y))
+
 let solve_equiv () : T.Tac unit =
   T.norm [delta_only [`%prel_equiv; `%RS.prel_equiv]];
   let _ = T.forall_intros () in
-  T.norm [delta_only [`%raw_terminal_rel; `%raw_content_rel; `%raw_lc_rel; `%raw_rel; `%raw_dec_rel; `%raw_items_rel; `%raw_items_any_rel; `%raw_adb_rel; `%raw_adb_fb_rel; `%raw_afb_rel; `%raw_fbr; `%PA.fbt; `%PA.adb_k_none; `%PA.adb_k_some; `%coerce_eq]; zeta; iota];
+  T.norm [delta_only [`%raw_terminal_rel; `%raw_crel; `%raw_sxrel; `%raw_fxrel; `%raw_iarel; `%raw_lcrel; `%raw_arel; `%raw_drel; `%raw_irel; `%raw_view; `%raw_dfbr; `%raw_dlit; `%legacy_adesc; `%legacy_cdesc; `%legacy_ddesc; `%legacy_idesc; `%legacy_lcdesc; `%legacy_iadesc; `%legacy_sxdesc; `%legacy_fxdesc; `%raw_content_rel; `%raw_lc_rel; `%raw_rel; `%raw_dec_rel; `%raw_items_rel; `%raw_items_any_rel; `%raw_adb_rel; `%raw_adb_fb_rel; `%raw_afb_rel; `%raw_fbr; `%PA.fbt; `%PA.adb_k_none; `%PA.adb_k_some; `%coerce_eq]; zeta; iota];
   T.trefl ()
 
 
@@ -775,149 +799,143 @@ let terminal_leaf_equiv (id: asn1_id_t) (k: leaf_k)
   | ASN1_DATE_TIME -> assert (prel_equiv #(asn1_terminal_impl_t ASN1_DATE_TIME) (raw_tlv id (raw_leaf ASN1_DATE_TIME)) (raw_terminal_rel id ASN1_DATE_TIME)) by (solve_equiv ())
 
 let content_terminal_equiv (id: asn1_id_t) (k: asn1_terminal_k)
-: Lemma (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_content_rel id (ASN1_TERMINAL k)))
-= assert (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_content_rel id (ASN1_TERMINAL k))) by (solve_equiv ())
+: Lemma (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_crel id (CD_TERMINAL k)))
+= assert (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_crel id (CD_TERMINAL k))) by (solve_equiv ())
 
 let content_restricted_equiv (id: asn1_id_t) (k: asn1_terminal_k) (r: asn1_restriction k)
-: Lemma (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k r)))
-= assert (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k r))) by (solve_equiv ())
+: Lemma (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_crel id (CD_RESTRICTED k r)))
+= assert (prel_equiv #(asn1_terminal_impl_t k) (raw_terminal_rel id k) (raw_crel id (CD_RESTRICTED k r))) by (solve_equiv ())
 
-let content_prefixed_equiv (id: asn1_id_t) (#s: _) (k: asn1_k s)
-: Lemma (prel_equiv #(asn1_impl_t k) (raw_tlv id (raw_rel k)) (raw_content_rel id (ASN1_PREFIXED k)))
-= assert (prel_equiv #(asn1_impl_t k) (raw_tlv id (raw_rel k)) (raw_content_rel id (ASN1_PREFIXED k))) by (solve_equiv ())
+let content_prefixed_equiv (id: asn1_id_t) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
+: Lemma (prel_equiv #t (raw_tlv id (raw_arel d)) (raw_crel id (CD_PREFIXED d)))
+= assert (prel_equiv #t (raw_tlv id (raw_arel d)) (raw_crel id (CD_PREFIXED d))) by (solve_equiv ())
 
-let content_sequence_equiv (id: asn1_id_t) (gitems: asn1_gen_items_lk)
-: Lemma (prel_equiv #(asn1_items_impl_t (dsnd gitems)) (raw_tlv id (raw_items_rel false (dsnd gitems))) (raw_content_rel id (ASN1_SEQUENCE gitems)))
-= assert (prel_equiv #(asn1_items_impl_t (dsnd gitems)) (raw_tlv id (raw_items_rel false (dsnd gitems))) (raw_content_rel id (ASN1_SEQUENCE gitems))) by (solve_equiv ())
+let content_sequence_equiv (id: asn1_id_t) (gitems: asn1_gen_items_lk) (#t: Type0) (di: idesc (dsnd gitems) t)
+: Lemma (prel_equiv #t (raw_tlv id (raw_irel false di)) (raw_crel id (CD_SEQUENCE gitems di)))
+= assert (prel_equiv #t (raw_tlv id (raw_irel false di)) (raw_crel id (CD_SEQUENCE gitems di))) by (solve_equiv ())
 
-let content_set_equiv (id: asn1_id_t) (ids: _) (items: asn1_gen_items_l ids) (pf: _)
-: Lemma (prel_equiv #(asn1_items_impl_t items) (raw_tlv id (raw_items_rel true items)) (raw_content_rel id (ASN1_SET ids items pf)))
-= assert (prel_equiv #(asn1_items_impl_t items) (raw_tlv id (raw_items_rel true items)) (raw_content_rel id (ASN1_SET ids items pf))) by (solve_equiv ())
+let content_set_equiv (id: asn1_id_t) (ids: _) (items: asn1_gen_items_l ids) (pf: _) (#t: Type0) (di: idesc items t)
+: Lemma (prel_equiv #t (raw_tlv id (raw_irel true di)) (raw_crel id (CD_SET ids items pf di)))
+= assert (prel_equiv #t (raw_tlv id (raw_irel true di)) (raw_crel id (CD_SET ids items pf di))) by (solve_equiv ())
 
-let content_seq_of_equiv (id: asn1_id_t) (ne: bool) (#s: _) (k: asn1_k s)
-: Lemma (prel_equiv #(ml (asn1_impl_t k)) (raw_tlv id (raw_ml (raw_rel k))) (raw_content_rel id (ASN1_SEQUENCE_OF ne k)))
-= assert (prel_equiv #(ml (asn1_impl_t k)) (raw_tlv id (raw_ml (raw_rel k))) (raw_content_rel id (ASN1_SEQUENCE_OF ne k))) by (solve_equiv ())
+let content_seq_of_equiv (id: asn1_id_t) (ne: bool) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
+: Lemma (prel_equiv #(ml t) (raw_tlv id (raw_ml (raw_arel d))) (raw_crel id (CD_SEQUENCE_OF ne d)))
+= assert (prel_equiv #(ml t) (raw_tlv id (raw_ml (raw_arel d))) (raw_crel id (CD_SEQUENCE_OF ne d))) by (solve_equiv ())
 
-let content_set_of_equiv (id: asn1_id_t) (ne: bool) (#s: _) (k: asn1_k s)
-: Lemma (prel_equiv #(ml (asn1_impl_t k)) (raw_tlv id (raw_ml_sorted (raw_rel k))) (raw_content_rel id (ASN1_SET_OF ne k)))
-= assert (prel_equiv #(ml (asn1_impl_t k)) (raw_tlv id (raw_ml_sorted (raw_rel k))) (raw_content_rel id (ASN1_SET_OF ne k))) by (solve_equiv ())
+let content_set_of_equiv (id: asn1_id_t) (ne: bool) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
+: Lemma (prel_equiv #(ml t) (raw_tlv id (raw_ml_sorted (raw_arel d))) (raw_crel id (CD_SET_OF ne d)))
+= assert (prel_equiv #(ml t) (raw_tlv id (raw_ml_sorted (raw_arel d))) (raw_crel id (CD_SET_OF ne d))) by (solve_equiv ())
 
 let content_adb_none_equiv (id: asn1_id_t) (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
   (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
-: Lemma (prel_equiv #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls None))
-    (raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)))
-    (raw_content_rel id (PA.adb_k_none ipd prefix kid key_k ls pf pf')))
-= assert (prel_equiv #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls None))
-    (raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)))
-    (raw_content_rel id (PA.adb_k_none ipd prefix kid key_k ls pf pf'))) by (solve_equiv ())
+  (#ts: Type0) (dsx: sxdesc key_k ls ts) (#t: Type0) (dpre: iadesc prefix ts t)
+: Lemma (prel_equiv #t (raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx))) (raw_crel id (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre)))
+= assert (prel_equiv #t (raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx))) (raw_crel id (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre))) by (solve_equiv ())
 
 let content_adb_some_equiv (id: asn1_id_t) (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
   (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
-: Lemma (prel_equiv #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))))
-    (raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)))
-    (raw_content_rel id (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')))
-= assert (prel_equiv #(asn1_items_any_impl_t prefix (asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))))
-    (raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)))
-    (raw_content_rel id (PA.adb_k_some ipd prefix kid key_k ls fb pf pf'))) by (solve_equiv ())
+  (#tfb: Type0) (dfb: idesc (dsnd fb) tfb)
+  (#ts: Type0) (dfx: fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) ts) (#t: Type0) (dpre: iadesc prefix ts t)
+: Lemma (prel_equiv #t (raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))) (raw_crel id (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre)))
+= assert (prel_equiv #t (raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))) (raw_crel id (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre))) by (solve_equiv ())
+
+let content_view_equiv (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
+: Lemma (prel_equiv #ty (raw_view (raw_crel id d) view) (raw_crel id (CD_VIEW d ty view mk law)))
+= assert (prel_equiv #ty (raw_view (raw_crel id d) view) (raw_crel id (CD_VIEW d ty view mk law))) by (solve_equiv ())
 
 let items_any_nil_equiv (#sfx: Type0) (sr: bprel sfx)
-: Lemma (prel_equiv #sfx sr (raw_items_any_rel ASN1_GEN_ITEMS_NIL sr))
-= assert (prel_equiv #sfx sr (raw_items_any_rel ASN1_GEN_ITEMS_NIL sr)) by (solve_equiv ())
+: Lemma (prel_equiv #sfx sr (raw_iarel (IA_NIL #sfx) sr))
+= assert (prel_equiv #sfx sr (raw_iarel (IA_NIL #sfx) sr)) by (solve_equiv ())
 
-let items_any_single_equiv (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#sfx: Type0) (sr: bprel sfx)
-: Lemma (prel_equiv #(asn1_decorated_impl_t dk & sfx) (raw_cat (raw_dec_rel dk) sr) (raw_items_any_rel (PS.single dk) sr))
-= assert (prel_equiv #(asn1_decorated_impl_t dk & sfx) (raw_cat (raw_dec_rel dk) sr) (raw_items_any_rel (PS.single dk) sr)) by (solve_equiv ())
+let items_any_single_equiv (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t) (#sfx: Type0) (sr: bprel sfx)
+: Lemma (prel_equiv #(t & sfx) (raw_cat (raw_drel dd) sr) (raw_iarel (IA_SINGLE dd #sfx) sr))
+= assert (prel_equiv #(t & sfx) (raw_cat (raw_drel dd) sr) (raw_iarel (IA_SINGLE dd #sfx) sr)) by (solve_equiv ())
 
-let items_any_cons_equiv (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#s2: _) (#d2: _) (dk2: asn1_decorated_k s2 d2) (#ids2: _) (tl2: asn1_gen_items_l ids2)
-  (#sfx: Type0) (sr: bprel sfx)
-: Lemma (prel_equiv
-    #(asn1_decorated_impl_t dk & asn1_items_any_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfx)
-    (raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr))
-    (raw_items_any_rel (PS.cons2 dk dk2 tl2) sr))
-= assert (prel_equiv
-    #(asn1_decorated_impl_t dk & asn1_items_any_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfx)
-    (raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr))
-    (raw_items_any_rel (PS.cons2 dk dk2 tl2) sr)) by (solve_equiv ())
+let items_any_cons_equiv (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (dd: ddesc dk t1)
+  (#s2: _) (#d2: _) (#dk2: asn1_decorated_k s2 d2) (#ids2: _) (#tl2: asn1_gen_items_l ids2) (#sfx: Type0) (#t2: Type0)
+  (dtl: iadesc (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfx t2) (sr: bprel sfx)
+: Lemma (prel_equiv #(t1 & t2) (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel (IA_CONS dd dtl) sr))
+= assert (prel_equiv #(t1 & t2) (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel (IA_CONS dd dtl) sr)) by (solve_equiv ())
 
 (* The payload selected by the key literal `kx` *)
-let raw_lit (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) : bprel (asn1_items_impl_t (dsnd y)) =
-  raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y))
-
 let adb_nil_equiv (kid: asn1_id_t) (key_k: asn1_terminal_k)
-: Lemma (prel_equiv #unit (raw_false unit) (raw_adb_rel kid key_k []))
-= assert (prel_equiv #unit (raw_false unit) (raw_adb_rel kid key_k [])) by (solve_equiv ())
+: Lemma (prel_equiv #unit (raw_false unit) (raw_sxrel kid (SX_NIL key_k)))
+= assert (prel_equiv #unit (raw_false unit) (raw_sxrel kid (SX_NIL key_k))) by (solve_equiv ())
 
-let adb_single_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk)
-: Lemma (prel_equiv #(asn1_items_impl_t (dsnd y)) (raw_lit kid kx y) (raw_adb_rel kid key_k [(kx, y)]))
-= assert (prel_equiv #(asn1_items_impl_t (dsnd y)) (raw_lit kid kx y) (raw_adb_rel kid key_k [(kx, y)])) by (T.norm [delta_only [`%raw_lit]]; solve_equiv ())
+let adb_single_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t: Type0) (di: idesc (dsnd y) t)
+: Lemma (prel_equiv #t (raw_dlit kid kx #y di) (raw_sxrel kid (SX_SINGLE key_k kx y di)))
+= assert (prel_equiv #t (raw_dlit kid kx #y di) (raw_sxrel kid (SX_SINGLE key_k kx y di))) by (T.norm [delta_only [`%raw_dlit]]; solve_equiv ())
 
-let adb_cons_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
-: Lemma (prel_equiv #(either (asn1_items_impl_t (dsnd y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None))
-    (raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))) (raw_adb_rel kid key_k ((kx, y) :: hd2 :: tl2)))
-= assert (prel_equiv #(either (asn1_items_impl_t (dsnd y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) None))
-    (raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))) (raw_adb_rel kid key_k ((kx, y) :: hd2 :: tl2))) by (T.norm [delta_only [`%raw_lit]]; solve_equiv ())
+let adb_cons_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t1: Type0) (di: idesc (dsnd y) t1)
+  (#hd2: (asn1_key_lit key_k & asn1_gen_items_lk)) (#tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t2: Type0) (dtl: sxdesc key_k (hd2 :: tl2) t2)
+: Lemma (prel_equiv #(either t1 t2) (raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)) (raw_sxrel kid (SX_CONS key_k kx y di dtl)))
+= assert (prel_equiv #(either t1 t2) (raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)) (raw_sxrel kid (SX_CONS key_k kx y di dtl))) by (T.norm [delta_only [`%raw_dlit]]; solve_equiv ())
 
-let afb_nil_equiv (kid: asn1_id_t) (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk)
-: Lemma (prel_equiv #(PA.fbt key_k fb) (raw_fbr kid key_k fb) (raw_afb_rel kid key_k [] fb))
-= assert (prel_equiv #(PA.fbt key_k fb) (raw_fbr kid key_k fb) (raw_afb_rel kid key_k [] fb)) by (solve_equiv ())
+let afb_nil_equiv (kid: asn1_id_t) (key_k: asn1_terminal_k) (#fbt: Type0) (fbr: bprel fbt)
+: Lemma (prel_equiv #fbt fbr (raw_fxrel kid (FX_NIL key_k #fbt) fbr))
+= assert (prel_equiv #fbt fbr (raw_fxrel kid (FX_NIL key_k #fbt) fbr)) by (solve_equiv ())
 
-let afb_single_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk)
-: Lemma (prel_equiv #(either (asn1_items_impl_t (dsnd y)) (PA.fbt key_k fb))
-    (raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)) (raw_afb_rel kid key_k [(kx, y)] fb))
-= assert (prel_equiv #(either (asn1_items_impl_t (dsnd y)) (PA.fbt key_k fb))
-    (raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)) (raw_afb_rel kid key_k [(kx, y)] fb)) by (T.norm [delta_only [`%raw_lit]]; solve_equiv ())
+let afb_single_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t: Type0) (di: idesc (dsnd y) t) (#fbt: Type0) (fbr: bprel fbt)
+: Lemma (prel_equiv #(either t fbt) (raw_either (raw_dlit kid kx #y di) fbr) (raw_fxrel kid (FX_SINGLE key_k kx y di #fbt) fbr))
+= assert (prel_equiv #(either t fbt) (raw_either (raw_dlit kid kx #y di) fbr) (raw_fxrel kid (FX_SINGLE key_k kx y di #fbt) fbr)) by (T.norm [delta_only [`%raw_dlit]]; solve_equiv ())
 
-let afb_cons_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-: Lemma (prel_equiv #(either (asn1_items_impl_t (dsnd y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (PA.fbt key_k fb))))
-    (raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)) (raw_afb_rel kid key_k ((kx, y) :: hd2 :: tl2) fb))
-= assert (prel_equiv #(either (asn1_items_impl_t (dsnd y)) (asn1_adb_suffix_impl_t key_k (hd2 :: tl2) (Some (PA.fbt key_k fb))))
-    (raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)) (raw_afb_rel kid key_k ((kx, y) :: hd2 :: tl2) fb)) by (T.norm [delta_only [`%raw_lit]]; solve_equiv ())
+let afb_cons_equiv (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t1: Type0) (di: idesc (dsnd y) t1)
+  (#hd2: (asn1_key_lit key_k & asn1_gen_items_lk)) (#tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#fbt: Type0) (#t2: Type0) (dtl: fxdesc key_k (hd2 :: tl2) fbt t2) (fbr: bprel fbt)
+: Lemma (prel_equiv #(either t1 t2) (raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)) (raw_fxrel kid (FX_CONS key_k kx y di dtl) fbr))
+= assert (prel_equiv #(either t1 t2) (raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)) (raw_fxrel kid (FX_CONS key_k kx y di dtl) fbr)) by (T.norm [delta_only [`%raw_dlit]]; solve_equiv ())
 
-let rel_ilc_equiv (id: asn1_id_t) (k: asn1_content_k)
-: Lemma (prel_equiv #(asn1_content_impl_t k) (raw_content_rel id k) (raw_rel (ASN1_ILC id k)))
-= assert (prel_equiv #(asn1_content_impl_t k) (raw_content_rel id k) (raw_rel (ASN1_ILC id k))) by (solve_equiv ())
+let rel_ilc_equiv (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (cd: cdesc k t)
+: Lemma (prel_equiv #t (raw_crel id cd) (raw_arel (D_ILC id cd)))
+= assert (prel_equiv #t (raw_crel id cd) (raw_arel (D_ILC id cd))) by (solve_equiv ())
 
-let rel_choice_equiv (lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc)))
-: Lemma (prel_equiv #(asn1_lc_impl_t lc) (raw_lc_rel lc) (raw_rel (ASN1_CHOICE_ILC lc pf)))
-= assert (prel_equiv #(asn1_lc_impl_t lc) (raw_lc_rel lc) (raw_rel (ASN1_CHOICE_ILC lc pf))) by (solve_equiv ())
+let rel_choice_equiv (lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) (#t: Type0) (ld: lcdesc lc t)
+: Lemma (prel_equiv #t (raw_lcrel ld) (raw_arel (D_CHOICE lc pf ld)))
+= assert (prel_equiv #t (raw_lcrel ld) (raw_arel (D_CHOICE lc pf ld))) by (solve_equiv ())
 
 let rel_any_equiv (_: unit)
-: Lemma (prel_equiv #(S.slice U8.t) raw_slice (raw_rel ASN1_ANY_ILC))
-= assert (prel_equiv #(S.slice U8.t) raw_slice (raw_rel ASN1_ANY_ILC)) by (solve_equiv ())
+: Lemma (prel_equiv #(S.slice U8.t) raw_slice (raw_arel D_ANY))
+= assert (prel_equiv #(S.slice U8.t) raw_slice (raw_arel D_ANY)) by (solve_equiv ())
+
+let rel_view_equiv (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
+: Lemma (prel_equiv #ty (raw_view (raw_arel d) view) (raw_arel (D_VIEW d ty view mk law)))
+= assert (prel_equiv #ty (raw_view (raw_arel d) view) (raw_arel (D_VIEW d ty view mk law))) by (solve_equiv ())
 
 let lc_nil_equiv (_: unit)
-: Lemma (prel_equiv #unit (raw_false unit) (raw_lc_rel []))
-= assert (prel_equiv #unit (raw_false unit) (raw_lc_rel [])) by (solve_equiv ())
+: Lemma (prel_equiv #unit (raw_false unit) (raw_lcrel LC_NIL))
+= assert (prel_equiv #unit (raw_false unit) (raw_lcrel LC_NIL)) by (solve_equiv ())
 
-let lc_single_equiv (id': asn1_id_t) (c: asn1_content_k)
-: Lemma (prel_equiv #(asn1_content_impl_t c) (raw_content_rel id' c) (raw_lc_rel [(id', c)]))
-= assert (prel_equiv #(asn1_content_impl_t c) (raw_content_rel id' c) (raw_lc_rel [(id', c)])) by (solve_equiv ())
+let lc_single_equiv (id': asn1_id_t) (#c: asn1_content_k) (#t: Type0) (cd: cdesc c t)
+: Lemma (prel_equiv #t (raw_crel id' cd) (raw_lcrel (LC_SINGLE id' cd)))
+= assert (prel_equiv #t (raw_crel id' cd) (raw_lcrel (LC_SINGLE id' cd))) by (solve_equiv ())
 
-let lc_cons_equiv (id': asn1_id_t) (c: asn1_content_k) (hd2: asn1_id_t & asn1_content_k) (tl2: list (asn1_id_t & asn1_content_k))
-: Lemma (prel_equiv #(either (asn1_content_impl_t c) (asn1_lc_impl_t (hd2 :: tl2)))
-    (raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2))) (raw_lc_rel ((id', c) :: hd2 :: tl2)))
-= assert (prel_equiv #(either (asn1_content_impl_t c) (asn1_lc_impl_t (hd2 :: tl2)))
-    (raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2))) (raw_lc_rel ((id', c) :: hd2 :: tl2))) by (solve_equiv ())
+let lc_cons_equiv (id': asn1_id_t) (#c: asn1_content_k) (#t1: Type0) (cd: cdesc c t1)
+  (#hd2: (asn1_id_t & asn1_content_k)) (#tl2: list (asn1_id_t & asn1_content_k)) (#t2: Type0) (dtl: lcdesc (hd2 :: tl2) t2)
+: Lemma (prel_equiv #(either t1 t2) (raw_either (raw_crel id' cd) (raw_lcrel dtl)) (raw_lcrel (LC_CONS id' cd dtl)))
+= assert (prel_equiv #(either t1 t2) (raw_either (raw_crel id' cd) (raw_lcrel dtl)) (raw_lcrel (LC_CONS id' cd dtl))) by (solve_equiv ())
 
-let dec_plain_equiv (#s: _) (k: asn1_k s)
-: Lemma (prel_equiv #(asn1_impl_t k) (raw_rel k) (raw_dec_rel (ASN1_PLAIN_ILC k)))
-= assert (prel_equiv #(asn1_impl_t k) (raw_rel k) (raw_dec_rel (ASN1_PLAIN_ILC k))) by (solve_equiv ())
+let dec_plain_equiv (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
+: Lemma (prel_equiv #t (raw_arel d) (raw_drel (DD_PLAIN d)))
+= assert (prel_equiv #t (raw_arel d) (raw_drel (DD_PLAIN d))) by (solve_equiv ())
 
-let dec_option_equiv (#s: _) (k: asn1_k s)
-: Lemma (prel_equiv #(option (asn1_impl_t k)) (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k)))
-= assert (prel_equiv #(option (asn1_impl_t k)) (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k))) by (solve_equiv ())
+let dec_option_equiv (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
+: Lemma (prel_equiv #(option t) (raw_opt (raw_arel d)) (raw_drel (DD_OPTION d)))
+= assert (prel_equiv #(option t) (raw_opt (raw_arel d)) (raw_drel (DD_OPTION d))) by (solve_equiv ())
 
 let dec_default_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k)
-: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)))
-= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv))) by (solve_equiv ())
+: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_drel (DD_DEFAULT id0 #k defv)))
+= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_drel (DD_DEFAULT id0 #k defv))) by (solve_equiv ())
 
 let dec_default_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) })
-: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)))
-= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv))) by (solve_equiv ())
+: Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_drel (DD_DEFAULT_RESTRICTED id0 #k r defv)))
+= assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_drel (DD_DEFAULT_RESTRICTED id0 #k r defv))) by (solve_equiv ())
+
+let dec_view_equiv (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
+: Lemma (prel_equiv #ty (raw_view (raw_drel d) view) (raw_drel (DD_VIEW d ty view mk law)))
+= assert (prel_equiv #ty (raw_view (raw_drel d) view) (raw_drel (DD_VIEW d ty view mk law))) by (solve_equiv ())
 
 let default_nd_equiv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
 : Lemma (requires (In.adb_key_supported k))
@@ -930,22 +948,18 @@ let default_opt_equiv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit 
 = default_rel_opt id0 k defl
 
 let items_nil_equiv (srt: bool)
-: Lemma (prel_equiv #unit (raw_pure null_enc) (raw_items_rel srt ASN1_GEN_ITEMS_NIL))
-= assert (prel_equiv #unit (raw_pure null_enc) (raw_items_rel srt ASN1_GEN_ITEMS_NIL)) by (solve_equiv ())
+: Lemma (prel_equiv #unit (raw_pure null_enc) (raw_irel srt ID_NIL))
+= assert (prel_equiv #unit (raw_pure null_enc) (raw_irel srt ID_NIL)) by (solve_equiv ())
 
-let items_single_equiv (srt: bool) (#s: _) (#d: _) (dk: asn1_decorated_k s d)
-: Lemma (prel_equiv #(asn1_decorated_impl_t dk) (raw_dec_rel dk) (raw_items_rel srt (PS.single dk)))
-= assert (prel_equiv #(asn1_decorated_impl_t dk) (raw_dec_rel dk) (raw_items_rel srt (PS.single dk))) by (solve_equiv ())
+let items_single_equiv (srt: bool) (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t)
+: Lemma (prel_equiv #t (raw_drel dd) (raw_irel srt (ID_SINGLE dd)))
+= assert (prel_equiv #t (raw_drel dd) (raw_irel srt (ID_SINGLE dd))) by (solve_equiv ())
 
-let items_cons_equiv (srt: bool) (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#s2: _) (#d2: _) (dk2: asn1_decorated_k s2 d2) (#ids2: _) (tl2: asn1_gen_items_l ids2)
-: Lemma (prel_equiv
-    #(asn1_decorated_impl_t dk & asn1_items_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))
-    (raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
-    (raw_items_rel srt (PS.cons2 dk dk2 tl2)))
-= assert (prel_equiv
-    #(asn1_decorated_impl_t dk & asn1_items_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))
-    (raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
-    (raw_items_rel srt (PS.cons2 dk dk2 tl2))) by (solve_equiv ())
+let items_cons_equiv (srt: bool) (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (dd: ddesc dk t1)
+  (#s2: _) (#d2: _) (#dk2: asn1_decorated_k s2 d2) (#ids2: _) (#tl2: asn1_gen_items_l ids2) (#t2: Type0)
+  (dtl: idesc (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) t2)
+: Lemma (prel_equiv #(t1 & t2) (raw_join srt (raw_drel dd) (raw_irel srt dtl)) (raw_irel srt (ID_CONS dd dtl)))
+= assert (prel_equiv #(t1 & t2) (raw_join srt (raw_drel dd) (raw_irel srt dtl)) (raw_irel srt (ID_CONS dd dtl))) by (solve_equiv ())
 
 let join_ins_equiv (srt: bool) (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2)
 : Lemma (requires srt == true) (ensures prel_equiv (raw_ins SI.lt_tag r1 r2) (raw_join srt r1 r2))
@@ -1028,278 +1042,323 @@ let gather_default (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) 
   then (default_nd_equiv id0 k defl; gather_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (gather_raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (gather_terminal id0 k)))
   else (default_opt_equiv id0 k defl; gather_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (gather_raw_opt (raw_terminal_rel id0 k) (gather_terminal id0 k)))
 
-let rec share_content (id: asn1_id_t) (k: asn1_content_k)
-: Tot (share_t (raw_content_rel id k)) (decreases k)
-= match k with
-  | ASN1_TERMINAL k' ->
+ghost
+fn share_raw_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (sh: share_t r)
+: share_t #ty (raw_view r view)
+= (x: ty) (#p: perm) (#y: SB.bytes)
+{
+  unfold (raw_view r view p x y);
+  sh (view x) #p #y;
+  fold (raw_view r view (p /. 2.0R) x y);
+  fold (raw_view r view (p /. 2.0R) x y)
+}
+
+ghost
+fn gather_raw_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (g: gather_t r)
+: gather_t #ty (raw_view r view)
+= (x: ty) (#p: perm) (#y: SB.bytes) (#p': perm) (#y': SB.bytes)
+{
+  unfold (raw_view r view p x y);
+  unfold (raw_view r view p' x y');
+  g (view x) #p #y #p' #y';
+  fold (raw_view r view (p +. p') x y)
+}
+
+let rec share_crel (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t)
+: Tot (share_t (raw_crel id d)) (decreases d)
+= match d with
+  | CD_TERMINAL k' ->
     content_terminal_equiv id k';
-    share_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_TERMINAL k')) () (share_terminal id k')
-  | ASN1_RESTRICTED_TERMINAL k' r ->
+    share_ext (raw_terminal_rel id k') (raw_crel id d) () (share_terminal id k')
+  | CD_RESTRICTED k' r ->
     content_restricted_equiv id k' r;
-    share_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k' r)) () (share_terminal id k')
-  | ASN1_PREFIXED k' ->
-    content_prefixed_equiv id k';
-    share_ext (raw_tlv id (raw_rel k')) (raw_content_rel id (ASN1_PREFIXED k')) () (share_raw_tlv id (raw_rel k') (share_k k'))
-  | ASN1_SEQUENCE gitems ->
-    content_sequence_equiv id gitems;
-    share_ext (raw_tlv id (raw_items_rel false (dsnd gitems))) (raw_content_rel id (ASN1_SEQUENCE gitems)) () (share_raw_tlv id (raw_items_rel false (dsnd gitems)) (share_items false (dsnd gitems)))
-  | ASN1_SET ids items pf ->
-    content_set_equiv id ids items pf;
-    share_ext (raw_tlv id (raw_items_rel true items)) (raw_content_rel id (ASN1_SET ids items pf)) () (share_raw_tlv id (raw_items_rel true items) (share_items true items))
-  | ASN1_SEQUENCE_OF ne k' ->
-    content_seq_of_equiv id ne k';
-    share_ext (raw_tlv id (raw_ml (raw_rel k'))) (raw_content_rel id (ASN1_SEQUENCE_OF ne k')) () (share_raw_tlv id (raw_ml (raw_rel k')) (share_raw_ml (raw_rel k') (share_k k')))
-  | ASN1_SET_OF ne k' ->
-    content_set_of_equiv id ne k';
-    share_ext (raw_tlv id (raw_ml_sorted (raw_rel k'))) (raw_content_rel id (ASN1_SET_OF ne k')) () (share_raw_tlv id (raw_ml_sorted (raw_rel k')) (share_raw_ml_sorted (raw_rel k') (share_k k')))
-  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
-    begin match ofb with
-    | None ->
-      content_adb_none_equiv id ipd prefix kid key_k ls pf pf';
-      share_ext (raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls))) (raw_content_rel id (PA.adb_k_none ipd prefix kid key_k ls pf pf')) ()
-        (share_raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)) (share_items_any prefix (raw_adb_rel kid key_k ls) (share_adb kid key_k ls)))
-    | Some fb ->
-      content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf';
-      share_ext (raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb))) (raw_content_rel id (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) ()
-        (share_raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)) (share_items_any prefix (raw_afb_rel kid key_k ls fb)
-          (share_afb kid key_k ls fb (share_raw_cat (raw_terminal_rel kid key_k) (raw_items_rel false (dsnd fb)) (share_terminal kid key_k) (share_items false (dsnd fb))))))
-    end
+    share_ext (raw_terminal_rel id k') (raw_crel id d) () (share_terminal id k')
+  | CD_PREFIXED d' ->
+    content_prefixed_equiv id d';
+    share_ext (raw_tlv id (raw_arel d')) (raw_crel id d) () (share_raw_tlv id (raw_arel d') (share_arel d'))
+  | CD_SEQUENCE gitems di ->
+    content_sequence_equiv id gitems di;
+    share_ext (raw_tlv id (raw_irel false di)) (raw_crel id d) () (share_raw_tlv id (raw_irel false di) (share_irel false di))
+  | CD_SET ids items pf di ->
+    content_set_equiv id ids items pf di;
+    share_ext (raw_tlv id (raw_irel true di)) (raw_crel id d) () (share_raw_tlv id (raw_irel true di) (share_irel true di))
+  | CD_SEQUENCE_OF ne d' ->
+    content_seq_of_equiv id ne d';
+    share_ext (raw_tlv id (raw_ml (raw_arel d'))) (raw_crel id d) () (share_raw_tlv id (raw_ml (raw_arel d')) (share_raw_ml (raw_arel d') (share_arel d')))
+  | CD_SET_OF ne d' ->
+    content_set_of_equiv id ne d';
+    share_ext (raw_tlv id (raw_ml_sorted (raw_arel d'))) (raw_crel id d) () (share_raw_tlv id (raw_ml_sorted (raw_arel d')) (share_raw_ml_sorted (raw_arel d') (share_arel d')))
+  | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->
+    content_adb_none_equiv id ipd prefix kid key_k ls pf pf' dsx dpre;
+    share_ext (raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx))) (raw_crel id d) ()
+      (share_raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx)) (share_iarel dpre (raw_sxrel kid dsx) (share_sxrel kid dsx)))
+  | CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre ->
+    content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf' dfb dfx dpre;
+    share_ext (raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))) (raw_crel id d) ()
+      (share_raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))
+        (share_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb))
+          (share_fxrel kid dfx (raw_dfbr kid key_k #fb dfb) (share_raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) (share_terminal kid key_k) (share_irel false dfb)))))
+  | CD_VIEW d' ty view mk law ->
+    content_view_equiv id d' ty view mk law;
+    share_ext (raw_view (raw_crel id d') view) (raw_crel id d) () (share_raw_view (raw_crel id d') view (share_crel id d'))
 
-and share_lc (lc: list (asn1_id_t & asn1_content_k))
-: Tot (share_t (raw_lc_rel lc)) (decreases lc)
-= match lc with
-  | [] -> lc_nil_equiv (); share_ext (raw_false unit) (raw_lc_rel []) () (share_raw_false unit)
-  | [(id', c)] -> lc_single_equiv id' c; share_ext (raw_content_rel id' c) (raw_lc_rel [(id', c)]) () (share_content id' c)
-  | (id', c) :: hd2 :: tl2 ->
-    lc_cons_equiv id' c hd2 tl2;
-    share_ext (raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2))) (raw_lc_rel ((id', c) :: hd2 :: tl2)) ()
-      (share_raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2)) (share_content id' c) (share_lc (hd2 :: tl2)))
+and share_lcrel (#lc: list (asn1_id_t & asn1_content_k)) (#t: Type0) (d: lcdesc lc t)
+: Tot (share_t (raw_lcrel d)) (decreases d)
+= match d with
+  | LC_NIL -> lc_nil_equiv (); share_ext (raw_false unit) (raw_lcrel d) () (share_raw_false unit)
+  | LC_SINGLE id' cd -> lc_single_equiv id' cd; share_ext (raw_crel id' cd) (raw_lcrel d) () (share_crel id' cd)
+  | LC_CONS id' cd dtl ->
+    lc_cons_equiv id' cd dtl;
+    share_ext (raw_either (raw_crel id' cd) (raw_lcrel dtl)) (raw_lcrel d) ()
+      (share_raw_either (raw_crel id' cd) (raw_lcrel dtl) (share_crel id' cd) (share_lcrel dtl))
 
-and share_k (#s: _) (k: asn1_k s)
-: Tot (share_t (raw_rel k)) (decreases k)
-= match k with
-  | ASN1_ILC id k' ->
-    rel_ilc_equiv id k';
-    share_ext (raw_content_rel id k') (raw_rel (ASN1_ILC id k')) () (share_content id k')
-  | ASN1_CHOICE_ILC lc pf ->
-    rel_choice_equiv lc pf;
-    share_ext (raw_lc_rel lc) (raw_rel (ASN1_CHOICE_ILC lc pf)) () (share_lc lc)
-  | ASN1_ANY_ILC ->
+and share_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
+: Tot (share_t (raw_arel d)) (decreases d)
+= match d with
+  | D_ILC id cd ->
+    rel_ilc_equiv id cd;
+    share_ext (raw_crel id cd) (raw_arel d) () (share_crel id cd)
+  | D_CHOICE lc pf ld ->
+    rel_choice_equiv lc pf ld;
+    share_ext (raw_lcrel ld) (raw_arel d) () (share_lcrel ld)
+  | D_ANY ->
     rel_any_equiv ();
-    share_ext raw_slice (raw_rel ASN1_ANY_ILC) () (share_raw_slice ())
+    share_ext raw_slice (raw_arel d) () (share_raw_slice ())
+  | D_VIEW d' ty view mk law ->
+    rel_view_equiv d' ty view mk law;
+    share_ext (raw_view (raw_arel d') view) (raw_arel d) () (share_raw_view (raw_arel d') view (share_arel d'))
 
-and share_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d)
-: Tot (share_t (raw_dec_rel dk)) (decreases dk)
-= match dk with
-  | ASN1_PLAIN_ILC k ->
-    dec_plain_equiv k;
-    share_ext (raw_rel k) (raw_dec_rel (ASN1_PLAIN_ILC k)) () (share_k k)
-  | ASN1_OPTION_ILC k ->
-    dec_option_equiv k;
-    share_ext (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k)) () (share_raw_opt (raw_rel k) (share_k k))
-  | ASN1_DEFAULT_TERMINAL id0 #k defv ->
+and share_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t)
+: Tot (share_t (raw_drel d)) (decreases d)
+= match d with
+  | DD_PLAIN d' ->
+    dec_plain_equiv d';
+    share_ext (raw_arel d') (raw_drel d) () (share_arel d')
+  | DD_OPTION d' ->
+    dec_option_equiv d';
+    share_ext (raw_opt (raw_arel d')) (raw_drel d) () (share_raw_opt (raw_arel d') (share_arel d'))
+  | DD_DEFAULT id0 #k defv ->
     dec_default_equiv id0 defv;
-    share_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (share_default id0 k defv)
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
+    share_ext (raw_default_rel id0 k defv) (raw_drel d) () (share_default id0 k defv)
+  | DD_DEFAULT_RESTRICTED id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    share_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (share_default id0 k defv)
+    share_ext (raw_default_rel id0 k defv) (raw_drel d) () (share_default id0 k defv)
+  | DD_VIEW d' ty view mk law ->
+    dec_view_equiv d' ty view mk law;
+    share_ext (raw_view (raw_drel d') view) (raw_drel d) () (share_raw_view (raw_drel d') view (share_drel d'))
 
-and share_items (srt: bool) (#i: _) (ls: asn1_gen_items_l i)
-: Tot (share_t (raw_items_rel srt ls)) (decreases ls)
-= match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+and share_irel (srt: bool) (#ids: _) (#items: asn1_gen_items_l ids) (#t: Type0) (d: idesc items t)
+: Tot (share_t (raw_irel srt d)) (decreases d)
+= match d with
+  | ID_NIL ->
     items_nil_equiv srt;
-    share_ext (raw_pure null_enc) (raw_items_rel srt ASN1_GEN_ITEMS_NIL) () (share_raw_pure null_enc)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_single_equiv srt dk;
-    share_ext (raw_dec_rel dk) (raw_items_rel srt (PS.single dk)) () (share_dec dk)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_cons_equiv srt dk dk2 tl2;
-    share_ext (raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (raw_items_rel srt (PS.cons2 dk dk2 tl2)) ()
-      (share_raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (share_dec dk) (share_items srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
+    share_ext (raw_pure null_enc) (raw_irel srt d) () (share_raw_pure null_enc)
+  | ID_SINGLE dd ->
+    items_single_equiv srt dd;
+    share_ext (raw_drel dd) (raw_irel srt d) () (share_drel dd)
+  | ID_CONS dd dtl ->
+    items_cons_equiv srt dd dtl;
+    share_ext (raw_join srt (raw_drel dd) (raw_irel srt dtl)) (raw_irel srt d) ()
+      (share_raw_join srt (raw_drel dd) (raw_irel srt dtl) (share_drel dd) (share_irel srt dtl))
 
-and share_adb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
-: Tot (share_t (raw_adb_rel kid key_k ls)) (decreases ls)
-= match ls with
-  | [] -> adb_nil_equiv kid key_k; share_ext (raw_false unit) (raw_adb_rel kid key_k []) () (share_raw_false unit)
-  | [(kx, y)] ->
-    adb_single_equiv kid kx y;
-    share_ext (raw_lit kid kx y) (raw_adb_rel kid key_k [(kx, y)]) ()
-      (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (share_items false (dsnd y)))
-  | (kx, y) :: hd2 :: tl2 ->
-    adb_cons_equiv kid kx y hd2 tl2;
-    share_ext (raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))) (raw_adb_rel kid key_k ((kx, y) :: hd2 :: tl2)) ()
-      (share_raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))
-        (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (share_items false (dsnd y)))
-        (share_adb kid key_k (hd2 :: tl2)))
+and share_sxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (d: sxdesc key_k ls t)
+: Tot (share_t (raw_sxrel kid d)) (decreases d)
+= match d with
+  | SX_NIL _ -> adb_nil_equiv kid key_k; share_ext (raw_false unit) (raw_sxrel kid d) () (share_raw_false unit)
+  | SX_SINGLE _ kx y di ->
+    adb_single_equiv kid kx y di;
+    share_ext (raw_dlit kid kx #y di) (raw_sxrel kid d) ()
+      (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (share_irel false di))
+  | SX_CONS _ kx y di dtl ->
+    adb_cons_equiv kid kx y di dtl;
+    share_ext (raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)) (raw_sxrel kid d) ()
+      (share_raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)
+        (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (share_irel false di))
+        (share_sxrel kid dtl))
 
-and share_afb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-  (xf: share_t (raw_fbr kid key_k fb))
-: Tot (share_t (raw_afb_rel kid key_k ls fb)) (decreases ls)
-= match ls with
-  | [] -> afb_nil_equiv kid key_k fb; share_ext (raw_fbr kid key_k fb) (raw_afb_rel kid key_k [] fb) () xf
-  | [(kx, y)] ->
-    afb_single_equiv kid kx y fb;
-    share_ext (raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)) (raw_afb_rel kid key_k [(kx, y)] fb) ()
-      (share_raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)
-        (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (share_items false (dsnd y)))
+and share_fxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#fbt: Type0) (#t: Type0) (d: fxdesc key_k ls fbt t)
+  (fbr: bprel fbt) (xf: share_t fbr)
+: Tot (share_t (raw_fxrel kid d fbr)) (decreases d)
+= match d with
+  | FX_NIL _ -> afb_nil_equiv kid key_k fbr; share_ext fbr (raw_fxrel kid d fbr) () xf
+  | FX_SINGLE _ kx y di ->
+    afb_single_equiv kid kx y di fbr;
+    share_ext (raw_either (raw_dlit kid kx #y di) fbr) (raw_fxrel kid d fbr) ()
+      (share_raw_either (raw_dlit kid kx #y di) fbr
+        (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (share_irel false di))
         xf)
-  | (kx, y) :: hd2 :: tl2 ->
-    afb_cons_equiv kid kx y hd2 tl2 fb;
-    share_ext (raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)) (raw_afb_rel kid key_k ((kx, y) :: hd2 :: tl2) fb) ()
-      (share_raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)
-        (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (share_items false (dsnd y)))
-        (share_afb kid key_k (hd2 :: tl2) fb xf))
+  | FX_CONS _ kx y di dtl ->
+    afb_cons_equiv kid kx y di dtl fbr;
+    share_ext (raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)) (raw_fxrel kid d fbr) ()
+      (share_raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)
+        (share_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (share_irel false di))
+        (share_fxrel kid dtl fbr xf))
 
-and share_items_any (#i: _) (ls: asn1_gen_items_l i) (#sfx: Type0) (sr: bprel sfx) (xs: share_t sr)
-: Tot (share_t (raw_items_any_rel ls sr)) (decreases ls)
-= match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+and share_iarel (#ids: _) (#items: asn1_gen_items_l ids) (#sfx: Type0) (#t: Type0) (d: iadesc items sfx t) (sr: bprel sfx) (xs: share_t sr)
+: Tot (share_t (raw_iarel d sr)) (decreases d)
+= match d with
+  | IA_NIL ->
     items_any_nil_equiv sr;
-    share_ext sr (raw_items_any_rel ASN1_GEN_ITEMS_NIL sr) () xs
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_any_single_equiv dk sr;
-    share_ext (raw_cat (raw_dec_rel dk) sr) (raw_items_any_rel (PS.single dk) sr) ()
-      (share_raw_cat (raw_dec_rel dk) sr (share_dec dk) xs)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_any_cons_equiv dk dk2 tl2 sr;
-    share_ext (raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr)) (raw_items_any_rel (PS.cons2 dk dk2 tl2) sr) ()
-      (share_raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr) (share_dec dk) (share_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr xs))
+    share_ext sr (raw_iarel d sr) () xs
+  | IA_SINGLE dd ->
+    items_any_single_equiv dd sr;
+    share_ext (raw_cat (raw_drel dd) sr) (raw_iarel d sr) ()
+      (share_raw_cat (raw_drel dd) sr (share_drel dd) xs)
+  | IA_CONS dd dtl ->
+    items_any_cons_equiv dd dtl sr;
+    share_ext (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel d sr) ()
+      (share_raw_cat (raw_drel dd) (raw_iarel dtl sr) (share_drel dd) (share_iarel dtl sr xs))
 
-let rec gather_content (id: asn1_id_t) (k: asn1_content_k)
-: Tot (gather_t (raw_content_rel id k)) (decreases k)
-= match k with
-  | ASN1_TERMINAL k' ->
+let rec gather_crel (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t)
+: Tot (gather_t (raw_crel id d)) (decreases d)
+= match d with
+  | CD_TERMINAL k' ->
     content_terminal_equiv id k';
-    gather_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_TERMINAL k')) () (gather_terminal id k')
-  | ASN1_RESTRICTED_TERMINAL k' r ->
+    gather_ext (raw_terminal_rel id k') (raw_crel id d) () (gather_terminal id k')
+  | CD_RESTRICTED k' r ->
     content_restricted_equiv id k' r;
-    gather_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k' r)) () (gather_terminal id k')
-  | ASN1_PREFIXED k' ->
-    content_prefixed_equiv id k';
-    gather_ext (raw_tlv id (raw_rel k')) (raw_content_rel id (ASN1_PREFIXED k')) () (gather_raw_tlv id (raw_rel k') (gather_k k'))
-  | ASN1_SEQUENCE gitems ->
-    content_sequence_equiv id gitems;
-    gather_ext (raw_tlv id (raw_items_rel false (dsnd gitems))) (raw_content_rel id (ASN1_SEQUENCE gitems)) () (gather_raw_tlv id (raw_items_rel false (dsnd gitems)) (gather_items false (dsnd gitems)))
-  | ASN1_SET ids items pf ->
-    content_set_equiv id ids items pf;
-    gather_ext (raw_tlv id (raw_items_rel true items)) (raw_content_rel id (ASN1_SET ids items pf)) () (gather_raw_tlv id (raw_items_rel true items) (gather_items true items))
-  | ASN1_SEQUENCE_OF ne k' ->
-    content_seq_of_equiv id ne k';
-    gather_ext (raw_tlv id (raw_ml (raw_rel k'))) (raw_content_rel id (ASN1_SEQUENCE_OF ne k')) () (gather_raw_tlv id (raw_ml (raw_rel k')) (gather_raw_ml (raw_rel k') (gather_k k')))
-  | ASN1_SET_OF ne k' ->
-    content_set_of_equiv id ne k';
-    gather_ext (raw_tlv id (raw_ml_sorted (raw_rel k'))) (raw_content_rel id (ASN1_SET_OF ne k')) () (gather_raw_tlv id (raw_ml_sorted (raw_rel k')) (gather_raw_ml_sorted (raw_rel k') (gather_k k')))
-  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
-    begin match ofb with
-    | None ->
-      content_adb_none_equiv id ipd prefix kid key_k ls pf pf';
-      gather_ext (raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls))) (raw_content_rel id (PA.adb_k_none ipd prefix kid key_k ls pf pf')) ()
-        (gather_raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)) (gather_items_any prefix (raw_adb_rel kid key_k ls) (gather_adb kid key_k ls)))
-    | Some fb ->
-      content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf';
-      gather_ext (raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb))) (raw_content_rel id (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) ()
-        (gather_raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)) (gather_items_any prefix (raw_afb_rel kid key_k ls fb)
-          (gather_afb kid key_k ls fb (gather_raw_cat (raw_terminal_rel kid key_k) (raw_items_rel false (dsnd fb)) (gather_terminal kid key_k) (gather_items false (dsnd fb))))))
-    end
+    gather_ext (raw_terminal_rel id k') (raw_crel id d) () (gather_terminal id k')
+  | CD_PREFIXED d' ->
+    content_prefixed_equiv id d';
+    gather_ext (raw_tlv id (raw_arel d')) (raw_crel id d) () (gather_raw_tlv id (raw_arel d') (gather_arel d'))
+  | CD_SEQUENCE gitems di ->
+    content_sequence_equiv id gitems di;
+    gather_ext (raw_tlv id (raw_irel false di)) (raw_crel id d) () (gather_raw_tlv id (raw_irel false di) (gather_irel false di))
+  | CD_SET ids items pf di ->
+    content_set_equiv id ids items pf di;
+    gather_ext (raw_tlv id (raw_irel true di)) (raw_crel id d) () (gather_raw_tlv id (raw_irel true di) (gather_irel true di))
+  | CD_SEQUENCE_OF ne d' ->
+    content_seq_of_equiv id ne d';
+    gather_ext (raw_tlv id (raw_ml (raw_arel d'))) (raw_crel id d) () (gather_raw_tlv id (raw_ml (raw_arel d')) (gather_raw_ml (raw_arel d') (gather_arel d')))
+  | CD_SET_OF ne d' ->
+    content_set_of_equiv id ne d';
+    gather_ext (raw_tlv id (raw_ml_sorted (raw_arel d'))) (raw_crel id d) () (gather_raw_tlv id (raw_ml_sorted (raw_arel d')) (gather_raw_ml_sorted (raw_arel d') (gather_arel d')))
+  | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->
+    content_adb_none_equiv id ipd prefix kid key_k ls pf pf' dsx dpre;
+    gather_ext (raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx))) (raw_crel id d) ()
+      (gather_raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx)) (gather_iarel dpre (raw_sxrel kid dsx) (gather_sxrel kid dsx)))
+  | CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre ->
+    content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf' dfb dfx dpre;
+    gather_ext (raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))) (raw_crel id d) ()
+      (gather_raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))
+        (gather_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb))
+          (gather_fxrel kid dfx (raw_dfbr kid key_k #fb dfb) (gather_raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) (gather_terminal kid key_k) (gather_irel false dfb)))))
+  | CD_VIEW d' ty view mk law ->
+    content_view_equiv id d' ty view mk law;
+    gather_ext (raw_view (raw_crel id d') view) (raw_crel id d) () (gather_raw_view (raw_crel id d') view (gather_crel id d'))
 
-and gather_lc (lc: list (asn1_id_t & asn1_content_k))
-: Tot (gather_t (raw_lc_rel lc)) (decreases lc)
-= match lc with
-  | [] -> lc_nil_equiv (); gather_ext (raw_false unit) (raw_lc_rel []) () (gather_raw_false unit)
-  | [(id', c)] -> lc_single_equiv id' c; gather_ext (raw_content_rel id' c) (raw_lc_rel [(id', c)]) () (gather_content id' c)
-  | (id', c) :: hd2 :: tl2 ->
-    lc_cons_equiv id' c hd2 tl2;
-    gather_ext (raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2))) (raw_lc_rel ((id', c) :: hd2 :: tl2)) ()
-      (gather_raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2)) (gather_content id' c) (gather_lc (hd2 :: tl2)))
+and gather_lcrel (#lc: list (asn1_id_t & asn1_content_k)) (#t: Type0) (d: lcdesc lc t)
+: Tot (gather_t (raw_lcrel d)) (decreases d)
+= match d with
+  | LC_NIL -> lc_nil_equiv (); gather_ext (raw_false unit) (raw_lcrel d) () (gather_raw_false unit)
+  | LC_SINGLE id' cd -> lc_single_equiv id' cd; gather_ext (raw_crel id' cd) (raw_lcrel d) () (gather_crel id' cd)
+  | LC_CONS id' cd dtl ->
+    lc_cons_equiv id' cd dtl;
+    gather_ext (raw_either (raw_crel id' cd) (raw_lcrel dtl)) (raw_lcrel d) ()
+      (gather_raw_either (raw_crel id' cd) (raw_lcrel dtl) (gather_crel id' cd) (gather_lcrel dtl))
 
-and gather_k (#s: _) (k: asn1_k s)
-: Tot (gather_t (raw_rel k)) (decreases k)
-= match k with
-  | ASN1_ILC id k' ->
-    rel_ilc_equiv id k';
-    gather_ext (raw_content_rel id k') (raw_rel (ASN1_ILC id k')) () (gather_content id k')
-  | ASN1_CHOICE_ILC lc pf ->
-    rel_choice_equiv lc pf;
-    gather_ext (raw_lc_rel lc) (raw_rel (ASN1_CHOICE_ILC lc pf)) () (gather_lc lc)
-  | ASN1_ANY_ILC ->
+and gather_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
+: Tot (gather_t (raw_arel d)) (decreases d)
+= match d with
+  | D_ILC id cd ->
+    rel_ilc_equiv id cd;
+    gather_ext (raw_crel id cd) (raw_arel d) () (gather_crel id cd)
+  | D_CHOICE lc pf ld ->
+    rel_choice_equiv lc pf ld;
+    gather_ext (raw_lcrel ld) (raw_arel d) () (gather_lcrel ld)
+  | D_ANY ->
     rel_any_equiv ();
-    gather_ext raw_slice (raw_rel ASN1_ANY_ILC) () (gather_raw_slice ())
+    gather_ext raw_slice (raw_arel d) () (gather_raw_slice ())
+  | D_VIEW d' ty view mk law ->
+    rel_view_equiv d' ty view mk law;
+    gather_ext (raw_view (raw_arel d') view) (raw_arel d) () (gather_raw_view (raw_arel d') view (gather_arel d'))
 
-and gather_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d)
-: Tot (gather_t (raw_dec_rel dk)) (decreases dk)
-= match dk with
-  | ASN1_PLAIN_ILC k ->
-    dec_plain_equiv k;
-    gather_ext (raw_rel k) (raw_dec_rel (ASN1_PLAIN_ILC k)) () (gather_k k)
-  | ASN1_OPTION_ILC k ->
-    dec_option_equiv k;
-    gather_ext (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k)) () (gather_raw_opt (raw_rel k) (gather_k k))
-  | ASN1_DEFAULT_TERMINAL id0 #k defv ->
+and gather_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t)
+: Tot (gather_t (raw_drel d)) (decreases d)
+= match d with
+  | DD_PLAIN d' ->
+    dec_plain_equiv d';
+    gather_ext (raw_arel d') (raw_drel d) () (gather_arel d')
+  | DD_OPTION d' ->
+    dec_option_equiv d';
+    gather_ext (raw_opt (raw_arel d')) (raw_drel d) () (gather_raw_opt (raw_arel d') (gather_arel d'))
+  | DD_DEFAULT id0 #k defv ->
     dec_default_equiv id0 defv;
-    gather_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () (gather_default id0 k defv)
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
+    gather_ext (raw_default_rel id0 k defv) (raw_drel d) () (gather_default id0 k defv)
+  | DD_DEFAULT_RESTRICTED id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    gather_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () (gather_default id0 k defv)
+    gather_ext (raw_default_rel id0 k defv) (raw_drel d) () (gather_default id0 k defv)
+  | DD_VIEW d' ty view mk law ->
+    dec_view_equiv d' ty view mk law;
+    gather_ext (raw_view (raw_drel d') view) (raw_drel d) () (gather_raw_view (raw_drel d') view (gather_drel d'))
 
-and gather_items (srt: bool) (#i: _) (ls: asn1_gen_items_l i)
-: Tot (gather_t (raw_items_rel srt ls)) (decreases ls)
-= match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+and gather_irel (srt: bool) (#ids: _) (#items: asn1_gen_items_l ids) (#t: Type0) (d: idesc items t)
+: Tot (gather_t (raw_irel srt d)) (decreases d)
+= match d with
+  | ID_NIL ->
     items_nil_equiv srt;
-    gather_ext (raw_pure null_enc) (raw_items_rel srt ASN1_GEN_ITEMS_NIL) () (gather_raw_pure null_enc)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_single_equiv srt dk;
-    gather_ext (raw_dec_rel dk) (raw_items_rel srt (PS.single dk)) () (gather_dec dk)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_cons_equiv srt dk dk2 tl2;
-    gather_ext (raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (raw_items_rel srt (PS.cons2 dk dk2 tl2)) ()
-      (gather_raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (gather_dec dk) (gather_items srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
+    gather_ext (raw_pure null_enc) (raw_irel srt d) () (gather_raw_pure null_enc)
+  | ID_SINGLE dd ->
+    items_single_equiv srt dd;
+    gather_ext (raw_drel dd) (raw_irel srt d) () (gather_drel dd)
+  | ID_CONS dd dtl ->
+    items_cons_equiv srt dd dtl;
+    gather_ext (raw_join srt (raw_drel dd) (raw_irel srt dtl)) (raw_irel srt d) ()
+      (gather_raw_join srt (raw_drel dd) (raw_irel srt dtl) (gather_drel dd) (gather_irel srt dtl))
 
-and gather_adb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
-: Tot (gather_t (raw_adb_rel kid key_k ls)) (decreases ls)
-= match ls with
-  | [] -> adb_nil_equiv kid key_k; gather_ext (raw_false unit) (raw_adb_rel kid key_k []) () (gather_raw_false unit)
-  | [(kx, y)] ->
-    adb_single_equiv kid kx y;
-    gather_ext (raw_lit kid kx y) (raw_adb_rel kid key_k [(kx, y)]) ()
-      (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (gather_items false (dsnd y)))
-  | (kx, y) :: hd2 :: tl2 ->
-    adb_cons_equiv kid kx y hd2 tl2;
-    gather_ext (raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))) (raw_adb_rel kid key_k ((kx, y) :: hd2 :: tl2)) ()
-      (gather_raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))
-        (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (gather_items false (dsnd y)))
-        (gather_adb kid key_k (hd2 :: tl2)))
+and gather_sxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (d: sxdesc key_k ls t)
+: Tot (gather_t (raw_sxrel kid d)) (decreases d)
+= match d with
+  | SX_NIL _ -> adb_nil_equiv kid key_k; gather_ext (raw_false unit) (raw_sxrel kid d) () (gather_raw_false unit)
+  | SX_SINGLE _ kx y di ->
+    adb_single_equiv kid kx y di;
+    gather_ext (raw_dlit kid kx #y di) (raw_sxrel kid d) ()
+      (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (gather_irel false di))
+  | SX_CONS _ kx y di dtl ->
+    adb_cons_equiv kid kx y di dtl;
+    gather_ext (raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)) (raw_sxrel kid d) ()
+      (gather_raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)
+        (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (gather_irel false di))
+        (gather_sxrel kid dtl))
 
-and gather_afb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-  (xf: gather_t (raw_fbr kid key_k fb))
-: Tot (gather_t (raw_afb_rel kid key_k ls fb)) (decreases ls)
-= match ls with
-  | [] -> afb_nil_equiv kid key_k fb; gather_ext (raw_fbr kid key_k fb) (raw_afb_rel kid key_k [] fb) () xf
-  | [(kx, y)] ->
-    afb_single_equiv kid kx y fb;
-    gather_ext (raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)) (raw_afb_rel kid key_k [(kx, y)] fb) ()
-      (gather_raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)
-        (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (gather_items false (dsnd y)))
+and gather_fxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#fbt: Type0) (#t: Type0) (d: fxdesc key_k ls fbt t)
+  (fbr: bprel fbt) (xf: gather_t fbr)
+: Tot (gather_t (raw_fxrel kid d fbr)) (decreases d)
+= match d with
+  | FX_NIL _ -> afb_nil_equiv kid key_k fbr; gather_ext fbr (raw_fxrel kid d fbr) () xf
+  | FX_SINGLE _ kx y di ->
+    afb_single_equiv kid kx y di fbr;
+    gather_ext (raw_either (raw_dlit kid kx #y di) fbr) (raw_fxrel kid d fbr) ()
+      (gather_raw_either (raw_dlit kid kx #y di) fbr
+        (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (gather_irel false di))
         xf)
-  | (kx, y) :: hd2 :: tl2 ->
-    afb_cons_equiv kid kx y hd2 tl2 fb;
-    gather_ext (raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)) (raw_afb_rel kid key_k ((kx, y) :: hd2 :: tl2) fb) ()
-      (gather_raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)
-        (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) (gather_items false (dsnd y)))
-        (gather_afb kid key_k (hd2 :: tl2) fb xf))
+  | FX_CONS _ kx y di dtl ->
+    afb_cons_equiv kid kx y di dtl fbr;
+    gather_ext (raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)) (raw_fxrel kid d fbr) ()
+      (gather_raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)
+        (gather_raw_pre (WA.raw_key_enc kid key_k kx) (raw_irel false di) (gather_irel false di))
+        (gather_fxrel kid dtl fbr xf))
 
-and gather_items_any (#i: _) (ls: asn1_gen_items_l i) (#sfx: Type0) (sr: bprel sfx) (xs: gather_t sr)
-: Tot (gather_t (raw_items_any_rel ls sr)) (decreases ls)
-= match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+and gather_iarel (#ids: _) (#items: asn1_gen_items_l ids) (#sfx: Type0) (#t: Type0) (d: iadesc items sfx t) (sr: bprel sfx) (xs: gather_t sr)
+: Tot (gather_t (raw_iarel d sr)) (decreases d)
+= match d with
+  | IA_NIL ->
     items_any_nil_equiv sr;
-    gather_ext sr (raw_items_any_rel ASN1_GEN_ITEMS_NIL sr) () xs
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_any_single_equiv dk sr;
-    gather_ext (raw_cat (raw_dec_rel dk) sr) (raw_items_any_rel (PS.single dk) sr) ()
-      (gather_raw_cat (raw_dec_rel dk) sr (gather_dec dk) xs)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_any_cons_equiv dk dk2 tl2 sr;
-    gather_ext (raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr)) (raw_items_any_rel (PS.cons2 dk dk2 tl2) sr) ()
-      (gather_raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr) (gather_dec dk) (gather_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr xs))
+    gather_ext sr (raw_iarel d sr) () xs
+  | IA_SINGLE dd ->
+    items_any_single_equiv dd sr;
+    gather_ext (raw_cat (raw_drel dd) sr) (raw_iarel d sr) ()
+      (gather_raw_cat (raw_drel dd) sr (gather_drel dd) xs)
+  | IA_CONS dd dtl ->
+    items_any_cons_equiv dd dtl sr;
+    gather_ext (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel d sr) ()
+      (gather_raw_cat (raw_drel dd) (raw_iarel dtl sr) (gather_drel dd) (gather_iarel dtl sr xs))
+
+(* The shares and gathers of the legacy relations *)
+
+let share_k (#s: _) (k: asn1_k s) : share_t (raw_rel k) = share_arel (legacy_adesc k)
+let gather_k (#s: _) (k: asn1_k s) : gather_t (raw_rel k) = gather_arel (legacy_adesc k)
+let share_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : share_t (raw_dec_rel dk) = share_drel (legacy_ddesc dk)
+let gather_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : gather_t (raw_dec_rel dk) = gather_drel (legacy_ddesc dk)
+let share_items (srt: bool) (#i: _) (ls: asn1_gen_items_l i) : share_t (raw_items_rel srt ls) = share_irel srt (legacy_idesc ls)
+let gather_items (srt: bool) (#i: _) (ls: asn1_gen_items_l i) : gather_t (raw_items_rel srt ls) = gather_irel srt (legacy_idesc ls)

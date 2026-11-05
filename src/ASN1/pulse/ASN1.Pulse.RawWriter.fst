@@ -474,248 +474,284 @@ let raw_write_default (id0: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: as
       x' #x out pos #v #p
   end
 
-(* The whole schema *)
+inline_for_extraction
+fn raw_write_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (pm: perm) (w: rw r pm)
+: rw #ty (raw_view r view) pm
+= (x': ty) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_view r view pm x' x);
+  let res = w (view x') #x out pos;
+  fold (raw_view r view pm x' x);
+  res
+}
 
-let rec raw_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (pm: perm)
-  (x': asn1_content_impl_t k) (#x: Ghost.erased SB.bytes)
+(* The whole schema, by descriptor *)
+
+let rec raw_write_crel (id: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] k: asn1_content_k) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: cdesc k t) (pm: perm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_content_rel id k) pm x' x out pos v p)
-  (decreases k)
-= [@inline_let] let vf : rw (raw_content_rel id k) pm =
-  (match k with
-  | ASN1_TERMINAL k' ->
+: Tot (wres (raw_crel id d) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_crel id d) pm =
+  (match d with
+  | CD_TERMINAL k' ->
     content_terminal_equiv id k';
-    raw_write_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_TERMINAL k')) () pm
+    raw_write_ext (raw_terminal_rel id k') (raw_crel id d) () pm
       (fun x' #x out pos #v #p -> raw_write_terminal id k' pm x' #x out pos #v #p)
-  | ASN1_RESTRICTED_TERMINAL k' r ->
+  | CD_RESTRICTED k' r ->
     content_restricted_equiv id k' r;
-    raw_write_ext (raw_terminal_rel id k') (raw_content_rel id (ASN1_RESTRICTED_TERMINAL k' r)) () pm
+    raw_write_ext (raw_terminal_rel id k') (raw_crel id d) () pm
       (fun x' #x out pos #v #p -> raw_write_terminal id k' pm x' #x out pos #v #p)
-  | ASN1_PREFIXED k' ->
-    content_prefixed_equiv id k';
-    raw_write_ext (raw_tlv id (raw_rel k')) (raw_content_rel id (ASN1_PREFIXED k')) () pm
-      (raw_write_tlv id (raw_rel k') pm (fun x' #x out pos #v #p -> raw_write_k k' pm x' #x out pos #v #p))
-  | ASN1_SEQUENCE gitems ->
-    content_sequence_equiv id gitems;
-    raw_write_ext (raw_tlv id (raw_items_rel false (dsnd gitems))) (raw_content_rel id (ASN1_SEQUENCE gitems)) () pm
-      (raw_write_tlv id (raw_items_rel false (dsnd gitems)) pm (fun x' #x out pos #v #p -> raw_write_items false (dsnd gitems) pm x' #x out pos #v #p))
-  | ASN1_SET ids items pf ->
-    content_set_equiv id ids items pf;
-    raw_write_ext (raw_tlv id (raw_items_rel true items)) (raw_content_rel id (ASN1_SET ids items pf)) () pm
-      (raw_write_tlv id (raw_items_rel true items) pm (fun x' #x out pos #v #p -> raw_write_items true items pm x' #x out pos #v #p))
-  | ASN1_SEQUENCE_OF ne k' ->
-    content_seq_of_equiv id ne k';
-    raw_write_ext (raw_tlv id (raw_ml (raw_rel k'))) (raw_content_rel id (ASN1_SEQUENCE_OF ne k')) () pm
-      (raw_write_tlv id (raw_ml (raw_rel k')) pm
-        (raw_write_ml (raw_rel k') (fun pm x' #x out pos #v #p -> raw_write_k k' pm x' #x out pos #v #p) (share_k k') (gather_k k') pm))
-  | ASN1_SET_OF ne k' ->
-    content_set_of_equiv id ne k';
-    raw_write_ext (raw_tlv id (raw_ml_sorted (raw_rel k'))) (raw_content_rel id (ASN1_SET_OF ne k')) () pm
-      (raw_write_tlv id (raw_ml_sorted (raw_rel k')) pm
-        (raw_write_ml_sorted (raw_rel k') (fun pm x' #x out pos #v #p -> raw_write_k k' pm x' #x out pos #v #p) (share_k k') (gather_k k') pm))
-  | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
-    begin match ofb with
-    | None ->
-      content_adb_none_equiv id ipd prefix kid key_k ls pf pf';
-      raw_write_ext (raw_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls))) (raw_content_rel id (PA.adb_k_none ipd prefix kid key_k ls pf pf')) () pm
-        (raw_write_tlv id (raw_items_any_rel prefix (raw_adb_rel kid key_k ls)) pm (fun x' #x out pos #v #p ->
-          raw_write_items_any prefix (raw_adb_rel kid key_k ls) pm
-            (fun x' #x out pos #v #p -> raw_write_adb kid key_k ls pm x' #x out pos #v #p)
-            x' #x out pos #v #p))
-    | Some fb ->
-      content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf';
-      raw_write_ext (raw_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb))) (raw_content_rel id (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')) () pm
-        (raw_write_tlv id (raw_items_any_rel prefix (raw_afb_rel kid key_k ls fb)) pm (fun x' #x out pos #v #p ->
-          raw_write_items_any prefix (raw_afb_rel kid key_k ls fb) pm
-            (fun x' #x out pos #v #p -> raw_write_afb kid key_k ls fb pm
-              (raw_write_cat (raw_terminal_rel kid key_k) (raw_items_rel false (dsnd fb)) pm
-                (fun x' #x out pos #v #p -> raw_write_terminal kid key_k pm x' #x out pos #v #p)
-                (fun x' #x out pos #v #p -> raw_write_items false (dsnd fb) pm x' #x out pos #v #p))
-              x' #x out pos #v #p)
-            x' #x out pos #v #p))
-    end)
+  | CD_PREFIXED d' ->
+    content_prefixed_equiv id d';
+    raw_write_ext (raw_tlv id (raw_arel d')) (raw_crel id d) () pm
+      (raw_write_tlv id (raw_arel d') pm (fun x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p))
+  | CD_SEQUENCE gitems di ->
+    content_sequence_equiv id gitems di;
+    raw_write_ext (raw_tlv id (raw_irel false di)) (raw_crel id d) () pm
+      (raw_write_tlv id (raw_irel false di) pm (fun x' #x out pos #v #p -> raw_write_irel false di pm x' #x out pos #v #p))
+  | CD_SET ids items pf di ->
+    content_set_equiv id ids items pf di;
+    raw_write_ext (raw_tlv id (raw_irel true di)) (raw_crel id d) () pm
+      (raw_write_tlv id (raw_irel true di) pm (fun x' #x out pos #v #p -> raw_write_irel true di pm x' #x out pos #v #p))
+  | CD_SEQUENCE_OF ne d' ->
+    content_seq_of_equiv id ne d';
+    raw_write_ext (raw_tlv id (raw_ml (raw_arel d'))) (raw_crel id d) () pm
+      (raw_write_tlv id (raw_ml (raw_arel d')) pm
+        (raw_write_ml (raw_arel d') (fun pm x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p) (share_arel d') (gather_arel d') pm))
+  | CD_SET_OF ne d' ->
+    content_set_of_equiv id ne d';
+    raw_write_ext (raw_tlv id (raw_ml_sorted (raw_arel d'))) (raw_crel id d) () pm
+      (raw_write_tlv id (raw_ml_sorted (raw_arel d')) pm
+        (raw_write_ml_sorted (raw_arel d') (fun pm x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p) (share_arel d') (gather_arel d') pm))
+  | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->
+    content_adb_none_equiv id ipd prefix kid key_k ls pf pf' dsx dpre;
+    raw_write_ext (raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx))) (raw_crel id d) () pm
+      (raw_write_tlv id (raw_iarel dpre (raw_sxrel kid dsx)) pm (fun x' #x out pos #v #p ->
+        raw_write_iarel dpre (raw_sxrel kid dsx) pm
+          (fun x' #x out pos #v #p -> raw_write_sxrel kid dsx pm x' #x out pos #v #p)
+          x' #x out pos #v #p))
+  | CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre ->
+    content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf' dfb dfx dpre;
+    raw_write_ext (raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))) (raw_crel id d) () pm
+      (raw_write_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb))) pm (fun x' #x out pos #v #p ->
+        raw_write_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)) pm
+          (fun x' #x out pos #v #p -> raw_write_fxrel kid dfx (raw_dfbr kid key_k #fb dfb) pm
+            (raw_write_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm
+              (fun x' #x out pos #v #p -> raw_write_terminal kid key_k pm x' #x out pos #v #p)
+              (fun x' #x out pos #v #p -> raw_write_irel false dfb pm x' #x out pos #v #p))
+            x' #x out pos #v #p)
+          x' #x out pos #v #p))
+  | CD_VIEW d' ty view mk law ->
+    content_view_equiv id d' ty view mk law;
+    raw_write_ext (raw_view (raw_crel id d') view) (raw_crel id d) () pm
+      (raw_write_view (raw_crel id d') view pm (fun x' #x out pos #v #p -> raw_write_crel id d' pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
 (* ANY DEFINED BY: the prefix items, then the suffix (written first) *)
-and raw_write_items_any (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i)
-  (#sfx: Type0) (sr: bprel sfx) (pm: perm) ([@@@FStar.Attributes.monomorphize] ws: rw sr pm)
-  (x': asn1_items_any_impl_t ls sfx) (#x: Ghost.erased SB.bytes)
+and raw_write_iarel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] sfx: Type0) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: iadesc ls sfx t)
+  (sr: bprel sfx) (pm: perm) ([@@@FStar.Attributes.monomorphize] ws: rw sr pm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_items_any_rel ls sr) pm x' x out pos v p)
-  (decreases ls)
-= [@inline_let] let vf : rw (raw_items_any_rel ls sr) pm =
-  (match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+: Tot (wres (raw_iarel d sr) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_iarel d sr) pm =
+  (match d with
+  | IA_NIL ->
     items_any_nil_equiv sr;
-    raw_write_ext sr (raw_items_any_rel ASN1_GEN_ITEMS_NIL sr) () pm ws
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_any_single_equiv dk sr;
-    raw_write_ext (raw_cat (raw_dec_rel dk) sr) (raw_items_any_rel (PS.single dk) sr) () pm
-      (raw_write_cat (raw_dec_rel dk) sr pm
-        (fun x' #x out pos #v #p -> raw_write_dec dk pm x' #x out pos #v #p)
+    raw_write_ext sr (raw_iarel d sr) () pm ws
+  | IA_SINGLE dd ->
+    items_any_single_equiv dd sr;
+    raw_write_ext (raw_cat (raw_drel dd) sr) (raw_iarel d sr) () pm
+      (raw_write_cat (raw_drel dd) sr pm
+        (fun x' #x out pos #v #p -> raw_write_drel dd pm x' #x out pos #v #p)
         ws)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_any_cons_equiv dk dk2 tl2 sr;
-    raw_write_ext (raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr)) (raw_items_any_rel (PS.cons2 dk dk2 tl2) sr) () pm
-      (raw_write_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr) pm
-        (fun x' #x out pos #v #p -> raw_write_dec dk pm x' #x out pos #v #p)
-        (fun x' #x out pos #v #p -> raw_write_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr pm ws x' #x out pos #v #p)))
+  | IA_CONS dd dtl ->
+    items_any_cons_equiv dd dtl sr;
+    raw_write_ext (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel d sr) () pm
+      (raw_write_cat (raw_drel dd) (raw_iarel dtl sr) pm
+        (fun x' #x out pos #v #p -> raw_write_drel dd pm x' #x out pos #v #p)
+        (fun x' #x out pos #v #p -> raw_write_iarel dtl sr pm ws x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
-and raw_write_adb (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k)
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (pm: perm)
-  (x': asn1_adb_suffix_impl_t key_k ls None) (#x: Ghost.erased SB.bytes)
+and raw_write_sxrel (kid: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k)
+  (#[@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: sxdesc key_k ls t) (pm: perm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_adb_rel kid key_k ls) pm x' x out pos v p)
-  (decreases ls)
-= [@inline_let] let vf : rw (raw_adb_rel kid key_k ls) pm =
-  (match ls with
-  | [] ->
+: Tot (wres (raw_sxrel kid d) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_sxrel kid d) pm =
+  (match d with
+  | SX_NIL _ ->
     adb_nil_equiv kid key_k;
-    raw_write_ext (raw_false unit) (raw_adb_rel kid key_k []) () pm (raw_write_false unit pm)
-  | [(kx, y)] ->
-    adb_single_equiv kid kx y;
-    raw_write_ext (raw_lit kid kx y) (raw_adb_rel kid key_k [(kx, y)]) () pm
+    raw_write_ext (raw_false unit) (raw_sxrel kid d) () pm (raw_write_false unit pm)
+  | SX_SINGLE _ kx y di ->
+    adb_single_equiv kid kx y di;
+    raw_write_ext (raw_dlit kid kx #y di) (raw_sxrel kid d) () pm
       (raw_write_pre (WA.raw_key_enc kid key_k kx)
           (fun x' #xx out pos #v #p -> WA.cw_raw_key kid key_k kx x' #xx out pos #v #p)
-          (raw_items_rel false (dsnd y)) pm
-          (fun x' #x out pos #v #p -> raw_write_items false (dsnd y) pm x' #x out pos #v #p))
-  | (kx, y) :: hd2 :: tl2 ->
-    adb_cons_equiv kid kx y hd2 tl2;
-    raw_write_ext (raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))) (raw_adb_rel kid key_k ((kx, y) :: hd2 :: tl2)) () pm
-      (raw_write_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2)) pm
+          (raw_irel false di) pm
+          (fun x' #x out pos #v #p -> raw_write_irel false di pm x' #x out pos #v #p))
+  | SX_CONS _ kx y di dtl ->
+    adb_cons_equiv kid kx y di dtl;
+    raw_write_ext (raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)) (raw_sxrel kid d) () pm
+      (raw_write_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl) pm
         (raw_write_pre (WA.raw_key_enc kid key_k kx)
           (fun x' #xx out pos #v #p -> WA.cw_raw_key kid key_k kx x' #xx out pos #v #p)
-          (raw_items_rel false (dsnd y)) pm
-          (fun x' #x out pos #v #p -> raw_write_items false (dsnd y) pm x' #x out pos #v #p))
-        (fun x' #x out pos #v #p -> raw_write_adb kid key_k (hd2 :: tl2) pm x' #x out pos #v #p)))
+          (raw_irel false di) pm
+          (fun x' #x out pos #v #p -> raw_write_irel false di pm x' #x out pos #v #p))
+        (fun x' #x out pos #v #p -> raw_write_sxrel kid dtl pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
 (* The same, with a fallback, whose writer is `wfb` *)
-and raw_write_afb (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k)
-  ([@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
-  ([@@@FStar.Attributes.monomorphize] fb: asn1_gen_items_lk) (pm: perm)
-  ([@@@FStar.Attributes.monomorphize] wfb: rw (raw_fbr kid key_k fb) pm)
-  (x': asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb))) (#x: Ghost.erased SB.bytes)
+and raw_write_fxrel (kid: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k)
+  (#[@@@FStar.Attributes.monomorphize] ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#[@@@FStar.Attributes.monomorphize] fbt: Type0) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: fxdesc key_k ls fbt t)
+  (fbr: bprel fbt) (pm: perm) ([@@@FStar.Attributes.monomorphize] wfb: rw fbr pm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_afb_rel kid key_k ls fb) pm x' x out pos v p)
-  (decreases ls)
-= [@inline_let] let vf : rw (raw_afb_rel kid key_k ls fb) pm =
-  (match ls with
-  | [] ->
-    afb_nil_equiv kid key_k fb;
-    raw_write_ext (raw_fbr kid key_k fb) (raw_afb_rel kid key_k [] fb) () pm wfb
-  | [(kx, y)] ->
-    afb_single_equiv kid kx y fb;
-    raw_write_ext (raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)) (raw_afb_rel kid key_k [(kx, y)] fb) () pm
-      (raw_write_either (raw_lit kid kx y) (raw_fbr kid key_k fb) pm
+: Tot (wres (raw_fxrel kid d fbr) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_fxrel kid d fbr) pm =
+  (match d with
+  | FX_NIL _ ->
+    afb_nil_equiv kid key_k fbr;
+    raw_write_ext fbr (raw_fxrel kid d fbr) () pm wfb
+  | FX_SINGLE _ kx y di ->
+    afb_single_equiv kid kx y di fbr;
+    raw_write_ext (raw_either (raw_dlit kid kx #y di) fbr) (raw_fxrel kid d fbr) () pm
+      (raw_write_either (raw_dlit kid kx #y di) fbr pm
         (raw_write_pre (WA.raw_key_enc kid key_k kx)
           (fun x' #xx out pos #v #p -> WA.cw_raw_key kid key_k kx x' #xx out pos #v #p)
-          (raw_items_rel false (dsnd y)) pm
-          (fun x' #x out pos #v #p -> raw_write_items false (dsnd y) pm x' #x out pos #v #p))
+          (raw_irel false di) pm
+          (fun x' #x out pos #v #p -> raw_write_irel false di pm x' #x out pos #v #p))
         wfb)
-  | (kx, y) :: hd2 :: tl2 ->
-    afb_cons_equiv kid kx y hd2 tl2 fb;
-    raw_write_ext (raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)) (raw_afb_rel kid key_k ((kx, y) :: hd2 :: tl2) fb) () pm
-      (raw_write_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb) pm
+  | FX_CONS _ kx y di dtl ->
+    afb_cons_equiv kid kx y di dtl fbr;
+    raw_write_ext (raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)) (raw_fxrel kid d fbr) () pm
+      (raw_write_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr) pm
         (raw_write_pre (WA.raw_key_enc kid key_k kx)
           (fun x' #xx out pos #v #p -> WA.cw_raw_key kid key_k kx x' #xx out pos #v #p)
-          (raw_items_rel false (dsnd y)) pm
-          (fun x' #x out pos #v #p -> raw_write_items false (dsnd y) pm x' #x out pos #v #p))
-        (fun x' #x out pos #v #p -> raw_write_afb kid key_k (hd2 :: tl2) fb pm wfb x' #x out pos #v #p)))
+          (raw_irel false di) pm
+          (fun x' #x out pos #v #p -> raw_write_irel false di pm x' #x out pos #v #p))
+        (fun x' #x out pos #v #p -> raw_write_fxrel kid dtl fbr pm wfb x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
-and raw_write_items ([@@@FStar.Attributes.monomorphize] srt: bool) (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (pm: perm)
-  (x': asn1_items_impl_t ls) (#x: Ghost.erased SB.bytes)
+and raw_write_irel ([@@@FStar.Attributes.monomorphize] srt: bool) (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: idesc ls t) (pm: perm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_items_rel srt ls) pm x' x out pos v p)
-  (decreases ls)
-= [@inline_let] let vf : rw (raw_items_rel srt ls) pm =
-  (match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+: Tot (wres (raw_irel srt d) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_irel srt d) pm =
+  (match d with
+  | ID_NIL ->
     items_nil_equiv srt;
-    raw_write_ext (raw_pure null_enc) (raw_items_rel srt ASN1_GEN_ITEMS_NIL) () pm (raw_write_null pm)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_single_equiv srt dk;
-    raw_write_ext (raw_dec_rel dk) (raw_items_rel srt (PS.single dk)) () pm
-      (fun x' #x out pos #v #p -> raw_write_dec dk pm x' #x out pos #v #p)
-  | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_cons_equiv srt dk dk2 tl2;
+    raw_write_ext (raw_pure null_enc) (raw_irel srt d) () pm (raw_write_null pm)
+  | ID_SINGLE dd ->
+    items_single_equiv srt dd;
+    raw_write_ext (raw_drel dd) (raw_irel srt d) () pm
+      (fun x' #x out pos #v #p -> raw_write_drel dd pm x' #x out pos #v #p)
+  | ID_CONS dd dtl ->
+    items_cons_equiv srt dd dtl;
     raw_write_ext
-      #(asn1_decorated_impl_t dk & asn1_items_impl_t (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))
-      (raw_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)))
-      (raw_items_rel srt (PS.cons2 dk dk2 tl2)) () pm
-      (raw_write_join srt (raw_dec_rel dk) (raw_items_rel srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) pm
-        (fun x' #x out pos #v #p -> raw_write_dec dk pm x' #x out pos #v #p)
-        (fun x' #x out pos #v #p -> raw_write_items srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) pm x' #x out pos #v #p)))
+      (raw_join srt (raw_drel dd) (raw_irel srt dtl))
+      (raw_irel srt d) () pm
+      (raw_write_join srt (raw_drel dd) (raw_irel srt dtl) pm
+        (fun x' #x out pos #v #p -> raw_write_drel dd pm x' #x out pos #v #p)
+        (fun x' #x out pos #v #p -> raw_write_irel srt dtl pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
-and raw_write_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) ([@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (pm: perm)
-  (x': asn1_decorated_impl_t dk) (#x: Ghost.erased SB.bytes)
+and raw_write_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] dc: _) (#[@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s dc) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: ddesc dk t) (pm: perm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_dec_rel dk) pm x' x out pos v p)
-  (decreases dk)
-= [@inline_let] let vf : rw (raw_dec_rel dk) pm =
-  (match dk with
-  | ASN1_PLAIN_ILC k ->
-    dec_plain_equiv k;
-    raw_write_ext (raw_rel k) (raw_dec_rel (ASN1_PLAIN_ILC k)) () pm
-      (fun x' #x out pos #v #p -> raw_write_k k pm x' #x out pos #v #p)
-  | ASN1_OPTION_ILC k ->
-    dec_option_equiv k;
-    raw_write_ext (raw_opt (raw_rel k)) (raw_dec_rel (ASN1_OPTION_ILC k)) () pm
-      (raw_write_opt (raw_rel k) pm (fun x' #x out pos #v #p -> raw_write_k k pm x' #x out pos #v #p))
-  | ASN1_DEFAULT_TERMINAL id0 #k defv ->
+: Tot (wres (raw_drel d) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_drel d) pm =
+  (match d with
+  | DD_PLAIN d' ->
+    dec_plain_equiv d';
+    raw_write_ext (raw_arel d') (raw_drel d) () pm
+      (fun x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p)
+  | DD_OPTION d' ->
+    dec_option_equiv d';
+    raw_write_ext (raw_opt (raw_arel d')) (raw_drel d) () pm
+      (raw_write_opt (raw_arel d') pm (fun x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p))
+  | DD_DEFAULT id0 #k defv ->
     dec_default_equiv id0 defv;
-    raw_write_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_TERMINAL id0 #k defv)) () pm
+    raw_write_ext (raw_default_rel id0 k defv) (raw_drel d) () pm
       (fun x' #x out pos #v #p -> raw_write_default id0 k defv pm x' #x out pos #v #p)
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv ->
+  | DD_DEFAULT_RESTRICTED id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
-    raw_write_ext (raw_default_rel id0 k defv) (raw_dec_rel (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) () pm
-      (fun x' #x out pos #v #p -> raw_write_default id0 k defv pm x' #x out pos #v #p))
+    raw_write_ext (raw_default_rel id0 k defv) (raw_drel d) () pm
+      (fun x' #x out pos #v #p -> raw_write_default id0 k defv pm x' #x out pos #v #p)
+  | DD_VIEW d' ty view mk law ->
+    dec_view_equiv d' ty view mk law;
+    raw_write_ext (raw_view (raw_drel d') view) (raw_drel d) () pm
+      (raw_write_view (raw_drel d') view pm (fun x' #x out pos #v #p -> raw_write_drel d' pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
-and raw_write_k (#[@@@FStar.Attributes.monomorphize] s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (pm: perm)
-  (x': asn1_impl_t k) (#x: Ghost.erased SB.bytes)
+and raw_write_arel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] k: asn1_k s) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: adesc k t) (pm: perm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_rel k) pm x' x out pos v p)
-  (decreases k)
-= [@inline_let] let vf : rw (raw_rel k) pm =
-  (match k with
-  | ASN1_ILC id k' ->
-    rel_ilc_equiv id k';
-    raw_write_ext (raw_content_rel id k') (raw_rel (ASN1_ILC id k')) () pm
-      (fun x' #x out pos #v #p -> raw_write_content id k' pm x' #x out pos #v #p)
-  | ASN1_CHOICE_ILC lc pf ->
-    rel_choice_equiv lc pf;
-    raw_write_ext (raw_lc_rel lc) (raw_rel (ASN1_CHOICE_ILC lc pf)) () pm
-      (fun x' #x out pos #v #p -> raw_write_lc lc pm x' #x out pos #v #p)
-  | ASN1_ANY_ILC ->
+: Tot (wres (raw_arel d) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_arel d) pm =
+  (match d with
+  | D_ILC id cd ->
+    rel_ilc_equiv id cd;
+    raw_write_ext (raw_crel id cd) (raw_arel d) () pm
+      (fun x' #x out pos #v #p -> raw_write_crel id cd pm x' #x out pos #v #p)
+  | D_CHOICE lc pf ld ->
+    rel_choice_equiv lc pf ld;
+    raw_write_ext (raw_lcrel ld) (raw_arel d) () pm
+      (fun x' #x out pos #v #p -> raw_write_lcrel ld pm x' #x out pos #v #p)
+  | D_ANY ->
     rel_any_equiv ();
-    raw_write_ext raw_slice (raw_rel ASN1_ANY_ILC) () pm (raw_write_slice pm))
+    raw_write_ext raw_slice (raw_arel d) () pm (raw_write_slice pm)
+  | D_VIEW d' ty view mk law ->
+    rel_view_equiv d' ty view mk law;
+    raw_write_ext (raw_view (raw_arel d') view) (raw_arel d) () pm
+      (raw_write_view (raw_arel d') view pm (fun x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
-and raw_write_lc ([@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (pm: perm)
-  (x': asn1_lc_impl_t lc) (#x: Ghost.erased SB.bytes)
+and raw_write_lcrel (#[@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: lcdesc lc t) (pm: perm)
+  (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (wres (raw_lc_rel lc) pm x' x out pos v p)
-  (decreases lc)
-= [@inline_let] let vf : rw (raw_lc_rel lc) pm =
-  (match lc with
-  | [] ->
+: Tot (wres (raw_lcrel d) pm x' x out pos v p)
+  (decreases d)
+= [@inline_let] let vf : rw (raw_lcrel d) pm =
+  (match d with
+  | LC_NIL ->
     lc_nil_equiv ();
-    raw_write_ext (raw_false unit) (raw_lc_rel []) () pm (raw_write_false unit pm)
-  | [(id', c)] ->
-    lc_single_equiv id' c;
-    raw_write_ext (raw_content_rel id' c) (raw_lc_rel [(id', c)]) () pm
-      (fun x' #x out pos #v #p -> raw_write_content id' c pm x' #x out pos #v #p)
-  | (id', c) :: hd2 :: tl2 ->
-    lc_cons_equiv id' c hd2 tl2;
-    raw_write_ext (raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2))) (raw_lc_rel ((id', c) :: hd2 :: tl2)) () pm
-      (raw_write_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2)) pm
-        (fun x' #x out pos #v #p -> raw_write_content id' c pm x' #x out pos #v #p)
-        (fun x' #x out pos #v #p -> raw_write_lc (hd2 :: tl2) pm x' #x out pos #v #p)))
+    raw_write_ext (raw_false unit) (raw_lcrel d) () pm (raw_write_false unit pm)
+  | LC_SINGLE id' cd ->
+    lc_single_equiv id' cd;
+    raw_write_ext (raw_crel id' cd) (raw_lcrel d) () pm
+      (fun x' #x out pos #v #p -> raw_write_crel id' cd pm x' #x out pos #v #p)
+  | LC_CONS id' cd dtl ->
+    lc_cons_equiv id' cd dtl;
+    raw_write_ext (raw_either (raw_crel id' cd) (raw_lcrel dtl)) (raw_lcrel d) () pm
+      (raw_write_either (raw_crel id' cd) (raw_lcrel dtl) pm
+        (fun x' #x out pos #v #p -> raw_write_crel id' cd pm x' #x out pos #v #p)
+        (fun x' #x out pos #v #p -> raw_write_lcrel dtl pm x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
+
+(* The legacy interpreters *)
+
+inline_for_extraction
+let raw_write_content (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_content_k) (pm: perm) : rw (raw_content_rel id k) pm =
+  (fun x' #x out pos #v #p -> raw_write_crel id (legacy_cdesc k) pm x' #x out pos #v #p)
+
+inline_for_extraction
+let raw_write_items ([@@@FStar.Attributes.monomorphize] srt: bool) (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (pm: perm) : rw (raw_items_rel srt ls) pm =
+  (fun x' #x out pos #v #p -> raw_write_irel srt (legacy_idesc ls) pm x' #x out pos #v #p)
+
+inline_for_extraction
+let raw_write_dec (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) ([@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (pm: perm) : rw (raw_dec_rel dk) pm =
+  (fun x' #x out pos #v #p -> raw_write_drel (legacy_ddesc dk) pm x' #x out pos #v #p)
+
+inline_for_extraction
+let raw_write_k (#[@@@FStar.Attributes.monomorphize] s: _) ([@@@FStar.Attributes.monomorphize] k: asn1_k s) (pm: perm) : rw (raw_rel k) pm =
+  (fun x' #x out pos #v #p -> raw_write_arel (legacy_adesc k) pm x' #x out pos #v #p)
 
 (* The static requirement on `k`: the validator supports it *)
 

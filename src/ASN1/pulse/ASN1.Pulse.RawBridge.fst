@@ -1032,7 +1032,7 @@ let lc_cons_f (id': asn1_id_t) (c: asn1_content_k) (hd2: asn1_id_t & asn1_conten
 #pop-options
 
 let br_lc_single (id': asn1_id_t) (c: asn1_content_k) (cc: content_br_t id' c) : lc_br_t [(id', c)] =
-  lc_single_equiv id' c;
+  lc_single_equiv id' (legacy_cdesc c);
   br_ext (asn1_raw_lc_rel [(id', c)]) (asn1_raw_lc_rel [(id', c)]) (raw_content_rel id' c) (raw_lc_rel [(id', c)]) (f_lc [(id', c)]) (f_lc [(id', c)]) ()
     (br_cond cc (asn1_raw_lc_rel [(id', c)]) (f_lc [(id', c)]) (fun y -> dfst y = id') (fun y _ -> raw_lc_head_val id' c [] y ())
       (raw_lc_single_eq id' c) (lc_single_f id' c))
@@ -1052,7 +1052,7 @@ let lc_cons_inr (id': asn1_id_t) (c: asn1_content_k) (hd2: asn1_id_t & asn1_cont
 let br_lc_cons (id': asn1_id_t) (c: asn1_content_k) (hd2: asn1_id_t & asn1_content_k) (tl2: list (asn1_id_t & asn1_content_k))
   (cc: content_br_t id' c) (ct: lc_br_t (hd2 :: tl2))
 : lc_br_t ((id', c) :: hd2 :: tl2)
-= lc_cons_equiv id' c hd2 tl2;
+= lc_cons_equiv id' (legacy_cdesc c) (legacy_lcdesc (hd2 :: tl2));
   br_ext (asn1_raw_lc_rel ((id', c) :: hd2 :: tl2)) (asn1_raw_lc_rel ((id', c) :: hd2 :: tl2))
     (raw_either (raw_content_rel id' c) (raw_lc_rel (hd2 :: tl2))) (raw_lc_rel ((id', c) :: hd2 :: tl2))
     (f_lc ((id', c) :: hd2 :: tl2)) (f_lc ((id', c) :: hd2 :: tl2)) ()
@@ -1100,7 +1100,7 @@ let adb_cons_f (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_
 
 let br_adb_single (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (ci: items_br_t false (dsnd y))
 : adb_br_t kid key_k [(kx, y)]
-= adb_single_equiv kid kx y;
+= adb_single_equiv kid kx y (legacy_idesc (dsnd y));
   br_ext (asn1_raw_adb_rel key_k [(kx, y)]) (asn1_raw_adb_rel key_k [(kx, y)]) (raw_lit kid kx y) (raw_adb_rel kid key_k [(kx, y)])
     (f_adb kid key_k [(kx, y)]) (f_adb kid key_k [(kx, y)]) ()
     (br_cond (br_lit kid kx y ci) (asn1_raw_adb_rel key_k [(kx, y)]) (f_adb kid key_k [(kx, y)])
@@ -1110,7 +1110,7 @@ let br_adb_single (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit k
 let br_adb_cons (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (ci: items_br_t false (dsnd y)) (ct: adb_br_t kid key_k (hd2 :: tl2))
 : adb_br_t kid key_k ((kx, y) :: hd2 :: tl2)
-= adb_cons_equiv kid kx y hd2 tl2;
+= adb_cons_equiv kid kx y (legacy_idesc (dsnd y)) (legacy_sxdesc key_k (hd2 :: tl2));
   br_ext (asn1_raw_adb_rel key_k ((kx, y) :: hd2 :: tl2)) (asn1_raw_adb_rel key_k ((kx, y) :: hd2 :: tl2))
     (raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))) (raw_adb_rel kid key_k ((kx, y) :: hd2 :: tl2))
     (f_adb kid key_k ((kx, y) :: hd2 :: tl2)) (f_adb kid key_k ((kx, y) :: hd2 :: tl2)) ()
@@ -1159,13 +1159,13 @@ let br_fbr (kid: asn1_id_t) (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (ci
 
 let br_afb_nil (kid: asn1_id_t) (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (ci: items_br_t false (dsnd fb))
 : afb_br_t kid key_k [] fb
-= afb_nil_equiv kid key_k fb;
+= afb_nil_equiv kid key_k (RR.raw_fbr kid key_k fb);
   br_ext _ _ _ _ _ _ () (br_fbr kid key_k fb ci)
 
 let br_afb_single (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (fb: asn1_gen_items_lk)
   (ci: items_br_t false (dsnd y)) (cf: items_br_t false (dsnd fb))
 : afb_br_t kid key_k [(kx, y)] fb
-= afb_single_equiv kid kx y fb;
+= afb_single_equiv kid kx y (legacy_idesc (dsnd y)) (RR.raw_fbr kid key_k fb);
   br_ext (RVR.raw_afb_rel key_k [(kx, y)] fb) (RVR.raw_afb_rel key_k [(kx, y)] fb)
     (raw_either (raw_lit kid kx y) (RR.raw_fbr kid key_k fb)) (RR.raw_afb_rel kid key_k [(kx, y)] fb)
     (f_afb kid key_k [(kx, y)] fb) (f_afb kid key_k [(kx, y)] fb) ()
@@ -1178,7 +1178,7 @@ let br_afb_single (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit k
 let br_afb_cons (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (hd2: asn1_key_lit key_k & asn1_gen_items_lk) (tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (ci: items_br_t false (dsnd y)) (ct: afb_br_t kid key_k (hd2 :: tl2) fb)
 : afb_br_t kid key_k ((kx, y) :: hd2 :: tl2) fb
-= afb_cons_equiv kid kx y hd2 tl2 fb;
+= afb_cons_equiv kid kx y (legacy_idesc (dsnd y)) (legacy_fxdesc key_k (hd2 :: tl2) (PA.fbt key_k fb)) (RR.raw_fbr kid key_k fb);
   br_ext (RVR.raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb) (RVR.raw_afb_rel key_k ((kx, y) :: hd2 :: tl2) fb)
     (raw_either (raw_lit kid kx y) (RR.raw_afb_rel kid key_k (hd2 :: tl2) fb)) (RR.raw_afb_rel kid key_k ((kx, y) :: hd2 :: tl2) fb)
     (f_afb kid key_k ((kx, y) :: hd2 :: tl2) fb) (f_afb kid key_k ((kx, y) :: hd2 :: tl2) fb) ()
@@ -1248,36 +1248,36 @@ let rec br_content (id: asn1_id_t) (k: asn1_content_k) (u: squash (ok_content id
     raw_content_restricted_equiv k' r;
     br_ext _ _ _ _ _ _ () (br_term id k')
   | ASN1_PREFIXED k' ->
-    content_prefixed_equiv id k';
+    content_prefixed_equiv id (legacy_adesc k');
     raw_content_prefixed_equiv k';
     br_ext _ _ _ _ _ _ () (br_tlv id (br_k k' ()))
   | ASN1_SEQUENCE gitems ->
-    content_sequence_equiv id gitems;
+    content_sequence_equiv id gitems (legacy_idesc (dsnd gitems));
     raw_content_sequence_equiv gitems;
     br_ext _ _ _ _ _ _ () (br_tlv id (br_items false (dsnd gitems) ()))
   | ASN1_SET ids items pf ->
-    content_set_equiv id ids items pf;
+    content_set_equiv id ids items pf (legacy_idesc items);
     raw_content_set_equiv ids items pf;
     br_ext _ _ _ _ _ _ () (br_tlv id (br_items true items ()))
   | ASN1_SEQUENCE_OF ne k' ->
-    content_seq_of_equiv id ne k';
+    content_seq_of_equiv id ne (legacy_adesc k');
     Classical.forall_intro_3 (raw_seq_of_eq ne k');
     br_ext _ _ _ _ _ _ () (br_tlv id (br_ml k' () (br_k k' ())))
   | ASN1_SET_OF ne k' ->
-    content_set_of_equiv id ne k';
+    content_set_of_equiv id ne (legacy_adesc k');
     Classical.forall_intro_3 (raw_set_of_eq ne k');
     br_ext _ _ _ _ _ _ () (br_tlv id (br_ml_sorted k' () (br_k k' ())))
   | ASN1_ANY_DEFINED_BY ipd prefix kid key_k ls ofb pf pf' ->
     begin match ofb with
     | None ->
-      content_adb_none_equiv id ipd prefix kid key_k ls pf pf';
+      content_adb_none_equiv id ipd prefix kid key_k ls pf pf' (legacy_sxdesc key_k ls) (legacy_iadesc prefix (asn1_adb_suffix_impl_t key_k ls None));
       raw_adb_none_equiv ipd prefix kid key_k ls pf pf';
       Classical.forall_intro (rb_content_adb_none id ipd prefix kid key_k ls pf pf');
       br_ext _ _ _ _ _ _ ()
         (br_tlv id (br_items_any prefix () (asn1_raw_adb_rel key_k ls) (raw_adb_rel kid key_k ls) (f_adb kid key_k ls) (br_adb kid key_k ls ())))
     | Some (| fbids, fbitems |) ->
       fb_precedes k;
-      content_adb_some_equiv id ipd prefix kid key_k ls (| fbids, fbitems |) pf pf';
+      content_adb_some_equiv id ipd prefix kid key_k ls (| fbids, fbitems |) pf pf' (legacy_idesc fbitems) (legacy_fxdesc key_k ls (asn1_terminal_impl_t key_k & asn1_items_impl_t fbitems)) (legacy_iadesc prefix (asn1_adb_suffix_impl_t key_k ls (Some (asn1_terminal_impl_t key_k & asn1_items_impl_t fbitems))));
       raw_adb_some_equiv ipd prefix kid key_k ls (| fbids, fbitems |) pf pf';
       Classical.forall_intro (rb_content_adb_some id ipd prefix kid key_k ls fbids fbitems pf pf');
       br_ext _ _ _ _ _ _ ()
@@ -1310,11 +1310,11 @@ and br_items_any (#i: _) (ls: asn1_gen_items_l i) (u: squash (ok_items ls)) (#sf
     raw_items_any_nil_equiv sfxr;
     br_ext _ _ _ _ _ _ () cs
   | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_any_single_equiv dk rsfx;
+    items_any_single_equiv (legacy_ddesc dk) rsfx;
     raw_items_any_single_equiv dk sfxr;
     br_ext _ _ _ _ _ _ () (br_cat (br_dec dk ()) cs)
   | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_any_cons_equiv dk dk2 tl2 rsfx;
+    items_any_cons_equiv (legacy_ddesc dk) (legacy_iadesc (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxi) rsfx;
     raw_items_any_cons_equiv dk dk2 tl2 sfxr;
     br_ext _ _ _ _ _ _ () (br_cat (br_dec dk ()) (br_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) () sfxr rsfx fs cs))
 
@@ -1329,11 +1329,11 @@ and br_k (#s: _) (k: asn1_k s) (u: squash (raw_ok k))
 : Tot (k_br_t k) (decreases k)
 = match k with
   | ASN1_ILC id k' ->
-    rel_ilc_equiv id k';
+    rel_ilc_equiv id (legacy_cdesc k');
     raw_rel_ilc_equiv id k';
     br_ext _ _ _ _ _ _ () (br_content id k' ())
   | ASN1_CHOICE_ILC lc pf ->
-    rel_choice_equiv lc pf;
+    rel_choice_equiv lc pf (legacy_lcdesc lc);
     raw_rel_choice_equiv lc pf;
     br_ext _ _ _ _ _ _ () (br_lc lc ())
   | ASN1_ANY_ILC ->
@@ -1345,11 +1345,11 @@ and br_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) (u: squash (ok_dec dk))
 : Tot (dec_br_t dk) (decreases dk)
 = match dk with
   | ASN1_PLAIN_ILC k ->
-    dec_plain_equiv k;
+    dec_plain_equiv (legacy_adesc k);
     raw_dec_plain_equiv k;
     br_ext _ _ _ _ _ _ () (br_k k ())
   | ASN1_OPTION_ILC k ->
-    dec_option_equiv k;
+    dec_option_equiv (legacy_adesc k);
     raw_dec_option_equiv k;
     br_ext _ _ _ _ _ _ () (br_opt (br_k k ()))
   | ASN1_DEFAULT_TERMINAL id0 #k defv ->
@@ -1373,11 +1373,11 @@ and br_items (srt: bool) (#i: _) (ls: asn1_gen_items_l i) (u: squash (ok_items l
     raw_items_nil_equiv ();
     br_ext _ _ _ _ _ _ () br_emp
   | ASN1_GEN_ITEMS_CONS _ _ dk _ ASN1_GEN_ITEMS_NIL ->
-    items_single_equiv srt dk;
+    items_single_equiv srt (legacy_ddesc dk);
     raw_items_single_equiv dk;
     br_ext _ _ _ _ _ _ () (br_dec dk ())
   | ASN1_GEN_ITEMS_CONS _ _ dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_cons_equiv srt dk dk2 tl2;
+    items_cons_equiv srt (legacy_ddesc dk) (legacy_idesc (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2));
     raw_items_cons_equiv dk dk2 tl2;
     br_ext _ _ _ _ _ _ () (br_join srt (br_dec dk ()) (br_items srt (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ()))
 #pop-options

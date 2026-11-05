@@ -326,47 +326,47 @@ ensures raw_either r1 r2 pm y x ** pure (SL.avoids s x)
   }
 }
 
-let av_lit (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk)
+let av_dlit (kid: asn1_id_t) (#key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (#y: asn1_gen_items_lk) (#t: Type0) (di: idesc (dsnd y) t)
   (s: FS.set asn1_id_t) (sq: squash (FS.disjoint s (FS.singleton kid)))
-: JF.av_t (raw_lit kid kx y) s
+: JF.av_t (raw_dlit kid kx #y di) s
 = key_framed kid key_k kx;
-  fun pm z x -> av_pre_framed (WA.raw_key_enc kid key_k kx) (raw_items_rel false (dsnd y)) s (FS.singleton kid) () pm z x
+  fun pm z x -> av_pre_framed (WA.raw_key_enc kid key_k kx) (raw_irel false di) s (FS.singleton kid) () pm z x
 
-let rec av_adb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+let rec av_sxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (d: sxdesc key_k ls t)
   (s: FS.set asn1_id_t) (sq: squash (FS.disjoint s (FS.singleton kid)))
-: Tot (JF.av_t (raw_adb_rel kid key_k ls) s) (decreases ls)
-= match ls with
-  | [] ->
+: Tot (JF.av_t (raw_sxrel kid d) s) (decreases d)
+= match d with
+  | SX_NIL _ ->
     adb_nil_equiv kid key_k;
-    JF.av_ext (raw_false unit) (raw_adb_rel kid key_k []) () s (av_false unit s)
-  | [(kx, y)] ->
-    adb_single_equiv kid kx y;
-    JF.av_ext (raw_lit kid kx y) (raw_adb_rel kid key_k [(kx, y)]) () s (av_lit kid kx y s ())
-  | (kx, y) :: hd2 :: tl2 ->
-    adb_cons_equiv kid kx y hd2 tl2;
-    JF.av_ext (raw_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2))) (raw_adb_rel kid key_k ((kx, y) :: hd2 :: tl2)) () s
-      (fun pm z x -> av_either (raw_lit kid kx y) (raw_adb_rel kid key_k (hd2 :: tl2)) s (av_lit kid kx y s ()) (av_adb kid key_k (hd2 :: tl2) s ()) pm z x)
+    JF.av_ext (raw_false unit) (raw_sxrel kid d) () s (av_false unit s)
+  | SX_SINGLE _ kx y di ->
+    adb_single_equiv kid kx y di;
+    JF.av_ext (raw_dlit kid kx #y di) (raw_sxrel kid d) () s (av_dlit kid kx di s ())
+  | SX_CONS _ kx y di dtl ->
+    adb_cons_equiv kid kx y di dtl;
+    JF.av_ext (raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)) (raw_sxrel kid d) () s
+      (fun pm z x -> av_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl) s (av_dlit kid kx di s ()) (av_sxrel kid dtl s ()) pm z x)
 
-let av_fbr (kid: asn1_id_t) (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk)
+let av_dfbr (kid: asn1_id_t) (key_k: asn1_terminal_k) (#gfb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd gfb) tfb)
   (s: FS.set asn1_id_t) (sq: squash (FS.disjoint s (FS.singleton kid)))
-: JF.av_t (raw_fbr kid key_k fb) s
-= fun pm z x -> av_cat_fr (raw_terminal_rel kid key_k) (raw_items_rel false (dsnd fb)) s (FS.singleton kid) () (JF.fr_terminal kid key_k) pm z x
+: JF.av_t (raw_dfbr kid key_k dfb) s
+= fun pm z x -> av_cat_fr (raw_terminal_rel kid key_k) (raw_irel false dfb) s (FS.singleton kid) () (JF.fr_terminal kid key_k) pm z x
 
-let rec av_afb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-  (s: FS.set asn1_id_t) (sq: squash (FS.disjoint s (FS.singleton kid)))
-: Tot (JF.av_t (raw_afb_rel kid key_k ls fb) s) (decreases ls)
-= match ls with
-  | [] ->
-    afb_nil_equiv kid key_k fb;
-    JF.av_ext (raw_fbr kid key_k fb) (raw_afb_rel kid key_k [] fb) () s (av_fbr kid key_k fb s ())
-  | [(kx, y)] ->
-    afb_single_equiv kid kx y fb;
-    JF.av_ext (raw_either (raw_lit kid kx y) (raw_fbr kid key_k fb)) (raw_afb_rel kid key_k [(kx, y)] fb) () s
-      (fun pm z x -> av_either (raw_lit kid kx y) (raw_fbr kid key_k fb) s (av_lit kid kx y s ()) (av_fbr kid key_k fb s ()) pm z x)
-  | (kx, y) :: hd2 :: tl2 ->
-    afb_cons_equiv kid kx y hd2 tl2 fb;
-    JF.av_ext (raw_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb)) (raw_afb_rel kid key_k ((kx, y) :: hd2 :: tl2) fb) () s
-      (fun pm z x -> av_either (raw_lit kid kx y) (raw_afb_rel kid key_k (hd2 :: tl2) fb) s (av_lit kid kx y s ()) (av_afb kid key_k (hd2 :: tl2) fb s ()) pm z x)
+let rec av_fxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#fbt: Type0) (#t: Type0) (d: fxdesc key_k ls fbt t)
+  (fbr: bprel fbt) (s: FS.set asn1_id_t) (sq: squash (FS.disjoint s (FS.singleton kid))) (avf: JF.av_t fbr s)
+: Tot (JF.av_t (raw_fxrel kid d fbr) s) (decreases d)
+= match d with
+  | FX_NIL _ ->
+    afb_nil_equiv kid key_k fbr;
+    JF.av_ext fbr (raw_fxrel kid d fbr) () s avf
+  | FX_SINGLE _ kx y di ->
+    afb_single_equiv kid kx y di fbr;
+    JF.av_ext (raw_either (raw_dlit kid kx #y di) fbr) (raw_fxrel kid d fbr) () s
+      (fun pm z x -> av_either (raw_dlit kid kx #y di) fbr s (av_dlit kid kx di s ()) avf pm z x)
+  | FX_CONS _ kx y di dtl ->
+    afb_cons_equiv kid kx y di dtl fbr;
+    JF.av_ext (raw_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr)) (raw_fxrel kid d fbr) () s
+      (fun pm z x -> av_either (raw_dlit kid kx #y di) (raw_fxrel kid dtl fbr) s (av_dlit kid kx di s ()) (av_fxrel kid dtl fbr s () avf) pm z x)
 
 (* The prefix items, then the suffix, whose raw bytes avoid any set of
    identifiers disjoint from `ks` *)
@@ -375,44 +375,45 @@ let av_sfx_t (#sfx: Type0) (sr: bprel sfx) (ks: FS.set asn1_id_t) =
   (s: FS.set asn1_id_t) -> squash (FS.disjoint s ks) -> JF.av_t sr s
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
-let rec av_items_any (#i: id_decs) (ls: asn1_gen_items_l i) (ks: FS.set asn1_id_t) (s: FS.set asn1_id_t)
+let rec av_iarel (#i: id_decs) (#ls: asn1_gen_items_l i) (#sfx: Type0) (#t: Type0) (d: iadesc ls sfx t) (ks: FS.set asn1_id_t) (s: FS.set asn1_id_t)
   (wf: squash (asn1_any_prefix_k_wf' ks i s))
-  (#sfx: Type0) (sr: bprel sfx) (avs: av_sfx_t sr ks)
-: Tot (JF.av_t (raw_items_any_rel ls sr) s) (decreases ls)
-= match ls with
-  | ASN1_GEN_ITEMS_NIL ->
+  (sr: bprel sfx) (avs: av_sfx_t sr ks)
+: Tot (JF.av_t (raw_iarel d sr) s) (decreases d)
+= match d with
+  | IA_NIL ->
     items_any_nil_equiv sr;
-    JF.av_ext sr (raw_items_any_rel ls sr) () s (avs s ())
-  | ASN1_GEN_ITEMS_CONS s1 d1 dk _ ASN1_GEN_ITEMS_NIL ->
-    items_any_single_equiv dk sr;
+    JF.av_ext sr (raw_iarel d sr) () s (avs s ())
+  | IA_SINGLE #s1 #d1 #dk dd ->
+    items_any_single_equiv dd sr;
     L.item_set_twin dk;
     SL.item_dec_twin dk;
     if JF.any_dec dk
-    then JF.av_none (raw_items_any_rel ls sr) s ()
+    then JF.av_none (raw_iarel d sr) s ()
     else if PLAIN? d1
-    then JF.av_ext (raw_cat (raw_dec_rel dk) sr) (raw_items_any_rel ls sr) () s
-      (fun pm y x -> JF.av_cons_plain (raw_dec_rel dk) sr (In.twin_of dk) s () (JF.fe_dec dk ()) pm y x)
-    else JF.av_ext (raw_cat (raw_dec_rel dk) sr) (raw_items_any_rel ls sr) () s
-      (fun pm y x -> JF.av_cons_opt (raw_dec_rel dk) sr (In.twin_of dk) s (FS.union s s1) () (JF.fe_dec dk ())
+    then JF.av_ext (raw_cat (raw_drel dd) sr) (raw_iarel d sr) () s
+      (fun pm y x -> JF.av_cons_plain (raw_drel dd) sr (In.twin_of dk) s () (JF.fe_drel dd ()) pm y x)
+    else JF.av_ext (raw_cat (raw_drel dd) sr) (raw_iarel d sr) () s
+      (fun pm y x -> JF.av_cons_opt (raw_drel dd) sr (In.twin_of dk) s (FS.union s s1) () (JF.fe_drel dd ())
         (avs (FS.union s s1) ()) pm y x)
-  | ASN1_GEN_ITEMS_CONS s1 d1 dk _ (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ->
-    items_any_cons_equiv dk dk2 tl2 sr;
+  | IA_CONS #s1 #d1 #dk dd dtl ->
+    items_any_cons_equiv dd dtl sr;
     L.item_set_twin dk;
     SL.item_dec_twin dk;
     if JF.any_dec dk
-    then JF.av_none (raw_items_any_rel ls sr) s ()
+    then JF.av_none (raw_iarel d sr) s ()
     else if PLAIN? d1
-    then JF.av_ext (raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr)) (raw_items_any_rel ls sr) () s
-      (fun pm y x -> JF.av_cons_plain (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr) (In.twin_of dk) s () (JF.fe_dec dk ()) pm y x)
-    else JF.av_ext (raw_cat (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr)) (raw_items_any_rel ls sr) () s
-      (fun pm y x -> JF.av_cons_opt (raw_dec_rel dk) (raw_items_any_rel (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sr) (In.twin_of dk) s (FS.union s s1) () (JF.fe_dec dk ())
-        (av_items_any (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) ks (FS.union s s1) () sr avs) pm y x)
+    then JF.av_ext (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel d sr) () s
+      (fun pm y x -> JF.av_cons_plain (raw_drel dd) (raw_iarel dtl sr) (In.twin_of dk) s () (JF.fe_drel dd ()) pm y x)
+    else JF.av_ext (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel d sr) () s
+      (fun pm y x -> JF.av_cons_opt (raw_drel dd) (raw_iarel dtl sr) (In.twin_of dk) s (FS.union s s1) () (JF.fe_drel dd ())
+        (av_iarel dtl ks (FS.union s s1) () sr avs) pm y x)
 #pop-options
 
-let av_sfx_adb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
-: av_sfx_t (raw_adb_rel kid key_k ls) (FS.singleton kid)
-= fun s sq -> av_adb kid key_k ls s sq
+let av_sfx_sxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (d: sxdesc key_k ls t)
+: av_sfx_t (raw_sxrel kid d) (FS.singleton kid)
+= fun s sq -> av_sxrel kid d s sq
 
-let av_sfx_afb (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-: av_sfx_t (raw_afb_rel kid key_k ls fb) (FS.singleton kid)
-= fun s sq -> av_afb kid key_k ls fb s sq
+let av_sfx_fxrel (kid: asn1_id_t) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#gfb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd gfb) tfb)
+  (#t: Type0) (d: fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) t)
+: av_sfx_t (raw_fxrel kid d (raw_dfbr kid key_k dfb)) (FS.singleton kid)
+= fun s sq -> av_fxrel kid d (raw_dfbr kid key_k dfb) s sq (av_dfbr kid key_k dfb s sq)
