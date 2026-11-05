@@ -1,0 +1,35 @@
+Small DEFINITIONS IMPLICIT TAGS ::= BEGIN
+
+Version ::= INTEGER { v1(0), v2(1), v3(2) } (0..2)
+
+Color ::= ENUMERATED { red, green(5), blue }
+
+Inner ::= CHOICE {
+  num  INTEGER,
+  flag BOOLEAN
+}
+
+Alt ::= CHOICE {
+  name  [0] OCTET STRING,
+  inner Inner,
+  nul   NULL
+}
+
+Pair ::= SET {
+  left  [0] INTEGER (0..255),
+  right [1] OCTET STRING (SIZE (1..4)),
+  note  [2] BOOLEAN OPTIONAL
+}
+
+Msg ::= SEQUENCE {
+  version  [0] Version DEFAULT v1,
+  id       INTEGER,
+  critical BOOLEAN DEFAULT FALSE,
+  color    Color OPTIONAL,
+  body     [3] Alt,
+  pair     [1] Pair OPTIONAL,
+  items    SEQUENCE SIZE (1..MAX) OF OCTET STRING,
+  extra    [2] SEQUENCE { a INTEGER, b UTF8String } OPTIONAL
+}
+
+END

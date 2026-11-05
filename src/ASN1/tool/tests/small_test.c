@@ -1,0 +1,216 @@
+/* Round trip through the C API that everparse-asn1 generates for Small.asn:
+   write `Msg` values (right to left), check the DER bytes, JIT_NO_SPACE and
+   JIT_INVALID, then validate and parse the bytes back. */
+#include "Small.h"
+#include <stdio.h>
+#include <string.h>
+#define BUF 128
+
+static int fails = 0;
+#define CHECK(c, ...) do { if (!(c)) { printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
+
+static Pulse_Lib_Slice_slice__uint8 sl(const char *s) {
+  return (Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)s, .len = strlen(s) };
+}
+
+typedef LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 octs_t;
+
+static octs_t octs(Pulse_Lib_Slice_slice__uint8 *a, size_t n) {
+  octs_t l = { .tag = LOWPARSE_PULSEPARSE_ITERATOR_TYPE_BASE__UINTSIZE_SLICE_UINT8 };
+  l.val.Base.tag = LOWPARSE_PULSEPARSE_ITERATOR_TYPE_SLICE__UINTSIZE_SLICE_UINT8;
+  l.val.Base.val.Slice.ss = (Pulse_Lib_Slice_slice__slice_uint8){ .elt = a, .len = n };
+  l.val.Base.val.Slice.count = n;
+  return l;
+}
+
+static Pulse_Lib_Slice_slice__uint8 items_arr[] = { { (uint8_t *)"x", 1 }, { (uint8_t *)"yz", 2 } };
+
+/* Msg { id 5, critical TRUE, color green, body inner: flag TRUE,
+         pair { left 7, right 'ab' }, items { 'x', 'yz' } } */
+static Msg msg1(void) {
+  Msg m;
+  memset(&m, 0, sizeof m);
+  m.version.tag = SMALL_IMPL_MSG_VERSION_ABSENT;
+  m.id = (ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = 5 } };
+  m.critical.tag = SMALL_IMPL_MSG_CRITICAL_PRESENT;
+  m.critical.val.Msg_critical_present = true;
+  m.color.tag = SMALL_IMPL_MSG_COLOR_PRESENT;
+  m.color.val.Msg_color_present = 5;
+  m.body.tag = SMALL_IMPL_ALT_INNER;
+  m.body.val.Alt_inner.tag = SMALL_IMPL_INNER_FLAG;
+  m.body.val.Alt_inner.val.Inner_flag = true;
+  m.pair.tag = SMALL_IMPL_MSG_PAIR_PRESENT;
+  m.pair.val.Msg_pair_present = (Pair){ .left = 7, .right = sl("ab") };
+  m.pair.val.Msg_pair_present.note.tag = SMALL_IMPL_PAIR_NOTE_ABSENT;
+  m.items = octs(items_arr, 2);
+  m.extra.tag = SMALL_IMPL_MSG_EXTRA_ABSENT;
+  return m;
+}
+
+static const uint8_t msg1_der[] = {
+  0x30, 0x20,
+  0x02, 0x01, 0x05,                                     /* id */
+  0x01, 0x01, 0xff,                                     /* critical */
+  0x0a, 0x01, 0x05,                                     /* color */
+  0xa3, 0x03, 0x01, 0x01, 0xff,                         /* body [3] */
+  0xa1, 0x07, 0x80, 0x01, 0x07, 0x81, 0x02, 0x61, 0x62, /* pair [1] */
+  0x30, 0x07, 0x04, 0x01, 0x78, 0x04, 0x02, 0x79, 0x7a, /* items */
+};
+
+/* Msg { version v3, id -1, body name 'n', items { '' },
+         extra { a 300, b 'u' } } */
+static Msg msg2(void) {
+  Msg m = msg1();
+  m.version.tag = SMALL_IMPL_MSG_VERSION_PRESENT;
+  m.version.val.Msg_version_present = 2;
+  m.id.val.Small = -1;
+  m.critical.tag = SMALL_IMPL_MSG_CRITICAL_ABSENT;
+  m.color.tag = SMALL_IMPL_MSG_COLOR_ABSENT;
+  m.body.tag = SMALL_IMPL_ALT_NAME;
+  m.body.val.Alt_name = sl("n");
+  m.pair.tag = SMALL_IMPL_MSG_PAIR_ABSENT;
+  static Pulse_Lib_Slice_slice__uint8 empty[] = { { (uint8_t *)"", 0 } };
+  m.items = octs(empty, 1);
+  m.extra.tag = SMALL_IMPL_MSG_EXTRA_PRESENT;
+  m.extra.val.Msg_extra_present = (Msg_extra){
+    .a = { .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = 300 } }, .b = sl("u") };
+  return m;
+}
+
+static const uint8_t msg2_der[] = {
+  0x30, 0x18,
+  0x80, 0x01, 0x02,                                     /* version [0] */
+  0x02, 0x01, 0xff,                                     /* id */
+  0xa3, 0x03, 0x80, 0x01, 0x6e,                         /* body [3] name [0] */
+  0x30, 0x02, 0x04, 0x00,                               /* items */
+  0xa2, 0x07, 0x02, 0x02, 0x01, 0x2c, 0x0c, 0x01, 0x75, /* extra [2] */
+};
+
+/* msg1 with pair.note TRUE (an OPTIONAL SET component) */
+static Msg msg3(void) {
+  Msg m = msg1();
+  m.pair.val.Msg_pair_present.note.tag = SMALL_IMPL_PAIR_NOTE_PRESENT;
+  m.pair.val.Msg_pair_present.note.val.Pair_note_present = true;
+  return m;
+}
+
+static const uint8_t msg3_der[] = {
+  0x30, 0x23,
+  0x02, 0x01, 0x05,
+  0x01, 0x01, 0xff,
+  0x0a, 0x01, 0x05,
+  0xa3, 0x03, 0x01, 0x01, 0xff,
+  0xa1, 0x0a, 0x80, 0x01, 0x07, 0x81, 0x02, 0x61, 0x62, 0x82, 0x01, 0xff, /* pair [1] */
+  0x30, 0x07, 0x04, 0x01, 0x78, 0x04, 0x02, 0x79, 0x7a,
+};
+
+static void write_ok(const char *name, Msg x, const uint8_t *exp, size_t len) {
+  uint8_t out[BUF];
+  size_t pos = BUF;
+  Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
+  ASN1_Pulse_JitWriter_jit_result r = write_Msg(x, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, exp, len) == 0,
+        "%s: write: expected the DER bytes (result %d, %zu bytes)", name, (int)r, BUF - pos);
+  pos = len - 1;
+  Pulse_Lib_Slice_slice__uint8 s = { .elt = out, .len = len - 1 };
+  CHECK(write_Msg(x, s, &pos) == ASN1_PULSE_JITWRITER_JIT_NO_SPACE,
+        "%s: short buffer: expected NO_SPACE", name);
+}
+
+static void write_invalid(const char *name, Msg x) {
+  uint8_t out[BUF];
+  size_t pos = BUF;
+  Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
+  ASN1_Pulse_JitWriter_jit_result r = write_Msg(x, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_INVALID, "%s: expected INVALID (%d)", name, (int)r);
+}
+
+static int validate(const uint8_t *in, size_t len) {
+  Pulse_Lib_Slice_slice__uint8 s = { .elt = (uint8_t *)in, .len = len };
+  size_t off = 0;
+  return validate_Msg(s, &off) && off == len;
+}
+
+int main(void) {
+  custard_init_globals();
+  Msg m1 = msg1(), m2 = msg2(), m3 = msg3();
+  write_ok("msg1", m1, msg1_der, sizeof msg1_der);
+  write_ok("msg2", m2, msg2_der, sizeof msg2_der);
+  write_ok("msg3", m3, msg3_der, sizeof msg3_der);
+
+  /* a DEFAULT component present with its default value is omitted (DER) */
+  Msg bad = msg1();
+  bad.version.tag = SMALL_IMPL_MSG_VERSION_PRESENT;
+  bad.version.val.Msg_version_present = 0;
+  write_ok("version = DEFAULT", bad, msg1_der, sizeof msg1_der);
+  bad = msg2();
+  bad.critical.tag = SMALL_IMPL_MSG_CRITICAL_PRESENT;
+  bad.critical.val.Msg_critical_present = false;
+  write_ok("critical = DEFAULT", bad, msg2_der, sizeof msg2_der);
+
+  /* not encodable: values outside of the constraints */
+  bad = msg1();
+  bad.color.val.Msg_color_present = 3;
+  write_invalid("color not in ENUMERATED", bad);
+  bad = msg1();
+  bad.pair.val.Msg_pair_present.left = 256;
+  write_invalid("left not in (0..255)", bad);
+  bad = msg1();
+  bad.pair.val.Msg_pair_present.right = sl("abcde");
+  write_invalid("right not in SIZE (1..4)", bad);
+  bad = msg1();
+  bad.items = octs(items_arr, 0);
+  bad.items.val.Base.tag = LOWPARSE_PULSEPARSE_ITERATOR_TYPE_EMPTY__UINTSIZE_SLICE_UINT8;
+  write_invalid("items SIZE (1..MAX) empty", bad);
+
+  CHECK(validate(msg1_der, sizeof msg1_der), "msg1: validate");
+  CHECK(validate(msg2_der, sizeof msg2_der), "msg2: validate");
+  CHECK(validate(msg3_der, sizeof msg3_der), "msg3: validate");
+  {
+    /* DER: critical encoded with its DEFAULT value */
+    uint8_t in[sizeof msg1_der];
+    memcpy(in, msg1_der, sizeof in);
+    in[7] = 0x00;
+    CHECK(!validate(in, sizeof in), "critical = FALSE: expected rejection");
+    /* DER: SET components out of tag order */
+    static const uint8_t swapped[] = { 0x81, 0x02, 0x61, 0x62, 0x80, 0x01, 0x07 };
+    memcpy(in, msg1_der, sizeof in);
+    memcpy(in + 18, swapped, sizeof swapped);
+    CHECK(!validate(in, sizeof in), "SET out of order: expected rejection");
+    /* truncated */
+    CHECK(!validate(msg1_der, sizeof msg1_der - 1), "truncated: expected rejection");
+  }
+
+  Msg p = parse_Msg((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)msg1_der, .len = sizeof msg1_der });
+  CHECK(p.version.tag == SMALL_IMPL_MSG_VERSION_ABSENT, "parse msg1: version");
+  CHECK(p.id.tag == ASN1_PULSE_REL_SMALL && p.id.val.Small == 5, "parse msg1: id");
+  CHECK(p.critical.tag == SMALL_IMPL_MSG_CRITICAL_PRESENT && p.critical.val.Msg_critical_present, "parse msg1: critical");
+  CHECK(p.color.tag == SMALL_IMPL_MSG_COLOR_PRESENT && p.color.val.Msg_color_present == 5, "parse msg1: color");
+  CHECK(p.body.tag == SMALL_IMPL_ALT_INNER && p.body.val.Alt_inner.tag == SMALL_IMPL_INNER_FLAG &&
+        p.body.val.Alt_inner.val.Inner_flag, "parse msg1: body");
+  CHECK(p.pair.tag == SMALL_IMPL_MSG_PAIR_PRESENT && p.pair.val.Msg_pair_present.left == 7 &&
+        p.pair.val.Msg_pair_present.right.len == 2 &&
+        p.pair.val.Msg_pair_present.right.elt == msg1_der + 23, "parse msg1: pair (zero-copy)");
+  CHECK(p.pair.val.Msg_pair_present.note.tag == SMALL_IMPL_PAIR_NOTE_ABSENT, "parse msg1: pair.note");
+  CHECK(p.extra.tag == SMALL_IMPL_MSG_EXTRA_ABSENT, "parse msg1: extra");
+  /* the parsed value can be written back */
+  write_ok("msg1 parsed", p, msg1_der, sizeof msg1_der);
+
+  p = parse_Msg((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)msg2_der, .len = sizeof msg2_der });
+  CHECK(p.version.tag == SMALL_IMPL_MSG_VERSION_PRESENT && p.version.val.Msg_version_present == 2, "parse msg2: version");
+  CHECK(p.critical.tag == SMALL_IMPL_MSG_CRITICAL_ABSENT, "parse msg2: critical");
+  CHECK(p.body.tag == SMALL_IMPL_ALT_NAME && p.body.val.Alt_name.len == 1 && p.body.val.Alt_name.elt[0] == 'n', "parse msg2: body");
+  CHECK(p.extra.tag == SMALL_IMPL_MSG_EXTRA_PRESENT && p.extra.val.Msg_extra_present.a.val.Small == 300 &&
+        p.extra.val.Msg_extra_present.b.len == 1, "parse msg2: extra");
+  write_ok("msg2 parsed", p, msg2_der, sizeof msg2_der);
+
+  p = parse_Msg((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)msg3_der, .len = sizeof msg3_der });
+  CHECK(p.pair.tag == SMALL_IMPL_MSG_PAIR_PRESENT &&
+        p.pair.val.Msg_pair_present.note.tag == SMALL_IMPL_PAIR_NOTE_PRESENT &&
+        p.pair.val.Msg_pair_present.note.val.Pair_note_present, "parse msg3: pair.note");
+  write_ok("msg3 parsed", p, msg3_der, sizeof msg3_der);
+
+  if (fails) { printf("small test: %d failures\n", fails); return 1; }
+  printf("small test: OK\n");
+  return 0;
+}
