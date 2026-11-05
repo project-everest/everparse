@@ -97,6 +97,23 @@ holding fractional permission `pm` on the input bytes it borrows.
   `check_ser k () y == None`. It runs `jit_writer` on the raw bytes
   `rb k y` of `y` (`ASN1.Pulse.RawBytes`), through a ghost bridge between
   the two relations (`ASN1.Pulse.RawBridge`).
+  On impl descriptors (`d: adesc k t`, `ASN1.Pulse.Rel`),
+  `jit_write_raw_d` takes the value-level relation
+  `ASN1.Pulse.RawVRel.raw_varel d pm x' y`, which relates the C value `x'`
+  to the raw value `y` leaf by leaf and never mentions bytes: the caller
+  does not reason about encodings. A ghost bridge
+  (`ASN1.Pulse.RawVBridge`) splits it into the byte-level relation that
+  `jit_writer_d` needs (`jit_write_raw_bytes_d` keeps the byte-level
+  interface).
+
+* **Typed writers** (`ASN1.Pulse.TypedWriter`, `write_typed_d`): take the
+  relation returned by the parsers, `arel d pm x' v` with `v: asn1_t k`,
+  and `encodable k v`, and never return `JIT_INVALID`: `JIT_OK` writes
+  `Ser.asn1_enc k v`. They convert `arel` to `raw_varel` and back with a
+  ghost conversion (`ASN1.Pulse.RawVConv.arel_to_raw`, with
+  `forget k v` as the raw value). Every parsed value is encodable, and its
+  encoding is the parsed input (`parsed_encodable_d`), so parsing then
+  writing back round-trips (`ASN1.Pulse.NamedTest.roundtrip_rec`).
 
 `make test-parse` runs the parsers extracted from `ASN1.Pulse.ParseTest`
 on hand-written encodings (`test/parse_test.c`). `make test-raw-write`
@@ -126,6 +143,8 @@ one byte short.
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and raw writers `raw_write_k` |
 | `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) |
 | `ASN1.Pulse.RawValueRel`, `ASN1.Pulse.RawBytes`, `ASN1.Pulse.RawBridge`, `ASN1.Pulse.RawJitWriter` | raw value relation `asn1_raw_rel`, and the JIT writer of raw values `jit_write_raw` |
+| `ASN1.Pulse.RawVRel`, `ASN1.Pulse.RawVBridge` | value-level relation of writers on descriptors `raw_varel`, and its bridge to bytes |
+| `ASN1.Pulse.RawVConv`, `ASN1.Pulse.TypedWriter` | from the parser relation `arel` to `raw_varel` (`arel_to_raw`), and typed writers `write_typed_d` |
 | `ASN1.Pulse.SortedInsert` | on-the-fly insertion sort of SET components and SET OF elements for the raw writers |
 | `ASN1.Pulse.ParseTest`, `ASN1.Pulse.RawWriteTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |

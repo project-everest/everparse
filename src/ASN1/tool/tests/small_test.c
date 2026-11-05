@@ -162,7 +162,7 @@ static void names_ok(const char *name, Names x, const uint8_t *exp, size_t len) 
   CHECK(p.short__.len == x.short__.len && p.wide.len == x.wide.len && p.bmp.tag == x.bmp.tag,
         "%s: parse", name);
   pos = BUF;
-  r = write_Names(p, o, &pos);
+  r = write_Names_typed(p, o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, exp, len) == 0,
         "%s: write back", name);
 }

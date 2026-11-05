@@ -10,7 +10,10 @@ module ASN1.Pulse.NamedTest
      Rec ::= SEQUENCE { a INTEGER (small), b BOOLEAN OPTIONAL, c Ch }
 
    Extraction roots: `validate_rec`, `parse_rec`, `jit_rec` (JIT writer of
-   raw bytes) and `jit_raw_rec` (the same, as a writer of raw values). *)
+   raw bytes), `jit_raw_rec` (the same, as a writer of raw values),
+   `jit_typed_rec` (the same, as a writer of typed values, taking the
+   relation returned by `parse_rec`) and `roundtrip_rec` (parse then write,
+   verified to write back the input bytes.) *)
 
 open Pulse.Lib.Pervasives
 open ASN1.Base
@@ -22,12 +25,17 @@ open ASN1.Pulse.Parser
 open ASN1.Pulse.RawRel
 open ASN1.Pulse.JitWriter
 open ASN1.Pulse.RawJitWriter
+open ASN1.Pulse.TypedWriter
 open ASN1.Syntax
 module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module I64 = FStar.Int64
 module LPS = LowParse.Pulse.Base
 module RW = ASN1.Pulse.RawWriter
+module SZ = FStar.SizeT
+module SB = LowParse.Spec.Base
+module W = LowParse.Pulse.R2L
+module Trade = Pulse.Lib.Trade
 
 (* The schema *)
 
@@ -170,4 +178,31 @@ let jit_rec : jwx (raw_arel rec_desc) (kacc rec_k) 1.0R =
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d];
   zeta; iota; primops]]
 let jit_raw_rec : raw_jit_writer_d_t rec_desc rec_ok 1.0R =
-  fun x' #y out pos #v #p -> jit_write_raw_d rec_desc rec_ok 1.0R (jit_writer_d rec_desc rec_ok 1.0R) x' #y out pos #v #p
+  fun x' #y out pos #v #p -> jit_write_raw_d rec_desc rec_ok 1.0R (jit_writer_d rec_desc rec_ok (1.0R /. 2.0R)) x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.NamedTest"];
+  delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d];
+  zeta; iota; primops]]
+let jit_typed_rec : typed_jit_writer_d_t rec_desc 1.0R =
+  fun x' #v out pos #b #p -> write_typed_d rec_desc rec_ok 1.0R (jit_write_raw_d rec_desc rec_ok 1.0R (jit_writer_d rec_desc rec_ok (1.0R /. 2.0R))) x' #v out pos #b #p
+
+(* Parse then write: if the output fits, the bytes written are exactly the
+   parsed input. *)
+fn roundtrip_rec (input: S.slice U8.t) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_t rec_k))
+  (out: S.slice U8.t) (pos: ref SZ.t) (#b: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+requires S.pts_to input w ** pts_to out b ** pts_to pos p **
+  pure (parsed #asn1_strong_parser_kind (asn1_as_parser rec_k) w v /\ SZ.v p <= Seq.length b)
+returns res: jit_result
+ensures exists* b' p' . S.pts_to input w ** pts_to out b' ** pts_to pos p' **
+  pure ((res == JIT_OK \/ res == JIT_NO_SPACE) /\
+    (res == JIT_OK ==> W.r2l_post w (SZ.v p) b true (SZ.v p') b'))
+{
+  let x = parse_rec input #1.0R #w #v;
+  parsed_encodable_d rec_k w v;
+  let res = jit_typed_rec x #v out pos;
+  Trade.elim_trade _ _;
+  res
+}

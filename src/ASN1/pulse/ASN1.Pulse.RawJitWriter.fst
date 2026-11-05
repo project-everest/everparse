@@ -35,6 +35,8 @@ module W = LowParse.Pulse.R2L
 module Ser = ASN1.Spec.Serializer
 module RW = ASN1.Pulse.RawWriter
 module Br = ASN1.Pulse.RawBridge
+module VR = ASN1.Pulse.RawVRel
+module VB = ASN1.Pulse.RawVBridge
 
 let raw_jit_post (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (y: asn1_raw_t k) (p: nat) (v: SB.bytes) (res: jit_result) (p': nat) (v': SB.bytes) : prop =
   Seq.length v' == Seq.length v /\
@@ -109,14 +111,72 @@ fn jit_write_raw (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (pm: perm)
 }
 
 (* The same, for the Pulse type `t` of a descriptor `d` (with named
-   structs and case types): a value `x': t` written as the raw bytes
-   `rb k y` of a raw value `y` (`raw_arel d pm x' (rb k y)`), for which the
-   writer reports the same outcomes as above. With the legacy descriptor,
-   `asn1_raw_rel k pm x' y` implies this relation (`split_k`).
-   `wj` is meant to be `jit_writer_d d u pm`. *)
+   structs and case types): a value `x': t` related to a raw value `y` by
+   the value-level relation `raw_varel d pm x' y` (`ASN1.Pulse.RawVRel`),
+   which does not mention bytes, so that the caller never needs to reason
+   about the encoding. The writer reports the same outcomes as above.
+   `wj` is meant to be `jit_writer_d d u (pm /. 2.0R)`, passed by the
+   extraction root. *)
 
 inline_for_extraction
 let raw_jit_writer_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm) =
+  (x': t) -> (#y: Ghost.erased (asn1_raw_t k)) ->
+  (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
+  stt jit_result
+    (pts_to out v ** pts_to pos p ** VR.raw_varel d pm x' y ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** VR.raw_varel d pm x' y **
+      pure (raw_jit_post k u y (SZ.v p) v res (SZ.v p') v'))
+
+let d_split (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) : Br.split_t (VR.raw_varel d) (raw_arel d) (rb k) = (VB.brd_a d u).sp
+let d_absorb (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) : Br.absorb_t (VR.raw_varel d) (raw_arel d) = (VB.brd_a d u).ab
+
+ghost
+fn split_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm) (x': t) (y: asn1_raw_t k)
+requires VR.raw_varel d pm x' y
+ensures VR.raw_varel d (pm /. 2.0R) x' y ** raw_arel d (pm /. 2.0R) x' (rb k y)
+{
+  d_split d u pm x' y
+}
+
+ghost
+fn absorb_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (p1 p2: perm) (x': t) (y: asn1_raw_t k) (w: SB.bytes)
+requires VR.raw_varel d p1 x' y ** raw_arel d p2 x' w
+ensures VR.raw_varel d (p1 +. p2) x' y
+{
+  d_absorb d u p1 p2 x' y w
+}
+
+ghost
+fn varel_halves (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x': t) (y: asn1_raw_t k)
+requires VR.raw_varel d (pm /. 2.0R +. pm /. 2.0R) x' y
+ensures VR.raw_varel d pm x' y
+{
+  assert (pure (pm /. 2.0R +. pm /. 2.0R == pm));
+  rewrite (VR.raw_varel d (pm /. 2.0R +. pm /. 2.0R) x' y) as (VR.raw_varel d pm x' y)
+}
+
+inline_for_extraction
+fn jit_write_raw_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
+  (wj: jwx (raw_arel d) (kacc k) (pm /. 2.0R))
+: raw_jit_writer_d_t d u pm
+= (x': t) (#y: Ghost.erased (asn1_raw_t k))
+  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  split_d d u pm x' y;
+  let res = wj x' #(rb k y) out pos;
+  with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+  absorb_d d u (pm /. 2.0R) (pm /. 2.0R) x' y (rb k y);
+  varel_halves d pm x' y;
+  raw_jit_correct k u y (SZ.v p) v res (SZ.v p1) v1;
+  res
+}
+
+(* The byte-level variant: the caller provides the raw byte relation
+   `raw_arel d pm x' (rb k y)` directly. `wj` is meant to be
+   `jit_writer_d d u pm`. *)
+
+inline_for_extraction
+let raw_jit_writer_bytes_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm) =
   (x': t) -> (#y: Ghost.erased (asn1_raw_t k)) ->
   (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
   stt jit_result
@@ -125,9 +185,9 @@ let raw_jit_writer_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squ
       pure (raw_jit_post k u y (SZ.v p) v res (SZ.v p') v'))
 
 inline_for_extraction
-fn jit_write_raw_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
+fn jit_write_raw_bytes_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
   (wj: jwx (raw_arel d) (kacc k) pm)
-: raw_jit_writer_d_t d u pm
+: raw_jit_writer_bytes_d_t d u pm
 = (x': t) (#y: Ghost.erased (asn1_raw_t k))
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {

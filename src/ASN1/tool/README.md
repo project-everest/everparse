@@ -14,7 +14,7 @@ specification (`..`). It works like the CDDL front end of EverParse:
    * `M.Impl.fst`: one C type per named SEQUENCE, SET, CHOICE and OPTIONAL
      component, and an impl descriptor `d_T : adesc k_T t_T` that ties each
      C type to its schema (`ASN1.Pulse.Rel`). The roots `validate_T`,
-     `parse_T` and `write_T` instantiate the generic Pulse interpreters
+     `parse_T`, `write_T` and `write_T_typed` instantiate the generic Pulse interpreters
      of `../pulse` with these descriptors.
 3. Verify both modules with F\*, then extract `M.Impl` to `M.c`/`M.h` with
    Custard, F\*'s direct-to-C backend (no KaRaMeL).
@@ -57,6 +57,8 @@ bool validate_T(Pulse_Lib_Slice_slice__uint8 input, size_t *offset);
 T    parse_T(Pulse_Lib_Slice_slice__uint8 validated_input);
 ASN1_Pulse_JitWriter_jit_result
      write_T(T x, Pulse_Lib_Slice_slice__uint8 out, size_t *pos);
+ASN1_Pulse_JitWriter_jit_result
+     write_T_typed(T x, Pulse_Lib_Slice_slice__uint8 out, size_t *pos);
 ```
 
 * `validate_T` succeeds exactly when the spec parser succeeds. It then
@@ -72,6 +74,19 @@ ASN1_Pulse_JitWriter_jit_result
 
   A DEFAULT component that is present with its default value is omitted
   from the output, as DER requires.
+
+  In F\*, the precondition of `write_T` is the value-level relation
+  `ASN1.Pulse.RawVRel.raw_varel d_T pm x y` between `x` and a ghost raw
+  value `y: asn1_raw_t k_T`. It never mentions bytes, so a verified
+  caller relates its C values to raw values without reasoning about
+  encodings. (Per-type introduction lemmas for this relation are not
+  generated yet: a caller unfolds `raw_varel d_T` itself.)
+* `write_T_typed` is the same writer, with the relation returned by
+  `parse_T` (`arel d_T pm x v`, with `v: asn1_t k_T`) and `encodable k_T v`
+  as its F\* precondition. It never returns `JIT_INVALID`, and `JIT_OK`
+  writes the encoding of `v`. Every value returned by `parse_T` qualifies
+  (`ASN1.Pulse.TypedWriter.parsed_encodable_d`), and writing it back
+  yields the parsed bytes. Its C code is that of `write_T`.
 
 Type naming:
 
