@@ -389,3 +389,40 @@ let sorted_no_dup
     end
   in
   Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (prf x1) x2)
+
+(* When the sorted elements are pairwise distinct (e.g. offsets), the
+   abort witness is exactly a pair of positions comparing equal. *)
+
+let seq_distinct (#t: eqtype) (s: Seq.seq t) : prop =
+  forall (i j: nat) . (i < j /\ j < Seq.length s) ==> Seq.index s i <> Seq.index s j
+
+let seq_no_cmp_dup (#t: Type) (cmp: t -> t -> int) (s: Seq.seq t) : prop =
+  forall (i j: nat) . (i < j /\ j < Seq.length s) ==> cmp (Seq.index s i) (Seq.index s j) <> 0
+
+let sort_abort_witness_distinct
+  (#t: eqtype) (cmp: t -> t -> int) (s: Seq.seq t)
+: Lemma
+  (requires compare_props cmp /\ seq_distinct s)
+  (ensures sort_abort_witness cmp s <==> ~ (seq_no_cmp_dup cmp s))
+= let prf1 (x1 x2: t) : Lemma
+    (requires SP.mem x1 s /\ SP.mem x2 s /\ cmp x1 x2 == 0 /\ (x1 <> x2 \/ SP.count x1 s >= 2))
+    (ensures ~ (seq_no_cmp_dup cmp s))
+  = if x1 <> x2
+    then begin
+      let i = SP.index_mem x1 s in
+      let j = SP.index_mem x2 s in
+      assert (i <> j);
+      if i < j then () else assert (cmp (Seq.index s j) (Seq.index s i) == 0)
+    end else begin
+      let (i, j) = count2_indices x1 s in
+      assert (Seq.index s i == Seq.index s j)
+    end
+  in
+  let prf2 (i j: nat) : Lemma
+    (requires i < j /\ j < Seq.length s /\ cmp (Seq.index s i) (Seq.index s j) == 0)
+    (ensures sort_abort_witness cmp s)
+  = assert (SP.mem (Seq.index s i) s);
+    assert (SP.mem (Seq.index s j) s)
+  in
+  Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (prf1 x1) x2);
+  Classical.forall_intro_2 (fun i j -> Classical.move_requires (prf2 i) j)
