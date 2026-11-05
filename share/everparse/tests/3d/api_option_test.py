@@ -32,8 +32,7 @@ def main():
     assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
     for api in ["pulse", "lowstar"]:
-        for option in ["goto_for_early_return", "blank_lines",
-                       "line_comments"]:
+        for option in ["goto_for_early_return", "blank_lines"]:
             message = run("--api", api, f"--{option}", succeeds=False)
             assert f"--{option}: not implemented yet" in message
     # The legacy Low* backend is gone: lowstar is the default, and
@@ -317,6 +316,68 @@ def main():
                 assert all("--hoist_locals --init_locals c89 " in line
                            for line in recipes), makefile
 
+        for api in ["pulse", "lowstar"]:
+            outputs = {}
+            for mode, flags in [
+                    ("normal", ["--batch"]),
+                    ("lines", ["--line_comments"]),
+                    ("hoisted", ["--line_comments", "--hoist_locals",
+                                 "--init_locals", "c99"]),
+                    ("reset", ["--line_comments", "--no_line_comments", "--batch"])]:
+                output = root / f"{api}-comments-{mode}"
+                output.mkdir()
+                outputs[mode] = output
+                log = run("--api", api, *flags, "--odir", output,
+                          "--save_hashes", source)
+                running = [line for line in log.splitlines()
+                           if line.startswith("Running: ")]
+                extraction_commands = [l for l in running if "--codegen C" in l]
+                assert extraction_commands, log
+                assert all(("--custard_line_comments" in line) ==
+                           (mode in ["lines", "hoisted"])
+                           for line in extraction_commands), log
+                verification_commands = [
+                    l for l in running if "--cache_checked_modules" in l]
+                assert verification_commands, log
+                assert all("--custard_line_comments" not in line
+                           for line in verification_commands), log
+
+            for suffix in [".c", ".h", "Wrapper.c", "Wrapper.h"]:
+                expected = (outputs["normal"] / f"ApiChoice{suffix}").read_bytes()
+                assert (outputs["reset"] / f"ApiChoice{suffix}").read_bytes() == expected
+            normal = (outputs["normal"] / "ApiChoice.c").read_text()
+            assert "  /* Validating field x */\n" in normal, normal
+            for mode in ["lines", "hoisted"]:
+                output = outputs[mode]
+                generated = (output / "ApiChoice.c").read_text()
+                assert "  //\n  // Validating field x\n  //\n" in generated, generated
+                depth = 0
+                for line in generated.splitlines():
+                    if depth:
+                        assert not re.match(r"^\s*/\*.*\*/\s*$", line), line
+                    depth += line.count("{") - line.count("}")
+                for c_file in ["ApiChoice.c", "ApiChoiceWrapper.c"]:
+                    subprocess.run(
+                        shlex.split(os.environ.get("CC", "cc")) +
+                        ["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only",
+                         "-I", str(output), str(output / c_file)],
+                        check=True,
+                    )
+
+            output = outputs["lines"]
+            run("--api", api, "--line_comments", "--odir", output,
+                "--check_hashes", "strong", source)
+            for make in ["gmake", "nmake"]:
+                run("--api", api, "--line_comments", "--odir", output,
+                    "--makefile", make, source)
+                makefile = (output / "EverParse.Makefile").read_text()
+                recipes = [
+                    line for line in makefile.splitlines()
+                    if line.startswith("\t$(EVERPARSE_CMD)")
+                ]
+                assert recipes
+                assert all(" --line_comments " in line for line in recipes), makefile
+
         # Weak hashes require no extraction, and must reject another API
         # even when its grammar and tool versions are identical.
         for name, options in modes.items():
@@ -338,7 +399,7 @@ def main():
                     run(*modes[name], "--odir", root / other,
                         "--check_hashes", "weak", source, succeeds=False)
 
-    print("API selection, hoisting, local initialization, generated commands, and hash isolation: PASS")
+    print("API selection, hoisting, local initialization, line comments, generated commands, and hash isolation: PASS")
 
 
 if __name__ == "__main__":
