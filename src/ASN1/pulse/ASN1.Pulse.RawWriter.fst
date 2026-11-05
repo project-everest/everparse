@@ -480,7 +480,10 @@ fn raw_write_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (pm: perm) (w: rw
 = (x': ty) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_view r view pm x' x);
-  let res = w (view x') #x out pos;
+  let y = view x';
+  rewrite (r pm (view x') x) as (r pm y x);
+  let res = w y #x out pos;
+  rewrite (r pm y x) as (r pm (view x') x);
   fold (raw_view r view pm x' x);
   res
 }
