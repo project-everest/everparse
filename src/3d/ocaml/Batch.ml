@@ -225,6 +225,7 @@ let produce_unit
     (match Options.get_init_locals () with
      | Some mode -> ["--custard_init_locals"; mode]
      | None -> []) @
+    (if Options.get_line_comments () then ["--custard_line_comments"] else []) @
     roots @ links @
     fstar_args ~output_dir:staging input_stream_binding out_dir @
     [module_file ".fst"; "-o"; staged (modul ^ ".c")]
