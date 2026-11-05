@@ -304,7 +304,7 @@ let automata_bare_parser'_pf1
   (s : cp.control_t)
 : Lemma (and_then_cases_injective_dep (dp.post_t s) (automata_bare_parser' cp dp bp s))
 = let p = automata_bare_parser' cp dp bp s in
-  and_then_cases_injective_dep_intro (dp.post_t s) p (automata_bare_parser'_pf1_aux cp dp bp pp s)
+  and_then_cases_injective_dep_intro #(x:dp.partial_t{dp.pre_t s x}) (dp.post_t s) p (automata_bare_parser'_pf1_aux cp dp bp pp s)
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 let rec automata_bare_parser'_pf2_aux

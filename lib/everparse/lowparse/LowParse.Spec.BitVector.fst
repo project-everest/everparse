@@ -171,7 +171,7 @@ let synth_extra_bv8_recip (n: nat) (x: BV.bv_t (n % 8)) : Tot (parse_filter_refi
 let synth_extra_bv8_injective (n: nat) : Lemma (synth_injective (synth_extra_bv8 n))
   [SMTPat (synth_injective (synth_extra_bv8 n))]
 =
-  synth_inverse_intro' (synth_extra_bv8_recip n) (synth_extra_bv8 n) (fun x ->
+  synth_inverse_intro' #_ #(parse_filter_refine (extra_bytes_prop n)) (synth_extra_bv8_recip n) (synth_extra_bv8 n) (fun x ->
     to_uint8_of_uint8 (n % 8) x
   )
 

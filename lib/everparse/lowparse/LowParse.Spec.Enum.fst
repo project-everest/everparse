@@ -911,6 +911,19 @@ let list_tl
   | _ :: q -> q
 
 
+(* The index of the recursive call in the [*_destr_cons] combinators. It
+   takes the invariant of the current call and states that of the next one
+   directly, so that a term built by applying these combinators repeatedly
+   (e.g. by [maybe_enum_destr_t_tac]) typechecks step by step, without
+   unfolding [e]. *)
+let list_append_rev_cons_inv
+  (#t: Type)
+  (e l1 l2: list t)
+  (u1: squash (Cons? l2 /\ e == L.append (L.rev l1) l2))
+: Lemma
+  (e == L.append (L.rev (list_hd l2 :: l1)) (list_tl l2))
+= list_append_rev_cons l1 (list_hd l2) (list_tl l2)
+
 inline_for_extraction
 let maybe_enum_destr_cons
   (t: Type)
@@ -919,7 +932,7 @@ let maybe_enum_destr_cons
   (l1: list (key & repr))
   (l2: list (key & repr))
   (u1: squash (Cons? l2 /\ e == L.append (L.rev l1) l2))
-  (g: (maybe_enum_destr_t' t e (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons l1 (list_hd l2) (list_tl l2))))
+  (g: (maybe_enum_destr_t' t e (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons_inv e l1 l2 u1)))
 : Tot (maybe_enum_destr_t' t e l1 l2 u1)
 = fun (eq: (t -> t -> GTot prop)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) (f: (maybe_enum_key e -> Tot t)) ->
   [@inline_let]
@@ -1057,7 +1070,7 @@ let dep_maybe_enum_destr_cons
   (l1: list (key & repr))
   (l2: list (key & repr))
   (u1: squash (Cons? l2 /\ e == L.append (L.rev l1) l2))
-  (g: (dep_maybe_enum_destr_t' e v (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons l1 (list_hd l2) (list_tl l2))))
+  (g: (dep_maybe_enum_destr_t' e v (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons_inv e l1 l2 u1)))
 : Tot (dep_maybe_enum_destr_t' e v l1 l2 u1)
 = fun
   (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot prop))

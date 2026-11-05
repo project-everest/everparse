@@ -50,7 +50,7 @@ val equiv_eq
     | Int64 ty1 v1, Int64 ty2 v2 ->
       ty1 = ty2 && v1.value = v2.value
     | String ty1 _ v1, String ty2 _ v2 ->
-      ty1 = ty2 && v1 = v2
+      ty1 = ty2 && (v1 <: Seq.seq FStar.UInt8.t) = v2
     | _ -> false
     end
   ))
@@ -230,7 +230,7 @@ let raw_equiv'
     | Int64 ty1 v1, Int64 ty2 v2 ->
       ty1 = ty2 && v1.value = v2.value
     | String ty1 _ v1, String ty2 _ v2 ->
-      ty1 = ty2 && v1 = v2
+      ty1 = ty2 && (v1 <: Seq.seq FStar.UInt8.t) = v2
     | Simple v1, Simple v2 -> v1 = v2
     | _ -> false
     end

@@ -31,11 +31,14 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
   bool pres = true;
   size_t pi = (size_t)0U;
   size_t len = Pulse_Lib_Slice_len__uint8_t(s);
-  while (pres && pi < len)
+  while (true)
   {
     size_t i = pi;
-    uint8_t byte1 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s, i);
-    size_t i1 = i + (size_t)1U;
+    if (!(pres && i < len))
+      break;
+    size_t i0 = pi;
+    uint8_t byte1 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s, i0);
+    size_t i1 = i0 + (size_t)1U;
     if (byte1 <= 0x7fU)
       pi = i1;
     else if (i1 == len)
@@ -653,8 +656,11 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item(
 {
   size_t pn = (size_t)1U;
   bool pres = true;
-  while (pres && pn > (size_t)0U)
+  while (true)
   {
+    size_t n0 = pn;
+    if (!(pres && n0 > (size_t)0U))
+      break;
     size_t off = *poffset;
     size_t n = pn;
     if (n > Pulse_Lib_Slice_len__uint8_t(input) - off)
@@ -816,8 +822,11 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_map_length_bounded(
 {
   size_t pn = (size_t)1U;
   bool pres = true;
-  while (pres && pn > (size_t)0U)
+  while (true)
   {
+    size_t n10 = pn;
+    if (!(pres && n10 > (size_t)0U))
+      break;
     size_t off = *poffset;
     size_t n1 = pn;
     if (n1 > Pulse_Lib_Slice_len__uint8_t(input) - off)
@@ -937,8 +946,11 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
 {
   size_t pn = n;
   bool pres = true;
-  while (pres && pn > (size_t)0U)
+  while (true)
   {
+    size_t n10 = pn;
+    if (!(pres && n10 > (size_t)0U))
+      break;
     size_t off = *poffset;
     size_t n1 = pn;
     if (n1 > Pulse_Lib_Slice_len__uint8_t(input) - off)
@@ -2603,16 +2615,19 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
           bool pres = true;
           size_t pi = (size_t)0U;
           size_t len = Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_raw(a);
-          while (pres && pi < len)
+          while (true)
           {
             size_t i = pi;
+            if (!(pres && i < len))
+              break;
+            size_t i0 = pi;
             if
             (
               CBOR_Pulse_Raw_Format_Serialize_siz__d(Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(a,
-                  i),
+                  i0),
                 out)
             )
-              pi = i + (size_t)1U;
+              pi = i0 + (size_t)1U;
             else
               pres = false;
           }
@@ -2663,18 +2678,21 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
           bool pres = true;
           size_t pi = (size_t)0U;
           size_t len = Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(a);
-          while (pres && pi < len)
+          while (true)
           {
             size_t i = pi;
+            if (!(pres && i < len))
+              break;
+            size_t i0 = pi;
             cbor_map_entry
-            e = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i);
+            e = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i0);
             bool ite;
             if (CBOR_Pulse_Raw_Format_Serialize_siz__d(e.cbor_map_entry_key, out))
               ite = CBOR_Pulse_Raw_Format_Serialize_siz__d(e.cbor_map_entry_value, out);
             else
               ite = false;
             if (ite)
-              pi = i + (size_t)1U;
+              pi = i0 + (size_t)1U;
             else
               pres = false;
           }
@@ -3314,10 +3332,13 @@ CBOR_Pulse_Raw_Compare_Bytes_lex_compare_bytes(
   size_t n1 = Pulse_Lib_Slice_len__uint8_t(s1);
   size_t n2 = Pulse_Lib_Slice_len__uint8_t(s2);
   int16_t pres = (size_t)0U < n1 ? (size_t)0U < n2 ? 0 : 1 : (size_t)0U < n2 ? -1 : 0;
-  while (pres == 0 && pi1 < n1)
+  while (true)
   {
     size_t i1 = pi1;
-    uint8_t x1 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s1, i1);
+    if (!(pres == 0 && i1 < n1))
+      break;
+    size_t i10 = pi1;
+    uint8_t x1 = Pulse_Lib_Slice_op_Array_Access__uint8_t(s1, i10);
     size_t i2 = pi2;
     int16_t
     c =
@@ -3325,7 +3346,7 @@ CBOR_Pulse_Raw_Compare_Bytes_lex_compare_bytes(
         Pulse_Lib_Slice_op_Array_Access__uint8_t(s2, i2));
     if (c == 0)
     {
-      size_t i1_ = i1 + (size_t)1U;
+      size_t i1_ = i10 + (size_t)1U;
       size_t i2_ = i2 + (size_t)1U;
       bool ci1_ = i1_ < n1;
       bool ci2_ = i2_ < n2;
@@ -3369,8 +3390,11 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
 {
   size_t pn = n1;
   bool pres = true;
-  while (pres && pn > (size_t)0U)
+  while (true)
   {
+    size_t n = pn;
+    if (!(pres && n > (size_t)0U))
+      break;
     CBOR_Pulse_Raw_Slice_byte_slice l = *pl;
     size_t n_ = pn - (size_t)1U;
     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3467,11 +3491,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
     CBOR_Pulse_Raw_EverParse_Format_read_header(Pulse_Lib_Slice_split__uint8_t(l2,
         CBOR_Pulse_Raw_EverParse_Format_jump_header(l2, (size_t)0U))._1);
   uint8_t mt1 = CBOR_Spec_Raw_EverParse_get_header_major_type(h1);
-  if
-  (
-    mt1 == CBOR_MAJOR_TYPE_MAP &&
-      CBOR_Spec_Raw_EverParse_get_header_major_type(h2) == CBOR_MAJOR_TYPE_MAP
-  )
+  uint8_t mt2 = CBOR_Spec_Raw_EverParse_get_header_major_type(h2);
+  if (mt1 == CBOR_MAJOR_TYPE_MAP && mt2 == CBOR_MAJOR_TYPE_MAP)
     if (CBOR_Pulse_Raw_Util_eq_Some_0sz(map_bound))
       return ((FStar_Pervasives_Native_option__bool){ .tag = FStar_Pervasives_Native_None });
     else
@@ -3530,8 +3551,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
       pres = { .tag = FStar_Pervasives_Native_Some, .v = true };
       while (true)
       {
-        size_t n = pn;
-        if (!(n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres)))
+        FStar_Pervasives_Native_option__bool res0 = pres;
+        if (!(pn > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(res0)))
           break;
         CBOR_Pulse_Raw_Slice_byte_slice l = pl;
         size_t n_ = pn - (size_t)1U;
@@ -3554,9 +3575,9 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
         bool pcont = true;
         while (true)
         {
-          size_t n1 = pn1;
+          FStar_Pervasives_Native_option__bool res = pres1;
           bool cont = pcont;
-          if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont))
+          if (!(pn1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(res) && cont))
             break;
           CBOR_Pulse_Raw_Slice_byte_slice l3 = pll;
           size_t n_1 = pn1 - (size_t)1U;
@@ -3730,9 +3751,9 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
               }
             }
           }
-          FStar_Pervasives_Native_option__bool res = pres2;
-          if (res.tag == FStar_Pervasives_Native_None)
-            pres1 = res;
+          FStar_Pervasives_Native_option__bool res0 = pres2;
+          if (res0.tag == FStar_Pervasives_Native_None)
+            pres1 = res0;
           else
           {
             FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -3742,8 +3763,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
             CBOR_Pulse_Raw_Slice_byte_slice lv1 = scrut0._1;
             CBOR_Pulse_Raw_Slice_byte_slice lt_1 = scrut0._2;
             bool ite0;
-            if (res.tag == FStar_Pervasives_Native_Some)
-              ite0 = res.v;
+            if (res0.tag == FStar_Pervasives_Native_Some)
+              ite0 = res0.v;
             else
               ite0 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
             if (ite0)
@@ -3941,8 +3962,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
         pres1 = { .tag = FStar_Pervasives_Native_Some, .v = true };
         while (true)
         {
-          size_t n = pn1;
-          if (!(n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1)))
+          FStar_Pervasives_Native_option__bool res10 = pres1;
+          if (!(pn1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(res10)))
             break;
           CBOR_Pulse_Raw_Slice_byte_slice l = pl1;
           size_t n_ = pn1 - (size_t)1U;
@@ -3965,9 +3986,9 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
           bool pcont = true;
           while (true)
           {
-            size_t n1 = pn2;
+            FStar_Pervasives_Native_option__bool res1 = pres2;
             bool cont = pcont;
-            if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2) && cont))
+            if (!(pn2 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(res1) && cont))
               break;
             CBOR_Pulse_Raw_Slice_byte_slice l3 = pll;
             size_t n_1 = pn2 - (size_t)1U;
@@ -4141,9 +4162,9 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
                 }
               }
             }
-            FStar_Pervasives_Native_option__bool res1 = pres3;
-            if (res1.tag == FStar_Pervasives_Native_None)
-              pres2 = res1;
+            FStar_Pervasives_Native_option__bool res10 = pres3;
+            if (res10.tag == FStar_Pervasives_Native_None)
+              pres2 = res10;
             else
             {
               FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Slice_byte_slice_CBOR_Pulse_Raw_Slice_byte_slice
@@ -4153,8 +4174,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
               CBOR_Pulse_Raw_Slice_byte_slice lv1 = scrut0._1;
               CBOR_Pulse_Raw_Slice_byte_slice lt_1 = scrut0._2;
               bool ite0;
-              if (res1.tag == FStar_Pervasives_Native_Some)
-                ite0 = res1.v;
+              if (res10.tag == FStar_Pervasives_Native_Some)
+                ite0 = res10.v;
               else
                 ite0 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
               if (ite0)
@@ -4559,9 +4580,12 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
   size_t pn = (size_t)1U;
   bool pres = true;
   CBOR_Pulse_Raw_Slice_byte_slice ppi = l1;
-  while (pres && pn > (size_t)0U)
+  while (true)
   {
     size_t n = pn;
+    if (!(pres && n > (size_t)0U))
+      break;
+    size_t n0 = pn;
     CBOR_Pulse_Raw_Slice_byte_slice pi = ppi;
     prims_dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
     h =
@@ -4591,8 +4615,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
       pres1 = { .tag = FStar_Pervasives_Native_Some, .v = true };
       while (true)
       {
-        size_t n1 = pn1;
-        if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres1)))
+        FStar_Pervasives_Native_option__bool res0 = pres1;
+        if (!(pn1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(res0)))
           break;
         size_t n_ = pn1 - (size_t)1U;
         CBOR_Pulse_Raw_Slice_byte_slice l = pl;
@@ -4612,8 +4636,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
         pres2 = { .tag = FStar_Pervasives_Native_Some, .v = false };
         while (true)
         {
-          size_t n2 = pn2;
-          if (!(n2 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres2)))
+          FStar_Pervasives_Native_option__bool res0 = pres2;
+          if (!(pn2 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(res0)))
             break;
           size_t n_1 = pn2 - (size_t)1U;
           CBOR_Pulse_Raw_Slice_byte_slice l2 = pl1;
@@ -4701,7 +4725,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_valid_basic(
       CBOR_Pulse_Raw_Slice_byte_slice pc = scrut._2;
       size_t unused = Pulse_Lib_Slice_len__uint8_t(pc);
       KRML_MAYBE_UNUSED_VAR(unused);
-      pn = n - (size_t)1U + CBOR_Pulse_Raw_EverParse_Format_jump_recursive_step_count_leaf(ph);
+      pn = n0 - (size_t)1U + CBOR_Pulse_Raw_EverParse_Format_jump_recursive_step_count_leaf(ph);
       ppi = pc;
     }
   }
@@ -4721,8 +4745,8 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_list_for_all_with_overflow_setoid_ass
   FStar_Pervasives_Native_option__bool pres = { .tag = FStar_Pervasives_Native_Some, .v = true };
   while (true)
   {
-    size_t n = pn;
-    if (!(n > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(pres)))
+    FStar_Pervasives_Native_option__bool res0 = pres;
+    if (!(pn > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_true(res0)))
       break;
     CBOR_Pulse_Raw_Slice_byte_slice l = pl;
     size_t n_ = pn - (size_t)1U;
@@ -4745,9 +4769,9 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_list_for_all_with_overflow_setoid_ass
     bool pcont = true;
     while (true)
     {
-      size_t n1 = pn1;
+      FStar_Pervasives_Native_option__bool res0 = pres1;
       bool cont = pcont;
-      if (!(n1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(pres1) && cont))
+      if (!(pn1 > (size_t)0U && CBOR_Pulse_Raw_Util_eq_Some_false(res0) && cont))
         break;
       CBOR_Pulse_Raw_Slice_byte_slice l3 = pll;
       size_t n_1 = pn1 - (size_t)1U;
@@ -5184,7 +5208,8 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
         while (true)
         {
           bool res = pres;
-          if (!(res && !CBOR_Pulse_Raw_Read_cbor_array_iterator_is_empty_with_depth(pi1)))
+          bool __anf0 = CBOR_Pulse_Raw_Read_cbor_array_iterator_is_empty_with_depth(pi1);
+          if (!(res && !__anf0))
             break;
           cbor_raw y1 = CBOR_Pulse_Raw_Read_cbor_array_iterator_next_with_depth(&pi1);
           pres =
@@ -5233,7 +5258,8 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
       while (true)
       {
         bool res0 = pres;
-        if (!(res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi2)))
+        bool __anf00 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi2);
+        if (!(res0 && !__anf00))
           break;
         cbor_map_entry x21 = CBOR_Pulse_Raw_Read_cbor_map_iterator_next_with_depth(&pi2);
         cbor_nondet_map_iterator_t pi1 = i2;
@@ -5270,7 +5296,8 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
         while (true)
         {
           bool res0 = pres1;
-          if (!(res0 && !CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi21)))
+          bool __anf010 = CBOR_Pulse_Raw_Read_cbor_map_iterator_is_empty_with_depth(pi21);
+          if (!(res0 && !__anf010))
             break;
           cbor_map_entry x21 = CBOR_Pulse_Raw_Read_cbor_map_iterator_next_with_depth(&pi21);
           cbor_nondet_map_iterator_t pi1 = i1;
@@ -5318,9 +5345,8 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_no_setoid_repeats(
   bool pres = true;
   while (true)
   {
-    bool res0 = pres;
     size_t __anf00 = pn1;
-    if (!(res0 && __anf00 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x)))
+    if (!(pres && __anf00 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x)))
       break;
     size_t n1 = pn1;
     cbor_map_entry x1 = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(x, n1);
@@ -5329,9 +5355,8 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_no_setoid_repeats(
     size_t pn2 = n2;
     while (true)
     {
-      bool res = pres;
       size_t __anf0 = pn2;
-      if (!(res && __anf0 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x)))
+      if (!(pres && __anf0 < Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(x)))
         break;
       size_t n21 = pn2;
       pres =
@@ -5719,8 +5744,11 @@ CBOR_Pulse_Raw_Nondet_cbor_nondet_map_get(cbor_raw x, cbor_raw k)
   cbor_nondet_map_iterator_t pi = i;
   bool pres = false;
   bool pcont = !CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_is_empty(i);
-  while (pcont && !pres)
+  while (true)
   {
+    bool res = pres;
+    if (!(pcont && !res))
+      break;
     cbor_map_entry y = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_next(&pi);
     if (CBOR_Pulse_Raw_Nondet_cbor_nondet_equal(y.cbor_map_entry_key, k))
     {
@@ -6414,8 +6442,7 @@ cbor_raw cbor_nondet_mk_int64(int64_t v)
 
 bool cbor_nondet_mk_byte_string(uint8_t *a, uint64_t len, cbor_raw *dest)
 {
-  bool __anf0 = a == NULL;
-  if (__anf0 || dest == NULL)
+  if (a == NULL || dest == NULL)
     return false;
   else
   {
@@ -6438,8 +6465,7 @@ bool cbor_nondet_mk_byte_string(uint8_t *a, uint64_t len, cbor_raw *dest)
 
 bool cbor_nondet_mk_text_string(uint8_t *a, uint64_t len, cbor_raw *dest)
 {
-  bool __anf0 = a == NULL;
-  if (__anf0 || dest == NULL)
+  if (a == NULL || dest == NULL)
     return false;
   else
   {
@@ -6474,8 +6500,7 @@ Pulse_Lib_Slice_arrayptr_to_slice_intro__CBOR_Pulse_Raw_Type_cbor_raw(cbor_raw *
 
 bool cbor_nondet_mk_array(cbor_raw *a, uint64_t len, cbor_raw *dest)
 {
-  bool __anf0 = a == NULL;
-  if (__anf0 || dest == NULL)
+  if (a == NULL || dest == NULL)
     return false;
   else
   {
@@ -6502,8 +6527,7 @@ Pulse_Lib_Slice_arrayptr_to_slice_intro__CBOR_Pulse_Raw_Type_cbor_map_entry(
 
 bool cbor_nondet_mk_map(cbor_map_entry *a, uint64_t len, cbor_raw *dest)
 {
-  bool __anf0 = a == NULL;
-  if (__anf0 || dest == NULL)
+  if (a == NULL || dest == NULL)
     return false;
   else
   {
@@ -6620,7 +6644,8 @@ cbor_nondet_map_get_multiple(
     while (true)
     {
       size_t i0 = pi;
-      if (!(i0 != (size_t)0U && !CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_is_empty(piter)))
+      bool __anf02 = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_is_empty(piter);
+      if (!(i0 != (size_t)0U && !__anf02))
         break;
       cbor_map_entry entry = CBOR_Pulse_Raw_Nondet_cbor_nondet_map_iterator_next(&piter);
       size_t pj = (size_t)0U;

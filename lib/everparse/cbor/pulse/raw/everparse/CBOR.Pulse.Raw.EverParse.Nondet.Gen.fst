@@ -72,7 +72,7 @@ let check_equiv_head
         v1 = v2
       | String ty1 _ s1, String ty2 _ s2 ->
         ty1 = ty2 &&
-        s1 = s2
+        (s1 <: Seq.seq FStar.UInt8.t) = s2
       | Tagged tag1 b1, Tagged tag2 b2 ->
         tag1.value = tag2.value
       | Array len1 ar1, Array len2 ar2 ->

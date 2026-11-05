@@ -902,7 +902,7 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   ) cl;
   w o "    )\n  | LP.Unknown r -> PPS.copyful_parse_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag (LP.Unknown r)\n      %s (fun lv -> %s_Unknown_%s_low r lv) () ()\n\n" n n n n n n (copyful_read_name dt) cprefix tn;
   (* copyful parser at the library dependent-pair mid, then bridged via coerce_mid. *)
-  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n%s  PPS.copyful_parse_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n n n n n n n n n n same_kind n tn tn n n n n n n n tn;
+  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n%s  PPS.copyful_parse_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) %s_enum_repr_of_key ()\n\n" n n n n n n n n n n same_kind n tn tn n n n n n n n tn;
   (* vmatch bridge lemma (per dtuple-key / low-pattern branch, plain norm). *)
   w o "let %s_coerce_vmatch_eq (xl: %s_low) (m1: PPS.dsum_mid %s_sum %s_mid_of_tag)\n  : Lemma (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch xl m1 == %s_vmatch xl (%s_fg m1))\n  = match m1 with\n  | (| k, cm |) ->\n    (match k with\n" n n n n n n n n n n n;
   let vm_assert keyexpr xlpat =
@@ -940,7 +940,7 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
     w o "    | %s -> PPS.free_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch (LP.Known %s)\n        %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" (cap case) n n n n n (cap case) (copyful_free_name ty) cprefix case
   ) cl;
   w o "    )\n  | LP.Unknown r -> PPS.free_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch (LP.Unknown r)\n      %s (fun xl -> match xl with | %s_Unknown_%s_low _ v -> Some v | _ -> None) ()\n\n" n n n n n (copyful_free_name dt) cprefix tn;
-  w o "let free_%s_sum : PPB.free_t (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) =\n  PPS.free_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch free_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" n n n n n n n n n n n n tn;
+  w o "let free_%s_sum : PPB.free_t (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) =\n  PPS.free_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch free_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) %s_enum_repr_of_key\n\n" n n n n n n n n n n n n tn;
   w o "let %s_free_vmatch_eq (xl: %s_low) (m: %s_mid)\n  : Lemma (%s_vmatch xl m == PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch xl (%s_gf m))\n  = match m with\n" n n n n n n n n n n;
   let fv_assert midpat xlpat =
     w o "    | %s -> assert (%s_vmatch (%s) (%s) == PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch (%s) (%s_gf (%s))) by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ())\n"
@@ -965,7 +965,7 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
       w o "    | %s -> PPS.l2r_safe_writer_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag (LP.Known %s)\n        %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" (cap case) n n n n n n (cap case) (copyful_writer_name ty) cprefix case
     ) cl;
     w o "    )\n  | LP.Unknown r -> PPS.l2r_safe_writer_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag (LP.Unknown r)\n      %s (fun xl -> match xl with | %s_Unknown_%s_low _ v -> Some v | _ -> None) ()\n\n" n n n n n n (copyful_writer_name dt) cprefix tn;
-    w o "let write_%s_sum\n  : PPB.l2r_safe_writer (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) (LP.serialize_dsum %s_sum %s_repr_serializer parse_%s_cases serialize_%s_cases %s %s) (PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.l2r_safe_writer_dsum %s_sum %s_repr_serializer write_maybe_%s_key %dsz parse_%s_cases serialize_%s_cases %s %s\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag write_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n n n n n n n tn n n (pcombinator_name dt) (scombinator_name dt) n n n n tn tn tagsz n n (pcombinator_name dt) (scombinator_name dt) n n n n n n tn;
+    w o "let write_%s_sum\n  : PPB.l2r_safe_writer (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) (LP.serialize_dsum %s_sum %s_repr_serializer parse_%s_cases serialize_%s_cases %s %s) (PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.l2r_safe_writer_dsum %s_sum %s_repr_serializer write_maybe_%s_key %dsz parse_%s_cases serialize_%s_cases %s %s\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag write_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) %s_enum_repr_of_key ()\n\n" n n n n n n n tn n n (pcombinator_name dt) (scombinator_name dt) n n n n tn tn tagsz n n (pcombinator_name dt) (scombinator_name dt) n n n n n n tn;
     w o "let %s_write_conv_eq (m: %s_mid)\n  : Lemma (%s_conv m == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m))\n  = match m with\n" n n n n n n n;
     List.iter (fun (mcase, _) ->
       w o "  | %s_%s_mid cm -> assert (%s_conv (%s_%s_mid cm) == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf (%s_%s_mid cm))) by (FStar.Tactics.norm [delta; iota; zeta; primops; unascribe; nbe]; FStar.Tactics.trefl ())\n"
@@ -1976,6 +1976,11 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
 	w ienum "    assert_norm (L.noRepeats (LP.list_map snd %s))\n" lit;
 	w ienum "  in e\n\n";
 
+  (* Synthesize once at the enum type: doing so inside a sum makes Core
+     recheck the large dependent sum while elaborating the tactic. *)
+  w i "noextract inline_for_extraction val %s_enum_repr_of_key : LP.enum_repr_of_key'_t %s_enum\n\n" n n;
+  w o "noextract inline_for_extraction let %s_enum_repr_of_key : LP.enum_repr_of_key'_t %s_enum =\n  _ by (LP.enum_repr_of_key_tac %s_enum)\n\n" n n n;
+
   (* Used in select() *)
   w o "noextract let %s_repr_parser = %s\n\n" n (pcombinator_name repr_t);
   w o "noextract let %s_repr_serializer = %s\n\n" n (scombinator_name repr_t);
@@ -2103,7 +2108,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
 
   (* Pulse: writer *)
   w o "inline_for_extraction let write_%s%s_key : LPS.l2r_leaf_writer (serialize_%s%s_key) =\n" maybe n maybe n;
-  w o "  LPPS.l2r_leaf_write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
+  w o "  LPPS.l2r_leaf_write_%senum_key %s_repr_writer %s_enum %s_enum_repr_of_key\n\n" maybe n n n;
   w i "val %s_writer: LPS.l2r_leaf_writer %s_serializer\n\n" n n;
   w o "let %s_writer =\n" n;
   w o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
@@ -2630,11 +2635,11 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       w o "let %s_serializer k = LP.serialize_synth _ (synth_%s k) (%s_serializer' (synth_%s_inv k)) (synth_%s_recip k) ()\n\n" n n n tn n;
       write_bytesize o is_private n  ~param:(if is_implicit then Some tagt else None);
       if need_validator then (
-        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_validator' = PPS.validate_dsum_cases_fn %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" n n n n (pulse_validator_name def) tn;
+        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_validator' = PPS.validate_dsum_cases_fn %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) %s_enum_repr_of_key\n\n" n n n n (pulse_validator_name def) tn;
         w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_validator k =\n  assert_norm (%s_parser k == %s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k);\n  let w : LPC.validator (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) =\n    LPC.validate_synth (PPC.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k)\n  in\n  LPC.validator_ext (%s_parser k) (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) w ()\n\n" n n n tn n n tn n tn n n n n n n tn n
       );
       if need_jumper then (
-        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_jumper' = PPS.jump_dsum_cases_fn %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" n n n n (pulse_jumper_name def) tn;
+        w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_jumper' = PPS.jump_dsum_cases_fn %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) %s_enum_repr_of_key\n\n" n n n n (pulse_jumper_name def) tn;
         w o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_jumper k =\n  assert_norm (%s_parser k == %s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k);\n  let j : LPC.jumper (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) =\n    LPC.jump_synth (PPC.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k)\n  in\n  LPC.jumper_ext (%s_parser k) (%s_parser' (synth_%s_inv k) `LP.parse_synth` synth_%s k) j ()\n\n" n n n tn n n tn n tn n n n n n n tn n
       )
   ) else (* tag is not erased *)
@@ -2695,7 +2700,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
          | None ->
             w o "  PPS.read_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases read_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.dep_maybe_enum_destr_t_tac ())) () ()\n\n" n tn tn n n;
          | Some dt ->
-            w o "  PPS.read_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases read_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) (_ by (LP.enum_repr_of_key_tac %s_enum)) ()\n\n" n tn tn n n (pulse_leaf_reader_name dt) tn);
+            w o "  PPS.read_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases read_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) %s_enum_repr_of_key ()\n\n" n tn tn n n (pulse_leaf_reader_name dt) tn);
 
         (* Pulse: sum/dsum writer *)
         w i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
