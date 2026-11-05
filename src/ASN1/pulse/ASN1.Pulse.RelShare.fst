@@ -310,10 +310,37 @@ let lafb_rel_cons_inr_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: 
   by (T.norm [delta_only [`%lafb_rel; `%asn1_adb_fb_rel; `%fxrel; `%legacy_fxdesc; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val]; zeta; iota]; T.trefl ())
 
 
+(* The legacy relations are the writer relations (`kb = false`), while the
+   equations of `ASN1.Pulse.ParseAdb` are about parsers (`kb = true`) *)
+
+let fbr_f (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) : perm -> (asn1_terminal_impl_t key_k & tfb) -> asn1_terminal_t key_k -> PA.fbs fb -> slprop =
+  fun pm (z: asn1_terminal_impl_t key_k & tfb) key (v: asn1_sequence_t_core (dsnd fb)) ->
+    asn1_terminal_rel key_k pm (fst z) key ** irel false dfb pm (snd z) v
+
 let lafb_rel_eq (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-: Lemma (lafb_rel key_k ls fb == PA.afb_rel fb (legacy_idesc (dsnd fb)) (legacy_fxdesc key_k ls (PA.fbt key_k fb)))
-= assert (lafb_rel key_k ls fb == PA.afb_rel fb (legacy_idesc (dsnd fb)) (legacy_fxdesc key_k ls (PA.fbt key_k fb)))
-    by (T.norm [delta_only [`%lafb_rel; `%PA.afb_rel; `%asn1_adb_fb_rel; `%lfbr; `%PA.fbr; `%asn1_items_rel; `%PA.fbs; `%PA.fbt]]; T.trefl ())
+: Lemma (lafb_rel key_k ls fb == fxrel false (legacy_fxdesc key_k ls (PA.fbt key_k fb)) (PA.fbs fb) (fbr_f key_k fb (legacy_idesc (dsnd fb))))
+= assert (lafb_rel key_k ls fb == fxrel false (legacy_fxdesc key_k ls (PA.fbt key_k fb)) (PA.fbs fb) (fbr_f key_k fb (legacy_idesc (dsnd fb))))
+    by (T.norm [delta_only [`%lafb_rel; `%asn1_adb_fb_rel; `%lfbr; `%fbr_f; `%asn1_items_rel; `%PA.fbs; `%PA.fbt]]; T.trefl ())
+
+let adb_rel_none_eq_f (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
+  (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
+  (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
+  (#ts: Type0) (dsx: sxdesc key_k ls ts) (#t: Type0) (dpre: iadesc prefix ts t)
+  (pm: perm) (x: t) (y: asn1_sequence_any_t_core prefix (AL.ady key_k ls))
+: Lemma (crel false (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm x y == iarel false dpre (sxrel false dsx) pm x y)
+= assert (crel false (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm x y == iarel false dpre (sxrel false dsx) pm x y)
+    by (T.norm [delta_only [`%crel]; zeta; iota]; T.trefl ())
+
+let adb_rel_some_eq_f (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
+  (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton kid) ipd))
+  (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
+  (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (#ts: Type0) (dfx: fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) ts) (#t: Type0) (dpre: iadesc prefix ts t)
+  (pm: perm) (x: t) (y: asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb))
+: Lemma (crel false (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm x y == iarel false dpre (fxrel false dfx (PA.fbs fb) (fbr_f key_k fb dfb)) pm x y)
+= assert (crel false (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm x y == iarel false dpre (fxrel false dfx (PA.fbs fb) (fbr_f key_k fb dfb)) pm x y)
+    by (T.norm [delta_only [`%crel; `%fbr_f; `%PA.fbs]; zeta; iota]; T.trefl ())
 
 let adb_none_equiv (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
   (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
@@ -324,7 +351,7 @@ let adb_none_equiv (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t
     #(asn1_sequence_any_t_core prefix (AL.ady key_k ls))
     (asn1_items_any_rel prefix (asn1_adb_rel key_k ls))
     (asn1_content_rel (PA.adb_k_none ipd prefix kid key_k ls pf pf')))
-= Classical.forall_intro_3 (PA.adb_rel_none_eq ipd prefix kid key_k ls pf pf' (legacy_sxdesc key_k ls) (legacy_iadesc prefix (asn1_adb_suffix_impl_t key_k ls None)))
+= Classical.forall_intro_3 (adb_rel_none_eq_f ipd prefix kid key_k ls pf pf' (legacy_sxdesc key_k ls) (legacy_iadesc prefix (asn1_adb_suffix_impl_t key_k ls None)))
 
 let adb_some_equiv (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
   (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
@@ -336,7 +363,7 @@ let adb_some_equiv (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t
     (asn1_items_any_rel prefix (lafb_rel key_k ls fb))
     (asn1_content_rel (PA.adb_k_some ipd prefix kid key_k ls fb pf pf')))
 = lafb_rel_eq key_k ls fb;
-  Classical.forall_intro_3 (PA.adb_rel_some_eq ipd prefix kid key_k ls fb pf pf' (legacy_idesc (dsnd fb)) (legacy_fxdesc key_k ls (PA.fbt key_k fb)) (legacy_iadesc prefix (asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb)))))
+  Classical.forall_intro_3 (adb_rel_some_eq_f ipd prefix kid key_k ls fb pf pf' (legacy_idesc (dsnd fb)) (legacy_fxdesc key_k ls (PA.fbt key_k fb)) (legacy_iadesc prefix (asn1_adb_suffix_impl_t key_k ls (Some (PA.fbt key_k fb)))))
 
 (* Without a fallback *)
 

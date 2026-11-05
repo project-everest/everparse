@@ -46,7 +46,7 @@ module L = ASN1.Pulse.ParseSequence.Lemmas
 let slot_rel (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc dk t) (pm: perm) (o: option t) (y: asn1_decorated_t_core dk) : slprop =
   match o with
   | None -> emp
-  | Some x -> drel dd pm x y
+  | Some x -> drel true dd pm x y
 
 (* strict: keeps Custard's template-index scan from unfolding [dtuple] on a
    symbolic descriptor, which blows up exponentially *)
@@ -225,12 +225,12 @@ fn disp_single
   let st' = sone_mk dd (Some x);
   partial_rel_single_eq dd pm st' v;
   is_some_fill (Ghost.reveal dk) ASN1_GEN_ITEMS_NIL (pres_of (ID_SINGLE (Ghost.reveal dd)) st) id;
-  rewrite (drel dd pm x v) as (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st' v);
+  rewrite (drel true dd pm x v) as (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st' v);
   intro (Trade.trade (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st' v) (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st v ** S.pts_to e #pm we))
-    #(Trade.trade (drel dd pm x v) (S.pts_to e #pm we))
+    #(Trade.trade (drel true dd pm x v) (S.pts_to e #pm we))
     fn _ {
-    rewrite (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st' v) as (drel dd pm x v);
-    Trade.elim (drel dd pm x v) (S.pts_to e #pm we);
+    rewrite (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st' v) as (drel true dd pm x v);
+    Trade.elim (drel true dd pm x v) (S.pts_to e #pm we);
     rewrite emp as (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st v);
   };
   st'
@@ -260,17 +260,17 @@ fn disp_cons
     let st' = scons_mk dd dk2 tl2 dtl (Some x) (scons_rest dd dk2 tl2 dtl st);
     partial_rel_cons_eq dd dk2 tl2 dtl pm st' v;
     is_some_fill (Ghost.reveal dk) (tail_of dk dk2 tl2) (pres_of (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) st) id;
-    rewrite (drel dd pm x (vfst dk dk2 tl2 v)) as (slot_rel dd pm (scons_get dd dk2 tl2 dtl st') (vfst dk dk2 tl2 v));
+    rewrite (drel true dd pm x (vfst dk dk2 tl2 v)) as (slot_rel dd pm (scons_get dd dk2 tl2 dtl st') (vfst dk dk2 tl2 v));
     rewrite (partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st) (vsnd dk dk2 tl2 v)) as (partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st') (vsnd dk dk2 tl2 v));
     rewrite (slot_rel dd pm (scons_get dd dk2 tl2 dtl st') (vfst dk dk2 tl2 v) ** partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st') (vsnd dk dk2 tl2 v))
       as (partial_rel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm st' v);
     intro (Trade.trade (partial_rel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm st' v) (partial_rel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm st v ** S.pts_to e #pm we))
-      #(Trade.trade (drel dd pm x (vfst dk dk2 tl2 v)) (S.pts_to e #pm we))
+      #(Trade.trade (drel true dd pm x (vfst dk dk2 tl2 v)) (S.pts_to e #pm we))
       fn _ {
       rewrite (partial_rel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm st' v)
         as (slot_rel dd pm (scons_get dd dk2 tl2 dtl st') (vfst dk dk2 tl2 v) ** partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st') (vsnd dk dk2 tl2 v));
-      rewrite (slot_rel dd pm (scons_get dd dk2 tl2 dtl st') (vfst dk dk2 tl2 v)) as (drel dd pm x (vfst dk dk2 tl2 v));
-      Trade.elim (drel dd pm x (vfst dk dk2 tl2 v)) (S.pts_to e #pm we);
+      rewrite (slot_rel dd pm (scons_get dd dk2 tl2 dtl st') (vfst dk dk2 tl2 v)) as (drel true dd pm x (vfst dk dk2 tl2 v));
+      Trade.elim (drel true dd pm x (vfst dk dk2 tl2 v)) (S.pts_to e #pm we);
       rewrite (partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st') (vsnd dk dk2 tl2 v)) as (partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st) (vsnd dk dk2 tl2 v));
       rewrite emp as (slot_rel dd pm (scons_get dd dk2 tl2 dtl st) (vfst dk dk2 tl2 v));
       rewrite (slot_rel dd pm (scons_get dd dk2 tl2 dtl st) (vfst dk dk2 tl2 v) ** partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st) (vsnd dk dk2 tl2 v))
@@ -312,7 +312,7 @@ let fin_t (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (di: idesc ls t) : T
   (#v: Ghost.erased (asn1_sequence_t_core ls)) ->
   stt t
     (partial_rel di pm st v ** pure (fin_pre ls (pres_of di st) v))
-    (fun res -> irel di pm res v ** Trade.trade (irel di pm res v) (partial_rel di pm st v))
+    (fun res -> irel true di pm res v ** Trade.trade (irel true di pm res v) (partial_rel di pm st v))
 
 inline_for_extraction
 fn fin_nil (_: unit)
@@ -322,8 +322,8 @@ fn fin_nil (_: unit)
   let res : unit = ();
   items_rel_nil_eq pm res v;
   partial_rel_nil_eq pm st v;
-  trade_emp_intro (irel ID_NIL pm res v) (partial_rel ID_NIL pm st v);
-  rewrite emp as (irel ID_NIL pm res v);
+  trade_emp_intro (irel true ID_NIL pm res v) (partial_rel ID_NIL pm st v);
+  rewrite emp as (irel true ID_NIL pm res v);
   res
 }
 
@@ -334,18 +334,18 @@ fn fin_slot
   (o: option t) (#pm: perm) (#y: Ghost.erased (asn1_decorated_t_core dk))
   requires slot_rel dd pm o y ** pure (None? o ==> absent_core dk y)
   returns x: t
-  ensures drel dd pm x y ** Trade.trade (drel dd pm x y) (slot_rel dd pm o y)
+  ensures drel true dd pm x y ** Trade.trade (drel true dd pm x y) (slot_rel dd pm o y)
 {
   match o {
     Some x -> {
-      rewrite (slot_rel dd pm o y) as (drel dd pm x y);
-      Trade.refl' (drel dd pm x y) (slot_rel dd pm o y);
+      rewrite (slot_rel dd pm o y) as (drel true dd pm x y);
+      Trade.refl' (drel true dd pm x y) (slot_rel dd pm o y);
       x
     }
     None -> {
       rewrite (slot_rel dd pm o y) as emp;
       let x = abs pm y;
-      Trade.refl' (drel dd pm x y) (slot_rel dd pm o y);
+      Trade.refl' (drel true dd pm x y) (slot_rel dd pm o y);
       x
     }
   }
@@ -365,9 +365,9 @@ fn fin_single
     as (slot_rel dd pm (sone_get dd st) v);
   let x = fin_slot dd abs (sone_get dd st) #pm #v;
   items_rel_single_eq dd pm x v;
-  rewrite (drel dd pm x v) as (irel (ID_SINGLE (Ghost.reveal dd)) pm x v);
-  rewrite (Trade.trade (drel dd pm x v) (slot_rel dd pm (sone_get dd st) v))
-    as (Trade.trade (irel (ID_SINGLE (Ghost.reveal dd)) pm x v) (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st v));
+  rewrite (drel true dd pm x v) as (irel true (ID_SINGLE (Ghost.reveal dd)) pm x v);
+  rewrite (Trade.trade (drel true dd pm x v) (slot_rel dd pm (sone_get dd st) v))
+    as (Trade.trade (irel true (ID_SINGLE (Ghost.reveal dd)) pm x v) (partial_rel (ID_SINGLE (Ghost.reveal dd)) pm st v));
   x
 }
 
@@ -391,16 +391,16 @@ fn fin_cons
   let x1 = fin_slot dd abs (scons_get dd dk2 tl2 dtl st) #pm #(vfst dk dk2 tl2 v);
   let x2 = ftail (scons_rest dd dk2 tl2 dtl st) #pm #(vsnd dk dk2 tl2 v);
   Trade.prod
-    (drel dd pm x1 (vfst dk dk2 tl2 v)) (slot_rel dd pm (scons_get dd dk2 tl2 dtl st) (vfst dk dk2 tl2 v))
-    (irel dtl pm x2 (vsnd dk dk2 tl2 v)) (partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st) (vsnd dk dk2 tl2 v));
+    (drel true dd pm x1 (vfst dk dk2 tl2 v)) (slot_rel dd pm (scons_get dd dk2 tl2 dtl st) (vfst dk dk2 tl2 v))
+    (irel true dtl pm x2 (vsnd dk dk2 tl2 v)) (partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st) (vsnd dk dk2 tl2 v));
   let res : (t1 & t2) = (x1, x2);
   items_rel_cons_eq dd dk2 tl2 dtl pm x1 x2 v;
-  rewrite (drel dd pm x1 (vfst dk dk2 tl2 v) ** irel dtl pm x2 (vsnd dk dk2 tl2 v))
-    as (irel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm res v);
+  rewrite (drel true dd pm x1 (vfst dk dk2 tl2 v) ** irel true dtl pm x2 (vsnd dk dk2 tl2 v))
+    as (irel true (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm res v);
   rewrite (Trade.trade
-      (drel dd pm x1 (vfst dk dk2 tl2 v) ** irel dtl pm x2 (vsnd dk dk2 tl2 v))
+      (drel true dd pm x1 (vfst dk dk2 tl2 v) ** irel true dtl pm x2 (vsnd dk dk2 tl2 v))
       (slot_rel dd pm (scons_get dd dk2 tl2 dtl st) (vfst dk dk2 tl2 v) ** partial_rel dtl pm (scons_rest dd dk2 tl2 dtl st) (vsnd dk dk2 tl2 v)))
-    as (Trade.trade (irel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm res v) (partial_rel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm st v));
+    as (Trade.trade (irel true (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm res v) (partial_rel (id_cons (Ghost.reveal dd) (Ghost.reveal dk2) (Ghost.reveal tl2) (Ghost.reveal dtl)) pm st v));
   res
 }
 
@@ -484,7 +484,7 @@ fn set_any_loop
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_t_core items))
   requires S.pts_to input #pm w ** pure (full items w v /\ inv items w w (none_tuple items))
   returns res: t
-  ensures irel di pm res v ** Trade.trade (irel di pm res v) (S.pts_to input #pm w)
+  ensures irel true di pm res v ** Trade.trade (irel true di pm res v) (S.pts_to input #pm w)
 {
   S.pts_to_len input;
   partial_rel_none di pm v;
@@ -522,7 +522,7 @@ fn set_any_loop
   final items w wr (pres_of di st) v;
   let res = fin st #pm #v;
   Trade.elim_hyp_r (partial_rel di pm st v) (S.pts_to r #pm wr) (S.pts_to input #pm w);
-  Trade.trans (irel di pm res v) (partial_rel di pm st v) (S.pts_to input #pm w);
+  Trade.trans (irel true di pm res v) (partial_rel di pm st v) (S.pts_to input #pm w);
   res
 }
 
@@ -535,7 +535,7 @@ fn set_any_parser
   (none: (x: dtuple (Ghost.reveal di) { x == dnone (Ghost.reveal di) }))
   (disp: disp_t (Ghost.reveal di))
   (fin: fin_t (Ghost.reveal di))
-: aparser #t #(asn1_sequence_t_core (Ghost.reveal items)) (irel di) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf))
+: aparser #t #(asn1_sequence_t_core (Ghost.reveal items)) (irel true di) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   init items pf w v;

@@ -6,6 +6,7 @@ let usage = "everparse-asn1 [options] file.asn"
 let odir = ref "."
 let mname = ref ""
 let roots = ref ""
+let keep_bytes = ref ""
 let fstar_only = ref false
 let skip_compilation = ref false
 let file = ref ""
@@ -14,6 +15,7 @@ let speclist = [
   "--odir", Arg.Set_string odir, "DIR output directory (default: .)";
   "--mname", Arg.Set_string mname, "NAME F* module name (default: from the ASN.1 module name)";
   "--root", Arg.Set_string roots, "A,B,... types for which to generate C functions (default: the types not used by other types)";
+  "--keep_bytes", Arg.Set_string keep_bytes, "A,B,... types whose parsed values keep their bytes (as with --#KEEP-BYTES A B in the file)";
   "--fstar_only", Arg.Set fstar_only, " only generate the F* modules";
   "--skip_compilation", Arg.Set skip_compilation, " do not compile the generated C code";
 ]
@@ -73,11 +75,18 @@ let () =
         n) (String.split_on_char ',' !roots)
   in
   if roots = [] then fail "no root types";
+  let keep =
+    let cli = if !keep_bytes = "" then [] else String.split_on_char ',' !keep_bytes in
+    List.sort_uniq compare (List.map (fun a ->
+        let n = Elab.mangle a in
+        if not (Hashtbl.mem r.env.types n) then fail "KEEP-BYTES: unknown type %s" a;
+        n) (cli @ !Lexer.keep_bytes))
+  in
   let src = Filename.basename !file in
   let spec_src, pulse_src =
     try
       Gen.gen_spec_module r ~src ~spec,
-      Gen.gen_pulse_module r ~src ~spec ~pulse ~roots
+      Gen.gen_pulse_module r ~src ~spec ~pulse ~roots ~keep
     with Ast.Error s -> fail "%s: %s" !file s
   in
   let rec mkdir_p d =

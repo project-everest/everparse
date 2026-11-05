@@ -96,6 +96,16 @@ let raw_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (pm: perm) (x: option t) (
 let raw_pre (e: SB.bytes) (#t: Type0) (r: bprel t) (pm: perm) (x: t) (w: SB.bytes) : slprop =
   exists* w' . r pm x w' ** pure (w == Seq.append e w')
 
+(* A KEEP-BYTES node: the value, written as usual, and the ownership of its
+   bytes (if any), which the writer ignores *)
+let keep_own (pm: perm) (r: option (S.slice U8.t)) : slprop =
+  match r with
+  | None -> emp
+  | Some sl -> exists* (b: Seq.seq U8.t) . S.pts_to sl #pm b
+
+let raw_keep (#t: Type0) (r: bprel t) (pm: perm) (x: kept t) (w: SB.bytes) : slprop =
+  r (pm /. 2.0R) x.kval w ** keep_own (pm /. 2.0R) x.kraw
+
 let raw_either (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm) (x: either t1 t2) (w: SB.bytes) : slprop =
   match x with
   | Inl a -> r1 pm a w
@@ -266,6 +276,9 @@ and raw_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: t)
   | D_CHOICE _ _ ld -> raw_lcrel ld pm x w
   | D_ANY -> raw_slice pm x w
   | D_VIEW d' _ view _ _ -> raw_arel d' pm (view x) w
+  | D_KEEP #_ #_ #t' d' _ ->
+    let x' : kept t' = x in
+    raw_arel d' (pm /. 2.0R) x'.kval w ** keep_own (pm /. 2.0R) x'.kraw
 
 and raw_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (pm: perm) (x: t) (w: SB.bytes) : Tot slprop (decreases d) =
   match d with
@@ -904,6 +917,10 @@ let rel_view_equiv (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (ty: Type0)
 : Lemma (prel_equiv #ty (raw_view (raw_arel d) view) (raw_arel (D_VIEW d ty view mk law)))
 = assert (prel_equiv #ty (raw_view (raw_arel d) view) (raw_arel (D_VIEW d ty view mk law))) by (solve_equiv ())
 
+let rel_keep_equiv (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (wf: squash (Conf.wf k))
+: Lemma (prel_equiv #(kept t) (raw_keep (raw_arel d)) (raw_arel (D_KEEP d wf)))
+= assert (prel_equiv #(kept t) (raw_keep (raw_arel d)) (raw_arel (D_KEEP d wf))) by (T.norm [delta_only [`%raw_keep]]; solve_equiv ())
+
 let lc_nil_equiv (_: unit)
 : Lemma (prel_equiv #unit (raw_false unit) (raw_lcrel LC_NIL))
 = assert (prel_equiv #unit (raw_false unit) (raw_lcrel LC_NIL)) by (solve_equiv ())
@@ -1064,6 +1081,72 @@ fn gather_raw_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (g: gather_t r)
   fold (raw_view r view (p +. p') x y)
 }
 
+ghost
+fn share_keep_own (pm: perm) (r: option (S.slice U8.t))
+requires keep_own pm r
+ensures keep_own (pm /. 2.0R) r ** keep_own (pm /. 2.0R) r
+{
+  match r {
+    None -> {
+      unfold (keep_own pm None);
+      fold (keep_own (pm /. 2.0R) None);
+      fold (keep_own (pm /. 2.0R) None)
+    }
+    Some sl -> {
+      unfold (keep_own pm (Some sl));
+      S.share sl;
+      fold (keep_own (pm /. 2.0R) (Some sl));
+      fold (keep_own (pm /. 2.0R) (Some sl))
+    }
+  }
+}
+
+ghost
+fn gather_keep_own (pm pm': perm) (r: option (S.slice U8.t))
+requires keep_own pm r ** keep_own pm' r
+ensures keep_own (pm +. pm') r
+{
+  match r {
+    None -> {
+      unfold (keep_own pm None);
+      unfold (keep_own pm' None);
+      fold (keep_own (pm +. pm') None)
+    }
+    Some sl -> {
+      unfold (keep_own pm (Some sl));
+      unfold (keep_own pm' (Some sl));
+      S.gather sl;
+      fold (keep_own (pm +. pm') (Some sl))
+    }
+  }
+}
+
+ghost
+fn share_raw_keep (#t: Type0) (r: bprel t) (sh: share_t r)
+: share_t #(kept t) (raw_keep r)
+= (x: kept t) (#p: perm) (#y: SB.bytes)
+{
+  unfold (raw_keep r p x y);
+  sh x.kval #(p /. 2.0R) #y;
+  share_keep_own (p /. 2.0R) x.kraw;
+  fold (raw_keep r (p /. 2.0R) x y);
+  fold (raw_keep r (p /. 2.0R) x y)
+}
+
+ghost
+fn gather_raw_keep (#t: Type0) (r: bprel t) (g: gather_t r)
+: gather_t #(kept t) (raw_keep r)
+= (x: kept t) (#p: perm) (#y: SB.bytes) (#p': perm) (#y': SB.bytes)
+{
+  unfold (raw_keep r p x y);
+  unfold (raw_keep r p' x y');
+  g x.kval #(p /. 2.0R) #y #(p' /. 2.0R) #y';
+  gather_keep_own (p /. 2.0R) (p' /. 2.0R) x.kraw;
+  assert (pure (p /. 2.0R +. p' /. 2.0R == (p +. p') /. 2.0R));
+  rewrite each (p /. 2.0R +. p' /. 2.0R) as ((p +. p') /. 2.0R);
+  fold (raw_keep r (p +. p') x y)
+}
+
 let rec share_crel (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t)
 : Tot (share_t (raw_crel id d)) (decreases d)
 = match d with
@@ -1127,6 +1210,9 @@ and share_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
   | D_VIEW d' ty view mk law ->
     rel_view_equiv d' ty view mk law;
     share_ext (raw_view (raw_arel d') view) (raw_arel d) () (share_raw_view (raw_arel d') view (share_arel d'))
+  | D_KEEP d' wf ->
+    rel_keep_equiv d' wf;
+    share_ext (raw_keep (raw_arel d')) (raw_arel d) () (share_raw_keep (raw_arel d') (share_arel d'))
 
 and share_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t)
 : Tot (share_t (raw_drel d)) (decreases d)
@@ -1272,6 +1358,9 @@ and gather_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t)
   | D_VIEW d' ty view mk law ->
     rel_view_equiv d' ty view mk law;
     gather_ext (raw_view (raw_arel d') view) (raw_arel d) () (gather_raw_view (raw_arel d') view (gather_arel d'))
+  | D_KEEP d' wf ->
+    rel_keep_equiv d' wf;
+    gather_ext (raw_keep (raw_arel d')) (raw_arel d) () (gather_raw_keep (raw_arel d') (gather_arel d'))
 
 and gather_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t)
 : Tot (gather_t (raw_drel d)) (decreases d)

@@ -2063,6 +2063,18 @@ fn jit_view (#ex: bool) (#t #ty: Type0) (r: bprel t) (view: ty -> t) (a: SB.byte
 }
 
 
+(* KEEP-BYTES nodes: write the value, ignore the bytes *)
+inline_for_extraction
+fn jit_keep (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a (pm /. 2.0R))
+: jwg ex #(kept t) (raw_keep r) a pm
+= (x': kept t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_keep r pm x' x);
+  let res = w x'.kval #x out pos;
+  fold (raw_keep r pm x' x);
+  res
+}
+
 (* The whole schema, by descriptor *)
 
 [@@In.asn1_pulse_attr]
@@ -2543,7 +2555,11 @@ and jit_write_arel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
   | D_VIEW d' ty view mk law ->
     rel_view_equiv d' ty view mk law;
     jit_iff (raw_view (raw_arel d') view) (raw_arel d) () (kacc k) (kacc k) (fun _ -> ()) (fun _ -> ()) pm
-      (jit_view (raw_arel d') view (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)))
+      (jit_view (raw_arel d') view (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p))
+  | D_KEEP d' wf ->
+    rel_keep_equiv d' wf;
+    jit_iff (raw_keep (raw_arel d')) (raw_arel d) () (kacc k) (kacc k) (fun _ -> ()) (fun _ -> ()) pm
+      (jit_keep (raw_arel d') (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d' () (pm /. 2.0R) x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
 and jit_write_lcrel (#[@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: lcdesc lc t)

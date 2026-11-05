@@ -29,6 +29,8 @@ module IO = LowParse.PulseParse.Iterator.IntOps
 module It = LowParse.PulseParse.Iterator
 module ItT = LowParse.PulseParse.Iterator.Type
 module SB = LowParse.Spec.Base
+module Ser = ASN1.Spec.Serializer
+module Conf = ASN1.Spec.Conformance
 
 (* Permission-indexed relations and their combinators *)
 
@@ -266,6 +268,15 @@ and asn1_items_any_impl_t (#ids: _) (items: asn1_gen_items_l ids) (sfx: Type0) :
    `asn1_impl_t k`; the relation `asn1_rel k` is defined as the relation of
    `legacy_adesc k`. *)
 
+(* A KEEP-BYTES node (`D_KEEP`): the value `kval` together with, optionally,
+   the bytes `kraw` of its DER encoding. Parsers always set `kraw` (to the
+   input bytes of the value); writers ignore it. *)
+noeq
+type kept (t: Type0) = {
+  kval: t;
+  kraw: option (S.slice U8.t);
+}
+
 let view_law (#t #ty: Type0) (view: ty -> t) (mk: t -> ty) : prop =
   forall (x: t) . view (mk x) == x
 
@@ -275,6 +286,7 @@ type adesc : (#s: Set.set asn1_id_t) -> asn1_k s -> Type0 -> Type u#1 =
 | D_CHOICE : lc: list (asn1_id_t & asn1_content_k) -> pf: squash (List.Tot.noRepeats (List.Tot.map fst lc)) -> #t: Type0 -> lcdesc lc t -> adesc (ASN1_CHOICE_ILC lc pf) t
 | D_ANY : adesc ASN1_ANY_ILC (S.slice U8.t)
 | D_VIEW : #s: Set.set asn1_id_t -> #k: asn1_k s -> #t: Type0 -> adesc k t -> ty: Type0 -> view: (ty -> t) -> mk: (t -> ty) -> squash (view_law view mk) -> adesc k ty
+| D_KEEP : #s: Set.set asn1_id_t -> #k: asn1_k s -> #t: Type0 -> adesc k t -> squash (Conf.wf k) -> adesc k (kept t)
 
 and cdesc : asn1_content_k -> Type0 -> Type u#1 =
 | CD_TERMINAL : k: asn1_terminal_k -> cdesc (ASN1_TERMINAL k) (asn1_terminal_impl_t k)
@@ -352,37 +364,66 @@ and lcdesc : list (asn1_id_t & asn1_content_k) -> Type0 -> Type u#1 =
    `parse_nlist _ (asn1_as_parser k)`. A VIEW node relates a value through
    its view. *)
 
-let rec arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: t) (y: asn1_t k) : Tot slprop (decreases d) =
-  match d with
-  | D_ILC _ cd -> crel cd pm x y
-  | D_CHOICE _ _ ld -> lcrel ld pm x y
-  | D_ANY -> prel_slice_ser asn1_value_enc pm x y
-  | D_VIEW d' _ view _ _ -> arel d' pm (view x) y
+(* The bytes of a KEEP-BYTES node, if any: they hold the DER encoding of
+   the spec value. *)
+let keep_rel (#s: _) (k: asn1_k s) (pm: perm) (r: option (S.slice U8.t)) (y: asn1_t k) : slprop =
+  match r with
+  | None -> emp
+  | Some sl -> pure (Ser.encodable k y) ** prel_slice_ser (Ser.asn1_enc k) pm sl y
 
-and crel (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) (pm: perm) (x: t) (y: asn1_content_t k) : Tot slprop (decreases d) =
+(* A mixed list returned by a parser: a serialized chunk of the input *)
+let is_serialized (#t: Type0) (x: ml t) : prop =
+  ItT.Base? x /\ ItT.Serialized? (ItT.Base?._0 x)
+
+(* `arel kb d`: with `kb = true` (the relation ensured by parsers), every
+   KEEP-BYTES node reachable without crossing a SEQUENCE OF / SET OF carries
+   its bytes, and every SEQUENCE OF / SET OF is serialized (so its elements,
+   once parsed, are related by `arel true`); with `kb = false` (the relation
+   required by writers), KEEP-BYTES nodes may carry no bytes and lists may
+   be built by the program. See `ASN1.Pulse.RelKeep` to go from one to the
+   other. *)
+let rec arel (kb: bool) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: t) (y: asn1_t k) : Tot slprop (decreases d) =
+  match d with
+  | D_ILC _ cd -> crel kb cd pm x y
+  | D_CHOICE _ _ ld -> lcrel kb ld pm x y
+  | D_ANY -> prel_slice_ser asn1_value_enc pm x y
+  | D_VIEW d' _ view _ _ -> arel kb d' pm (view x) y
+  | D_KEEP #_ #k' #t' d' _ ->
+    let x' : kept t' = x in
+    if kb
+    then arel kb d' (pm /. 2.0R) x'.kval y ** keep_rel k' (pm /. 2.0R) x'.kraw y ** pure (Some? x'.kraw)
+    else arel kb d' (pm /. 2.0R) x'.kval y ** keep_rel k' (pm /. 2.0R) x'.kraw y
+
+and crel (kb: bool) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) (pm: perm) (x: t) (y: asn1_content_t k) : Tot slprop (decreases d) =
   match d with
   | CD_TERMINAL k' -> asn1_terminal_rel k' pm x y
   | CD_RESTRICTED k' _ -> asn1_terminal_rel k' pm x y
-  | CD_SEQUENCE _ ld -> irel ld pm x y
-  | CD_SET _ _ _ ld -> irel ld pm x y
-  | CD_SEQUENCE_OF _ #_ #k' d' -> It.mixed_list_match (arel d') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
-  | CD_SET_OF _ #_ #k' d' -> It.mixed_list_match (arel d') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
-  | CD_PREFIXED d' -> arel d' pm x y
+  | CD_SEQUENCE _ ld -> irel kb ld pm x y
+  | CD_SET _ _ _ ld -> irel kb ld pm x y
+  | CD_SEQUENCE_OF _ #_ #k' #t' d' ->
+    if kb
+    then It.mixed_list_match (arel kb d') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y ** pure (is_serialized #t' x)
+    else It.mixed_list_match (arel kb d') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
+  | CD_SET_OF _ #_ #k' #t' d' ->
+    if kb
+    then It.mixed_list_match (arel kb d') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y ** pure (is_serialized #t' x)
+    else It.mixed_list_match (arel kb d') ml_ops #asn1_strong_parser_kind (asn1_as_parser k') pm x y
+  | CD_PREFIXED d' -> arel kb d' pm x y
   | CD_ADB_NONE _ _ _ key_k ls _ _ dsx dpre ->
-    iarel dpre
+    iarel kb dpre
       #(make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls))
-      (sxrel dsx)
+      (sxrel kb dsx)
       pm x y
   | CD_ADB_SOME _ _ _ key_k ls fb _ _ #tfb dfb dfx dpre ->
-    iarel dpre
+    iarel kb dpre
       #(make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) (asn1_sequence_t_core (dsnd fb)))
-      (fxrel dfx (asn1_sequence_t_core (dsnd fb))
+      (fxrel kb dfx (asn1_sequence_t_core (dsnd fb))
         (fun pm (z: asn1_terminal_impl_t key_k & tfb) key (v: asn1_sequence_t_core (dsnd fb)) ->
-          asn1_terminal_rel key_k pm (fst z) key ** irel dfb pm (snd z) v))
+          asn1_terminal_rel key_k pm (fst z) key ** irel kb dfb pm (snd z) v))
       pm x y
-  | CD_VIEW d' _ view _ _ -> crel d' pm (view x) y
+  | CD_VIEW d' _ view _ _ -> crel kb d' pm (view x) y
 
-and sxrel (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (d: sxdesc key_k ls t)
+and sxrel (kb: bool) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t: Type0) (d: sxdesc key_k ls t)
   (pm: perm) (x: t) (y: make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls))
 : Tot slprop (decreases d)
 = match d with
@@ -390,17 +431,17 @@ and sxrel (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_it
   | SX_SINGLE _ key' it di ->
     let (| key, v |) = y in
     if key = key_of_lit key_k key'
-    then irel di pm x v
+    then irel kb di pm x v
     else pure False
   | SX_CONS _ key' it #t1 di #_ #_ #t2 dtl ->
     let (| key, v |) = y in
     let x' : either t1 t2 = x in
     begin match x' with
-    | Inl a -> if key = key_of_lit key_k key' then irel di pm a v else pure False
-    | Inr b -> if key = key_of_lit key_k key' then pure False else sxrel dtl pm b (| key, v |)
+    | Inl a -> if key = key_of_lit key_k key' then irel kb di pm a v else pure False
+    | Inr b -> if key = key_of_lit key_k key' then pure False else sxrel kb dtl pm b (| key, v |)
     end
 
-and fxrel (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#fbt: Type0) (#t: Type0) (d: fxdesc key_k ls fbt t)
+and fxrel (kb: bool) (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#fbt: Type0) (#t: Type0) (d: fxdesc key_k ls fbt t)
   (fbs: Type) (fbr: perm -> fbt -> asn1_terminal_t key_k -> fbs -> slprop)
   (pm: perm) (x: t) (y: make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) fbs)
 : Tot slprop (decreases d)
@@ -412,42 +453,42 @@ and fxrel (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_it
     let (| key, v |) = y in
     let x' : either t1 fbt = x in
     begin match x' with
-    | Inl a -> if key = key_of_lit key_k key' then irel di pm a v else pure False
+    | Inl a -> if key = key_of_lit key_k key' then irel kb di pm a v else pure False
     | Inr b -> if key = key_of_lit key_k key' then pure False else fbr pm b key v
     end
   | FX_CONS _ key' it #t1 di #_ #_ #_ #t2 dtl ->
     let (| key, v |) = y in
     let x' : either t1 t2 = x in
     begin match x' with
-    | Inl a -> if key = key_of_lit key_k key' then irel di pm a v else pure False
-    | Inr b -> if key = key_of_lit key_k key' then pure False else fxrel dtl fbs fbr pm b (| key, v |)
+    | Inl a -> if key = key_of_lit key_k key' then irel kb di pm a v else pure False
+    | Inr b -> if key = key_of_lit key_k key' then pure False else fxrel kb dtl fbs fbr pm b (| key, v |)
     end
 
-and lcrel (#lc: list (asn1_id_t & asn1_content_k)) (#t: Type0) (d: lcdesc lc t) (pm: perm) (x: t) (y: make_gen_choice_type (asn1_lc_t lc)) : Tot slprop (decreases d) =
+and lcrel (kb: bool) (#lc: list (asn1_id_t & asn1_content_k)) (#t: Type0) (d: lcdesc lc t) (pm: perm) (x: t) (y: make_gen_choice_type (asn1_lc_t lc)) : Tot slprop (decreases d) =
   match d with
   | LC_NIL -> pure False
   | LC_SINGLE id' cd ->
     let (| id, v |) = y in
     if id = id'
-    then crel cd pm x v
+    then crel kb cd pm x v
     else pure False
   | LC_CONS id' #_ #t1 cd #_ #_ #t2 dtl ->
     let (| id, v |) = y in
     let x' : either t1 t2 = x in
     begin match x' with
-    | Inl a -> if id = id' then crel cd pm a v else pure False
-    | Inr b -> if id = id' then pure False else lcrel dtl pm b (| id, v |)
+    | Inl a -> if id = id' then crel kb cd pm a v else pure False
+    | Inr b -> if id = id' then pure False else lcrel kb dtl pm b (| id, v |)
     end
 
-and drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (pm: perm) (x: t) (y: asn1_decorated_t_core dk) : Tot slprop (decreases d) =
+and drel (kb: bool) (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (pm: perm) (x: t) (y: asn1_decorated_t_core dk) : Tot slprop (decreases d) =
   match d with
-  | DD_PLAIN d' -> arel d' pm x y
+  | DD_PLAIN d' -> arel kb d' pm x y
   | DD_OPTION #_ #k' #t' d' ->
     let x' : option t' = x in
     let y' : option (asn1_t k') = y in
     begin match x', y' with
     | None, None -> emp
-    | Some a, Some b -> arel d' pm a b
+    | Some a, Some b -> arel kb d' pm a b
     | _ -> pure False
     end
   | DD_DEFAULT _ #k' defv ->
@@ -466,28 +507,28 @@ and drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk 
     | Some a, Nondefault b -> asn1_terminal_rel k' pm a b
     | _ -> pure False
     end
-  | DD_VIEW d' _ view _ _ -> drel d' pm (view x) y
+  | DD_VIEW d' _ view _ _ -> drel kb d' pm (view x) y
 
-and irel (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (d: idesc ls t) (pm: perm) (x: t) (y: asn1_sequence_t_core ls) : Tot slprop (decreases d) =
+and irel (kb: bool) (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (d: idesc ls t) (pm: perm) (x: t) (y: asn1_sequence_t_core ls) : Tot slprop (decreases d) =
   match d with
   | ID_NIL -> emp
-  | ID_SINGLE dd -> drel dd pm x y
+  | ID_SINGLE dd -> drel kb dd pm x y
   | ID_CONS #_ #_ #dk #t1 dd #s2 #d2 #dk2 #ids2 #tl2 #t2 dtl ->
     let x' : t1 & t2 = x in
     let y' : asn1_decorated_t_core dk & asn1_sequence_t_core (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) = y in
-    drel dd pm (fst x') (fst y') ** irel dtl pm (snd x') (snd y')
+    drel kb dd pm (fst x') (fst y') ** irel kb dtl pm (snd x') (snd y')
 
-and iarel (#ids: _) (#ls: asn1_gen_items_l ids) (#sfxi: Type0) (#t: Type0) (d: iadesc ls sfxi t) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) (pm: perm) (x: t) (y: asn1_sequence_any_t_core ls sfxs) : Tot slprop (decreases d) =
+and iarel (kb: bool) (#ids: _) (#ls: asn1_gen_items_l ids) (#sfxi: Type0) (#t: Type0) (d: iadesc ls sfxi t) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) (pm: perm) (x: t) (y: asn1_sequence_any_t_core ls sfxs) : Tot slprop (decreases d) =
   match d with
   | IA_NIL -> sfxr pm x y
   | IA_SINGLE #_ #_ #dk #t1 dd ->
     let x' : t1 & sfxi = x in
     let y' : asn1_decorated_t_core dk & sfxs = y in
-    drel dd pm (fst x') (fst y') ** sfxr pm (snd x') (snd y')
+    drel kb dd pm (fst x') (fst y') ** sfxr pm (snd x') (snd y')
   | IA_CONS #_ #_ #dk #t1 dd #s2 #d2 #dk2 #ids2 #tl2 #_ #t2 dtl ->
     let x' : t1 & t2 = x in
     let y' : asn1_decorated_t_core dk & asn1_sequence_any_t_core (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2) sfxs = y in
-    drel dd pm (fst x') (fst y') ** iarel dtl sfxr pm (snd x') (snd y')
+    drel kb dd pm (fst x') (fst y') ** iarel kb dtl sfxr pm (snd x') (snd y')
 
 (* The legacy descriptors: no VIEW node *)
 
@@ -552,28 +593,34 @@ and legacy_iadesc (#ids: _) (items: asn1_gen_items_l ids) (sfx: Type0) : Tot (ia
 
 (* The relation of today's representations: that of the legacy descriptors *)
 
-let asn1_content_rel (k: asn1_content_k) : prel (asn1_content_impl_t k) (asn1_content_t k) = crel (legacy_cdesc k)
+let asn1_content_rel (k: asn1_content_k) : prel (asn1_content_impl_t k) (asn1_content_t k) = crel false (legacy_cdesc k)
 
 let asn1_adb_rel (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
 : prel (asn1_adb_suffix_impl_t key_k ls None) (make_gen_choice_type (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls))
-= sxrel (legacy_sxdesc key_k ls)
+= sxrel false (legacy_sxdesc key_k ls)
 
 let asn1_adb_fb_rel (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (fbt: Type0) (fbs: Type) (fbr: perm -> fbt -> asn1_terminal_t key_k -> fbs -> slprop)
 : prel (asn1_adb_suffix_impl_t key_k ls (Some fbt)) (make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ls) fbs)
-= fxrel (legacy_fxdesc key_k ls fbt) fbs fbr
+= fxrel false (legacy_fxdesc key_k ls fbt) fbs fbr
 
-let asn1_lc_rel (lc: list (asn1_id_t & asn1_content_k)) : prel (asn1_lc_impl_t lc) (make_gen_choice_type (asn1_lc_t lc)) = lcrel (legacy_lcdesc lc)
+let asn1_lc_rel (lc: list (asn1_id_t & asn1_content_k)) : prel (asn1_lc_impl_t lc) (make_gen_choice_type (asn1_lc_t lc)) = lcrel false (legacy_lcdesc lc)
 
-let asn1_rel (#s: _) (k: asn1_k s) : prel (asn1_impl_t k) (asn1_t k) = arel (legacy_adesc k)
+let asn1_rel (#s: _) (k: asn1_k s) : prel (asn1_impl_t k) (asn1_t k) = arel false (legacy_adesc k)
 
-let asn1_decorated_rel (#s: _) (#d: _) (dk: asn1_decorated_k s d) : prel (asn1_decorated_impl_t dk) (asn1_decorated_t_core dk) = drel (legacy_ddesc dk)
+let asn1_decorated_rel (#s: _) (#d: _) (dk: asn1_decorated_k s d) : prel (asn1_decorated_impl_t dk) (asn1_decorated_t_core dk) = drel false (legacy_ddesc dk)
 
-let asn1_items_rel (#ids: _) (items: asn1_gen_items_l ids) : prel (asn1_items_impl_t items) (asn1_sequence_t_core items) = irel (legacy_idesc items)
+let asn1_items_rel (#ids: _) (items: asn1_gen_items_l ids) : prel (asn1_items_impl_t items) (asn1_sequence_t_core items) = irel false (legacy_idesc items)
 
 let asn1_items_any_rel (#ids: _) (items: asn1_gen_items_l ids) (#sfxi: Type0) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop)
 : prel (asn1_items_any_impl_t items sfxi) (asn1_sequence_any_t_core items sfxs)
-= iarel (legacy_iadesc items sfxi) sfxr
+= iarel false (legacy_iadesc items sfxi) sfxr
+
+(* The relations ensured by the legacy parsers *)
+
+let asn1_prel (#s: _) (k: asn1_k s) : prel (asn1_impl_t k) (asn1_t k) = arel true (legacy_adesc k)
+
+let asn1_content_prel (k: asn1_content_k) : prel (asn1_content_impl_t k) (asn1_content_t k) = crel true (legacy_cdesc k)
 
 (* Equations, so that proofs need not unfold the relation of a whole schema *)
 

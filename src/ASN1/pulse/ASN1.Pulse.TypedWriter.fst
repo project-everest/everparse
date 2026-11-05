@@ -2,7 +2,7 @@ module ASN1.Pulse.TypedWriter
 #lang-pulse
 
 (* A typed writer: it takes the same relation as the parsers,
-   `ASN1.Pulse.Rel.arel d pm x' v` with `v: asn1_t k`, plus `encodable k v`
+   `ASN1.Pulse.Rel.arel false d pm x' v` with `v: asn1_t k`, plus `encodable k v`
    (which holds for every parsed value, `parsed_encodable_d`.) It converts
    the relation to the value-level relation of the raw writer
    (`ASN1.Pulse.RawVConv.arel_to_raw`), runs the raw writer
@@ -45,8 +45,8 @@ let typed_jit_writer_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: 
   (x': t) -> (#v: Ghost.erased (asn1_t k)) ->
   (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#b: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
   stt jit_result
-    (pts_to out b ** pts_to pos p ** arel d pm x' v ** pure (SZ.v p <= Seq.length b /\ Ser.encodable k v))
-    (fun res -> exists* b' p' . pts_to out b' ** pts_to pos p' ** arel d pm x' v **
+    (pts_to out b ** pts_to pos p ** arel false d pm x' v ** pure (SZ.v p <= Seq.length b /\ Ser.encodable k v))
+    (fun res -> exists* b' p' . pts_to out b' ** pts_to pos p' ** arel false d pm x' v **
       pure (typed_jit_post k v (SZ.v p) b res (SZ.v p') b'))
 
 let typed_jit_correct (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (v: asn1_t k) (p: nat) (b: SB.bytes) (res: jit_result) (p': nat) (b': SB.bytes)

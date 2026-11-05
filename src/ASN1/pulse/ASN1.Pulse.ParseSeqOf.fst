@@ -227,18 +227,21 @@ ensures S.pts_to input #pm w ** pure (SZ.v res == List.Tot.length v)
 
 (* The mixed list: the whole contents, serialized *)
 
-let ml_match (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) : prel (ml t) (list (asn1_t k)) =
-  It.mixed_list_match (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k)
+let ml_match0 (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) : prel (ml t) (list (asn1_t k)) =
+  It.mixed_list_match (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k)
+
+let ml_match (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: ml t) (l: list (asn1_t k)) : slprop =
+  ml_match0 d pm x l ** pure (is_serialized x)
 
 let serialized_ml (t: Type0) (count: SZ.t) (input: S.slice U8.t) : ml t =
   ItT.Base (ItT.Serialized 0.5R count input)
 
 let ml_match_n_eq (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (count: SZ.t) (input: S.slice U8.t) (pm: perm) (l: list (asn1_t k))
-: Lemma (ml_match d pm (serialized_ml t count input) l ==
-    It.mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) l)
-= assert (ml_match d pm (serialized_ml t count input) l ==
-    It.mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) l)
-    by (FStar.Tactics.V2.norm [delta_only [`%ml_match; `%serialized_ml; `%It.mixed_list_match; `%ItT.mixed_list_length; `%ItT.base_mixed_list_length; `%ml_ops; `%LowParse.PulseParse.Iterator.IntOps.sizet_ops; `%LowParse.PulseParse.Iterator.IntOps.__proj__Mkint_ops__item__v]; iota; zeta; primops]; FStar.Tactics.V2.trefl ())
+: Lemma (ml_match0 d pm (serialized_ml t count input) l ==
+    It.mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) l)
+= assert (ml_match0 d pm (serialized_ml t count input) l ==
+    It.mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) l)
+    by (FStar.Tactics.V2.norm [delta_only [`%ml_match0; `%serialized_ml; `%It.mixed_list_match; `%ItT.mixed_list_length; `%ItT.base_mixed_list_length; `%ml_ops; `%LowParse.PulseParse.Iterator.IntOps.sizet_ops; `%LowParse.PulseParse.Iterator.IntOps.__proj__Mkint_ops__item__v]; iota; zeta; primops]; FStar.Tactics.V2.trefl ())
 
 let nlist_parsed (#s: _) (k: asn1_k s) (w: SB.bytes) (v: list (asn1_t k))
 : Lemma
@@ -270,18 +273,20 @@ ensures ml_match d pm res v ** Trade.trade (ml_match d pm res v) (S.pts_to input
   nlist_parsed k w v;
   It.pts_to_parsed_strong_prefix_fold (VC.parse_nlist (0 + List.Tot.length v) #asn1_strong_parser_kind (asn1_as_parser k)) input #(pm *. 0.5R) #w (as_nlist (Ghost.reveal v));
   split_at_0 (Ghost.reveal v);
-  fold (It.base_mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Serialized 0.5R count input) v);
+  fold (It.base_mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Serialized 0.5R count input) v);
   let res : ml t = ItT.Base (ItT.Serialized 0.5R count input);
-  fold (It.mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v);
+  fold (It.mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v);
   ml_match_n_eq d count input pm v;
-  rewrite (It.mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v)
-    as (ml_match d pm res v);
+  rewrite (It.mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v)
+    as (ml_match0 d pm res v);
+  fold (ml_match d pm res v);
   intro_trade (ml_match d pm res v) (S.pts_to input #pm w) (S.pts_to input #(pm /. 2.0R) w) fn _ {
     ml_match_n_eq d count input pm v;
-    rewrite (ml_match d pm res v)
-      as (It.mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v);
-    unfold (It.mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v);
-    unfold (It.base_mixed_list_match_n (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Serialized 0.5R count input) v);
+    unfold (ml_match d pm res v);
+    rewrite (ml_match0 d pm res v)
+      as (It.mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v);
+    unfold (It.mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Base (ItT.Serialized 0.5R count input)) v);
+    unfold (It.base_mixed_list_match_n (arel true d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) 0 (SZ.v count) pm (ItT.Serialized 0.5R count input) v);
     with l_all . unfold (LPB.pts_to_parsed_strong_prefix (VC.parse_nlist (0 + SZ.v count) #asn1_strong_parser_kind (asn1_as_parser k)) input #(pm *. 0.5R) l_all);
     with w' . assert (S.pts_to input #(pm *. 0.5R) w');
     half_eq pm;
@@ -301,39 +306,39 @@ let set_of_list (ne: Ghost.erased bool) (#s: Ghost.erased (Set.set asn1_id_t)) (
 = let l : list (asn1_t k) = Ghost.reveal v in Ghost.hide l
 
 let crel_seq_of_eq (ne: bool) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: ml t) (y: asn1_content_t (ASN1_SEQUENCE_OF ne k))
-: Lemma (crel (CD_SEQUENCE_OF ne d) pm x y == It.mixed_list_match (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-= assert (crel (CD_SEQUENCE_OF ne d) pm x y == It.mixed_list_match (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-    by (FStar.Tactics.V2.norm [delta_only [`%crel]; iota; zeta]; FStar.Tactics.V2.trefl ())
+: Lemma (crel true (CD_SEQUENCE_OF ne d) pm x y == ml_match d pm x y)
+= assert (crel true (CD_SEQUENCE_OF ne d) pm x y == ml_match d pm x y)
+    by (FStar.Tactics.V2.norm [delta_only [`%crel; `%ml_match; `%ml_match0]; iota; zeta]; FStar.Tactics.V2.trefl ())
 
 let crel_set_of_eq (ne: bool) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: ml t) (y: asn1_content_t (ASN1_SET_OF ne k))
-: Lemma (crel (CD_SET_OF ne d) pm x y == It.mixed_list_match (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-= assert (crel (CD_SET_OF ne d) pm x y == It.mixed_list_match (arel d) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-    by (FStar.Tactics.V2.norm [delta_only [`%crel]; iota; zeta]; FStar.Tactics.V2.trefl ())
+: Lemma (crel true (CD_SET_OF ne d) pm x y == ml_match d pm x y)
+= assert (crel true (CD_SET_OF ne d) pm x y == ml_match d pm x y)
+    by (FStar.Tactics.V2.norm [delta_only [`%crel; `%ml_match; `%ml_match0]; iota; zeta]; FStar.Tactics.V2.trefl ())
 
 (* The SEQUENCE OF and SET OF content parsers *)
 
 inline_for_extraction
 fn seq_of_parser (ne: Ghost.erased bool) (#s: Ghost.erased (Set.set asn1_id_t)) (#k: Ghost.erased (asn1_k s)) (#t: Type0) (d: Ghost.erased (adesc k t))
-: aparser #(ml t) #(asn1_content_t (ASN1_SEQUENCE_OF ne k)) (crel (CD_SEQUENCE_OF ne (Ghost.reveal d))) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k))
+: aparser #(ml t) #(asn1_content_t (ASN1_SEQUENCE_OF ne k)) (crel true (CD_SEQUENCE_OF ne (Ghost.reveal d))) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   seq_of_content ne k w v;
   let vl : Ghost.erased (list (asn1_t k)) = seq_of_list ne k v;
   let res : ml t = list_parser d input #pm #w #vl;
   crel_seq_of_eq ne d pm res v;
-  PS.rel_rewrite #(ml_match d pm res vl) (crel (CD_SEQUENCE_OF ne (Ghost.reveal d)) pm res v);
+  PS.rel_rewrite #(ml_match d pm res vl) (crel true (CD_SEQUENCE_OF ne (Ghost.reveal d)) pm res v);
   res
 }
 
 inline_for_extraction
 fn set_of_parser (ne: Ghost.erased bool) (#s: Ghost.erased (Set.set asn1_id_t)) (#k: Ghost.erased (asn1_k s)) (#t: Type0) (d: Ghost.erased (adesc k t))
-: aparser #(ml t) #(asn1_content_t (ASN1_SET_OF ne k)) (crel (CD_SET_OF ne (Ghost.reveal d))) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET_OF ne k))
+: aparser #(ml t) #(asn1_content_t (ASN1_SET_OF ne k)) (crel true (CD_SET_OF ne (Ghost.reveal d))) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET_OF ne k))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   set_of_content ne k w v;
   let vl : Ghost.erased (list (asn1_t k)) = set_of_list ne k v;
   let res : ml t = list_parser d input #pm #w #vl;
   crel_set_of_eq ne d pm res v;
-  PS.rel_rewrite #(ml_match d pm res vl) (crel (CD_SET_OF ne (Ghost.reveal d)) pm res v);
+  PS.rel_rewrite #(ml_match d pm res vl) (crel true (CD_SET_OF ne (Ghost.reveal d)) pm res v);
   res
 }

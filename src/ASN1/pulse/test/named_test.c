@@ -6,7 +6,12 @@
    Write `Rec` structs with the JIT writers (`jit_rec`, `jit_raw_rec`,
    `jit_typed_rec`), check the DER bytes and JIT_NO_SPACE on a buffer one
    byte too short, then validate and parse the bytes back into a `Rec`
-   (zero-copy), and parse then write them back (`roundtrip_rec`). */
+   (zero-copy), and parse then write them back (`roundtrip_rec`).
+
+   KEEP-BYTES: `Outer ::= SEQUENCE { x INTEGER (small), r Rec }` with `r`
+   keeping its bytes: the parser sets `r.kraw` to the bytes of `r` in the
+   input, the writer ignores `kraw` (so a value built with no bytes can be
+   written), and `roundtrip_outer` parses then writes back. */
 #include "ASN1.Pulse.NamedTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -55,6 +60,16 @@ static void roundtrip_ok(const char *name, uint8_t *in, size_t len) {
   }
 }
 
+static void write_outer_ok(const char *name, Outer x, const uint8_t *exp, size_t len) {
+  uint8_t out[BUF];
+  size_t pos = BUF;
+  Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
+  if (ASN1_Pulse_NamedTest_jit_typed_outer(x, o, &pos) != ASN1_PULSE_JITWRITER_JIT_OK
+      || pos != BUF - len || memcmp(out + pos, exp, len) != 0) {
+    printf("%s: write failed\n", name); fails++;
+  }
+}
+
 int main(void) {
   /* { a 5, c i:7 } */
   Rec r1 = { .a = 5, .b = { .tag = ASN1_PULSE_NAMEDTEST_REC_B_ABSENT },
@@ -92,6 +107,37 @@ int main(void) {
   size_t off = 0;
   Pulse_Lib_Slice_slice__uint8 sb = { .elt = bad, .len = sizeof(bad) };
   if (ASN1_Pulse_NamedTest_validate_rec(sb, &off)) { printf("bad accepted\n"); fails++; }
+
+  /* KEEP-BYTES: { x 3, r r2 } */
+  Outer o3 = { .x = 3, .r = { .kval = r2, .kraw = { .tag = FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8 } } };
+  uint8_t e3[] = { 0x30, 0x10, 0x02, 0x01, 0x03,
+                   0x30, 0x0b, 0x02, 0x02, 0xff, 0x7f, 0x01, 0x01, 0xff, 0x04, 0x02, 0x01, 0x02 };
+  write_outer_ok("jit_typed o3 (no bytes)", o3, e3, sizeof(e3));
+  {
+    Pulse_Lib_Slice_slice__uint8 s3 = { .elt = e3, .len = sizeof(e3) };
+    size_t off3 = 0;
+    if (!ASN1_Pulse_NamedTest_validate_outer(s3, &off3) || off3 != sizeof(e3)) {
+      printf("o3: validation failed\n"); fails++;
+    }
+    Outer p3 = ASN1_Pulse_NamedTest_parse_outer(s3);
+    if (p3.x != 3 || p3.r.kraw.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8
+        || p3.r.kraw.val.Some.elt != e3 + 5 || p3.r.kraw.val.Some.len != sizeof(e2)
+        || p3.r.kval.a != -129 || p3.r.kval.c.tag != ASN1_PULSE_NAMEDTEST_CH_O
+        || p3.r.kval.c.val.Ch_o.elt != e3 + 16) {
+      printf("parse o3\n"); fails++;
+    }
+    write_outer_ok("jit_typed o3 (parsed, with bytes)", p3, e3, sizeof(e3));
+  }
+  {
+    uint8_t out[BUF];
+    size_t pos = BUF;
+    Pulse_Lib_Slice_slice__uint8 i = { .elt = e3, .len = sizeof(e3) };
+    Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
+    if (ASN1_Pulse_NamedTest_roundtrip_outer(i, o, &pos) != ASN1_PULSE_JITWRITER_JIT_OK
+        || pos != BUF - sizeof(e3) || memcmp(out + pos, e3, sizeof(e3)) != 0) {
+      printf("o3: roundtrip failed\n"); fails++;
+    }
+  }
 
   if (fails) { printf("%d failure(s)\n", fails); return 1; }
   printf("named test: OK\n");

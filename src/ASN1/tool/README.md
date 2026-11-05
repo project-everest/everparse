@@ -32,13 +32,16 @@ make test       # test-small (C round trip) and test-golden
 ```
 
 ```
-Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--fstar_only] [--skip_compilation] file.asn
+Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--fstar_only] [--skip_compilation] file.asn
 ```
 
 * `--odir`: the output directory (default `.`; created if missing).
 * `--mname`: the F\* module name (default: the ASN.1 module name).
 * `--root`: the types to generate C functions for (default: the types
   that no other type uses).
+* `--keep_bytes`: the types whose parsed values keep their bytes (see
+  KEEP-BYTES below). A line `--#KEEP-BYTES A B ...` in the `.asn` file has
+  the same effect.
 * `--fstar_only`: generate the F\* modules only.
 * `--skip_compilation`: do not run `cc` on the generated C.
 
@@ -81,12 +84,40 @@ ASN1_Pulse_JitWriter_jit_result
   caller relates its C values to raw values without reasoning about
   encodings. (Per-type introduction lemmas for this relation are not
   generated yet: a caller unfolds `raw_varel d_T` itself.)
-* `write_T_typed` is the same writer, with the relation returned by
-  `parse_T` (`arel d_T pm x v`, with `v: asn1_t k_T`) and `encodable k_T v`
-  as its F\* precondition. It never returns `JIT_INVALID`, and `JIT_OK`
-  writes the encoding of `v`. Every value returned by `parse_T` qualifies
-  (`ASN1.Pulse.TypedWriter.parsed_encodable_d`), and writing it back
-  yields the parsed bytes. Its C code is that of `write_T`.
+* `write_T_typed` is the same writer, with the typed relation
+  `arel false d_T pm x v` (with `v: asn1_t k_T`) and `encodable k_T v` as
+  its F\* precondition. It never returns `JIT_INVALID`, and `JIT_OK`
+  writes the encoding of `v`. Its C code is that of `write_T`.
+* `parse_T` ensures `arel true d_T pm x v`. The Boolean says whether the
+  values of KEEP-BYTES types carry their bytes: `true` for parsers, `false`
+  for writers, which never need bytes. The ghost
+  `ASN1.Pulse.RelKeep.to_writer d_T pm x v` turns `arel true` into
+  `arel false`, with a trade back to `arel true`. So a parsed value can
+  be written back: every value returned by `parse_T` is encodable
+  (`ASN1.Pulse.TypedWriter.parsed_encodable_d`), and writing it yields
+  the parsed bytes. Without KEEP-BYTES types, `arel true` and `arel false`
+  coincide.
+
+### KEEP-BYTES
+
+`--#KEEP-BYTES T` (or `--keep_bytes T`) makes every use of `T`, as well as
+`parse_T`, `write_T` and `write_T_typed` if `T` is a root, use the C type
+
+```c
+typedef struct { T value; T_raw raw; } T_kept;
+```
+
+where `raw` is tagged `M_IMPL_T_RAW_ABSENT` / `M_IMPL_T_RAW_PRESENT`
+(member `T_raw_present`, a slice). Parsers always set `raw` to the bytes
+of the DER encoding of `value` in the input (zero-copy). This is useful to
+check a signature over a sub-structure, such as the `tbsCertificate` of an
+X.509 certificate. Writers ignore `raw`: a caller can set it ABSENT, and
+stale bytes are never written. In F\*, `d_T` is
+`D_VIEW (D_KEEP dbase_T wf_T) ...`. The generated `to_writer_T` is
+`to_writer d_T`, specialized. Limitations: KEEP-BYTES applies to whole
+types, not to single components. It is lost at IMPLICIT tags on `T` (they
+reuse the content of `T`, not its descriptor). It is rejected on a CHOICE
+used untagged as an alternative of another CHOICE.
 
 Type naming:
 
@@ -107,7 +138,8 @@ Type naming:
   return it lazily (count and payload). To write one, build its `Base` /
   `Slice` case over a C array (see `tests/small_test.c`).
 
-See `tests/Small.asn` and `tests/small_test.c` for a complete example.
+See `tests/Small.asn` and `tests/small_test.c` for a complete example,
+including KEEP-BYTES on `Names`.
 
 ## Supported ASN.1
 

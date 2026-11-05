@@ -488,6 +488,18 @@ fn raw_write_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (pm: perm) (w: rw
   res
 }
 
+(* KEEP-BYTES nodes: write the value, ignore the bytes *)
+inline_for_extraction
+fn raw_write_keep (#t: Type0) (r: bprel t) (pm: perm) (w: rw r (pm /. 2.0R))
+: rw #(kept t) (raw_keep r) pm
+= (x': kept t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_keep r pm x' x);
+  let res = w x'.kval #x out pos;
+  fold (raw_keep r pm x' x);
+  res
+}
+
 (* The whole schema, by descriptor *)
 
 let rec raw_write_crel (id: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] k: asn1_content_k) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: cdesc k t) (pm: perm)
@@ -713,7 +725,11 @@ and raw_write_arel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
   | D_VIEW d' ty view mk law ->
     rel_view_equiv d' ty view mk law;
     raw_write_ext (raw_view (raw_arel d') view) (raw_arel d) () pm
-      (raw_write_view (raw_arel d') view pm (fun x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p)))
+      (raw_write_view (raw_arel d') view pm (fun x' #x out pos #v #p -> raw_write_arel d' pm x' #x out pos #v #p))
+  | D_KEEP d' wf ->
+    rel_keep_equiv d' wf;
+    raw_write_ext (raw_keep (raw_arel d')) (raw_arel d) () pm
+      (raw_write_keep (raw_arel d') pm (fun x' #x out pos #v #p -> raw_write_arel d' (pm /. 2.0R) x' #x out pos #v #p)))
   in vf x' #x out pos #v #p
 
 and raw_write_lcrel (#[@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: lcdesc lc t) (pm: perm)

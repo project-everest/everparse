@@ -235,6 +235,7 @@ let parse_file (file: string) : modul =
   let ic = open_in_bin file in
   let lexbuf = Lexing.from_channel ic in
   Lexer.line := 1;
+  Lexer.keep_bytes := [];
   let toks =
     try
       let rec go acc =

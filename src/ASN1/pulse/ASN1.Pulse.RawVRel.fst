@@ -28,6 +28,20 @@ module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module It = LowParse.PulseParse.Iterator
 module T = FStar.Tactics
+module Ser = ASN1.Spec.Serializer
+module Conf = ASN1.Spec.Conformance
+
+(* KEEP-BYTES nodes: the value, and the bytes (if any) at half permission
+   each. The bytes are the encoding of some typed value that forgets to the
+   raw value. Writers ignore the bytes. *)
+
+let keep_v (#s: _) (k: asn1_k s) (pm: perm) (r: option (S.slice U8.t)) (y: asn1_raw_t k) : slprop =
+  match r with
+  | None -> emp
+  | Some sl -> exists* (v: asn1_t k) . pure (forget k v == y /\ Ser.encodable k v) ** prel_slice_ser (Ser.asn1_enc k) pm sl v
+
+let vkeep (#t #u: Type0) (r: prel t u) (kr: perm -> option (S.slice U8.t) -> u -> slprop) (pm: perm) (x: kept t) (y: u) : slprop =
+  r (pm /. 2.0R) x.kval y ** kr (pm /. 2.0R) x.kraw y
 
 let rec raw_varel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: t) (y: asn1_raw_t k) : Tot slprop (decreases d) =
   match d with
@@ -35,6 +49,9 @@ let rec raw_varel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (
   | D_CHOICE _ _ ld -> raw_vlcrel ld pm x y
   | D_ANY -> prel_slice_ser asn1_value_enc pm x y
   | D_VIEW d' _ view _ _ -> raw_varel d' pm (view x) y
+  | D_KEEP #_ #k' #t' d' _ ->
+    let x' : kept t' = x in
+    raw_varel d' (pm /. 2.0R) x'.kval y ** keep_v k' (pm /. 2.0R) x'.kraw y
 
 and raw_vcrel (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) (pm: perm) (x: t) (y: asn1_raw_content_t k) : Tot slprop (decreases d) =
   match d with
@@ -196,6 +213,10 @@ let vview (#t #ty #u: Type0) (r: prel t u) (view: ty -> t) (pm: perm) (x: ty) (y
 let vrel_view_equiv (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
 : Lemma (pequiv #ty #(asn1_raw_t k) (vview (raw_varel d) view) (raw_varel (D_VIEW d ty view mk law)))
 = assert (pequiv #ty #(asn1_raw_t k) (vview (raw_varel d) view) (raw_varel (D_VIEW d ty view mk law))) by (T.norm [delta_only [`%vview]]; solve_vequiv ())
+
+let vrel_keep_equiv (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (wf: squash (Conf.wf k))
+: Lemma (pequiv #(kept t) #(asn1_raw_t k) (vkeep (raw_varel d) (keep_v k)) (raw_varel (D_KEEP d wf)))
+= assert (pequiv #(kept t) #(asn1_raw_t k) (vkeep (raw_varel d) (keep_v k)) (raw_varel (D_KEEP d wf))) by (T.norm [delta_only [`%vkeep]]; solve_vequiv ())
 
 let vcontent_terminal_equiv (k: asn1_terminal_k)
 : Lemma (pequiv #(asn1_terminal_impl_t k) #(asn1_raw_terminal_t k) (asn1_raw_terminal_rel k) (raw_vcrel (CD_TERMINAL k)))

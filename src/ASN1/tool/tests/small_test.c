@@ -143,6 +143,16 @@ static Names names(const char *sh, const char *wide) {
   return n;
 }
 
+/* Names has KEEP-BYTES: its C type Names_kept pairs it with optional bytes,
+   that the writers ignore */
+static Names_kept kn(Names x) {
+  Names_kept k;
+  memset(&k, 0, sizeof k);
+  k.value = x;
+  k.raw.tag = SMALL_IMPL_NAMES_RAW_ABSENT;
+  return k;
+}
+
 static int validate_names(const uint8_t *in, size_t len) {
   Pulse_Lib_Slice_slice__uint8 s = { .elt = (uint8_t *)in, .len = len };
   size_t off = 0;
@@ -154,24 +164,32 @@ static void names_ok(const char *name, Names x, const uint8_t *exp, size_t len) 
   uint8_t out[BUF];
   size_t pos = BUF;
   Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
-  ASN1_Pulse_JitWriter_jit_result r = write_Names(x, o, &pos);
+  ASN1_Pulse_JitWriter_jit_result r = write_Names(kn(x), o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, exp, len) == 0,
         "%s: write: expected the DER bytes (result %d, %zu bytes)", name, (int)r, BUF - pos);
   CHECK(validate_names(exp, len), "%s: validate", name);
-  Names p = parse_Names((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)exp, .len = len });
-  CHECK(p.short__.len == x.short__.len && p.wide.len == x.wide.len && p.bmp.tag == x.bmp.tag,
+  Names_kept p = parse_Names((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)exp, .len = len });
+  CHECK(p.value.short__.len == x.short__.len && p.value.wide.len == x.wide.len && p.value.bmp.tag == x.bmp.tag,
         "%s: parse", name);
+  CHECK(p.raw.tag == SMALL_IMPL_NAMES_RAW_PRESENT && p.raw.val.Names_raw_present.elt == exp &&
+        p.raw.val.Names_raw_present.len == len, "%s: parse: kept bytes", name);
   pos = BUF;
   r = write_Names_typed(p, o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, exp, len) == 0,
         "%s: write back", name);
+  /* stale kept bytes are ignored by the writer */
+  p.raw.val.Names_raw_present = sl("garbage");
+  pos = BUF;
+  r = write_Names(p, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, exp, len) == 0,
+        "%s: write with stale kept bytes", name);
 }
 
 static void names_invalid(const char *name, Names x) {
   uint8_t out[BUF];
   size_t pos = BUF;
   Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
-  ASN1_Pulse_JitWriter_jit_result r = write_Names(x, o, &pos);
+  ASN1_Pulse_JitWriter_jit_result r = write_Names(kn(x), o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_INVALID, "%s: expected INVALID (%d)", name, (int)r);
 }
 
@@ -218,6 +236,52 @@ static void test_names(void) {
   CHECK(validate_names(one, sizeof one), "short \"A\", wide \"x\": validate");
 }
 
+/* Wrapper: Names nested (kept bytes point into the input), also under an
+   EXPLICIT tag in an OPTIONAL component */
+static const uint8_t wrapper_der[] = {
+  0x30, 0x24, 0x02, 0x01, 0x03,
+  0x30, 0x09, 0x13, 0x02, 0x41, 0x42, 0x0c, 0x03, 0xc3, 0xa9, 0x78,
+  0xa0, 0x14,
+  0x30, 0x12, 0x13, 0x04, 0x41, 0x42, 0x43, 0x44, 0x0c, 0x04, 0xc3, 0xa9, 0xc3, 0xa9,
+  0x1e, 0x04, 0x00, 0x41, 0x00, 0x42
+};
+
+static void test_wrapper(void) {
+  uint8_t out[BUF];
+  size_t pos = BUF;
+  size_t len = sizeof wrapper_der;
+  Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
+  Pulse_Lib_Slice_slice__uint8 in = { .elt = (uint8_t *)wrapper_der, .len = len };
+  Wrapper w;
+  memset(&w, 0, sizeof w);
+  w.n = 3;
+  w.names = kn(names("AB", "\xc3\xa9x"));
+  Names n2 = names("ABCD", "\xc3\xa9\xc3\xa9");
+  n2.bmp.tag = SMALL_IMPL_NAMES_BMP_PRESENT;
+  n2.bmp.val.Names_bmp_present = (Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)"\0A\0B", .len = 4 };
+  w.alt.tag = SMALL_IMPL_WRAPPER_ALT_PRESENT;
+  w.alt.val.Wrapper_alt_present = kn(n2);
+  ASN1_Pulse_JitWriter_jit_result r = write_Wrapper(w, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, wrapper_der, len) == 0,
+        "wrapper: write (result %d, %zu bytes)", (int)r, BUF - pos);
+  size_t off = 0;
+  CHECK(validate_Wrapper(in, &off) && off == len, "wrapper: validate");
+  Wrapper p = parse_Wrapper(in);
+  CHECK(p.n == 3, "wrapper: parse n");
+  CHECK(p.names.raw.tag == SMALL_IMPL_NAMES_RAW_PRESENT &&
+        p.names.raw.val.Names_raw_present.elt == wrapper_der + 5 &&
+        p.names.raw.val.Names_raw_present.len == 11, "wrapper: names kept bytes");
+  CHECK(p.alt.tag == SMALL_IMPL_WRAPPER_ALT_PRESENT &&
+        p.alt.val.Wrapper_alt_present.raw.tag == SMALL_IMPL_NAMES_RAW_PRESENT &&
+        p.alt.val.Wrapper_alt_present.raw.val.Names_raw_present.elt == wrapper_der + 18 &&
+        p.alt.val.Wrapper_alt_present.raw.val.Names_raw_present.len == 20 &&
+        p.alt.val.Wrapper_alt_present.value.bmp.tag == SMALL_IMPL_NAMES_BMP_PRESENT, "wrapper: alt kept bytes");
+  pos = BUF;
+  r = write_Wrapper_typed(p, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, wrapper_der, len) == 0,
+        "wrapper: write back");
+}
+
 int main(void) {
   custard_init_globals();
   Msg m1 = msg1(), m2 = msg2(), m3 = msg3();
@@ -225,6 +289,7 @@ int main(void) {
   write_ok("msg2", m2, msg2_der, sizeof msg2_der);
   write_ok("msg3", m3, msg3_der, sizeof msg3_der);
   test_names();
+  test_wrapper();
 
   /* a DEFAULT component present with its default value is omitted (DER) */
   Msg bad = msg1();

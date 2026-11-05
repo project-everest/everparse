@@ -107,13 +107,28 @@ holding fractional permission `pm` on the input bytes it borrows.
   interface).
 
 * **Typed writers** (`ASN1.Pulse.TypedWriter`, `write_typed_d`): take the
-  relation returned by the parsers, `arel d pm x' v` with `v: asn1_t k`,
-  and `encodable k v`, and never return `JIT_INVALID`: `JIT_OK` writes
-  `Ser.asn1_enc k v`. They convert `arel` to `raw_varel` and back with a
-  ghost conversion (`ASN1.Pulse.RawVConv.arel_to_raw`, with
+  typed relation `arel false d pm x' v` with `v: asn1_t k`, and
+  `encodable k v`, and never return `JIT_INVALID`: `JIT_OK` writes
+  `Ser.asn1_enc k v`. They convert `arel false` to `raw_varel` and back
+  with a ghost conversion (`ASN1.Pulse.RawVConv.arel_to_raw`, with
   `forget k v` as the raw value). Every parsed value is encodable, and its
   encoding is the parsed input (`parsed_encodable_d`), so parsing then
   writing back round-trips (`ASN1.Pulse.NamedTest.roundtrip_rec`).
+
+* **KEEP-BYTES** (`D_KEEP d wf : adesc k (kept t)`, `ASN1.Pulse.Rel`): a
+  value `{ kval; kraw }` where `kraw` is optionally the bytes of the DER
+  encoding of `kval` (e.g. to check a signature over a `tbsCertificate`).
+  The relation `arel kb d pm x' v` takes a Boolean `kb`: with `true`, the
+  `kraw` of every KEEP-BYTES node is `Some` of a slice holding exactly
+  `Ser.asn1_enc k v` (with permission); with `false`, `kraw` is ignored.
+  Parsers ensure `arel true` (`parse_d`), writers require `arel false`
+  (raw writers ignore `kraw` too), so callers of writers never reason
+  about bytes, and stale bytes are never written. The ghost
+  `ASN1.Pulse.RelKeep.to_writer d pm x' v` turns `arel true` into
+  `arel false` together with a trade back to `arel true`. Its frame is
+  the pure fact `kept_a d x'` (every `kraw` is `Some`), so it releases no
+  permission (`weaken` / `restore`). Tests: `ASN1.Pulse.NamedTest`
+  (`Outer`, `roundtrip_outer`) and `test/named_test.c`.
 
 `make test-parse` runs the parsers extracted from `ASN1.Pulse.ParseTest`
 on hand-written encodings (`test/parse_test.c`). `make test-raw-write`
@@ -144,7 +159,8 @@ one byte short.
 | `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) |
 | `ASN1.Pulse.RawValueRel`, `ASN1.Pulse.RawBytes`, `ASN1.Pulse.RawBridge`, `ASN1.Pulse.RawJitWriter` | raw value relation `asn1_raw_rel`, and the JIT writer of raw values `jit_write_raw` |
 | `ASN1.Pulse.RawVRel`, `ASN1.Pulse.RawVBridge` | value-level relation of writers on descriptors `raw_varel`, and its bridge to bytes |
-| `ASN1.Pulse.RawVConv`, `ASN1.Pulse.TypedWriter` | from the parser relation `arel` to `raw_varel` (`arel_to_raw`), and typed writers `write_typed_d` |
+| `ASN1.Pulse.RawVConv`, `ASN1.Pulse.TypedWriter` | from the typed relation `arel false` to `raw_varel` (`arel_to_raw`), and typed writers `write_typed_d` |
+| `ASN1.Pulse.RelKeep` | KEEP-BYTES: from the parser relation `arel true` to the writer relation `arel false` and back (`weaken`, `restore`, `to_writer`) |
 | `ASN1.Pulse.SortedInsert` | on-the-fly insertion sort of SET components and SET OF elements for the raw writers |
 | `ASN1.Pulse.ParseTest`, `ASN1.Pulse.RawWriteTest` | extraction roots for parser and writer tests |
 | `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |

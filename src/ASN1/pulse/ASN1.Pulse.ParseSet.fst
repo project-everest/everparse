@@ -161,7 +161,7 @@ fn set_parser
   (u: squash (items_canon (Ghost.reveal items)))
   (#t: Type0) (di: Ghost.erased (idesc (Ghost.reveal items) t))
   (f: sparser di)
-: aparser #t #(asn1_sequence_t_core (Ghost.reveal items)) (irel di) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf))
+: aparser #t #(asn1_sequence_t_core (Ghost.reveal items)) (irel true di) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   set_content items pf w v;

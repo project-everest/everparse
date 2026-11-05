@@ -116,6 +116,17 @@ ensures raw_view r view pm y x ** pure (L.framed s x)
   fold (raw_view r view pm y x);
 }
 
+ghost
+fn fr_keep (#t: Type0) (r: bprel t) (s: FS.set asn1_id_t) (f: fr_t r s)
+  (pm: perm) (y: kept t) (x: Ghost.erased SB.bytes)
+requires raw_keep r pm y x
+ensures raw_keep r pm y x ** pure (L.framed s x)
+{
+  unfold (raw_keep r pm y x);
+  f (pm /. 2.0R) y.kval x;
+  fold (raw_keep r pm y x);
+}
+
 let rec fr_crel (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) : Tot (fr_t (raw_crel id d) (FS.singleton id)) (decreases d) =
   match d with
   | CD_TERMINAL k' ->
@@ -185,6 +196,10 @@ let rec fr_arel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (~ 
     rel_view_equiv d' ty view mk law;
     fr_ext (raw_view (raw_arel d') view) (raw_arel d) () s
       (fun pm y x -> fr_view (raw_arel d') view s (fr_arel d' ()) pm y x)
+  | D_KEEP d' wf ->
+    rel_keep_equiv d' wf;
+    fr_ext (raw_keep (raw_arel d')) (raw_arel d) () s
+      (fun pm y x -> fr_keep (raw_arel d') s (fr_arel d' ()) pm y x)
 
 let fr_content (id: asn1_id_t) (k: asn1_content_k) : fr_t (raw_content_rel id k) (FS.singleton id) = fr_crel id (legacy_cdesc k)
 let fr_lc (lc: list (asn1_id_t & asn1_content_k)) : fr_t (raw_lc_rel lc) (lc_set lc) = fr_lcrel (legacy_lcdesc lc)

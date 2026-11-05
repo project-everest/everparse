@@ -21,7 +21,7 @@ let int64_ = ASN1.Syntax.asn1_bounded_integer 8
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_int64 : aparser #(asn1_impl_t int64_) #(asn1_t int64_) (asn1_rel int64_) #asn1_strong_parser_kind (asn1_as_parser int64_) =
+let parse_int64 : aparser #(asn1_impl_t int64_) #(asn1_t int64_) (asn1_prel int64_) #asn1_strong_parser_kind (asn1_as_parser int64_) =
   fun input #pm #w #v -> parse_k int64_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -30,7 +30,7 @@ let parse_int64 : aparser #(asn1_impl_t int64_) #(asn1_t int64_) (asn1_rel int64
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_int_ : aparser #(asn1_impl_t D.int_) #(asn1_t D.int_) (asn1_rel D.int_) #asn1_strong_parser_kind (asn1_as_parser D.int_) =
+let parse_int_ : aparser #(asn1_impl_t D.int_) #(asn1_t D.int_) (asn1_prel D.int_) #asn1_strong_parser_kind (asn1_as_parser D.int_) =
   fun input #pm #w #v -> parse_k D.int_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -39,7 +39,7 @@ let parse_int_ : aparser #(asn1_impl_t D.int_) #(asn1_t D.int_) (asn1_rel D.int_
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_enum_ : aparser #(asn1_impl_t D.enum_) #(asn1_t D.enum_) (asn1_rel D.enum_) #asn1_strong_parser_kind (asn1_as_parser D.enum_) =
+let parse_enum_ : aparser #(asn1_impl_t D.enum_) #(asn1_t D.enum_) (asn1_prel D.enum_) #asn1_strong_parser_kind (asn1_as_parser D.enum_) =
   fun input #pm #w #v -> parse_k D.enum_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -48,7 +48,7 @@ let parse_enum_ : aparser #(asn1_impl_t D.enum_) #(asn1_t D.enum_) (asn1_rel D.e
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_bits : aparser #(asn1_impl_t D.bits) #(asn1_t D.bits) (asn1_rel D.bits) #asn1_strong_parser_kind (asn1_as_parser D.bits) =
+let parse_bits : aparser #(asn1_impl_t D.bits) #(asn1_t D.bits) (asn1_prel D.bits) #asn1_strong_parser_kind (asn1_as_parser D.bits) =
   fun input #pm #w #v -> parse_k D.bits (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -57,7 +57,7 @@ let parse_bits : aparser #(asn1_impl_t D.bits) #(asn1_t D.bits) (asn1_rel D.bits
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_bool_ : aparser #(asn1_impl_t D.bool_) #(asn1_t D.bool_) (asn1_rel D.bool_) #asn1_strong_parser_kind (asn1_as_parser D.bool_) =
+let parse_bool_ : aparser #(asn1_impl_t D.bool_) #(asn1_t D.bool_) (asn1_prel D.bool_) #asn1_strong_parser_kind (asn1_as_parser D.bool_) =
   fun input #pm #w #v -> parse_k D.bool_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -66,7 +66,7 @@ let parse_bool_ : aparser #(asn1_impl_t D.bool_) #(asn1_t D.bool_) (asn1_rel D.b
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_octets : aparser #(asn1_impl_t D.octets) #(asn1_t D.octets) (asn1_rel D.octets) #asn1_strong_parser_kind (asn1_as_parser D.octets) =
+let parse_octets : aparser #(asn1_impl_t D.octets) #(asn1_t D.octets) (asn1_prel D.octets) #asn1_strong_parser_kind (asn1_as_parser D.octets) =
   fun input #pm #w #v -> parse_k D.octets (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 module DC = ASN1.DiffTest.Constructed
@@ -77,7 +77,7 @@ module DC = ASN1.DiffTest.Constructed
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_choice_ : aparser #(asn1_impl_t DC.choice) #(asn1_t DC.choice) (asn1_rel DC.choice) #asn1_strong_parser_kind (asn1_as_parser DC.choice) =
+let parse_choice_ : aparser #(asn1_impl_t DC.choice) #(asn1_t DC.choice) (asn1_prel DC.choice) #asn1_strong_parser_kind (asn1_as_parser DC.choice) =
   fun input #pm #w #v -> parse_k DC.choice (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 
@@ -93,7 +93,7 @@ let seqAB = ASN1.Syntax.asn1_sequence [ "a" *^ (PLAIN ^: ASN1.Syntax.asn1_intege
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_seqA : aparser #(asn1_impl_t seqA) #(asn1_t seqA) (asn1_rel seqA) #asn1_strong_parser_kind (asn1_as_parser seqA) =
+let parse_seqA : aparser #(asn1_impl_t seqA) #(asn1_t seqA) (asn1_prel seqA) #asn1_strong_parser_kind (asn1_as_parser seqA) =
   fun input #pm #w #v -> parse_k seqA (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -102,7 +102,7 @@ let parse_seqA : aparser #(asn1_impl_t seqA) #(asn1_t seqA) (asn1_rel seqA) #asn
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_seqAB : aparser #(asn1_impl_t seqAB) #(asn1_t seqAB) (asn1_rel seqAB) #asn1_strong_parser_kind (asn1_as_parser seqAB) =
+let parse_seqAB : aparser #(asn1_impl_t seqAB) #(asn1_t seqAB) (asn1_prel seqAB) #asn1_strong_parser_kind (asn1_as_parser seqAB) =
   fun input #pm #w #v -> parse_k seqAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -111,7 +111,7 @@ let parse_seqAB : aparser #(asn1_impl_t seqAB) #(asn1_t seqAB) (asn1_rel seqAB) 
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
   zeta; iota; primops]]
-let parse_seq : aparser #(asn1_impl_t DC.seq) #(asn1_t DC.seq) (asn1_rel DC.seq) #asn1_strong_parser_kind (asn1_as_parser DC.seq) =
+let parse_seq : aparser #(asn1_impl_t DC.seq) #(asn1_t DC.seq) (asn1_prel DC.seq) #asn1_strong_parser_kind (asn1_as_parser DC.seq) =
   fun input #pm #w #v -> parse_k DC.seq (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 (* SEQUENCE OF INTEGER and SET OF OCTET STRING *)
@@ -126,7 +126,7 @@ let setOfOctets = ASN1.Syntax.asn1_set_of ASN1.Syntax.asn1_octetstring
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
-let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_rel seqOfInt) #asn1_strong_parser_kind (asn1_as_parser seqOfInt) =
+let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_prel seqOfInt) #asn1_strong_parser_kind (asn1_as_parser seqOfInt) =
   fun input #pm #w #v -> parse_k seqOfInt (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -135,7 +135,7 @@ let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_re
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
-let parse_setOfOctets : aparser #(asn1_impl_t setOfOctets) #(asn1_t setOfOctets) (asn1_rel setOfOctets) #asn1_strong_parser_kind (asn1_as_parser setOfOctets) =
+let parse_setOfOctets : aparser #(asn1_impl_t setOfOctets) #(asn1_t setOfOctets) (asn1_prel setOfOctets) #asn1_strong_parser_kind (asn1_as_parser setOfOctets) =
   fun input #pm #w #v -> parse_k setOfOctets (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 (* SET { b BOOLEAN, a [0] IMPLICIT INTEGER OPTIONAL, c [1] IMPLICIT OCTET STRING },
@@ -153,7 +153,7 @@ let setBAC = ASN1.Syntax.asn1_set [
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
-let parse_setBAC : aparser #(asn1_impl_t setBAC) #(asn1_t setBAC) (asn1_rel setBAC) #asn1_strong_parser_kind (asn1_as_parser setBAC) =
+let parse_setBAC : aparser #(asn1_impl_t setBAC) #(asn1_t setBAC) (asn1_prel setBAC) #asn1_strong_parser_kind (asn1_as_parser setBAC) =
   fun input #pm #w #v -> parse_k setBAC (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 (* ANY DEFINED BY (OBJECT IDENTIFIER keys) *)
@@ -196,7 +196,7 @@ let adbF = ASN1.Syntax.asn1_any_oid_with_fallback
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_algId : aparser #(asn1_impl_t ASN1.DiffTest.Any.algId) #(asn1_t ASN1.DiffTest.Any.algId) (asn1_rel ASN1.DiffTest.Any.algId) #asn1_strong_parser_kind (asn1_as_parser ASN1.DiffTest.Any.algId) =
+let parse_algId : aparser #(asn1_impl_t ASN1.DiffTest.Any.algId) #(asn1_t ASN1.DiffTest.Any.algId) (asn1_prel ASN1.DiffTest.Any.algId) #asn1_strong_parser_kind (asn1_as_parser ASN1.DiffTest.Any.algId) =
   fun input #pm #w #v -> parse_k ASN1.DiffTest.Any.algId (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -206,7 +206,7 @@ let parse_algId : aparser #(asn1_impl_t ASN1.DiffTest.Any.algId) #(asn1_t ASN1.D
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_adbP : aparser #(asn1_impl_t adbP) #(asn1_t adbP) (asn1_rel adbP) #asn1_strong_parser_kind (asn1_as_parser adbP) =
+let parse_adbP : aparser #(asn1_impl_t adbP) #(asn1_t adbP) (asn1_prel adbP) #asn1_strong_parser_kind (asn1_as_parser adbP) =
   fun input #pm #w #v -> parse_k adbP (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -216,7 +216,7 @@ let parse_adbP : aparser #(asn1_impl_t adbP) #(asn1_t adbP) (asn1_rel adbP) #asn
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_adbF : aparser #(asn1_impl_t adbF) #(asn1_t adbF) (asn1_rel adbF) #asn1_strong_parser_kind (asn1_as_parser adbF) =
+let parse_adbF : aparser #(asn1_impl_t adbF) #(asn1_t adbF) (asn1_prel adbF) #asn1_strong_parser_kind (asn1_as_parser adbF) =
   fun input #pm #w #v -> parse_k adbF (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 (* ANY DEFINED BY with keys other than OBJECT IDENTIFIER: the key is
@@ -289,7 +289,7 @@ let defL = ASN1.Syntax.asn1_sequence [
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_adbO : aparser #(asn1_impl_t adbO) #(asn1_t adbO) (asn1_rel adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
+let parse_adbO : aparser #(asn1_impl_t adbO) #(asn1_t adbO) (asn1_prel adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
   fun input #pm #w #v -> parse_k adbO (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -299,7 +299,7 @@ let parse_adbO : aparser #(asn1_impl_t adbO) #(asn1_t adbO) (asn1_rel adbO) #asn
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_adbB : aparser #(asn1_impl_t adbB) #(asn1_t adbB) (asn1_rel adbB) #asn1_strong_parser_kind (asn1_as_parser adbB) =
+let parse_adbB : aparser #(asn1_impl_t adbB) #(asn1_t adbB) (asn1_prel adbB) #asn1_strong_parser_kind (asn1_as_parser adbB) =
   fun input #pm #w #v -> parse_k adbB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -309,7 +309,7 @@ let parse_adbB : aparser #(asn1_impl_t adbB) #(asn1_t adbB) (asn1_rel adbB) #asn
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_adbS : aparser #(asn1_impl_t adbS) #(asn1_t adbS) (asn1_rel adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
+let parse_adbS : aparser #(asn1_impl_t adbS) #(asn1_t adbS) (asn1_prel adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
   fun input #pm #w #v -> parse_k adbS (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -319,7 +319,7 @@ let parse_adbS : aparser #(asn1_impl_t adbS) #(asn1_t adbS) (asn1_rel adbS) #asn
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_adbI : aparser #(asn1_impl_t adbI) #(asn1_t adbI) (asn1_rel adbI) #asn1_strong_parser_kind (asn1_as_parser adbI) =
+let parse_adbI : aparser #(asn1_impl_t adbI) #(asn1_t adbI) (asn1_prel adbI) #asn1_strong_parser_kind (asn1_as_parser adbI) =
   fun input #pm #w #v -> parse_k adbI (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -329,7 +329,7 @@ let parse_adbI : aparser #(asn1_impl_t adbI) #(asn1_t adbI) (asn1_rel adbI) #asn
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_adbT : aparser #(asn1_impl_t adbT) #(asn1_t adbT) (asn1_rel adbT) #asn1_strong_parser_kind (asn1_as_parser adbT) =
+let parse_adbT : aparser #(asn1_impl_t adbT) #(asn1_t adbT) (asn1_prel adbT) #asn1_strong_parser_kind (asn1_as_parser adbT) =
   fun input #pm #w #v -> parse_k adbT (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -379,7 +379,7 @@ let validate_adbT : LowParse.Pulse.Base.validator #(asn1_t adbT) #asn1_strong_pa
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
   zeta; iota; primops]]
-let parse_defL : aparser #(asn1_impl_t defL) #(asn1_t defL) (asn1_rel defL) #asn1_strong_parser_kind (asn1_as_parser defL) =
+let parse_defL : aparser #(asn1_impl_t defL) #(asn1_t defL) (asn1_prel defL) #asn1_strong_parser_kind (asn1_as_parser defL) =
   fun input #pm #w #v -> parse_k defL (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [
@@ -409,7 +409,7 @@ let setCAB = ASN1.Syntax.asn1_set [
   delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
   zeta; iota; primops]]
-let parse_setCAB : aparser #(asn1_impl_t setCAB) #(asn1_t setCAB) (asn1_rel setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
+let parse_setCAB : aparser #(asn1_impl_t setCAB) #(asn1_t setCAB) (asn1_prel setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
   fun input #pm #w #v -> parse_k setCAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
 
 [@@normalize_for_extraction [

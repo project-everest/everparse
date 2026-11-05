@@ -21,7 +21,7 @@ build: $(TOOL)
 
 # C round trip on a generated API
 $(OUT)/small/Small.c: tests/Small.asn $(TOOL)
-	$(TOOL) --odir $(OUT)/small $<
+	$(TOOL) --odir $(OUT)/small --root Msg,Names,Wrapper $<
 
 $(OUT)/small_test.exe: $(OUT)/small/Small.c tests/small_test.c
 	$(CC) $(TEST_CFLAGS) -I $(OUT)/small -o $@ $^

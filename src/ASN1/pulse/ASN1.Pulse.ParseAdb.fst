@@ -74,14 +74,14 @@ let ia_cons_prop (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (dd: d
   (#ids: _) (#tl: asn1_gen_items_l ids) (#sfxi: Type0) (#t2: Type0) (dtl: iadesc tl sfxi t2)
   (dia: iadesc (consa dk tl) sfxi (t1 & t2)) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) : prop
 = forall (pm: perm) (r1: t1) (r2: t2) (y: asn1_sequence_any_t_core (consa dk tl) sfxs) .
-    iarel dia sfxr pm (r1, r2) y == (drel dd pm r1 (avfst dk tl y) ** iarel dtl sfxr pm r2 (avsnd dk tl y))
+    iarel true dia sfxr pm (r1, r2) y == (drel true dd pm r1 (avfst dk tl y) ** iarel true dtl sfxr pm r2 (avsnd dk tl y))
 
 let ia_cons_inst (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (dd: ddesc dk t1)
   (#ids: _) (#tl: asn1_gen_items_l ids) (#sfxi: Type0) (#t2: Type0) (dtl: iadesc tl sfxi t2)
   (dia: iadesc (consa dk tl) sfxi (t1 & t2)) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop)
   (sq: squash (ia_cons_prop dd dtl dia sfxr))
   (pm: perm) (r1: t1) (r2: t2) (y: asn1_sequence_any_t_core (consa dk tl) sfxs)
-: Lemma (iarel dia sfxr pm (r1, r2) y == (drel dd pm r1 (avfst dk tl y) ** iarel dtl sfxr pm r2 (avsnd dk tl y)))
+: Lemma (iarel true dia sfxr pm (r1, r2) y == (drel true dd pm r1 (avfst dk tl y) ** iarel true dtl sfxr pm r2 (avsnd dk tl y)))
 = ()
 
 #push-options "--fuel 2 --ifuel 2 --z3rlimit 32"
@@ -89,8 +89,8 @@ let ia_single_prop (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (dd:
   (#sfxi: Type0) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop)
 : Lemma (ia_cons_prop dd (IA_NIL #sfxi) (IA_SINGLE dd) sfxr)
 = let aux (pm: perm) (r1: t1) (r2: sfxi) (y: asn1_sequence_any_t_core (consa dk ASN1_GEN_ITEMS_NIL) sfxs)
-  : Lemma (iarel (IA_SINGLE #_ #_ #_ #_ dd #sfxi) sfxr pm (r1, r2) y == (drel dd pm r1 (avfst dk ASN1_GEN_ITEMS_NIL y) ** iarel (IA_NIL #sfxi) sfxr pm r2 (avsnd dk ASN1_GEN_ITEMS_NIL y)))
-  = assert_norm (iarel (IA_NIL #sfxi) sfxr pm r2 (avsnd dk ASN1_GEN_ITEMS_NIL y) == sfxr pm r2 (avsnd dk ASN1_GEN_ITEMS_NIL y))
+  : Lemma (iarel true (IA_SINGLE #_ #_ #_ #_ dd #sfxi) sfxr pm (r1, r2) y == (drel true dd pm r1 (avfst dk ASN1_GEN_ITEMS_NIL y) ** iarel true (IA_NIL #sfxi) sfxr pm r2 (avsnd dk ASN1_GEN_ITEMS_NIL y)))
+  = assert_norm (iarel true (IA_NIL #sfxi) sfxr pm r2 (avsnd dk ASN1_GEN_ITEMS_NIL y) == sfxr pm r2 (avsnd dk ASN1_GEN_ITEMS_NIL y))
   in
   Classical.forall_intro_4 aux
 
@@ -102,8 +102,8 @@ let ia_cons_cons_prop (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t1: Type0) (
 #pop-options
 
 let items_any_rel_nil_eq (#sfxi: Type0) (#sfxs: Type) (sfxr: perm -> sfxi -> sfxs -> slprop) (pm: perm) (x: sfxi) (y: sfxs)
-: Lemma (iarel (IA_NIL #sfxi) sfxr pm x y == sfxr pm x y)
-= assert_norm (iarel (IA_NIL #sfxi) sfxr pm x y == sfxr pm x y)
+: Lemma (iarel true (IA_NIL #sfxi) sfxr pm x y == sfxr pm x y)
+= assert_norm (iarel true (IA_NIL #sfxi) sfxr pm x y == sfxr pm x y)
 
 let seqa_cons_post_core (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#ids: _) (tl: asn1_gen_items_l ids) (#t: Type) (sfx: parser_twin asn1_weak_parser_kind t)
   (w: SB.bytes) (v: asn1_sequence_any_t_core (consa dk tl) t) : prop
@@ -149,7 +149,7 @@ let saparser (#i: _) (#ls: asn1_gen_items_l i) (#sfxi: Type0) (#t: Type0) (dia: 
   (#v: Ghost.erased (asn1_sequence_any_t_core ls sfxs)) ->
   stt t
     (S.pts_to input #pm w ** pure (seqa_parsed_core ls sfx w v /\ AL.sfx_shaped sfx))
-    (fun res -> iarel dia sfxr pm res v ** Trade.trade (iarel dia sfxr pm res v) (S.pts_to input #pm w))
+    (fun res -> iarel true dia sfxr pm res v ** Trade.trade (iarel true dia sfxr pm res v) (S.pts_to input #pm w))
 
 inline_for_extraction
 fn seqa_nil
@@ -162,7 +162,7 @@ fn seqa_nil
   let v' : Ghost.erased sfxs = Ghost.hide #sfxs (Ghost.reveal v);
   let res : sfxi = psfx input #pm #w #v';
   items_any_rel_nil_eq sfxr pm res v';
-  rewrite each (sfxr pm res v') as (iarel (IA_NIL #sfxi) sfxr pm res v);
+  rewrite each (sfxr pm res v') as (iarel true (IA_NIL #sfxi) sfxr pm res v);
   res
 }
 
@@ -180,17 +180,17 @@ fn seqa_cons_absent
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_any_t_core (consa dk tl) sfxs))
   requires S.pts_to input #pm w ** pure (PS.absent_core dk (avfst dk tl v) /\ seqa_parsed_core tl sfx w (avsnd dk tl v) /\ AL.sfx_shaped sfx)
   returns res: (t1 & t2)
-  ensures iarel dia sfxr pm res v ** Trade.trade (iarel dia sfxr pm res v) (S.pts_to input #pm w)
+  ensures iarel true dia sfxr pm res v ** Trade.trade (iarel true dia sfxr pm res v) (S.pts_to input #pm w)
 {
   let r1 = abs pm (avfst dk tl v);
   let r2 = ptail input #pm #w #(avsnd dk tl v);
-  PS.trade_emp_l (drel dd pm r1 (avfst dk tl v)) (iarel dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to input #pm w);
+  PS.trade_emp_l (drel true dd pm r1 (avfst dk tl v)) (iarel true dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to input #pm w);
   let res : (t1 & t2) = (r1, r2);
   ia_cons_inst dd dtl dia sfxr sq pm r1 r2 v;
-  rewrite (drel dd pm r1 (avfst dk tl v) ** iarel dtl sfxr pm r2 (avsnd dk tl v))
-    as (iarel dia sfxr pm res v);
-  rewrite (Trade.trade (drel dd pm r1 (avfst dk tl v) ** iarel dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to input #pm w))
-    as (Trade.trade (iarel dia sfxr pm res v) (S.pts_to input #pm w));
+  rewrite (drel true dd pm r1 (avfst dk tl v) ** iarel true dtl sfxr pm r2 (avsnd dk tl v))
+    as (iarel true dia sfxr pm res v);
+  rewrite (Trade.trade (drel true dd pm r1 (avfst dk tl v) ** iarel true dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to input #pm w))
+    as (Trade.trade (iarel true dia sfxr pm res v) (S.pts_to input #pm w));
   res
 }
 
@@ -207,24 +207,24 @@ fn seqa_cons_present
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_sequence_any_t_core (consa dk tl) sfxs))
   requires S.pts_to input #pm w ** pure (SZ.v n <= Seq.length w /\ PS.item_parsed_core dk (Seq.slice w 0 (SZ.v n)) (avfst dk tl v) /\ seqa_parsed_core tl sfx (Seq.slice w (SZ.v n) (Seq.length w)) (avsnd dk tl v) /\ AL.sfx_shaped sfx)
   returns res: (t1 & t2)
-  ensures iarel dia sfxr pm res v ** Trade.trade (iarel dia sfxr pm res v) (S.pts_to input #pm w)
+  ensures iarel true dia sfxr pm res v ** Trade.trade (iarel true dia sfxr pm res v) (S.pts_to input #pm w)
 {
   let in1, in2 = SU.split_trade input n;
   let r1 = pres in1 #pm #(Seq.slice w 0 (SZ.v n)) #(avfst dk tl v);
   let r2 = ptail in2 #pm #(Seq.slice w (SZ.v n) (Seq.length w)) #(avsnd dk tl v);
   Trade.prod
-    (drel dd pm r1 (avfst dk tl v)) (S.pts_to in1 #pm (Seq.slice w 0 (SZ.v n)))
-    (iarel dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to in2 #pm (Seq.slice w (SZ.v n) (Seq.length w)));
+    (drel true dd pm r1 (avfst dk tl v)) (S.pts_to in1 #pm (Seq.slice w 0 (SZ.v n)))
+    (iarel true dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to in2 #pm (Seq.slice w (SZ.v n) (Seq.length w)));
   Trade.trans
-    (drel dd pm r1 (avfst dk tl v) ** iarel dtl sfxr pm r2 (avsnd dk tl v))
+    (drel true dd pm r1 (avfst dk tl v) ** iarel true dtl sfxr pm r2 (avsnd dk tl v))
     (S.pts_to in1 #pm (Seq.slice w 0 (SZ.v n)) ** S.pts_to in2 #pm (Seq.slice w (SZ.v n) (Seq.length w)))
     (S.pts_to input #pm w);
   let res : (t1 & t2) = (r1, r2);
   ia_cons_inst dd dtl dia sfxr sq pm r1 r2 v;
-  rewrite (drel dd pm r1 (avfst dk tl v) ** iarel dtl sfxr pm r2 (avsnd dk tl v))
-    as (iarel dia sfxr pm res v);
-  rewrite (Trade.trade (drel dd pm r1 (avfst dk tl v) ** iarel dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to input #pm w))
-    as (Trade.trade (iarel dia sfxr pm res v) (S.pts_to input #pm w));
+  rewrite (drel true dd pm r1 (avfst dk tl v) ** iarel true dtl sfxr pm r2 (avsnd dk tl v))
+    as (iarel true dia sfxr pm res v);
+  rewrite (Trade.trade (drel true dd pm r1 (avfst dk tl v) ** iarel true dtl sfxr pm r2 (avsnd dk tl v)) (S.pts_to input #pm w))
+    as (Trade.trade (iarel true dia sfxr pm res v) (S.pts_to input #pm w));
   res
 }
 
@@ -347,33 +347,33 @@ let pl_single (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_ite
 
 let adb_rel_single_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t: Type0) (di: idesc (dsnd y) t) (pm: perm)
   (r: t) (v: AL.ady key_k [(x, y)]) (sq: squash (dfst v == key_of_lit key_k x))
-: Lemma (sxrel (SX_SINGLE key_k x y di) pm r v == irel di pm r (AL.ady_head_val x y [] v ()))
-= assert_norm (sxrel (SX_SINGLE key_k x y di) pm r v == (let (| key, v |) = v in if key = key_of_lit key_k x then irel di pm r v else pure False))
+: Lemma (sxrel true (SX_SINGLE key_k x y di) pm r v == irel true di pm r (AL.ady_head_val x y [] v ()))
+= assert_norm (sxrel true (SX_SINGLE key_k x y di) pm r v == (let (| key, v |) = v in if key = key_of_lit key_k x then irel true di pm r v else pure False))
 
 let adb_rel_cons_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t1: Type0) (di: idesc (dsnd y) t1)
   (#hd2: asn1_key_lit key_k & asn1_gen_items_lk) (#tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t2: Type0) (dtl: sxdesc key_k (hd2 :: tl2) t2)
   (pm: perm) (r: either t1 t2) (key: asn1_terminal_t key_k) (w: idlookup_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ((x, y) :: hd2 :: tl2)))
-: Lemma (sxrel (SX_CONS key_k x y di dtl) pm r ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ==
+: Lemma (sxrel true (SX_CONS key_k x y di dtl) pm r ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ==
     (match r with
-     | Inl a -> if key = key_of_lit key_k x then irel di pm a w else pure False
-     | Inr b -> if key = key_of_lit key_k x then pure False else sxrel dtl pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
-= assert (sxrel (SX_CONS key_k x y di dtl) pm r ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ==
+     | Inl a -> if key = key_of_lit key_k x then irel true di pm a w else pure False
+     | Inr b -> if key = key_of_lit key_k x then pure False else sxrel true dtl pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
+= assert (sxrel true (SX_CONS key_k x y di dtl) pm r ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ==
     (match r with
-     | Inl a -> if key = key_of_lit key_k x then irel di pm a w else pure False
-     | Inr b -> if key = key_of_lit key_k x then pure False else sxrel dtl pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
+     | Inl a -> if key = key_of_lit key_k x then irel true di pm a w else pure False
+     | Inr b -> if key = key_of_lit key_k x then pure False else sxrel true dtl pm b (AL.ady_tail_val x y (hd2 :: tl2) ((| key, w |) <: AL.ady key_k ((x, y) :: hd2 :: tl2)) ())))
   by (T.norm [delta_only [`%sxrel; `%AL.ady_tail_val]; zeta; iota]; T.trefl ())
 
 let adb_rel_cons_inl_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t1: Type0) (di: idesc (dsnd y) t1)
   (#hd2: asn1_key_lit key_k & asn1_gen_items_lk) (#tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t2: Type0) (dtl: sxdesc key_k (hd2 :: tl2) t2)
   (pm: perm) (a: t1) (v: AL.ady key_k ((x, y) :: hd2 :: tl2)) (sq: squash (dfst v == key_of_lit key_k x))
-: Lemma (sxrel (SX_CONS key_k x y di dtl) pm (Inl #_ #t2 a) v == irel di pm a (AL.ady_head_val x y (hd2 :: tl2) v ()))
+: Lemma (sxrel true (SX_CONS key_k x y di dtl) pm (Inl #_ #t2 a) v == irel true di pm a (AL.ady_head_val x y (hd2 :: tl2) v ()))
 = let (| key, w |) = v in
   adb_rel_cons_aux x y di dtl pm (Inl a) key w
 
 let adb_rel_cons_inr_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t1: Type0) (di: idesc (dsnd y) t1)
   (#hd2: asn1_key_lit key_k & asn1_gen_items_lk) (#tl2: list (asn1_key_lit key_k & asn1_gen_items_lk)) (#t2: Type0) (dtl: sxdesc key_k (hd2 :: tl2) t2)
   (pm: perm) (b: t2) (v: AL.ady key_k ((x, y) :: hd2 :: tl2)) (sq: squash (dfst v <> key_of_lit key_k x))
-: Lemma (sxrel (SX_CONS key_k x y di dtl) pm (Inr #t1 b) v == sxrel dtl pm b (AL.ady_tail_val x y (hd2 :: tl2) v ()))
+: Lemma (sxrel true (SX_CONS key_k x y di dtl) pm (Inr #t1 b) v == sxrel true dtl pm b (AL.ady_tail_val x y (hd2 :: tl2) v ()))
 = let (| key, w |) = v in
   adb_rel_cons_aux x y di dtl pm (Inr b) key w
 
@@ -387,11 +387,11 @@ let ndisp (key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_ite
   (#v: Ghost.erased (AL.ady key_k ls)) ->
   stt t
     (S.pts_to kc #pm wk ** S.pts_to pin #pm wp ** pure (parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) wk (dfst (Ghost.reveal v)) /\ AL.pl_parsed key_k ls wp v))
-    (fun res -> sxrel dsx pm res v ** Trade.trade (sxrel dsx pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
+    (fun res -> sxrel true dsx pm res v ** Trade.trade (sxrel true dsx pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
 
 inline_for_extraction
 let items_parser (y: asn1_gen_items_lk) (#t: Type0) (di: idesc (dsnd y) t) : Type =
-  aparser #t #(asn1_sequence_t_core (dsnd y)) (irel di) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE y))
+  aparser #t #(asn1_sequence_t_core (dsnd y)) (irel true di) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE y))
 
 inline_for_extraction
 fn ndisp_nil (key_k: asn1_terminal_k)
@@ -411,9 +411,9 @@ fn ndisp_single (key_k: asn1_terminal_k) (x: Ghost.erased (asn1_key_lit key_k)) 
   pl_single x y wp v;
   AL.pl_head x y [] wp v;
   let res = pitems pin #pm #wp #(AL.ady_head_val x y [] v ());
-  trade_frame_l (S.pts_to kc #pm wk) (irel di pm res (AL.ady_head_val x y [] v ())) (S.pts_to pin #pm wp);
+  trade_frame_l (S.pts_to kc #pm wk) (irel true di pm res (AL.ady_head_val x y [] v ())) (S.pts_to pin #pm wp);
   adb_rel_single_eq x y di pm res v ();
-  rewrite each (irel di pm res (AL.ady_head_val x y [] v ())) as (sxrel (SX_SINGLE key_k x y di) pm res v);
+  rewrite each (irel true di pm res (AL.ady_head_val x y [] v ())) as (sxrel true (SX_SINGLE key_k x y di) pm res v);
   res
 }
 
@@ -434,17 +434,17 @@ fn ndisp_cons (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) 
   if ok {
     AL.pl_head x y (Ghost.reveal hd2 :: Ghost.reveal tl2) wp v;
     let r = pitems pin #pm #wp #(AL.ady_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ());
-    trade_frame_l (S.pts_to kc #pm wk) (irel di pm r (AL.ady_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ())) (S.pts_to pin #pm wp);
+    trade_frame_l (S.pts_to kc #pm wk) (irel true di pm r (AL.ady_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ())) (S.pts_to pin #pm wp);
     let res : either t1 t2 = Inl #_ #t2 r;
     adb_rel_cons_inl_eq x y di dtl pm r v ();
-    rewrite each (irel di pm r (AL.ady_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ())) as (sxrel (SX_CONS key_k x y di dtl) pm res v);
+    rewrite each (irel true di pm r (AL.ady_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ())) as (sxrel true (SX_CONS key_k x y di dtl) pm res v);
     res
   } else {
     AL.pl_tail x y (Ghost.reveal hd2 :: Ghost.reveal tl2) wp v;
     let r = ptail kc pin #pm #wk #wp #(AL.ady_tail_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ());
     let res : either t1 t2 = Inr #t1 r;
     adb_rel_cons_inr_eq x y di dtl pm r v ();
-    rewrite each (sxrel dtl pm r (AL.ady_tail_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ())) as (sxrel (SX_CONS key_k x y di dtl) pm res v);
+    rewrite each (sxrel true dtl pm r (AL.ady_tail_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) v ())) as (sxrel true (SX_CONS key_k x y di dtl) pm res v);
     res
   }
 }
@@ -462,24 +462,24 @@ let fbs (fb: asn1_gen_items_lk) : Type =
 
 let fbr (key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) : perm -> (asn1_terminal_impl_t key_k & tfb) -> asn1_terminal_t key_k -> fbs fb -> slprop =
   fun pm (z: asn1_terminal_impl_t key_k & tfb) key (v: asn1_sequence_t_core (dsnd fb)) ->
-    asn1_terminal_rel key_k pm (fst z) key ** irel dfb pm (snd z) v
+    asn1_terminal_rel key_k pm (fst z) key ** irel true dfb pm (snd z) v
 
 let afb_rel (#key_k: asn1_terminal_k) (#ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb)
   (#ts: Type0) (dfx: fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) ts)
-= fxrel dfx (fbs fb) (fbr key_k fb dfb)
+= fxrel true dfx (fbs fb) (fbr key_k fb dfb)
 
 let afb_rel_nil_aux (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (pm: perm)
   (rk: asn1_terminal_impl_t key_k) (ri: tfb) (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) []) (asn1_sequence_t_core (dsnd fb)))
 : Lemma (afb_rel fb dfb (FX_NIL key_k) pm (rk, ri) ((| key, w |) <: AL.ady_fb key_k [] fb) ==
-    (asn1_terminal_rel key_k pm rk key ** irel dfb pm ri (AL.ady_fb_nil_val fb ((| key, w |) <: AL.ady_fb key_k [] fb))))
+    (asn1_terminal_rel key_k pm rk key ** irel true dfb pm ri (AL.ady_fb_nil_val fb ((| key, w |) <: AL.ady_fb key_k [] fb))))
 = assert (afb_rel fb dfb (FX_NIL key_k) pm (rk, ri) ((| key, w |) <: AL.ady_fb key_k [] fb) ==
-    (asn1_terminal_rel key_k pm rk key ** irel dfb pm ri (AL.ady_fb_nil_val fb ((| key, w |) <: AL.ady_fb key_k [] fb))))
+    (asn1_terminal_rel key_k pm rk key ** irel true dfb pm ri (AL.ady_fb_nil_val fb ((| key, w |) <: AL.ady_fb key_k [] fb))))
   by (T.norm [delta_only [`%afb_rel; `%fxrel; `%fbr; `%AL.ady_fb_nil_val; `%dsnd; `%fst; `%snd]; zeta; iota]; T.trefl ())
 
 let afb_rel_nil_eq (#key_k: asn1_terminal_k) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (pm: perm)
   (rk: asn1_terminal_impl_t key_k) (ri: tfb) (v: AL.ady_fb key_k [] fb)
 : Lemma (afb_rel fb dfb (FX_NIL key_k) pm (rk, ri) v ==
-    (asn1_terminal_rel key_k pm rk (dfst v) ** irel dfb pm ri (AL.ady_fb_nil_val fb v)))
+    (asn1_terminal_rel key_k pm rk (dfst v) ** irel true dfb pm ri (AL.ady_fb_nil_val fb v)))
 = let (| key, w |) = v in
   afb_rel_nil_aux fb dfb pm rk ri key w
 
@@ -488,11 +488,11 @@ let afb_rel_single_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn
   (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) [(x, y)]) (asn1_sequence_t_core (dsnd fb)))
 : Lemma (afb_rel fb dfb (FX_SINGLE key_k x y di) pm r ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ==
     (match r with
-     | Inl a -> if key = key_of_lit key_k x then irel di pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False
+     | Inl a -> if key = key_of_lit key_k x then irel true di pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False
      | Inr b -> if key = key_of_lit key_k x then pure False else fbr key_k fb dfb pm b key (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()))))
 = assert (afb_rel fb dfb (FX_SINGLE key_k x y di) pm r ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ==
     (match r with
-     | Inl a -> if key = key_of_lit key_k x then irel di pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False
+     | Inl a -> if key = key_of_lit key_k x then irel true di pm a (AL.ady_fb_head_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()) else pure False
      | Inr b -> if key = key_of_lit key_k x then pure False else fbr key_k fb dfb pm b key (AL.ady_fb_nil_val fb (AL.ady_fb_tail_val x y [] fb ((| key, w |) <: AL.ady_fb key_k [(x, y)] fb) ()))))
   by (T.norm [delta_only [`%afb_rel; `%fxrel; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val; `%AL.ady_fb_nil_val]; zeta; iota]; T.trefl ())
 
@@ -503,18 +503,18 @@ let afb_rel_cons_aux (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_
   (key: asn1_terminal_t key_k) (w: idlookup_with_fallback_t key (asn1_any_t_core (asn1_terminal_t key_k) (key_of_lit key_k) ((x, y) :: hd2 :: tl2)) (asn1_sequence_t_core (dsnd fb)))
 : Lemma (afb_rel fb dfb (FX_CONS key_k x y di dtl) pm r ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ==
     (match r with
-     | Inl a -> if key = key_of_lit key_k x then irel di pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False
+     | Inl a -> if key = key_of_lit key_k x then irel true di pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False
      | Inr b -> if key = key_of_lit key_k x then pure False else afb_rel fb dfb dtl pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
 = assert (afb_rel fb dfb (FX_CONS key_k x y di dtl) pm r ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ==
     (match r with
-     | Inl a -> if key = key_of_lit key_k x then irel di pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False
+     | Inl a -> if key = key_of_lit key_k x then irel true di pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ()) else pure False
      | Inr b -> if key = key_of_lit key_k x then pure False else afb_rel fb dfb dtl pm b (AL.ady_fb_tail_val x y (hd2 :: tl2) fb ((| key, w |) <: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) ())))
   by (T.norm [delta_only [`%afb_rel; `%fxrel; `%AL.ady_fb_head_val; `%AL.ady_fb_tail_val]; zeta; iota]; T.trefl ())
 
 let afb_rel_single_inl_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: asn1_gen_items_lk) (#t1: Type0) (di: idesc (dsnd y) t1)
   (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (pm: perm)
   (a: t1) (v: AL.ady_fb key_k [(x, y)] fb) (sq: squash (dfst v == key_of_lit key_k x))
-: Lemma (afb_rel fb dfb (FX_SINGLE key_k x y di) pm (Inl #_ #(asn1_terminal_impl_t key_k & tfb) a) v == irel di pm a (AL.ady_fb_head_val x y [] fb v ()))
+: Lemma (afb_rel fb dfb (FX_SINGLE key_k x y di) pm (Inl #_ #(asn1_terminal_impl_t key_k & tfb) a) v == irel true di pm a (AL.ady_fb_head_val x y [] fb v ()))
 = let (| key, w |) = v in
   afb_rel_single_aux x y di fb dfb pm (Inl a) key w
 
@@ -529,7 +529,7 @@ let afb_rel_cons_inl_eq (#key_k: asn1_terminal_k) (x: asn1_key_lit key_k) (y: as
   (#hd2: asn1_key_lit key_k & asn1_gen_items_lk) (#tl2: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (#t2: Type0) (dtl: fxdesc key_k (hd2 :: tl2) (asn1_terminal_impl_t key_k & tfb) t2) (pm: perm)
   (a: t1) (v: AL.ady_fb key_k ((x, y) :: hd2 :: tl2) fb) (sq: squash (dfst v == key_of_lit key_k x))
-: Lemma (afb_rel fb dfb (FX_CONS key_k x y di dtl) pm (Inl #_ #t2 a) v == irel di pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb v ()))
+: Lemma (afb_rel fb dfb (FX_CONS key_k x y di dtl) pm (Inl #_ #t2 a) v == irel true di pm a (AL.ady_fb_head_val x y (hd2 :: tl2) fb v ()))
 = let (| key, w |) = v in
   afb_rel_cons_aux x y di fb dfb dtl pm (Inl a) key w
 
@@ -578,11 +578,11 @@ fn fb_core (key_k: asn1_terminal_k) (fb: Ghost.erased asn1_gen_items_lk) (#tfb: 
   let ri = pitems pin #pm #wp #v;
   Trade.prod
     (asn1_terminal_rel key_k pm rk key) (S.pts_to kc #pm wk)
-    (irel dfb pm ri v) (S.pts_to pin #pm wp);
+    (irel true dfb pm ri v) (S.pts_to pin #pm wp);
   let res : (asn1_terminal_impl_t key_k & tfb) = (rk, ri);
-  rewrite (asn1_terminal_rel key_k pm rk key ** irel dfb pm ri v)
+  rewrite (asn1_terminal_rel key_k pm rk key ** irel true dfb pm ri v)
     as (fbr key_k fb dfb pm res key v);
-  rewrite (Trade.trade (asn1_terminal_rel key_k pm rk key ** irel dfb pm ri v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
+  rewrite (Trade.trade (asn1_terminal_rel key_k pm rk key ** irel true dfb pm ri v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp))
     as (Trade.trade (fbr key_k fb dfb pm res key v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp));
   res
 }
@@ -617,10 +617,10 @@ fn fdisp_single (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)
   if ok {
     AL.pl_fb_head x y [] fb wp v;
     let r = pitems pin #pm #wp #(AL.ady_fb_head_val x y [] fb v ());
-    trade_frame_l (S.pts_to kc #pm wk) (irel di pm r (AL.ady_fb_head_val x y [] fb v ())) (S.pts_to pin #pm wp);
+    trade_frame_l (S.pts_to kc #pm wk) (irel true di pm r (AL.ady_fb_head_val x y [] fb v ())) (S.pts_to pin #pm wp);
     let res : either t1 (asn1_terminal_impl_t key_k & tfb) = Inl #_ #(asn1_terminal_impl_t key_k & tfb) r;
     afb_rel_single_inl_eq x y di fb dfb pm r v ();
-    rewrite each (irel di pm r (AL.ady_fb_head_val x y [] fb v ())) as (afb_rel fb dfb (FX_SINGLE key_k x y di #(asn1_terminal_impl_t key_k & tfb)) pm res v);
+    rewrite each (irel true di pm r (AL.ady_fb_head_val x y [] fb v ())) as (afb_rel fb dfb (FX_SINGLE key_k x y di #(asn1_terminal_impl_t key_k & tfb)) pm res v);
     res
   } else {
     AL.pl_fb_tail x y [] fb wp v;
@@ -651,10 +651,10 @@ fn fdisp_cons (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) 
   if ok {
     AL.pl_fb_head x y (Ghost.reveal hd2 :: Ghost.reveal tl2) fb wp v;
     let r = pitems pin #pm #wp #(AL.ady_fb_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) fb v ());
-    trade_frame_l (S.pts_to kc #pm wk) (irel di pm r (AL.ady_fb_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) fb v ())) (S.pts_to pin #pm wp);
+    trade_frame_l (S.pts_to kc #pm wk) (irel true di pm r (AL.ady_fb_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) fb v ())) (S.pts_to pin #pm wp);
     let res : either t1 t2 = Inl #_ #t2 r;
     afb_rel_cons_inl_eq x y di fb dfb dtl pm r v ();
-    rewrite each (irel di pm r (AL.ady_fb_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) fb v ())) as (afb_rel fb dfb (FX_CONS key_k x y di dtl) pm res v);
+    rewrite each (irel true di pm r (AL.ady_fb_head_val x y (Ghost.reveal hd2 :: Ghost.reveal tl2) fb v ())) as (afb_rel fb dfb (FX_CONS key_k x y di dtl) pm res v);
     res
   } else {
     AL.pl_fb_tail x y (Ghost.reveal hd2 :: Ghost.reveal tl2) fb wp v;
@@ -682,14 +682,14 @@ let sfx_some (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit k
 inline_for_extraction
 fn sfx_none_parser (kid: Ghost.erased asn1_id_t) (key_k: Ghost.erased asn1_terminal_k) (#ls: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (#t: Type0) (dsx: Ghost.erased (sxdesc key_k ls t))
   (disp: ndisp key_k dsx)
-: aparser #t #(AL.ady key_k ls) (sxrel dsx) #asn1_weak_parser_kind (Mkparsertwin?.p (sfx_none kid key_k ls))
+: aparser #t #(AL.ady key_k ls) (sxrel true dsx) #asn1_weak_parser_kind (Mkparsertwin?.p (sfx_none kid key_k ls))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   AL.sfx_none_layout kid key_k ls w v;
   let kc, pin = sfx_split key_k (dfst v) (fun wp -> AL.pl_parsed key_k ls wp v) input;
   with wk wp . assert (S.pts_to kc #pm wk ** S.pts_to pin #pm wp);
   let res = disp kc pin #pm #wk #wp #v;
-  Trade.trans (sxrel dsx pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp) (S.pts_to input #pm w);
+  Trade.trans (sxrel true dsx pm res v) (S.pts_to kc #pm wk ** S.pts_to pin #pm wp) (S.pts_to input #pm w);
   res
 }
 
@@ -764,8 +764,8 @@ let adb_rel_none_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
   (#ts: Type0) (dsx: sxdesc key_k ls ts) (#t: Type0) (dpre: iadesc prefix ts t)
   (pm: perm) (x: t) (y: asn1_sequence_any_t_core prefix (AL.ady key_k ls))
-: Lemma (crel (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm x y == iarel dpre (sxrel dsx) pm x y)
-= assert (crel (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm x y == iarel dpre (sxrel dsx) pm x y)
+: Lemma (crel true (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm x y == iarel true dpre (sxrel true dsx) pm x y)
+= assert (crel true (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm x y == iarel true dpre (sxrel true dsx) pm x y)
     by (T.norm [delta_only [`%crel]; zeta; iota]; T.trefl ())
 
 let adb_rel_some_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_t) (key_k: asn1_terminal_k)
@@ -774,8 +774,8 @@ let adb_rel_some_eq (ipd: id_decs) (prefix: asn1_gen_items_l ipd) (kid: asn1_id_
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst ls)))
   (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (#ts: Type0) (dfx: fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) ts) (#t: Type0) (dpre: iadesc prefix ts t)
   (pm: perm) (x: t) (y: asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb))
-: Lemma (crel (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm x y == iarel dpre (afb_rel fb dfb dfx) pm x y)
-= assert (crel (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm x y == iarel dpre (afb_rel fb dfb dfx) pm x y)
+: Lemma (crel true (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm x y == iarel true dpre (afb_rel fb dfb dfx) pm x y)
+= assert (crel true (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm x y == iarel true dpre (afb_rel fb dfb dfx) pm x y)
     by (T.norm [delta_only [`%crel; `%afb_rel; `%fbr; `%fbs]; zeta; iota]; T.trefl ())
 
 inline_for_extraction
@@ -784,15 +784,15 @@ fn adb_none_parser (ipd: Ghost.erased id_decs) (prefix: Ghost.erased (asn1_gen_i
   (pf: squash (asn1_any_prefix_k_wf (FStar.Set.singleton (Ghost.reveal kid)) ipd))
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst (Ghost.reveal ls))))
   (#ts: Type0) (dsx: Ghost.erased (sxdesc key_k ls ts)) (#t: Type0) (dpre: Ghost.erased (iadesc prefix ts t))
-  (pp: saparser dpre (sxrel dsx) (sfx_none kid key_k ls))
-: aparser #t #(asn1_content_t (adb_k_none ipd prefix kid key_k ls pf pf')) (crel (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre)) #asn1_weak_parser_kind (asn1_content_as_parser (adb_k_none ipd prefix kid key_k ls pf pf'))
+  (pp: saparser dpre (sxrel true dsx) (sfx_none kid key_k ls))
+: aparser #t #(asn1_content_t (adb_k_none ipd prefix kid key_k ls pf pf')) (crel true (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre)) #asn1_weak_parser_kind (asn1_content_as_parser (adb_k_none ipd prefix kid key_k ls pf pf'))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   let v' : Ghost.erased (asn1_sequence_any_t_core prefix (AL.ady key_k ls)) = Ghost.hide #(asn1_sequence_any_t_core prefix (AL.ady key_k ls)) (Ghost.reveal v);
   adb_content_none ipd prefix kid key_k ls pf pf' w v';
   let res = pp input #pm #w #v';
   adb_rel_none_eq ipd prefix kid key_k ls pf pf' dsx dpre pm res v';
-  rewrite each (iarel dpre (sxrel dsx) pm res v') as (crel (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm res v);
+  rewrite each (iarel true dpre (sxrel true dsx) pm res v') as (crel true (CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre) pm res v);
   res
 }
 
@@ -803,13 +803,13 @@ fn adb_some_parser (ipd: Ghost.erased id_decs) (prefix: Ghost.erased (asn1_gen_i
   (pf': squash (List.Tot.noRepeats (List.Tot.map fst (Ghost.reveal ls))))
   (#tfb: Type0) (dfb: Ghost.erased (idesc (dsnd fb) tfb)) (#ts: Type0) (dfx: Ghost.erased (fxdesc key_k ls (asn1_terminal_impl_t key_k & tfb) ts)) (#t: Type0) (dpre: Ghost.erased (iadesc prefix ts t))
   (pp: saparser dpre (afb_rel fb dfb dfx) (sfx_some kid key_k ls fb))
-: aparser #t #(asn1_content_t (adb_k_some ipd prefix kid key_k ls fb pf pf')) (crel (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre)) #asn1_weak_parser_kind (asn1_content_as_parser (adb_k_some ipd prefix kid key_k ls fb pf pf'))
+: aparser #t #(asn1_content_t (adb_k_some ipd prefix kid key_k ls fb pf pf')) (crel true (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre)) #asn1_weak_parser_kind (asn1_content_as_parser (adb_k_some ipd prefix kid key_k ls fb pf pf'))
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   let v' : Ghost.erased (asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb)) = Ghost.hide #(asn1_sequence_any_t_core prefix (AL.ady_fb key_k ls fb)) (Ghost.reveal v);
   adb_content_some ipd prefix kid key_k ls fb pf pf' w v';
   let res = pp input #pm #w #v';
   adb_rel_some_eq ipd prefix kid key_k ls fb pf pf' dfb dfx dpre pm res v';
-  rewrite each (iarel dpre (afb_rel fb dfb dfx) pm res v') as (crel (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm res v);
+  rewrite each (iarel true dpre (afb_rel fb dfb dfx) pm res v') as (crel true (CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre) pm res v);
   res
 }

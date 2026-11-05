@@ -35,6 +35,7 @@ module WA = ASN1.Pulse.WriteAdb
 module In = ASN1.Pulse.Interpreter
 module RR = ASN1.Pulse.RawRel
 module T = FStar.Tactics
+module Ser = ASN1.Spec.Serializer
 
 (* VIEW nodes *)
 
@@ -63,6 +64,85 @@ fn absorb_view (#t #ty #u: Type0) (a: prel t u) (r: bprel t) (c: absorb_t a r) (
 let br_view (#t #ty #u: Type0) (#a: prel t u) (#r: bprel t) (#f: u -> GTot SB.bytes) (c: br_t a r f) (view: ty -> t)
 : br_t (vview a view) (raw_view r view) f
 = { sp = split_view a r f c.sp view; ab = absorb_view a r c.ab view }
+
+(* KEEP-BYTES nodes: the writer only needs the value, the bytes are only
+   carried along *)
+
+ghost
+fn split_keep_v (#s: _) (k: asn1_k s) (pm: perm) (r: option (S.slice U8.t)) (y: asn1_raw_t k)
+requires keep_v k pm r y
+ensures keep_v k (pm /. 2.0R) r y ** keep_own (pm /. 2.0R) r
+{
+  match r {
+    None -> {
+      unfold (keep_v k pm None y);
+      fold (keep_v k (pm /. 2.0R) None y);
+      fold (keep_own (pm /. 2.0R) None)
+    }
+    Some sl -> {
+      unfold (keep_v k pm (Some sl) y);
+      with v . assert (prel_slice_ser (Ser.asn1_enc k) pm sl v);
+      unfold (prel_slice_ser (Ser.asn1_enc k) pm sl v);
+      S.share sl;
+      fold (prel_slice_ser (Ser.asn1_enc k) (pm /. 2.0R) sl v);
+      fold (keep_v k (pm /. 2.0R) (Some sl) y);
+      fold (keep_own (pm /. 2.0R) (Some sl))
+    }
+  }
+}
+
+ghost
+fn absorb_keep_v (#s: _) (k: asn1_k s) (p1 p2: perm) (r: option (S.slice U8.t)) (y: asn1_raw_t k)
+requires keep_v k p1 r y ** keep_own p2 r
+ensures keep_v k (p1 +. p2) r y
+{
+  match r {
+    None -> {
+      unfold (keep_v k p1 None y);
+      unfold (keep_own p2 None);
+      fold (keep_v k (p1 +. p2) None y)
+    }
+    Some sl -> {
+      unfold (keep_v k p1 (Some sl) y);
+      with v . assert (prel_slice_ser (Ser.asn1_enc k) p1 sl v);
+      unfold (prel_slice_ser (Ser.asn1_enc k) p1 sl v);
+      unfold (keep_own p2 (Some sl));
+      S.gather sl;
+      fold (prel_slice_ser (Ser.asn1_enc k) (p1 +. p2) sl v);
+      fold (keep_v k (p1 +. p2) (Some sl) y)
+    }
+  }
+}
+
+ghost
+fn split_keep (#s: _) (k: asn1_k s) (#t: Type0) (a: prel t (asn1_raw_t k)) (r: bprel t) (f: asn1_raw_t k -> GTot SB.bytes) (c: split_t a r f)
+: split_t (vkeep a (keep_v k)) (raw_keep r) f
+= (pm: perm) (x: kept t) (y: asn1_raw_t k)
+{
+  unfold (vkeep a (keep_v k) pm x y);
+  c (pm /. 2.0R) x.kval y;
+  split_keep_v k (pm /. 2.0R) x.kraw y;
+  fold (vkeep a (keep_v k) (pm /. 2.0R) x y);
+  fold (raw_keep r (pm /. 2.0R) x (f y))
+}
+
+ghost
+fn absorb_keep (#s: _) (k: asn1_k s) (#t: Type0) (a: prel t (asn1_raw_t k)) (r: bprel t) (c: absorb_t a r)
+: absorb_t (vkeep a (keep_v k)) (raw_keep r)
+= (p1: perm) (p2: perm) (x: kept t) (y: asn1_raw_t k) (w: SB.bytes)
+{
+  unfold (vkeep a (keep_v k) p1 x y);
+  unfold (raw_keep r p2 x w);
+  c (p1 /. 2.0R) (p2 /. 2.0R) x.kval y w;
+  absorb_keep_v k (p1 /. 2.0R) (p2 /. 2.0R) x.kraw y;
+  assert (pure (p1 /. 2.0R +. p2 /. 2.0R == (p1 +. p2) /. 2.0R));
+  rewrite each (p1 /. 2.0R +. p2 /. 2.0R) as ((p1 +. p2) /. 2.0R);
+  fold (vkeep a (keep_v k) (p1 +. p2) x y)
+}
+
+let br_keep (#s: _) (k: asn1_k s) (#t: Type0) (#a: prel t (asn1_raw_t k)) (#r: bprel t) (#f: asn1_raw_t k -> GTot SB.bytes) (c: br_t a r f)
+: br_t (vkeep a (keep_v k)) (raw_keep r) f
+= { sp = split_keep k a r f c.sp; ab = absorb_keep k a r c.ab }
 
 (* SEQUENCE OF / SET OF, for any element relation *)
 
@@ -317,6 +397,10 @@ let rec brd_a (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_
     vrel_view_equiv d' ty view mk law;
     rel_view_equiv d' ty view mk law;
     br_ext _ _ _ _ _ _ () (br_view (brd_a d' ()) view)
+  | D_KEEP #_ #k' d' wf ->
+    vrel_keep_equiv d' wf;
+    rel_keep_equiv d' wf;
+    br_ext _ _ _ _ _ _ () (br_keep k' (brd_a d' ()))
 
 and brd_c (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (cd: cdesc k t) (u: squash (ok_content id k))
 : Tot (vc_br_t id cd) (decreases cd)
