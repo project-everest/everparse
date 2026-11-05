@@ -159,6 +159,13 @@ $(C_OUTPUT_DIR)/raw_write_test.exe: $(C_OUTPUT_DIR)/ASN1.Pulse.RawWriteTest.c te
 test-raw-write: $(C_OUTPUT_DIR)/raw_write_test.exe
 	$<
 
+# Named C types through impl descriptors (ASN1.Pulse.NamedTest)
+$(C_OUTPUT_DIR)/named_test.exe: $(C_OUTPUT_DIR)/ASN1.Pulse.NamedTest.c test/named_test.c
+	$(CC) $(TEST_CFLAGS) -I $(C_OUTPUT_DIR) -o $@ $< test/named_test.c
+
+test-named: $(C_OUTPUT_DIR)/named_test.exe
+	$<
+
 # Deeply nested ANY (constant stack: run with a 64 KiB stack limit)
 DEEP_ANY_DEPTH := 4000
 test-deep-any: $(C_OUTPUT_DIR)/test_Any_AnyT.exe
@@ -172,5 +179,5 @@ stack-check: $(C_OUTPUT_DIR)/ASN1.Pulse.X509.c test/stack.py
 	python3 test/stack.py --budget $(STACK_BUDGET) $(C_OUTPUT_DIR)/stack.ci \
 	  ASN1_Pulse_X509_validate_certificate ASN1_Pulse_X509_validate_crl
 
-.PRECIOUS: $(C_OUTPUT_DIR)/%.c $(C_OUTPUT_DIR)/%.h $(C_OUTPUT_DIR)/test_%.exe $(C_OUTPUT_DIR)/corpus_%.exe $(C_OUTPUT_DIR)/parse_test.exe $(C_OUTPUT_DIR)/raw_write_test.exe
-.PHONY: test test-oracle test-parse test-raw-write test-corpus test-deep-any stack-check FORCE
+.PRECIOUS: $(C_OUTPUT_DIR)/%.c $(C_OUTPUT_DIR)/%.h $(C_OUTPUT_DIR)/test_%.exe $(C_OUTPUT_DIR)/corpus_%.exe $(C_OUTPUT_DIR)/parse_test.exe $(C_OUTPUT_DIR)/raw_write_test.exe $(C_OUTPUT_DIR)/named_test.exe
+.PHONY: test test-oracle test-parse test-raw-write test-named test-corpus test-deep-any stack-check FORCE
