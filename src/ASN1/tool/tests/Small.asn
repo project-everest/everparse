@@ -21,6 +21,12 @@ Pair ::= SET {
   note  [2] BOOLEAN OPTIONAL
 }
 
+Names ::= SEQUENCE {
+  short PrintableString (SIZE (1..4)),
+  wide  UTF8String (SIZE (1..2)),
+  bmp   BMPString (SIZE (2)) OPTIONAL
+}
+
 Msg ::= SEQUENCE {
   version  [0] Version DEFAULT v1,
   id       INTEGER,

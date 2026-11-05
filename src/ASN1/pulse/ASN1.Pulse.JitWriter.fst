@@ -1597,7 +1597,9 @@ fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k)
       let p2r = !pos;
       let len = SZ.sub p1r p2r;
       assert_norm (pow2 32 == 4294967296);
-      if (SZ.eq (SZ.uint32_to_sizet (SZ.sizet_to_uint32 len)) len) {
+      let len32 = SZ.sizet_to_uint32 len;
+      SZ.fits_lte (U32.v len32) (SZ.v len);
+      if (SZ.eq (SZ.uint32_to_sizet len32) len) {
         fold (W.vmatch_sz len (Seq.length (JK.raw_key_c key_k kx)));
         let ok3 = WL.r2l_write_hdr true len #(Seq.length (JK.raw_key_c key_k kx)) out pos;
         unfold (W.vmatch_sz len (Seq.length (JK.raw_key_c key_k kx)));

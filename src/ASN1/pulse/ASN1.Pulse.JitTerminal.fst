@@ -558,9 +558,9 @@ let pr (k: E.leaf_k) (r: asn1_restriction k) (u: squash (In.supported_restrictio
 = match k with
   | ASN1_BOOLEAN -> pc_pure boolean_enc (L.tacc ASN1_BOOLEAN) (L.holds ASN1_BOOLEAN (restriction_pred r)) (Rs.bool_in (RESTRICT_IN?.values r)) (bool_restr r) pm
   | ASN1_INTEGER bound -> pr_integer bound r () pm
-  | ASN1_OCTETSTRING ->
-    slice_leaf_eq ASN1_OCTETSTRING (L.tacc k) (L.holds k (restriction_pred r)) pm;
-    coerce_eq () (pc_slice (In.validate_restricted ASN1_OCTETSTRING r ()) (L.tacc k) (L.holds k (restriction_pred r)) (fun w -> L.restricted_iff ASN1_OCTETSTRING r w) pm)
+  | _ ->
+    slice_leaf_eq k (L.tacc k) (L.holds k (restriction_pred r)) pm;
+    coerce_eq () (pc_slice (In.validate_restricted k r ()) (L.tacc k) (L.holds k (restriction_pred r)) (fun w -> L.restricted_iff k r w) pm)
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction

@@ -263,7 +263,11 @@ and node env (ctx: string) (t: typ) : node =
         NILC (id, CTerm (small_integer_term, Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
       | CSize _ -> error "%s: SIZE constraint on INTEGER" ctx
       end
-    | Some (id, CTerm ({ tk = "ASN1_OCTETSTRING"; _ } as tm, None)), CSize sz ->
+    | Some (id, CTerm ({ tk = ("ASN1_OCTETSTRING" | "ASN1_UTF8STRING" | "ASN1_BMPSTRING"
+                             | "ASN1_UNIVERSALSTRING" | "ASN1_PRINTABLESTRING" | "ASN1_IA5STRING"
+                             | "ASN1_VISIBLESTRING" | "ASN1_NUMERICSTRING" | "ASN1_TELETEXSTRING"
+                             | "ASN1_VIDEOTEXSTRING" | "ASN1_GRAPHICSTRING" | "ASN1_GENERALSTRING"
+                             | "ASN1_OBJECTDESCRIPTOR"); _ } as tm, None)), CSize sz ->
       let lo, hi = match sz with
         | CRange (Val lo, Max) when lo >= 0 -> lo, "None"
         | CRange (Val lo, Val hi) when lo >= 0 -> lo, Printf.sprintf "(Some %d)" hi
@@ -272,7 +276,7 @@ and node env (ctx: string) (t: typ) : node =
         | _ -> error "%s: unsupported SIZE constraint" ctx
       in
       NILC (id, CTerm (tm, Some (Printf.sprintf "(RESTRICT_SIZE %d %s)" lo hi)))
-    | _ -> error "%s: constraints are supported on INTEGER and on the SIZE of OCTET STRING only" ctx
+    | _ -> error "%s: constraints are supported on INTEGER and on the SIZE of OCTET STRING and character strings only" ctx
     end
 
 and components env (name: string) (cs: component list) : (string * typ * deco) list =

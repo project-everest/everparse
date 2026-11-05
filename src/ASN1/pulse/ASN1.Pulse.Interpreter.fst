@@ -88,8 +88,7 @@ let supported_restriction (k: asn1_terminal_k) (r: asn1_restriction k) : Tot boo
   match k with
   | ASN1_BOOLEAN -> RESTRICT_IN? r
   | ASN1_INTEGER bound -> bound < 18446744073709551615 && Rs.int_restriction_ok r
-  | ASN1_OCTETSTRING -> Rs.size_restriction_ok r
-  | _ -> false
+  | _ -> Rs.size_string_k k && Rs.size_restriction_ok r
 
 (* ANY DEFINED BY: the kinds of keys that can be compared with a constant *)
 [@@asn1_pulse_attr; FStar.Attributes.custard_compile_time]
@@ -416,7 +415,19 @@ let validate_restricted ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) 
     Rs.validate_boolean_in (RESTRICT_IN?.values r)
   | ASN1_INTEGER bound ->
     Rs.validate_integer_restricted (U64.uint_to_t bound) r
-  | ASN1_OCTETSTRING -> Rs.validate_octetstring_size r)
+  | ASN1_OCTETSTRING -> Rs.validate_string_size k r Term.validate_octetstring
+  | ASN1_UTF8STRING -> Rs.validate_string_size k r Term.validate_utf8
+  | ASN1_BMPSTRING -> Rs.validate_string_size k r Term.validate_bmp
+  | ASN1_UNIVERSALSTRING -> Rs.validate_string_size k r Term.validate_universal
+  | ASN1_PRINTABLESTRING -> Rs.validate_string_size k r Term.validate_printable
+  | ASN1_IA5STRING -> Rs.validate_string_size k r Term.validate_ia5
+  | ASN1_VISIBLESTRING -> Rs.validate_string_size k r Term.validate_visible
+  | ASN1_NUMERICSTRING -> Rs.validate_string_size k r Term.validate_numeric
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR -> Rs.validate_string_size k r (Term.validate_raw_string k))
   in vf vinput vpoffset #voffset #vpm #vv
 
 [@@asn1_pulse_attr]

@@ -1091,6 +1091,10 @@ let lc_size_tlv (c x2: bytes)
   then parse_enc_len (U32.uint_to_t (Seq.length c)) (c `Seq.append` x2)
   else hdr_big_none (Seq.length c) (c `Seq.append` x2)
 
+let slice_append_r (a b: bytes)
+: Lemma (Seq.slice (a `Seq.append` b) (Seq.length a) (Seq.length a + Seq.length b) == b)
+= assert (Seq.equal (Seq.slice (a `Seq.append` b) (Seq.length a) (Seq.length a + Seq.length b)) b)
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 128"
 let iacc_cons_inv' (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin { Cons? tl })
   (id: asn1_id_t) (c x2: bytes)
@@ -1112,9 +1116,8 @@ let iacc_cons_inv' (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parse
   let c1 = Seq.length ie in
   assert (x1 == ie `Seq.append` r1);
   assert (x == ie `Seq.append` rr);
-  Seq.lemma_split (ie `Seq.append` rr) c1;
-  assert (Seq.equal (Seq.slice x c1 (Seq.length x)) rr);
-  assert (Seq.equal (Seq.slice x1 c1 (Seq.length x1)) r1);
+  slice_append_r ie rr;
+  slice_append_r ie r1;
   Sq.seq_cons_cons_some hd tl id rr;
   Sq.seq_single_some hd id r1;
   let tw = parse_asn1_sequence_item_twin hd id in

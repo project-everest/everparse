@@ -375,29 +375,7 @@ let validate_integer_restricted (bound: U64.t { U64.v bound > 0 /\ U64.v bound <
     (check_integer_restricted bound (int_pred r) (int_check r) ())
     (int_restricted_pred (U64.v bound) r)
 
-(* OCTET STRING sizes *)
-
-let size_accept (lo: nat) (hi: option nat) (b: bytes) : GTot bool =
-  lo <= Seq.length b && (match hi with None -> true | Some h -> Seq.length b <= h)
-
-inline_for_extraction
-fn check_size
-  (lo: SZ.t) (has_hi: bool) (hi: SZ.t)
-  (hi': Ghost.erased (option nat) { Ghost.reveal hi' == (if has_hi then Some (SZ.v hi) else None) })
-: C.slice_checker (size_accept (SZ.v lo) hi')
-=
-  (s: S.slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-{
-  pts_to_len s;
-  let n = S.len s;
-  (SZ.lte lo n && (not has_hi || SZ.lte n hi))
-}
-
-let size_restricted_pred (lo: nat) (hi: option nat)
-: Lemma (Term.all_bytes_pred (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL ASN1_OCTETSTRING (RESTRICT_SIZE lo hi))) (size_accept lo hi))
-= Classical.forall_intro (T.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser ASN1_OCTETSTRING) (restriction_pred (RESTRICT_SIZE #ASN1_OCTETSTRING lo hi)))
+(* SIZE on OCTET STRING and character strings *)
 
 [@@asn1_restrict_attr]
 let size_restriction_ok (#k: asn1_terminal_k) (r: asn1_restriction k) : Tot bool =
@@ -405,22 +383,171 @@ let size_restriction_ok (#k: asn1_terminal_k) (r: asn1_restriction k) : Tot bool
   | RESTRICT_SIZE lo hi -> lo < 65536 && (match hi with None -> true | Some h -> h < 65536)
   | _ -> false
 
+(* `f` computes, from the content bytes, the size of the value they parse
+   to; the base parser consumes all its input *)
+let count_pred (k: asn1_terminal_k) (f: bytes -> GTot nat) : prop =
+  forall (b: bytes) . match parse (asn1_terminal_as_parser k) b with
+  | None -> True
+  | Some (x, n) -> n == Seq.length b /\ asn1_char_count #k x == Some (f b)
+
+inline_for_extraction
+fn check_count
+  (#f: Ghost.erased (bytes -> GTot nat))
+  (cnt: C.slice_counter f)
+  (lo: SZ.t) (has_hi: bool) (hi: SZ.t)
+  (hi': Ghost.erased (option nat) { Ghost.reveal hi' == (if has_hi then Some (SZ.v hi) else None) })
+: C.slice_checker (fun b -> size_in_range (SZ.v lo) hi' (Ghost.reveal f b))
+=
+  (s: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let n = cnt s;
+  (SZ.lte lo n && (not has_hi || SZ.lte n hi))
+}
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn validate_size_gen
+  (k: Ghost.erased asn1_terminal_k)
+  (r: Ghost.erased (asn1_restriction k) { RESTRICT_SIZE? r })
+  (w: LPS.validator #(asn1_terminal_t k) #asn1_weak_parser_kind (asn1_terminal_as_parser k))
+  (f: Ghost.erased (bytes -> GTot nat))
+  (c: C.slice_checker (fun b -> size_in_range (RESTRICT_SIZE?.lo r) (RESTRICT_SIZE?.hi r) (Ghost.reveal f b)))
+  (sq: squash (count_pred k f))
+: LPS.validator #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))
+=
+  (input: slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  pts_to_len input;
+  reveal_opaque (`%size_pred) (size_pred #(Ghost.reveal k) (RESTRICT_SIZE?.lo r) (RESTRICT_SIZE?.hi r));
+  T.parse_filter_eq #asn1_weak_parser_kind (asn1_terminal_as_parser k) (restriction_pred #(Ghost.reveal k) r) (Seq.slice v (SZ.v offset) (Seq.length v));
+  let off = !poffset;
+  let ok = w input poffset;
+  if (ok) {
+    let s1, s2 = S.split input off;
+    let res = c s2;
+    S.join s1 s2 input;
+    Seq.lemma_split v (SZ.v off);
+    res
+  } else {
+    false
+  }
+}
+
+#pop-options
+
+let rec char_list_count (f: U8.t -> bool) (b: bytes)
+: Lemma (ensures (match parse (LowParse.Tot.List.parse_list (T.parse_filter LowParse.Tot.Int.parse_u8 f)) b with
+    | None -> True
+    | Some (x, n) -> n == Seq.length b /\ List.length x == Seq.length b))
+  (decreases (Seq.length b))
+= let p = T.parse_filter LowParse.Tot.Int.parse_u8 f in
+  LowParse.Spec.List.tot_parse_list_eq p b;
+  if Seq.length b = 0 then ()
+  else begin
+    LowParse.Spec.Base.parser_kind_prop_equiv (LowParse.Spec.Combinators.parse_filter_kind LowParse.Spec.Int.parse_u8_kind) p;
+    match parse p b with
+    | None -> ()
+    | Some (_, n) -> char_list_count f (Seq.slice b n (Seq.length b))
+  end
+
+let count_bytes (b: bytes) : GTot nat = Seq.length b
+let count_bmp (b: bytes) : GTot nat = Seq.length b / 2
+let count_universal (b: bytes) : GTot nat = Seq.length b / 4
+let count_utf8 (b: bytes) : GTot nat = utf8_count b
+
+inline_for_extraction
+fn len_div (d: SZ.t { SZ.v d > 0 }) (#f: Ghost.erased (bytes -> GTot nat) { forall b . Ghost.reveal f b == Seq.length b / SZ.v d })
+: C.slice_counter f
+=
+  (s: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  pts_to_len s;
+  SZ.div (S.len s) d
+}
+
+[@@asn1_restrict_attr]
+let raw_string_k (k: asn1_terminal_k) : Tot bool =
+  match k with
+  | ASN1_OCTETSTRING | ASN1_TELETEXSTRING | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING | ASN1_GENERALSTRING | ASN1_OBJECTDESCRIPTOR -> true
+  | _ -> false
+
+let raw_count_pred (k: asn1_terminal_k { raw_string_k k }) : Lemma (count_pred k count_bytes)
+= reveal_opaque (`%asn1_char_count) (asn1_char_count #k)
+
+let bmp_count_pred () : Lemma (count_pred ASN1_BMPSTRING count_bmp)
+= reveal_opaque (`%asn1_char_count) (asn1_char_count #ASN1_BMPSTRING);
+  Classical.forall_intro (T.parse_filter_eq LowParse.Tot.SeqBytes.parse_seq_all_bytes is_valid_bmp)
+
+let universal_count_pred () : Lemma (count_pred ASN1_UNIVERSALSTRING count_universal)
+= reveal_opaque (`%asn1_char_count) (asn1_char_count #ASN1_UNIVERSALSTRING);
+  Classical.forall_intro (T.parse_filter_eq LowParse.Tot.SeqBytes.parse_seq_all_bytes is_valid_universal)
+
+let utf8_count_pred () : Lemma (count_pred ASN1_UTF8STRING count_utf8)
+= reveal_opaque (`%asn1_char_count) (asn1_char_count #ASN1_UTF8STRING);
+  Classical.forall_intro (T.parse_filter_eq LowParse.Tot.SeqBytes.parse_seq_all_bytes LowParse.Spec.UTF8.correct)
+
+[@@asn1_restrict_attr]
+let char_list_k (k: asn1_terminal_k) : Tot bool =
+  match k with
+  | ASN1_PRINTABLESTRING | ASN1_IA5STRING | ASN1_VISIBLESTRING | ASN1_NUMERICSTRING -> true
+  | _ -> false
+
+let char_list_count_pred (k: asn1_terminal_k { char_list_k k }) : Lemma (count_pred k count_bytes)
+= reveal_opaque (`%asn1_char_count) (asn1_char_count #k);
+  match k with
+  | ASN1_PRINTABLESTRING -> Classical.forall_intro (char_list_count is_printable_char)
+  | ASN1_IA5STRING -> Classical.forall_intro (char_list_count is_ia5_char)
+  | ASN1_VISIBLESTRING -> Classical.forall_intro (char_list_count is_visible_char)
+  | ASN1_NUMERICSTRING -> Classical.forall_intro (char_list_count is_numeric_char)
+
+[@@asn1_restrict_attr]
+let size_string_k (k: asn1_terminal_k) : Tot bool =
+  raw_string_k k || char_list_k k ||
+  (match k with
+   | ASN1_UTF8STRING | ASN1_BMPSTRING | ASN1_UNIVERSALSTRING -> true
+   | _ -> false)
+
 inline_for_extraction
 [@@asn1_restrict_attr]
-let validate_octetstring_size (r: asn1_restriction ASN1_OCTETSTRING { size_restriction_ok r })
+let validate_string_size
+  (k: asn1_terminal_k { size_string_k k })
+  (r: asn1_restriction k { size_restriction_ok r })
+  (w: LPS.validator #(asn1_terminal_t k) #asn1_weak_parser_kind (asn1_terminal_as_parser k))
 : LPS.validator
-    #(asn1_content_t (ASN1_RESTRICTED_TERMINAL ASN1_OCTETSTRING r))
+    #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r))
     #asn1_weak_parser_kind
-    (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL ASN1_OCTETSTRING r))
+    (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))
 = [@inline_let] let lo = RESTRICT_SIZE?.lo r in
   [@inline_let] let hi = RESTRICT_SIZE?.hi r in
   SZ.fits_at_least_16 lo;
+  [@inline_let] let lo_sz = SZ.uint_to_t lo in
   [@inline_let] let hi_sz : SZ.t = (if Some? hi then (SZ.fits_at_least_16 (Some?.v hi); SZ.uint_to_t (Some?.v hi)) else 0sz) in
-  Term.validate_all_bytes_pred
-    (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL ASN1_OCTETSTRING r))
-    (size_accept lo hi)
-    (check_size (SZ.uint_to_t lo) (Some? hi) hi_sz (Ghost.hide hi))
-    (size_restricted_pred lo hi)
+  match k with
+  | ASN1_UTF8STRING ->
+    validate_size_gen k r w count_utf8
+      (check_count #(Ghost.hide count_utf8) C.count_utf8 lo_sz (Some? hi) hi_sz (Ghost.hide hi)) (utf8_count_pred ())
+  | ASN1_BMPSTRING ->
+    validate_size_gen k r w count_bmp
+      (check_count (len_div 2sz #count_bmp) lo_sz (Some? hi) hi_sz (Ghost.hide hi)) (bmp_count_pred ())
+  | ASN1_UNIVERSALSTRING ->
+    validate_size_gen k r w count_universal
+      (check_count (len_div 4sz #count_universal) lo_sz (Some? hi) hi_sz (Ghost.hide hi)) (universal_count_pred ())
+  | ASN1_PRINTABLESTRING | ASN1_IA5STRING | ASN1_VISIBLESTRING | ASN1_NUMERICSTRING ->
+    validate_size_gen k r w count_bytes
+      (check_count (len_div 1sz #count_bytes) lo_sz (Some? hi) hi_sz (Ghost.hide hi)) (char_list_count_pred k)
+  | _ ->
+    validate_size_gen k r w count_bytes
+      (check_count (len_div 1sz #count_bytes) lo_sz (Some? hi) hi_sz (Ghost.hide hi)) (raw_count_pred k)
 
 (* BOOLEAN (restricted to a value set) DEFAULT defv *)
 

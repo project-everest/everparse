@@ -550,13 +550,59 @@ type asn1_restriction (k : asn1_terminal_k) : Type =
 | RESTRICT_INT_IN : values : list int -> asn1_restriction k
 // ValueRange on INTEGER, with optional bounds (MIN, MAX)
 | RESTRICT_INT_RANGE : lo : option int -> hi : option int -> asn1_restriction k
-// SizeConstraint on OCTET STRING, with an optional upper bound (MAX)
+// SizeConstraint (X.680 51.5) on OCTET STRING and character strings, with
+// an optional upper bound (MAX); see `asn1_char_count`
 | RESTRICT_SIZE : lo : nat -> hi : option nat -> asn1_restriction k
 | RESTRICT_CUSTOM : is_valid : (asn1_terminal_t k -> bool) -> asn1_restriction k
 
 let int_in_range (lo hi : option int) (x : int) : Tot bool =
   (match lo with None -> true | Some l -> l <= x) &&
   (match hi with None -> true | Some h -> x <= h)
+
+let size_in_range (lo : nat) (hi : option nat) (n : nat) : Tot bool =
+  lo <= n && (match hi with None -> true | Some h -> n <= h)
+
+(* UTF-8: a character starts at each byte that is not a continuation byte
+   (10xxxxxx) *)
+let is_utf8_lead (c : U8.t) : Tot bool = U8.v c < 128 || U8.v c >= 192
+
+let rec utf8_count_from (b : asn1_bytes) (i : nat {i <= Seq.length b})
+: Tot nat (decreases (Seq.length b - i))
+= if i = Seq.length b then 0
+  else (if is_utf8_lead (Seq.index b i) then 1 else 0) + utf8_count_from b (i + 1)
+
+let utf8_count (b : asn1_bytes) : Tot nat = utf8_count_from b 0
+
+(* The size measured by SizeConstraint (X.680 51.5): the number of octets
+   of an OCTET STRING, and the number of characters of a character string.
+   The ISO 2022 based types (TeletexString, VideotexString, GraphicString,
+   GeneralString, ObjectDescriptor) are measured in octets, which is exact
+   for their single-byte repertoires only. *)
+[@@"opaque_to_smt"]
+let asn1_char_count (#k : asn1_terminal_k) (x : asn1_terminal_t k) : Tot (option nat) =
+  match k with
+  | ASN1_OCTETSTRING
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR -> Some (Seq.length #byte x)
+  | ASN1_PRINTABLESTRING -> Some (List.length #(b : byte {is_printable_char b}) x)
+  | ASN1_IA5STRING -> Some (List.length #(b : byte {is_ia5_char b}) x)
+  | ASN1_VISIBLESTRING -> Some (List.length #(b : byte {is_visible_char b}) x)
+  | ASN1_NUMERICSTRING -> Some (List.length #(b : byte {is_numeric_char b}) x)
+  | ASN1_UTF8STRING -> Some (utf8_count x)
+  | ASN1_BMPSTRING -> Some (Seq.length #byte x / 2)
+  | ASN1_UNIVERSALSTRING -> Some (Seq.length #byte x / 4)
+  | _ -> None
+
+(* Kept opaque so that the SMT context of the many proofs that mention
+   `restriction_pred` without needing its SIZE case stays small *)
+[@@"opaque_to_smt"]
+let size_pred (#k : asn1_terminal_k) (lo : nat) (hi : option nat) (x : asn1_terminal_t k) : Tot bool =
+  match asn1_char_count x with
+  | Some n -> size_in_range lo hi n
+  | None -> false
 
 let restriction_pred (#k : asn1_terminal_k) (r : asn1_restriction k) (x : asn1_terminal_t k) : Tot bool =
   match r with
@@ -569,12 +615,7 @@ let restriction_pred (#k : asn1_terminal_k) (r : asn1_restriction k) (x : asn1_t
     (match k with
      | ASN1_INTEGER _ -> int_in_range lo hi x
      | _ -> false)
-  | RESTRICT_SIZE lo hi ->
-    (match k with
-     | ASN1_OCTETSTRING ->
-       lo <= Seq.length #byte x &&
-       (match hi with None -> true | Some h -> Seq.length #byte x <= h)
-     | _ -> false)
+  | RESTRICT_SIZE lo hi -> size_pred lo hi x
   | RESTRICT_CUSTOM f -> f x
 
 (* Restrictions on literals (e.g. DEFAULT values), computable by
@@ -650,7 +691,9 @@ let restriction_pred_lit (#k : asn1_terminal_k) (r : asn1_restriction k) (x : as
 #push-options "--fuel 2 --ifuel 2"
 let restriction_pred_lit_correct (#k : asn1_terminal_k) (r : asn1_restriction k) (x : asn1_key_lit k)
 : Lemma (requires (restriction_pred_lit r x)) (ensures (restriction_pred r (key_of_lit k x)))
-= match k with
+= reveal_opaque (`%asn1_char_count) (asn1_char_count #k);
+  (match r with RESTRICT_SIZE lo hi -> reveal_opaque (`%size_pred) (size_pred #k lo hi) | _ -> ());
+  match k with
   | ASN1_INTEGER bound -> int_of_lit_list_correct bound x
   | _ -> ()
 #pop-options

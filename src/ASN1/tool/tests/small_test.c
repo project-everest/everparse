@@ -1,6 +1,7 @@
 /* Round trip through the C API that everparse-asn1 generates for Small.asn:
    write `Msg` values (right to left), check the DER bytes, JIT_NO_SPACE and
-   JIT_INVALID, then validate and parse the bytes back. */
+   JIT_INVALID, then validate and parse the bytes back; also check SIZE
+   constraints on character strings (`Names`). */
 #include "Small.h"
 #include <stdio.h>
 #include <string.h>
@@ -131,12 +132,99 @@ static int validate(const uint8_t *in, size_t len) {
   return validate_Msg(s, &off) && off == len;
 }
 
+/* Names: SIZE on character strings counts characters, not bytes */
+
+static Names names(const char *sh, const char *wide) {
+  Names n;
+  memset(&n, 0, sizeof n);
+  n.short__ = sl(sh);
+  n.wide = sl(wide);
+  n.bmp.tag = SMALL_IMPL_NAMES_BMP_ABSENT;
+  return n;
+}
+
+static int validate_names(const uint8_t *in, size_t len) {
+  Pulse_Lib_Slice_slice__uint8 s = { .elt = (uint8_t *)in, .len = len };
+  size_t off = 0;
+  return validate_Names(s, &off) && off == len;
+}
+
+/* write `x`, compare with `exp`, then validate, parse and write back */
+static void names_ok(const char *name, Names x, const uint8_t *exp, size_t len) {
+  uint8_t out[BUF];
+  size_t pos = BUF;
+  Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
+  ASN1_Pulse_JitWriter_jit_result r = write_Names(x, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, exp, len) == 0,
+        "%s: write: expected the DER bytes (result %d, %zu bytes)", name, (int)r, BUF - pos);
+  CHECK(validate_names(exp, len), "%s: validate", name);
+  Names p = parse_Names((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)exp, .len = len });
+  CHECK(p.short__.len == x.short__.len && p.wide.len == x.wide.len && p.bmp.tag == x.bmp.tag,
+        "%s: parse", name);
+  pos = BUF;
+  r = write_Names(p, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, exp, len) == 0,
+        "%s: write back", name);
+}
+
+static void names_invalid(const char *name, Names x) {
+  uint8_t out[BUF];
+  size_t pos = BUF;
+  Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
+  ASN1_Pulse_JitWriter_jit_result r = write_Names(x, o, &pos);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_INVALID, "%s: expected INVALID (%d)", name, (int)r);
+}
+
+/* short "AB", wide "\u00e9x" (2 characters, 3 bytes) */
+static const uint8_t names1_der[] = {
+  0x30, 0x09, 0x13, 0x02, 0x41, 0x42, 0x0c, 0x03, 0xc3, 0xa9, 0x78
+};
+/* short "ABCD", wide "\u00e9\u00e9" (2 characters, 4 bytes), bmp "AB" */
+static const uint8_t names2_der[] = {
+  0x30, 0x12, 0x13, 0x04, 0x41, 0x42, 0x43, 0x44, 0x0c, 0x04, 0xc3, 0xa9, 0xc3, 0xa9,
+  0x1e, 0x04, 0x00, 0x41, 0x00, 0x42
+};
+
+static void test_names(void) {
+  names_ok("names1", names("AB", "\xc3\xa9x"), names1_der, sizeof names1_der);
+  Names n = names("ABCD", "\xc3\xa9\xc3\xa9");
+  n.bmp.tag = SMALL_IMPL_NAMES_BMP_PRESENT;
+  n.bmp.val.Names_bmp_present = (Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)"\0A\0B", .len = 4 };
+  names_ok("names2", n, names2_der, sizeof names2_der);
+
+  names_invalid("short: 5 characters", names("ABCDE", "x"));
+  names_invalid("short: empty", names("", "x"));
+  names_invalid("wide: 3 characters in 3 bytes", names("A", "xyz"));
+  names_invalid("wide: 3 characters in 6 bytes", names("A", "\xc3\xa9\xc3\xa9\xc3\xa9"));
+  n.bmp.val.Names_bmp_present.len = 2;
+  names_invalid("bmp: 1 character", n);
+
+  uint8_t in[sizeof names2_der];
+  memcpy(in, names2_der, sizeof in);
+  in[12] = 0x41; in[13] = 0x42; /* wide "\u00e9AB": 3 characters */
+  CHECK(!validate_names(in, sizeof in), "wide: 3 characters: expected rejection");
+  memcpy(in, names2_der, sizeof in);
+  in[7] = 0x2a; /* short "ABC*": not printable */
+  CHECK(!validate_names(in, sizeof in), "short: not printable: expected rejection");
+  static const uint8_t short5[] = {
+    0x30, 0x0a, 0x13, 0x05, 0x41, 0x42, 0x43, 0x44, 0x45, 0x0c, 0x01, 0x78
+  };
+  CHECK(validate_names(short5, sizeof short5) == 0, "short: 5 characters: expected rejection");
+  static const uint8_t bmp1[] = {
+    0x30, 0x0a, 0x13, 0x01, 0x41, 0x0c, 0x01, 0x78, 0x1e, 0x02, 0x00, 0x41
+  };
+  CHECK(validate_names(bmp1, sizeof bmp1) == 0, "bmp: 1 character: expected rejection");
+  static const uint8_t one[] = { 0x30, 0x06, 0x13, 0x01, 0x41, 0x0c, 0x01, 0x78 };
+  CHECK(validate_names(one, sizeof one), "short \"A\", wide \"x\": validate");
+}
+
 int main(void) {
   custard_init_globals();
   Msg m1 = msg1(), m2 = msg2(), m3 = msg3();
   write_ok("msg1", m1, msg1_der, sizeof msg1_der);
   write_ok("msg2", m2, msg2_der, sizeof msg2_der);
   write_ok("msg3", m3, msg3_der, sizeof msg3_der);
+  test_names();
 
   /* a DEFAULT component present with its default value is omitted (DER) */
   Msg bad = msg1();

@@ -101,7 +101,12 @@ Supported:
 * Modules with `IMPLICIT TAGS`, `EXPLICIT TAGS` or `AUTOMATIC TAGS`.
 * Type assignments and references.
 * All universal terminal types; INTEGER and ENUMERATED with named numbers.
-* Value range, single value and SIZE constraints.
+* Value range and single value constraints on INTEGER; SIZE constraints
+  on OCTET STRING and character strings. SIZE counts characters:
+  octets for OCTET STRING and the ISO 2022 based strings (TeletexString,
+  VideotexString, GraphicString, GeneralString, ObjectDescriptor), code
+  points for UTF8String, BMPString and UniversalString. SIZE bounds must
+  be below 65536.
 * `[n]` / `[APPLICATION n]` / ... tags, IMPLICIT and EXPLICIT.
 * SEQUENCE and SET (at most 64 components) with OPTIONAL and DEFAULT
   components.

@@ -170,6 +170,51 @@ ensures pts_to s #pm v ** pure (r == is_valid_universal v)
   !pres
 }
 
+(* Character counts, for SizeConstraint on character strings *)
+
+let slice_counter (f: bytes -> GTot nat) =
+  (s: S.slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased bytes) ->
+  stt SZ.t (pts_to s #pm v) (fun r -> pts_to s #pm v ** pure (SZ.v r == f v))
+
+fn count_utf8
+  (s: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+requires pts_to s #pm v
+returns r: SZ.t
+ensures pts_to s #pm v ** pure (SZ.v r == utf8_count v)
+{
+  S.pts_to_len s;
+  let len = S.len s;
+  let mut pn = 0sz;
+  let mut pi = 0sz;
+  while (
+    let i = !pi;
+    SZ.lt i len
+  ) invariant exists* n i .
+    pts_to s #pm v **
+    pts_to pn n **
+    pts_to pi i **
+    pure (
+      SZ.v i <= Seq.length v /\
+      SZ.v n <= SZ.v i /\
+      SZ.v n + utf8_count_from v (SZ.v i) == utf8_count v
+    )
+    decreases (SZ.v len - SZ.v (!pi))
+  {
+    let i = !pi;
+    let c = s.(i);
+    let n = !pn;
+    if (U8.lt c 128uy || U8.gte c 192uy) {
+      pn := SZ.add n 1sz
+    };
+    pi := SZ.add i 1sz
+  };
+  !pn
+}
+
 (* OID-IRI and RELATIVE-OID-IRI *)
 
 #push-options "--z3rlimit 32"

@@ -482,6 +482,11 @@ let tag_lt (a b: asn1_id_t) : Tot (r: bool { r == asn1_tag_lt a b }) =
 
 (* The validator *)
 
+let vreader_some_le (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) (x: t)
+: Lemma (requires LowParse.PulseParse.VReader.vreader_postcond p offset v off (Some x))
+    (ensures SZ.v offset <= SZ.v off /\ SZ.v off <= Seq.length v)
+= ()
+
 let set_ready (its: list gen_decorated_parser_twin) : prop =
   Conf.items_tagged its /\ L.length its <= 64
 
@@ -540,6 +545,7 @@ fn validate_set
       }
       Some id -> {
         with off1 . assert (R.pts_to poffset off1);
+        vreader_some_le #asn1_strong_parser_kind parse_asn1_identifier_U32 off v_bytes off1 id;
         Seq.slice_slice v_bytes (SZ.v off) (Seq.length v_bytes) (SZ.v off1 - SZ.v off) (Seq.length v_bytes - SZ.v off);
         match comp id {
           None -> {
