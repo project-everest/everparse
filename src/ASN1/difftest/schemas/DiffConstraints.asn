@@ -1,0 +1,10 @@
+-- Differential testing: SIZE and value constraints.
+-- F* translation: src/ASN1/ASN1.DiffTest.Constraints.fst
+DiffConstraints DEFINITIONS ::= BEGIN
+
+Sized ::= OCTET STRING (SIZE (2..3))
+Byte ::= INTEGER (0..255)
+NonEmptySeqOf ::= SEQUENCE SIZE (1..MAX) OF INTEGER
+NonEmptySetOf ::= SET SIZE (1..MAX) OF INTEGER
+
+END

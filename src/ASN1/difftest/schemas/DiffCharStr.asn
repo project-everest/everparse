@@ -1,0 +1,8 @@
+-- Differential testing: CHARACTER STRING (separate module, as not every
+-- implementation supports it).
+-- F* translation: src/ASN1/ASN1.DiffTest.Presentation.fst
+DiffCharStr DEFINITIONS ::= BEGIN
+
+CharStr ::= CHARACTER STRING
+
+END

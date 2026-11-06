@@ -1,0 +1,8 @@
+-- Differential testing: OID-IRI and RELATIVE-OID-IRI.
+-- F* translation: src/ASN1/ASN1.DiffTest.Prim.fst
+DiffIRI DEFINITIONS ::= BEGIN
+
+Iri ::= OID-IRI
+RelIri ::= RELATIVE-OID-IRI
+
+END

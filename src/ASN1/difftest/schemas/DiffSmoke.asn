@@ -1,0 +1,11 @@
+-- Differential testing, walking-skeleton schema.
+-- F* translation: src/ASN1/ASN1.DiffTest.Smoke.fst
+DiffSmoke DEFINITIONS IMPLICIT TAGS ::= BEGIN
+
+Smoke ::= SEQUENCE {
+  a INTEGER,
+  b BOOLEAN OPTIONAL,
+  c OCTET STRING
+}
+
+END

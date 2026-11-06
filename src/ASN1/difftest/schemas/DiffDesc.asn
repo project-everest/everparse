@@ -1,0 +1,8 @@
+-- Differential testing: ObjectDescriptor (separate module, as not every
+-- implementation supports it).
+-- F* translation: src/ASN1/ASN1.DiffTest.Prim.fst
+DiffDesc DEFINITIONS ::= BEGIN
+
+Desc ::= ObjectDescriptor
+
+END

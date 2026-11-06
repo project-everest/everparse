@@ -17,42 +17,24 @@ let byte = U8.t
 
 let parse_asn1_OIDU32_tail = parse_list parse_asn1_identifier_U32_alt
 
-let decode_OIDU32_head (buf : byte)
+(* X.690 8.19.4: the first subidentifier, (X*40)+Y, is itself a
+   base-128 subidentifier, possibly spanning several octets. *)
+let decode_OIDU32_head (v : U32.t)
 : (p : (U32.t & U32.t) {asn1_OID_wf' (fst p) (snd p)})
-= if (U8.v buf < 40) then
-    (0ul, Cast.uint8_to_uint32 buf)
+= if (U32.v v < 40) then
+    (0ul, v)
   else 
-    if (U8.v buf < 80) then
-      (1ul, Cast.uint8_to_uint32 (U8.sub buf 40uy))
+    if (U32.v v < 80) then
+      (1ul, U32.sub v 40ul)
     else
-      (2ul, Cast.uint8_to_uint32 (U8.sub buf 80uy))
+      (2ul, U32.sub v 80ul)
 
-let decode_OIDU32_head_inj (buf1 buf2 : byte) :
-Lemma (requires (decode_OIDU32_head buf1 = decode_OIDU32_head buf2))
-      (ensures (buf1 = buf2))
-= if (U8.v buf1 < 40) then
-    if (U8.v buf2 < 40) then
-      _
-    else if (U8.v buf2 < 80) then
-      _
-    else 
-      _
-  else if (U8.v buf1 < 80) then
-    if (U8.v buf2 < 40) then
-      _
-    else if (U8.v buf2 < 80) then
-      _
-    else 
-      _
-  else
-    if (U8.v buf2 < 40) then
-      _
-    else if (U8.v buf2 < 80) then
-      _
-    else 
-      _
+let decode_OIDU32_head_inj (v1 v2 : U32.t) :
+Lemma (requires (decode_OIDU32_head v1 = decode_OIDU32_head v2))
+      (ensures (v1 = v2))
+= ()
         
-let synth_OIDU32 (btl : byte & list U32.t)
+let synth_OIDU32 (btl : U32.t & list U32.t)
 : asn1_oid_t
 = let (buf, tl) = btl in
   let p = decode_OIDU32_head buf in
@@ -72,4 +54,8 @@ let lemma_synth_OIDU32_inj () :
 
 let parse_asn1_OIDU32 : asn1_weak_parser asn1_oid_t =
   let _ = lemma_synth_OIDU32_inj () in
-  weaken asn1_weak_parser_kind ((parse_u8 `nondep_then` parse_asn1_OIDU32_tail) `parse_synth` synth_OIDU32)
+  weaken asn1_weak_parser_kind ((parse_asn1_identifier_U32_alt `nondep_then` parse_asn1_OIDU32_tail) `parse_synth` synth_OIDU32)
+
+(* X.690 8.20: RELATIVE-OID, a non-empty list of subidentifiers *)
+let parse_asn1_RELATIVE_OIDU32 : asn1_weak_parser asn1_relative_oid_t =
+  weaken asn1_weak_parser_kind (parse_asn1_OIDU32_tail `parse_filter` asn1_relative_oid_wf)

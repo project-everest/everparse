@@ -6,6 +6,7 @@ open ASN1.Spec.IdentifierU32
 open ASN1.Spec.LengthU32
 
 open ASN1.Spec.Content.OCTETSTRING
+open ASN1.Spec.Value
 
 open LowParse.Tot.Base
 open LowParse.Tot.Combinators
@@ -54,24 +55,19 @@ let parser_asn1_ILC_twin_case_injective
   (and_then_cases_injective (parse_asn1_ILC_twin id p))
 = and_then_cases_injective_intro (parse_asn1_ILC_twin id p) (fun id1 id2 _ _ -> assert (id1 = id) ; assert (id2 = id))
 
+(* ANY: a generic DER value *)
+
 let parse_asn1_anyILC
 : asn1_strong_parser (asn1_t (ASN1_ANY_ILC))
-= parse_asn1_identifier_U32 `nondep_then` (parse_asn1_LC #(ASN1_TERMINAL ASN1_OCTETSTRING) parse_asn1_octetstring)
+= parse_asn1_value
 
 let parse_asn1_anyILC_twin
 : asn1_id_t -> asn1_strong_parser (asn1_t (ASN1_ANY_ILC))
-= fun id -> (parse_ret id) `nondep_then` (parse_asn1_LC #(ASN1_TERMINAL ASN1_OCTETSTRING) parse_asn1_octetstring)
+= parse_asn1_value_twin
 
 let parse_asn1_anyILC_twin_and_then_cases_injective ()
 : Lemma (and_then_cases_injective parse_asn1_anyILC_twin)
-= let p = parse_asn1_anyILC_twin in
-  and_then_cases_injective_intro p (fun x1 x2 b1 b2 -> 
-    let p1 = parse_ret x1 in
-    let p2 = parse_ret x2 in
-    let p' = (parse_asn1_LC #(ASN1_TERMINAL ASN1_OCTETSTRING) parse_asn1_octetstring) in
-    nondep_then_eq p1 p' b1;
-    nondep_then_eq p2 p' b2
-  )
+= parse_asn1_value_twin_and_then_cases_injective ()
 
 (*
 

@@ -1,0 +1,24 @@
+{
+  "vectors": [
+    {"id": "smoke/accept/with-b", "type": "DiffSmoke.Smoke", "hex": "300a 020105 0101ff 0402abcd",
+     "expect": "accept", "clause": "X.690 8.9", "features": ["SEQUENCE", "OPTIONAL", "INTEGER", "BOOLEAN", "OCTET STRING"]},
+    {"id": "smoke/accept/without-b", "type": "DiffSmoke.Smoke", "hex": "3007 020105 0402abcd",
+     "expect": "accept", "clause": "X.690 8.9", "features": ["SEQUENCE", "OPTIONAL", "INTEGER", "OCTET STRING"]},
+    {"id": "smoke/accept/a-zero", "type": "DiffSmoke.Smoke", "hex": "3007 020100 0402abcd",
+     "expect": "accept", "clause": "X.690 8.3.2", "features": ["SEQUENCE", "INTEGER", "OCTET STRING"]},
+    {"id": "smoke/accept/c-empty", "type": "DiffSmoke.Smoke", "hex": "3005 020105 0400",
+     "expect": "accept", "clause": "X.690 8.7", "features": ["SEQUENCE", "INTEGER", "OCTET STRING"]},
+    {"id": "smoke/reject/boolean-01", "type": "DiffSmoke.Smoke", "hex": "300a 020105 010101 0402abcd",
+     "expect": "reject", "clause": "X.690 11.1", "mutation": "boolean-not-ff",
+     "features": ["SEQUENCE", "OPTIONAL", "INTEGER", "BOOLEAN", "OCTET STRING"]},
+    {"id": "smoke/reject/integer-leading-00", "type": "DiffSmoke.Smoke", "hex": "3008 02020005 0402abcd",
+     "expect": "reject", "clause": "X.690 8.3.2", "mutation": "integer-nonminimal",
+     "features": ["SEQUENCE", "INTEGER", "OCTET STRING"]},
+    {"id": "smoke/reject/length-long-form", "type": "DiffSmoke.Smoke", "hex": "308107 020105 0402abcd",
+     "expect": "reject", "clause": "X.690 10.1", "mutation": "length-nonminimal",
+     "features": ["SEQUENCE", "INTEGER", "OCTET STRING"]},
+    {"id": "smoke/reject/missing-c", "type": "DiffSmoke.Smoke", "hex": "3003 020105",
+     "expect": "reject", "clause": "X.680 25 (mandatory component absent)", "mutation": "missing-mandatory",
+     "features": ["SEQUENCE", "INTEGER"]}
+  ]
+}

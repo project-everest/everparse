@@ -1,0 +1,20 @@
+-- Differential testing: ANY and ANY DEFINED BY (X.208).
+-- F* translation: src/ASN1/ASN1.DiffTest.Any.fst
+-- Our schema additionally fixes the parameters of algorithm 1.2.3 to NULL,
+-- which cannot be expressed with ANY DEFINED BY: the DEFINED-BY
+-- directive of everparse-asn1 below (an ASN.1 comment for other tools)
+-- expresses it.
+DiffAny DEFINITIONS ::= BEGIN
+
+alg-123 OBJECT IDENTIFIER ::= { 1 2 3 }
+
+--#DEFINED-BY AlgId.parameters { alg-123 : NULL }
+
+AnyT ::= ANY
+
+AlgId ::= SEQUENCE {
+  algorithm OBJECT IDENTIFIER,
+  parameters ANY DEFINED BY algorithm OPTIONAL
+}
+
+END

@@ -315,7 +315,7 @@ let length_first_lex_order_total
 
 let same_sign
   (x1 x2: int)
-: GTot prop
+: Tot prop
 = (x1 == 0 <==> x2 == 0) /\
   (x1 < 0 <==> x2 < 0)
 

@@ -1,0 +1,8 @@
+-- Differential testing: RELATIVE-OID (separate module, as not every
+-- implementation supports it).
+-- F* translation: src/ASN1/ASN1.DiffTest.Prim.fst
+DiffRelOid DEFINITIONS ::= BEGIN
+
+RelOid ::= RELATIVE-OID
+
+END

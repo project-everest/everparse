@@ -1,0 +1,8 @@
+-- Differential testing: UTCTime and GeneralizedTime.
+-- F* translation: src/ASN1/ASN1.DiffTest.Time.fst
+DiffTime DEFINITIONS ::= BEGIN
+
+Utc ::= UTCTime
+Gen ::= GeneralizedTime
+
+END

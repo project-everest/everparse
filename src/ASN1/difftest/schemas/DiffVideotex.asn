@@ -1,0 +1,8 @@
+-- Differential testing: VideotexString (separate module, as not every
+-- implementation supports it).
+-- F* translation: src/ASN1/ASN1.DiffTest.Strings.fst
+DiffVideotex DEFINITIONS ::= BEGIN
+
+Videotex ::= VideotexString
+
+END

@@ -1,0 +1,201 @@
+{
+ "impl": "asn1-rs",
+ "features": {
+  "id.high-tag": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "id.class.application": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "id.class.context": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "id.class.private": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "len.long": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "BOOLEAN": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "INTEGER": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "ENUMERATED": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "BIT STRING": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "OCTET STRING": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "NULL": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "OBJECT IDENTIFIER": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "RELATIVE-OID": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "OID-IRI": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no OID-IRI type (src/asn1_types)"
+  },
+  "RELATIVE-OID-IRI": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no RELATIVE-OID-IRI type (src/asn1_types)"
+  },
+  "ObjectDescriptor": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "UTF8String": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "NumericString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "PrintableString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "TeletexString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "VideotexString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "IA5String": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "GraphicString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "VisibleString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "GeneralString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "UniversalString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "BMPString": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "UTCTime": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "GeneralizedTime": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "DATE": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no DATE type (src/asn1_types)"
+  },
+  "TIME-OF-DAY": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no TIME-OF-DAY type (src/asn1_types)"
+  },
+  "DATE-TIME": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no DATE-TIME type (src/asn1_types)"
+  },
+  "SEQUENCE": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "SEQUENCE OF": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "SET": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "SET OF": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "CHOICE": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "OPTIONAL": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "DEFAULT": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "IMPLICIT": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "EXPLICIT": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "ANY": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "ANY DEFINED BY": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "EXTERNAL": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no EXTERNAL type (src/asn1_types)"
+  },
+  "EMBEDDED PDV": {
+   "status": "supported",
+   "source": "asn1-rs 0.7.2, hand-written types in harness/rust/asn1rs-runner/src/main.rs, DER (FromDer); schemas compile and accept vectors decode"
+  },
+  "CHARACTER STRING": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no CHARACTER STRING type (src/asn1_types)"
+  },
+  "SIZE": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no constraint support (no schema compiler; derive has no size attribute)"
+  },
+  "value-constraint": {
+   "status": "unsupported",
+   "source": "asn1-rs 0.7.2 has no constraint support (no schema compiler; derive has no range attribute)"
+  },
+  "policy.oid-arc-bound": {
+   "status": "supported",
+   "source": "asn1-rs Oid arcs are arbitrary-length; differences are classified 'policy'"
+  }
+ }
+}

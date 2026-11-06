@@ -19,8 +19,8 @@ let generate_defaultable_item (item : gen_decorated_parser_twin) :
   | (| _, _, dk |) -> match dk with
                        | ASN1_PLAIN_ILC k -> None
                        | ASN1_OPTION_ILC k -> Some (None #(asn1_t k)) 
-                       | ASN1_DEFAULT_TERMINAL id #k defv -> Some (Default #(asn1_terminal_t k) #defv)
-                       | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k is_valid defv -> Some (Default #(asn1_decorated_pure_t (Mkgendcparser?.d item)) #defv)
+                       | ASN1_DEFAULT_TERMINAL id #k defv -> Some (Default #(asn1_terminal_t k) #(key_of_lit k defv))
+                       | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv -> Some (Default #(asn1_decorated_pure_t (Mkgendcparser?.d item)) #(key_of_lit k defv))
 
 let rec generate_defaultable_items (itemtwins : list (gen_decorated_parser_twin)) :
   Tot (option (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins)))
@@ -44,16 +44,16 @@ let parse_asn1_sequence_item_twin (item : gen_decorated_parser_twin) :
          match dk with
            | ASN1_PLAIN_ILC _ -> fun id -> (fp id)
            | ASN1_OPTION_ILC _ -> fun id -> ((fp id) `parse_synth` (Some))
-           | ASN1_DEFAULT_TERMINAL _ defaultv -> fun id ->
+           | ASN1_DEFAULT_TERMINAL _ #k defaultv_l -> let defaultv = key_of_lit k defaultv_l in fun id ->
                     (((fp id)
                     `parse_filter`
                     (defaultv_filter defaultv))
                     `parse_synth`
                     (defaultv_synth defaultv))
-           | ASN1_DEFAULT_RESTRICTED_TERMINAL _ is_valid defaultv -> fun id ->
+           | ASN1_DEFAULT_RESTRICTED_TERMINAL _ #k r defaultv_l -> let defaultv : parse_filter_refine (restriction_pred r) = key_of_lit k defaultv_l in fun id ->
                     ((((fp id)
                     `parse_filter`
-                    is_valid)
+                    (restriction_pred r))
                     `parse_filter`
                     (defaultv_filter #(asn1_decorated_pure_t d) defaultv))
                     `parse_synth`
@@ -80,19 +80,21 @@ let parse_asn1_sequence_item_twin_nondefault
            | Some (v, _) -> 
              let _ = parse_synth_eq (fp id) (Some) input in
              ())
-        | ASN1_DEFAULT_TERMINAL _ defaultv ->
+        | ASN1_DEFAULT_TERMINAL _ #k_dl defaultv_l ->
+          let defaultv = key_of_lit k_dl defaultv_l in
           let defv = generate_defaultable_item item in
           (match parse p input with
            | None -> ()
            | Some (v, _) -> 
              let _ = parse_synth_eq ((fp id) `parse_filter` (defaultv_filter defaultv)) (defaultv_synth defaultv) input in
              ())
-        | ASN1_DEFAULT_RESTRICTED_TERMINAL _ is_valid defaultv ->
+        | ASN1_DEFAULT_RESTRICTED_TERMINAL _ #k_dl r defaultv_l ->
+          let defaultv : parse_filter_refine (restriction_pred r) = key_of_lit k_dl defaultv_l in
           let defv = generate_defaultable_item item in
           (match parse p input with
            | None -> ()
            | Some (v, _) -> 
-             let _ = parse_synth_eq (((fp id) `parse_filter` is_valid) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defaultv)) (defaultv_synth  #(asn1_decorated_pure_t d) defaultv) input in
+             let _ = parse_synth_eq (((fp id) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defaultv)) (defaultv_synth  #(asn1_decorated_pure_t d) defaultv) input in
              ())
 
 
@@ -165,7 +167,8 @@ let parse_asn1_sequence_item_twin_cases_injective
               parse_synth_eq (fp id2) (Some) b2;
               and_then_cases_injective_elim fp id1 id2 b1 b2
           )
-        | ASN1_DEFAULT_TERMINAL _ defaultv ->
+        | ASN1_DEFAULT_TERMINAL _ #k_dl defaultv_l ->
+          let defaultv = key_of_lit k_dl defaultv_l in
           let p = parse_asn1_sequence_item_twin item in
           and_then_cases_injective_intro p (
             fun id1 id2 b1 b2 ->
@@ -175,16 +178,17 @@ let parse_asn1_sequence_item_twin_cases_injective
               parse_filter_eq (fp id2) (defaultv_filter defaultv) b2;
               and_then_cases_injective_elim fp id1 id2 b1 b2
           )
-        | ASN1_DEFAULT_RESTRICTED_TERMINAL _ is_valid defaultv ->
+        | ASN1_DEFAULT_RESTRICTED_TERMINAL _ #k_dl r defaultv_l ->
+          let defaultv : parse_filter_refine (restriction_pred r) = key_of_lit k_dl defaultv_l in
           let p = parse_asn1_sequence_item_twin item in
           and_then_cases_injective_intro p (
             fun id1 id2 b1 b2 ->
-              parse_synth_eq (((fp id1) `parse_filter` is_valid) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defaultv)) (defaultv_synth #(asn1_decorated_pure_t d) defaultv) b1;
-              parse_synth_eq (((fp id2) `parse_filter` is_valid) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defaultv)) (defaultv_synth #(asn1_decorated_pure_t d) defaultv) b2;
-              parse_filter_eq ((fp id1) `parse_filter` is_valid) (defaultv_filter #(asn1_decorated_pure_t d) defaultv) b1;
-              parse_filter_eq ((fp id2) `parse_filter` is_valid) (defaultv_filter #(asn1_decorated_pure_t d) defaultv) b2;
-              parse_filter_eq (fp id1) is_valid b1;
-              parse_filter_eq (fp id2) is_valid b2;
+              parse_synth_eq (((fp id1) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defaultv)) (defaultv_synth #(asn1_decorated_pure_t d) defaultv) b1;
+              parse_synth_eq (((fp id2) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter #(asn1_decorated_pure_t d) defaultv)) (defaultv_synth #(asn1_decorated_pure_t d) defaultv) b2;
+              parse_filter_eq ((fp id1) `parse_filter` (restriction_pred r)) (defaultv_filter #(asn1_decorated_pure_t d) defaultv) b1;
+              parse_filter_eq ((fp id2) `parse_filter` (restriction_pred r)) (defaultv_filter #(asn1_decorated_pure_t d) defaultv) b2;
+              parse_filter_eq (fp id1) (restriction_pred r) b1;
+              parse_filter_eq (fp id2) (restriction_pred r) b2;
               and_then_cases_injective_elim fp id1 id2 b1 b2
           )
   
