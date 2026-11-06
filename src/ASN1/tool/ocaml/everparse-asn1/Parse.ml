@@ -16,7 +16,7 @@ let show = function
   | RBRACKET -> "]" | COMMA -> "," | DOTDOT -> ".." | ELLIPSIS -> "..."
   | BAR -> "|" | MINUS -> "-" | SEMI -> ";" | DOT -> "." | LT -> "<" | COLON -> ":"
   | CSTRING s -> "\"" ^ s ^ "\"" | BSTRING s -> "'" ^ s ^ "'B" | HSTRING s -> "'" ^ s ^ "'H"
-  | AMP s -> "&" ^ s | AT -> "@"
+  | AMP s -> "&" ^ s | AT -> "@" | CARET -> "^"
   | EOF -> "end of file"
 
 let fail st fmt =
@@ -185,7 +185,6 @@ let bound st = match peek st with
    or WITH COMPONENT(S) *)
 let rec constr_body st =
   match peek st with
-  | ID "SIZE" -> advance st; expect st LPAREN; let c = constr_body st in expect st RPAREN; CSize c
   | ID "CONTAINING" ->
     advance st;
     let t = typ st in
@@ -237,29 +236,49 @@ let rec constr_body st =
     in
     CTable (set, key)
   | _ ->
-    let elt () =
-      let lo = bound st in
-      let lo = if peek st = LT then (advance st; Open lo) else lo in
-      if peek st = DOTDOT then begin
-        advance st;
-        let hi = if peek st = LT then (advance st; Open (bound st)) else bound st in
-        CRange (lo, hi)
-      end else match lo with
-        | Min | Max -> fail st "MIN/MAX outside of a range"
-        | Open _ -> fail st "expected '..'"
-        | b -> CSingle [b]
-    in
-    let rec more acc = if peek st = BAR then (advance st; more (elt () :: acc)) else List.rev acc in
-    let es = more [elt ()] in
+    let c = element_set st in
     if peek st = COMMA then fail st "extensible constraints are not supported";
-    if peek st = ID "UNION" || peek st = ID "INTERSECTION" || peek st = ID "EXCEPT" || peek st = ID "ALL" then
-      fail st "UNION, INTERSECTION, EXCEPT and ALL are not supported";
-    begin match es with
+    c
+
+(* X.680 50: ALL EXCEPT e | e1 UNION e2 ^ e3 EXCEPT e4 ..., with the
+   precedence EXCEPT > INTERSECTION > UNION *)
+and element_set st =
+  if kw st "ALL" then (expect_kw st "EXCEPT"; CAll (elements st))
+  else begin
+    let rec go acc =
+      if peek st = BAR || peek st = ID "UNION" then (advance st; go (intersections st :: acc)) else List.rev acc in
+    match go [intersections st] with
     | [e] -> e
-    | _ when List.for_all (function CSingle _ -> true | _ -> false) es ->
+    | es when List.for_all (function CSingle _ -> true | _ -> false) es ->
       CSingle (List.concat_map (function CSingle l -> l | _ -> []) es)
-    | _ -> CUnion es
-    end
+    | es -> CUnion es
+  end
+
+and intersections st =
+  let elems () = let e = elements st in if kw st "EXCEPT" then CExcept (e, elements st) else e in
+  let rec go acc =
+    if peek st = CARET || peek st = ID "INTERSECTION" then (advance st; go (elems () :: acc)) else List.rev acc in
+  match go [elems ()] with
+  | [e] -> e
+  | es -> CInter es
+
+and elements st =
+  match peek st with
+  | LPAREN -> advance st; let c = element_set st in expect st RPAREN; c
+  | ID "SIZE" -> advance st; expect st LPAREN; let c = element_set st in expect st RPAREN; CSize c
+  | ID ("FROM" | "PATTERN" | "INCLUDES" as k) -> fail st "%s constraints are not supported" k
+  | ID ("CONTAINING" | "WITH") | LBRACE -> fail st "this constraint is not supported in a set operation"
+  | _ ->
+    let lo = bound st in
+    let lo = if peek st = LT then (advance st; Open lo) else lo in
+    if peek st = DOTDOT then begin
+      advance st;
+      let hi = if peek st = LT then (advance st; Open (bound st)) else bound st in
+      CRange (lo, hi)
+    end else match lo with
+      | Min | Max -> fail st "MIN/MAX outside of a range"
+      | Open _ -> fail st "expected '..'"
+      | b -> CSingle [b]
 
 and constr st = expect st LPAREN; let c = constr_body st in expect st RPAREN; c
 

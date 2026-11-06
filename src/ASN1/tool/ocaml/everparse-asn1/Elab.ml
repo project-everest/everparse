@@ -485,6 +485,9 @@ let rec norm_constr env (c: constr) : constr =
     CRange (lo, hi)
   | CSingle l -> CSingle (List.map b l)
   | CUnion l -> CUnion (List.map (norm_constr env) l)
+  | CInter l -> CInter (List.map (norm_constr env) l)
+  | CExcept (a, b) -> CExcept (norm_constr env a, norm_constr env b)
+  | CAll a -> CAll (norm_constr env a)
   | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> c
 
 (* A union of INTEGER ranges and values, as sorted disjoint intervals
@@ -514,6 +517,118 @@ let union_intervals (where: string) (es: constr list) : (int option * int option
     | l -> l
   in
   merge ivs
+
+(* Set operations (X.680 50) on sorted disjoint intervals *)
+let rec merge_ivs = function
+  | (l1, h1) :: (l2, h2) :: q ->
+    let adjacent = match h1, l2 with
+      | None, _ | _, None -> true
+      | Some h, Some l -> l <= h + 1
+    in
+    if adjacent then
+      let h = match h1, h2 with None, _ | _, None -> None | Some a, Some b -> Some (max a b) in
+      merge_ivs ((l1, h) :: q)
+    else (l1, h1) :: merge_ivs ((l2, h2) :: q)
+  | l -> l
+
+let union_ivs ivs =
+  let cmp_lo a b = match a, b with
+    | None, None -> 0 | None, _ -> -1 | _, None -> 1 | Some x, Some y -> compare x y in
+  merge_ivs (List.sort (fun (a, _) (b, _) -> cmp_lo a b) ivs)
+
+let complement_ivs ivs =
+  (* start: where the next gap starts (Some None: at -infinity) *)
+  let rec go (start: int option option) = function
+    | [] -> (match start with Some s -> [(s, None)] | None -> [])
+    | (lo, hi) :: q ->
+      let gap = match start, lo with
+        | Some (Some s), Some l -> if s <= l - 1 then [(Some s, Some (l - 1))] else []
+        | Some None, Some l -> [(None, Some (l - 1))]
+        | _ -> []
+      in
+      gap @ (match hi with None -> [] | Some h -> go (Some (Some (h + 1))) q)
+  in
+  go (Some None) ivs
+
+let inter_ivs a b = complement_ivs (union_ivs (complement_ivs a @ complement_ivs b))
+
+let rec has_set_op = function
+  | CInter _ | CExcept _ | CAll _ -> true
+  | CUnion l -> List.exists (fun c -> has_set_op c || (match c with CUnion _ | CSize _ -> true | _ -> false)) l
+  | CSize c -> has_set_op c
+  | _ -> false
+
+(* SIZE (A) op SIZE (B) is SIZE (A op B) *)
+let rec lift_size where (c: constr) : constr =
+  let parts l =
+    let l = List.map (lift_size where) l in
+    if List.for_all (function CSize _ -> true | _ -> false) l then Some (List.map (function CSize x -> x | x -> x) l)
+    else if List.exists (function CSize _ -> true | _ -> false) l then
+      error "%s: SIZE and value constraints cannot be combined" where
+    else None
+  in
+  match c with
+  | CUnion l -> (match parts l with Some xs -> CSize (CUnion xs) | None -> c)
+  | CInter l -> (match parts l with Some xs -> CSize (CInter xs) | None -> c)
+  | CExcept (a, b) -> (match parts [a; b] with Some [x; y] -> CSize (CExcept (x, y)) | _ -> c)
+  | CAll a -> (match lift_size where a with CSize x -> CSize (CAll x) | _ -> c)
+  | _ -> c
+
+let rec eval_ivs where (c: constr) =
+  match c with
+  | CRange (lo, hi) ->
+    let f = function Val v -> Some v | Min | Max -> None | _ -> error "%s: bad constraint" where in
+    [(f lo, f hi)]
+  | CSingle l -> union_ivs (List.map (function Val v -> (Some v, Some v) | _ -> error "%s: bad constraint" where) l)
+  | CUnion l -> union_ivs (List.concat_map (eval_ivs where) l)
+  | CInter (a :: l) -> List.fold_left (fun acc c -> inter_ivs acc (eval_ivs where c)) (eval_ivs where a) l
+  | CExcept (a, b) -> inter_ivs (eval_ivs where a) (complement_ivs (eval_ivs where b))
+  | CAll a -> complement_ivs (eval_ivs where a)
+  | _ -> error "%s: unsupported constraint in a set operation" where
+
+let of_ivs where ivs =
+  let b d = function Some v -> Val v | None -> d in
+  match ivs with
+  | [] -> error "%s: the constraint admits no value" where
+  | [(lo, hi)] -> CRange (b Min lo, b Max hi)
+  | l -> CUnion (List.map (fun (lo, hi) -> CRange (b Min lo, b Max hi)) l)
+
+(* Evaluate the set operations of a (normalized) constraint into a range,
+   a union of ranges, or a set of BOOLEAN values *)
+let eval_constr where (c: constr) : constr =
+  if not (has_set_op c) then c else
+  match lift_size where c with
+  | CSize x -> CSize (of_ivs where (inter_ivs (eval_ivs where x) [(Some 0, None)]))
+  | c ->
+    let bools = ref false in
+    let bb = function
+      | BBool v -> bools := true; Val (if v then 1 else 0)
+      | b -> b
+    in
+    let rec m = function
+      | CRange (lo, hi) -> CRange (bb lo, bb hi)
+      | CSingle l -> CSingle (List.map bb l)
+      | CUnion l -> CUnion (List.map m l)
+      | CInter l -> CInter (List.map m l)
+      | CExcept (a, b) -> CExcept (m a, m b)
+      | CAll a -> CAll (m a)
+      | c -> c
+    in
+    let c = m c in
+    if !bools then
+      match inter_ivs (eval_ivs where c) [(Some 0, Some 1)] with
+      | [] -> error "%s: the constraint admits no value" where
+      | ivs -> CSingle (List.concat_map (function
+          | Some lo, Some hi -> List.init (hi - lo + 1) (fun i -> BBool (lo + i = 1))
+          | _ -> []) ivs)
+    else of_ivs where (eval_ivs where c)
+
+let rec value_constr = function
+  | CRange _ | CSingle _ -> true
+  | CSize c | CAll c -> value_constr c
+  | CUnion l | CInter l -> List.for_all value_constr l
+  | CExcept (a, b) -> value_constr a && value_constr b
+  | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> false
 
 (* The KEEP-BYTES definition whose bytes the values of `r` keep, if any *)
 let rec keep_target env (r: string) : string option =
@@ -709,7 +824,7 @@ and node env (ctx: string) (t: typ) : node =
   | TAnyDefinedBy _ -> NAny (* with no DEFINED-BY table *)
   | TSequenceOf (c, t') | TSetOf (c, t') ->
     let set = (match t with TSetOf _ -> true | _ -> false) in
-    let c = Option.map (norm_constr env) c in
+    let c = Option.map (fun c -> eval_constr ctx (norm_constr env c)) c in
     let ne = match c with
       | None -> false
       | Some (CSize (CRange (Val 1, Max))) -> true
@@ -744,6 +859,22 @@ and node env (ctx: string) (t: typ) : node =
       end
     | _ -> NILC ({ cls; num; cons = true }, CPrefixed inner)  (* X.680 31.2.7 *)
     end
+  | TConstrained (TConstrained (t'', c1), c2) when value_constr c1 && value_constr c2 ->
+    (* serial constraints: their intersection *)
+    node env ctx (TConstrained (t'', CInter [c1; c2]))
+  | TConstrained (TRef r, c2) when value_constr c2
+                                && (match Hashtbl.find_opt env.types (mangle r), c2 with
+                                    | Some (TConstrained (_, c1)), _ -> value_constr c1
+                                    | Some (TSequenceOf _ | TSetOf _), CSize _ -> true
+                                    | _ -> false)
+                                && Hashtbl.find_opt env.type_td (mangle r) = Some env.td ->
+    (* a constrained reference to a constrained type, or to a SEQUENCE OF *)
+    (match Hashtbl.find env.types (mangle r) with
+     | TConstrained (t'', c1) -> node env ctx (TConstrained (t'', CInter [c1; c2]))
+     | t'' -> node env ctx (TConstrained (t'', c2)))
+  | TConstrained ((TSequenceOf (c1, e) | TSetOf (c1, e)) as t', (CSize _ as c2)) ->
+    let c = match c1 with None -> c2 | Some c1 -> CInter [c1; c2] in
+    node env ctx (match t' with TSetOf _ -> TSetOf (Some c, e) | _ -> TSequenceOf (Some c, e))
   | TConstrained (t', ((CWithComponent _ | CWithComponents _) as c)) ->
     let t'', td = with_inner env ctx t' c in
     let saved = env.td in
@@ -759,7 +890,7 @@ and node env (ctx: string) (t: typ) : node =
     | _ -> error "%s: CONTAINING is supported on OCTET STRING only" ctx
     end
   | TConstrained (t', c) ->
-    let c = norm_constr env c in
+    let c = eval_constr ctx (norm_constr env c) in
     let inner = node env ctx t' in
     begin match resolve_struct env inner, c with
     | Some (id, CTerm (tm, None)), _ when tm.ibound <> None ->
@@ -789,7 +920,8 @@ and node env (ctx: string) (t: typ) : node =
             error "%s: a union of ranges must be a single range, or have at most %d values" ctx max_values;
           NILC (id, CTerm (small_integer_term, Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
         end
-      | CSize _ | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> error "%s: unsupported constraint on INTEGER" ctx
+      | CSize _ | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _
+      | CInter _ | CExcept _ | CAll _ -> error "%s: unsupported constraint on INTEGER" ctx
       end
     | Some (id, CTerm ({ tk = "ASN1_BOOLEAN"; _ } as tm, None)), CSingle bs ->
       let vs = List.sort_uniq compare (List.map (function
@@ -1036,7 +1168,9 @@ and constr_refs (c: constr) : string list =
   match c with
   | CContaining t -> refs t
   | CSize c | CWithComponent c -> constr_refs c
-  | CUnion l -> List.concat_map constr_refs l
+  | CUnion l | CInter l -> List.concat_map constr_refs l
+  | CExcept (a, b) -> constr_refs a @ constr_refs b
+  | CAll a -> constr_refs a
   | CWithComponents (_, l) -> List.concat_map (fun (_, c, _) -> match c with Some c -> constr_refs c | None -> []) l
   | CTable _ | CRange _ | CSingle _ -> []
 
@@ -1098,6 +1232,9 @@ let expand_params (ms: modul list) : modul list =
     match c with
     | CSize c -> CSize (constr depth c)
     | CUnion l -> CUnion (List.map (constr depth) l)
+    | CInter l -> CInter (List.map (constr depth) l)
+    | CExcept (a, b) -> CExcept (constr depth a, constr depth b)
+    | CAll a -> CAll (constr depth a)
     | CContaining t -> CContaining (typ depth t)
     | CWithComponent c -> CWithComponent (constr depth c)
     | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, c, pr) -> (n, Option.map (constr depth) c, pr)) l)
@@ -1162,6 +1299,9 @@ let expand_params (ms: modul list) : modul list =
       | CRange (lo, hi) -> CRange (b lo, b hi)
       | CSingle l -> CSingle (List.map b l)
       | CUnion l -> CUnion (List.map c l)
+      | CInter l -> CInter (List.map c l)
+      | CExcept (x, y) -> CExcept (c x, c y)
+      | CAll x -> CAll (c x)
       | CContaining t -> CContaining (go t)
       | CWithComponent k -> CWithComponent (c k)
       | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, k, pr) -> (n, Option.map c k, pr)) l)
@@ -1340,6 +1480,9 @@ let resolve_ioc (ms: modul list) : modul list =
     match c with
     | CSize c -> CSize (strip_c c)
     | CUnion l -> CUnion (List.map strip_c l)
+    | CInter l -> CInter (List.map strip_c l)
+    | CExcept (a, b) -> CExcept (strip_c a, strip_c b)
+    | CAll a -> CAll (strip_c a)
     | CContaining t -> CContaining (strip t)
     | CWithComponent c -> CWithComponent (strip_c c)
     | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, c, pr) -> (n, Option.map strip_c c, pr)) l)

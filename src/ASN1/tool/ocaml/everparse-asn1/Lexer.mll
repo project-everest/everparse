@@ -10,6 +10,7 @@ type token =
   | COMMA | DOTDOT | ELLIPSIS | BAR | MINUS | SEMI | DOT | LT | COLON
   | AMP of string         (* &field: a field of an information object class *)
   | AT                    (* @ *)
+  | CARET                 (* ^ *)
   | EOF
 
 exception Lex_error of string
@@ -63,7 +64,7 @@ rule token = parse
       | _ -> raise (Lex_error (Printf.sprintf "line %d: number too large: %s" !line n)) }
   | ident as s { ID s }
   | '&' (ident as s) { AMP s }
-  | '@' { AT }
+  | '@' { AT } | '^' { CARET }
   | eof { EOF }
   | _ as c { raise (Lex_error (Printf.sprintf "line %d: unexpected character '%c'" !line c)) }
 

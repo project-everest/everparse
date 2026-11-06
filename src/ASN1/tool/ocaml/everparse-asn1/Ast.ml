@@ -46,7 +46,10 @@ type constr =
   | CSize of constr                    (* SIZE (...) *)
   | CRange of bound * bound            (* lo .. hi *)
   | CSingle of bound list              (* v1 | v2 | ... *)
-  | CUnion of constr list              (* unions of ranges and values: CRange or CSingle *)
+  | CUnion of constr list              (* unions (| or UNION) *)
+  | CInter of constr list              (* intersections (^ or INTERSECTION), and serial constraints T (C1) (C2) *)
+  | CExcept of constr * constr         (* C1 EXCEPT C2 *)
+  | CAll of constr                     (* ALL EXCEPT C *)
   | CContaining of typ                 (* CONTAINING T (X.682 11) *)
   | CWithComponent of constr           (* WITH COMPONENT (c): on the elements of a SEQUENCE OF / SET OF *)
   | CWithComponents of bool * (string * constr option * presence option) list
