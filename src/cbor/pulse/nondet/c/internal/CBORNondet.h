@@ -66,6 +66,62 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
 
 bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbor_raw x2);
 
+typedef struct CBOR_Spec_Raw_Hash_sip_s
+{
+  uint64_t v0;
+  uint64_t v1;
+  uint64_t v2;
+  uint64_t v3;
+  uint64_t nw;
+}
+CBOR_Spec_Raw_Hash_sip;
+
+CBOR_Spec_Raw_Hash_sip
+CBOR_Pulse_Raw_EverParse_DupCheck_hash_items(
+  CBOR_Pulse_Raw_Slice_byte_slice b,
+  uint64_t k0,
+  uint64_t k1,
+  CBOR_Spec_Raw_Hash_sip st0,
+  size_t o0,
+  size_t c0,
+  size_t *pout
+);
+
+typedef struct Pulse_Lib_Slice_slice__size_t_s
+{
+  size_t *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__size_t;
+
+int16_t
+CBOR_Pulse_Raw_EverParse_DupCheck_cmp_one(
+  CBOR_Pulse_Raw_Slice_byte_slice b,
+  Pulse_Lib_Slice_slice__size_t sc,
+  size_t x,
+  size_t y
+);
+
+typedef struct Pulse_Lib_Slice_slice__uint64_t_s
+{
+  uint64_t *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__uint64_t;
+
+bool
+CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
+  CBOR_Pulse_Raw_Slice_byte_slice b,
+  Pulse_Lib_Slice_slice__size_t sc,
+  uint64_t k0,
+  uint64_t k1,
+  Pulse_Lib_Slice_slice__uint64_t hv,
+  Pulse_Lib_Slice_slice__size_t idx,
+  size_t o0,
+  size_t c0,
+  size_t *pout
+);
+
 #if defined(__cplusplus)
 }
 #endif

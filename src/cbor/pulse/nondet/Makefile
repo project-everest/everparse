@@ -30,8 +30,14 @@ endif
 # rather than next to the C sources (see snapshot.Makefile).
 header_dir := $(local_everparse_home)/include/everparse
 
+# The extracted headers that are part of the public API; any other extracted
+# header stays next to the C sources (see snapshot.Makefile.) Hand-written
+# public headers (e.g. CBORNondetHashRandom.h) live in include/everparse
+# directly; the list of installed headers is in install.Makefile.
+c.snapshot c.test-snapshot: PUBLIC_HEADERS := CBORNondet.h CBORNondetType.h
+
 %.snapshot:
-	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) header_dir=$(header_dir) $(subst .,,$(suffix $@))
+	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) header_dir=$(header_dir) PUBLIC_HEADERS='$(PUBLIC_HEADERS)' $(subst .,,$(suffix $@))
 	+$(MAKE) $(basename $@).do
 
 .PHONY: %.snapshot snapshot
@@ -42,7 +48,7 @@ c.test-snapshot: target_dir=../c
 test-snapshot: c.test-snapshot
 
 %.test-snapshot:
-	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) header_dir=$(header_dir) $(subst .,,$(suffix $@))
+	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) header_dir=$(header_dir) PUBLIC_HEADERS='$(PUBLIC_HEADERS)' $(subst .,,$(suffix $@))
 
 .PHONY: %.test-snapshot test-snapshot
 

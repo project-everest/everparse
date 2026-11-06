@@ -37,6 +37,63 @@ val cbor_nondet_parse_map_length_bounded (_: unit) : cbor_nondet_parse_map_lengt
    either bound is exceeded. *)
 val cbor_nondet_parse_bounded (_: unit) : cbor_nondet_parse_bounded_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
 
+(* Returns true if and only if 3 * map_length_bound * map_depth_bound
+   <= scratch_len, without overflow. *)
+val cbor_nondet_bounded_sort_scratch_ok
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+: Tot (res: bool { res == CBOR.Pulse.API.Base.cbor_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len })
+
+(* Like cbor_nondet_parse_bounded, but map key duplicate checking is
+   performed by sorting map keys in the caller-provided scratch space,
+   so that validation takes O(L log N) memory accesses per map nesting
+   level (where L is the input length and N is map_length_bound),
+   without any allocation. The scratch space must hold at least
+   3 * map_length_bound * map_depth_bound elements (see
+   cbor_nondet_bounded_sort_scratch_ok); otherwise, parsing fails. The
+   contents of the scratch space are unspecified upon return. scratch
+   must not be NULL, and must point to at least scratch_len elements. *)
+val cbor_nondet_parse_bounded_sort (_: unit) : cbor_nondet_parse_bounded_sort_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
+
+(* Returns true if and only if
+   3 * map_length_bound * map_depth_bound + map_length_bound <= scratch_len
+   and map_length_bound <= hash_scratch_len, without overflow. *)
+val cbor_nondet_bounded_hash_scratch_ok
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+  (hash_scratch_len: SZ.t)
+: Tot (res: bool { res == CBOR.Pulse.API.Base.cbor_nondet_bounded_hash_scratch_ok map_depth_bound map_length_bound scratch_len hash_scratch_len })
+
+(* Like cbor_nondet_parse_bounded_sort, but the keys of each map are
+   sorted by their keyed SipHash-1-3 hash under the key (k0, k1) first,
+   and compared with the CBOR canonical order only when their hashes
+   are equal. With a secret random key, adversarial inputs cannot
+   predictably cause hash collisions, so that key comparisons mostly
+   reduce to 64-bit integer comparisons. Correctness does not depend on
+   the key. The scratch space must hold at least
+   3 * map_length_bound * map_depth_bound + map_length_bound elements,
+   and the hash scratch space at least map_length_bound elements (see
+   cbor_nondet_bounded_hash_scratch_ok); otherwise, parsing fails. The
+   contents of both scratch spaces are unspecified upon return. Neither
+   scratch nor hash_scratch may be NULL. *)
+val cbor_nondet_parse_bounded_hash (_: unit) : cbor_nondet_parse_bounded_hash_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
+
+(* Like cbor_nondet_parse_bounded_sort, but the scratch space is
+   allocated on the heap (with malloc, through the trusted
+   CBOR.Pulse.API.Nondet.C.Alloc, implemented in CBORNondetAlloc.h)
+   once per call, and freed before returning. Parsing may also fail
+   because the scratch space size overflows or its allocation fails,
+   so only success is specified: if parsing succeeds, then the CBOR
+   object meets both bounds. *)
+val cbor_nondet_parse_bounded_sort_alloc (_: unit) : cbor_nondet_parse_bounded_sort_alloc_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
+
+(* Like cbor_nondet_parse_bounded_hash, but both scratch spaces are
+   allocated on the heap once per call, and freed before returning (see
+   cbor_nondet_parse_bounded_sort_alloc.) *)
+val cbor_nondet_parse_bounded_hash_alloc (_: unit) : cbor_nondet_parse_bounded_hash_alloc_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
+
 val cbor_nondet_match_with_size
   (size: nat)
   (p: perm)
