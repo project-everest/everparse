@@ -45,6 +45,14 @@ fn parse_bounded_sort()
     assert!(cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input[..4]).is_none());
     assert!(cbor_nondet_parse_bounded_sort(0, 0, &mut [], &[0x00]).is_some());
 
+    // the same scratch can be reused while earlier results are alive
+    {
+        let (o1, _) = cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input).unwrap();
+        let (o2, _) = cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input).unwrap();
+        scratch[0] = 0;
+        assert!(cbor_nondet_equal(o1, o2));
+    }
+
     // {0: 1, 0: 2}: duplicate keys
     let dup = [0xa2, 0x00, 0x01, 0x00, 0x02];
     assert!(cbor_nondet_parse_bounded_sort(1, 2, &mut scratch, &dup).is_none());
@@ -87,6 +95,13 @@ fn parse_bounded_hash()
         assert!(cbor_nondet_parse_bounded_hash(1, 1, k0, k1, &mut scratch, &mut hscratch, &input).is_none());
         assert!(cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut hscratch, &input[..4]).is_none());
         assert!(cbor_nondet_parse_bounded_hash(0, 0, k0, k1, &mut [], &mut [], &[0x00]).is_some());
+        {
+            let (o1, _) = cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
+            let (o2, _) = cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
+            scratch[0] = 0;
+            hscratch[0] = 0;
+            assert!(cbor_nondet_equal(o1, o2));
+        }
         let dup = [0xa2, 0x00, 0x01, 0x00, 0x02];
         assert!(cbor_nondet_parse_bounded_hash(1, 2, k0, k1, &mut scratch, &mut hscratch, &dup).is_none());
         let ok = [0xa2, 0x00, 0x01, 0x01, 0x02];

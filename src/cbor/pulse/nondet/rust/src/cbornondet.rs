@@ -119,24 +119,33 @@ pub fn cbor_nondet_bounded_sort_scratch_ok(
 /// `scratch` slice instead of quadratic pairwise comparisons. `scratch`
 /// must satisfy [`cbor_nondet_bounded_sort_scratch_ok`], otherwise this
 /// function returns `None`. This function allocates nothing.
-///
-/// Limitation: `scratch` stays mutably borrowed for as long as the
-/// returned object lives.
+/// `scratch` is only borrowed for the duration of the call: the
+/// returned object only borrows from `input`.
 pub fn cbor_nondet_parse_bounded_sort<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
-    scratch: &'a mut [usize],
+    scratch: &mut [usize],
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {
-    match crate::cbornondetver::cbor_nondet_parse_bounded_sort(
+    // This is the verified crate::cbornondetver::cbor_nondet_parse_bounded_sort
+    // (CBOR.Pulse.API.Base.cbor_nondet_parse_bounded_sort, instantiated in
+    // CBOR.Pulse.API.Nondet.Rust), redone by hand calling the same verified
+    // validator and parser. Karamel gives the same lifetime to all
+    // reference arguments of a function returning a borrow, so the
+    // extracted version requires `scratch` to outlive the result, although
+    // the result only borrows from `input`.
+    let len = crate::cbornondetveraux::cbor_nondet_validate_bounded_sort(
         map_depth_bound,
         map_length_bound,
         scratch,
         input,
-    ) {
-        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
-        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    );
+    if len == 0 {
+        None
+    } else {
+        let (inl, inr) = input.split_at(len);
+        Some((crate::cbornondetveraux::cbor_nondet_parse_valid(inl, len), inr))
     }
 }
 
@@ -166,21 +175,22 @@ pub fn cbor_nondet_bounded_hash_scratch_ok(
 /// [`cbor_nondet_parse_bounded_hash_random`].) `scratch` and
 /// `hash_scratch` must satisfy [`cbor_nondet_bounded_hash_scratch_ok`],
 /// otherwise this function returns `None`. This function allocates
-/// nothing.
-///
-/// Limitation: `scratch` and `hash_scratch` stay mutably borrowed for
-/// as long as the returned object lives.
+/// nothing. `scratch` and `hash_scratch` are only borrowed for the
+/// duration of the call: the returned object only borrows from `input`.
 pub fn cbor_nondet_parse_bounded_hash<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
     k0: u64,
     k1: u64,
-    scratch: &'a mut [usize],
-    hash_scratch: &'a mut [u64],
+    scratch: &mut [usize],
+    hash_scratch: &mut [u64],
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {
-    match crate::cbornondetver::cbor_nondet_parse_bounded_hash(
+    // This is the verified crate::cbornondetver::cbor_nondet_parse_bounded_hash
+    // (CBOR.Pulse.API.Base.cbor_nondet_parse_bounded_hash), redone by hand
+    // for the same lifetime reason as in cbor_nondet_parse_bounded_sort.
+    let len = crate::cbornondetveraux::cbor_nondet_validate_bounded_hash(
         map_depth_bound,
         map_length_bound,
         k0,
@@ -188,9 +198,12 @@ pub fn cbor_nondet_parse_bounded_hash<'a>(
         scratch,
         hash_scratch,
         input,
-    ) {
-        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
-        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    );
+    if len == 0 {
+        None
+    } else {
+        let (inl, inr) = input.split_at(len);
+        Some((crate::cbornondetveraux::cbor_nondet_parse_valid(inl, len), inr))
     }
 }
 
@@ -215,8 +228,8 @@ pub fn cbor_nondet_random_hash_key() -> (u64, u64)
 pub fn cbor_nondet_parse_bounded_hash_random<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
-    scratch: &'a mut [usize],
-    hash_scratch: &'a mut [u64],
+    scratch: &mut [usize],
+    hash_scratch: &mut [u64],
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {

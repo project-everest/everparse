@@ -6859,7 +6859,7 @@ fn cbor_nondet_validate(map_key_bound: option__size_t, strict_check: bool, input
     usize
 { cbor_validate_nondet(map_key_bound, strict_check, input) }
 
-fn cbor_nondet_parse_valid <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
+pub(crate) fn cbor_nondet_parse_valid <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
 { cbor_parse(input, len) }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -6971,7 +6971,7 @@ pub(crate) fn cbor_nondet_bounded_sort_scratch_ok_impl(
     )
 }
 
-fn cbor_nondet_validate_bounded_sort(
+pub(crate) fn cbor_nondet_validate_bounded_sort(
     map_depth_bound: usize,
     map_length_bound: usize,
     scratch: &mut [usize],
@@ -6979,30 +6979,6 @@ fn cbor_nondet_validate_bounded_sort(
 ) ->
     usize
 { cbor_validate_nondet_bounded_sort(map_depth_bound, map_length_bound, input, scratch) }
-
-pub(crate) fn cbor_nondet_parse_bounded_sort <'a>(
-    map_depth_bound: usize,
-    map_length_bound: usize,
-    scratch: &'a mut [usize],
-    input: &'a [u8]
-) ->
-    option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-    <'a>
-{
-    let len: usize =
-        cbor_nondet_validate_bounded_sort(map_depth_bound, map_length_bound, scratch, input);
-    if len == 0usize
-    { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
-    else
-    {
-        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
-        let inl: &[u8] = _letpattern.0;
-        let inr: &[u8] = _letpattern.1;
-        let resl: cbor_raw = cbor_nondet_parse_valid(inl, len);
-        option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-        { v: (resl,inr) }
-    }
-}
 
 pub(crate) fn cbor_nondet_bounded_hash_scratch_ok_impl(
     map_depth_bound: usize,
@@ -7020,7 +6996,7 @@ pub(crate) fn cbor_nondet_bounded_hash_scratch_ok_impl(
     )
 }
 
-fn cbor_nondet_validate_bounded_hash(
+pub(crate) fn cbor_nondet_validate_bounded_hash(
     map_depth_bound: usize,
     map_length_bound: usize,
     k0: u64,
@@ -7040,41 +7016,6 @@ fn cbor_nondet_validate_bounded_hash(
         scratch,
         hash_scratch
     )
-}
-
-pub(crate) fn cbor_nondet_parse_bounded_hash <'a>(
-    map_depth_bound: usize,
-    map_length_bound: usize,
-    k0: u64,
-    k1: u64,
-    scratch: &'a mut [usize],
-    hash_scratch: &'a mut [u64],
-    input: &'a [u8]
-) ->
-    option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-    <'a>
-{
-    let len: usize =
-        cbor_nondet_validate_bounded_hash(
-            map_depth_bound,
-            map_length_bound,
-            k0,
-            k1,
-            scratch,
-            hash_scratch,
-            input
-        );
-    if len == 0usize
-    { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
-    else
-    {
-        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
-        let inl: &[u8] = _letpattern.0;
-        let inr: &[u8] = _letpattern.1;
-        let resl: cbor_raw = cbor_nondet_parse_valid(inl, len);
-        option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-        { v: (resl,inr) }
-    }
 }
 
 pub(crate) fn cbor_nondet_size(x: cbor_raw, bound: usize) -> usize { cbor_size(x, bound) }
