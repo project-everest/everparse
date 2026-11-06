@@ -21,6 +21,7 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module I16 = FStar.Int16
 module MS = LowParse.Pulse.MergeSort
+module SP = FStar.Seq.Properties
 module CB = CBOR.Pulse.Raw.Compare.Bytes
 module Trade = Pulse.Lib.Trade.Util
 
@@ -125,6 +126,687 @@ ensures exists* s . pts_to b #p bB ** pts_to ks s ** pure (
   with s o . assert (pts_to ks s ** pts_to po o);
   fill_inv_end bB s (SZ.v o) v m q;
   !po
+}
+
+#pop-options
+
+(* Comparing two byte strings of the same length within the input *)
+
+let same_sign_cb (x y: int) : Lemma
+  (requires CBOR.Pulse.Raw.Compare.Base.same_sign x y)
+  (ensures MS.same_sign x y)
+= ()
+
+fn cmp_str
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (o1 o2 len: SZ.t)
+requires
+  pts_to b #p bB ** pure (
+    SZ.v o1 + SZ.v len <= Seq.length bB /\
+    SZ.v o2 + SZ.v len <= Seq.length bB
+  )
+returns r: I16.t
+ensures
+  pts_to b #p bB ** pure (
+    SZ.v o1 + SZ.v len <= Seq.length bB /\
+    SZ.v o2 + SZ.v len <= Seq.length bB /\
+    MS.same_sign (I16.v r) (CBOR.Spec.Raw.Format.bytes_lex_compare
+      (Seq.slice bB (SZ.v o1) (SZ.v o1 + SZ.v len))
+      (Seq.slice bB (SZ.v o2) (SZ.v o2 + SZ.v len)))
+  )
+{
+  S.pts_to_len b;
+  S.share b;
+  let s1 = Pulse.Lib.Slice.Util.subslice_trade b o1 (SZ.add o1 len);
+  let s2 = Pulse.Lib.Slice.Util.subslice_trade b o2 (SZ.add o2 len);
+  let r = CB.lex_compare_bytes s1 s2;
+  same_sign_cb (I16.v r) (CBOR.Spec.Raw.Format.bytes_lex_compare
+      (Seq.slice bB (SZ.v o1) (SZ.v o1 + SZ.v len))
+      (Seq.slice bB (SZ.v o2) (SZ.v o2 + SZ.v len)));
+  Trade.elim (pts_to s1 #(p /. 2.0R) (Seq.slice bB (SZ.v o1) (SZ.v (SZ.add o1 len)))) (pts_to b #(p /. 2.0R) bB);
+  Trade.elim (pts_to s2 #(p /. 2.0R) (Seq.slice bB (SZ.v o2) (SZ.v (SZ.add o2 len)))) (pts_to b #(p /. 2.0R) bB);
+  S.gather b;
+  r
+}
+
+(* The resources of the comparison: the input and the scratch space *)
+
+let cinv (b: S.slice U8.t) (p: perm) (bB: Ghost.erased bytes) (sc: S.slice SZ.t) : slprop =
+  pts_to b #p bB ** (exists* s . pts_to sc s)
+
+inline_for_extraction
+let rec_cmp_t (b: S.slice U8.t) (p: perm) (bB: Ghost.erased bytes) (n f: Ghost.erased nat) =
+  (sc: S.slice SZ.t) ->
+  MS.impl_cmp_t #SZ.t (cinv b p bB sc) (cmp_pre bB n f (SZ.v (S.len sc))) (key_cmp_g bB)
+
+(* Comparing the sorted entries of two maps, in lockstep *)
+
+let key_cmp_g_eq (b: Ghost.erased bytes) (x y: SZ.t) : Lemma
+  (Ghost.reveal (key_cmp_g b) x y == key_cmp b x y)
+= ()
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn lockstep
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f: Ghost.erased nat)
+  (rec_cmp: rec_cmp_t b p bB n f)
+  (rest: S.slice SZ.t)
+  (ks1 ks2: S.slice SZ.t)
+  (#s1 #s2: Ghost.erased (Seq.seq SZ.t))
+requires
+  cinv b p bB rest ** pts_to ks1 s1 ** pts_to ks2 s2 ** pure (
+    Seq.length s1 == Seq.length s2 /\
+    entries_ok bB n f s1 /\
+    entries_ok bB n f s2 /\
+    SZ.v (S.len rest) >= 3 * n * f
+  )
+returns r: I16.t
+ensures
+  cinv b p bB rest ** pts_to ks1 s1 ** pts_to ks2 s2 ** pure (
+    Seq.length s1 == Seq.length s2 /\
+    MS.same_sign (I16.v r) (cc_entries (entries_of bB s1) (entries_of bB s2))
+  )
+{
+  S.pts_to_len ks1;
+  S.pts_to_len ks2;
+  let k = S.len ks1;
+  let mut pi = 0sz;
+  let mut pr = 0s;
+  cc_entries_init bB s1 s2;
+  while (
+    let i = !pi;
+    let r = !pr;
+    (r = 0s && SZ.lt i k)
+  )
+  invariant exists* i r .
+    cinv b p bB rest ** pts_to ks1 s1 ** pts_to ks2 s2 **
+    pts_to pi i ** pts_to pr r ** pure (
+      SZ.v i <= SZ.v k /\
+      (I16.v r == 0 ==> cc_entries (entries_of bB s1) (entries_of bB s2) ==
+        cc_entries (entries_of bB (Seq.slice s1 (SZ.v i) (SZ.v k))) (entries_of bB (Seq.slice s2 (SZ.v i) (SZ.v k)))) /\
+      (I16.v r <> 0 ==> MS.same_sign (I16.v r) (cc_entries (entries_of bB s1) (entries_of bB s2)))
+    )
+  decreases (SZ.v k - SZ.v !pi)
+  {
+    let i = !pi;
+    let x1 = S.op_Dot_Lparen_Rparen ks1 i;
+    let x2 = S.op_Dot_Lparen_Rparen ks2 i;
+    entries_ok_index bB n f s1 (SZ.v i);
+    entries_ok_index bB n f s2 (SZ.v i);
+    entry_pre_elim bB n f x1;
+    entry_pre_elim bB n f x2;
+    cc_entries_step bB s1 s2 (SZ.v i);
+    key_cmp_g_eq bB x1 x2;
+    let rk = rec_cmp rest x1 x2;
+    if (rk = 0s) {
+      unfold (cinv b p bB rest);
+      items_at_step bB (SZ.v x1) 1 [item_at bB (SZ.v x1)];
+      items_at_step bB (SZ.v x2) 1 [item_at bB (SZ.v x2)];
+      let v1 = jump_raw_data_item () b x1;
+      jump_item_end bB x1 v1;
+      let v2 = jump_raw_data_item () b x2;
+      jump_item_end bB x2 v2;
+      fold (cinv b p bB rest);
+      key_cmp_g_eq bB v1 v2;
+      let rv = rec_cmp rest v1 v2;
+      pr := rv;
+      pi := SZ.add i 1sz;
+    } else {
+      pr := rk;
+      pi := SZ.add i 1sz;
+    }
+  };
+  let r = !pr;
+  with i . assert (pts_to pi i);
+  if (r = 0s) {
+    cc_entries_end bB s1 s2;
+    r
+  } else {
+    r
+  }
+}
+
+#pop-options
+
+(* Comparing two maps with equal heads, by sorting their entries *)
+
+let map_entries (a: raw_data_item) : Tot (list (raw_data_item & raw_data_item)) =
+  match a with
+  | Map _ v -> v
+  | _ -> []
+
+let map_facts (n f: nat) (a: raw_data_item) : Lemma
+  (requires Map? a /\ item_ok n f a)
+  (ensures
+    f >= 1 /\
+    List.Tot.length (map_entries a) <= n /\
+    List.Tot.for_all (item_ok n (f - 1)) (list_of_pair_list (map_entries a)) /\
+    no_cc_dup (List.Tot.map fst (map_entries a)) == true
+  )
+= let Map len v = a in
+  item_ok_map n f len v
+
+let scratch_split (len n f f' k: nat) : Lemma
+  (requires f == f' + 1 /\ len >= 3 * n * f /\ k <= n)
+  (ensures 3 * k <= len /\ len - 3 * k >= 3 * n * f')
+= assert (3 * n * f == 3 * n * f' + 3 * n)
+
+let map_sort_ok
+  (b: bytes) (n f: nat) (a: raw_data_item) (s0 s1: Seq.seq SZ.t) (res: bool)
+: Lemma
+  (requires
+    Map? a /\ item_ok n f a /\
+    offsets_match b s0 (Seq.length s0) (map_entries a) /\
+    Seq.length s0 == List.Tot.length (map_entries a) /\
+    MS.sort_post (key_cmp b) s0 s1 res
+  )
+  (ensures res == true)
+= map_facts n f a;
+  offsets_sort_ok b s0 (map_entries a)
+
+let map_entries_ok
+  (b: bytes) (n f f': nat) (a: raw_data_item) (s: Seq.seq SZ.t)
+: Lemma
+  (requires
+    f == f' + 1 /\
+    Map? a /\ item_ok n f a /\
+    offsets_match b s (Seq.length s) (map_entries a) /\
+    Seq.length s == List.Tot.length (map_entries a) /\
+    (forall (j: nat) . j < Seq.length s ==> entry_struct b (Seq.index s j))
+  )
+  (ensures entries_ok b n f' s)
+= map_facts n f a;
+  fill_entries_ok b n f' s (map_entries a)
+
+[@@"opaque_to_smt"]
+let map_side (b: bytes) (n f: nat) (oh: nat) (a: raw_data_item) (m: nat) (q: list raw_data_item) : prop =
+  Map? a /\ item_ok n f a /\
+  items_at b oh (2 * List.Tot.length (map_entries a) + m) (List.Tot.append (list_of_pair_list (map_entries a)) q)
+
+let map_side_elim (b: bytes) (n f: nat) (oh: nat) (a: raw_data_item) (m: nat) (q: list raw_data_item) : Lemma
+  (requires map_side b n f oh a m q)
+  (ensures
+    Map? a /\ item_ok n f a /\
+    items_at b oh (2 * List.Tot.length (map_entries a) + m) (List.Tot.append (list_of_pair_list (map_entries a)) q))
+= reveal_opaque (`%map_side) (map_side b n f oh a m q)
+
+let map_side_intro (b: bytes) (n f: nat) (oh: nat) (a: raw_data_item) (m: nat) (q: list raw_data_item) : Lemma
+  (requires
+    Map? a /\ item_ok n f a /\
+    items_at b oh (2 * List.Tot.length (map_entries a) + m) (List.Tot.append (list_of_pair_list (map_entries a)) q))
+  (ensures map_side b n f oh a m q)
+= reveal_opaque (`%map_side) (map_side b n f oh a m q)
+
+let map_side_facts (b: bytes) (n f: nat) (oh: nat) (a: raw_data_item) (m: nat) (q: list raw_data_item) : Lemma
+  (requires map_side b n f oh a m q)
+  (ensures f >= 1 /\ List.Tot.length (map_entries a) <= n)
+= map_side_elim b n f oh a m q;
+  map_facts n f a
+
+let sorted_offsets (b: bytes) (n f': nat) (a: raw_data_item) (s1: Seq.seq SZ.t) : prop =
+  entries_ok b n f' s1 /\
+  (exists (s0: Seq.seq SZ.t) .
+    offsets_match b s0 (Seq.length s0) (map_entries a) /\
+    Seq.length s0 == List.Tot.length (map_entries a) /\
+    MS.sort_post (key_cmp b) s0 s1 true)
+
+let sorted_offsets_intro
+  (b: bytes) (n f': nat) (a: raw_data_item) (s0 s1: Seq.seq SZ.t)
+: Lemma
+  (requires
+    entries_ok b n f' s1 /\
+    offsets_match b s0 (Seq.length s0) (map_entries a) /\
+    Seq.length s0 == List.Tot.length (map_entries a) /\
+    MS.sort_post (key_cmp b) s0 s1 true)
+  (ensures sorted_offsets b n f' a s1)
+= ()
+
+let cc_map_sorted_items
+  (b: bytes) (n f f': nat) (a1 a2: raw_data_item) (s1 s2: Seq.seq SZ.t)
+  (oh1 oh2 m: nat) (q1 q2: list raw_data_item)
+: Lemma
+  (requires
+    map_side b n f oh1 a1 m q1 /\
+    map_side b n f oh2 a2 m q2 /\
+    List.Tot.length (map_entries a1) == List.Tot.length (map_entries a2) /\
+    sorted_offsets b n f' a1 s1 /\
+    sorted_offsets b n f' a2 s2
+  )
+  (ensures
+    Seq.length s1 == Seq.length s2 /\
+    entries_ok b n f' s1 /\
+    entries_ok b n f' s2 /\
+    cc a1 a2 == cc_entries (entries_of b s1) (entries_of b s2)
+  )
+= map_side_elim b n f oh1 a1 m q1;
+  map_side_elim b n f oh2 a2 m q2;
+  let Map len1 v1 = a1 in
+  let Map len2 v2 = a2 in
+  U64.v_inj len1.value len2.value;
+  eliminate exists (s01: Seq.seq SZ.t) .
+    offsets_match b s01 (Seq.length s01) (map_entries a1) /\
+    Seq.length s01 == List.Tot.length (map_entries a1) /\
+    MS.sort_post (key_cmp b) s01 s1 true
+  with eliminate exists (s02: Seq.seq SZ.t) .
+    offsets_match b s02 (Seq.length s02) (map_entries a2) /\
+    Seq.length s02 == List.Tot.length (map_entries a2) /\
+    MS.sort_post (key_cmp b) s02 s2 true
+  with cc_map_sorted b n f len1 v1 s01 s1 len2 v2 s02 s2
+
+let key_cmp_props_g (b: Ghost.erased bytes) : Lemma
+  (MS.compare_props (Ghost.reveal (key_cmp_g b)))
+= key_cmp_props b
+
+let seq_pre_cmp_pre (b: Ghost.erased bytes) (n f: Ghost.erased nat) (scl: nat) (s: Seq.seq SZ.t) : Lemma
+  (requires forall x . SP.mem x s ==> cmp_pre b n f scl x)
+  (ensures MS.seq_pre (Ghost.reveal (Ghost.hide (cmp_pre b n f scl))) s)
+= ()
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn fill_sort
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f f': Ghost.erased nat)
+  (rec_cmp: rec_cmp_t b p bB n f')
+  (rest: S.slice SZ.t)
+  (ks tmp: S.slice SZ.t)
+  (oh: SZ.t)
+  (a: Ghost.erased raw_data_item)
+  (m: Ghost.erased nat)
+  (q: Ghost.erased (list raw_data_item))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+  (#st: Ghost.erased (Seq.seq SZ.t))
+requires
+  cinv b p bB rest ** pts_to ks s ** pts_to tmp st ** pure (
+    Ghost.reveal f == Ghost.reveal f' + 1 /\
+    SZ.v (S.len rest) >= 3 * n * f' /\
+    Seq.length s == List.Tot.length (map_entries a) /\
+    Seq.length st == Seq.length s /\
+    map_side bB n f (SZ.v oh) a m q
+  )
+returns o' : SZ.t
+ensures
+  cinv b p bB rest ** (exists* s1 st1 . pts_to ks s1 ** pts_to tmp st1 ** pure (
+    Seq.length s1 == Seq.length s /\
+    Seq.length st1 == Seq.length s /\
+    sorted_offsets bB n f' a s1 /\
+    items_at bB (SZ.v o') m q
+  ))
+{
+  S.pts_to_len tmp;
+  S.pts_to_len ks;
+  map_side_elim bB n f (SZ.v oh) a m q;
+  unfold (cinv b p bB rest);
+  let o' = fill_offsets b ks oh (map_entries a) m q;
+  fold (cinv b p bB rest);
+  with s0 . assert (pts_to ks s0);
+  map_entries_ok bB n f f' a s0;
+  entries_ok_cmp_pre bB n f' (SZ.v (S.len rest)) s0;
+  key_cmp_props_g bB;
+  seq_pre_cmp_pre bB n f' (SZ.v (S.len rest)) s0;
+  let ok = MS.sort #SZ.t #(cinv b p bB rest) #(Ghost.hide (cmp_pre bB n f' (SZ.v (S.len rest)))) #(key_cmp_g bB) (rec_cmp rest) ks tmp;
+  with s1 . assert (pts_to ks s1);
+  map_sort_ok bB n f a s0 s1 ok;
+  entries_ok_perm bB n f' s0 s1;
+  sorted_offsets_intro bB n f' a s0 s1;
+  S.pts_to_len tmp;
+  o'
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn cmp_maps
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f f': Ghost.erased nat)
+  (rec_cmp: rec_cmp_t b p bB n f')
+  (sc: S.slice SZ.t)
+  (k: SZ.t)
+  (oh1 oh2: SZ.t)
+  (a1 a2: Ghost.erased raw_data_item)
+  (m: Ghost.erased nat)
+  (q1 q2: Ghost.erased (list raw_data_item))
+  (po1 po2: ref SZ.t)
+requires
+  pts_to b #p bB ** (exists* s . pts_to sc s) **
+  (exists* o1 o2 . pts_to po1 o1 ** pts_to po2 o2) ** pure (
+    Ghost.reveal f == Ghost.reveal f' + 1 /\
+    SZ.v (S.len sc) >= 3 * n * f /\
+    SZ.v k == List.Tot.length (map_entries a1) /\
+    SZ.v k == List.Tot.length (map_entries a2) /\
+    map_side bB n f (SZ.v oh1) a1 m q1 /\
+    map_side bB n f (SZ.v oh2) a2 m q2
+  )
+returns r: I16.t
+ensures
+  pts_to b #p bB ** (exists* s . pts_to sc s) **
+  (exists* o1 o2 . pts_to po1 o1 ** pts_to po2 o2 ** pure (
+    items_at bB (SZ.v o1) m q1 /\
+    items_at bB (SZ.v o2) m q2 /\
+    MS.same_sign (I16.v r) (cc a1 a2)
+  ))
+{
+  S.pts_to_len sc;
+  map_side_facts bB n f (SZ.v oh1) a1 m q1;
+  scratch_split (SZ.v (S.len sc)) n f f' (SZ.v k);
+  let ks1, r1 = S.split sc k;
+  S.pts_to_len r1;
+  let ks2, r2 = S.split r1 k;
+  S.pts_to_len r2;
+  let tmp, rest = S.split r2 k;
+  S.pts_to_len ks1;
+  S.pts_to_len ks2;
+  S.pts_to_len tmp;
+  S.pts_to_len rest;
+  with v1 . assert (pts_to ks1 v1);
+  with v2 . assert (pts_to ks2 v2);
+  with vt . assert (pts_to tmp vt);
+  assert (pure (Seq.length v1 == SZ.v k));
+  assert (pure (Seq.length v2 == SZ.v k));
+  assert (pure (Seq.length vt == SZ.v k));
+  assert (pure (SZ.v (S.len rest) == SZ.v (S.len sc) - 3 * SZ.v k));
+  assert (pure (SZ.v (S.len rest) >= 3 * n * f'));
+  fold (cinv b p bB rest);
+  let o1 = fill_sort b n f f' rec_cmp rest ks1 tmp oh1 a1 m q1;
+  let o2 = fill_sort b n f f' rec_cmp rest ks2 tmp oh2 a2 m q2;
+  with s1 . assert (pts_to ks1 s1);
+  with s2 . assert (pts_to ks2 s2);
+  cc_map_sorted_items bB n f f' a1 a2 s1 s2 (SZ.v oh1) (SZ.v oh2) m q1 q2;
+  let r = lockstep b n f' rec_cmp rest ks1 ks2;
+  unfold (cinv b p bB rest);
+  S.join tmp rest r2;
+  S.join ks2 r2 r1;
+  S.join ks1 r1 sc;
+  po1 := o1;
+  po2 := o2;
+  r
+}
+
+#pop-options
+
+(* One step of the comparison of two items *)
+
+let lhd (l: list raw_data_item) : Tot raw_data_item =
+  match l with
+  | a :: _ -> a
+  | [] -> dummy
+
+let ltl (l: list raw_data_item) : Tot (list raw_data_item) =
+  match l with
+  | _ :: q -> q
+  | [] -> []
+
+let major_type_facts (a: raw_data_item) : Lemma
+  ((String? a <==> (get_major_type a = cbor_major_type_byte_string || get_major_type a = cbor_major_type_text_string)) /\
+   (Map? a <==> get_major_type a = cbor_major_type_map))
+= ()
+
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 64"
+let cmp_map_pre
+  (b: bytes) (n f: nat) (x y: SZ.t) (o1 o2 c: nat) (l1 l2: list raw_data_item) (oh1 oh2: nat)
+: Lemma
+  (requires
+    cmp_inv b n f x y o1 o2 c l1 l2 0 /\ Cons? l1 /\ Cons? l2 /\ c >= 1 /\ (
+    let a1 = lhd l1 in
+    let a2 = lhd l2 in
+    Map? a1 /\
+    get_major_type a1 == get_major_type a2 /\
+    head_compare a1 a2 == 0 /\
+    items_at b (oh1 + CBOR.Spec.Raw.EverParse.Items.leaf_size (get_raw_data_item_header a1)) (remaining_data_items_header (get_raw_data_item_header a1) + (c - 1)) (List.Tot.append (children a1) (ltl l1)) /\
+    items_at b (oh2 + CBOR.Spec.Raw.EverParse.Items.leaf_size (get_raw_data_item_header a2)) (remaining_data_items_header (get_raw_data_item_header a2) + (c - 1)) (List.Tot.append (children a2) (ltl l2))
+  ))
+  (ensures (
+    let a1 = lhd l1 in
+    let a2 = lhd l2 in
+    Map? a1 /\ Map? a2 /\
+    f >= 1 /\ c >= 1 /\
+    map_side b n f oh1 a1 (c - 1) (ltl l1) /\
+    map_side b n f oh2 a2 (c - 1) (ltl l2) /\
+    List.Tot.length (map_entries a1) == List.Tot.length (map_entries a2) /\
+    U64.v (Map?.len a1).value == List.Tot.length (map_entries a1) /\
+    oh1 + 2 * List.Tot.length (map_entries a1) <= Seq.length b
+  ))
+= let a1 :: q1 = l1 in
+  let a2 :: q2 = l2 in
+  assert (c >= 1);
+  let c1 : nat = c - 1 in
+  let k1 : nat = List.Tot.length (map_entries a1) in
+  let m1 : nat = 2 * k1 + c1 in
+  same_major_type a1 a2;
+  cc_head a1 a2;
+  item_ok_map_hd n f a1 q1;
+  item_ok_map_hd n f a2 q2;
+  map_layout b oh1 c a1 q1;
+  map_layout b oh2 c a2 q2;
+  items_at_bound b oh1 m1 (List.Tot.append (list_of_pair_list (map_entries a1)) q1);
+  map_side_intro b n f oh1 a1 c1 q1;
+  map_side_intro b n f oh2 a2 c1 q2
+#pop-options
+
+let cmp_map_post
+  (b: bytes) (n f: nat) (x y: SZ.t) (o1 o2 c: nat) (l1 l2: list raw_data_item) (o1' o2': nat) (r: int)
+: Lemma
+  (requires
+    cmp_inv b n f x y o1 o2 c l1 l2 0 /\ Cons? l1 /\ Cons? l2 /\ c >= 1 /\
+    items_at b o1' (c - 1) (ltl l1) /\
+    items_at b o2' (c - 1) (ltl l2) /\
+    MS.same_sign r (cc (lhd l1) (lhd l2))
+  )
+  (ensures
+    (r <> 0 ==> cmp_inv b n f x y o1 o2 c l1 l2 r) /\
+    (r == 0 ==> (
+      cmp_inv b n f x y o1' o2' (c - 1) (ltl l1) (ltl l2) 0 /\
+      list_sum raw_data_item_size (ltl l1) < list_sum raw_data_item_size l1
+    ))
+  )
+= if r <> 0
+  then cmp_inv_stop b n f x y o1 o2 c l1 l2 r
+  else cmp_inv_cont_map b n f x y o1 o2 c l1 l2 o1' o2'
+
+let cmp_nonmap
+  (b: bytes) (n f: nat) (x y: SZ.t) (o1 o2 c: nat) (l1 l2: list raw_data_item) (oh1 oh2: nat) (leaf: nat) (rs: int)
+: Lemma
+  (requires
+    cmp_inv b n f x y o1 o2 c l1 l2 0 /\ Cons? l1 /\ Cons? l2 /\ (
+    let a1 = lhd l1 in
+    let a2 = lhd l2 in
+    let h1 = get_raw_data_item_header a1 in
+    let h2 = get_raw_data_item_header a2 in
+    get_major_type a1 == get_major_type a2 /\
+    ~ (Map? a1) /\
+    head_compare a1 a2 == 0 /\
+    leaf == (match a1 with String _ len _ -> U64.v len.value | _ -> 0) /\
+    oh1 + CBOR.Spec.Raw.EverParse.Items.leaf_size h1 <= Seq.length b /\
+    oh2 + CBOR.Spec.Raw.EverParse.Items.leaf_size h2 <= Seq.length b /\
+    (String? a1 ==> Seq.slice b oh1 (oh1 + CBOR.Spec.Raw.EverParse.Items.leaf_size h1) == String?.v a1) /\
+    (String? a2 ==> Seq.slice b oh2 (oh2 + CBOR.Spec.Raw.EverParse.Items.leaf_size h2) == String?.v a2) /\
+    (String? a1 ==> (
+      oh1 + leaf <= Seq.length b /\
+      oh2 + leaf <= Seq.length b /\
+      MS.same_sign rs (CBOR.Spec.Raw.Format.bytes_lex_compare (Seq.slice b oh1 (oh1 + leaf)) (Seq.slice b oh2 (oh2 + leaf))))) /\
+    (~ (String? a1) ==> rs == 0) /\
+    items_at b (oh1 + CBOR.Spec.Raw.EverParse.Items.leaf_size h1) (remaining_data_items_header h1 + (c - 1)) (List.Tot.append (children a1) (ltl l1)) /\
+    items_at b (oh2 + CBOR.Spec.Raw.EverParse.Items.leaf_size h2) (remaining_data_items_header h2 + (c - 1)) (List.Tot.append (children a2) (ltl l2))
+  ))
+  (ensures (
+    let a1 = lhd l1 in
+    let a2 = lhd l2 in
+    let h1 = get_raw_data_item_header a1 in
+    let h2 = get_raw_data_item_header a2 in
+    CBOR.Spec.Raw.EverParse.Items.leaf_size h1 == leaf /\
+    CBOR.Spec.Raw.EverParse.Items.leaf_size h2 == leaf /\
+    (rs <> 0 ==> cmp_inv b n f x y o1 o2 c l1 l2 rs) /\
+    (rs == 0 ==> (
+      let c' = remaining_data_items_header h1 + (c - 1) in
+      oh1 + leaf + c' <= Seq.length b /\
+      cmp_inv b n f x y (oh1 + leaf) (oh2 + leaf) c' (List.Tot.append (children a1) (ltl l1)) (List.Tot.append (children a2) (ltl l2)) 0 /\
+      list_sum raw_data_item_size (List.Tot.append (children a1) (ltl l1)) < list_sum raw_data_item_size l1
+    ))
+  ))
+= let a1 :: q1 = l1 in
+  let a2 :: q2 = l2 in
+  same_major_type a1 a2;
+  cc_head a1 a2;
+  leaf_size_eq a1;
+  leaf_size_eq a2;
+  let h1 = get_raw_data_item_header a1 in
+  items_at_bound b (oh1 + CBOR.Spec.Raw.EverParse.Items.leaf_size h1) (remaining_data_items_header h1 + (c - 1)) (List.Tot.append (children a1) q1);
+  if rs <> 0
+  then cmp_inv_stop b n f x y o1 o2 c l1 l2 rs
+  else cmp_inv_cont_nonmap b n f x y o1 o2 c l1 l2 (oh1 + leaf) (oh2 + leaf)
+
+fn cmp_leaf
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (is_string: bool)
+  (o1 o2 len: SZ.t)
+requires
+  pts_to b #p bB ** pure (
+    is_string ==> (
+      SZ.v o1 + SZ.v len <= Seq.length bB /\
+      SZ.v o2 + SZ.v len <= Seq.length bB
+    )
+  )
+returns r: I16.t
+ensures
+  pts_to b #p bB ** pure (
+    (is_string ==> (
+      SZ.v o1 + SZ.v len <= Seq.length bB /\
+      SZ.v o2 + SZ.v len <= Seq.length bB /\
+      MS.same_sign (I16.v r) (CBOR.Spec.Raw.Format.bytes_lex_compare
+        (Seq.slice bB (SZ.v o1) (SZ.v o1 + SZ.v len))
+        (Seq.slice bB (SZ.v o2) (SZ.v o2 + SZ.v len))))) /\
+    (is_string == false ==> r == 0s)
+  )
+{
+  if is_string {
+    cmp_str b o1 o2 len
+  } else {
+    0s
+  }
+}
+
+(* Comparing two items at offsets, using scratch space for maps in keys *)
+
+let cmp_end
+  (b: bytes) (n f: nat) (x y: SZ.t) (o1 o2: nat) (c: nat)
+  (l1 l2: list raw_data_item) (r: I16.t)
+: Lemma
+  (requires cmp_inv b n f x y o1 o2 c l1 l2 (I16.v r) /\ not (r = 0s && c > 0))
+  (ensures MS.same_sign (I16.v r) (key_cmp b x y))
+= cmp_inv_end b n f x y o1 o2 c l1 l2 (I16.v r)
+
+#push-options "--z3rlimit 128"
+
+fn rec cmp_one
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f: Ghost.erased nat)
+  (sc: S.slice SZ.t)
+  (x y: SZ.t)
+requires
+  cinv b p bB sc ** pure (cmp_pre bB n f (SZ.v (S.len sc)) x /\ cmp_pre bB n f (SZ.v (S.len sc)) y)
+returns r: I16.t
+ensures
+  cinv b p bB sc ** pure (MS.same_sign (I16.v r) (Ghost.reveal (key_cmp_g bB) x y))
+decreases (Ghost.reveal f)
+{
+  unfold (cinv b p bB sc);
+  S.pts_to_len b;
+  cmp_inv_init bB n f (SZ.v (S.len sc)) x y;
+  let mut po1 = x;
+  let mut po2 = y;
+  let mut pc = 1sz;
+  let mut pres = 0s;
+  let mut pl1 : Ghost.erased (list raw_data_item) = Ghost.hide [item_at bB (SZ.v x)];
+  let mut pl2 : Ghost.erased (list raw_data_item) = Ghost.hide [item_at bB (SZ.v y)];
+  while (
+    let r = !pres;
+    let c = !pc;
+    (r = 0s && SZ.gt c 0sz)
+  )
+  invariant exists* o1 o2 c r (l1 l2: Ghost.erased (list raw_data_item)) .
+    pts_to b #p bB ** (exists* s . pts_to sc s) **
+    pts_to po1 o1 ** pts_to po2 o2 ** pts_to pc c ** pts_to pres r **
+    pts_to pl1 l1 ** pts_to pl2 l2 **
+    pure (
+      cmp_inv bB n f x y (SZ.v o1) (SZ.v o2) (SZ.v c) l1 l2 (I16.v r)
+    )
+  decreases %[(if I16.v !pres = 0 then 1 else 0); list_sum raw_data_item_size (Ghost.reveal !pl1)]
+  {
+    let o1 = !po1;
+    let o2 = !po2;
+    let c = !pc;
+    let l1 = !pl1;
+    let l2 = !pl2;
+    items_at_step bB (SZ.v o1) (SZ.v c) l1;
+    items_at_step bB (SZ.v o2) (SZ.v c) l2;
+    items_at_bound bB (SZ.v o1) (SZ.v c) l1;
+    let oh1 = jump_header () b o1;
+    let h1 = read_from_validator_success (read_header ()) b o1 oh1;
+    let oh2 = jump_header () b o2;
+    let h2 = read_from_validator_success (read_header ()) b o2 oh2;
+    items_at_header bB (SZ.v o1) (SZ.v c) l1 h1 (SZ.v oh1);
+    items_at_header bB (SZ.v o2) (SZ.v c) l2 h2 (SZ.v oh2);
+    major_type_facts (lhd l1);
+    major_type_facts (lhd l2);
+    let mt1 = get_header_major_type h1;
+    let mt2 = get_header_major_type h2;
+    if (mt1 <> mt2) {
+      cc_major_type_diff (lhd l1) (lhd l2);
+      let r : I16.t = (if U8.lt mt1 mt2 then (-1s) else 1s);
+      cmp_inv_stop bB n f x y (SZ.v o1) (SZ.v o2) (SZ.v c) l1 l2 (I16.v r);
+      pres := r;
+    } else {
+      let hc = impl_head_cmp (Ghost.hide (lhd l1)) (Ghost.hide (lhd l2)) h1 h2;
+      cc_head (lhd l1) (lhd l2);
+      if (hc <> 0s) {
+        cmp_inv_stop bB n f x y (SZ.v o1) (SZ.v o2) (SZ.v c) l1 l2 (I16.v hc);
+        pres := hc;
+      } else if (mt1 = cbor_major_type_map) {
+        cmp_map_pre bB n f x y (SZ.v o1) (SZ.v o2) (SZ.v c) l1 l2 (SZ.v oh1) (SZ.v oh2);
+        let k = SZ.uint64_to_sizet (get_map_length (Ghost.hide (lhd l1)) h1).value;
+        let f' : Ghost.erased nat = Ghost.hide (Ghost.reveal f - 1);
+        let r = cmp_maps b n f f' (cmp_one b #p #bB n f') sc k oh1 oh2 (Ghost.hide (lhd l1)) (Ghost.hide (lhd l2)) (Ghost.hide (SZ.v c - 1)) (Ghost.hide (ltl l1)) (Ghost.hide (ltl l2)) po1 po2;
+        with o1' . assert (pts_to po1 o1');
+        with o2' . assert (pts_to po2 o2');
+        cmp_map_post bB n f x y (SZ.v o1) (SZ.v o2) (SZ.v c) l1 l2 (SZ.v o1') (SZ.v o2') (I16.v r);
+        if (r <> 0s) {
+          po1 := o1;
+          po2 := o2;
+          pres := r;
+        } else {
+          pc := SZ.sub c 1sz;
+          pl1 := Ghost.hide (ltl l1);
+          pl2 := Ghost.hide (ltl l2);
+        }
+      } else {
+        let is_string = (mt1 = cbor_major_type_byte_string || mt1 = cbor_major_type_text_string);
+        leaf_size_eq (lhd l1);
+        let leaf : SZ.t = (if is_string then SZ.uint64_to_sizet (get_string_length (Ghost.hide (lhd l1)) h1).value else 0sz);
+        let rs = cmp_leaf b is_string oh1 oh2 leaf;
+        cmp_nonmap bB n f x y (SZ.v o1) (SZ.v o2) (SZ.v c) l1 l2 (SZ.v oh1) (SZ.v oh2) (SZ.v leaf) (I16.v rs);
+        if (rs <> 0s) {
+          pres := rs;
+        } else {
+          let rem = impl_remaining_data_items_header (Ghost.hide (S.len b)) h1;
+          po1 := SZ.add oh1 leaf;
+          po2 := SZ.add oh2 leaf;
+          pc := SZ.add rem (SZ.sub c 1sz);
+          pl1 := Ghost.hide (List.Tot.append (children (lhd l1)) (ltl l1));
+          pl2 := Ghost.hide (List.Tot.append (children (lhd l2)) (ltl l2));
+        }
+      }
+    }
+  };
+  with o1 o2 c l1 l2 . assert (pts_to po1 o1 ** pts_to po2 o2 ** pts_to pc c ** pts_to pl1 l1 ** pts_to pl2 l2);
+  let r = !pres;
+  cmp_end bB n f x y (SZ.v o1) (SZ.v o2) (SZ.v c) l1 l2 r;
+  fold (cinv b p bB sc);
+  r
 }
 
 #pop-options
