@@ -304,11 +304,25 @@ and base_typ st =
     | "REAL" | "INSTANCE" | "TYPE-IDENTIFIER" ->
       fail st "type %s is not supported" s
     | _ when is_upper s ->
-      if peek st = DOT || peek st = LBRACE then fail st "external references and parameterized types are not supported";
-      TRef s
+      if peek st = DOT then fail st "external references are not supported";
+      if peek st = LBRACE then TInst (s, args st) else TRef s
     | _ -> fail st "expected a type"
     end
   | _ -> fail st "expected a type"
+
+(* The actual parameters { T, 5, ... } of a parameterized type: types start
+   with an uppercase letter or a tag *)
+and args st =
+  expect st LBRACE;
+  let rec go acc =
+    let a = match peek st with
+      | ID s when is_upper s -> AType (typ st)
+      | LBRACKET -> AType (typ st)
+      | _ -> AValue (value ~colon:false st)
+    in
+    let acc = a :: acc in
+    if peek st = COMMA then (advance st; go acc) else (expect st RBRACE; List.rev acc)
+  in go []
 
 and components st =
   expect st LBRACE;
@@ -333,11 +347,34 @@ and components st =
       if peek st = COMMA then (advance st; go acc) else (expect st RBRACE; List.rev acc)
     in go []
 
+(* The formal parameters { T, INTEGER : ub, ... } of a parameterized type *)
+let params st =
+  expect st LBRACE;
+  let rec go acc =
+    let p = match peek st, peek2 st with
+      | ID s, (COMMA | RBRACE) when is_upper s -> advance st; PType s
+      | _ ->
+        let gov = typ st in
+        expect st COLON;
+        match peek st with
+        | ID s when is_lower s -> advance st; PValue (gov, s)
+        | _ -> fail st "only type and value parameters are supported"
+    in
+    let acc = p :: acc in
+    if peek st = COMMA then (advance st; go acc) else (expect st RBRACE; List.rev acc)
+  in go []
+
 let assignment st =
   let n = ident st in
   if is_upper n then begin
-    expect st ASSIGN; TypeAssign (n, typ st)
+    if peek st = LBRACE then begin
+      let ps = params st in
+      expect st ASSIGN; TypeTemplate (n, ps, typ st)
+    end else begin
+      expect st ASSIGN; TypeAssign (n, typ st)
+    end
   end else begin
+    if peek st = LBRACE then fail st "parameterized values are not supported";
     let t = typ st in expect st ASSIGN; ValueAssign (n, t, value st)
   end
 
@@ -365,7 +402,7 @@ let modul st =
         else begin
           let rec syms acc =
             let s = ident st in
-            if peek st = LBRACE then fail st "parameterized imports are not supported";
+            if peek st = LBRACE then (advance st; expect st RBRACE);  (* a parameterized type: Name{} *)
             let acc = s :: acc in
             if peek st = COMMA then (advance st; syms acc) else List.rev acc
           in

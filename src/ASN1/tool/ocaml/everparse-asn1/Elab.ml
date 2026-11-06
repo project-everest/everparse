@@ -696,6 +696,7 @@ and node env (ctx: string) (t: typ) : node =
     if Hashtbl.mem env.types ctx then error "name clash: anonymous type %s" ctx;
     elab_named env ctx t; NRef ctx
   | TRef r -> let r = mangle r in elab_def env r; NRef r
+  | TInst (n, _) -> error "%s: unexpanded instance of %s" ctx n
   | TBuiltin s -> let id, tm = builtin s in NILC (id, CTerm (tm, None))
   | TInteger _ -> NILC (univ 2, CTerm (integer_term, None))
   | TEnumerated items ->
@@ -1042,6 +1043,161 @@ let body_refs = function
   | BAbsent -> []
   | BType (t, _) | BContaining t -> refs t
 
+(* Parameterized types (X.683): each instance `Name { args }` becomes an
+   ordinary type assignment `Name_<args>` of the module of `Name` (so that
+   it is tagged as there), memoized by its arguments *)
+let expand_params (ms: modul list) : modul list =
+  let templates = Hashtbl.create 7 in
+  List.iter (fun (m: modul) ->
+      List.iter (function
+          | TypeTemplate (n, ps, t) ->
+            if Hashtbl.mem templates n then error "parameterized type %s defined twice" n;
+            Hashtbl.replace templates n (m.mname, ps, t)
+          | _ -> ())
+        m.assignments)
+    ms;
+  let taken = Hashtbl.create 17 in
+  List.iter (fun (m: modul) ->
+      List.iter (function
+          | TypeAssign (n, _) | TypeTemplate (n, _, _) -> Hashtbl.replace taken (mangle n) ()
+          | ValueAssign _ -> ())
+        m.assignments)
+    ms;
+  let instances = Hashtbl.create 7 in            (* (name, args) -> instance name *)
+  let extra = Hashtbl.create 7 in                (* module -> instances, in reverse order *)
+  let rec arg_name = function
+    | AType (TRef r) -> mangle r
+    | AType (TInst (n, args)) -> String.concat "_" (mangle n :: List.map arg_name args)
+    | AType (TBuiltin b) -> String.map (fun c -> if c = ' ' || c = '-' then '_' else c) b
+    | AType (TInteger _) -> "INTEGER"
+    | AType (TTagged (_, n, _, t)) -> Printf.sprintf "%d_%s" n (arg_name (AType t))
+    | AValue (VInt i) -> if i < 0 then Printf.sprintf "m%d" (-i) else string_of_int i
+    | AValue (VName s) -> mangle s
+    | AValue (VBool b) -> string_of_bool b
+    | _ -> "x"
+  in
+  let rec typ depth (t: typ) : typ =
+    let go = typ depth in
+    match t with
+    | TRef r when Hashtbl.mem templates r -> error "parameterized type %s used without arguments" r
+    | TInst (n, args) -> TRef (instance depth n (List.map (arg depth) args))
+    | TSequence cs -> TSequence (List.map (comp depth) cs)
+    | TSet cs -> TSet (List.map (comp depth) cs)
+    | TSequenceOf (c, t) -> TSequenceOf (Option.map (constr depth) c, go t)
+    | TSetOf (c, t) -> TSetOf (Option.map (constr depth) c, go t)
+    | TChoice alts -> TChoice (List.map (fun (n, t) -> (n, go t)) alts)
+    | TTagged (c, n, m, t) -> TTagged (c, n, m, go t)
+    | TConstrained (t, c) -> TConstrained (go t, constr depth c)
+    | TBuiltin _ | TInteger _ | TEnumerated _ | TBitString _ | TAny | TAnyDefinedBy _ | TRef _ -> t
+  and comp depth = function
+    | Field (n, t, d) -> Field (n, typ depth t, d)
+    | ComponentsOf t -> ComponentsOf (typ depth t)
+  and constr depth (c: constr) : constr =
+    match c with
+    | CSize c -> CSize (constr depth c)
+    | CUnion l -> CUnion (List.map (constr depth) l)
+    | CContaining t -> CContaining (typ depth t)
+    | CWithComponent c -> CWithComponent (constr depth c)
+    | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, c, pr) -> (n, Option.map (constr depth) c, pr)) l)
+    | CRange _ | CSingle _ -> c
+  and arg depth = function
+    | AType t -> AType (typ depth t)
+    | a -> a
+  and instance depth n args =
+    if depth > 100 then error "%s: too many nested instances (recursive parameterized types are not supported)" n;
+    match Hashtbl.find_opt instances (n, args) with
+    | Some i -> i
+    | None ->
+      let mname, ps, body = match Hashtbl.find_opt templates n with
+        | Some x -> x
+        | None -> error "%s is not a parameterized type" n
+      in
+      if List.length ps <> List.length args then
+        error "%s: %d parameters expected, %d given" n (List.length ps) (List.length args);
+      let base = String.concat "_" (mangle n :: List.map arg_name args) in
+      let rec fresh i = let c = if i = 0 then base else Printf.sprintf "%s_%d" base i in
+        if Hashtbl.mem taken c then fresh (i + 1) else c in
+      let iname = fresh 0 in
+      Hashtbl.replace taken iname ();
+      Hashtbl.replace instances (n, args) iname;
+      let tsub = List.concat (List.map2 (fun p a -> match p, a with
+          | PType x, AType t -> [(x, t)]
+          | PType x, AValue _ -> error "%s: the argument for %s must be a type" n x
+          | PValue _, _ -> []) ps args) in
+      let vsub = List.concat (List.map2 (fun p a -> match p, a with
+          | PValue (_, x), AValue v -> [(x, v)]
+          | PValue (_, x), AType _ -> error "%s: the argument for %s must be a value" n x
+          | PType _, _ -> []) ps args) in
+      let body = subst tsub vsub body in
+      let body = typ (depth + 1) body in
+      let l = match Hashtbl.find_opt extra mname with Some l -> l | None -> [] in
+      Hashtbl.replace extra mname (TypeAssign (iname, body) :: l);
+      iname
+  (* Substitute the formal parameters of a template (before expanding its instances) *)
+  and subst tsub vsub (t: typ) : typ =
+    let go = subst tsub vsub in
+    let v = function
+      | VName x when List.mem_assoc x vsub -> List.assoc x vsub
+      | v -> v
+    in
+    let rec b = function
+      | BRef x when List.mem_assoc x vsub ->
+        (match List.assoc x vsub with
+         | VInt i -> Val i
+         | VBool bb -> BBool bb
+         | VName y -> BRef y
+         | _ -> error "the value parameter %s is used as a bound: expected an INTEGER or BOOLEAN" x)
+      | Open x -> Open (b x)
+      | x -> x
+    in
+    let rec c = function
+      | CSize k -> CSize (c k)
+      | CRange (lo, hi) -> CRange (b lo, b hi)
+      | CSingle l -> CSingle (List.map b l)
+      | CUnion l -> CUnion (List.map c l)
+      | CContaining t -> CContaining (go t)
+      | CWithComponent k -> CWithComponent (c k)
+      | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, k, pr) -> (n, Option.map c k, pr)) l)
+    in
+    let d = function DDefault x -> DDefault (v x) | d -> d in
+    match t with
+    | TRef r when List.mem_assoc r tsub -> List.assoc r tsub
+    | TInst (n, args) -> TInst (n, List.map (function AType t -> AType (go t) | AValue x -> AValue (v x)) args)
+    | TSequence cs -> TSequence (List.map (function Field (n, t, dd) -> Field (n, go t, d dd) | ComponentsOf t -> ComponentsOf (go t)) cs)
+    | TSet cs -> TSet (List.map (function Field (n, t, dd) -> Field (n, go t, d dd) | ComponentsOf t -> ComponentsOf (go t)) cs)
+    | TSequenceOf (k, t) -> TSequenceOf (Option.map c k, go t)
+    | TSetOf (k, t) -> TSetOf (Option.map c k, go t)
+    | TChoice alts -> TChoice (List.map (fun (n, t) -> (n, go t)) alts)
+    | TTagged (cl, n, m, t) -> TTagged (cl, n, m, go t)
+    | TConstrained (t, k) -> TConstrained (go t, c k)
+    | TBuiltin _ | TInteger _ | TEnumerated _ | TBitString _ | TAny | TAnyDefinedBy _ | TRef _ -> t
+  in
+  let body = function
+    | BType (t, o) -> BType (typ 0 t, o)
+    | BContaining t -> BContaining (typ 0 t)
+    | BAbsent -> BAbsent
+  in
+  let ms = List.map (fun (m: modul) ->
+      let assignments = List.filter_map (function
+          | TypeAssign (n, t) -> Some (TypeAssign (n, typ 0 t))
+          | ValueAssign (n, t, v) -> Some (ValueAssign (n, typ 0 t, v))
+          | TypeTemplate _ as a -> Some a)  (* for the checks of IMPORTS *)
+          m.assignments
+      in
+      let directives = List.map (fun db ->
+          { db with db_cases = List.map (fun (v, b) -> (v, body b)) db.db_cases;
+                    db_fallback = (match db.db_fallback with FbBody b -> FbBody (body b) | f -> f) })
+          m.directives
+      in
+      { m with assignments; directives })
+      ms
+  in
+  List.map (fun (m: modul) ->
+      match Hashtbl.find_opt extra m.mname with
+      | Some l -> { m with assignments = m.assignments @ List.rev l }
+      | None -> m)
+    ms
+
 type result = {
   env: env;
   order: string list;           (* definitions, dependencies first *)
@@ -1060,6 +1216,10 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
     state = Hashtbl.create 17; order = []; user = Hashtbl.create 17;
     keep = Hashtbl.create 7; keep_alias = Hashtbl.create 7; keep_comps = Hashtbl.create 7;
   } in
+  let m, deps = match expand_params (m :: deps) with
+    | m :: deps -> m, deps
+    | [] -> assert false
+  in
   let ms = m :: deps in
   List.iter (fun (m': modul) ->
       if List.length (List.filter (fun (m'': modul) -> m''.mname = m'.mname) ms) > 1 then
@@ -1075,7 +1235,8 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
         Some n'
       | ValueAssign (n, t, v) ->
         if Hashtbl.mem env.values n then error "value %s defined twice" n;
-        Hashtbl.replace env.values n (t, v); None)
+        Hashtbl.replace env.values n (t, v); None
+      | TypeTemplate _ -> None)
       m.assignments
   in
   let main_names = names_of m in
@@ -1090,7 +1251,7 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
           Hashtbl.replace env.type_td n' prelude.tag_default;
           Hashtbl.replace env.user n' n
         end
-      | ValueAssign _ -> ())
+      | ValueAssign _ | TypeTemplate _ -> ())
     prelude.assignments;
   (* IMPORTS: the symbols must be defined by the given modules *)
   List.iter (fun (m: modul) ->
@@ -1100,7 +1261,7 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
           | Some m' ->
             List.iter (fun s ->
                 let defined = List.exists (function
-                    | TypeAssign (n, _) | ValueAssign (n, _, _) -> n = s) m'.assignments in
+                    | TypeAssign (n, _) | ValueAssign (n, _, _) | TypeTemplate (n, _, _) -> n = s) m'.assignments in
                 if not defined then error "%s imports %s from %s, which does not define it" m.mname s from)
               syms)
         m.imports)

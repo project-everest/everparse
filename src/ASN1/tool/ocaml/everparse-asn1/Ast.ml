@@ -59,6 +59,11 @@ and typ =
   | TChoice of (string * typ) list
   | TTagged of tag_class * int * tag_mode * typ
   | TConstrained of typ * constr
+  | TInst of string * arg list         (* an instance of a parameterized type: Name { T, 5 } *)
+
+and arg =
+  | AType of typ
+  | AValue of value
 
 and component =
   | Field of string * typ * deco
@@ -66,9 +71,15 @@ and component =
 
 and deco = DPlain | DOptional | DDefault of value
 
+(* The formal parameters of a parameterized type (X.683) *)
+type param =
+  | PType of string                    (* T *)
+  | PValue of typ * string             (* INTEGER : ub *)
+
 type assignment =
   | TypeAssign of string * typ
   | ValueAssign of string * typ * value
+  | TypeTemplate of string * param list * typ  (* Name { params } ::= T *)
 
 (* A `--#DEFINED-BY Type.field [BY key] { key : body, ... } [FALLBACK body]`
    directive: the cases of an ANY DEFINED BY (or of any component that
