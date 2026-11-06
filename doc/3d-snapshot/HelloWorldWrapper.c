@@ -28,10 +28,8 @@ void DefaultErrorHandler(
 
 BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{
@@ -46,10 +44,8 @@ BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len) {
 
 BOOLEAN HelloWorldCheckCompletePoint(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{

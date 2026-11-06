@@ -108,7 +108,7 @@ to verify the produced files and extract C code:
 
 * The binary package contains F\* and Karamel respectively at `bin/fstar.exe` and `bin/krml`
 
-* The Docker image contains F\* and Karamel respectively at `opt/FStar/out/bin/fstar.exe` and `opt/karamel/krml`
+* The Docker image contains F\* and Karamel respectively at `opt/FStar/out/bin/fstar.exe` and `opt/FStar/karamel/out/bin/krml`
 
 TODO: integrate [documentation and example by Samuel Chassot](https://github.com/project-everest/everparse/pull/86)
 

@@ -14,13 +14,13 @@
 #
 # Generation-only (`--no_batch`): what is under test is the frontend's
 # accept/reject decision, so there is no need to pay for F* verification and
-# KaRaMeL extraction. Nothing is run.
+# Custard C extraction. Nothing is run.
 
 EVERPARSE_HOME ?= $(realpath ../../../../..)
 export EVERPARSE_HOME
 
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)") --api pulse
 
 EVERPARSE_OUTPUT_DIR=obj
 

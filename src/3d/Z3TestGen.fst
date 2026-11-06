@@ -2338,8 +2338,8 @@ BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE
 }
 "
 
-let generate_probe_init_function (name: string) : Tot string = "
-BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+let generate_probe_init_function (name: string) : ML string = "
+"^(if Options.uses_pulse_api () then "bool" else "BOOLEAN")^" "^name^"(const char *src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   (void)(src);
   (void)(len);
   (void)(dst);
@@ -2353,7 +2353,7 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
    sites has to be rewound.  (The interpreter calls `reset` too; doing it here
    as well is harmless and keeps the harness self-contained.) *)
 let generate_default_probe_function_pulse (name: string) : Tot string = "
-BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+bool "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
   if (ro != 0 || wo != 0) {
     printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
     exit(4);
@@ -2377,7 +2377,7 @@ BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE
 "
 
 let generate_ptr_probe_function_pulse (name: string) : Tot string = "
-BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+bool "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
   if (ro != 0 || wo != 0) {
     printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
     exit(4);

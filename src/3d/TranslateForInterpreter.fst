@@ -270,7 +270,15 @@ let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
       "none"
       (Parse_dep_pair_with_action p1 a (Some (fst p2), snd p2))
 let extend_fieldname fieldname e = Printf.sprintf "%s.%s" fieldname e
-let ite_parser typename fieldname (e:T.expr) (then_:T.parser) (else_:T.parser) : ML T.parser =      
+let rec ite_parser typename fieldname (e:T.expr) (then_:T.parser) (else_:T.parser) : ML T.parser =
+  match (if T.contains_compile_time_flag e then Some (fst e) else None) with
+  | Some (T.App T.And [a;b]) ->
+    ite_parser typename fieldname a (ite_parser typename fieldname b then_ else_) else_
+  | Some (T.App T.Or [a;b]) ->
+    ite_parser typename fieldname a then_ (ite_parser typename fieldname b then_ else_)
+  | Some (T.App T.Not [a]) ->
+    ite_parser typename fieldname a else_ then_
+  | _ ->
     let k, p1, p2 =
       let k = pk_glb then_.p_kind else_.p_kind in
            k,

@@ -28,10 +28,8 @@ void DefaultErrorHandler(
 
 BOOLEAN Specialize1CheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{
@@ -46,10 +44,8 @@ BOOLEAN Specialize1CheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EV
 
 BOOLEAN Specialize1CheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{
@@ -69,10 +65,8 @@ BOOLEAN Specialize1CheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T d
 
 BOOLEAN Specialize1CheckRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{
@@ -87,10 +81,8 @@ BOOLEAN Specialize1CheckRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS,
 
 BOOLEAN Specialize1CheckCompleteRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{

@@ -9,6 +9,7 @@ module B = EverParse3d.InputStream.LowstarExtern.Types
 module AppCtxt = EverParse3d.AppCtxt
 module E = EverParse3d.Lowstar.ErrorCode
 
+[@@FStar.Attributes.rename_let "EVERPARSE_ERROR_HANDLER"; FStar.Attributes.custard_no_unfold]
 let error_handler =
   typename:string ->
   fieldname:string ->

@@ -13,26 +13,66 @@ module SZ = FStar.SizeT
    which cannot depend on the interpreter, can still be unfolded by it. *)
 let specialize_backend = ()
 
+(* Recasing of the names that `rename_let` gives to the locals of the
+   generated C code, so that a 3D field `__bitfield_0` yields `bitfield0`,
+   `resultAfterBitfield0`, ... This follows the conventions of KaRaMeL's
+   former `-fmicrosoft` option (`GlobalNames.pascal_case`): underscores are
+   dropped and start a new word, and when the name has underscores, letters
+   following an upper-case letter or a digit are lower-cased.
+
+   These functions are evaluated by the normalizer when the combinators are
+   inlined, so they must only use primitive string operations: in particular,
+   `FStar.Char.uppercase` is not a primitive, hence the detour through
+   one-character strings. *)
+inline_for_extraction noextract
+let rec pascal_case_aux (has_underscore: bool) (what_next: nat) (l: list FStar.String.char)
+  : Tot string (decreases l)
+= match l with
+  | [] -> ""
+  | c :: cs ->
+    if c = '_'
+    then pascal_case_aux has_underscore 1 cs
+    else
+      let s = FStar.String.string_of_list [c] in
+      let up = FStar.String.uppercase s in
+      let low = FStar.String.lowercase s in
+      let out = if what_next = 1 then up else if what_next = 2 && has_underscore then low else s in
+      let what_next' = if up = s then 2 else if low = s then 0 else what_next in
+      out ^ pascal_case_aux has_underscore what_next' cs
+
+inline_for_extraction noextract
+let pascal_case_impl (s: string) : Tot string =
+  let l = FStar.String.list_of_string s in
+  pascal_case_aux (List.Tot.mem '_' l) 1 l
+
+inline_for_extraction noextract
+let camel_case_impl (s: string) : Tot string =
+  match FStar.String.list_of_string (pascal_case_impl s) with
+  | [] -> ""
+  | c :: cs ->
+    FStar.String.lowercase (FStar.String.string_of_list [c]) ^
+    FStar.String.string_of_list cs
+
+(* Custard does not reduce recursive functions (it normalizes without zeta),
+   hence the explicit [normalize_term]. *)
+inline_for_extraction noextract
+let pascal_case (s: string) : Tot string = normalize_term (pascal_case_impl s)
+
+inline_for_extraction noextract
+let camel_case (s: string) : Tot string = normalize_term (camel_case_impl s)
+
+[@@FStar.Attributes.rename_let "EVERPARSE_APP_CTXT"; FStar.Attributes.custard_no_unfold]
 let app_ctxt = AppCtxt.app_ctxt
 
 (* The error-handler callback type.
 
-   This is the instance's [error_handler_t] member rather than the arrow type
-   itself, so that it extracts to a 0-ary, per-backend alias that KaRaMeL can
-   preserve as EVERPARSE_ERROR_HANDLER. See EverParse3d.InputStream.Base for
-   why, and [I.error_handler_arrow] for the shape it is equal to.
+   Each instance supplies a monomorphic [error_handler_t] alias that Custard
+   preserves as EVERPARSE_ERROR_HANDLER. See EverParse3d.InputStream.Base and
+   [I.error_handler_arrow] for the corresponding function-pointer signature.
 
-   [unfold]: this is a *generic* projection out of the instance. If a
-   declaration survives to extraction, KaRaMeL gets an unrepresentable type
-   (`void *`) which, under the `EverParse` bundle's rename-prefix, additionally
-   steals the C name from the backend alias it is supposed to resolve to.
-   Unfolding it at each use site is what lets extraction resolve the
-   projection to that alias.
-
-   [noextract_to "krml"]: `unfold` removes it from every use site, but F* still
-   emits a declaration for it, which extracts as an opaque `any`; KaRaMeL drops
-   its (now unused) type parameters and turns it into a 0-ary
-   `typedef void *`, stealing the C name from the backend alias. *)
+   This generic projection is unfolded at use sites and excluded from
+   standalone extraction, leaving the selected backend's alias as the public
+   C typedef. *)
 [@@noextract_to "krml"]
 unfold
 let error_handler

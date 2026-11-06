@@ -5,7 +5,7 @@ git-clone:
 
 include hashes.Makefile
 
-EVERPARSE_OPAM_FILES_DEFAULT = fstar-deps.opam karamel-deps.opam everparse-deps.opam
+EVERPARSE_OPAM_FILES_DEFAULT = fstar-deps.opam $(if $(filter 1,$(EVERPARSE_USE_KRML_EXE)),,karamel-deps.opam) everparse-deps.opam
 EVERPARSE_OPAM_FILES := $(EVERPARSE_OPAM_FILES_DEFAULT)
 
 # Include specific options on release branches (e.g. EVERPARSE_OPAM_FILES)
@@ -23,9 +23,8 @@ ifeq ($(OS),Windows_NT)
 cygwin_local_install += --cygwin-local-install
 endif
 
-# Change these if you want to use your own clones
+# Change this if you want to use your own clone
 FStar_repo=https://github.com/FStarLang/FStar
-karamel_repo=https://github.com/FStarLang/karamel
 
 # This rule is necessary for the package and release CI rules to pull
 # the right hash when building the F* source package for Windows
@@ -40,8 +39,10 @@ ifeq ($(OS),Windows_NT)
 endif
 	git clone $(FStar_repo) $@
 
-karamel: %:
-	git clone $($@_repo) $@
+FStar/karamel/Makefile: FStar/Makefile
+	if test -e FStar/.git ; then git -C FStar submodule update --init karamel ; fi
+	test -f $@
+	touch -c $@
 
 opam:
 	rm -rf $@ $@.tmp
@@ -56,7 +57,6 @@ opam:
 snapshot:
 	./snapshot.sh
 	touch -c FStar/Makefile
-	touch -c karamel/Makefile
 
 .PHONY: snapshot
 
@@ -64,9 +64,9 @@ fstar-deps.opam: FStar/Makefile
 	cp FStar/fstar.opam $@
 	touch $@
 
-karamel-deps.opam: karamel/Makefile
+karamel-deps.opam: FStar/karamel/Makefile
 	rm -f $@ $@.tmp
-	grep -v '^ *"fstar"' < karamel/karamel.opam > $@.tmp
+	grep -v '^ *"fstar"' < FStar/karamel/karamel.opam > $@.tmp
 	mv $@.tmp $@
 
 opam.done: opam $(EVERPARSE_OPAM_FILES)
@@ -77,7 +77,7 @@ advance:
 	rm -f hashes.Makefile
 	cp advance.Makefile hashes.Makefile
 	touch hashes.Makefile
-	+$(MAKE) FStar/Makefile karamel/Makefile
+	+$(MAKE) FStar/Makefile
 	+$(MAKE) snapshot
 
 .PHONY: advance
@@ -89,14 +89,14 @@ release:
 .PHONY: release
 
 FStar.clean:
-	rm -f FStar.done
+	rm -f FStar.done karamel.done
 ifeq (,$(do_not_clean_FStar))
 	rm -rf FStar
 else
 	+if test -d FStar ; then $(MAKE) -C FStar clean ; fi
 endif
 
-clean_rules := $(addsuffix .clean,karamel z3 opam)
+clean_rules := $(addsuffix .clean,z3 opam)
 
 $(clean_rules): %.clean:
 	rm -rf $(basename $@) $(basename $@).done

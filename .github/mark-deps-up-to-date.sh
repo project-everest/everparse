@@ -21,7 +21,7 @@ old='2000-01-01 00:00:00'
 touch -c -d "$old" \
       opt/hashes.Makefile \
       opt/FStar opt/FStar/Makefile \
-      opt/karamel opt/karamel/Makefile \
+      opt/FStar/karamel opt/FStar/karamel/Makefile \
       opt/opam opt/opam/opam-init/init.sh \
       opt/fstar-deps.opam opt/everparse-deps.opam
 
@@ -34,7 +34,7 @@ touch -c opam-env.Makefile \
 ls -ld --full-time \
    opt/hashes.Makefile \
    opt/FStar/Makefile \
-   opt/karamel/Makefile \
+   opt/FStar/karamel/Makefile \
    opt/opam/opam-init/init.sh \
    opam-env.Makefile \
    opt/opam.done opt/FStar.done opt/karamel.done opt/z3 || true

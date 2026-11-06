@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "header": "EverParse.h",
+  "header_generator": "Custard C",
+  "validator_generator": ["Custard C"],
+  "runtime_unit": "EverParse.cui",
+  "retain_runtime_krml": false,
+  "boolean": {
+    "name": "BOOLEAN",
+    "representation": "uint8_t",
+    "false": 0,
+    "true": 1,
+    "truth": "nonzero"
+  },
+  "validator_boolean": {
+    "pulse": "bool",
+    "lowstar": "BOOLEAN"
+  },
+  "preserve": [
+    "public identifiers",
+    "function and callback types",
+    "argument order",
+    "record field types and layout",
+    "foreign linkage",
+    "client error-handler macros",
+    "Windows endianness-header substitution"
+  ],
+  "profiles": [
+    {
+      "api": "pulse",
+      "stream": "buffer",
+      "directory": "buffer",
+      "static_hooks": [],
+      "extern_values": []
+    },
+    {
+      "api": "pulse",
+      "stream": "extern",
+      "directory": "extern",
+      "static_hooks": [],
+      "extern_values": ["EverParseNullPtr"]
+    },
+    {
+      "api": "pulse",
+      "stream": "static",
+      "directory": "static",
+      "static_hooks": [
+        "EverParseStreamGetPosition",
+        "EverParseStreamHas",
+        "EverParseStreamHasAt",
+        "EverParseStreamReadBytes",
+        "EverParseStreamSkip",
+        "EverParseStreamEmpty",
+        "EverParseFieldPtrAfterImpl"
+      ],
+      "extern_values": ["EverParseNullPtr"]
+    },
+    {
+      "api": "lowstar",
+      "stream": "buffer",
+      "directory": "lowstar/buffer",
+      "static_hooks": [],
+      "extern_values": []
+    },
+    {
+      "api": "lowstar",
+      "stream": "extern",
+      "directory": "lowstar/extern",
+      "static_hooks": [],
+      "extern_values": []
+    },
+    {
+      "api": "lowstar",
+      "stream": "static",
+      "directory": "lowstar/static",
+      "static_hooks": [
+        "EverParseHas",
+        "EverParseSkip",
+        "EverParseEmpty",
+        "EverParseRead",
+        "EverParsePeep"
+      ],
+      "extern_values": []
+    }
+  ]
+}

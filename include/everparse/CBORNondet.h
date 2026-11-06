@@ -19,25 +19,25 @@ typedef uint8_t simple_value;
 
 typedef uint8_t major_type_byte_string_or_text_string;
 
-#define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
+#define CBOR_MAJOR_TYPE_SIMPLE_VALUE ((uint8_t)7U)
 
-#define MIN_SIMPLE_VALUE_LONG_ARGUMENT (32U)
+#define MIN_SIMPLE_VALUE_LONG_ARGUMENT ((uint8_t)32U)
 
-#define CBOR_MAJOR_TYPE_BYTE_STRING (2U)
+#define CBOR_MAJOR_TYPE_BYTE_STRING ((uint8_t)2U)
 
-#define CBOR_MAJOR_TYPE_TEXT_STRING (3U)
+#define CBOR_MAJOR_TYPE_TEXT_STRING ((uint8_t)3U)
 
-#define CBOR_MAJOR_TYPE_ARRAY (4U)
+#define CBOR_MAJOR_TYPE_ARRAY ((uint8_t)4U)
 
-#define CBOR_MAJOR_TYPE_MAP (5U)
+#define CBOR_MAJOR_TYPE_MAP ((uint8_t)5U)
 
-#define CBOR_MAJOR_TYPE_TAGGED (6U)
+#define CBOR_MAJOR_TYPE_TAGGED ((uint8_t)6U)
 
-#define CBOR_MAJOR_TYPE_UINT64 (0U)
+#define CBOR_MAJOR_TYPE_UINT64 ((uint8_t)0U)
 
-#define CBOR_MAJOR_TYPE_NEG_INT64 (1U)
+#define CBOR_MAJOR_TYPE_NEG_INT64 ((uint8_t)1U)
 
-#define MAX_SIMPLE_VALUE_ADDITIONAL_INFO (23U)
+#define MAX_SIMPLE_VALUE_ADDITIONAL_INFO ((uint8_t)23U)
 
 bool
 cbor_nondet_parse(

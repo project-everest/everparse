@@ -1,0 +1,19 @@
+extern Bool IsSet(UINT8 value)
+
+entrypoint
+typedef struct _Mutable(Bool expected, mutable Bool *left, mutable Bool *right) {
+  UINT8 command;
+  unit update
+  {:check
+    var before = *left;
+    var value = IsSet(command);
+    if (before == expected) {
+      *left = value;
+      var after = *right;
+      return after == (command != 0);
+    } else {
+      return false;
+    }
+  };
+  UINT8 tail { tail == 42 };
+} Mutable;

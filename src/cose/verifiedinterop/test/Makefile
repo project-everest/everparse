@@ -22,8 +22,8 @@ $(CURDIR)/hacl-star:
 	git clone https://github.com/hacl-star/hacl-star $@.tmp
 	mv $@.tmp $@
 
-$(EVERPARSE_HOME)/opt/karamel:
-	+$(MAKE) -C $(dir $@) $(notdir $@)
+$(EVERPARSE_HOME)/opt/FStar/karamel/Makefile:
+	+$(MAKE) -C $(EVERPARSE_HOME)/opt FStar/karamel/Makefile
 
 HEADERDEPS = ../../c/COSE_Format.h ../../c/COSE_EverCrypt.h $(EVERPARSE_HOME)/include/everparse/CBORDet.h
 

@@ -345,8 +345,8 @@ COSE_EverCrypt_verify1(
     FStar_Pervasives_Native_tuple2__COSE_Format_cose_sign1_Pulse_Lib_Slice_slice__uint8_t
     res1 = scrut.v;
     COSE_Format_cose_sign1 x = res1._1;
-    Pulse_Lib_Slice_slice__uint8_t rem = res1._2;
-    if (Pulse_Lib_Slice_len__uint8_t(rem) == (size_t)0U && x.payload.tag == FStar_Pervasives_Inl)
+    if
+    (Pulse_Lib_Slice_len__uint8_t(res1._2) == (size_t)0U && x.payload.tag == FStar_Pervasives_Inl)
     {
       Pulse_Lib_Slice_slice__uint8_t sig = x.signature;
       bool ite0;

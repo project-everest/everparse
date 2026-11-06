@@ -28,10 +28,8 @@ void DefaultErrorHandler(
 
 BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{
@@ -46,10 +44,8 @@ BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len)
 
 BOOLEAN ReadPairCheckCompletePair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t ep_status = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
 	if (EverParseIsError(ep_status))
 	{

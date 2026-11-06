@@ -12,29 +12,32 @@ module LBF = LowParse.BitFields
 
 // The get_bitfield operators are least significant bit first by default
 // following MSVC (https://learn.microsoft.com/en-us/cpp/c-language/c-bit-fields)
+[@@FStar.Attributes.rename_let "EverParseGetBitfield8"; FStar.Attributes.CInline]
 let get_bitfield8
   (value:U8.t)
   (bitsFrom:U32.t{U32.v bitsFrom < 8})
   (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 8})
 : Tot (i:U8.t{FStar.UInt.size (U8.v i) (U32.v bitsTo - U32.v bitsFrom)})
 = LBF.get_bitfield_eq_2 #8 (U8.v value) (U32.v bitsFrom) (U32.v bitsTo);
-  (* NOTE: due to https://github.com/FStarLang/karamel/issues/102 I need to introduce explicit let-bindings here *)
   let op1 = value `U8.shift_left` (8ul `U32.sub` bitsTo) in
   let op2 = op1 `U8.shift_right` ((8ul `U32.sub` bitsTo) `U32.add` bitsFrom) in
   op2
 
+[@@FStar.Attributes.rename_let "EverParseGetBitfield16"; FStar.Attributes.CInline]
 let get_bitfield16 (value:U16.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 16})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 16})
    : i:U16.t{FStar.UInt.size (U16.v i) (U32.v bitsTo - U32.v bitsFrom)}
    = LBF.uint16.LBF.get_bitfield_gen value bitsFrom bitsTo
 
+[@@FStar.Attributes.rename_let "EverParseGetBitfield32"; FStar.Attributes.CInline]
 let get_bitfield32 (value:U32.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 32})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 32})
    : i:U32.t{FStar.UInt.size (U32.v i) (U32.v bitsTo - U32.v bitsFrom)}
    = LBF.uint32.LBF.get_bitfield_gen value bitsFrom bitsTo
 
+[@@FStar.Attributes.rename_let "EverParseGetBitfield64"; FStar.Attributes.CInline]
 let get_bitfield64 (value:U64.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 64})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 64})
@@ -43,6 +46,7 @@ let get_bitfield64 (value:U64.t)
 
 // Most significant bit first variants:
 
+[@@FStar.Attributes.rename_let "EverParseGetBitfield8MsbFirst"; FStar.Attributes.CInline]
 let get_bitfield8_msb_first
   (value:U8.t)
   (bitsFrom:U32.t{U32.v bitsFrom < 8})
@@ -50,18 +54,21 @@ let get_bitfield8_msb_first
 : Tot (i:U8.t{FStar.UInt.size (U8.v i) (U32.v bitsTo - U32.v bitsFrom)})
 = get_bitfield8 value (8ul `U32.sub` bitsTo) (8ul `U32.sub` bitsFrom)
 
+[@@FStar.Attributes.rename_let "EverParseGetBitfield16MsbFirst"; FStar.Attributes.CInline]
 let get_bitfield16_msb_first (value:U16.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 16})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 16})
    : i:U16.t{FStar.UInt.size (U16.v i) (U32.v bitsTo - U32.v bitsFrom)}
    = get_bitfield16 value (16ul `U32.sub` bitsTo) (16ul `U32.sub` bitsFrom)
 
+[@@FStar.Attributes.rename_let "EverParseGetBitfield32MsbFirst"; FStar.Attributes.CInline]
 let get_bitfield32_msb_first (value:U32.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 32})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 32})
    : i:U32.t{FStar.UInt.size (U32.v i) (U32.v bitsTo - U32.v bitsFrom)}
    = get_bitfield32 value (32ul `U32.sub` bitsTo) (32ul `U32.sub` bitsFrom)
 
+[@@FStar.Attributes.rename_let "EverParseGetBitfield64MsbFirst"; FStar.Attributes.CInline]
 let get_bitfield64_msb_first (value:U64.t)
                    (bitsFrom:U32.t{U32.v bitsFrom < 64})
                    (bitsTo:U32.t{U32.v bitsFrom < U32.v bitsTo /\ U32.v bitsTo <= 64})

@@ -58,6 +58,49 @@ pub fn cbor_nondet_parse <'a>(map_key_bound: Option<usize>, strict_check: bool, 
     }
 }
 
+/// Like [`cbor_nondet_parse`], but rejects any map, at any nesting
+/// depth, with more than `map_length_bound` entries.
+pub fn cbor_nondet_parse_map_length_bounded<'a>(
+    map_length_bound: usize,
+    map_key_bound: Option<usize>,
+    strict_check: bool,
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    let map_key_bound0 = match map_key_bound {
+        None => crate::cbornondetveraux::option__size_t::None,
+        Some(v) => crate::cbornondetveraux::option__size_t::Some { v },
+    };
+    match crate::cbornondetver::cbor_nondet_parse_map_length_bounded(
+        map_length_bound,
+        map_key_bound0,
+        strict_check,
+        input,
+    ) {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    }
+}
+
+/// Parses a CBOR object with map nesting depth at most `map_depth_bound`
+/// and at most `map_length_bound` entries in every map. Returns `None`
+/// on failure, or the object and the remaining input on success.
+pub fn cbor_nondet_parse_bounded<'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    match crate::cbornondetver::cbor_nondet_parse_bounded(
+        map_depth_bound,
+        map_length_bound,
+        input,
+    ) {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    }
+}
+
 /// Computes the byte size of the binary representation of the
 /// CBOR object `x`,
 /// but without serializing `x`. Returns `None` if that size is
