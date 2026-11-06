@@ -8,6 +8,8 @@ type token =
   | ASSIGN                (* ::= *)
   | LBRACE | RBRACE | LPAREN | RPAREN | LBRACKET | RBRACKET
   | COMMA | DOTDOT | ELLIPSIS | BAR | MINUS | SEMI | DOT | LT | COLON
+  | AMP of string         (* &field: a field of an information object class *)
+  | AT                    (* @ *)
   | EOF
 
 exception Lex_error of string
@@ -60,6 +62,8 @@ rule token = parse
       | Some i when i < 1 lsl 61 -> NUM i
       | _ -> raise (Lex_error (Printf.sprintf "line %d: number too large: %s" !line n)) }
   | ident as s { ID s }
+  | '&' (ident as s) { AMP s }
+  | '@' { AT }
   | eof { EOF }
   | _ as c { raise (Lex_error (Printf.sprintf "line %d: unexpected character '%c'" !line c)) }
 

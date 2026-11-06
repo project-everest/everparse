@@ -485,7 +485,7 @@ let rec norm_constr env (c: constr) : constr =
     CRange (lo, hi)
   | CSingle l -> CSingle (List.map b l)
   | CUnion l -> CUnion (List.map (norm_constr env) l)
-  | CContaining _ | CWithComponent _ | CWithComponents _ -> c
+  | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> c
 
 (* A union of INTEGER ranges and values, as sorted disjoint intervals
    (None: unbounded) *)
@@ -697,6 +697,7 @@ and node env (ctx: string) (t: typ) : node =
     elab_named env ctx t; NRef ctx
   | TRef r -> let r = mangle r in elab_def env r; NRef r
   | TInst (n, _) -> error "%s: unexpanded instance of %s" ctx n
+  | TField (c, f) -> error "%s: %s.&%s is supported only in the components of a SEQUENCE type assignment" ctx c f
   | TBuiltin s -> let id, tm = builtin s in NILC (id, CTerm (tm, None))
   | TInteger _ -> NILC (univ 2, CTerm (integer_term, None))
   | TEnumerated items ->
@@ -788,7 +789,7 @@ and node env (ctx: string) (t: typ) : node =
             error "%s: a union of ranges must be a single range, or have at most %d values" ctx max_values;
           NILC (id, CTerm (small_integer_term, Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
         end
-      | CSize _ | CContaining _ | CWithComponent _ | CWithComponents _ -> error "%s: SIZE constraint on INTEGER" ctx
+      | CSize _ | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> error "%s: unsupported constraint on INTEGER" ctx
       end
     | Some (id, CTerm ({ tk = "ASN1_BOOLEAN"; _ } as tm, None)), CSingle bs ->
       let vs = List.sort_uniq compare (List.map (function
@@ -1037,7 +1038,7 @@ and constr_refs (c: constr) : string list =
   | CSize c | CWithComponent c -> constr_refs c
   | CUnion l -> List.concat_map constr_refs l
   | CWithComponents (_, l) -> List.concat_map (fun (_, c, _) -> match c with Some c -> constr_refs c | None -> []) l
-  | CRange _ | CSingle _ -> []
+  | CTable _ | CRange _ | CSingle _ -> []
 
 let body_refs = function
   | BAbsent -> []
@@ -1060,7 +1061,7 @@ let expand_params (ms: modul list) : modul list =
   List.iter (fun (m: modul) ->
       List.iter (function
           | TypeAssign (n, _) | TypeTemplate (n, _, _) -> Hashtbl.replace taken (mangle n) ()
-          | ValueAssign _ -> ())
+          | _ -> ())
         m.assignments)
     ms;
   let instances = Hashtbl.create 7 in            (* (name, args) -> instance name *)
@@ -1074,6 +1075,7 @@ let expand_params (ms: modul list) : modul list =
     | AValue (VInt i) -> if i < 0 then Printf.sprintf "m%d" (-i) else string_of_int i
     | AValue (VName s) -> mangle s
     | AValue (VBool b) -> string_of_bool b
+    | ASet { elems = [ESet n]; _ } -> mangle n
     | _ -> "x"
   in
   let rec typ depth (t: typ) : typ =
@@ -1088,7 +1090,7 @@ let expand_params (ms: modul list) : modul list =
     | TChoice alts -> TChoice (List.map (fun (n, t) -> (n, go t)) alts)
     | TTagged (c, n, m, t) -> TTagged (c, n, m, go t)
     | TConstrained (t, c) -> TConstrained (go t, constr depth c)
-    | TBuiltin _ | TInteger _ | TEnumerated _ | TBitString _ | TAny | TAnyDefinedBy _ | TRef _ -> t
+    | TBuiltin _ | TInteger _ | TEnumerated _ | TBitString _ | TAny | TAnyDefinedBy _ | TRef _ | TField _ -> t
   and comp depth = function
     | Field (n, t, d) -> Field (n, typ depth t, d)
     | ComponentsOf t -> ComponentsOf (typ depth t)
@@ -1099,7 +1101,7 @@ let expand_params (ms: modul list) : modul list =
     | CContaining t -> CContaining (typ depth t)
     | CWithComponent c -> CWithComponent (constr depth c)
     | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, c, pr) -> (n, Option.map (constr depth) c, pr)) l)
-    | CRange _ | CSingle _ -> c
+    | CRange _ | CSingle _ | CTable _ -> c
   and arg depth = function
     | AType t -> AType (typ depth t)
     | a -> a
@@ -1123,19 +1125,24 @@ let expand_params (ms: modul list) : modul list =
       let tsub = List.concat (List.map2 (fun p a -> match p, a with
           | PType x, AType t -> [(x, t)]
           | PType x, AValue _ -> error "%s: the argument for %s must be a type" n x
-          | PValue _, _ -> []) ps args) in
+          | PType x, ASet _ -> error "%s: the argument for %s must be a type" n x
+          | (PValue _ | PSet _), _ -> []) ps args) in
       let vsub = List.concat (List.map2 (fun p a -> match p, a with
           | PValue (_, x), AValue v -> [(x, v)]
-          | PValue (_, x), AType _ -> error "%s: the argument for %s must be a value" n x
-          | PType _, _ -> []) ps args) in
-      let body = subst tsub vsub body in
+          | PValue (_, x), (AType _ | ASet _) -> error "%s: the argument for %s must be a value" n x
+          | (PType _ | PSet _), _ -> []) ps args) in
+      let ssub = List.concat (List.map2 (fun p a -> match p, a with
+          | PSet (_, x), ASet o -> [(x, o)]
+          | PSet (_, x), _ -> error "%s: the argument for %s must be an object set {...}" n x
+          | (PType _ | PValue _), _ -> []) ps args) in
+      let body = subst tsub vsub ssub body in
       let body = typ (depth + 1) body in
       let l = match Hashtbl.find_opt extra mname with Some l -> l | None -> [] in
       Hashtbl.replace extra mname (TypeAssign (iname, body) :: l);
       iname
   (* Substitute the formal parameters of a template (before expanding its instances) *)
-  and subst tsub vsub (t: typ) : typ =
-    let go = subst tsub vsub in
+  and subst tsub vsub ssub (t: typ) : typ =
+    let go = subst tsub vsub ssub in
     let v = function
       | VName x when List.mem_assoc x vsub -> List.assoc x vsub
       | v -> v
@@ -1158,11 +1165,23 @@ let expand_params (ms: modul list) : modul list =
       | CContaining t -> CContaining (go t)
       | CWithComponent k -> CWithComponent (c k)
       | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, k, pr) -> (n, Option.map c k, pr)) l)
+      | CTable (o, k) -> CTable (set o, k)
+    and set (o: obj_set) : obj_set =
+      List.fold_left (fun (acc: obj_set) e -> match e with
+          | ESet x when List.mem_assoc x ssub ->
+            let o' = List.assoc x ssub in
+            { elems = acc.elems @ o'.elems; ext = acc.ext || o'.ext }
+          | e -> { acc with elems = acc.elems @ [e] })
+        { elems = []; ext = o.ext } o.elems
     in
     let d = function DDefault x -> DDefault (v x) | d -> d in
     match t with
     | TRef r when List.mem_assoc r tsub -> List.assoc r tsub
-    | TInst (n, args) -> TInst (n, List.map (function AType t -> AType (go t) | AValue x -> AValue (v x)) args)
+    | TField (r, f) when List.mem_assoc r tsub ->
+      (match List.assoc r tsub with
+       | TRef r' -> TField (r', f)
+       | _ -> error "the class parameter %s must be given a class" r)
+    | TInst (n, args) -> TInst (n, List.map (function AType t -> AType (go t) | AValue x -> AValue (v x) | ASet o -> ASet (set o)) args)
     | TSequence cs -> TSequence (List.map (function Field (n, t, dd) -> Field (n, go t, d dd) | ComponentsOf t -> ComponentsOf (go t)) cs)
     | TSet cs -> TSet (List.map (function Field (n, t, dd) -> Field (n, go t, d dd) | ComponentsOf t -> ComponentsOf (go t)) cs)
     | TSequenceOf (k, t) -> TSequenceOf (Option.map c k, go t)
@@ -1170,7 +1189,7 @@ let expand_params (ms: modul list) : modul list =
     | TChoice alts -> TChoice (List.map (fun (n, t) -> (n, go t)) alts)
     | TTagged (cl, n, m, t) -> TTagged (cl, n, m, go t)
     | TConstrained (t, k) -> TConstrained (go t, c k)
-    | TBuiltin _ | TInteger _ | TEnumerated _ | TBitString _ | TAny | TAnyDefinedBy _ | TRef _ -> t
+    | TBuiltin _ | TInteger _ | TEnumerated _ | TBitString _ | TAny | TAnyDefinedBy _ | TRef _ | TField _ -> t
   in
   let body = function
     | BType (t, o) -> BType (typ 0 t, o)
@@ -1181,7 +1200,7 @@ let expand_params (ms: modul list) : modul list =
       let assignments = List.filter_map (function
           | TypeAssign (n, t) -> Some (TypeAssign (n, typ 0 t))
           | ValueAssign (n, t, v) -> Some (ValueAssign (n, typ 0 t, v))
-          | TypeTemplate _ as a -> Some a)  (* for the checks of IMPORTS *)
+          | (TypeTemplate _ | ClassAssign _ | ClassAlias _ | ObjectAssign _ | ObjectSetAssign _) as a -> Some a  (* for the checks of IMPORTS *))
           m.assignments
       in
       let directives = List.map (fun db ->
@@ -1196,6 +1215,225 @@ let expand_params (ms: modul list) : modul list =
       match Hashtbl.find_opt extra m.mname with
       | Some l -> { m with assignments = m.assignments @ List.rev l }
       | None -> m)
+    ms
+
+
+(* Information object classes (X.681) and table constraints (X.682): a
+   component `C.&Type ({Set}{@key})` (possibly under tags, SEQUENCE OF,
+   CONTAINING, ...) whose key component is `C.&id ({Set})` generates a
+   DEFINED-BY table, with a case per object of Set (the fallback is the
+   declared component, i.e. ANY, if Set is extensible, NONE otherwise).
+   The other field references are replaced with their types (ANY for a
+   type field). *)
+let builtin_classes = [
+  "TYPE-IDENTIFIER", { cl_fields = [FsValue ("id", TBuiltin "OBJECT IDENTIFIER", false); FsType ("Type", false)];
+                       cl_syntax = Some [SField "Type"; SWord "IDENTIFIED"; SWord "BY"; SField "id"] };
+  "ABSTRACT-SYNTAX", { cl_fields = [FsValue ("id", TBuiltin "OBJECT IDENTIFIER", false); FsType ("Type", false); FsOther "property"];
+                       cl_syntax = Some [SField "Type"; SWord "IDENTIFIED"; SWord "BY"; SField "id";
+                                         SOpt [SWord "HAS"; SWord "PROPERTY"; SField "property"]] };
+]
+
+let resolve_ioc (ms: modul list) : modul list =
+  let all = List.concat_map (fun (m: modul) -> m.assignments) ms in
+  let classes = Hashtbl.create 7 in
+  List.iter (fun (n, c) -> Hashtbl.replace classes n c) builtin_classes;
+  List.iter (function
+      | ClassAssign (n, c) ->
+        if Hashtbl.mem classes n then error "class %s defined twice" n;
+        Hashtbl.replace classes n c
+      | _ -> ())
+    all;
+  let aliases = List.filter_map (function
+      | ClassAlias (n, c) -> Some (n, c)
+      | TypeAssign (n, TRef c) when Parse.is_class_name n && Parse.is_class_name c -> Some (n, c)
+      | _ -> None) all in
+  let rec fix () =
+    let changed = ref false in
+    List.iter (fun (n, c) ->
+        if not (Hashtbl.mem classes n) && Hashtbl.mem classes c then begin
+          Hashtbl.replace classes n (Hashtbl.find classes c); changed := true
+        end) aliases;
+    if !changed then fix ()
+  in
+  fix ();
+  List.iter (function ClassAlias (n, c) when not (Hashtbl.mem classes n) -> error "%s: unknown class %s" n c | _ -> ()) all;
+  let is_class n = Hashtbl.mem classes n in
+  let cls where n = match Hashtbl.find_opt classes n with
+    | Some c -> c
+    | None -> error "%s: unknown class %s" where n
+  in
+  let objects = Hashtbl.create 17 in
+  List.iter (function
+      | ObjectAssign (n, c, r) when is_class c ->
+        if Hashtbl.mem objects n then error "object %s defined twice" n;
+        Hashtbl.replace objects n (`Raw (c, r))
+      | ValueAssign (n, TRef c, VName o) when is_class c ->
+        if Hashtbl.mem objects n then error "object %s defined twice" n;
+        Hashtbl.replace objects n (`Alias o)
+      | ValueAssign (n, TRef c, _) when is_class c -> error "object %s: expected { ... } or an object reference" n
+      | _ -> ())
+    all;
+  let parsed = Hashtbl.create 17 in
+  let rec obj depth n =
+    if depth > 100 then error "object %s: circular definition" n;
+    match Hashtbl.find_opt objects n with
+    | Some (`Raw (c, r)) ->
+      (match Hashtbl.find_opt parsed n with
+       | Some x -> x
+       | None -> let x = Parse.parse_object (cls n c) r in Hashtbl.replace parsed n x; x)
+    | Some (`Alias o) -> obj (depth + 1) o
+    | None -> error "unknown information object %s" n
+  in
+  let sets = Hashtbl.create 7 in
+  List.iter (function
+      | ObjectSetAssign (n, c, o) ->
+        if not (is_class c) then error "%s: value sets are not supported (or unknown class %s)" n c;
+        if Hashtbl.mem sets n then error "object set %s defined twice" n;
+        Hashtbl.replace sets n (c, o)
+      | _ -> ())
+    all;
+  let rec flatten depth c (o: obj_set) =
+    if depth > 100 then error "circular object set definition";
+    List.fold_left (fun (acc, ext) e -> match e with
+        | EObject n -> (acc @ [obj 0 n], ext)
+        | EInline r -> (acc @ [Parse.parse_object (cls "object set" c) r], ext)
+        | ESet n ->
+          (match Hashtbl.find_opt sets n with
+           | Some (c', o') -> let l, e' = flatten (depth + 1) c' o' in (acc @ l, ext || e')
+           | None -> error "unknown object set %s" n))
+      ([], o.ext) o.elems
+  in
+  let field_kind c f =
+    match List.find_opt (function FsType (n, _) | FsValue (n, _, _) | FsOther n -> n = f) (cls (c ^ ".&" ^ f) c).cl_fields with
+    | Some k -> k
+    | None -> error "class %s has no field &%s" c f
+  in
+  let rec head_field = function
+    | TField _ -> true
+    | TConstrained (t, _) -> head_field t
+    | _ -> false
+  in
+  (* Replace the field references with their types *)
+  let rec strip (t: typ) : typ =
+    match t with
+    | TField (c, f) ->
+      (match field_kind c f with
+       | FsType _ -> TAny
+       | FsValue (_, t, _) -> strip t
+       | FsOther _ -> error "%s.&%s: only type and value fields are supported" c f)
+    | TConstrained (_, CTable (_, Some k)) ->
+      error "{@%s}: component relation constraints are supported only in the components of a SEQUENCE type assignment" k
+    | TConstrained (t, CTable (_, None)) -> strip t
+    | TConstrained (t, CContaining t') when head_field t' -> ignore (strip t'); strip t
+    | TConstrained (t, c) -> TConstrained (strip t, strip_c c)
+    | TSequence cs -> TSequence (List.map comp cs)
+    | TSet cs -> TSet (List.map comp cs)
+    | TSequenceOf (c, t) -> TSequenceOf (Option.map strip_c c, strip t)
+    | TSetOf (c, t) -> TSetOf (Option.map strip_c c, strip t)
+    | TChoice alts -> TChoice (List.map (fun (n, t) -> (n, strip t)) alts)
+    | TTagged (c, n, m, t) -> TTagged (c, n, m, strip t)
+    | TBuiltin _ | TInteger _ | TEnumerated _ | TBitString _ | TAny | TAnyDefinedBy _ | TRef _ | TInst _ -> t
+  and comp = function
+    | Field (n, t, d) -> Field (n, strip t, d)
+    | ComponentsOf t -> ComponentsOf (strip t)
+  and strip_c (c: constr) : constr =
+    match c with
+    | CSize c -> CSize (strip_c c)
+    | CUnion l -> CUnion (List.map strip_c l)
+    | CContaining t -> CContaining (strip t)
+    | CWithComponent c -> CWithComponent (strip_c c)
+    | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, c, pr) -> (n, Option.map strip_c c, pr)) l)
+    | CRange _ | CSingle _ | CTable _ -> c
+  in
+  (* The occurrences of C.&f ({Set}{@key}) in a component (not in nested
+     SEQUENCE, SET or CHOICE types), and their replacement *)
+  let rec keyed (t: typ) =
+    match t with
+    | TConstrained (TField (c, f), CTable (set, Some k)) -> [(c, f, set, k)]
+    | TConstrained (t, CContaining t') -> keyed t @ keyed t'
+    | TConstrained (t, _) | TTagged (_, _, _, t) | TSequenceOf (_, t) | TSetOf (_, t) -> keyed t
+    | _ -> []
+  in
+  let rec replace u (t: typ) : typ =
+    match t with
+    | TConstrained ((TField _ as x), CTable (_, Some _)) -> (match u with Some u -> u | None -> x)
+    | TConstrained (t, CContaining t') -> TConstrained (replace u t, CContaining (replace u t'))
+    | TConstrained (t, c) -> TConstrained (replace u t, c)
+    | TTagged (c, n, m, t) -> TTagged (c, n, m, replace u t)
+    | TSequenceOf (c, t) -> TSequenceOf (c, replace u t)
+    | TSetOf (c, t) -> TSetOf (c, replace u t)
+    | _ -> t
+  in
+  let rec peel = function TTagged (_, _, _, t) -> peel t | t -> t in
+  let user_dbs = List.concat_map (fun (m: modul) -> List.map (fun db -> db.db_type) m.directives) ms in
+  let sequence n (cs: component list) : defined_by option =
+    let deps = List.concat_map (function
+        | Field (f, t, d) -> List.map (fun x -> (f, t, d, x)) (keyed t)
+        | ComponentsOf _ -> []) cs in
+    match deps with
+    | [] -> None
+    | _ :: _ :: _ -> error "%s: only one component relation constraint {@key} per SEQUENCE is supported" n
+    | [(f, t, d, (c, fl, set, k))] ->
+      let where = Printf.sprintf "%s.%s ({@%s})" n f k in
+      let kt = match List.find_opt (function Field (n', _, _) -> n' = k | ComponentsOf _ -> false) cs with
+        | Some (Field (_, kt, _)) -> kt
+        | _ -> error "%s: %s has no component %s" where n k
+      in
+      let rec key_field = function
+        | TField (c', idf) -> (c', idf)
+        | TConstrained (t, _) | TTagged (_, _, _, t) -> key_field t
+        | _ -> error "%s: the key component %s must be a field reference %s.&id ({Set})" where k c
+      in
+      let _, idf = key_field kt in
+      (match field_kind c fl with
+       | FsType _ -> ()
+       | _ -> error "%s: %s.&%s must be a type field" where c fl);
+      (match field_kind c idf with
+       | FsValue _ -> ()
+       | _ -> error "%s: %s.&%s must be a value field" where c idf);
+      if List.mem n user_dbs then begin
+        Printf.eprintf "Warning: %s: the --#DEFINED-BY directive replaces the table constraint\n" where;
+        None
+      end else begin
+        let objs, ext = flatten 0 c set in
+        let seen = Hashtbl.create 7 in
+        let cases = List.filter_map (fun settings ->
+            let kv = match List.assoc_opt idf settings with
+              | Some (Parse.SetValue v) -> v
+              | _ -> error "%s: an object of the set has no &%s" where idf
+            in
+            if Hashtbl.mem seen kv then None else begin
+              Hashtbl.add seen kv ();
+              match List.assoc_opt fl settings, d with
+              | _, DDefault _ -> error "%s: a dependent component cannot have a DEFAULT" where
+              | Some (Parse.SetType u), _ -> Some (kv, BType (strip (replace (Some u) (peel t)), d = DOptional))
+              | None, DOptional -> Some (kv, BAbsent)
+              | None, _ -> error "%s: an object of the set has no &%s, but %s is not OPTIONAL" where fl f
+              | Some _, _ -> error "%s: &%s is not a type" where fl
+            end)
+            objs
+        in
+        Some { db_type = n; db_field = f; db_key = Some k; db_cases = cases;
+               db_fallback = (if ext then FbDeclared else FbNone); db_line = 0 }
+      end
+  in
+  List.map (fun (m: modul) ->
+      let dbs = ref [] in
+      let assignments = List.filter_map (function
+          | TypeAssign (n, TRef c) when Hashtbl.mem classes n -> Some (ClassAlias (n, c))
+          | TypeAssign (n, TSequence cs) ->
+            (match sequence n cs with Some db -> dbs := db :: !dbs | None -> ());
+            Some (TypeAssign (n, strip (TSequence (List.map (function
+                | Field (f, t, d) -> Field (f, replace None t, d)
+                | c -> c) cs))))
+          | TypeAssign (n, t) -> Some (TypeAssign (n, strip t))
+          | ValueAssign (n, TRef c, v) when is_class c -> ignore v; Some (ObjectAssign (n, c, []))
+          | ValueAssign (n, t, v) -> Some (ValueAssign (n, strip t, v))
+          | ObjectAssign (n, c, r) when not (is_class c) -> Some (ValueAssign (n, TRef c, Parse.parse_value r))
+          | a -> Some a)
+          m.assignments
+      in
+      { m with assignments; directives = m.directives @ List.rev !dbs })
     ms
 
 type result = {
@@ -1216,7 +1454,7 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
     state = Hashtbl.create 17; order = []; user = Hashtbl.create 17;
     keep = Hashtbl.create 7; keep_alias = Hashtbl.create 7; keep_comps = Hashtbl.create 7;
   } in
-  let m, deps = match expand_params (m :: deps) with
+  let m, deps = match expand_params (resolve_ioc (expand_params (m :: deps))) with
     | m :: deps -> m, deps
     | [] -> assert false
   in
@@ -1236,7 +1474,7 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
       | ValueAssign (n, t, v) ->
         if Hashtbl.mem env.values n then error "value %s defined twice" n;
         Hashtbl.replace env.values n (t, v); None
-      | TypeTemplate _ -> None)
+      | TypeTemplate _ | ClassAssign _ | ClassAlias _ | ObjectAssign _ | ObjectSetAssign _ -> None)
       m.assignments
   in
   let main_names = names_of m in
@@ -1251,7 +1489,7 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
           Hashtbl.replace env.type_td n' prelude.tag_default;
           Hashtbl.replace env.user n' n
         end
-      | ValueAssign _ | TypeTemplate _ -> ())
+      | _ -> ())
     prelude.assignments;
   (* IMPORTS: the symbols must be defined by the given modules *)
   List.iter (fun (m: modul) ->
@@ -1261,7 +1499,8 @@ let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: mod
           | Some m' ->
             List.iter (fun s ->
                 let defined = List.exists (function
-                    | TypeAssign (n, _) | ValueAssign (n, _, _) | TypeTemplate (n, _, _) -> n = s) m'.assignments in
+                    | TypeAssign (n, _) | ValueAssign (n, _, _) | TypeTemplate (n, _, _)
+                    | ClassAssign (n, _) | ClassAlias (n, _) | ObjectAssign (n, _, _) | ObjectSetAssign (n, _, _) -> n = s) m'.assignments in
                 if not defined then error "%s imports %s from %s, which does not define it" m.mname s from)
               syms)
         m.imports)

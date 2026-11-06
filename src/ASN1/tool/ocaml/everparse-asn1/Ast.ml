@@ -31,6 +31,17 @@ type bound =
   | BBool of bool                      (* TRUE, FALSE *)
   | Open of bound                      (* an excluded endpoint: lo<.. or ..<hi *)
 
+(* Information objects (X.681) are kept as tokens, until the syntax of
+   their class is known *)
+type raw = (Lexer.token * int) list
+
+type set_elem =
+  | EObject of string                  (* an object reference *)
+  | EInline of raw                     (* { ... }: an object *)
+  | ESet of string                     (* an object set reference *)
+
+type obj_set = { elems: set_elem list; ext: bool (* extensible: has ... *) }
+
 type constr =
   | CSize of constr                    (* SIZE (...) *)
   | CRange of bound * bound            (* lo .. hi *)
@@ -41,6 +52,8 @@ type constr =
   | CWithComponents of bool * (string * constr option * presence option) list
                                        (* WITH COMPONENTS { [..., ] name [(c)] [PRESENT|ABSENT|OPTIONAL], ... }:
                                           partial?, component constraints (X.680 51.8) *)
+
+  | CTable of obj_set * string option  (* ({Set}) or ({Set}{@key}): a table constraint (X.682 10) *)
 
 and presence = PPresent | PAbsent | POptional
 
@@ -60,10 +73,12 @@ and typ =
   | TTagged of tag_class * int * tag_mode * typ
   | TConstrained of typ * constr
   | TInst of string * arg list         (* an instance of a parameterized type: Name { T, 5 } *)
+  | TField of string * string          (* CLASS.&field *)
 
 and arg =
   | AType of typ
   | AValue of value
+  | ASet of obj_set                    (* {Set}: an object set *)
 
 and component =
   | Field of string * typ * deco
@@ -75,11 +90,29 @@ and deco = DPlain | DOptional | DDefault of value
 type param =
   | PType of string                    (* T *)
   | PValue of typ * string             (* INTEGER : ub *)
+  | PSet of string * string            (* CLASS : Set *)
+
+(* Information object classes (X.681 9) *)
+type field_spec =
+  | FsType of string * bool            (* &Type [OPTIONAL | DEFAULT T]: optional? *)
+  | FsValue of string * typ * bool     (* &id T [UNIQUE] [OPTIONAL | DEFAULT v]: optional? *)
+  | FsOther of string                  (* other fields (value sets, objects, ...): ignored *)
+
+type syntax_item =                     (* WITH SYNTAX (X.681 10) *)
+  | SWord of string                    (* a word, or "," *)
+  | SField of string                   (* &field *)
+  | SOpt of syntax_item list           (* [ ... ] *)
+
+type class_def = { cl_fields: field_spec list; cl_syntax: syntax_item list option }
 
 type assignment =
   | TypeAssign of string * typ
   | ValueAssign of string * typ * value
   | TypeTemplate of string * param list * typ  (* Name { params } ::= T *)
+  | ClassAssign of string * class_def          (* NAME ::= CLASS { ... } *)
+  | ClassAlias of string * string              (* NAME ::= OTHER-CLASS *)
+  | ObjectAssign of string * string * raw      (* name CLASS ::= { ... } *)
+  | ObjectSetAssign of string * string * obj_set  (* Name CLASS ::= { ... } *)
 
 (* A `--#DEFINED-BY Type.field [BY key] { key : body, ... } [FALLBACK body]`
    directive: the cases of an ANY DEFINED BY (or of any component that

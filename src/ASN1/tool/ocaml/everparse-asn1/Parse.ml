@@ -16,6 +16,7 @@ let show = function
   | RBRACKET -> "]" | COMMA -> "," | DOTDOT -> ".." | ELLIPSIS -> "..."
   | BAR -> "|" | MINUS -> "-" | SEMI -> ";" | DOT -> "." | LT -> "<" | COLON -> ":"
   | CSTRING s -> "\"" ^ s ^ "\"" | BSTRING s -> "'" ^ s ^ "'B" | HSTRING s -> "'" ^ s ^ "'H"
+  | AMP s -> "&" ^ s | AT -> "@"
   | EOF -> "end of file"
 
 let fail st fmt =
@@ -50,6 +51,48 @@ let rec skip_braces st =
     | EOF -> fail st "unbalanced braces"
     | _ -> advance st; go ()
   in go ()
+
+(* The tokens of a balanced { ... }, without the outer braces *)
+let raw_braces st : raw =
+  let start = line st in
+  expect st LBRACE;
+  let rec go depth acc =
+    let (t, _) as x = st.toks.(st.pos) in
+    match t with
+    | EOF -> error "line %d: unbalanced braces" start
+    | RBRACE when depth = 0 -> advance st; List.rev acc
+    | RBRACE -> advance st; go (depth - 1) (x :: acc)
+    | LBRACE -> advance st; go (depth + 1) (x :: acc)
+    | _ -> advance st; go depth (x :: acc)
+  in go 0 []
+
+(* X.681 7.1: the names of classes are in uppercase *)
+let is_class_name s =
+  String.exists (fun c -> 'A' <= c && c <= 'Z') s &&
+  String.for_all (fun c -> ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c = '-') s
+
+let builtin_type_words = ["BOOLEAN"; "NULL"; "INTEGER"; "ENUMERATED"; "BIT"; "OCTET"; "OBJECT";
+                          "ANY"; "SEQUENCE"; "SET"; "CHOICE"; "EXTERNAL"; "EMBEDDED"; "CHARACTER";
+                          "REAL"; "DATE"; "TIME-OF-DAY"; "DATE-TIME"; "RELATIVE-OID"; "OID-IRI";
+                          "RELATIVE-OID-IRI"; "INSTANCE"]
+
+(* An object set { o1 | o2 | { inline } | Set, ... }: references and
+   inline objects, with | or UNION, and an extension marker *)
+let obj_set st : obj_set =
+  expect st LBRACE;
+  let rec go elems ext =
+    match peek st with
+    | RBRACE -> advance st; { elems = List.rev elems; ext }
+    | ELLIPSIS -> advance st; go elems true
+    | COMMA | BAR | ID "UNION" -> advance st; go elems ext
+    | ID s when is_lower s -> advance st; go (EObject s :: elems) ext
+    | ID s ->
+      advance st;
+      if peek st = LBRACE then fail st "parameterized object sets are not supported";
+      go (ESet s :: elems) ext
+    | LBRACE -> let r = raw_braces st in go (EInline r :: elems) ext
+    | _ -> fail st "unsupported object set element"
+  in go [] false
 
 (* An OBJECT IDENTIFIER value: { iso(1) member-body(2) 840 } or { id-ce 19 } *)
 let oid_value st =
@@ -177,6 +220,22 @@ let rec constr_body st =
       CWithComponent (constr st)
     end
   | ELLIPSIS -> fail st "extensible constraints are not supported"
+  | LBRACE ->
+    (* a table constraint {Set} or {Set}{@key} *)
+    let set = obj_set st in
+    let key =
+      if peek st = LBRACE then begin
+        advance st;
+        expect st AT;
+        if peek st = DOT then fail st "relative component references (@.c) are not supported";
+        let k = lower_ident st in
+        if peek st = DOT then fail st "component references of nested components (@a.b) are not supported";
+        if peek st = COMMA then fail st "table constraints with several keys are not supported";
+        expect st RBRACE;
+        Some k
+      end else None
+    in
+    CTable (set, key)
   | _ ->
     let elt () =
       let lo = bound st in
@@ -301,8 +360,14 @@ and base_typ st =
     | "EXTERNAL" -> TRef "EXTERNAL"
     | "EMBEDDED" -> expect_kw st "PDV"; TRef "EMBEDDED-PDV"
     | "CHARACTER" -> expect_kw st "STRING"; TRef "CHARACTER-STRING"
-    | "REAL" | "INSTANCE" | "TYPE-IDENTIFIER" ->
+    | ("TYPE-IDENTIFIER" | "ABSTRACT-SYNTAX") when peek st = DOT ->
+      advance st;
+      (match peek st with AMP f -> advance st; TField (s, f) | _ -> fail st "expected a field (&name)")
+    | "REAL" | "INSTANCE" | "TYPE-IDENTIFIER" | "ABSTRACT-SYNTAX" ->
       fail st "type %s is not supported" s
+    | _ when is_upper s && peek st = DOT && (match peek2 st with AMP _ -> true | _ -> false) ->
+      advance st;
+      (match peek st with AMP f -> advance st; if peek st = DOT then fail st "nested field references are not supported"; TField (s, f) | _ -> assert false)
     | _ when is_upper s ->
       if peek st = DOT then fail st "external references are not supported";
       if peek st = LBRACE then TInst (s, args st) else TRef s
@@ -315,9 +380,10 @@ and base_typ st =
 and args st =
   expect st LBRACE;
   let rec go acc =
-    let a = match peek st with
-      | ID s when is_upper s -> AType (typ st)
-      | LBRACKET -> AType (typ st)
+    let a = match peek st, peek2 st with
+      | LBRACE, ID s when is_upper s -> ASet (obj_set st)
+      | ID s, _ when is_upper s -> AType (typ st)
+      | LBRACKET, _ -> AType (typ st)
       | _ -> AValue (value ~colon:false st)
     in
     let acc = a :: acc in
@@ -356,13 +422,137 @@ let params st =
       | _ ->
         let gov = typ st in
         expect st COLON;
-        match peek st with
-        | ID s when is_lower s -> advance st; PValue (gov, s)
-        | _ -> fail st "only type and value parameters are supported"
+        match peek st, gov with
+        | ID s, _ when is_lower s -> advance st; PValue (gov, s)
+        | ID s, TRef c when is_class_name c -> advance st; PSet (c, s)
+        | _ -> fail st "only type, value and object set parameters are supported"
     in
     let acc = p :: acc in
     if peek st = COMMA then (advance st; go acc) else (expect st RBRACE; List.rev acc)
   in go []
+
+(* Skip to the next , or } at depth 0; were OPTIONAL or DEFAULT seen? *)
+let skip_field st =
+  let opt = ref false in
+  let rec go depth =
+    match peek st with
+    | (COMMA | RBRACE) when depth = 0 -> ()
+    | LBRACE | LPAREN | LBRACKET -> advance st; go (depth + 1)
+    | RBRACE | RPAREN | RBRACKET -> advance st; go (depth - 1)
+    | ID ("OPTIONAL" | "DEFAULT") when depth = 0 -> opt := true; advance st; go depth
+    | EOF -> fail st "unexpected end of file"
+    | _ -> advance st; go depth
+  in go 0; !opt
+
+(* CLASS { &field ..., ... } [WITH SYNTAX { ... }] *)
+let class_def st : class_def =
+  expect_kw st "CLASS";
+  expect st LBRACE;
+  let rec fields acc =
+    let f = match peek st with
+      | AMP n ->
+        advance st;
+        if is_upper n then begin
+          match peek st with
+          | COMMA | RBRACE -> FsType (n, false)
+          | ID ("OPTIONAL" | "DEFAULT") -> FsType (n, skip_field st)
+          | _ -> ignore (skip_field st); FsOther n
+        end else begin
+          match peek st with
+          | AMP _ -> ignore (skip_field st); FsOther n
+          | _ ->
+            let save = st.pos in
+            match (try Some (typ st) with Error _ -> None) with
+            | Some t ->
+              ignore (kw st "UNIQUE");
+              FsValue (n, t, skip_field st)
+            | None -> st.pos <- save; ignore (skip_field st); FsOther n
+        end
+      | _ -> fail st "expected a field (&name)"
+    in
+    let acc = f :: acc in
+    if peek st = COMMA then (advance st; fields acc) else (expect st RBRACE; List.rev acc)
+  in
+  let cl_fields = fields [] in
+  let cl_syntax =
+    if kw st "WITH" then begin
+      expect_kw st "SYNTAX";
+      expect st LBRACE;
+      let rec items close acc =
+        if peek st = close then (advance st; List.rev acc) else
+        let it = match peek st with
+          | LBRACKET -> advance st; SOpt (items RBRACKET [])
+          | AMP f -> advance st; SField f
+          | ID w -> advance st; SWord w
+          | COMMA -> advance st; SWord ","
+          | _ -> fail st "unsupported WITH SYNTAX item"
+        in
+        items close (it :: acc)
+      in
+      Some (items RBRACE [])
+    end else None
+  in
+  { cl_fields; cl_syntax }
+
+(* The settings of the fields of an object (X.681 11) *)
+type setting = SetType of typ | SetValue of value | SetOther
+
+let parse_object (cls: class_def) (r: raw) : (string * setting) list =
+  let last = match List.rev r with (_, l) :: _ -> l | [] -> 0 in
+  let st = { toks = Array.of_list (r @ [(EOF, last)]); pos = 0 } in
+  let kind f =
+    match List.find_opt (function FsType (n, _) | FsValue (n, _, _) | FsOther n -> n = f) cls.cl_fields with
+    | Some k -> k
+    | None -> fail st "the class has no field &%s" f
+  in
+  let setting f =
+    match kind f with
+    | FsType _ -> SetType (typ st)
+    | FsValue _ -> SetValue (value ~colon:false st)
+    | FsOther _ ->
+      (match peek st with
+       | LBRACE -> skip_braces st
+       | ID s when is_upper s -> ignore (typ st)
+       | _ -> ignore (value ~colon:false st));
+      SetOther
+  in
+  match cls.cl_syntax with
+  | None ->
+    (* the default syntax: &field setting, ... *)
+    let rec go acc =
+      match peek st with
+      | EOF -> List.rev acc
+      | AMP f ->
+        advance st;
+        let s = setting f in
+        let acc = (f, s) :: acc in
+        if peek st = COMMA then advance st else if peek st <> EOF then fail st "expected ','";
+        go acc
+      | _ -> fail st "expected a field (&name)"
+    in go []
+  | Some syntax ->
+    let acc = ref [] in
+    let rec items l = List.iter item l
+    and item = function
+      | SWord "," -> expect st COMMA
+      | SWord w -> expect_kw st w
+      | SField f -> let s = setting f in acc := (f, s) :: !acc
+      | SOpt l ->
+        (* an optional group: taken if it matches (greedy) *)
+        let save = st.pos and saved = !acc in
+        (try items l with Error _ -> st.pos <- save; acc := saved)
+    in
+    items syntax;
+    if peek st <> EOF then fail st "the object does not follow the syntax of its class";
+    List.rev !acc
+
+(* A value given as tokens (an ObjectAssign that turns out to be a value) *)
+let parse_value (r: raw) : value =
+  let last = match List.rev r with (_, l) :: _ -> l | [] -> 0 in
+  let st = { toks = Array.of_list ((LBRACE, last) :: r @ [(RBRACE, last); (EOF, last)]); pos = 0 } in
+  let v = value ~colon:false st in
+  if peek st <> EOF then fail st "trailing tokens";
+  v
 
 let assignment st =
   let n = ident st in
@@ -370,11 +560,27 @@ let assignment st =
     if peek st = LBRACE then begin
       let ps = params st in
       expect st ASSIGN; TypeTemplate (n, ps, typ st)
-    end else begin
-      expect st ASSIGN; TypeAssign (n, typ st)
-    end
+    end else match peek st with
+      | ID c when peek2 st = ASSIGN ->
+        (* Name CLASS ::= { ... }: an object set *)
+        advance st; advance st;
+        if not (is_class_name c) || List.mem c builtin_type_words then fail st "value sets are not supported";
+        ObjectSetAssign (n, c, obj_set st)
+      | _ ->
+        expect st ASSIGN;
+        match peek st, peek2 st with
+        | ID "CLASS", _ -> ClassAssign (n, class_def st)
+        | ID ("TYPE-IDENTIFIER" | "ABSTRACT-SYNTAX" as c), t when t <> DOT -> advance st; ClassAlias (n, c)
+        | _ -> TypeAssign (n, typ st)
   end else begin
     if peek st = LBRACE then fail st "parameterized values are not supported";
+    match peek st, peek2 st with
+    | ID c, ASSIGN when is_class_name c && not (List.mem c builtin_type_words) ->
+      (* name CLASS ::= { ... }: an object (or a value of an uppercase type) *)
+      advance st; advance st;
+      if peek st = LBRACE then ObjectAssign (n, c, raw_braces st)
+      else ValueAssign (n, TRef c, value st)
+    | _ ->
     let t = typ st in expect st ASSIGN; ValueAssign (n, t, value st)
   end
 
