@@ -1255,9 +1255,8 @@ let adb_suffix_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_
 let adb_suffix_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (id: asn1_id_t) (b: bytes)
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls))
-  (ensures (match parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) b with
-    | Some (v, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_sv kid key_k ls v)
-    | None -> True))
+  (ensures (let r = parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) b in
+    Some? r ==> asn1_id_enc id `Seq.append` Seq.slice b 0 (snd (Some?.v r)) == asn1_value_list_enc (adb_sv kid key_k ls (fst (Some?.v r)))))
 = let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   parse_tagged_union_eq (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) b;
   adb_key_twin_at kid key_k id b;
@@ -1291,9 +1290,8 @@ let adb_fb_suffix_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_k
 let adb_fb_suffix_twin_at (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (id: asn1_id_t) (b: bytes)
 : Lemma
   (requires (wf_terminal kid key_k /\ ls_esound ls /\ items_esound (asn1_sequence_as_parser (dsnd fb))))
-  (ensures (match parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (fb_gp fb))) b with
-    | Some (v, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_fb_sv kid key_k ls fb v)
-    | None -> True))
+  (ensures (let r = parse (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (fb_gp fb))) b in
+    Some? r ==> asn1_id_enc id `Seq.append` Seq.slice b 0 (snd (Some?.v r)) == asn1_value_list_enc (adb_fb_sv kid key_k ls fb (fst (Some?.v r)))))
 = let lp = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
   parse_tagged_union_eq (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (fb_gp fb)) b;
   adb_key_twin_at kid key_k id b;
@@ -1405,7 +1403,7 @@ let adb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key
     | Some (x, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_sv kid key_k ls x)
     | None -> True)
   = assert (parse (Mkparsertwin?.fp (adb_sfx kid key_k ls) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)))) b)
-      by (FStar.Tactics.norm [delta_only [`%adb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_weak_parser_twin; `%adb_lp]; zeta; iota]; FStar.Tactics.trefl ());
+      by (FStar.Tactics.norm [delta_only [`%adb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_weak_parser_twin; `%adb_lp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
     adb_suffix_twin_at kid key_k ls id b
   in
   Classical.forall_intro prf1;
@@ -1424,7 +1422,7 @@ let adb_fb_sfx_esound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_
     | Some (x, n) -> asn1_id_enc id `Seq.append` Seq.slice b 0 n == asn1_value_list_enc (adb_fb_sv kid key_k ls fb x)
     | None -> True)
   = assert (parse (Mkparsertwin?.fp (adb_fb_sfx kid key_k ls fb) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (fb_gp fb)))) b)
-      by (FStar.Tactics.norm [delta_only [`%adb_fb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_with_fallback_weak_parser_twin; `%adb_lp]; zeta; iota]; FStar.Tactics.trefl ());
+      by (FStar.Tactics.norm [delta_only [`%adb_fb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_with_fallback_weak_parser_twin; `%adb_lp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
     adb_fb_suffix_twin_at kid key_k ls fb id b
   in
   Classical.forall_intro prf1;
@@ -1444,7 +1442,7 @@ let adb_content_esound (id: asn1_id_t)
 = adb_sfx_esound kid key_k ls;
   any_parser_esound (asn1_sequence_as_parser prefix) (adb_sfx kid key_k ls) (adb_sv kid key_k ls);
   assert (asn1_content_as_parser (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls None pf pf') == make_asn1_sequence_any_parser (asn1_sequence_as_parser prefix) (adb_sfx kid key_k ls))
-    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp]; zeta; iota]; FStar.Tactics.trefl ());
+    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
   Classical.forall_intro (adb_content_value id idp prefix kid key_k ls pf pf');
   esound_ext (asn1_content_as_parser (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls None pf pf')) (any_enc (asn1_sequence_as_parser prefix) (adb_sv kid key_k ls)) (content_enc id (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls None pf pf'))
 
@@ -1461,7 +1459,7 @@ let adb_fb_content_esound (id: asn1_id_t)
 = adb_fb_sfx_esound kid key_k ls (| fbids, fbitems |);
   any_parser_esound (asn1_sequence_as_parser prefix) (adb_fb_sfx kid key_k ls (| fbids, fbitems |)) (adb_fb_sv kid key_k ls (| fbids, fbitems |));
   assert (asn1_content_as_parser (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls (Some (| fbids, fbitems |)) pf pf') == make_asn1_sequence_any_parser (asn1_sequence_as_parser prefix) (adb_fb_sfx kid key_k ls (| fbids, fbitems |)))
-    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_fb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp; `%fb_gp]; zeta; iota]; FStar.Tactics.trefl ());
+    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_fb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp; `%fb_gp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
   Classical.forall_intro (adb_fb_content_value id idp prefix kid key_k ls fbids fbitems pf pf');
   esound_ext (asn1_content_as_parser (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls (Some (| fbids, fbitems |)) pf pf')) (any_enc (asn1_sequence_as_parser prefix) (adb_fb_sv kid key_k ls (| fbids, fbitems |))) (content_enc id (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls (Some (| fbids, fbitems |)) pf pf'))
 #pop-options

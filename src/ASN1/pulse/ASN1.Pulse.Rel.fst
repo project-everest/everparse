@@ -639,12 +639,12 @@ let asn1_content_rel_terminal_eq (k: asn1_terminal_k) (pm: perm) (x: asn1_conten
 let asn1_content_rel_seq_of_eq (ne: bool) (#s: _) (k: asn1_k s) (pm: perm) (x: asn1_content_impl_t (ASN1_SEQUENCE_OF ne k)) (y: asn1_content_t (ASN1_SEQUENCE_OF ne k))
 : Lemma (asn1_content_rel (ASN1_SEQUENCE_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
 = assert (asn1_content_rel (ASN1_SEQUENCE_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-    by (FStar.Tactics.V2.norm [delta_only [`%asn1_content_rel]; iota; zeta]; FStar.Tactics.V2.trefl ())
+    by (FStar.Tactics.V2.norm [delta_only [`%asn1_content_rel; `%crel; `%legacy_cdesc; `%asn1_rel]; iota; zeta]; FStar.Tactics.V2.trefl ())
 
 let asn1_content_rel_set_of_eq (ne: bool) (#s: _) (k: asn1_k s) (pm: perm) (x: asn1_content_impl_t (ASN1_SET_OF ne k)) (y: asn1_content_t (ASN1_SET_OF ne k))
 : Lemma (asn1_content_rel (ASN1_SET_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
 = assert (asn1_content_rel (ASN1_SET_OF ne k) pm x y == It.mixed_list_match (asn1_rel k) ml_ops #asn1_strong_parser_kind (asn1_as_parser k) pm x y)
-    by (FStar.Tactics.V2.norm [delta_only [`%asn1_content_rel]; iota; zeta]; FStar.Tactics.V2.trefl ())
+    by (FStar.Tactics.V2.norm [delta_only [`%asn1_content_rel; `%crel; `%legacy_cdesc; `%asn1_rel]; iota; zeta]; FStar.Tactics.V2.trefl ())
 
 let asn1_terminal_rel_leaf_eq (k: leaf_k) (pm: perm) (x: asn1_terminal_impl_t k) (y: asn1_terminal_t k)
 : Lemma

@@ -226,6 +226,8 @@ let parsed_encodable_d (#s: _) (k: asn1_k s) (w: SB.bytes) (v: asn1_t k)
   Ser.asn1_as_parser_consumed k w;
   assert (Seq.equal (Seq.slice w 0 (Seq.length w)) w)
 
+let half_perm_pos (pm: perm) : Lemma (pm /. 2.0R >. 0.0R) = ()
+
 inline_for_extraction
 fn parse_keep
   (#s: Ghost.erased (Set.set asn1_id_t)) (#k: Ghost.erased (asn1_k s)) (#t: Type0) (#r: prel t (asn1_t k))
@@ -236,6 +238,7 @@ fn parse_keep
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   parsed_encodable_d k w v;
+  half_perm_pos pm;
   S.share input;
   let x = f input #(pm /. 2.0R) #w #v;
   let res : kept t = { kval = x; kraw = Some input };

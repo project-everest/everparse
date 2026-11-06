@@ -829,7 +829,7 @@ let adb_sfx_psound (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key
     | Some (x, _) -> adb_sq key_k ls x == true
     | None -> True)
   = assert (parse (Mkparsertwin?.fp (adb_sfx kid key_k ls) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls))) (make_gen_choice_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)))) b)
-      by (FStar.Tactics.norm [delta_only [`%adb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_weak_parser_twin; `%adb_lp]; zeta; iota]; FStar.Tactics.trefl ());
+      by (FStar.Tactics.norm [delta_only [`%adb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_weak_parser_twin; `%adb_lp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
     parse_tagged_union_eq (adb_key_fp kid key_k id) (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) b;
     match parse (adb_key_fp kid key_k id) b with
     | None -> ()
@@ -855,7 +855,7 @@ let adb_fb_sfx_psound (k0: asn1_content_k) (kid: asn1_id_t) (key_k: asn1_termina
     | Some (x, _) -> adb_fb_sq k0 key_k ls fb x == true
     | None -> True)
   = assert (parse (Mkparsertwin?.fp (adb_fb_sfx kid key_k ls fb) id) b == parse (weaken asn1_weak_parser_kind (parse_tagged_union (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls)) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser (asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls) (fb_gp fb)))) b)
-      by (FStar.Tactics.norm [delta_only [`%adb_fb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_with_fallback_weak_parser_twin; `%adb_lp]; zeta; iota]; FStar.Tactics.trefl ());
+      by (FStar.Tactics.norm [delta_only [`%adb_fb_sfx; `%Mkparsertwin?.fp; `%make_gen_choice_with_fallback_weak_parser_twin; `%adb_lp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
     parse_tagged_union_eq (adb_key_fp kid key_k id) (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (fb_gp fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (fb_gp fb)) b;
     match parse (adb_key_fp kid key_k id) b with
     | None -> ()
@@ -880,7 +880,7 @@ let adb_content_psound
   adb_sfx_psound kid key_k ls;
   any_parser_psound (asn1_sequence_as_parser prefix) (adb_sfx kid key_k ls) (adb_sq key_k ls);
   assert (asn1_content_as_parser (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls None pf pf') == make_asn1_sequence_any_parser (asn1_sequence_as_parser prefix) (adb_sfx kid key_k ls))
-    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp]; zeta; iota]; FStar.Tactics.trefl ());
+    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
   let prf (x: asn1_content_t k) : Lemma (canonical_content k x == any_canon (asn1_sequence_as_parser prefix) (adb_sq key_k ls) x) =
     items_any_canon prefix (adb_sq key_k ls) x
   in
@@ -901,7 +901,7 @@ let adb_fb_content_psound
   adb_fb_sfx_psound k kid key_k ls fb;
   any_parser_psound (asn1_sequence_as_parser prefix) (adb_fb_sfx kid key_k ls fb) (adb_fb_sq k key_k ls fb);
   assert (asn1_content_as_parser (ASN1_ANY_DEFINED_BY idp prefix kid key_k ls (Some (| fbids, fbitems |)) pf pf') == make_asn1_sequence_any_parser (asn1_sequence_as_parser prefix) (adb_fb_sfx kid key_k ls (| fbids, fbitems |)))
-    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_fb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp; `%fb_gp]; zeta; iota]; FStar.Tactics.trefl ());
+    by (FStar.Tactics.norm [delta_only [`%asn1_content_as_parser; `%adb_fb_sfx; `%adb_lp; `%adb_key_p; `%adb_key_fp; `%fb_gp; `%asn1_content_t]; zeta; iota]; FStar.Tactics.trefl ());
   let prf (x: asn1_content_t k) : Lemma (canonical_content k x == any_canon (asn1_sequence_as_parser prefix) (adb_fb_sq k key_k ls fb) x) =
     items_any_canon prefix (adb_fb_sq k key_k ls fb) x
   in

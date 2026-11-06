@@ -86,7 +86,9 @@ let any_id_then (b: bytes)
               assert (parse pv b == r);
               let n1 : consumed_length b1 = sz + U32.v len in
               let r1 : option (asn1_value & consumed_length b1) = Some (synth_asn1_value_twin id x, n1) in
-              assert (parse (parse_asn1_value_twin id) b1 == r1)
+              assert (parse (parse_asn1_value_twin id) b1 == r1);
+              assert (id_then_v parse_asn1_value_twin b == r);
+              eq_opt_pair b (parse parse_asn1_value b) (id_then_v parse_asn1_value_twin b)
             end
         end
     end
@@ -399,19 +401,46 @@ let dec_default (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (w
     parse_synth_eq ((fp id) `parse_filter` (defaultv_filter (key_of_lit k defv))) (defaultv_synth (key_of_lit k defv)) b1;
     parse_filter_eq (fp id) (defaultv_filter (key_of_lit k defv)) b1
 
+(* Quantified forms of parse_synth_eq / parse_filter_eq, to be called
+   locally (not SMTPat lemmas, so as not to pollute dependent modules) *)
+let parse_synth_eq_forall () : Lemma
+  (forall (k: parser_kind) (t1 t2: Type0) (p1: parser k t1) (f2: t1 -> Tot t2) (b: bytes) .
+    {:pattern (parse (parse_synth p1 f2) b)}
+    (k.parser_kind_injective ==> synth_injective f2) ==>
+    parse (parse_synth p1 f2) b == SC.parse_synth' #k p1 f2 b)
+= introduce forall (k: parser_kind) (t1 t2: Type0) (p1: parser k t1) (f2: t1 -> Tot t2) (b: bytes) .
+    (k.parser_kind_injective ==> synth_injective f2) ==>
+    parse (parse_synth p1 f2) b == SC.parse_synth' #k p1 f2 b
+  with introduce _ ==> _
+  with parse_synth_eq p1 f2 b
+
+let parse_filter_eq_forall () : Lemma
+  (forall (k: parser_kind) (t: Type0) (p: parser k t) (f: t -> Tot bool) (b: bytes) .
+    {:pattern (parse (parse_filter p f) b)}
+    parse (parse_filter p f) b == (match parse p b with
+    | None -> None
+    | Some (x, c) -> if f x then Some (x, c) else None))
+= introduce forall (k: parser_kind) (t: Type0) (p: parser k t) (f: t -> Tot bool) (b: bytes) .
+    parse (parse_filter p f) b == (match parse p b with
+    | None -> None
+    | Some (x, c) -> if f x then Some (x, c) else None)
+  with parse_filter_eq p f b
+
+#push-options "--z3rlimit 32"
 let dec_default_restricted (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (w: bytes) (v: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
 : Lemma
   (requires (item_parsed (I.twin_of (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv)) w v))
   (ensures (Nondefault? v /\ P.parsed #asn1_strong_parser_kind (parse_asn1_ILC id0 #(ASN1_RESTRICTED_TERMINAL k r) (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))) w (Nondefault?.v' v)))
 = let dv : parse_filter_refine (restriction_pred r) = key_of_lit k defv in
   let p : asn1_weak_parser (parse_filter_refine (restriction_pred r)) = weaken _ ((asn1_terminal_as_parser k) `parse_filter` (restriction_pred r)) in
-  assert (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r) == p);
+  assert (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r) == weaken _ ((asn1_terminal_as_parser k) `parse_filter` (restriction_pred r))) by (FStar.Tactics.V2.norm [delta_only [`%asn1_content_as_parser; `%asn1_content_t]; iota; zeta]; FStar.Tactics.V2.trefl ());
   ILC.ilc_eq id0 #(ASN1_RESTRICTED_TERMINAL k r) p w;
   match parse parse_asn1_identifier_U32 w with
   | Some (id, c1) ->
     let b1 = Seq.slice w c1 (Seq.length w) in
-    let fp = parse_asn1_ILC_twin id0 #(ASN1_RESTRICTED_TERMINAL k r) p in
-    parse_synth_eq (((fp id) `parse_filter` (restriction_pred r)) `parse_filter` (defaultv_filter dv)) (defaultv_synth dv) b1;
-    parse_filter_eq ((fp id) `parse_filter` (restriction_pred r)) (defaultv_filter dv) b1;
-    parse_filter_eq (fp id) (restriction_pred r) b1
+    (* The item parser is stated at nested refinement types that newer F*
+       rejects when written explicitly, so use quantified equations instead *)
+    parse_synth_eq_forall ();
+    parse_filter_eq_forall ()
+#pop-options
 #pop-options

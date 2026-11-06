@@ -445,7 +445,53 @@ let adb_eq
 
 #pop-options
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 64 --ifuel 2"
+
+let validate_adb_short
+  (kid: asn1_id_t)
+  (key_k: asn1_terminal_k)
+  (#data_t: Type)
+  (tag: data_t -> Tot (asn1_terminal_t key_k))
+  (pl: (x: asn1_terminal_t key_k) -> Tot (asn1_weak_parser (refine_with_tag tag x)))
+  (v: bytes)
+  (offset off1 off2: SZ.t)
+  (len: LowParse.Spec.BoundedInt.bounded_int32 0 ILC.asn1_length_max)
+: Lemma
+  (requires (
+    vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 offset v off1 (Some kid) /\
+    vreader_postcond #(SDER.parse_bounded_der_length32_kind 0 ILC.asn1_length_max) (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) off1 v off2 (Some len) /\
+    U32.v len > Seq.length v - SZ.v off2))
+  (ensures (LPS.validator_postcond #(and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind) (T.parse_tagged_union (key_p kid key_k) tag pl) offset v off2 false))
+= let b = Seq.slice v (SZ.v offset) (Seq.length v) in
+  adb_eq kid key_k tag pl b;
+  Seq.slice_slice v (SZ.v offset) (Seq.length v) (SZ.v off1 - SZ.v offset) (Seq.length v - SZ.v offset);
+  Seq.slice_slice v (SZ.v off1) (Seq.length v) (SZ.v off2 - SZ.v off1) (Seq.length v - SZ.v off1);
+  disp_short key_k tag pl (U32.v len) (Seq.slice v (SZ.v off2) (Seq.length v))
+
+let validate_adb_long
+  (kid: asn1_id_t)
+  (key_k: asn1_terminal_k)
+  (#data_t: Type)
+  (tag: data_t -> Tot (asn1_terminal_t key_k))
+  (pl: (x: asn1_terminal_t key_k) -> Tot (asn1_weak_parser (refine_with_tag tag x)))
+  (v: bytes)
+  (offset off1 off2 off3: SZ.t)
+  (len: LowParse.Spec.BoundedInt.bounded_int32 0 ILC.asn1_length_max)
+  (res: bool)
+: Lemma
+  (requires (
+    vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 offset v off1 (Some kid) /\
+    vreader_postcond #(SDER.parse_bounded_der_length32_kind 0 ILC.asn1_length_max) (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) off1 v off2 (Some len) /\
+    LPS.validator_postcond #(disp_kind (U32.v len)) (disp_p key_k tag pl (U32.v len)) off2 v off3 res))
+  (ensures (LPS.validator_postcond #(and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind) (T.parse_tagged_union (key_p kid key_k) tag pl) offset v off3 res))
+= let b = Seq.slice v (SZ.v offset) (Seq.length v) in
+  adb_eq kid key_k tag pl b;
+  Seq.slice_slice v (SZ.v offset) (Seq.length v) (SZ.v off1 - SZ.v offset) (Seq.length v - SZ.v offset);
+  Seq.slice_slice v (SZ.v off1) (Seq.length v) (SZ.v off2 - SZ.v off1) (Seq.length v - SZ.v off1)
+
+#pop-options
+
+#push-options "--z3rlimit 64 --ifuel 2"
 
 inline_for_extraction
 fn validate_adb
@@ -482,9 +528,12 @@ fn validate_adb
             let rem = SZ.sub (S.len input) off;
             if (LowParse.Pulse.SizeComparison.u32_lte_sizet len rem) {
               SZ.fits_lte (U32.v len) (SZ.v rem);
-              vd (SZ.uint32_to_sizet len) input poffset
+              let res = vd (SZ.uint32_to_sizet len) input poffset;
+              with off3 . assert (R.pts_to poffset off3);
+              validate_adb_long kid key_k tag pl v offset off1 off2 off3 len res;
+              res
             } else {
-              disp_short key_k tag pl (U32.v len) (Seq.slice v (SZ.v off) (Seq.length v));
+              validate_adb_short kid key_k tag pl v offset off1 off2 len;
               false
             }
           }
