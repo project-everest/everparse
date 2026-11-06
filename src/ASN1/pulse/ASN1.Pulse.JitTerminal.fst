@@ -487,6 +487,18 @@ fn pv_bitstring (g: SB.bytes -> prop) (pm: perm)
   res
 }
 
+(* Projections of a BIT STRING literal: a Pulse local holding the literal
+   would need a C representation of its list *)
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let lit_unused (defl: asn1_key_lit ASN1_BITSTRING) : Tot U8.t =
+  let d : asn1_bitstring_lit = defl in fst d
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let lit_bytes (defl: asn1_key_lit ASN1_BITSTRING) : Tot (list U8.t) =
+  let d : asn1_bitstring_lit = defl in snd d
+
 inline_for_extraction
 fn pn_bitstring (defl: asn1_key_lit ASN1_BITSTRING) (g: SB.bytes -> prop) (pm: perm)
 : pcg #asn1_bitstring_impl raw_bitstring g (L.holds ASN1_BITSTRING (defaultv_filter (key_of_lit ASN1_BITSTRING defl))) pm
@@ -494,24 +506,23 @@ fn pn_bitstring (defl: asn1_key_lit ASN1_BITSTRING) (g: SB.bytes -> prop) (pm: p
 {
   unfold (raw_bitstring pm x' x);
   with b . assert (S.pts_to x'.bytes #pm b);
-  let d : asn1_bitstring_lit = defl;
-  if (x'.unused <> fst d) {
+  if (x'.unused <> lit_unused defl) {
     fold (raw_bitstring pm x' x);
     bitstring_neq defl x'.unused b;
     true
   } else {
     let mut off = 0sz;
-    let valid = In.validate_bytes_eq (snd d) x'.bytes off;
+    let valid = In.validate_bytes_eq (lit_bytes defl) x'.bytes off;
     let off1 = !off;
     fold (raw_bitstring pm x' x);
     if valid {
-      ADB.bytes_eq_consumed (snd d) b;
+      ADB.bytes_eq_consumed (lit_bytes defl) b;
       slice_full b;
       bitstring_eq_not_holds defl x'.unused b;
       false
     } else {
-      none_of_invalid (ADB.bytes_eq_p (snd d)) b off1;
-      ADB.bytes_eq_consumed (snd d) b;
+      none_of_invalid (ADB.bytes_eq_p (lit_bytes defl)) b off1;
+      ADB.bytes_eq_consumed (lit_bytes defl) b;
       bitstring_neq defl x'.unused b;
       true
     }
