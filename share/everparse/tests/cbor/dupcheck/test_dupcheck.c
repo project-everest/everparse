@@ -1,17 +1,20 @@
-/* Differential tests of the verified sort-based duplicate key check
- * (cbor_nondet_parse_bounded_sort) against the verified reference
- * (cbor_nondet_parse_bounded), on hand-written cases and on random
+/* Differential tests of the verified sort-based and hash-based duplicate
+ * key checks (cbor_nondet_parse_bounded_sort, cbor_nondet_parse_bounded_hash
+ * with several keys, and the cbor_nondet_parse_bounded_hash_random wrapper)
+ * against the verified reference (cbor_nondet_parse_bounded), on
+ * hand-written cases and on random
  * equivalence-heavy inputs (tiny value domains, non-minimal integer
  * encodings, shuffled map entries, planted re-encoded duplicate keys).
- * Every call runs on a heap scratch of exactly 3 * N * D elements (so
- * that AddressSanitizer catches overruns); one element less must be
- * rejected. malloc & co. are wrapped at link time and abort if called
+ * Every call runs on heap scratch spaces of exactly the minimal size
+ * (3 * N * D for sort; 3 * N * D + N and N for hash) so that
+ * AddressSanitizer catches overruns; one element less must be rejected. malloc & co. are wrapped at link time and abort if called
  * during a check.
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include "CBORNondet.h"
+#include "CBORNondetHashRandom.h"
 #include "gen.h"
 
 static int forbid_alloc = 0;
@@ -50,7 +53,26 @@ static size_t sorted(size_t D, size_t N, uint8_t *b, size_t len,
   return r ? len - l : 0;
 }
 
-/* Runs both and checks that they agree; returns the common result. */
+static size_t hashed(size_t D, size_t N, uint64_t k0, uint64_t k1, int rnd,
+                     uint8_t *b, size_t len, size_t *scratch, size_t slen,
+                     uint64_t *hs, size_t hlen) {
+  uint8_t *p = b; size_t l = len; cbor_raw dest;
+  forbid_alloc = 1;
+  bool r = rnd ? cbor_nondet_parse_bounded_hash_random(D, N, scratch, slen, hs,
+                                                       hlen, &p, &l, &dest)
+               : cbor_nondet_parse_bounded_hash(D, N, k0, k1, scratch, slen,
+                                                hs, hlen, &p, &l, &dest);
+  forbid_alloc = 0;
+  CHECK(r == (l < len), "inconsistent result");
+  return r ? len - l : 0;
+}
+
+/* Hash keys: all-zero, the SipHash test vector key, and a random one. */
+static uint64_t hkeys[3][2] = {
+  { 0, 0 }, { 0x0706050403020100ULL, 0x0f0e0d0c0b0a0908ULL }, { 0, 0 }
+};
+
+/* Runs all variants and checks that they agree; returns the common result. */
 static size_t run(size_t D, size_t N, uint8_t *b, size_t len) {
   size_t slen = 3 * N * D;
   CHECK(cbor_nondet_bounded_sort_scratch_ok(D, N, slen), "scratch_ok exact");
@@ -64,6 +86,25 @@ static size_t run(size_t D, size_t N, uint8_t *b, size_t len) {
     CHECK(sorted(D, N, b, len, s, slen - 1) == 0, "scratch - 1 accepted");
   }
   free(s);
+  size_t hslen = 3 * N * D + N, hhlen = N;
+  CHECK(cbor_nondet_bounded_hash_scratch_ok(D, N, hslen, hhlen), "hash scratch_ok exact");
+  s = malloc((hslen ? hslen : 1) * sizeof(size_t));
+  uint64_t *h = malloc((hhlen ? hhlen : 1) * sizeof(uint64_t));
+  for (int k = 0; k < 4; k++) {
+    size_t r2 = hashed(D, N, hkeys[k < 3 ? k : 0][0], hkeys[k < 3 ? k : 0][1],
+                       k == 3, b, len, s, hslen, h, hhlen);
+    CHECK(r0 == r2, "mismatch: bounded=%zu hash[%d]=%zu (D=%zu N=%zu len=%zu)",
+          r0, k, r2, D, N, len);
+  }
+  if (hslen > 0) {
+    CHECK(!cbor_nondet_bounded_hash_scratch_ok(D, N, hslen - 1, hhlen), "hash scratch_ok - 1");
+    CHECK(hashed(D, N, 1, 2, 0, b, len, s, hslen - 1, h, hhlen) == 0, "hash scratch - 1 accepted");
+  }
+  if (hhlen > 0) {
+    CHECK(!cbor_nondet_bounded_hash_scratch_ok(D, N, hslen, hhlen - 1), "hash hscratch_ok - 1");
+    CHECK(hashed(D, N, 1, 2, 0, b, len, s, hslen, h, hhlen - 1) == 0, "hash hscratch - 1 accepted");
+  }
+  free(s); free(h);
   return r1;
 }
 
@@ -76,6 +117,16 @@ static void test_scratch_ok(void) {
   /* NULL scratch is rejected */
   uint8_t b[1] = { 0 }; uint8_t *p = b; size_t l = 1; cbor_raw dest;
   CHECK(!cbor_nondet_parse_bounded_sort(0, 0, NULL, 0, &p, &l, &dest), "NULL");
+  CHECK(cbor_nondet_bounded_hash_scratch_ok(0, M, M, M), "hash D = 0");
+  CHECK(!cbor_nondet_bounded_hash_scratch_ok(0, M, M, M - 1), "hash D = 0, hs");
+  CHECK(!cbor_nondet_bounded_hash_scratch_ok(M, M, M, M), "hash overflow");
+  CHECK(!cbor_nondet_bounded_hash_scratch_ok(1, M / 4 + 1, M, M), "hash overflow 2");
+  CHECK(cbor_nondet_bounded_hash_scratch_ok(1, M / 4, M, M), "hash max");
+  size_t sc[1]; uint64_t hs[1];
+  CHECK(!cbor_nondet_parse_bounded_hash(0, 0, 0, 0, NULL, 0, hs, 0, &p, &l, &dest), "hash NULL 1");
+  CHECK(!cbor_nondet_parse_bounded_hash(0, 0, 0, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 2");
+  CHECK(!cbor_nondet_parse_bounded_hash_random(0, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 3");
+  CHECK(cbor_nondet_parse_bounded_hash(0, 0, 0, 0, sc, 0, hs, 0, &p, &l, &dest), "hash D = 0 ok");
 }
 
 static void test_cases(void) {
@@ -232,6 +283,7 @@ static void test_random(unsigned iters) {
 
 int main(int argc, char **argv) {
   unsigned iters = argc > 1 ? (unsigned)atoi(argv[1]) : 100000;
+  CHECK(cbor_nondet_hash_random_key(hkeys[2]), "random key");
   test_scratch_ok();
   test_cases();
   test_random(iters);

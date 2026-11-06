@@ -140,6 +140,90 @@ pub fn cbor_nondet_parse_bounded_sort<'a>(
     }
 }
 
+/// Returns `true` if and only if scratch slices of `scratch_len` and
+/// `hash_scratch_len` elements are large enough for
+/// [`cbor_nondet_parse_bounded_hash`] with these bounds, i.e.
+/// `scratch_len >= 3 * map_depth_bound * map_length_bound +
+/// map_length_bound` and `hash_scratch_len >= map_length_bound`
+/// (without overflow.)
+pub fn cbor_nondet_bounded_hash_scratch_ok(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize,
+    hash_scratch_len: usize,
+) -> bool
+{
+    crate::cbornondetver::cbor_nondet_bounded_hash_scratch_ok(map_depth_bound, map_length_bound, scratch_len, hash_scratch_len)
+}
+
+/// Same specification as [`cbor_nondet_parse_bounded`], but checks
+/// map keys for duplicates by sorting them by their SipHash-1-3 hash
+/// keyed with `(k0, k1)` first, comparing them with the CBOR canonical
+/// order only when their hashes are equal. The result does not depend
+/// on the key; but if the key is secret and random, adversarial inputs
+/// cannot predictably cause hash collisions, so that the check is
+/// fast even when map keys contain maps (see
+/// [`cbor_nondet_parse_bounded_hash_random`].) `scratch` and
+/// `hash_scratch` must satisfy [`cbor_nondet_bounded_hash_scratch_ok`],
+/// otherwise this function returns `None`. This function allocates
+/// nothing.
+///
+/// Limitation: `scratch` and `hash_scratch` stay mutably borrowed for
+/// as long as the returned object lives.
+pub fn cbor_nondet_parse_bounded_hash<'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    k0: u64,
+    k1: u64,
+    scratch: &'a mut [usize],
+    hash_scratch: &'a mut [u64],
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    match crate::cbornondetver::cbor_nondet_parse_bounded_hash(
+        map_depth_bound,
+        map_length_bound,
+        k0,
+        k1,
+        scratch,
+        hash_scratch,
+        input,
+    ) {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    }
+}
+
+/// Returns a fresh random SipHash key, derived from the randomly
+/// seeded [`std::collections::hash_map::RandomState`] (the standard
+/// library seeds it from the operating system's random number
+/// generator.)
+pub fn cbor_nondet_random_hash_key() -> (u64, u64)
+{
+    use std::hash::{BuildHasher, Hasher};
+    let st = std::collections::hash_map::RandomState::new();
+    let mut h0 = st.build_hasher();
+    h0.write_u8(0);
+    let mut h1 = st.build_hasher();
+    h1.write_u8(1);
+    (h0.finish(), h1.finish())
+}
+
+/// Same as [`cbor_nondet_parse_bounded_hash`], with a fresh random key
+/// from [`cbor_nondet_random_hash_key`]. This function allocates
+/// nothing on the heap.
+pub fn cbor_nondet_parse_bounded_hash_random<'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch: &'a mut [usize],
+    hash_scratch: &'a mut [u64],
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    let (k0, k1) = cbor_nondet_random_hash_key();
+    cbor_nondet_parse_bounded_hash(map_depth_bound, map_length_bound, k0, k1, scratch, hash_scratch, input)
+}
+
 /// Computes the byte size of the binary representation of the
 /// CBOR object `x`,
 /// but without serializing `x`. Returns `None` if that size is

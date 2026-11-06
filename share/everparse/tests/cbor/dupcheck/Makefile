@@ -1,6 +1,8 @@
 # Tests and benchmarks of the verified duplicate map key checks of the
-# EverCBOR nondet API (cbor_nondet_parse_bounded_sort), against the
-# verified reference cbor_nondet_parse_bounded.
+# EverCBOR nondet API (cbor_nondet_parse_bounded_sort,
+# cbor_nondet_parse_bounded_hash and the hand-written
+# cbor_nondet_parse_bounded_hash_random wrapper), against the verified
+# reference cbor_nondet_parse_bounded.
 #
 #   make test        differential tests, no-malloc check
 #   make test-asan   same, with -fsanitize=address,undefined
@@ -28,16 +30,16 @@ out/CBORNondet.o: $(NONDET_C)/CBORNondet.c
 out/%.exe: %.c gen.h out/CBORNondet.o
 	$(CC) $(CFLAGS_T) $(EXTRA) -o $@ $< out/CBORNondet.o $(if $(filter test_%,$*),$(WRAP))
 
-test: out/test_sort.exe
-	./out/test_sort.exe
+test: out/test_dupcheck.exe
+	./out/test_dupcheck.exe
 
 test-asan:
 	$(MAKE) clean
 	$(MAKE) test OPT="-O1 -g" EXTRA="-fsanitize=address,undefined -fno-sanitize-recover=all"
 	$(MAKE) clean
 
-bench: out/bench_sort.exe
-	./out/bench_sort.exe > bench.csv
+bench: out/bench_dupcheck.exe
+	./out/bench_dupcheck.exe > bench.csv
 
 clean:
 	rm -rf out

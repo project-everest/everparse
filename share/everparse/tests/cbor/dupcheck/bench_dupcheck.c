@@ -4,6 +4,9 @@
  * Variants:
  *   bounded  cbor_nondet_parse_bounded(D, N) (pairwise key comparisons)
  *   sort     cbor_nondet_parse_bounded_sort(D, N) with 3 * N * D scratch
+ *   hash     cbor_nondet_parse_bounded_hash(D, N) with a random key drawn
+ *            once per run, 3 * N * D + N scratch and N hash scratch
+ *            (scratch_elts counts both)
  * Times are per call (median of 5 batches of >= 20 ms; a single call if it
  * takes > 0.1 s). A variant whose single call exceeds CAP_NS (0.5 s) is not
  * run on larger parameters of the family. Families are the same as for the
@@ -15,6 +18,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include "CBORNondet.h"
+#include "CBORNondetHashRandom.h"
 #include "gen.h"
 
 #define CAP_NS 5e8
@@ -27,13 +31,17 @@ static double now_ns(void) {
   return (double)t.tv_sec * 1e9 + (double)t.tv_nsec;
 }
 
-enum { VB, SORT, NV };
-static const char *vname[NV] = { "bounded", "sort" };
+enum { VB, SORT, HASH, NV };
+static const char *vname[NV] = { "bounded", "sort", "hash" };
+static uint64_t hkey[2];
 
-static int call(int v, size_t len, size_t D, size_t N, size_t *s, size_t sz) {
+static int call(int v, size_t len, size_t D, size_t N, size_t *s, size_t sz,
+                uint64_t *h) {
   uint8_t *p = buf; size_t l = len; cbor_raw dest;
   bool r = v == VB ? cbor_nondet_parse_bounded(D, N, &p, &l, &dest)
-                   : cbor_nondet_parse_bounded_sort(D, N, s, sz, &p, &l, &dest);
+         : v == SORT ? cbor_nondet_parse_bounded_sort(D, N, s, sz, &p, &l, &dest)
+         : cbor_nondet_parse_bounded_hash(D, N, hkey[0], hkey[1], s, sz, h, N,
+                                          &p, &l, &dest);
   return r && l == 0 ? 0 : 1;
 }
 
@@ -49,10 +57,11 @@ static void measure(const char *fam, double param, size_t len, size_t D,
   int r0 = -1;
   for (int v = 0; v < NV; v++) {
     if (!(variants & (1u << v)) || capped[v]) continue;
-    size_t sz = v == SORT ? 3 * N * D : 0;
+    size_t sz = v == SORT ? 3 * N * D : v == HASH ? 3 * N * D + N : 0;
     size_t *s = malloc((sz ? sz : 1) * sizeof(size_t));
+    uint64_t *h = malloc((N ? N : 1) * sizeof(uint64_t));
     double t0 = now_ns();
-    int r = call(v, len, D, N, s, sz);
+    int r = call(v, len, D, N, s, sz, h);
     double one = now_ns() - t0;
     if (r0 >= 0 && r != r0) {
       fprintf(stderr, "%s %g: variants disagree\n", fam, param);
@@ -66,16 +75,16 @@ static void measure(const char *fam, double param, size_t len, size_t D,
       double res[5];
       for (int k = 0; k < 5; k++) {
         t0 = now_ns();
-        for (unsigned i = 0; i < iters; i++) (void)call(v, len, D, N, s, sz);
+        for (unsigned i = 0; i < iters; i++) (void)call(v, len, D, N, s, sz, h);
         res[k] = (now_ns() - t0) / iters;
       }
       qsort(res, 5, sizeof(double), cmpd);
       med = res[2];
     }
     printf("%s,%g,%zu,%zu,%zu,%s,%.0f,%d,%zu\n", fam, param, len, D, N,
-           vname[v], med, r, sz);
+           vname[v], med, r, sz + (v == HASH ? N : 0));
     fflush(stdout);
-    free(s);
+    free(s); free(h);
   }
 }
 static void start_family(void) { for (int v = 0; v < NV; v++) capped[v] = false; }
@@ -243,9 +252,27 @@ static size_t gen_array_of_maps_key(size_t n, size_t k, size_t m) {
   return o;
 }
 
+/* B7: map with 2 keys, each a chain {{...{x: 0}...}: 0} of t nested
+ * single-entry maps, the two chains only differing in their innermost x
+ * (or not, if dup). Map depth t + 1. The hash variant rehashes every key
+ * once per enclosing map: Theta(t^2) for an input of size Theta(t). */
+static size_t gen_key_chain1(size_t o, size_t t, uint64_t x) {
+  for (size_t i = 0; i < t; i++) o = emit_head(buf, o, 5, 1);
+  o = emit_head(buf, o, 0, x);
+  for (size_t i = 0; i < t; i++) o = emit_head(buf, o, 0, 0);
+  return o;
+}
+static size_t gen_key_chain(size_t t, bool dup) {
+  size_t o = emit_head(buf, 0, 5, 2);
+  o = gen_key_chain1(o, t, 0); o = emit_head(buf, o, 0, 0);
+  o = gen_key_chain1(o, t, dup ? 0 : 1); o = emit_head(buf, o, 0, 0);
+  return o;
+}
+
 int main(int argc, char **argv) {
   bool quick = argc > 1 && !strcmp(argv[1], "quick");
   buf = malloc(BUF_SIZE);
+  if (!cbor_nondet_hash_random_key(hkey)) { fprintf(stderr, "no random key\n"); return 1; }
   perm_buf = malloc(sizeof(uint64_t) * (1u << 22));
   printf("family,param,bytes,D,N,variant,ns,result,scratch_elts\n");
   size_t maxn = quick ? (1u << 12) : (1u << 20);
@@ -296,9 +323,19 @@ int main(int argc, char **argv) {
     measure("B4_resort_dup_n_m32", (double)n, len, 2, n > 32 ? n : 32, ALL);
   }
   start_family();
-  for (size_t t = 1; t <= (quick ? 5u : 9u); t++) {
+  for (size_t t = 1; t <= (quick ? 5u : 10u); t++) {
     size_t len = gen_nested_resort(t, 4, 8);
     measure("B3_nested_resort_m4_n8", (double)t, len, t + 1, 8, ALL);
+  }
+  start_family();
+  for (size_t t = 16; t <= (quick ? 256u : 4096u); t *= 4) {
+    size_t len = gen_key_chain(t, false);
+    measure("B7_key_chain", (double)t, len, t + 1, 2, ALL);
+  }
+  start_family();
+  for (size_t t = 16; t <= (quick ? 256u : 4096u); t *= 4) {
+    size_t len = gen_key_chain(t, true);
+    measure("B7_key_chain_dup", (double)t, len, t + 1, 2, ALL);
   }
   start_family();
   for (size_t k = 1; k <= (quick ? 64u : 4096u); k *= 4) {
