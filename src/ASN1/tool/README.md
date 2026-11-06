@@ -130,10 +130,24 @@ check a signature over a sub-structure, such as the `tbsCertificate` of an
 X.509 certificate. Writers ignore `raw`: a caller can set it ABSENT, and
 stale bytes are never written. In F\*, `d_T` is
 `D_VIEW (D_KEEP dbase_T wf_T) ...`. The generated `to_writer_T` is
-`to_writer d_T`, specialized. Limitations: KEEP-BYTES applies to whole
-types, not to single components. It is lost at IMPLICIT tags on `T` (they
-reuse the content of `T`, not its descriptor). It is rejected on a CHOICE
-used untagged as an alternative of another CHOICE.
+`to_writer d_T`, specialized.
+
+An IMPLICIT tag on `T` (`[1] T` in an IMPLICIT TAGS module, or
+`[1] IMPLICIT T`) keeps the bytes too: the tagged type gets its own
+KEEP-BYTES descriptor, with the same C type `T_kept`, and `raw` covers the
+encoding with the new tag.
+
+`--#KEEP-BYTES T.c` (or `--keep_bytes T.c`) keeps the bytes of the
+component `c` of the SEQUENCE or SET `T` only, including its tags. If the
+type of `c` is anonymous, e.g. `c SEQUENCE { ... }`, its C type `T_c` gets
+the kept version `T_c_kept`; otherwise, the component gets a new type
+`T_c` (an alias of the type of `c`, kept). KEEP-BYTES is rejected on DEFAULT
+components and on the key and dependent components of a DEFINED-BY table.
+
+Limitations: KEEP-BYTES is rejected on a CHOICE used untagged as an
+alternative of another CHOICE. A CHOICE alternative of a KEEP-BYTES type
+does not keep its bytes (everparse-asn1 prints a warning): CHOICE
+alternatives are content descriptors.
 
 Type naming:
 
@@ -166,7 +180,10 @@ Type naming:
 See `tests/Small.asn` and `tests/small_test.c` for a complete example,
 including KEEP-BYTES on `Names`, and `tests/X509Lite.asn` (with
 `tests/X509LiteBase.asn`) and `tests/x509lite_test.c` for IMPORTS, OID
-values, ANY DEFINED BY tables and extension values.
+values, ANY DEFINED BY tables and extension values. `tests/Features.asn`
+and `tests/features_test.c` cover open ranges and unions, DEFAULT strings
+and BIT STRINGs, DEFINED-BY keys of other types, EXTERNAL, EMBEDDED PDV,
+and KEEP-BYTES under IMPLICIT tags and on components.
 
 ### ANY DEFINED BY tables: `--#DEFINED-BY`
 
@@ -190,9 +207,11 @@ tools) gives the table:
 * `T.f` is the dependent component of the SEQUENCE `T`. Its key is the
   component named by `ANY DEFINED BY`, or by `BY key` (needed when `f` is
   not an ANY, e.g. the OCTET STRING `extnValue`).
-* The key must be a mandatory BOOLEAN, INTEGER or OBJECT IDENTIFIER
-  component without constraints (EXPLICIT tags allowed). The keys are value
-  references, `TRUE`/`FALSE`, numbers or `{ ... }` OID values.
+* The key must be a mandatory component of a terminal type other than
+  RELATIVE-OID, without constraints (EXPLICIT tags allowed). The keys are
+  values (see Values below): value references, `TRUE`/`FALSE`, numbers,
+  `{ ... }` OID values, strings, etc. Time types and OID-IRI keys are not
+  supported, since their literals are not supported.
 * For each key, `f` becomes, under its declared tags:
   * `ABSENT`: nothing (the component is removed);
   * `U` or `U OPTIONAL`: type `U` (`f` is OPTIONAL only if so marked);
@@ -207,7 +226,7 @@ A directive may span several `--#` lines. The generated schema is the
 `ASN1_ANY_DEFINED_BY` of `ASN1.Base` (as in `asn1_any_oid_with_fallback`).
 Without a table, `ANY DEFINED BY x` is parsed as ANY.
 
-The other directives are `--#KEEP-BYTES T1, T2 ...` (see above).
+The other directives are `--#KEEP-BYTES T1, T2.c ...` (see above).
 
 ### IMPORTS and values
 
@@ -221,6 +240,26 @@ DEFINED-BY keys. OID values use the X.680 syntax
 `itu-t` and `joint-iso-itu-t` predefined). Each OBJECT IDENTIFIER value
 `v` is generated as `oid_v` in `M.fst`.
 
+Values (in DEFAULT and DEFINED-BY keys) of other types:
+
+* NULL: `NULL`.
+* OCTET STRING: `'0A1B'H` or `'00001010'B` (padded with zeros to whole
+  octets).
+* BIT STRING: `'1010'B`, `'A0'H`, or named bits `{ a, b }` (with `{}`
+  for no bits). With named bits, trailing zero bits are removed, as DER
+  requires (X.690 11.2.2). Note that the parser compares the encoded
+  bytes: a value with trailing zero bits is not equal to its normalized
+  DEFAULT value. Validators and writers do not check that a BIT STRING
+  with named bits has no trailing zero bits (X.690 11.2.2) either.
+* Character strings: `"..."` (with `""` for a quote). UTF8String
+  values are the UTF-8 bytes of the source file, BMPString and
+  UniversalString values are re-encoded as UTF-16BE and UTF-32BE.
+  PrintableString, NumericString, VisibleString and IA5String values are
+  checked against their character sets. The other string types accept
+  printable ASCII only.
+* Not supported: RELATIVE-OID, time types, OID-IRI and RELATIVE-OID-IRI
+  values, and `{ Quadruple }` / `{ Tuple }` character string values.
+
 ## Supported ASN.1
 
 Supported:
@@ -228,19 +267,28 @@ Supported:
 * Modules with `IMPLICIT TAGS`, `EXPLICIT TAGS` or `AUTOMATIC TAGS`.
 * Type assignments and references.
 * All universal terminal types; INTEGER and ENUMERATED with named numbers.
-* Value range and single value constraints on INTEGER; SIZE constraints
-  on OCTET STRING and character strings. SIZE counts characters:
+* Value range and single value constraints on INTEGER, with open bounds
+  (`0<..<10`, `MIN<..0`) and unions (`1..3 | 7 | 10..12`); a union that is
+  not a single range is expanded into its values (at most 256). SIZE
+  constraints on OCTET STRING and character strings, with open bounds and
+  unions that form a single range. SIZE counts characters:
   octets for OCTET STRING and the ISO 2022 based strings (TeletexString,
   VideotexString, GraphicString, GeneralString, ObjectDescriptor), code
   points for UTF8String, BMPString and UniversalString. SIZE bounds must
   be below 65536.
 * `[n]` / `[APPLICATION n]` / ... tags, IMPLICIT and EXPLICIT.
 * SEQUENCE and SET (at most 64 components) with OPTIONAL and DEFAULT
-  components. DEFAULT applies to BOOLEAN, INTEGER, ENUMERATED and
-  (unconstrained) OBJECT IDENTIFIER components, also under one EXPLICIT
-  tag if unconstrained (such as `[0] EXPLICIT Version DEFAULT v1`).
+  components. DEFAULT applies to components of terminal types, other than
+  RELATIVE-OID, the time types and OID-IRI types, also under one EXPLICIT
+  tag if unconstrained (such as `[0] EXPLICIT Version DEFAULT v1`). Of the
+  constrained types, only INTEGER, ENUMERATED and OCTET STRING allow
+  DEFAULT.
 * CHOICE, SEQUENCE OF and SET OF (with SIZE), and ANY.
 * IMPORTS, INTEGER and OBJECT IDENTIFIER value assignments.
+* EXTERNAL, EMBEDDED PDV and CHARACTER STRING, with their X.680 associated
+  types (as in `ASN1.UniversalTypes`). They are defined in a prelude ASN.1
+  module (`Prelude.ml`), named `EXTERNAL`, `EMBEDDED-PDV` and
+  `CHARACTER-STRING`, generated only if used.
 * ANY DEFINED BY, with a `--#DEFINED-BY` table or as ANY.
 * `OCTET STRING (CONTAINING T)`.
 
@@ -248,15 +296,17 @@ Not supported (rejected with an error message):
 
 * Parameterized types, information object classes, and `ENCODED BY`.
 * Extension markers (`...`) and `EXTENSIBILITY IMPLIED`.
-* Open ranges (`<`) and unions of ranges in constraints (single values
-  `(v1 | v2)` are supported).
+* Set operators other than unions (`^`, `INTERSECTION`, `EXCEPT`,
+  `ALL EXCEPT`), and unions of SIZE constraints that are not a single
+  range.
 * ANY as a CHOICE alternative.
 * Recursive types.
 * Value assignments of other types.
-* EXTERNAL, EMBEDDED PDV and CHARACTER STRING. The Pulse library
-  supports these, but the front end does not yet.
-* DEFAULT on a constructed type, or on an EXPLICIT-tagged restricted
-  INTEGER or ENUMERATED. The specification allows DEFAULT only on
+* Inner type constraints (`WITH COMPONENTS`) on EXTERNAL, EMBEDDED PDV and
+  CHARACTER STRING.
+* DEFAULT on a constructed type, on an EXPLICIT-tagged restricted
+  INTEGER or ENUMERATED, or on a constrained type other than INTEGER,
+  ENUMERATED and OCTET STRING. The specification allows DEFAULT only on
   terminals, possibly under one EXPLICIT tag.
 * `SIZE` on SEQUENCE OF / SET OF other than `SIZE (1..MAX)` (but see
   `--lax_size_of`).
@@ -266,7 +316,7 @@ Ambiguous schemas are reported by F\*, not by the front end: verifying
 component followed by a component that can start with the same tag.
 
 `make test-golden` checks that the schemas generated from
-`../difftest/schemas/{DiffConstructed,DiffSet,DiffConstraints,DiffAny}.asn` are
+`../difftest/schemas/{DiffConstructed,DiffSet,DiffConstraints,DiffAny,DiffExternal,DiffPdv,DiffCharStr}.asn` are
 equal, by normalization, to the hand-written translations in
 `../difftest`.
 

@@ -15,6 +15,7 @@ let show = function
   | RBRACE -> "}" | LPAREN -> "(" | RPAREN -> ")" | LBRACKET -> "["
   | RBRACKET -> "]" | COMMA -> "," | DOTDOT -> ".." | ELLIPSIS -> "..."
   | BAR -> "|" | MINUS -> "-" | SEMI -> ";" | DOT -> "." | LT -> "<" | COLON -> ":"
+  | CSTRING s -> "\"" ^ s ^ "\"" | BSTRING s -> "'" ^ s ^ "'B" | HSTRING s -> "'" ^ s ^ "'H"
   | EOF -> "end of file"
 
 let fail st fmt =
@@ -70,13 +71,31 @@ let oid_value st =
   | [] -> fail st "empty OBJECT IDENTIFIER value"
   | l -> VOid l
 
+(* Named bits { a, b } (X.680 22.9); { } is empty and { a } is parsed as an OBJECT IDENTIFIER *)
+let bits_value st =
+  expect st LBRACE;
+  if peek st = RBRACE then (advance st; VBits [])
+  else
+    let rec go acc =
+      let acc = lower_ident st :: acc in
+      if peek st = COMMA then (advance st; go acc) else (expect st RBRACE; VBits (List.rev acc))
+    in go []
+
 let value st = match peek st with
   | NUM _ | MINUS -> VInt (number st)
   | ID "TRUE" -> advance st; VBool true
   | ID "FALSE" -> advance st; VBool false
+  | ID "NULL" -> advance st; VNull
   | ID s when is_lower s -> advance st; VName s
-  | LBRACE -> oid_value st
-  | _ -> fail st "unsupported value (only INTEGER, BOOLEAN, OBJECT IDENTIFIER and named values are supported)"
+  | CSTRING s -> advance st; VCString s
+  | BSTRING s -> advance st; VBString s
+  | HSTRING s -> advance st; VHString s
+  | LBRACE ->
+    begin match peek2 st, fst st.toks.(min (st.pos + 2) (Array.length st.toks - 1)) with
+    | RBRACE, _ | ID _, COMMA -> bits_value st
+    | _ -> oid_value st
+    end
+  | _ -> fail st "unsupported value (only INTEGER, BOOLEAN, NULL, OBJECT IDENTIFIER, string, bit string and named values are supported)"
 
 let bound st = match peek st with
   | ID "MIN" -> advance st; Min
@@ -84,7 +103,8 @@ let bound st = match peek st with
   | ID s when is_lower s -> advance st; BRef s
   | _ -> Val (number st)
 
-(* The contents of ( ... ): SIZE (c), lo..hi, v1 | v2 | ..., or CONTAINING T *)
+(* The contents of ( ... ): SIZE (c), a union of ranges lo..hi (with lo<
+   or <hi for an excluded endpoint) and values v1 | v2 | ..., or CONTAINING T *)
 let rec constr_body st =
   match peek st with
   | ID "SIZE" -> advance st; expect st LPAREN; let c = constr_body st in expect st RPAREN; CSize c
@@ -95,19 +115,28 @@ let rec constr_body st =
     CContaining t
   | ELLIPSIS -> fail st "extensible constraints are not supported"
   | _ ->
-    let lo = bound st in
-    if peek st = DOTDOT then begin
-      advance st;
-      if peek st = LT then fail st "open ranges (<) are not supported";
-      let hi = bound st in
-      if peek st = COMMA || peek st = BAR then fail st "unions of ranges are not supported";
-      CRange (lo, hi)
-    end else begin
-      let v = function Min | Max -> fail st "MIN/MAX outside of a range" | b -> b in
-      let rec more acc = if peek st = BAR then (advance st; more (v (bound st) :: acc)) else List.rev acc in
-      let vs = more [v lo] in
-      if peek st = COMMA then fail st "extensible constraints are not supported";
-      CSingle vs
+    let elt () =
+      let lo = bound st in
+      let lo = if peek st = LT then (advance st; Open lo) else lo in
+      if peek st = DOTDOT then begin
+        advance st;
+        let hi = if peek st = LT then (advance st; Open (bound st)) else bound st in
+        CRange (lo, hi)
+      end else match lo with
+        | Min | Max -> fail st "MIN/MAX outside of a range"
+        | Open _ -> fail st "expected '..'"
+        | b -> CSingle [b]
+    in
+    let rec more acc = if peek st = BAR then (advance st; more (elt () :: acc)) else List.rev acc in
+    let es = more [elt ()] in
+    if peek st = COMMA then fail st "extensible constraints are not supported";
+    if peek st = ID "UNION" || peek st = ID "INTERSECTION" || peek st = ID "EXCEPT" || peek st = ID "ALL" then
+      fail st "UNION, INTERSECTION, EXCEPT and ALL are not supported";
+    begin match es with
+    | [e] -> e
+    | _ when List.for_all (function CSingle _ -> true | _ -> false) es ->
+      CSingle (List.concat_map (function CSingle l -> l | _ -> []) es)
+    | _ -> CUnion es
     end
 
 and constr st = expect st LPAREN; let c = constr_body st in expect st RPAREN; c
@@ -161,7 +190,18 @@ and base_typ st =
         let acc = (n, v) :: acc in
         if peek st = COMMA then (advance st; items acc) else (expect st RBRACE; List.rev acc)
       in TEnumerated (items [])
-    | "BIT" -> expect_kw st "STRING"; if peek st = LBRACE then skip_braces st; TBitString
+    | "BIT" ->
+      expect_kw st "STRING";
+      if peek st = LBRACE then begin
+        advance st;
+        let rec items acc =
+          let n = lower_ident st in
+          expect st LPAREN; let v = number st in expect st RPAREN;
+          if v < 0 then fail st "negative bit number";
+          let acc = (n, v) :: acc in
+          if peek st = COMMA then (advance st; items acc) else (expect st RBRACE; List.rev acc)
+        in TBitString (items [])
+      end else TBitString []
     | "OCTET" -> expect_kw st "STRING"; TBuiltin "OCTET STRING"
     | "OBJECT" -> expect_kw st "IDENTIFIER"; TBuiltin "OBJECT IDENTIFIER"
     | "ANY" ->
@@ -194,7 +234,11 @@ and base_typ st =
         let acc = (n, t) :: acc in
         if peek st = COMMA then (advance st; alts acc) else (expect st RBRACE; List.rev acc)
       in TChoice (alts [])
-    | "EXTERNAL" | "EMBEDDED" | "CHARACTER" | "REAL" | "INSTANCE" | "TYPE-IDENTIFIER" ->
+    (* The universal types of the prelude (Prelude.ml) *)
+    | "EXTERNAL" -> TRef "EXTERNAL"
+    | "EMBEDDED" -> expect_kw st "PDV"; TRef "EMBEDDED-PDV"
+    | "CHARACTER" -> expect_kw st "STRING"; TRef "CHARACTER-STRING"
+    | "REAL" | "INSTANCE" | "TYPE-IDENTIFIER" ->
       fail st "type %s is not supported" s
     | _ when is_upper s ->
       if peek st = DOT || peek st = LBRACE then fail st "external references and parameterized types are not supported";
@@ -282,7 +326,7 @@ let modul st =
   { mname; tag_default; imports; assignments; directives = []; keep_bytes = [] }
 
 (* The `--#` directives:
-   --#KEEP-BYTES T1 T2 ...
+   --#KEEP-BYTES T1 T2.component ...
    --#DEFINED-BY Type.field [BY key] { value : body, ... } [FALLBACK (NONE | body)]
    where body is ABSENT, CONTAINING T, or T [OPTIONAL] *)
 let directives st : defined_by list * string list =
@@ -299,7 +343,10 @@ let directives st : defined_by list * string list =
       let rec names keep = match peek st with
         | COMMA -> advance st; names keep
         | ID ("KEEP-BYTES" | "DEFINED-BY") -> keep
-        | ID s when is_upper s -> advance st; names (s :: keep)
+        | ID s when is_upper s ->
+          advance st;
+          if peek st = DOT then (advance st; let c = lower_ident st in names ((s ^ "." ^ c) :: keep))
+          else names (s :: keep)
         | _ -> keep
       in go dbs (names keep)
     | ID "DEFINED-BY" ->
@@ -336,16 +383,13 @@ let lex_all lexbuf =
     if t = EOF then List.rev acc else go ((t, l) :: acc)
   in go []
 
-let parse_file (file: string) : modul =
-  let ic = open_in_bin file in
-  let lexbuf = Lexing.from_channel ic in
+let parse_lexbuf (lexbuf: Lexing.lexbuf) : modul =
   Lexer.line := 1;
   Lexer.directives := [];
   let toks =
     try lex_all lexbuf
-    with Lexer.Lex_error s -> close_in ic; error "%s" s
+    with Lexer.Lex_error s -> error "%s" s
   in
-  close_in ic;
   let last = !Lexer.line in
   let m = modul { toks = Array.of_list (toks @ [(EOF, last)]); pos = 0 } in
   let dtoks =
@@ -358,3 +402,9 @@ let parse_file (file: string) : modul =
   in
   let directives, keep_bytes = directives { toks = Array.of_list (dtoks @ [(EOF, last)]); pos = 0 } in
   { m with directives; keep_bytes }
+
+let parse_file (file: string) : modul =
+  let ic = open_in_bin file in
+  Fun.protect ~finally:(fun () -> close_in ic) (fun () -> parse_lexbuf (Lexing.from_channel ic))
+
+let parse_string (text: string) : modul = parse_lexbuf (Lexing.from_string text)

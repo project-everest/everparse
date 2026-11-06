@@ -71,6 +71,9 @@ type env = {
   state: (string, bool) Hashtbl.t;          (* false: in progress *)
   mutable order: string list;               (* reverse topological order *)
   user: (string, string) Hashtbl.t;         (* mangled -> ASN.1 name *)
+  keep: (string, unit) Hashtbl.t;           (* the KEEP-BYTES definitions *)
+  keep_alias: (string, string) Hashtbl.t;   (* KEEP-BYTES retaggings: the C type of their values is that of the target *)
+  keep_comps: (string, bool ref) Hashtbl.t; (* KEEP-BYTES components "T.c" (mangled), used? *)
 }
 
 let cls_name = function
@@ -215,7 +218,7 @@ let rec int_value env (src: typ) (v: value) : int =
       | Some (t, v) -> int_value env t v
       | None -> error "unknown value %s" n
     end
-  | VBool _ | VOid _ -> error "expected an INTEGER value"
+  | _ -> error "expected an INTEGER value"
 
 let rec bool_value env (v: value) : bool =
   match v with
@@ -224,7 +227,7 @@ let rec bool_value env (v: value) : bool =
     (match Hashtbl.find_opt env.values n with
      | Some (_, v) -> bool_value env v
      | None -> error "unknown value %s" n)
-  | VInt _ | VOid _ -> error "expected a BOOLEAN value"
+  | _ -> error "expected a BOOLEAN value"
 
 (* The arcs of an OBJECT IDENTIFIER value *)
 let rec oid_value ?(depth = 0) env (v: value) : int list =
@@ -254,19 +257,205 @@ let rec oid_value ?(depth = 0) env (v: value) : int list =
     in
     if List.exists (fun n -> n < 0 || n >= 1 lsl 32) l then error "OBJECT IDENTIFIER arc out of range";
     l
-  | VInt _ | VBool _ -> error "expected an OBJECT IDENTIFIER value"
+  | _ -> error "expected an OBJECT IDENTIFIER value"
 
-(* Resolve the value references in the bounds of a constraint *)
+(* Follow the value references *)
+let rec deref ?(depth = 0) env (v: value) : value =
+  if depth > 100 then error "cyclic values";
+  match v with
+  | VName n ->
+    (match Hashtbl.find_opt env.values n with
+     | Some (_, v) -> deref ~depth:(depth + 1) env v
+     | None -> error "unknown value %s" n)
+  | _ -> v
+
+let rec named_bits env (t: typ) : (string * int) list =
+  match t with
+  | TBitString l -> l
+  | TRef r -> (match Hashtbl.find_opt env.types (mangle r) with Some t -> named_bits env t | None -> [])
+  | TTagged (_, _, _, t) | TConstrained (t, _) -> named_bits env t
+  | _ -> []
+
+let hex_digit c = if c <= '9' then Char.code c - 48 else Char.code c - 55
+
+(* The bits of a BIT STRING value (X.680 22.9, 22.16): with named bits,
+   without its trailing 0 bits (X.690 11.2.2) *)
+let bits_value env (src: typ) (v: value) : bool list =
+  let named = named_bits env src in
+  let bits = match deref env v with
+    | VBString b -> List.init (String.length b) (fun i -> b.[i] = '1')
+    | VHString h ->
+      List.concat (List.init (String.length h) (fun i ->
+          let d = hex_digit h.[i] in List.init 4 (fun j -> d land (8 lsr j) <> 0)))
+    | VBits names ->
+      let pos = List.map (fun n -> match List.assoc_opt n named with
+          | Some i -> i
+          | None -> error "unknown named bit %s" n) names in
+      let len = List.fold_left (fun m i -> max m (i + 1)) 0 pos in
+      List.init len (fun i -> List.mem i pos)
+    | VOid [OName n] ->
+      let i = match List.assoc_opt n named with Some i -> i | None -> error "unknown named bit %s" n in
+      List.init (i + 1) (fun j -> j = i)
+    | _ -> error "expected a BIT STRING value"
+  in
+  if named = [] then bits
+  else
+    let rec drop = function true :: _ as l -> l | false :: q -> drop q | [] -> [] in
+    List.rev (drop (List.rev bits))
+
+(* The bytes of bits, with the number of unused bits of the last byte *)
+let bytes_of_bits (bits: bool list) : int * int list =
+  let n = List.length bits in
+  let nb = (n + 7) / 8 in
+  let a = Array.of_list bits in
+  let bytes = List.init nb (fun i ->
+      let b = ref 0 in
+      for j = 0 to 7 do
+        let k = 8 * i + j in
+        if k < n && a.(k) then b := !b lor (0x80 lsr j)
+      done; !b)
+  in
+  (8 * nb - n, bytes)
+
+(* The code points of a UTF-8 string *)
+let code_points (s: string) : int list =
+  let rec go i acc =
+    if i >= String.length s then List.rev acc
+    else
+      let d = String.get_utf_8_uchar s i in
+      if not (Uchar.utf_decode_is_valid d) then error "string \"%s\": invalid UTF-8" s;
+      go (i + Uchar.utf_decode_length d) (Uchar.to_int (Uchar.utf_decode_uchar d) :: acc)
+  in go 0 []
+
+(* The DER contents of a string value of a terminal: OCTET STRING from a
+   bstring or hstring (X.680 22.10), character strings from a cstring *)
+let string_bytes env (tk: string) (v: value) : int list =
+  let cps () = match deref env v with
+    | VCString s -> code_points s
+    | _ -> error "expected a character string value \"...\""
+  in
+  let check what ok =
+    let l = cps () in
+    List.iter (fun c -> if not (ok c) then error "character U+%04X is not allowed in %s" c what) l; l
+  in
+  let printable c =
+    (c >= Char.code 'A' && c <= Char.code 'Z') || (c >= Char.code 'a' && c <= Char.code 'z') ||
+    (c >= Char.code '0' && c <= Char.code '9') || String.contains " '()+,-./:=?" (Char.chr (c land 0x7f)) && c < 128
+  in
+  match tk with
+  | "ASN1_OCTETSTRING" ->
+    begin match deref env v with
+      | VBString _ | VHString _ as v' ->
+        let bits = match v' with
+          | VBString b -> List.init (String.length b) (fun i -> b.[i] = '1')
+          | VHString h -> List.concat (List.init (String.length h) (fun i ->
+              let d = hex_digit h.[i] in List.init 4 (fun j -> d land (8 lsr j) <> 0)))
+          | _ -> []
+        in snd (bytes_of_bits bits)
+      | _ -> error "expected an OCTET STRING value 'hex'H or 'bits'B"
+    end
+  | "ASN1_UTF8STRING" ->
+    (match deref env v with
+     | VCString s -> ignore (code_points s); List.init (String.length s) (fun i -> Char.code s.[i])
+     | _ -> error "expected a character string value \"...\"")
+  | "ASN1_BMPSTRING" ->
+    List.concat_map (fun c -> [c lsr 8; c land 0xff])
+      (check "BMPString" (fun c -> c <= 0xffff && not (c >= 0xd800 && c <= 0xdfff)))
+  | "ASN1_UNIVERSALSTRING" ->
+    List.concat_map (fun c -> [c lsr 24; (c lsr 16) land 0xff; (c lsr 8) land 0xff; c land 0xff]) (cps ())
+  | "ASN1_PRINTABLESTRING" -> check "PrintableString" printable
+  | "ASN1_NUMERICSTRING" -> check "NumericString" (fun c -> c = 32 || (c >= 48 && c <= 57))
+  | "ASN1_VISIBLESTRING" -> check "VisibleString" (fun c -> c >= 32 && c <= 126)
+  | "ASN1_IA5STRING" -> check "IA5String" (fun c -> c < 128)
+  | "ASN1_TELETEXSTRING" | "ASN1_VIDEOTEXSTRING" | "ASN1_GRAPHICSTRING" | "ASN1_GENERALSTRING"
+  | "ASN1_OBJECTDESCRIPTOR" ->
+    check "this string type (only ASCII values are supported)" (fun c -> c >= 32 && c <= 126)
+  | _ -> error "values of this type are not supported"
+
+let bytes_lit (l: int list) =
+  Printf.sprintf "[%s]" (String.concat "; " (List.map (Printf.sprintf "0x%02xuy") l))
+
+(* Resolve the value references in the bounds of a constraint, and the
+   excluded endpoints of ranges (lo<.. is lo+1.., ..<hi is ..hi-1) *)
 let rec norm_constr env (c: constr) : constr =
-  let b = function
+  let rec b = function
     | BRef s -> Val (int_value env (TInteger []) (VName s))
+    | Open x -> Open (b x)
     | x -> x
+  in
+  let opened d x = match b x with
+    | Open (Val v) -> Val (v + d)
+    | Open (Open _) -> error "bad range endpoint"
+    | Open x | x -> x  (* MIN< and <MAX: unbounded anyway *)
   in
   match c with
   | CSize c -> CSize (norm_constr env c)
-  | CRange (lo, hi) -> CRange (b lo, b hi)
+  | CRange (lo, hi) ->
+    let lo = opened 1 lo and hi = opened (-1) hi in
+    (match lo, hi with
+     | Val l, Val h when l > h -> error "empty range %d..%d" l h
+     | Max, _ | _, Min -> error "bad range"
+     | _ -> ());
+    CRange (lo, hi)
   | CSingle l -> CSingle (List.map b l)
+  | CUnion l -> CUnion (List.map (norm_constr env) l)
   | CContaining _ -> c
+
+(* A union of INTEGER ranges and values, as sorted disjoint intervals
+   (None: unbounded) *)
+let union_intervals (where: string) (es: constr list) : (int option * int option) list =
+  let ivs = List.concat_map (function
+      | CRange (lo, hi) ->
+        let f = function Val v -> Some v | Min | Max -> None | _ -> error "%s: bad constraint" where in
+        [(f lo, f hi)]
+      | CSingle l -> List.map (function Val v -> (Some v, Some v) | _ -> error "%s: bad constraint" where) l
+      | _ -> error "%s: unsupported constraint in a union" where)
+      es
+  in
+  let cmp_lo a b = match a, b with
+    | None, None -> 0 | None, _ -> -1 | _, None -> 1 | Some x, Some y -> compare x y in
+  let ivs = List.sort (fun (a, _) (b, _) -> cmp_lo a b) ivs in
+  let rec merge = function
+    | (l1, h1) :: (l2, h2) :: q ->
+      let adjacent = match h1, l2 with
+        | None, _ | _, None -> true
+        | Some h, Some l -> l <= h + 1
+      in
+      if adjacent then
+        let h = match h1, h2 with None, _ | _, None -> None | Some a, Some b -> Some (max a b) in
+        merge ((l1, h) :: q)
+      else (l1, h1) :: merge ((l2, h2) :: q)
+    | l -> l
+  in
+  merge ivs
+
+(* The KEEP-BYTES definition whose bytes the values of `r` keep, if any *)
+let rec keep_target env (r: string) : string option =
+  if Hashtbl.mem env.keep r then Some r
+  else match Hashtbl.find_opt env.defs r with
+    | Some (DNode (NRef r')) -> keep_target env r'
+    | _ -> None
+
+(* The KEEP-BYTES definition that owns the C type of the values of `r` *)
+let rec kept_owner env (r: string) : string =
+  match Hashtbl.find_opt env.keep_alias r with
+  | Some r' -> kept_owner env r'
+  | None -> r
+
+(* A fresh definition name, starting with `name` *)
+let fresh env (name: string) : string =
+  let rec go n = if Hashtbl.mem env.state n || Hashtbl.mem env.types n then go (n ^ "_") else n in
+  go name
+
+(* Add a KEEP-BYTES definition `name` for a node (its dependencies are
+   already elaborated) *)
+let hoist_keep env (name: string) (nd: node) : string =
+  let name = fresh env name in
+  Hashtbl.replace env.defs name (DNode nd);
+  Hashtbl.replace env.state name true;
+  env.order <- name :: env.order;
+  Hashtbl.replace env.keep name ();
+  name
 
 (* The types under the outermost tags *)
 let rec under_tags f = function
@@ -318,7 +507,7 @@ and node env (ctx: string) (t: typ) : node =
     let vs = List.map snd (enum_values items) in
     NILC (univ 10, CTerm (small_integer_term,
       Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
-  | TBitString -> NILC (univ 3, CTerm (bitstring_term, None))
+  | TBitString _ -> NILC (univ 3, CTerm (bitstring_term, None))
   | TAny -> NAny
   | TAnyDefinedBy _ -> NAny (* with no DEFINED-BY table *)
   | TSequenceOf (c, t') | TSetOf (c, t') ->
@@ -341,7 +530,21 @@ and node env (ctx: string) (t: typ) : node =
       | TDefault -> env.td <> DExplicit
     in
     begin match resolve env inner with
-    | RILC (_, c) when implicit -> NILC ({ cls; num; cons = content_cons env c }, c)
+    | RILC (_, c) when implicit ->
+      let nd = NILC ({ cls; num; cons = content_cons env c }, c) in
+      begin match c with
+        | CRef r ->
+          (* IMPLICIT tagging reuses the content of r: keep the bytes in a
+             new KEEP-BYTES definition, with the C type of r *)
+          begin match keep_target env r with
+            | Some t ->
+              let a = hoist_keep env (ctx ^ "_kept") nd in
+              Hashtbl.replace env.keep_alias a t;
+              NRef a
+            | None -> nd
+          end
+        | _ -> nd
+      end
     | _ -> NILC ({ cls; num; cons = true }, CPrefixed inner)  (* X.680 31.2.7 *)
     end
   | TConstrained (t', CContaining t'') ->
@@ -365,6 +568,23 @@ and node env (ctx: string) (t: typ) : node =
       | CSingle vs ->
         let vs = List.map (function Val v -> v | _ -> error "%s: bad constraint" ctx) vs in
         NILC (id, CTerm (small_integer_term, Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
+      | CUnion es ->
+        begin match union_intervals ctx es with
+        | [(lo, hi)] ->
+          let b = function Some v -> Printf.sprintf "(Some %s)" (fstar_int v) | None -> "None" in
+          let tm = if lo <> None && hi <> None then small_integer_term else integer_term in
+          NILC (id, CTerm (tm, Some (Printf.sprintf "(RESTRICT_INT_RANGE %s %s)" (b lo) (b hi))))
+        | ivs ->
+          let max_values = 256 in
+          let vs = List.concat_map (function
+              | Some lo, Some hi when hi - lo < max_values -> List.init (hi - lo + 1) (fun i -> lo + i)
+              | _ -> error "%s: a union of ranges must be a single range, or have at most %d values" ctx max_values)
+              ivs
+          in
+          if List.length vs > max_values then
+            error "%s: a union of ranges must be a single range, or have at most %d values" ctx max_values;
+          NILC (id, CTerm (small_integer_term, Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
+        end
       | CSize _ | CContaining _ -> error "%s: SIZE constraint on INTEGER" ctx
       end
     | Some (id, CTerm ({ tk = ("ASN1_OCTETSTRING" | "ASN1_UTF8STRING" | "ASN1_BMPSTRING"
@@ -372,6 +592,15 @@ and node env (ctx: string) (t: typ) : node =
                              | "ASN1_VISIBLESTRING" | "ASN1_NUMERICSTRING" | "ASN1_TELETEXSTRING"
                              | "ASN1_VIDEOTEXSTRING" | "ASN1_GRAPHICSTRING" | "ASN1_GENERALSTRING"
                              | "ASN1_OBJECTDESCRIPTOR"); _ } as tm, None)), CSize sz ->
+      let sz = match sz with
+        | CUnion es ->
+          begin match union_intervals ctx es with
+            | [(lo, hi)] ->
+              CRange ((match lo with Some v -> Val v | None -> Min), (match hi with Some v -> Val v | None -> Max))
+            | _ -> error "%s: a SIZE union must be a single range" ctx
+          end
+        | _ -> sz
+      in
       let lo, hi = match sz with
         | CRange (Val lo, Max) when lo >= 0 -> lo, "None"
         | CRange (Val lo, Val hi) when lo >= 0 -> lo, Printf.sprintf "(Some %d)" hi
@@ -429,28 +658,65 @@ and terminal_of env (fnode: node) : (id * term * string option * term) option =
 
 (* The F* literal of a value of a terminal *)
 and literal env (where: string) (src: typ) (tm: term) (v: value) : string =
-  match tm.tk, tm.ibound with
-  | "ASN1_BOOLEAN", _ -> string_of_bool (bool_value env v)
-  | "ASN1_OID", _ ->
-    Printf.sprintf "(mk_oid [%s])" (String.concat "; " (List.map string_of_int (oid_value env v)))
-  | _, Some b ->
-    let bytes = int_bytes (int_value env src v) in
-    Printf.sprintf "(mk_int_lit %s [%s] ())" b
-      (String.concat "; " (List.map (Printf.sprintf "%duy") bytes))
-  | _ -> error "%s: only BOOLEAN, INTEGER and OBJECT IDENTIFIER values are supported" where
+  try
+    match tm.tk, tm.ibound with
+    | "ASN1_BOOLEAN", _ -> string_of_bool (bool_value env v)
+    | "ASN1_NULL", _ -> (match deref env v with VNull -> "()" | _ -> error "expected NULL")
+    | "ASN1_OID", _ ->
+      Printf.sprintf "(mk_oid [%s])" (String.concat "; " (List.map string_of_int (oid_value env v)))
+    | "ASN1_BITSTRING", _ ->
+      let unused, bytes = bytes_of_bits (bits_value env src v) in
+      (* proved by normalization (ASN1.Lit): SMT may time out *)
+      let l = bytes_lit bytes in
+      Printf.sprintf "(let l : list FStar.UInt8.t = %s in assert_norm (ASN1.Lit.bitstring_l %duy %s); ASN1.Lit.bitstring_l_correct %duy l; (%duy, l))" l unused l unused unused
+    | ("ASN1_RELATIVE_OID" | "ASN1_UTCTIME" | "ASN1_GENERALIZEDTIME" | "ASN1_DATE" | "ASN1_TIME_OF_DAY"
+      | "ASN1_DATE_TIME" | "ASN1_OID_IRI" | "ASN1_RELATIVE_OID_IRI"), _ ->
+      error "values of this type are not supported"
+    | _, Some b ->
+      let bytes = int_bytes (int_value env src v) in
+      Printf.sprintf "(mk_int_lit %s [%s] ())" b
+        (String.concat "; " (List.map (Printf.sprintf "%duy") bytes))
+    | tk, None ->
+      let l = bytes_lit (string_bytes env tk v) in
+      let pred = match tk with
+        | "ASN1_UTF8STRING" -> Some ("utf8_l", "utf8_l_correct l")
+        | "ASN1_BMPSTRING" -> Some ("bmp_l", "bmp_l_correct l 0")
+        | "ASN1_UNIVERSALSTRING" -> Some ("universal_l", "universal_l_correct l 0")
+        | _ -> None
+      in
+      begin match pred with
+        | Some (p, lem) ->
+          Printf.sprintf "(let l : list FStar.UInt8.t = %s in assert_norm (ASN1.Lit.%s %s); ASN1.Lit.%s; l)" l p l lem
+        | None -> l
+      end
+  with Error s -> error "%s: %s" where s
 
-and elab_field env owner ((n, src, d, t): string * typ * deco * typ) : field =
+and elab_field ?(keep_ok = true) env owner ((n, src, d, t): string * typ * deco * typ) : field =
   let fname = mangle n in
   let fnode = node env (owner ^ "_" ^ fname) t in
+  let fnode = match Hashtbl.find_opt env.keep_comps (owner ^ "." ^ fname) with
+    | None -> fnode
+    | Some used ->
+      used := true;
+      if not keep_ok then error "%s.%s: KEEP-BYTES is not supported on the key or the dependent component of a DEFINED-BY table" owner n;
+      (match d with DDefault _ -> error "%s.%s: KEEP-BYTES is not supported on DEFAULT components" owner n | _ -> ());
+      begin match fnode with
+        | NRef r when r = owner ^ "_" ^ fname && not (Hashtbl.mem env.types r) ->
+          (* an anonymous type, hoisted for this component *)
+          Hashtbl.replace env.keep r (); fnode
+        | _ -> NRef (hoist_keep env (owner ^ "_" ^ fname) fnode)
+      end
+  in
   let fdeco = match d with
     | DPlain -> FPlain
     | DOptional -> FOptional
     | DDefault v ->
       let where = Printf.sprintf "%s.%s: DEFAULT" owner n in
       begin match terminal_of env fnode with
-      | Some (_, _, Some _, { tk = "ASN1_OID"; _ }) -> error "%s: not supported on OBJECT IDENTIFIER" where
+      | Some (_, _, Some _, ltm) when ltm.ibound = None && ltm.tk <> "ASN1_OCTETSTRING" ->
+        error "%s: constraints are supported only on INTEGER and OCTET STRING components with a DEFAULT value" where
       | Some (id, tm, r, ltm) -> FDefault (id, tm, r, literal env where src ltm v)
-      | None -> error "%s: supported on BOOLEAN and INTEGER only (possibly EXPLICIT-tagged, unconstrained)" where
+      | None -> error "%s: supported on simple types only (possibly EXPLICIT-tagged, unconstrained)" where
       end
   in
   { fname; fnode; fdeco; fowner = owner }
@@ -483,23 +749,23 @@ and adb env name cs (db: defined_by) : adb =
   let (_, key_src, key_d, _) as key_c = List.nth comps key_i in
   if key_d <> DPlain then error "%s: the key component %s must not be OPTIONAL or DEFAULT" where key_n;
   let prefix = List.map (elab_field env name) prefix in
-  let key = elab_field env name key_c in
+  let key = elab_field ~keep_ok:false env name key_c in
   let key_id, key_term, ltm = match terminal_of env key.fnode with
     | Some (id, tm, None, ltm) -> id, tm, ltm
     | Some (_, _, Some _, _) -> error "%s: the key component %s must not be constrained" where key_n
-    | None -> error "%s: the key component %s must be a BOOLEAN, INTEGER or OBJECT IDENTIFIER" where key_n
+    | None -> error "%s: the key component %s must have a simple type" where key_n
   in
   (* The components after the key, other than the dependent one, are shared *)
   let after = List.filteri (fun i _ -> i > key_i) comps in
   let shared = List.map (fun ((n, _, _, _) as c) -> if n = dep_n then None else Some (elab_field env name c)) after in
   let with_dep owner (b: case_body option) : field list =
     let dep_field = match b with
-      | None -> Some (elab_field env name dep)
+      | None -> Some (elab_field ~keep_ok:false env name dep)
       | Some BAbsent -> None
       | Some (BType (t, opt)) ->
-        Some (elab_field env owner (dep_n, t, (if opt then DOptional else DPlain), under_tags (fun _ -> t) dep_t))
+        Some (elab_field ~keep_ok:false env owner (dep_n, t, (if opt then DOptional else DPlain), under_tags (fun _ -> t) dep_t))
       | Some (BContaining t) ->
-        Some (elab_field env owner (dep_n, dep_src, DPlain, under_tags (fun d -> TConstrained (d, CContaining t)) dep_t))
+        Some (elab_field ~keep_ok:false env owner (dep_n, dep_src, DPlain, under_tags (fun d -> TConstrained (d, CContaining t)) dep_t))
     in
     List.filter_map (fun x -> x) (List.map (function Some f -> Some f | None -> dep_field) shared)
   in
@@ -559,15 +825,18 @@ type result = {
   order: string list;           (* definitions, dependencies first *)
   roots: string list;           (* default roots: types of the main module referenced by no other type *)
   user_names: string list;      (* the type assignments, in source order *)
+  keep: string list;            (* the KEEP-BYTES definitions *)
 }
 
-(* Elaborate the main module `m` and the modules it imports from (`deps`) *)
-let elaborate ?(lax_size_of = false) (m: modul) (deps: modul list) : result =
+(* Elaborate the main module `m` and the modules it imports from (`deps`),
+   with the KEEP-BYTES types and components `keep` (T or T.c) *)
+let elaborate ?(lax_size_of = false) ?(keep = []) (m: modul) (deps: modul list) : result =
   let env = {
     mname = m.mname; td = m.tag_default; type_td = Hashtbl.create 17;
     types = Hashtbl.create 17; values = Hashtbl.create 17; dbs = Hashtbl.create 17;
     lax_size_of; defs = Hashtbl.create 17;
     state = Hashtbl.create 17; order = []; user = Hashtbl.create 17;
+    keep = Hashtbl.create 7; keep_alias = Hashtbl.create 7; keep_comps = Hashtbl.create 7;
   } in
   let ms = m :: deps in
   List.iter (fun (m': modul) ->
@@ -589,6 +858,18 @@ let elaborate ?(lax_size_of = false) (m: modul) (deps: modul list) : result =
   in
   let main_names = names_of m in
   let names = main_names @ List.concat_map names_of deps in
+  (* The types of the prelude, elaborated only if used *)
+  let prelude = Parse.parse_string Prelude.text in
+  List.iter (function
+      | TypeAssign (n, t) ->
+        let n' = mangle n in
+        if not (Hashtbl.mem env.types n') then begin
+          Hashtbl.replace env.types n' t;
+          Hashtbl.replace env.type_td n' prelude.tag_default;
+          Hashtbl.replace env.user n' n
+        end
+      | ValueAssign _ -> ())
+    prelude.assignments;
   (* IMPORTS: the symbols must be defined by the given modules *)
   List.iter (fun (m: modul) ->
       List.iter (fun (from, syms) ->
@@ -609,7 +890,20 @@ let elaborate ?(lax_size_of = false) (m: modul) (deps: modul list) : result =
           Hashtbl.replace env.dbs n db)
         m.directives)
     ms;
+  let keep = keep @ List.concat_map (fun (m: modul) -> m.keep_bytes) ms in
+  List.iter (fun a ->
+      match String.index_opt a '.' with
+      | Some i ->
+        let t = mangle (String.sub a 0 i) and c = mangle (String.sub a (i + 1) (String.length a - i - 1)) in
+        if not (Hashtbl.mem env.types t) then error "KEEP-BYTES: unknown type %s" a;
+        Hashtbl.replace env.keep_comps (t ^ "." ^ c) (ref false)
+      | None ->
+        let n = mangle a in
+        if not (Hashtbl.mem env.types n) then error "KEEP-BYTES: unknown type %s" a;
+        Hashtbl.replace env.keep n ())
+    keep;
   List.iter (elab_def env) names;
+  Hashtbl.iter (fun c used -> if not !used then error "KEEP-BYTES: unknown component %s" c) env.keep_comps;
   Hashtbl.iter (fun n db ->
       if not (Hashtbl.mem env.defs n) then error "line %d: DEFINED-BY: unknown type %s" db.db_line db.db_type)
     env.dbs;
@@ -620,4 +914,5 @@ let elaborate ?(lax_size_of = false) (m: modul) (deps: modul list) : result =
         (match db.db_fallback with FbBody b -> body_refs b | _ -> []) @ acc) env.dbs []
   in
   let roots = List.filter (fun n -> not (List.mem n referenced)) main_names in
-  { env; order = List.rev env.order; roots; user_names = names }
+  let order = List.rev env.order in
+  { env; order; roots; user_names = names; keep = List.filter (Hashtbl.mem env.keep) order }

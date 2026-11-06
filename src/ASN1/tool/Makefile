@@ -11,6 +11,9 @@ DUNE ?= dune
 CC ?= cc
 TEST_CFLAGS := -std=c11 -Wall -Wextra -Werror -Wno-type-limits -Wno-unused-variable -O1
 
+comma := ,
+empty :=
+space := $(empty) $(empty)
 TOOL := ocaml/_build/default/everparse-asn1/Main.exe
 OUT := _output
 
@@ -40,8 +43,20 @@ $(OUT)/x509lite_test.exe: $(OUT)/x509lite/X509Lite.c tests/x509lite_test.c
 test-x509lite: $(OUT)/x509lite_test.exe
 	$<
 
+# Open ranges and unions, DEFAULT strings and BIT STRINGs, DEFINED-BY keys
+# of string and INTEGER types, EXTERNAL and EMBEDDED PDV, and KEEP-BYTES
+# under an IMPLICIT tag and on a component
+$(OUT)/features/Features.c: tests/Features.asn $(TOOL)
+	$(TOOL) --odir $(OUT)/features --root Rec,Item,Opt,Pdv $<
+
+$(OUT)/features_test.exe: $(OUT)/features/Features.c tests/features_test.c
+	$(CC) $(TEST_CFLAGS) -I $(OUT)/features -o $@ $^
+
+test-features: $(OUT)/features_test.exe
+	$<
+
 # The generated schemas agree with the hand translations of difftest/schemas
-GOLDEN := DiffConstructed DiffSet DiffConstraints DiffAny
+GOLDEN := DiffConstructed DiffSet DiffConstraints DiffAny DiffExternal DiffPdv DiffCharStr
 
 $(OUT)/golden/%.fst: ../difftest/schemas/%.asn $(TOOL)
 	$(TOOL) --fstar_only --odir $(OUT)/golden $<
@@ -49,13 +64,13 @@ $(OUT)/golden/%.fst: ../difftest/schemas/%.asn $(TOOL)
 test-golden: $(addprefix $(OUT)/golden/,$(addsuffix .fst,$(GOLDEN)))
 	cd tests && $(FSTAR_EXE) --smt $(EVERPARSE_HOME)/opt/z3/z3-5.3.0 --z3version 5.3.0 \
 	  --include $(EVERPARSE_HOME)/lib/everparse/lowparse --include $(EVERPARSE_HOME)/src/ASN1 --include $(CURDIR)/$(OUT)/golden \
-	  --already_cached '*,-Golden,-DiffConstructed,-DiffSet,-DiffConstraints,-DiffAny' Golden.fst
+	  --already_cached '*,-Golden,$(subst $(space),$(comma),$(addprefix -,$(GOLDEN)))' Golden.fst
 
-test: test-golden test-small test-x509lite
+test: test-golden test-small test-x509lite test-features
 
 clean:
 	rm -rf $(OUT)
 	cd ocaml && $(DUNE) clean
 
-.PHONY: all build test test-small test-x509lite test-golden clean
-.PRECIOUS: $(OUT)/small/Small.c $(OUT)/x509lite/X509Lite.c $(OUT)/golden/%.fst
+.PHONY: all build test test-small test-x509lite test-features test-golden clean
+.PRECIOUS: $(OUT)/small/Small.c $(OUT)/x509lite/X509Lite.c $(OUT)/features/Features.c $(OUT)/golden/%.fst

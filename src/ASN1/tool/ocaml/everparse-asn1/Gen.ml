@@ -23,7 +23,12 @@ let keywords = [
   "let"; "logic"; "match"; "module"; "new"; "noeq"; "noextract"; "of"; "open";
   "opaque"; "private"; "rec"; "reifiable"; "reflectable"; "requires"; "returns";
   "then"; "total"; "true"; "try"; "type"; "unfold"; "unfoldable"; "unopteq";
-  "val"; "when"; "with"; "fn"; "mut"; "ghost"; "atomic"; "prop"; "x";
+  "val"; "when"; "with"; "prop"; "x"; "eliminate"; "introduce"; "quote";
+  "reify"; "synth"; "new_effect"; "sub_effect"; "range_of"; "set_range_of";
+  (* Pulse *)
+  "fn"; "mut"; "ghost"; "atomic"; "unobservable"; "invariant"; "rewrite"; "each";
+  "fold"; "label"; "goto"; "opens"; "preserves"; "parallel"; "norewrite";
+  "with_invariants"; "show_proof_state";
   (* C *)
   "auto"; "break"; "case"; "char"; "const"; "continue"; "do"; "double"; "enum";
   "extern"; "float"; "for"; "goto"; "int"; "long"; "register"; "return";
@@ -156,13 +161,19 @@ let rec cty ctx (nd: node) = match nd with
 
 and ccty ctx (c: cnode) = match c with
   | CTerm (t, _) -> t.cty
-  | CRef r -> base_cty ctx r
+  | CRef r -> content_cty ctx r
   | COf (_, _, n) -> sp "(ml %s)" (cty ctx n)
   | CPrefixed n | CContaining n -> cty ctx n
 
 (* The type of `d_r`, with its kept bytes if `r` has KEEP-BYTES *)
 and def_cty ctx (r: string) =
-  if is_keep ctx r then "t_" ^ r ^ "_kept" else base_cty ctx r
+  if is_keep ctx r then "t_" ^ kept_owner ctx.r.env r ^ "_kept" else base_cty ctx r
+
+(* The type of `cd_r` (no KEEP-BYTES, even behind aliases) *)
+and content_cty ctx (r: string) = match def ctx r with
+  | DNode (NRef r') -> content_cty ctx r'
+  | DNode (NILC (_, c)) -> ccty ctx c
+  | _ -> base_cty ctx r
 
 (* The type of `d_r` without KEEP-BYTES at `r`, i.e. that of `cd_r` *)
 and base_cty ctx (r: string) = match def ctx r with
@@ -291,7 +302,12 @@ let gen_types ctx (n: string) =
   | DChoice alts ->
     p "%s[@@FStar.Attributes.rename_let \"%s\"]\nnoeq\ntype t_%s =\n" (comment_name ctx n) n n;
     List.iter (function
-        | ALeaf (a, _, c) -> p "| %s_%s : %s: %s -> t_%s\n" n a (field_name a) (ccty ctx c) n
+        | ALeaf (a, _, c) ->
+          (match c with
+           | CRef r when keep_target ctx.r.env r <> None ->
+             prerr_endline (sp "everparse-asn1: warning: the CHOICE alternative %s.%s does not keep the bytes of %s (KEEP-BYTES)" n a r)
+           | _ -> ());
+          p "| %s_%s : %s: %s -> t_%s\n" n a (field_name a) (ccty ctx c) n
         | ASub (a, r) ->
           if is_keep ctx r then error "KEEP-BYTES is not supported on %s: an untagged alternative of the CHOICE %s" r n;
           p "| %s_%s : %s: t_%s -> t_%s\n" n a (field_name a) r n)
@@ -325,7 +341,7 @@ let gen_types ctx (n: string) =
 (* The C type `T_kept` of a KEEP-BYTES type `T`: its value and, optionally,
    the bytes of its encoding (set by the parser, ignored by the writers) *)
 let gen_kept_types ctx (n: string) =
-  if is_keep ctx n then begin
+  if is_keep ctx n && kept_owner ctx.r.env n = n then begin
     let b = base_cty ctx n in
     p "[@@FStar.Attributes.rename_let \"%s_raw\"]\nnoeq\ntype t_%s_raw =\n| %s_raw_absent : t_%s_raw\n| %s_raw_present : v: S.slice U8.t -> t_%s_raw\n\n" n n n n n n;
     p "(* %s, with the bytes it was parsed from *)\n[@@FStar.Attributes.rename_let \"%s_kept\"]\nnoeq\ntype t_%s_kept = {\n  value: %s;\n  raw: t_%s_raw;\n}\n\n" n n n b n;
@@ -339,7 +355,8 @@ let dname ctx n = if is_keep ctx n then "dbase_" ^ n else "d_" ^ n
 let gen_kept_desc ctx (n: string) =
   if is_keep ctx n then begin
     p "noextract\nlet wf_%s : squash (ASN1.Spec.Conformance.wf k_%s) =\n  _ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())\n\n" n n;
-    p "noextract\nlet d_%s : adesc k_%s t_%s_kept =\n  D_VIEW (D_KEEP dbase_%s wf_%s) t_%s_kept kview_%s kmk_%s ()\n\n" n n n n n n n n
+    let o = kept_owner ctx.r.env n in
+    p "noextract\nlet d_%s : adesc k_%s t_%s_kept =\n  D_VIEW (D_KEEP dbase_%s wf_%s) t_%s_kept kview_%s kmk_%s ()\n\n" n n o n n o o o
   end
 
 let gen_desc ctx (n: string) =
@@ -405,7 +422,14 @@ let gen_desc ctx (n: string) =
     in
     p "inline_for_extraction noextract\nlet view_%s (x: t_%s) : %s =\n  %s\n\n" n n (either_ty tys) (view_match 0 "x" n);
     p "inline_for_extraction noextract\nlet mk_%s (x: %s) : t_%s =\n  %s\n\n" n (either_ty tys) n (mk_match "x" 0 ls);
-    p "noextract\nlet %s : adesc k_%s t_%s =\n  D_VIEW (D_CHOICE lc_%s pf_%s\n      %s)\n    t_%s view_%s mk_%s ()\n\n" (dname ctx n) n n n n (lcdesc ls) n n n
+    (* the view law, by case analysis (SMT times out on large CHOICEs) *)
+    let rec law_match var i = function
+      | [] | [_] -> "()"
+      | _ :: q -> sp "(match %s with | Inl _ -> () | Inr w%d -> %s)" var i (law_match (sp "w%d" i) (i + 1) q)
+    in
+    p "noextract\nlet law1_%s (x: %s) : Lemma (view_%s (mk_%s x) == x) =\n  %s\n\n" n (either_ty tys) n n (law_match "x" 0 ls);
+    p "noextract\nlet law_%s () : Lemma (view_law view_%s mk_%s) =\n  Classical.forall_intro law1_%s\n\n" n n n n;
+    p "noextract\nlet %s : adesc k_%s t_%s =\n  D_VIEW (D_CHOICE lc_%s pf_%s\n      %s)\n    t_%s view_%s mk_%s (law_%s ())\n\n" (dname ctx n) n n n n (lcdesc ls) n n n n
   | DAdb a ->
     let k = a.key.fname in
     let cases = List.map (fun c -> (c.cname, c.cfields)) a.cases @ (match a.fallback with Some fb -> [("other", fb)] | None -> []) in
@@ -465,7 +489,7 @@ let gen_desc ctx (n: string) =
     p "noextract\nlet cd_%s : cdesc c_%s t_%s =\n  CD_VIEW (%s)\n    t_%s view_%s mk_%s ()\n\n" n n n adb n n n;
     p "noextract\nlet %s : adesc k_%s %s = D_ILC id_%s cd_%s\n\n" (dname ctx n) n (base_cty ctx n) n n
   | DNode (NRef r) ->
-    if is_ilc ctx r then p "noextract\nlet cd_%s : cdesc c_%s %s = cd_%s\n\n" n n (base_cty ctx r) r;
+    if is_ilc ctx r then p "noextract\nlet cd_%s : cdesc c_%s %s = cd_%s\n\n" n n (content_cty ctx r) r;
     p "noextract\nlet %s : adesc k_%s %s = d_%s\n\n" (dname ctx n) n (base_cty ctx n) r
   | DNode NAny ->
     p "noextract\nlet %s : adesc k_%s %s = D_ANY\n\n" (dname ctx n) n slice
@@ -476,7 +500,7 @@ let gen_desc ctx (n: string) =
 let gen_desc ctx n = gen_desc ctx n; gen_kept_desc ctx n
 
 let norm_attr ns extra =
-  sp "normalize_for_extraction [\n  delta_attr [`%%asn1_pulse_attr; `%%ASN1.Pulse.Restrict.asn1_restrict_attr];\n  delta_namespace [\"ASN1.Syntax\"; %s];\n  delta_only [`%%dfst; `%%dsnd; `%%Mkdtuple2?._1; `%%Mkdtuple2?._2; `%%ASN1.Base.k_as_lk; `%%ASN1.Base.list_as_l; `%%ASN1.Base.mk_ASN1_GEN_ITEM; `%%ASN1.Base.proj2_of_3; `%%List.Tot.map;\n    %s];\n  zeta; iota; primops]"
+  sp "normalize_for_extraction [\n  delta_attr [`%%asn1_pulse_attr; `%%ASN1.Pulse.Restrict.asn1_restrict_attr];\n  delta_namespace [\"ASN1.Syntax\"; %s];\n  delta_only [`%%dfst; `%%dsnd; `%%Mkdtuple2?._1; `%%Mkdtuple2?._2; `%%fst; `%%snd; `%%ASN1.Base.k_as_lk; `%%ASN1.Base.list_as_l; `%%ASN1.Base.mk_ASN1_GEN_ITEM; `%%ASN1.Base.proj2_of_3; `%%List.Tot.map;\n    %s];\n  zeta; iota; primops]"
     (String.concat "; " (List.map (sp "%S") ns)) extra
 
 let has_adb ctx = List.exists (fun n -> match def ctx n with DAdb _ -> true | _ -> false) ctx.r.order
@@ -496,10 +520,10 @@ let gen_root ctx ns (n: string) =
   p "let parse_%s : aparser #%s #(asn1_t k_%s) (arel true d_%s) #asn1_strong_parser_kind (asn1_as_parser k_%s) =\n  fun input #pm #w #v -> parse_d d_%s psupported_%s input #pm #w #v\n\n" n ty n n n n n;
   p "(* Write a %s right to left, ending at *pos, if it is valid (else\n   JIT_INVALID) and fits (else JIT_NO_SPACE) *)\n" n;
   p "[@@%s;\n  FStar.Attributes.rename_let \"write_%s\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d") n;
-  p "let write_%s : raw_jit_writer_d_t d_%s ok_%s 1.0R =\n  fun x' #y out pos #v #p -> jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s (1.0R /. 2.0R)) x' #y out pos #v #p\n\n" n n n n n n n;
+  p "let write_%s : raw_jit_writer_d_t d_%s ok_%s 1.0R =\n  fun x' #y out pos #v #p -> jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s half_perm) x' #y out pos #v #p\n\n" n n n n n n n;
   p "(* Write a typed %s (related by `arel false d_%s`, e.g. a value returned\n   by parse_%s after ASN1.Pulse.RelKeep.to_writer) that is encodable:\n   never JIT_INVALID *)\n" n n n;
   p "[@@%s;\n  FStar.Attributes.rename_let \"write_%s_typed\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d") n;
-  p "let write_%s_typed : typed_jit_writer_d_t d_%s 1.0R =\n  fun x' #v out pos #b #p -> write_typed_d d_%s ok_%s 1.0R (jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s (1.0R /. 2.0R))) x' #v out pos #b #p\n\n" n n n n n n n n
+  p "let write_%s_typed : typed_jit_writer_d_t d_%s 1.0R =\n  fun x' #v out pos #b #p -> write_typed_d d_%s ok_%s 1.0R (jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s half_perm)) x' #v out pos #b #p\n\n" n n n n n n n n
 
 (* For a KEEP-BYTES type: hand a parsed value (`arel true`, bytes kept) to
    the writers (`arel false`), and get the parser relation back later *)
@@ -525,12 +549,13 @@ let gen_spec_module (r: result) ~src ~spec : string =
   List.iter (gen_spec ctx) r.order;
   Buffer.contents buf
 
-let gen_pulse_module (r: result) ~src ~spec ~pulse ~(roots: string list) ~(keep: string list) : string =
+let gen_pulse_module (r: result) ~src ~spec ~pulse ~(roots: string list) : string =
   Buffer.clear buf;
-  let ctx = { r; spec; keep } in
+  let ctx = { r; spec; keep = r.keep } in
   p "module %s\n#lang-pulse\n%s" pulse (header src);
   p "open Pulse.Lib.Pervasives\nopen ASN1.Base\nopen ASN1.Spec.Interpreter\nopen ASN1.Pulse.Rel\nopen ASN1.Pulse.Parse\nopen ASN1.Pulse.Interpreter\nopen ASN1.Pulse.Parser\nopen ASN1.Pulse.RawRel\nopen ASN1.Pulse.JitWriter\nopen ASN1.Pulse.RawJitWriter\nopen ASN1.Pulse.TypedWriter\nopen ASN1.Syntax\nopen %s\n" spec;
   p "module S = Pulse.Lib.Slice\nmodule U8 = FStar.UInt8\nmodule I64 = FStar.Int64\nmodule LPS = LowParse.Pulse.Base\nmodule RW = ASN1.Pulse.RawWriter\nmodule Trade = Pulse.Lib.Trade\n\n";
+  p "(* proved in an empty context: in a large one, SMT may time out *)\ninline_for_extraction noextract\nlet half_perm : perm = 1.0R /. 2.0R\n\n";
   p "(* C types *)\n\n";
   List.iter (fun n -> gen_types ctx n; gen_kept_types ctx n) r.order;
   p "(* Descriptors *)\n\n";

@@ -10,6 +10,7 @@ module C = ASN1.DiffTest.Constructed
 module S = ASN1.DiffTest.Set
 module R = ASN1.DiffTest.Constraints
 module A = ASN1.DiffTest.Any
+module P = ASN1.DiffTest.Presentation
 
 let tac () = T.norm [delta; zeta; iota; primops]; T.trefl ()
 
@@ -31,3 +32,7 @@ let _ = assert (DiffConstraints.k_NonEmptySetOf == R.nonEmptySetOf) by (tac ())
 
 let _ = assert (DiffAny.k_AnyT == A.anyT) by (tac ())
 let _ = assert (DiffAny.k_AlgId == A.algId) by (tac ())
+
+let _ = assert (DiffExternal.k_Ext == P.ext) by (tac ())
+let _ = assert (DiffPdv.k_Pdv == P.pdv) by (tac ())
+let _ = assert (DiffCharStr.k_CharStr == P.charStr) by (tac ())

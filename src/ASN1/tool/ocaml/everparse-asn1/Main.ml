@@ -16,7 +16,7 @@ let speclist = [
   "--odir", Arg.Set_string odir, "DIR output directory (default: .)";
   "--mname", Arg.Set_string mname, "NAME F* module name (default: from the ASN.1 module name)";
   "--root", Arg.Set_string roots, "A,B,... types for which to generate C functions (default: the types not used by other types)";
-  "--keep_bytes", Arg.Set_string keep_bytes, "A,B,... types whose parsed values keep their bytes (as with --#KEEP-BYTES A B in the file)";
+  "--keep_bytes", Arg.Set_string keep_bytes, "A,B.c,... types (or components c of SEQUENCE/SET types B) whose parsed values keep their bytes (as with --#KEEP-BYTES A B.c in the file)";
   "--fstar_only", Arg.Set fstar_only, " only generate the F* modules";
   "--skip_compilation", Arg.Set skip_compilation, " do not compile the generated C code";
   "--lax_size_of", Arg.Set lax_size_of, " accept SIZE (lo..hi) on SEQUENCE OF / SET OF, but only check lo >= 1 (the validators accept more values than the schema)";
@@ -66,8 +66,9 @@ let () =
       try Parse.parse_file f
       with Ast.Error s -> fail "%s: %s" f s) !files
   in
+  let keep = if !keep_bytes = "" then [] else String.split_on_char ',' !keep_bytes in
   let r =
-    try Elab.elaborate ~lax_size_of:!lax_size_of (List.hd ms) (List.tl ms)
+    try Elab.elaborate ~lax_size_of:!lax_size_of ~keep (List.hd ms) (List.tl ms)
     with Ast.Error s -> fail "%s: %s" (String.concat ", " !files) s
   in
   let spec = if !mname <> "" then module_name !mname else module_name r.env.mname in
@@ -80,18 +81,11 @@ let () =
         n) (String.split_on_char ',' !roots)
   in
   if roots = [] then fail "no root types";
-  let keep =
-    let cli = if !keep_bytes = "" then [] else String.split_on_char ',' !keep_bytes in
-    List.sort_uniq compare (List.map (fun a ->
-        let n = Elab.mangle a in
-        if not (Hashtbl.mem r.env.types n) then fail "KEEP-BYTES: unknown type %s" a;
-        n) (cli @ List.concat_map (fun (m: Ast.modul) -> m.keep_bytes) ms))
-  in
   let src = String.concat ", " (List.map Filename.basename !files) in
   let spec_src, pulse_src =
     try
       Gen.gen_spec_module r ~src ~spec,
-      Gen.gen_pulse_module r ~src ~spec ~pulse ~roots ~keep
+      Gen.gen_pulse_module r ~src ~spec ~pulse ~roots
     with Ast.Error s -> fail "%s: %s" file s
   in
   let rec mkdir_p d =

@@ -11,25 +11,34 @@ type value =
   | VBool of bool
   | VName of string          (* a named number or a value reference *)
   | VOid of oid_comp list    (* { iso(1) member-body(2) 840 } or { id-ce 19 } *)
+  | VCString of string       (* "text" *)
+  | VBString of string       (* '0101'B: the binary digits *)
+  | VHString of string       (* '0A1F'H: the hexadecimal digits *)
+  | VNull                    (* NULL *)
+  | VBits of string list     (* { bit1, bit2 }: named bits ({ bit1 } parses as VOid) *)
 
 and oid_comp =
   | ONum of int              (* 840 *)
   | OName of string          (* id-ce: an OBJECT IDENTIFIER value (first component only) *)
   | ONamed of string * int   (* iso(1) *)
 
-type bound = Min | Max | Val of int | BRef of string (* an INTEGER value reference *)
+type bound =
+  | Min | Max | Val of int
+  | BRef of string                     (* an INTEGER value reference *)
+  | Open of bound                      (* an excluded endpoint: lo<.. or ..<hi *)
 
 type constr =
   | CSize of constr                    (* SIZE (...) *)
   | CRange of bound * bound            (* lo .. hi *)
   | CSingle of bound list              (* v1 | v2 | ... *)
+  | CUnion of constr list              (* unions of ranges and values: CRange or CSingle *)
   | CContaining of typ                 (* CONTAINING T (X.682 11) *)
 
 and typ =
   | TBuiltin of string                 (* BOOLEAN, NULL, OCTET STRING, ... *)
   | TInteger of (string * int) list    (* named numbers *)
   | TEnumerated of (string * int option) list
-  | TBitString                         (* named bits are ignored *)
+  | TBitString of (string * int) list  (* named bits *)
   | TAny
   | TAnyDefinedBy of string            (* ANY DEFINED BY component *)
   | TRef of string
