@@ -9,6 +9,7 @@ module T = FStar.Tactics
 module C = ASN1.DiffTest.Constructed
 module S = ASN1.DiffTest.Set
 module R = ASN1.DiffTest.Constraints
+module A = ASN1.DiffTest.Any
 
 let tac () = T.norm [delta; zeta; iota; primops]; T.trefl ()
 
@@ -27,3 +28,6 @@ let _ = assert (DiffSet.k_Set == S.set_) by (tac ())
 let _ = assert (DiffConstraints.k_Sized == R.sized) by (tac ())
 let _ = assert (DiffConstraints.k_NonEmptySeqOf == R.nonEmptySeqOf) by (tac ())
 let _ = assert (DiffConstraints.k_NonEmptySetOf == R.nonEmptySetOf) by (tac ())
+
+let _ = assert (DiffAny.k_AnyT == A.anyT) by (tac ())
+let _ = assert (DiffAny.k_AlgId == A.algId) by (tac ())

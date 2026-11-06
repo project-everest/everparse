@@ -8,7 +8,9 @@ module ASN1.DiffTest.Any
      algorithm OBJECT IDENTIFIER,
      parameters ANY DEFINED BY algorithm OPTIONAL }
 
-   except that, here, the parameters of algorithm 1.2.3 must be NULL. *)
+   where the parameters of algorithm 1.2.3 must be NULL, as expressed
+   there by the everparse-asn1 directive
+   --#DEFINED-BY AlgId.parameters { alg-123 : NULL } *)
 
 open ASN1.Base
 open ASN1.Syntax

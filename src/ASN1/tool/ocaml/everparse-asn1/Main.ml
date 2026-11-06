@@ -1,7 +1,7 @@
 (* everparse-asn1: generate verified DER validators, parsers and writers in C
    from an ASN.1 module *)
 
-let usage = "everparse-asn1 [options] file.asn"
+let usage = "everparse-asn1 [options] main.asn [imported.asn ...]"
 
 let odir = ref "."
 let mname = ref ""
@@ -9,7 +9,8 @@ let roots = ref ""
 let keep_bytes = ref ""
 let fstar_only = ref false
 let skip_compilation = ref false
-let file = ref ""
+let lax_size_of = ref false
+let files = ref []
 
 let speclist = [
   "--odir", Arg.Set_string odir, "DIR output directory (default: .)";
@@ -18,6 +19,7 @@ let speclist = [
   "--keep_bytes", Arg.Set_string keep_bytes, "A,B,... types whose parsed values keep their bytes (as with --#KEEP-BYTES A B in the file)";
   "--fstar_only", Arg.Set fstar_only, " only generate the F* modules";
   "--skip_compilation", Arg.Set skip_compilation, " do not compile the generated C code";
+  "--lax_size_of", Arg.Set lax_size_of, " accept SIZE (lo..hi) on SEQUENCE OF / SET OF, but only check lo >= 1 (the validators accept more values than the schema)";
 ]
 
 let fail fmt = Printf.ksprintf (fun s -> prerr_endline ("everparse-asn1: " ^ s); exit 1) fmt
@@ -57,15 +59,18 @@ let module_name s =
   String.capitalize_ascii s
 
 let () =
-  Arg.parse speclist (fun f -> if !file = "" then file := f else fail "only one input file is supported") usage;
-  if !file = "" then (Arg.usage speclist usage; exit 1);
-  let r =
-    try
-      let m = Parse.parse_file !file in
-      Elab.elaborate m
-    with Ast.Error s -> fail "%s: %s" !file s
+  Arg.parse speclist (fun f -> files := !files @ [f]) usage;
+  if !files = [] then (Arg.usage speclist usage; exit 1);
+  let file = List.hd !files in
+  let ms = List.map (fun f ->
+      try Parse.parse_file f
+      with Ast.Error s -> fail "%s: %s" f s) !files
   in
-  let spec = if !mname <> "" then module_name !mname else module_name r.env.m.mname in
+  let r =
+    try Elab.elaborate ~lax_size_of:!lax_size_of (List.hd ms) (List.tl ms)
+    with Ast.Error s -> fail "%s: %s" (String.concat ", " !files) s
+  in
+  let spec = if !mname <> "" then module_name !mname else module_name r.env.mname in
   let pulse = spec ^ ".Impl" in
   let roots =
     if !roots = "" then r.roots
@@ -80,14 +85,14 @@ let () =
     List.sort_uniq compare (List.map (fun a ->
         let n = Elab.mangle a in
         if not (Hashtbl.mem r.env.types n) then fail "KEEP-BYTES: unknown type %s" a;
-        n) (cli @ !Lexer.keep_bytes))
+        n) (cli @ List.concat_map (fun (m: Ast.modul) -> m.keep_bytes) ms))
   in
-  let src = Filename.basename !file in
+  let src = String.concat ", " (List.map Filename.basename !files) in
   let spec_src, pulse_src =
     try
       Gen.gen_spec_module r ~src ~spec,
       Gen.gen_pulse_module r ~src ~spec ~pulse ~roots ~keep
-    with Ast.Error s -> fail "%s: %s" !file s
+    with Ast.Error s -> fail "%s: %s" file s
   in
   let rec mkdir_p d =
     if not (Sys.file_exists d) then begin

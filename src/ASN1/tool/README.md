@@ -5,7 +5,8 @@ struct/union type with a validator, a zero-copy parser, and a right-to-left
 DER writer. The parser and writer are verified against the pure F\* ASN.1 DER
 specification (`..`). It works like the CDDL front end of EverParse:
 
-1. Parse the `.asn` file, resolve type references, and elaborate tags.
+1. Parse the `.asn` files, resolve type and value references (across
+   IMPORTS), and elaborate tags.
 2. Generate two F\* modules:
    * `M.fst`: the schemas (`k_T : asn1_k`) as `ASN1.Syntax` terms. Their
      well-formedness, including the absence of tag ambiguity in SEQUENCE,
@@ -28,12 +29,16 @@ built in `opt/FStar`, and the verified ASN.1 Pulse library
 
 ```
 make build      # ocaml/_build/default/everparse-asn1/Main.exe
-make test       # test-small (C round trip) and test-golden
+make test       # test-small and test-x509lite (C tests), and test-golden
 ```
 
 ```
-Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--fstar_only] [--skip_compilation] file.asn
+Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--lax_size_of] [--fstar_only] [--skip_compilation] main.asn [imported.asn ...]
 ```
+
+The first file is the main module: its types are generated, with those of
+the other files that it uses (directly or not) through IMPORTS. Every
+imported module must be given on the command line.
 
 * `--odir`: the output directory (default `.`; created if missing).
 * `--mname`: the F\* module name (default: the ASN.1 module name).
@@ -42,6 +47,11 @@ Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--
 * `--keep_bytes`: the types whose parsed values keep their bytes (see
   KEEP-BYTES below). A line `--#KEEP-BYTES A B ...` in the `.asn` file has
   the same effect.
+* `--lax_size_of`: accept `SIZE (lo..hi)` and `SIZE (n)` on SEQUENCE OF /
+  SET OF, but only check that the list is nonempty when `lo >= 1` (the
+  library only supports `SIZE (1..MAX)`). The validators then accept more
+  values than the schema. RFC 5280 uses such bounds in its ORAddress types,
+  e.g. `SIZE (1..ub-domain-defined-attributes)`.
 * `--fstar_only`: generate the F\* modules only.
 * `--skip_compilation`: do not run `cc` on the generated C.
 
@@ -138,8 +148,72 @@ Type naming:
   return it lazily (count and payload). To write one, build its `Base` /
   `Slice` case over a C array (see `tests/small_test.c`).
 
+* A SEQUENCE with an ANY DEFINED BY table (see below) maps to a struct `T`
+  with the components before the key, and a tagged union `T_key` for the
+  key and the components after it: one alternative `T_key_case` per
+  table entry (the key is implicit; the payload is a struct `T_case` of
+  the remaining components, if more than one), and `T_key_other` with the
+  key and the payload of the fallback.
+* An `OCTET STRING (CONTAINING U)` maps to the C type of `U`: the parser decodes the contents, and the writer
+  encodes them.
+
 See `tests/Small.asn` and `tests/small_test.c` for a complete example,
-including KEEP-BYTES on `Names`.
+including KEEP-BYTES on `Names`, and `tests/X509Lite.asn` (with
+`tests/X509LiteBase.asn`) and `tests/x509lite_test.c` for IMPORTS, OID
+values, ANY DEFINED BY tables and extension values.
+
+### ANY DEFINED BY tables: `--#DEFINED-BY`
+
+ASN.1 (X.208) `ANY DEFINED BY key` does not say which type corresponds to
+which key; X.680 uses information object classes instead, which are not
+supported. A `--#DEFINED-BY` directive (an ASN.1 comment, ignored by other
+tools) gives the table:
+
+```
+--#DEFINED-BY AlgorithmIdentifier.parameters {
+--#  sha256WithRSAEncryption : NULL,
+--#  ecdsa-with-SHA256 : ABSENT
+--#}
+
+--#DEFINED-BY Extension.extnValue BY extnID {
+--#  id-ce-basicConstraints : CONTAINING BasicConstraints,
+--#  id-ce-keyUsage : CONTAINING KeyUsage
+--#} FALLBACK NONE
+```
+
+* `T.f` is the dependent component of the SEQUENCE `T`. Its key is the
+  component named by `ANY DEFINED BY`, or by `BY key` (needed when `f` is
+  not an ANY, e.g. the OCTET STRING `extnValue`).
+* The key must be a mandatory BOOLEAN, INTEGER or OBJECT IDENTIFIER
+  component without constraints (EXPLICIT tags allowed). The keys are value
+  references, `TRUE`/`FALSE`, numbers or `{ ... }` OID values.
+* For each key, `f` becomes, under its declared tags:
+  * `ABSENT`: nothing (the component is removed);
+  * `U` or `U OPTIONAL`: type `U` (`f` is OPTIONAL only if so marked);
+  * `CONTAINING U`: the declared type of `f` (an OCTET STRING), whose
+    contents are the DER encoding of a `U`.
+  The components between the key and `f` (e.g. `critical`) are kept as is
+  in every case.
+* Unknown keys use the declared component (the default), the given
+  `FALLBACK` entry, or are rejected (`FALLBACK NONE`).
+
+A directive may span several `--#` lines. The generated schema is the
+`ASN1_ANY_DEFINED_BY` of `ASN1.Base` (as in `asn1_any_oid_with_fallback`).
+Without a table, `ANY DEFINED BY x` is parsed as ANY.
+
+The other directives are `--#KEEP-BYTES T1, T2 ...` (see above).
+
+### IMPORTS and values
+
+`IMPORTS a, B FROM M;` (optionally followed by an OID or a value
+reference naming the module) imports type and value assignments of the
+module `M`, which must be given on the command line. Value assignments of
+INTEGER (and of a type with named numbers) and OBJECT IDENTIFIER types can
+be used in DEFAULT values, constraint bounds (`SIZE (1..ub-name)`) and
+DEFINED-BY keys. OID values use the X.680 syntax
+(`{ id-ce 19 }`, `{ iso(1) member-body(2) 840 }`, with the names `iso`,
+`itu-t` and `joint-iso-itu-t` predefined). Each OBJECT IDENTIFIER value
+`v` is generated as `oid_v` in `M.fst`.
 
 ## Supported ASN.1
 
@@ -156,31 +230,37 @@ Supported:
   be below 65536.
 * `[n]` / `[APPLICATION n]` / ... tags, IMPLICIT and EXPLICIT.
 * SEQUENCE and SET (at most 64 components) with OPTIONAL and DEFAULT
-  components.
+  components. DEFAULT applies to BOOLEAN, INTEGER, ENUMERATED and
+  (unconstrained) OBJECT IDENTIFIER components, also under one EXPLICIT
+  tag if unconstrained (such as `[0] EXPLICIT Version DEFAULT v1`).
 * CHOICE, SEQUENCE OF and SET OF (with SIZE), and ANY.
+* IMPORTS, INTEGER and OBJECT IDENTIFIER value assignments.
+* ANY DEFINED BY, with a `--#DEFINED-BY` table or as ANY.
+* `OCTET STRING (CONTAINING T)`.
 
 Not supported (rejected with an error message):
 
-* IMPORTS and parameterized types.
+* Parameterized types, information object classes, and `ENCODED BY`.
 * Extension markers (`...`) and `EXTENSIBILITY IMPLIED`.
 * Open ranges (`<`) and unions of ranges in constraints (single values
   `(v1 | v2)` are supported).
 * ANY as a CHOICE alternative.
 * Recursive types.
-* Value assignments other than DEFAULT literals; OID values.
-* ANY DEFINED BY.
+* Value assignments of other types.
 * EXTERNAL, EMBEDDED PDV and CHARACTER STRING. The Pulse library
-  supports these and ANY DEFINED BY, but the front end does not yet.
-* DEFAULT on anything other than an implicitly tagged BOOLEAN or INTEGER
-  (including restricted INTEGER and ENUMERATED). The specification allows
-  DEFAULT only on terminals.
+  supports these, but the front end does not yet.
+* DEFAULT on a constructed type, or on an EXPLICIT-tagged restricted
+  INTEGER or ENUMERATED. The specification allows DEFAULT only on
+  terminals, possibly under one EXPLICIT tag.
+* `SIZE` on SEQUENCE OF / SET OF other than `SIZE (1..MAX)` (but see
+  `--lax_size_of`).
 
 Ambiguous schemas are reported by F\*, not by the front end: verifying
 `M.fst` fails in `seq_tac`/`set_tac`. A typical case is an OPTIONAL
 component followed by a component that can start with the same tag.
 
 `make test-golden` checks that the schemas generated from
-`../difftest/schemas/{DiffConstructed,DiffSet,DiffConstraints}.asn` are
+`../difftest/schemas/{DiffConstructed,DiffSet,DiffConstraints,DiffAny}.asn` are
 equal, by normalization, to the hand-written translations in
 `../difftest`.
 

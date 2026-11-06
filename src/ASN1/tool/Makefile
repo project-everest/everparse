@@ -29,8 +29,19 @@ $(OUT)/small_test.exe: $(OUT)/small/Small.c tests/small_test.c
 test-small: $(OUT)/small_test.exe
 	$<
 
+# IMPORTS, value assignments, ANY DEFINED BY tables, CONTAINING, DEFAULT
+# under an EXPLICIT tag, and KEEP-BYTES
+$(OUT)/x509lite/X509Lite.c: tests/X509Lite.asn tests/X509LiteBase.asn $(TOOL)
+	$(TOOL) --lax_size_of --odir $(OUT)/x509lite --root Cert,Extension,BasicConstraints tests/X509Lite.asn tests/X509LiteBase.asn
+
+$(OUT)/x509lite_test.exe: $(OUT)/x509lite/X509Lite.c tests/x509lite_test.c
+	$(CC) $(TEST_CFLAGS) -I $(OUT)/x509lite -o $@ $^
+
+test-x509lite: $(OUT)/x509lite_test.exe
+	$<
+
 # The generated schemas agree with the hand translations of difftest/schemas
-GOLDEN := DiffConstructed DiffSet DiffConstraints
+GOLDEN := DiffConstructed DiffSet DiffConstraints DiffAny
 
 $(OUT)/golden/%.fst: ../difftest/schemas/%.asn $(TOOL)
 	$(TOOL) --fstar_only --odir $(OUT)/golden $<
@@ -38,13 +49,13 @@ $(OUT)/golden/%.fst: ../difftest/schemas/%.asn $(TOOL)
 test-golden: $(addprefix $(OUT)/golden/,$(addsuffix .fst,$(GOLDEN)))
 	cd tests && $(FSTAR_EXE) --smt $(EVERPARSE_HOME)/opt/z3/z3-5.3.0 --z3version 5.3.0 \
 	  --include $(EVERPARSE_HOME)/lib/everparse/lowparse --include $(EVERPARSE_HOME)/src/ASN1 --include $(CURDIR)/$(OUT)/golden \
-	  --already_cached '*,-Golden,-DiffConstructed,-DiffSet,-DiffConstraints' Golden.fst
+	  --already_cached '*,-Golden,-DiffConstructed,-DiffSet,-DiffConstraints,-DiffAny' Golden.fst
 
-test: test-golden test-small
+test: test-golden test-small test-x509lite
 
 clean:
 	rm -rf $(OUT)
 	cd ocaml && $(DUNE) clean
 
-.PHONY: all build test test-small test-golden clean
-.PRECIOUS: $(OUT)/small/Small.c $(OUT)/golden/%.fst
+.PHONY: all build test test-small test-x509lite test-golden clean
+.PRECIOUS: $(OUT)/small/Small.c $(OUT)/x509lite/X509Lite.c $(OUT)/golden/%.fst

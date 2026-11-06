@@ -33,17 +33,6 @@ let keywords = [
 
 let field_name f = if List.mem f keywords then f ^ "_" else f
 
-let cls_name = function
-  | Universal -> "UNIVERSAL" | Application -> "APPLICATION"
-  | Context -> "CONTEXT_SPECIFIC" | Private -> "PRIVATE"
-
-let idexpr (id: id) =
-  match id.cls with
-  | Universal ->
-    if id.num = 0 then error "[UNIVERSAL 0] is not a valid tag";
-    sp "(%s %d)" (if id.cons then "mk_constant_constructed_id" else "mk_constant_id") id.num
-  | c -> sp "(mk_custom_id %s %s %d)" (cls_name c) (if id.cons then "CONSTRUCTED" else "PRIMITIVE") id.num
-
 type ctx = {
   r: result;
   spec: string;        (* the spec module name *)
@@ -67,10 +56,18 @@ and cexpr (c: cnode) = match c with
   | CTerm (t, Some r) -> sp "(ASN1_RESTRICTED_TERMINAL %s %s)" t.tk r
   | CRef r -> "c_" ^ r
   | COf (set, ne, n) -> sp "(%s %b %s)" (if set then "ASN1_SET_OF" else "ASN1_SEQUENCE_OF") ne (kexpr n)
-  | CPrefixed n -> sp "(ASN1_PREFIXED %s)" (kexpr n)
+  | CPrefixed n | CContaining n -> sp "(ASN1_PREFIXED %s)" (kexpr n)
 
 (* The default value of a DEFAULT component, defined in the spec module *)
-let dv_name n (f: field) = sp "dv_%s_%s" n f.fname
+let dv_name _ (f: field) = sp "dv_%s_%s" f.fowner f.fname
+
+(* The components of an ANY DEFINED BY, each once *)
+let adb_fields (a: adb) : field list =
+  let rest = List.concat_map (fun c -> c.cfields) a.cases @ (match a.fallback with Some l -> l | None -> []) in
+  let seen = Hashtbl.create 7 in
+  a.prefix @ [a.key] @ List.filter (fun f ->
+      let k = (f.fowner, f.fname) in
+      if Hashtbl.mem seen k then false else (Hashtbl.add seen k (); true)) rest
 
 let gen_dv n (f: field) = match f.fdeco with
   | FDefault (_, t, None, lit) ->
@@ -130,7 +127,24 @@ let gen_spec ctx (n: string) =
      p "noextract\nlet k_%s = k_%s\n\n" n r
    | DNode NAny ->
      p "noextract\nlet k_%s = ASN1_ANY_ILC\n\n" n
-   | DNode (NILC (id, c)) -> ilc_consts (idexpr id) (cexpr c));
+   | DNode (NILC (id, c)) -> ilc_consts (idexpr id) (cexpr c)
+   | DAdb a ->
+     List.iter (gen_dv n) (adb_fields a);
+     p "noextract\nlet items_%s =\n    %s\n\n" n (items_expr n a.prefix);
+     let gitems suffix fields =
+       p "noextract\nlet gitems_%s_%s : asn1_gen_items_lk = mk_gitems %s (_ by (seq_tac ()))\n\n" n suffix (items_expr n fields)
+     in
+     List.iter (fun c ->
+         p "noextract\nlet key_%s_%s : asn1_key_lit %s = %s\n\n" n c.cname a.key_term.tk c.clit;
+         gitems c.cname c.cfields)
+       a.cases;
+     Option.iter (gitems "other") a.fallback;
+     p "noextract\nlet ls_%s : list (asn1_key_lit %s & asn1_gen_items_lk) = [%s]\n\n" n a.key_term.tk
+       (String.concat "; " (List.map (fun c -> sp "(key_%s_%s, gitems_%s_%s)" n c.cname n c.cname) a.cases));
+     ilc_consts "(mk_constant_constructed_id 16)"
+       (sp "ASN1_ANY_DEFINED_BY _ items_%s %s %s ls_%s %s (_ by (seq_tac ())) (_ by (choice_tac ()))"
+          n (idexpr a.key_id) a.key_term.tk n
+          (match a.fallback with Some _ -> sp "(Some gitems_%s_other)" n | None -> "None")));
   p "let _ : squash (asn1_k_wf k_%s) = _ by (wf_tac ())\n\n" n
 
 (* Impl types *)
@@ -144,7 +158,7 @@ and ccty ctx (c: cnode) = match c with
   | CTerm (t, _) -> t.cty
   | CRef r -> base_cty ctx r
   | COf (_, _, n) -> sp "(ml %s)" (cty ctx n)
-  | CPrefixed n -> cty ctx n
+  | CPrefixed n | CContaining n -> cty ctx n
 
 (* The type of `d_r`, with its kept bytes if `r` has KEEP-BYTES *)
 and def_cty ctx (r: string) =
@@ -153,7 +167,7 @@ and def_cty ctx (r: string) =
 (* The type of `d_r` without KEEP-BYTES at `r`, i.e. that of `cd_r` *)
 and base_cty ctx (r: string) = match def ctx r with
   | DStruct (_, []) -> "unit"
-  | DStruct _ | DChoice _ -> "t_" ^ r
+  | DStruct _ | DChoice _ | DAdb _ -> "t_" ^ r
   | DNode n -> cty ctx n
 
 let opt_payload ctx (f: field) = match f.fdeco with
@@ -161,7 +175,7 @@ let opt_payload ctx (f: field) = match f.fdeco with
   | FOptional -> cty ctx f.fnode
   | FDefault (_, t, _, _) -> t.cty
 
-let opt_name n (f: field) = sp "%s_%s" n f.fname
+let opt_name _ (f: field) = sp "%s_%s" f.fowner f.fname
 
 let field_cty ctx n (f: field) = match f.fdeco with
   | FPlain -> cty ctx f.fnode
@@ -190,7 +204,7 @@ and cdexpr (c: cnode) = match c with
   | CTerm (t, Some r) -> sp "(CD_RESTRICTED %s %s)" t.tk r
   | CRef r -> "cd_" ^ r
   | COf (set, ne, n) -> sp "(%s %b %s)" (if set then "CD_SET_OF" else "CD_SEQUENCE_OF") ne (dexpr n)
-  | CPrefixed n -> sp "(CD_PREFIXED %s)" (dexpr n)
+  | CPrefixed n | CContaining n -> sp "(CD_PREFIXED %s)" (dexpr n)
 
 let ddexpr n (f: field) =
   let o = opt_name n f in
@@ -206,22 +220,71 @@ let rec idesc_expr n = function
   | [f] -> sp "(ID_SINGLE %s)" (ddexpr n f)
   | f :: q -> sp "(ID_CONS %s\n      %s)" (ddexpr n f) (idesc_expr n q)
 
+let rec iadesc_expr n = function
+  | [] -> "IA_NIL"
+  | [f] -> sp "(IA_SINGLE %s)" (ddexpr n f)
+  | f :: q -> sp "(IA_CONS %s\n      %s)" (ddexpr n f) (iadesc_expr n q)
+
+(* The i-th injection into `either_ty` of nl types *)
+let inj nl i v =
+  let rec inrs k e = if k = 0 then e else sp "Inr (%s)" (inrs (k - 1) e) in
+  if nl = 1 then v
+  else if i = nl - 1 then inrs i v
+  else inrs i (sp "Inl %s" v)
+
+(* The i-th component of `tuple_ty` of nf types *)
+let access nf i x =
+  let rec snds k e = if k = 0 then e else snds (k - 1) (sp "snd (%s)" e) in
+  if nf = 1 then x
+  else if i = nf - 1 then snds i x
+  else sp "fst (%s)" (snds i x)
+
+(* ANY DEFINED BY: the payload of a case (or of the fallback) `s` is a
+   named struct `t_<n>_<s>` if it has more than one component *)
+let adb_payload ctx n s (fields: field list) =
+  match fields with
+  | [] | [_] -> tuple_ty (List.map (field_cty ctx n) fields)
+  | _ -> sp "t_%s_%s" n s
+
+let adb_key_name (a: adb) = field_name a.key.fname
+
+(* The view of a payload as nested pairs, and back *)
+let adb_payload_view n s (fields: field list) v =
+  match fields with
+  | [] | [_] -> v
+  | _ ->
+    let rec go = function
+      | [] -> "()"
+      | [f] -> sp "Mkt_%s_%s?.%s %s" n s (field_name f.fname) v
+      | f :: q -> sp "(Mkt_%s_%s?.%s %s, %s)" n s (field_name f.fname) v (go q)
+    in go fields
+
+let adb_payload_mk n s (fields: field list) v =
+  match fields with
+  | [] | [_] -> v
+  | _ ->
+    let nf = List.length fields in
+    sp "(Mkt_%s_%s %s)" n s (String.concat " " (List.mapi (fun i _ -> sp "(%s)" (access nf i v)) fields))
+
 let comment_name ctx n =
   match Hashtbl.find_opt ctx.r.env.user n with
   | Some a -> sp "(* %s *)\n" a
   | None -> sp "(* %s (anonymous) *)\n" n
 
-let gen_types ctx (n: string) =
-  match def ctx n with
-  | DStruct (_, []) -> ()
-  | DStruct (_, fields) ->
+let gen_opt_types ctx n fields =
     List.iter (fun f -> if f.fdeco <> FPlain then begin
         let o = opt_name n f in
         let pl = opt_payload ctx f in
         p "[@@FStar.Attributes.rename_let \"%s_opt\"]\nnoeq\ntype t_%s_opt =\n| %s_absent : t_%s_opt\n| %s_present : v: %s -> t_%s_opt\n\n" o o o o o pl o;
         p "inline_for_extraction noextract\nlet oview_%s (x: t_%s_opt) : option %s =\n  match x with\n  | %s_absent -> None\n  | %s_present v -> Some v\n\n" o o pl o o;
         p "inline_for_extraction noextract\nlet omk_%s (x: option %s) : t_%s_opt =\n  match x with\n  | None -> %s_absent\n  | Some v -> %s_present v\n\n" o pl o o o
-      end) fields;
+      end) fields
+
+let gen_types ctx (n: string) =
+  match def ctx n with
+  | DStruct (_, []) -> ()
+  | DStruct (_, fields) ->
+    gen_opt_types ctx n fields;
     p "%s[@@FStar.Attributes.rename_let \"%s\"]\nnoeq\ntype t_%s = {\n" (comment_name ctx n) n n;
     List.iter (fun f -> p "  %s: %s;\n" (field_name f.fname) (field_cty ctx n f)) fields;
     p "}\n\n"
@@ -234,6 +297,29 @@ let gen_types ctx (n: string) =
           p "| %s_%s : %s: t_%s -> t_%s\n" n a (field_name a) r n)
       alts;
     p "\n"
+  | DAdb a ->
+    gen_opt_types ctx n (adb_fields a);
+    let payload s fields =
+      match fields with
+      | [] | [_] -> ()
+      | _ ->
+        p "[@@FStar.Attributes.rename_let \"%s_%s\"]\nnoeq\ntype t_%s_%s = {\n" n s n s;
+        List.iter (fun f -> p "  %s: %s;\n" (field_name f.fname) (field_cty ctx n f)) fields;
+        p "}\n\n"
+    in
+    List.iter (fun c -> payload c.cname c.cfields) a.cases;
+    Option.iter (payload "other") a.fallback;
+    let k = a.key.fname in
+    p "(* %s.%s, with the components that depend on it *)\n[@@FStar.Attributes.rename_let \"%s_%s\"]\nnoeq\ntype t_%s_%s =\n" n k n k n k;
+    List.iter (fun c ->
+        p "| %s_%s_%s : %s: %s -> t_%s_%s\n" n k c.cname (field_name c.cname) (adb_payload ctx n c.cname c.cfields) n k)
+      a.cases;
+    Option.iter (fun fb ->
+        p "| %s_%s_other : key: %s -> other: %s -> t_%s_%s\n" n k a.key_term.cty (adb_payload ctx n "other" fb) n k)
+      a.fallback;
+    p "\n%s[@@FStar.Attributes.rename_let \"%s\"]\nnoeq\ntype t_%s = {\n" (comment_name ctx n) n n;
+    List.iter (fun f -> p "  %s: %s;\n" (field_name f.fname) (field_cty ctx n f)) a.prefix;
+    p "  %s: t_%s_%s;\n}\n\n" (adb_key_name a) n k
   | DNode _ -> ()
 
 (* The C type `T_kept` of a KEEP-BYTES type `T`: its value and, optionally,
@@ -320,6 +406,64 @@ let gen_desc ctx (n: string) =
     p "inline_for_extraction noextract\nlet view_%s (x: t_%s) : %s =\n  %s\n\n" n n (either_ty tys) (view_match 0 "x" n);
     p "inline_for_extraction noextract\nlet mk_%s (x: %s) : t_%s =\n  %s\n\n" n (either_ty tys) n (mk_match "x" 0 ls);
     p "noextract\nlet %s : adesc k_%s t_%s =\n  D_VIEW (D_CHOICE lc_%s pf_%s\n      %s)\n    t_%s view_%s mk_%s ()\n\n" (dname ctx n) n n n n (lcdesc ls) n n n
+  | DAdb a ->
+    let k = a.key.fname in
+    let cases = List.map (fun c -> (c.cname, c.cfields)) a.cases @ (match a.fallback with Some fb -> [("other", fb)] | None -> []) in
+    let nl = List.length cases in
+    let tuple fields = tuple_ty (List.map (field_cty ctx n) fields) in
+    let fbt fb = sp "(%s & %s)" a.key_term.cty (tuple fb) in
+    let ts = either_ty (List.map (fun c -> tuple c.cfields) a.cases @ (match a.fallback with Some fb -> [fbt fb] | None -> [])) in
+    let tys = List.map (field_cty ctx n) a.prefix @ [ts] in
+    let nf = List.length tys in
+    let proj f = sp "Mkt_%s?.%s x" n (field_name f.fname) in
+    let suffix_view =
+      sp "(match Mkt_%s?.%s x with %s)" n (adb_key_name a)
+        (String.concat " " (List.mapi (fun i (s, fields) ->
+             if s = "other" && a.fallback <> None && i = nl - 1 then
+               sp "| %s_%s_other key v -> %s" n k (inj nl i (sp "(key, %s)" (adb_payload_view n s fields "v")))
+             else sp "| %s_%s_%s v -> %s" n k s (inj nl i (sp "(%s)" (adb_payload_view n s fields "v"))))
+             cases))
+    in
+    let rec view = function
+      | [] -> suffix_view
+      | f :: q -> sp "(%s, %s)" (proj f) (view q)
+    in
+    let rec mk_suffix var i = function
+      | [] -> "()"
+      | [(s, fields)] ->
+        if s = "other" && a.fallback <> None then
+          sp "%s_%s_other (fst %s) %s" n k var (adb_payload_mk n s fields (sp "(snd %s)" var))
+        else sp "%s_%s_%s %s" n k s (adb_payload_mk n s fields var)
+      | (s, fields) :: q ->
+        let w = sp "w%d" i in
+        sp "(match %s with | Inl v -> %s_%s_%s %s | Inr %s -> %s)" var n k s (adb_payload_mk n s fields "v") w (mk_suffix w (i + 1) q)
+    in
+    p "inline_for_extraction noextract\nlet view_%s (x: t_%s) : %s =\n  %s\n\n" n n (tuple_ty tys) (view a.prefix);
+    p "inline_for_extraction noextract\nlet mk_%s (x: %s) : t_%s =\n  Mkt_%s %s (%s)\n\n" n (tuple_ty tys) n n
+      (String.concat " " (List.mapi (fun i _ -> sp "(%s)" (access nf i "x")) a.prefix))
+      (mk_suffix (sp "(%s)" (access nf (nf - 1) "x")) 0 cases);
+    let tk = a.key_term.tk in
+    let item c = sp "%s key_%s_%s gitems_%s_%s %s" tk n c.cname n c.cname (idesc_expr n c.cfields) in
+    let rec sx = function
+      | [] -> sp "(SX_NIL %s)" tk
+      | [c] -> sp "(SX_SINGLE %s)" (item c)
+      | c :: q -> sp "(SX_CONS %s\n      %s)" (item c) (sx q)
+    in
+    let rec fx = function
+      | [] -> sp "(FX_NIL %s)" tk
+      | [c] -> sp "(FX_SINGLE %s)" (item c)
+      | c :: q -> sp "(FX_CONS %s\n      %s)" (item c) (fx q)
+    in
+    let adb = match a.fallback with
+      | None ->
+        sp "CD_ADB_NONE _ items_%s %s %s ls_%s (ASN1_ANY_DEFINED_BY?.pf_wf c_%s) (ASN1_ANY_DEFINED_BY?.pf_sup c_%s)\n      %s\n      %s"
+          n (idexpr a.key_id) tk n n n (sx a.cases) (iadesc_expr n a.prefix)
+      | Some fb ->
+        sp "CD_ADB_SOME _ items_%s %s %s ls_%s gitems_%s_other (ASN1_ANY_DEFINED_BY?.pf_wf c_%s) (ASN1_ANY_DEFINED_BY?.pf_sup c_%s)\n      %s\n      %s\n      %s"
+          n (idexpr a.key_id) tk n n n n (idesc_expr n fb) (fx a.cases) (iadesc_expr n a.prefix)
+    in
+    p "noextract\nlet cd_%s : cdesc c_%s t_%s =\n  CD_VIEW (%s)\n    t_%s view_%s mk_%s ()\n\n" n n n adb n n n;
+    p "noextract\nlet %s : adesc k_%s %s = D_ILC id_%s cd_%s\n\n" (dname ctx n) n (base_cty ctx n) n n
   | DNode (NRef r) ->
     if is_ilc ctx r then p "noextract\nlet cd_%s : cdesc c_%s %s = cd_%s\n\n" n n (base_cty ctx r) r;
     p "noextract\nlet %s : adesc k_%s %s = d_%s\n\n" (dname ctx n) n (base_cty ctx n) r
@@ -335,6 +479,8 @@ let norm_attr ns extra =
   sp "normalize_for_extraction [\n  delta_attr [`%%asn1_pulse_attr; `%%ASN1.Pulse.Restrict.asn1_restrict_attr];\n  delta_namespace [\"ASN1.Syntax\"; %s];\n  delta_only [`%%dfst; `%%dsnd; `%%Mkdtuple2?._1; `%%Mkdtuple2?._2; `%%ASN1.Base.k_as_lk; `%%ASN1.Base.list_as_l; `%%ASN1.Base.mk_ASN1_GEN_ITEM; `%%ASN1.Base.proj2_of_3; `%%List.Tot.map;\n    %s];\n  zeta; iota; primops]"
     (String.concat "; " (List.map (sp "%S") ns)) extra
 
+let has_adb ctx = List.exists (fun n -> match def ctx n with DAdb _ -> true | _ -> false) ctx.r.order
+
 let gen_root ctx ns (n: string) =
   let tac = "_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())" in
   p "noextract\nlet supported_%s : squash (supported_k k_%s) = %s\n\n" n n tac;
@@ -345,7 +491,8 @@ let gen_root ctx ns (n: string) =
   p "[@@%s;\n  FStar.Attributes.rename_let \"validate_%s\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable") n;
   p "let validate_%s : LPS.validator #(asn1_t k_%s) #asn1_strong_parser_kind (asn1_as_parser k_%s) =\n  validate_k k_%s supported_%s\n\n" n n n n n;
   p "(* Read a validated %s (zero-copy: its strings point into the input) *)\n" n;
-  p "[@@%s;\n  FStar.Attributes.rename_let \"parse_%s\"]\n" (norm_attr ns "`%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer") n;
+  p "[@@%s;\n  FStar.Attributes.rename_let \"parse_%s\"]\n" (norm_attr ns ("`%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer" ^
+    (if has_adb ctx then "; `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t" else ""))) n;
   p "let parse_%s : aparser #%s #(asn1_t k_%s) (arel true d_%s) #asn1_strong_parser_kind (asn1_as_parser k_%s) =\n  fun input #pm #w #v -> parse_d d_%s psupported_%s input #pm #w #v\n\n" n ty n n n n n;
   p "(* Write a %s right to left, ending at *pos, if it is valid (else\n   JIT_INVALID) and fits (else JIT_NO_SPACE) *)\n" n;
   p "[@@%s;\n  FStar.Attributes.rename_let \"write_%s\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d") n;
@@ -368,6 +515,13 @@ let gen_spec_module (r: result) ~src ~spec : string =
   p "module %s\n%s" spec (header src);
   p "open ASN1.Base\nopen ASN1.Syntax\n\n";
   p "noextract\nlet mk_gitems (#ids: id_decs) (items: asn1_gen_items_l ids) (_: squash (asn1_sequence_k_wf ids)) : asn1_gen_items_lk =\n  (| ids, items |)\n\n";
+  (* The OBJECT IDENTIFIER value assignments *)
+  let oids = Hashtbl.fold (fun n (t, _) acc ->
+      match t with TBuiltin "OBJECT IDENTIFIER" -> n :: acc | _ -> acc) r.env.values [] in
+  List.iter (fun n ->
+      let l = oid_value r.env (VName n) in
+      p "noextract\nlet oid_%s : asn1_oid_t = mk_oid [%s]\n\n" (mangle n) (String.concat "; " (List.map string_of_int l)))
+    (List.sort compare oids);
   List.iter (gen_spec ctx) r.order;
   Buffer.contents buf
 

@@ -4,15 +4,15 @@ type token =
   | NUM of int
   | ASSIGN                (* ::= *)
   | LBRACE | RBRACE | LPAREN | RPAREN | LBRACKET | RBRACKET
-  | COMMA | DOTDOT | ELLIPSIS | BAR | MINUS | SEMI | DOT | LT
+  | COMMA | DOTDOT | ELLIPSIS | BAR | MINUS | SEMI | DOT | LT | COLON
   | EOF
 
 exception Lex_error of string
 
 let line = ref 1
 
-(* The types named by `--#KEEP-BYTES T1 T2 ...` directives *)
-let keep_bytes : string list ref = ref []
+(* The `--#` directive lines (line number, text), in reverse order *)
+let directives : (int * string) list ref = ref []
 }
 
 let letter = ['a'-'z' 'A'-'Z']
@@ -22,7 +22,7 @@ let ident = letter (alnum | '-' alnum)*
 rule token = parse
   | [' ' '\t' '\r']+ { token lexbuf }
   | '\n' { incr line; token lexbuf }
-  | "--#KEEP-BYTES" { keep_line lexbuf }
+  | "--#" ([^ '\n']* as d) { directives := (!line, d) :: !directives; token lexbuf }
   | "--" { line_comment lexbuf }
   | "/*" { block_comment 1 lexbuf }
   | "::=" { ASSIGN }
@@ -32,6 +32,7 @@ rule token = parse
   | '{' { LBRACE } | '}' { RBRACE }
   | '(' { LPAREN } | ')' { RPAREN }
   | '[' { LBRACKET } | ']' { RBRACKET }
+  | ':' { COLON }
   | ',' { COMMA } | '|' { BAR } | '-' { MINUS } | ';' { SEMI } | '<' { LT }
   | ['0'-'9']+ as n {
       match int_of_string_opt n with
@@ -47,15 +48,6 @@ and line_comment = parse
   | "--" { token lexbuf }
   | eof { EOF }
   | _ { line_comment lexbuf }
-
-(* A `--#KEEP-BYTES` directive: type names up to the end of the line *)
-and keep_line = parse
-  | [' ' '\t' '\r' ',']+ { keep_line lexbuf }
-  | ident as s { keep_bytes := s :: !keep_bytes; keep_line lexbuf }
-  | '\n' { incr line; token lexbuf }
-  | "--" { token lexbuf }
-  | eof { EOF }
-  | _ as c { raise (Lex_error (Printf.sprintf "line %d: unexpected character '%c' in --#KEEP-BYTES" !line c)) }
 
 and block_comment depth = parse
   | "*/" { if depth = 1 then token lexbuf else block_comment (depth - 1) lexbuf }
