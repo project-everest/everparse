@@ -101,3 +101,48 @@ val cbor_validate_nondet_bounded
     (fun res -> pts_to input #pm v ** pure (
       cbor_validate_nondet_bounded_post map_depth_bound map_length_bound v res
     ))
+
+(* Sort-based variant of `cbor_validate_nondet_bounded`, checking map
+   key duplicates with caller-provided scratch space and without
+   allocating. The scratch slice must hold at least
+   `3 * map_length_bound * map_depth_bound` elements; otherwise, the
+   validator returns 0. *)
+
+let cbor_validate_nondet_bounded_sort_scratch_ok
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+: Tot bool
+= 3 * SZ.v map_length_bound * SZ.v map_depth_bound <= SZ.v scratch_len
+
+unfold
+let cbor_validate_nondet_bounded_sort_post
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: Tot prop
+= if cbor_validate_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len
+  then cbor_validate_nondet_bounded_post map_depth_bound map_length_bound v res
+  else SZ.v res == 0
+
+val cbor_validate_nondet_bounded_sort_scratch_ok_impl
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+: Tot (res: bool { res == cbor_validate_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len })
+
+val cbor_validate_nondet_bounded_sort
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (input: slice U8.t)
+  (scratch: slice SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+: stt SZ.t
+    (pts_to input #pm v ** pts_to scratch s)
+    (fun res -> pts_to input #pm v ** (exists* s' . pts_to scratch s' ** pure (
+      cbor_validate_nondet_bounded_sort_post map_depth_bound map_length_bound (len scratch) v res
+    )))

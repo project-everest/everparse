@@ -134,3 +134,47 @@ ensures
     0sz
   }
 }
+
+let cbor_validate_nondet_bounded_sort_scratch_ok_impl d n l =
+  CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_sort_scratch_ok d n l
+
+fn cbor_validate_nondet_bounded_sort
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (input: slice U8.t)
+  (scratch: slice SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+requires
+  (pts_to input #pm v ** pts_to scratch s)
+returns res: SZ.t
+ensures
+  (pts_to input #pm v ** (exists* s' . pts_to scratch s' ** pure (
+    cbor_validate_nondet_bounded_sort_post map_depth_bound map_length_bound (len scratch) v res
+  )))
+{
+  if (not (CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_sort_scratch_ok map_depth_bound map_length_bound (len scratch))) {
+    0sz
+  } else {
+    LowParse.Spec.Combinators.parse_filter_eq
+      CBOR.Spec.Raw.EverParse.parse_raw_data_item
+      (CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+      v;
+    Seq.slice_length v;
+    let mut poff = 0sz;
+    let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound input poff;
+    if (res) {
+      let off = !poff;
+      let x : Ghost.erased CBOR.Spec.Raw.Base.raw_data_item = Ghost.hide (fst (Some?.v (LowParse.Spec.Base.parse CBOR.Spec.Raw.EverParse.parse_raw_data_item v)));
+      let ok = CBOR.Pulse.Raw.EverParse.DupCheck.Top.check_dups_top input map_depth_bound map_length_bound scratch x (Ghost.hide (SZ.v off));
+      if (ok) {
+        off
+      } else {
+        0sz
+      }
+    } else {
+      0sz
+    }
+  }
+}
