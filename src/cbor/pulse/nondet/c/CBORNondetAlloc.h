@@ -2,7 +2,8 @@
  * CBOR.Pulse.API.Nondet.C.Alloc (lib/everparse/cbor/pulse), used by the
  * verified cbor_nondet_parse_bounded_{sort,hash}_alloc to allocate their
  * scratch spaces once per call. This file is included by the extracted
- * CBORNondet.c; it is not meant to be included by users.
+ * CBORNondet.c (next to which it lives), and only needed to compile it: it
+ * is not a public header, and is not installed.
  *
  * Specification (trusted): cbor_nondet_malloc_T(n) returns either NULL,
  * or a pointer to a fresh, possibly uninitialized, array of n elements
@@ -10,9 +11,9 @@
  * with cbor_nondet_free_T. The count n is an element count, not a byte
  * count: the multiplication by sizeof(T) is checked for overflow here.
  *
- * Define CBOR_NONDET_CUSTOM_ALLOC to provide your own definitions of
- * these four functions (with external linkage) instead, e.g. to use a
- * custom allocator.
+ * Compile CBORNondet.c with -DCBOR_NONDET_CUSTOM_ALLOC to provide your own
+ * definitions of these four functions (with external linkage) instead, e.g.
+ * to use a custom allocator.
  */
 #ifndef CBOR_NONDET_ALLOC_H
 #define CBOR_NONDET_ALLOC_H

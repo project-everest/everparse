@@ -61,10 +61,13 @@ install-3d-pulse:
 
 .PHONY: install-3d install-3d-pulse
 
+# The public EverCBOR C headers. Headers only needed to compile the library
+# (e.g. src/cbor/pulse/nondet/c/CBORNondetAlloc.h) stay with its sources.
+CBOR_PUBLIC_HEADERS := CBORDet.h CBORDetType.h CBORNondet.h CBORNondetType.h CBORNondetHashRandom.h krmllib.h
+
 install-cbor:
 	install -d $(PREFIX)/include/everparse
-	install -m 644 $(wildcard include/everparse/CBOR*.h) $(PREFIX)/include/everparse
-	install -m 644 include/everparse/krmllib.h $(PREFIX)/include/everparse
+	install -m 644 $(addprefix include/everparse/,$(CBOR_PUBLIC_HEADERS)) $(PREFIX)/include/everparse
 	install -d $(PREFIX)/lib/everparse
 	install -m 644 $(addprefix lib/everparse/,CBORDet.o CBORNondet.o) $(PREFIX)/lib/everparse
 	install -d $(PREFIX)/lib/everparse/cbor/spec/raw/everparse

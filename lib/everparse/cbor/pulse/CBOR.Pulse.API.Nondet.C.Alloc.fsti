@@ -6,7 +6,7 @@ module U64 = FStar.UInt64
 
 (* TRUSTED: fallible heap allocation of scratch spaces for the C
    extraction, assumed here and implemented by hand in
-   include/everparse/CBORNondetAlloc.h (with malloc and free.)
+   src/cbor/pulse/nondet/c/CBORNondetAlloc.h (with malloc and free.)
 
    cbor_nondet_malloc_X n either returns NULL, or a pointer to n
    (uninitialized) elements, which must be freed exactly once with

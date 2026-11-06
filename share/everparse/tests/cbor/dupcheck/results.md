@@ -24,9 +24,10 @@ Additional entry points:
   - The wrappers are verified (`CBOR.Pulse.Raw.Nondet.Alloc`). The size
     arithmetic is overflow-checked in `uint64_t`.
   - Only the allocator is trusted: `CBOR.Pulse.API.Nondet.{C,Rust}.Alloc.fsti`.
-    - C: `include/everparse/CBORNondetAlloc.h`, `malloc`/`free` with a checked
-      byte-size multiplication. Define `CBOR_NONDET_CUSTOM_ALLOC` to supply
-      your own.
+    - C: `src/cbor/pulse/nondet/c/CBORNondetAlloc.h` (internal, compiled into
+      `CBORNondet.o`), `malloc`/`free` with a checked byte-size
+      multiplication. Compile `CBORNondet.c` with `-DCBOR_NONDET_CUSTOM_ALLOC`
+      to supply your own.
     - Rust: `cbornondetallocimpl.rs`, `Vec::try_reserve_exact` + `Box::leak`,
       freed via `Box::from_raw` on a raw pointer.
   - Failure is weakly specified: only success is specified (the input then
