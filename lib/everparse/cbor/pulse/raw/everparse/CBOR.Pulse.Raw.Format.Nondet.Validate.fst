@@ -135,8 +135,8 @@ ensures
   }
 }
 
-let cbor_validate_nondet_bounded_sort_scratch_ok_impl d n l =
-  CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_sort_scratch_ok d n l
+let cbor_validate_nondet_bounded_sort_scratch_ok_impl map_depth_bound map_length_bound scratch_len =
+  CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_sort_scratch_ok map_depth_bound map_length_bound scratch_len
 
 fn cbor_validate_nondet_bounded_sort
   (map_depth_bound: SZ.t)

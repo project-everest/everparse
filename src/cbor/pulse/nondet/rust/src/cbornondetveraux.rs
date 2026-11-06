@@ -5154,6 +5154,960 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
     (&pres)[0usize]
 }
 
+fn fill_offsets(b: &[u8], ks: &mut [usize], o0: usize) -> usize
+{
+    let k: usize = ks.len();
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let mut po: [usize; 1] = [o0; 1usize];
+    while
+    true
+    {
+        let i: usize = (&pi)[0usize];
+        if i >= k { break };
+        let i0: usize = (&pi)[0usize];
+        let o: usize = (&po)[0usize];
+        ks[i0] = o;
+        let o1: usize = jump_raw_data_item(b, o);
+        let o2: usize = jump_raw_data_item(b, o1);
+        (&mut pi)[0usize] = i0.wrapping_add(1usize);
+        (&mut po)[0usize] = o2
+    };
+    (&po)[0usize]
+}
+
+fn cmp_str(b: &[u8], o1: usize, o2: usize, len: usize) -> i16
+{
+    let s1: &[u8] = &b[o1..o1.wrapping_add(len)];
+    let s2: &[u8] = &b[o2..o2.wrapping_add(len)];
+    lex_compare_bytes(s1, s2)
+}
+
+fn cmp_leaf(b: &[u8], is_string: bool, o1: usize, o2: usize, len: usize) -> i16
+{ if is_string { cmp_str(b, o1, o2, len) } else { 0i16 } }
+
+pub(crate) fn cmp_one(b: &[u8], sc: &mut [usize], x: usize, y: usize) -> i16
+{
+    let mut po1: [usize; 1] = [x; 1usize];
+    let mut po2: [usize; 1] = [y; 1usize];
+    let mut pc: [usize; 1] = [1usize; 1usize];
+    let mut pres: [i16; 1] = [0i16; 1usize];
+    while
+    true
+    {
+        let r: i16 = (&pres)[0usize];
+        let c: usize = (&pc)[0usize];
+        if ! (r == 0i16 && c > 0usize) { break };
+        let o1: usize = (&po1)[0usize];
+        let o2: usize = (&po2)[0usize];
+        let c0: usize = (&pc)[0usize];
+        let oh1: usize = jump_header(b, o1);
+        let _letpattern: (&[u8], &[u8]) = b.split_at(o1);
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = _letpattern.0;
+                let input23: &[u8] = _letpattern.1;
+                let consumed: usize = oh1.wrapping_sub(o1);
+                let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                let input2: &[u8] = _letpattern1.0;
+                let _input3: &[u8] = _letpattern1.1;
+                input2
+            };
+        let
+        h1: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        =
+            read_header(input·);
+        let oh2: usize = jump_header(b, o2);
+        let _letpattern1: (&[u8], &[u8]) = b.split_at(o2);
+        let input·1: &[u8] =
+            {
+                let _input1: &[u8] = _letpattern1.0;
+                let input23: &[u8] = _letpattern1.1;
+                let consumed: usize = oh2.wrapping_sub(o2);
+                let _letpattern2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let input2: &[u8] = _letpattern2.0;
+                let _input3: &[u8] = _letpattern2.1;
+                input2
+            };
+        let
+        h2: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        =
+            read_header(input·1);
+        let mt1: u8 = get_header_major_type(h1);
+        let mt2: u8 = get_header_major_type(h2);
+        if mt1 != mt2
+        {
+            let r0: i16 = if mt1 < mt2 { -1i16 } else { 1i16 };
+            (&mut pres)[0usize] = r0
+        }
+        else
+        {
+            let mt: u8 = get_header_major_type(h1);
+            let hc: i16 =
+                if mt == cbor_major_type_simple_value
+                {
+                    if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentOther => h1._1.additional_info,
+                        long_argument::LongArgumentSimpleValue { v } => v,
+                        _ => panic!("Incomplete pattern matching")
+                    }
+                    <
+                    match h2._2
+                    {
+                        long_argument::LongArgumentOther => h2._1.additional_info,
+                        long_argument::LongArgumentSimpleValue { v } => v,
+                        _ => panic!("Incomplete pattern matching")
+                    }
+                    { -1i16 }
+                    else if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentOther => h1._1.additional_info,
+                        long_argument::LongArgumentSimpleValue { v } => v,
+                        _ => panic!("Incomplete pattern matching")
+                    }
+                    >
+                    match h2._2
+                    {
+                        long_argument::LongArgumentOther => h2._1.additional_info,
+                        long_argument::LongArgumentSimpleValue { v } => v,
+                        _ => panic!("Incomplete pattern matching")
+                    }
+                    { 1i16 }
+                    else
+                    { 0i16 }
+                }
+                else if mt == cbor_major_type_uint64 || mt == cbor_major_type_neg_int64
+                {
+                    if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    <
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { -1i16 }
+                    else if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    >
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { 1i16 }
+                    else
+                    { 0i16 }
+                }
+                else if mt == cbor_major_type_byte_string || mt == cbor_major_type_text_string
+                {
+                    if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    <
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { -1i16 }
+                    else if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    >
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { 1i16 }
+                    else
+                    { 0i16 }
+                }
+                else if mt == cbor_major_type_tagged
+                {
+                    if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    <
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { -1i16 }
+                    else if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    >
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { 1i16 }
+                    else
+                    { 0i16 }
+                }
+                else if mt == cbor_major_type_array
+                {
+                    if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    <
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { -1i16 }
+                    else if
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    >
+                    match h2._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    { 1i16 }
+                    else
+                    { 0i16 }
+                }
+                else if
+                match h1._2
+                {
+                    long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
+                    long_argument::LongArgumentU16 { v } =>
+                      raw_uint64 { size: 2u8, value: v as u64 },
+                    long_argument::LongArgumentU32 { v } =>
+                      raw_uint64 { size: 3u8, value: v as u64 },
+                    long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                    long_argument::LongArgumentOther =>
+                      raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                    _ => panic!("Incomplete pattern matching")
+                }.value
+                <
+                match h2._2
+                {
+                    long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
+                    long_argument::LongArgumentU16 { v } =>
+                      raw_uint64 { size: 2u8, value: v as u64 },
+                    long_argument::LongArgumentU32 { v } =>
+                      raw_uint64 { size: 3u8, value: v as u64 },
+                    long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                    long_argument::LongArgumentOther =>
+                      raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                    _ => panic!("Incomplete pattern matching")
+                }.value
+                { -1i16 }
+                else if
+                match h1._2
+                {
+                    long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
+                    long_argument::LongArgumentU16 { v } =>
+                      raw_uint64 { size: 2u8, value: v as u64 },
+                    long_argument::LongArgumentU32 { v } =>
+                      raw_uint64 { size: 3u8, value: v as u64 },
+                    long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                    long_argument::LongArgumentOther =>
+                      raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                    _ => panic!("Incomplete pattern matching")
+                }.value
+                >
+                match h2._2
+                {
+                    long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
+                    long_argument::LongArgumentU16 { v } =>
+                      raw_uint64 { size: 2u8, value: v as u64 },
+                    long_argument::LongArgumentU32 { v } =>
+                      raw_uint64 { size: 3u8, value: v as u64 },
+                    long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                    long_argument::LongArgumentOther =>
+                      raw_uint64 { size: 0u8, value: h2._1.additional_info as u64 },
+                    _ => panic!("Incomplete pattern matching")
+                }.value
+                { 1i16 }
+                else
+                { 0i16 };
+            if hc != 0i16
+            { (&mut pres)[0usize] = hc }
+            else if mt1 == cbor_major_type_map
+            {
+                let k: usize =
+                    match h1._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    as
+                    usize;
+                let _letpattern2: (&mut [usize], &mut [usize]) = sc.split_at_mut(k);
+                let r0: i16 =
+                    {
+                        let ks1: &mut [usize] = _letpattern2.0;
+                        let r1: &mut [usize] = _letpattern2.1;
+                        let _letpattern3: (&mut [usize], &mut [usize]) = r1.split_at_mut(k);
+                        let ks2: &mut [usize] = _letpattern3.0;
+                        let r2: &mut [usize] = _letpattern3.1;
+                        let _letpattern4: (&mut [usize], &mut [usize]) = r2.split_at_mut(k);
+                        let tmp: &mut [usize] = _letpattern4.0;
+                        let rest: &mut [usize] = _letpattern4.1;
+                        let o·: usize = fill_offsets(b, ks1, oh1);
+                        let n: usize = ks1.len();
+                        let mut pw: [usize; 1] = [1usize; 1usize];
+                        let mut pok: [bool; 1] = [true; 1usize];
+                        let mut pdone: [bool; 1] = [n <= 1usize; 1usize];
+                        while
+                        true
+                        {
+                            let ok: bool = (&pok)[0usize];
+                            let done: bool = (&pdone)[0usize];
+                            if ! (ok && ! done) { break };
+                            let w: usize = (&pw)[0usize];
+                            let n1: usize = ks1.len();
+                            let mut plo: [usize; 1] = [0usize; 1usize];
+                            let mut pok1: [bool; 1] = [true; 1usize];
+                            while
+                            true
+                            {
+                                let ok0: bool = (&pok1)[0usize];
+                                let lo: usize = (&plo)[0usize];
+                                if ! (ok0 && lo < n1) { break };
+                                let lo0: usize = (&plo)[0usize];
+                                let mid: usize =
+                                    if w <= n1.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n1 };
+                                let hi: usize =
+                                    if w <= n1.wrapping_sub(mid) { mid.wrapping_add(w) } else { n1 };
+                                let mut pi1: [usize; 1] = [lo0; 1usize];
+                                let mut pi2: [usize; 1] = [mid; 1usize];
+                                let mut pk: [usize; 1] = [lo0; 1usize];
+                                let mut pok2: [bool; 1] = [true; 1usize];
+                                while
+                                true
+                                {
+                                    let ok1: bool = (&pok2)[0usize];
+                                    let i1: usize = (&pi1)[0usize];
+                                    let i2: usize = (&pi2)[0usize];
+                                    if ! (ok1 && (i1 != mid || i2 != hi)) { break };
+                                    let i10: usize = (&pi1)[0usize];
+                                    let i20: usize = (&pi2)[0usize];
+                                    let k1: usize = (&pk)[0usize];
+                                    if i10 == mid
+                                    {
+                                        let x1: usize = ks1[i20];
+                                        tmp[k1] = x1;
+                                        (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                    }
+                                    else if i20 == hi
+                                    {
+                                        let x1: usize = ks1[i10];
+                                        tmp[k1] = x1;
+                                        (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                    }
+                                    else
+                                    {
+                                        let x1: usize = ks1[i10];
+                                        let x2: usize = ks1[i20];
+                                        let c1: i16 = cmp_one(b, rest, x1, x2);
+                                        if c1 == 0i16
+                                        { (&mut pok2)[0usize] = false }
+                                        else if c1 < 0i16
+                                        {
+                                            tmp[k1] = x1;
+                                            (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                        }
+                                        else
+                                        {
+                                            tmp[k1] = x2;
+                                            (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                        }
+                                    }
+                                };
+                                let res: bool = (&pok2)[0usize];
+                                if res
+                                { (&mut plo)[0usize] = hi }
+                                else
+                                { (&mut pok1)[0usize] = false }
+                            };
+                            let res: bool = (&pok1)[0usize];
+                            if res
+                            {
+                                ks1.copy_from_slice(tmp);
+                                if n.wrapping_sub(w) <= w
+                                { (&mut pdone)[0usize] = true }
+                                else
+                                { (&mut pw)[0usize] = w.wrapping_add(w) }
+                            }
+                            else
+                            { (&mut pok)[0usize] = false }
+                        };
+                        let o·1: usize = fill_offsets(b, ks2, oh2);
+                        let n1: usize = ks2.len();
+                        let mut pw1: [usize; 1] = [1usize; 1usize];
+                        let mut pok1: [bool; 1] = [true; 1usize];
+                        let mut pdone1: [bool; 1] = [n1 <= 1usize; 1usize];
+                        while
+                        true
+                        {
+                            let ok: bool = (&pok1)[0usize];
+                            let done: bool = (&pdone1)[0usize];
+                            if ! (ok && ! done) { break };
+                            let w: usize = (&pw1)[0usize];
+                            let n2: usize = ks2.len();
+                            let mut plo: [usize; 1] = [0usize; 1usize];
+                            let mut pok2: [bool; 1] = [true; 1usize];
+                            while
+                            true
+                            {
+                                let ok0: bool = (&pok2)[0usize];
+                                let lo: usize = (&plo)[0usize];
+                                if ! (ok0 && lo < n2) { break };
+                                let lo0: usize = (&plo)[0usize];
+                                let mid: usize =
+                                    if w <= n2.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n2 };
+                                let hi: usize =
+                                    if w <= n2.wrapping_sub(mid) { mid.wrapping_add(w) } else { n2 };
+                                let mut pi1: [usize; 1] = [lo0; 1usize];
+                                let mut pi2: [usize; 1] = [mid; 1usize];
+                                let mut pk: [usize; 1] = [lo0; 1usize];
+                                let mut pok3: [bool; 1] = [true; 1usize];
+                                while
+                                true
+                                {
+                                    let ok1: bool = (&pok3)[0usize];
+                                    let i1: usize = (&pi1)[0usize];
+                                    let i2: usize = (&pi2)[0usize];
+                                    if ! (ok1 && (i1 != mid || i2 != hi)) { break };
+                                    let i10: usize = (&pi1)[0usize];
+                                    let i20: usize = (&pi2)[0usize];
+                                    let k1: usize = (&pk)[0usize];
+                                    if i10 == mid
+                                    {
+                                        let x1: usize = ks2[i20];
+                                        tmp[k1] = x1;
+                                        (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                    }
+                                    else if i20 == hi
+                                    {
+                                        let x1: usize = ks2[i10];
+                                        tmp[k1] = x1;
+                                        (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                    }
+                                    else
+                                    {
+                                        let x1: usize = ks2[i10];
+                                        let x2: usize = ks2[i20];
+                                        let c1: i16 = cmp_one(b, rest, x1, x2);
+                                        if c1 == 0i16
+                                        { (&mut pok3)[0usize] = false }
+                                        else if c1 < 0i16
+                                        {
+                                            tmp[k1] = x1;
+                                            (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                        }
+                                        else
+                                        {
+                                            tmp[k1] = x2;
+                                            (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                        }
+                                    }
+                                };
+                                let res: bool = (&pok3)[0usize];
+                                if res
+                                { (&mut plo)[0usize] = hi }
+                                else
+                                { (&mut pok2)[0usize] = false }
+                            };
+                            let res: bool = (&pok2)[0usize];
+                            if res
+                            {
+                                ks2.copy_from_slice(tmp);
+                                if n1.wrapping_sub(w) <= w
+                                { (&mut pdone1)[0usize] = true }
+                                else
+                                { (&mut pw1)[0usize] = w.wrapping_add(w) }
+                            }
+                            else
+                            { (&mut pok1)[0usize] = false }
+                        };
+                        let k1: usize = ks1.len();
+                        let mut pi: [usize; 1] = [0usize; 1usize];
+                        let mut pr: [i16; 1] = [0i16; 1usize];
+                        while
+                        true
+                        {
+                            let i: usize = (&pi)[0usize];
+                            let r0: i16 = (&pr)[0usize];
+                            if ! (r0 == 0i16 && i < k1) { break };
+                            let i0: usize = (&pi)[0usize];
+                            let x1: usize = ks1[i0];
+                            let x2: usize = ks2[i0];
+                            let rk: i16 = cmp_one(b, rest, x1, x2);
+                            if rk == 0i16
+                            {
+                                let v1: usize = jump_raw_data_item(b, x1);
+                                let v2: usize = jump_raw_data_item(b, x2);
+                                let rv: i16 = cmp_one(b, rest, v1, v2);
+                                (&mut pr)[0usize] = rv;
+                                (&mut pi)[0usize] = i0.wrapping_add(1usize)
+                            }
+                            else
+                            {
+                                (&mut pr)[0usize] = rk;
+                                (&mut pi)[0usize] = i0.wrapping_add(1usize)
+                            }
+                        };
+                        let r0: i16 = (&pr)[0usize];
+                        let r3: i16 = if r0 == 0i16 { r0 } else { r0 };
+                        (&mut po1)[0usize] = o·;
+                        (&mut po2)[0usize] = o·1;
+                        r3
+                    };
+                if r0 != 0i16
+                {
+                    (&mut po1)[0usize] = o1;
+                    (&mut po2)[0usize] = o2;
+                    (&mut pres)[0usize] = r0
+                }
+                else
+                { (&mut pc)[0usize] = c0.wrapping_sub(1usize) }
+            }
+            else
+            {
+                let is_string: bool =
+                    mt1 == cbor_major_type_byte_string || mt1 == cbor_major_type_text_string;
+                let leaf: usize =
+                    if is_string
+                    {
+                        match h1._2
+                        {
+                            long_argument::LongArgumentU8 { v } =>
+                              raw_uint64 { size: 1u8, value: v as u64 },
+                            long_argument::LongArgumentU16 { v } =>
+                              raw_uint64 { size: 2u8, value: v as u64 },
+                            long_argument::LongArgumentU32 { v } =>
+                              raw_uint64 { size: 3u8, value: v as u64 },
+                            long_argument::LongArgumentU64 { v } =>
+                              raw_uint64 { size: 4u8, value: v },
+                            long_argument::LongArgumentOther =>
+                              raw_uint64 { size: 0u8, value: h1._1.additional_info as u64 },
+                            _ => panic!("Incomplete pattern matching")
+                        }.value
+                        as
+                        usize
+                    }
+                    else
+                    { 0usize };
+                let rs: i16 = cmp_leaf(b, is_string, oh1, oh2, leaf);
+                if rs != 0i16
+                { (&mut pres)[0usize] = rs }
+                else
+                {
+                    let rem: usize = impl_remaining_data_items_header(h1);
+                    (&mut po1)[0usize] = oh1.wrapping_add(leaf);
+                    (&mut po2)[0usize] = oh2.wrapping_add(leaf);
+                    (&mut pc)[0usize] = rem.wrapping_add(c0.wrapping_sub(1usize))
+                }
+            }
+        }
+    };
+    (&pres)[0usize]
+}
+
+pub(crate) fn check_items(b: &[u8], sc: &mut [usize], o0: usize, c0: usize, pout: &mut [usize]) ->
+    bool
+{
+    let mut po: [usize; 1] = [o0; 1usize];
+    let mut pc: [usize; 1] = [c0; 1usize];
+    let mut pres: [bool; 1] = [true; 1usize];
+    while
+    true
+    {
+        let r: bool = (&pres)[0usize];
+        let c: usize = (&pc)[0usize];
+        if ! (r && c > 0usize) { break };
+        let o: usize = (&po)[0usize];
+        let c1: usize = (&pc)[0usize];
+        let oh: usize = jump_header(b, o);
+        let _letpattern: (&[u8], &[u8]) = b.split_at(o);
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = _letpattern.0;
+                let input23: &[u8] = _letpattern.1;
+                let consumed: usize = oh.wrapping_sub(o);
+                let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                let input2: &[u8] = _letpattern1.0;
+                let _input3: &[u8] = _letpattern1.1;
+                input2
+            };
+        let
+        h: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        =
+            read_header(input·);
+        let mt: u8 = get_header_major_type(h);
+        if mt == cbor_major_type_map
+        {
+            let k: usize =
+                match h._2
+                {
+                    long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
+                    long_argument::LongArgumentU16 { v } =>
+                      raw_uint64 { size: 2u8, value: v as u64 },
+                    long_argument::LongArgumentU32 { v } =>
+                      raw_uint64 { size: 3u8, value: v as u64 },
+                    long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                    long_argument::LongArgumentOther =>
+                      raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                    _ => panic!("Incomplete pattern matching")
+                }.value
+                as
+                usize;
+            let res1: bool = check_items(b, sc, oh, 2usize.wrapping_mul(k), pout);
+            if ! res1
+            { (&mut pres)[0usize] = false }
+            else
+            {
+                let o·: usize = pout[0usize];
+                let _letpattern1: (&mut [usize], &mut [usize]) = sc.split_at_mut(k);
+                let ks: &mut [usize] = _letpattern1.0;
+                let r1: &mut [usize] = _letpattern1.1;
+                let _letpattern2: (&mut [usize], &mut [usize]) = r1.split_at_mut(k);
+                let tmp: &mut [usize] = _letpattern2.0;
+                let rest: &mut [usize] = _letpattern2.1;
+                let _o·: usize = fill_offsets(b, ks, oh);
+                crate::lowstar::ignore::ignore::<usize>(_o·);
+                let n: usize = ks.len();
+                let mut pw: [usize; 1] = [1usize; 1usize];
+                let mut pok: [bool; 1] = [true; 1usize];
+                let mut pdone: [bool; 1] = [n <= 1usize; 1usize];
+                while
+                true
+                {
+                    let ok: bool = (&pok)[0usize];
+                    let done: bool = (&pdone)[0usize];
+                    if ! (ok && ! done) { break };
+                    let w: usize = (&pw)[0usize];
+                    let n1: usize = ks.len();
+                    let mut plo: [usize; 1] = [0usize; 1usize];
+                    let mut pok1: [bool; 1] = [true; 1usize];
+                    while
+                    true
+                    {
+                        let ok0: bool = (&pok1)[0usize];
+                        let lo: usize = (&plo)[0usize];
+                        if ! (ok0 && lo < n1) { break };
+                        let lo0: usize = (&plo)[0usize];
+                        let mid: usize =
+                            if w <= n1.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n1 };
+                        let hi: usize =
+                            if w <= n1.wrapping_sub(mid) { mid.wrapping_add(w) } else { n1 };
+                        let mut pi1: [usize; 1] = [lo0; 1usize];
+                        let mut pi2: [usize; 1] = [mid; 1usize];
+                        let mut pk: [usize; 1] = [lo0; 1usize];
+                        let mut pok2: [bool; 1] = [true; 1usize];
+                        while
+                        true
+                        {
+                            let ok1: bool = (&pok2)[0usize];
+                            let i1: usize = (&pi1)[0usize];
+                            let i2: usize = (&pi2)[0usize];
+                            if ! (ok1 && (i1 != mid || i2 != hi)) { break };
+                            let i10: usize = (&pi1)[0usize];
+                            let i20: usize = (&pi2)[0usize];
+                            let k1: usize = (&pk)[0usize];
+                            if i10 == mid
+                            {
+                                let x: usize = ks[i20];
+                                tmp[k1] = x;
+                                (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                            }
+                            else if i20 == hi
+                            {
+                                let x: usize = ks[i10];
+                                tmp[k1] = x;
+                                (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                            }
+                            else
+                            {
+                                let x1: usize = ks[i10];
+                                let x2: usize = ks[i20];
+                                let c10: i16 = cmp_one(b, rest, x1, x2);
+                                if c10 == 0i16
+                                { (&mut pok2)[0usize] = false }
+                                else if c10 < 0i16
+                                {
+                                    tmp[k1] = x1;
+                                    (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                    (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                }
+                                else
+                                {
+                                    tmp[k1] = x2;
+                                    (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                    (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                }
+                            }
+                        };
+                        let res: bool = (&pok2)[0usize];
+                        if res { (&mut plo)[0usize] = hi } else { (&mut pok1)[0usize] = false }
+                    };
+                    let res: bool = (&pok1)[0usize];
+                    if res
+                    {
+                        ks.copy_from_slice(tmp);
+                        if n.wrapping_sub(w) <= w
+                        { (&mut pdone)[0usize] = true }
+                        else
+                        { (&mut pw)[0usize] = w.wrapping_add(w) }
+                    }
+                    else
+                    { (&mut pok)[0usize] = false }
+                };
+                let ok: bool = (&pok)[0usize];
+                let ok1: bool = if ok { ok } else { ok };
+                if ok1
+                {
+                    (&mut po)[0usize] = o·;
+                    (&mut pc)[0usize] = c1.wrapping_sub(1usize)
+                }
+                else
+                { (&mut pres)[0usize] = false }
+            }
+        }
+        else
+        {
+            let is_string: bool =
+                mt == cbor_major_type_byte_string || mt == cbor_major_type_text_string;
+            let leaf: usize =
+                if is_string
+                {
+                    match h._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    as
+                    usize
+                }
+                else
+                { 0usize };
+            let rem: usize = impl_remaining_data_items_header(h);
+            (&mut po)[0usize] = oh.wrapping_add(leaf);
+            (&mut pc)[0usize] = rem.wrapping_add(c1.wrapping_sub(1usize))
+        }
+    };
+    let r: bool = (&pres)[0usize];
+    if r
+    {
+        let o: usize = (&po)[0usize];
+        pout[0usize] = o;
+        r
+    }
+    else
+    { r }
+}
+
+fn dupcheck_sort_scratch_ok(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize
+) ->
+    bool
+{
+    map_depth_bound == 0usize
+    ||
+    map_length_bound <= scratch_len.wrapping_div(3usize).wrapping_div(map_depth_bound)
+}
+
+fn check_dups_top(b: &[u8], sc: &mut [usize]) -> bool
+{
+    let mut pout: [usize; 1] = [0usize; 1usize];
+    check_items(b, sc, 0usize, 1usize, &mut pout)
+}
+
 fn cbor_validate_nondet(map_key_bound: option__size_t, strict_check: bool, input: &[u8]) ->
     usize
 {
@@ -5236,6 +6190,40 @@ fn cbor_validate_nondet_bounded(map_depth_bound: usize, map_length_bound: usize,
     }
     else
     { 0usize }
+}
+
+fn cbor_validate_nondet_bounded_sort_scratch_ok_impl(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize
+) ->
+    bool
+{ dupcheck_sort_scratch_ok(map_depth_bound, map_length_bound, scratch_len) }
+
+fn cbor_validate_nondet_bounded_sort(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &[u8],
+    scratch: &mut [usize]
+) ->
+    usize
+{
+    if ! dupcheck_sort_scratch_ok(map_depth_bound, map_length_bound, scratch.len())
+    { 0usize }
+    else
+    {
+        let mut poff: [usize; 1] = [0usize; 1usize];
+        let res: bool =
+            validate_raw_data_item_bounded(map_depth_bound, map_length_bound, input, &mut poff);
+        if res
+        {
+            let off: usize = (&poff)[0usize];
+            let ok: bool = check_dups_top(input, scratch);
+            if ok { off } else { 0usize }
+        }
+        else
+        { 0usize }
+    }
 }
 
 pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a> { c }
@@ -5329,6 +6317,53 @@ pub(crate) fn cbor_nondet_parse_bounded <'a>(
     <'a>
 {
     let len: usize = cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, input);
+    if len == 0usize
+    { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
+    else
+    {
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
+        let inl: &[u8] = _letpattern.0;
+        let inr: &[u8] = _letpattern.1;
+        let resl: cbor_raw = cbor_nondet_parse_valid(inl, len);
+        option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+        { v: (resl,inr) }
+    }
+}
+
+pub(crate) fn cbor_nondet_bounded_sort_scratch_ok_impl(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize
+) ->
+    bool
+{
+    cbor_validate_nondet_bounded_sort_scratch_ok_impl(
+        map_depth_bound,
+        map_length_bound,
+        scratch_len
+    )
+}
+
+fn cbor_nondet_validate_bounded_sort(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch: &mut [usize],
+    input: &[u8]
+) ->
+    usize
+{ cbor_validate_nondet_bounded_sort(map_depth_bound, map_length_bound, input, scratch) }
+
+pub(crate) fn cbor_nondet_parse_bounded_sort <'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch: &'a mut [usize],
+    input: &'a [u8]
+) ->
+    option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    let len: usize =
+        cbor_nondet_validate_bounded_sort(map_depth_bound, map_length_bound, scratch, input);
     if len == 0usize
     { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     else

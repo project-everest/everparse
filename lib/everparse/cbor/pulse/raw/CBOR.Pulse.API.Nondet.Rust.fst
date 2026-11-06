@@ -46,6 +46,13 @@ let cbor_nondet_parse_bounded_aux : Base.cbor_nondet_parse_bounded_t cbor_nondet
 
 let cbor_nondet_parse_bounded () map_depth_bound map_length_bound input #pm #v = cbor_nondet_parse_bounded_aux map_depth_bound map_length_bound input #pm #v
 
+let cbor_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len = Nondet.cbor_nondet_bounded_sort_scratch_ok_impl map_depth_bound map_length_bound scratch_len
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_bounded_sort_aux : Base.cbor_nondet_parse_bounded_sort_t cbor_nondet_match = Nondet.cbor_nondet_parse_bounded_sort ()
+
+let cbor_nondet_parse_bounded_sort () map_depth_bound map_length_bound scratch input #pm #v #s = cbor_nondet_parse_bounded_sort_aux map_depth_bound map_length_bound scratch input #pm #v #s
+
 let cbor_nondet_match_with_size = Nondet.cbor_nondet_match_with_size
 
 let cbor_nondet_match_with_size_intro = Nondet.cbor_nondet_match_with_size_intro

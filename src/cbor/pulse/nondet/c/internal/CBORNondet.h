@@ -66,6 +66,30 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
 
 bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbor_raw x2);
 
+typedef struct Pulse_Lib_Slice_slice__size_t_s
+{
+  size_t *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__size_t;
+
+int16_t
+CBOR_Pulse_Raw_EverParse_DupCheck_cmp_one(
+  CBOR_Pulse_Raw_Slice_byte_slice b,
+  Pulse_Lib_Slice_slice__size_t sc,
+  size_t x,
+  size_t y
+);
+
+bool
+CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
+  CBOR_Pulse_Raw_Slice_byte_slice b,
+  Pulse_Lib_Slice_slice__size_t sc,
+  size_t o0,
+  size_t c0,
+  size_t *pout
+);
+
 #if defined(__cplusplus)
 }
 #endif

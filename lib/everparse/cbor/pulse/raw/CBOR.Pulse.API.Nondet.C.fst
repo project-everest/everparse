@@ -23,6 +23,10 @@ let cbor_nondet_parse_map_length_bounded () = cbor_nondet_parse_map_length_bound
 
 let cbor_nondet_parse_bounded () = cbor_nondet_parse_bounded_from_arrayptr (Rust.cbor_nondet_validate_bounded ()) (Rust.cbor_nondet_parse_valid ())
 
+let cbor_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len = Rust.cbor_nondet_bounded_sort_scratch_ok_impl map_depth_bound map_length_bound scratch_len
+
+let cbor_nondet_parse_bounded_sort () = cbor_nondet_parse_bounded_sort_from_arrayptr (Rust.cbor_nondet_validate_bounded_sort ()) (Rust.cbor_nondet_parse_valid ())
+
 let cbor_nondet_match_with_size = Rust.cbor_nondet_match_with_size
 
 let cbor_nondet_match_with_size_intro () = Rust.cbor_nondet_match_with_size_intro ()

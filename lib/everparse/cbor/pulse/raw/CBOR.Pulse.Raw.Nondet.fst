@@ -247,6 +247,35 @@ fn cbor_nondet_parse_bounded (_: unit) : cbor_nondet_parse_bounded_t #cbor_nonde
   CBOR.Pulse.API.Base.cbor_nondet_parse_bounded (cbor_nondet_validate_bounded ()) (cbor_nondet_parse_valid ()) map_depth_bound map_length_bound input
 }
 
+let cbor_nondet_bounded_sort_scratch_ok_impl map_depth_bound map_length_bound scratch_len =
+  CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet_bounded_sort_scratch_ok_impl map_depth_bound map_length_bound scratch_len
+
+fn cbor_nondet_validate_bounded_sort (_: unit) : cbor_nondet_validate_bounded_sort_t =
+  (map_depth_bound: _)
+  (map_length_bound: _)
+  (scratch: _)
+  (input: _)
+  (#pm: _)
+  (#v: _)
+  (#s: _)
+{
+  Classical.forall_intro (Classical.move_requires SpecRaw.mk_cbor_map_depth);
+  Classical.forall_intro (Classical.move_requires (SpecRaw.mk_cbor_map_length_bounded (SZ.v map_length_bound)));
+  CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet_bounded_sort map_depth_bound map_length_bound input scratch;
+}
+
+fn cbor_nondet_parse_bounded_sort (_: unit) : cbor_nondet_parse_bounded_sort_t #cbor_nondet_t cbor_nondet_match =
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch: S.slice SZ.t)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+{
+  CBOR.Pulse.API.Base.cbor_nondet_parse_bounded_sort (cbor_nondet_validate_bounded_sort ()) (cbor_nondet_parse_valid ()) map_depth_bound map_length_bound scratch input
+}
+
 let cbor_nondet_match_with_size
   (size: nat)
   (p: perm)

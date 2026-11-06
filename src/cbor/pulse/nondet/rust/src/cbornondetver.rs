@@ -48,6 +48,37 @@ pub fn cbor_nondet_parse_bounded <'a>(
     crate::cbornondetveraux::cbor_nondet_parse_bounded(map_depth_bound, map_length_bound, input)
 }
 
+pub fn cbor_nondet_bounded_sort_scratch_ok(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize
+) ->
+    bool
+{
+    crate::cbornondetveraux::cbor_nondet_bounded_sort_scratch_ok_impl(
+        map_depth_bound,
+        map_length_bound,
+        scratch_len
+    )
+}
+
+pub fn cbor_nondet_parse_bounded_sort <'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch: &'a mut [usize],
+    input: &'a [u8]
+) ->
+    crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    crate::cbornondetveraux::cbor_nondet_parse_bounded_sort(
+        map_depth_bound,
+        map_length_bound,
+        scratch,
+        input
+    )
+}
+
 pub fn cbor_nondet_size(x: crate::cbornondetveraux::cbor_raw, bound: usize) -> usize
 { crate::cbornondetveraux::cbor_nondet_size(x, bound) }
 

@@ -26,12 +26,12 @@ let sort_scratch_ok_correct (d n l: nat) : Lemma
   div_le n (l / 3) d;
   assert (3 * n * d == (n * d) * 3)
 
-let dupcheck_sort_scratch_ok (d n len: SZ.t) : Tot (res: bool { res == (3 * SZ.v n * SZ.v d <= SZ.v len) })
-= if d = 0sz
+let dupcheck_sort_scratch_ok (map_depth_bound map_length_bound scratch_len: SZ.t) : Tot (res: bool { res == (3 * SZ.v map_length_bound * SZ.v map_depth_bound <= SZ.v scratch_len) })
+= if map_depth_bound = 0sz
   then true
   else begin
-    sort_scratch_ok_correct (SZ.v d) (SZ.v n) (SZ.v len);
-    SZ.lte n (SZ.div (SZ.div len 3sz) d)
+    sort_scratch_ok_correct (SZ.v map_depth_bound) (SZ.v map_length_bound) (SZ.v scratch_len);
+    SZ.lte map_length_bound (SZ.div (SZ.div scratch_len 3sz) map_depth_bound)
   end
 
 let bounded_item_bnd (d n: nat) (x: raw_data_item) : Lemma

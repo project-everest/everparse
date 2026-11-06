@@ -37,6 +37,25 @@ val cbor_nondet_parse_map_length_bounded (_: unit) : cbor_nondet_parse_map_lengt
    either bound is exceeded. *)
 val cbor_nondet_parse_bounded (_: unit) : cbor_nondet_parse_bounded_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
 
+(* Returns true if and only if 3 * map_length_bound * map_depth_bound
+   <= scratch_len, without overflow. *)
+val cbor_nondet_bounded_sort_scratch_ok
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+: Tot (res: bool { res == CBOR.Pulse.API.Base.cbor_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len })
+
+(* Like cbor_nondet_parse_bounded, but map key duplicate checking is
+   performed by sorting map keys in the caller-provided scratch space,
+   so that validation takes O(L log N) memory accesses per map nesting
+   level (where L is the input length and N is map_length_bound),
+   without any allocation. The scratch space must hold at least
+   3 * map_length_bound * map_depth_bound elements (see
+   cbor_nondet_bounded_sort_scratch_ok); otherwise, parsing fails. The
+   contents of the scratch space are unspecified upon return. scratch
+   must not be NULL, and must point to at least scratch_len elements. *)
+val cbor_nondet_parse_bounded_sort (_: unit) : cbor_nondet_parse_bounded_sort_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
+
 val cbor_nondet_match_with_size
   (size: nat)
   (p: perm)
