@@ -15,7 +15,11 @@ failed=0
 check () {
   local expected=$1 name=$2 hex=$3
   local f="$tmp/$name.der"
-  printf '%s' "$hex" | xxd -r -p > "$f"
+  # Decode hex in pure bash (xxd is not available everywhere, e.g. in CI)
+  hex=${hex// /}
+  local esc="" i
+  for (( i = 0; i < ${#hex}; i += 2 )); do esc+="\\x${hex:i:2}"; done
+  printf "$esc" > "$f"
   if ./ASN1_Parser.exe SETTEST "$f" > /dev/null ; then actual=accept ; else actual=reject ; fi
   if [ "$actual" = "$expected" ] ; then
     echo "OK   $expected $name"
