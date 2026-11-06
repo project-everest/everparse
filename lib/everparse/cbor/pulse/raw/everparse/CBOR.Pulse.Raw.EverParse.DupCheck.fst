@@ -810,3 +810,273 @@ decreases (Ghost.reveal f)
 }
 
 #pop-options
+
+(* Checking the map keys of a map whose entries are valid *)
+
+let scratch_split_walk (len n f f' k: nat) : Lemma
+  (requires f == f' + 1 /\ len >= 3 * n * f /\ k <= n)
+  (ensures 2 * k <= len /\ len - 2 * k >= 3 * n * f')
+= assert (3 * n * f == 3 * n * f' + 3 * n)
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn check_map_keys
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f': Ghost.erased nat)
+  (rec_cmp: rec_cmp_t b p bB n f')
+  (rest: S.slice SZ.t)
+  (ks tmp: S.slice SZ.t)
+  (oh: SZ.t)
+  (v: Ghost.erased (list (raw_data_item & raw_data_item)))
+  (m: Ghost.erased nat)
+  (q: Ghost.erased (list raw_data_item))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+  (#st: Ghost.erased (Seq.seq SZ.t))
+requires
+  cinv b p bB rest ** pts_to ks s ** pts_to tmp st ** pure (
+    SZ.v (S.len rest) >= 3 * n * f' /\
+    Seq.length s == List.Tot.length v /\
+    Seq.length st == Seq.length s /\
+    items_at bB (SZ.v oh) (2 * List.Tot.length v + m) (List.Tot.append (list_of_pair_list v) q) /\
+    List.Tot.for_all (item_ok n f') (list_of_pair_list v)
+  )
+returns res: bool
+ensures
+  cinv b p bB rest ** (exists* s1 st1 . pts_to ks s1 ** pts_to tmp st1 ** pure (
+    Seq.length s1 == Seq.length s /\
+    Seq.length st1 == Seq.length s /\
+    res == no_cc_dup (List.Tot.map fst v)
+  ))
+{
+  S.pts_to_len tmp;
+  S.pts_to_len ks;
+  unfold (cinv b p bB rest);
+  let _o' = fill_offsets b ks oh v m q;
+  fold (cinv b p bB rest);
+  with s0 . assert (pts_to ks s0);
+  fill_entries_ok bB n f' s0 v;
+  entries_ok_cmp_pre bB n f' (SZ.v (S.len rest)) s0;
+  key_cmp_props_g bB;
+  seq_pre_cmp_pre bB n f' (SZ.v (S.len rest)) s0;
+  let ok = MS.sort #SZ.t #(cinv b p bB rest) #(Ghost.hide (cmp_pre bB n f' (SZ.v (S.len rest)))) #(key_cmp_g bB) (rec_cmp rest) ks tmp;
+  with s1 . assert (pts_to ks s1);
+  S.pts_to_len tmp;
+  if ok {
+    offsets_sort_success bB s0 s1 v;
+    ok
+  } else {
+    offsets_sort_fail bB s0 v;
+    ok
+  }
+}
+
+#pop-options
+
+(* The walker over a list of items, checking all maps for duplicate keys *)
+
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 64"
+
+let walk_step
+  (b: bytes) (n f: nat) (o: nat) (c: pos) (m: nat) (lw q: list raw_data_item) (h: header) (oh: nat)
+: Lemma
+  (requires
+    List.Tot.length lw == c /\
+    items_at b o (c + m) (List.Tot.append lw q) /\
+    List.Tot.for_all (item_bnd n f) lw /\
+    (match parse parse_header (Seq.slice b o (Seq.length b)) with
+     | Some (h', l) -> h' == h /\ oh == o + l
+     | None -> False))
+  (ensures (
+    Cons? lw /\ (
+    let a = lhd lw in
+    let tl = ltl lw in
+    h == get_raw_data_item_header a /\
+    get_header_major_type h == get_major_type a /\
+    oh + CBOR.Spec.Raw.EverParse.Items.leaf_size h <= Seq.length b /\
+    CBOR.Spec.Raw.EverParse.Items.leaf_size h == (match a with String _ len _ -> U64.v len.value | _ -> 0) /\
+    List.Tot.for_all (item_bnd n f) tl /\
+    List.Tot.length tl == c - 1 /\
+    list_sum raw_data_item_size tl < list_sum raw_data_item_size lw /\
+    (Map? a ==> (
+      let k = List.Tot.length (Map?.v a) in
+      f >= 1 /\ k <= n /\ k == U64.v (Map?.len a).value /\
+      List.Tot.length (children a) == 2 * k /\
+      children a == list_of_pair_list (Map?.v a) /\
+      List.Tot.for_all (item_bnd n (f - 1)) (children a) /\
+      oh + 2 * k + (c - 1) + m <= Seq.length b /\
+      items_at b oh (2 * k + ((c - 1) + m)) (List.Tot.append (children a) (List.Tot.append tl q)))) /\
+    (~ (Map? a) ==> (
+      let l' = List.Tot.append (children a) tl in
+      List.Tot.length l' == remaining_data_items_header h + (c - 1) /\
+      oh + CBOR.Spec.Raw.EverParse.Items.leaf_size h + List.Tot.length l' + m <= Seq.length b /\
+      items_at b (oh + CBOR.Spec.Raw.EverParse.Items.leaf_size h) (List.Tot.length l' + m) (List.Tot.append l' q) /\
+      List.Tot.for_all (item_bnd n f) l' /\
+      check_dups lw == check_dups l' /\
+      list_sum raw_data_item_size l' < list_sum raw_data_item_size lw))
+  )))
+= let a :: tl = lw in
+  items_at_header b o (c + m) (List.Tot.append lw q) h oh;
+  leaf_size_eq a;
+  remaining_children_length a;
+  list_sum_size_cons a tl;
+  check_dups_cons a tl;
+  List.Tot.append_assoc (children a) tl q;
+  List.Tot.append_length (children a) tl;
+  let o1 = oh + CBOR.Spec.Raw.EverParse.Items.leaf_size h in
+  let r = remaining_data_items_header h in
+  items_at_bound b o1 (r + (c + m - 1)) (List.Tot.append (children a) (List.Tot.append tl q));
+  if Map? a
+  then begin
+    item_bnd_map_hd n f a tl;
+    children_map_length a
+  end
+  else item_bnd_cons_children n f a tl
+
+let walk_map_ok (n f: nat) (a: raw_data_item) (tl: list raw_data_item) : Lemma
+  (requires
+    Map? a /\
+    List.Tot.for_all (item_bnd n f) (a :: tl) /\
+    check_dups (children a) == true
+  )
+  (ensures
+    children a == list_of_pair_list (Map?.v a) /\
+    List.Tot.for_all (item_ok n (f - 1)) (list_of_pair_list (Map?.v a)) /\
+    check_dups (a :: tl) == (no_cc_dup (List.Tot.map fst (Map?.v a)) && check_dups tl)
+  )
+= children_map_length a;
+  walker_map_ok n f a tl
+
+let walk_map_fail (a: raw_data_item) (tl: list raw_data_item) : Lemma
+  (requires Map? a /\ check_dups (children a) == false)
+  (ensures check_dups (a :: tl) == false)
+= children_map_length a;
+  check_dups_cons a tl
+
+let walk_end (b: bytes) (o: nat) (m: nat) (lw q: list raw_data_item) : Lemma
+  (requires List.Tot.length lw == 0 /\ items_at b o (0 + m) (List.Tot.append lw q))
+  (ensures check_dups lw == true /\ items_at b o m q)
+= ()
+
+#pop-options
+
+let walk_inv
+  (b: bytes) (n f: nat) (l0: list raw_data_item) (o c m: nat) (lw q: list raw_data_item) (res: bool)
+: prop
+= List.Tot.length lw == c /\
+  items_at b o (c + m) (List.Tot.append lw q) /\
+  List.Tot.for_all (item_bnd n f) lw /\
+  (res == true ==> check_dups l0 == check_dups lw) /\
+  (res == false ==> check_dups l0 == false)
+
+#push-options "--z3rlimit 128"
+
+fn rec check_items
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f: Ghost.erased nat)
+  (sc: S.slice SZ.t)
+  (o0 c0: SZ.t)
+  (l0 q: Ghost.erased (list raw_data_item))
+  (m: Ghost.erased nat)
+  (pout: ref SZ.t)
+requires
+  pts_to b #p bB ** (exists* s . pts_to sc s) ** (exists* o . pts_to pout o) ** pure (
+    SZ.v (S.len sc) >= 3 * n * f /\
+    List.Tot.length l0 == SZ.v c0 /\
+    items_at bB (SZ.v o0) (SZ.v c0 + m) (List.Tot.append l0 q) /\
+    List.Tot.for_all (item_bnd n f) l0
+  )
+returns res: bool
+ensures
+  pts_to b #p bB ** (exists* s . pts_to sc s) ** (exists* o . pts_to pout o ** pure (
+    res == check_dups l0 /\
+    (res == true ==> items_at bB (SZ.v o) m q)
+  ))
+decreases (Ghost.reveal f)
+{
+  S.pts_to_len b;
+  let mut po = o0;
+  let mut pc = c0;
+  let mut pres = true;
+  let mut pl : Ghost.erased (list raw_data_item) = l0;
+  while (
+    let r = !pres;
+    let c = !pc;
+    (r && SZ.gt c 0sz)
+  )
+  invariant exists* o c r (lw: Ghost.erased (list raw_data_item)) .
+    pts_to b #p bB ** (exists* s . pts_to sc s) ** (exists* o . pts_to pout o) **
+    pts_to po o ** pts_to pc c ** pts_to pres r ** pts_to pl lw **
+    pure (walk_inv bB n f l0 (SZ.v o) (SZ.v c) m lw q r)
+  decreases %[(if !pres then 1 else 0); list_sum raw_data_item_size (Ghost.reveal !pl)]
+  {
+    let o = !po;
+    let c = !pc;
+    let lw = !pl;
+    items_at_step bB (SZ.v o) (SZ.v c + m) (List.Tot.append lw q);
+    let oh = jump_header () b o;
+    let h = read_from_validator_success (read_header ()) b o oh;
+    walk_step bB n f (SZ.v o) (SZ.v c) m lw q h (SZ.v oh);
+    major_type_facts (lhd lw);
+    let mt = get_header_major_type h;
+    if (mt = cbor_major_type_map) {
+      let k = SZ.uint64_to_sizet (get_map_length (Ghost.hide (lhd lw)) h).value;
+      let f' : Ghost.erased nat = Ghost.hide (Ghost.reveal f - 1);
+      let res1 = check_items b n f' sc oh (SZ.mul 2sz k) (Ghost.hide (children (lhd lw))) (Ghost.hide (List.Tot.append (ltl lw) q)) (Ghost.hide (SZ.v c - 1 + m)) pout;
+      if (not res1) {
+        walk_map_fail (lhd lw) (ltl lw);
+        pres := false;
+      } else {
+        with o' . assert (pts_to pout o');
+        let o' = !pout;
+        walk_map_ok n f (lhd lw) (ltl lw);
+        with s . assert (pts_to sc s);
+        S.pts_to_len sc;
+        scratch_split_walk (SZ.v (S.len sc)) n f f' (SZ.v k);
+        let ks, r1 = S.split sc k;
+        S.pts_to_len r1;
+        let tmp, rest = S.split r1 k;
+        S.pts_to_len ks;
+        S.pts_to_len tmp;
+        S.pts_to_len rest;
+        with vk . assert (pts_to ks vk);
+        with vt . assert (pts_to tmp vt);
+        assert (pure (Seq.length vk == SZ.v k));
+        assert (pure (Seq.length vt == SZ.v k));
+        assert (pure (SZ.v (S.len rest) == SZ.v (S.len sc) - 2 * SZ.v k));
+        assert (pure (SZ.v (S.len rest) >= 3 * n * f'));
+        fold (cinv b p bB rest);
+        let ok = check_map_keys b n f' (cmp_one b #p #bB n f') rest ks tmp oh (Ghost.hide (Map?.v (lhd lw))) (Ghost.hide (SZ.v c - 1 + m)) (Ghost.hide (List.Tot.append (ltl lw) q));
+        unfold (cinv b p bB rest);
+        S.join tmp rest r1;
+        S.join ks r1 sc;
+        if ok {
+          po := o';
+          pc := SZ.sub c 1sz;
+          pl := Ghost.hide (ltl lw);
+        } else {
+          pres := false;
+        }
+      }
+    } else {
+      let is_string = (mt = cbor_major_type_byte_string || mt = cbor_major_type_text_string);
+      let leaf : SZ.t = (if is_string then SZ.uint64_to_sizet (get_string_length (Ghost.hide (lhd lw)) h).value else 0sz);
+      let rem = impl_remaining_data_items_header (Ghost.hide (S.len b)) h;
+      po := SZ.add oh leaf;
+      pc := SZ.add rem (SZ.sub c 1sz);
+      pl := Ghost.hide (List.Tot.append (children (lhd lw)) (ltl lw));
+    }
+  };
+  with o c lw . assert (pts_to po o ** pts_to pc c ** pts_to pl lw);
+  let r = !pres;
+  if r {
+    walk_end bB (SZ.v o) m lw q;
+    let o = !po;
+    pout := o;
+    r
+  } else {
+    r
+  }
+}
+
+#pop-options
