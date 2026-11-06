@@ -335,7 +335,9 @@ int main(int argc, char **argv) {
   start_family();
   for (size_t t = 16; t <= (quick ? 256u : 4096u); t *= 4) {
     size_t len = gen_key_chain(t, true);
-    measure("B7_key_chain_dup", (double)t, len, t + 1, 2, ALL);
+    /* the reference is exponential here (40+ min at t = 64) */
+    measure("B7_key_chain_dup", (double)t, len, t + 1, 2,
+            t <= 16 ? ALL : ALL & ~(1u << VB));
   }
   start_family();
   for (size_t k = 1; k <= (quick ? 64u : 4096u); k *= 4) {
