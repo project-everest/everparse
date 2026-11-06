@@ -32,7 +32,6 @@ inline_for_extraction
 let rotl (x: U64.t) (r: U32.t { 0 < U32.v r /\ U32.v r < 64 }) : Tot U64.t =
   U64.logor (U64.shift_left x r) (U64.shift_right x (U32.sub 64ul r))
 
-inline_for_extraction
 [@@"opaque_to_smt"]
 let sip_round (s: sip) : Tot sip =
   let v0 = U64.add_mod s.v0 s.v1 in
@@ -61,13 +60,11 @@ let sip_init (k0 k1: U64.t) : Tot sip = {
   nw = 0uL;
 }
 
-inline_for_extraction
 [@@"opaque_to_smt"]
 let sip_absorb (s: sip) (m: U64.t) : Tot sip =
   let s1 = sip_round ({ s with v3 = U64.logxor s.v3 m }) in
   { s1 with v0 = U64.logxor s1.v0 m; nw = U64.add_mod s.nw 1uL }
 
-inline_for_extraction
 [@@"opaque_to_smt"]
 let sip_fin (s: sip) : Tot U64.t =
   (* the length byte of the RFC for a message of 8 * nw bytes *)

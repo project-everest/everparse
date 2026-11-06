@@ -967,17 +967,37 @@ let impl_head_value (a: Ghost.erased raw_data_item) (h: header) : Pure U64.t
   (ensures fun r -> r == H.head_value a)
 = header_major_type a;
   let mt = get_header_major_type h in
+  (* intermediate results are let-bound to work around a Rust code
+     generation issue with casts and field projections of `match`es *)
   if mt = cbor_major_type_simple_value
-  then FStar.Int.Cast.uint8_to_uint64 (get_simple_value a h)
+  then begin
+    let v : U8.t = get_simple_value a h in
+    FStar.Int.Cast.uint8_to_uint64 v
+  end
   else if mt = cbor_major_type_uint64 || mt = cbor_major_type_neg_int64
-  then (get_int64_value a h).value
+  then begin
+    let v : raw_uint64 = get_int64_value a h in
+    v.value
+  end
   else if mt = cbor_major_type_byte_string || mt = cbor_major_type_text_string
-  then (get_string_length a h).value
+  then begin
+    let v : raw_uint64 = get_string_length a h in
+    v.value
+  end
   else if mt = cbor_major_type_tagged
-  then (get_tagged_tag a h).value
+  then begin
+    let v : raw_uint64 = get_tagged_tag a h in
+    v.value
+  end
   else if mt = cbor_major_type_array
-  then (get_array_length a h).value
-  else (get_map_length a h).value
+  then begin
+    let v : raw_uint64 = get_array_length a h in
+    v.value
+  end
+  else begin
+    let v : raw_uint64 = get_map_length a h in
+    v.value
+  end
 
 fn hash_word
   (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)

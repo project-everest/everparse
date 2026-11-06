@@ -5154,6 +5154,359 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
     (&pres)[0usize]
 }
 
+#[derive(PartialEq, Clone, Copy)]
+pub(crate) struct sip
+{ pub v0: u64, pub v1: u64, pub v2: u64, pub v3: u64, pub nw: u64 }
+
+fn sip_round(s: sip) -> sip
+{
+    let v0: u64 = (s.v0).wrapping_add(s.v1);
+    let v1: u64 = (s.v1).wrapping_shl(13u32) | (s.v1).wrapping_shr(51u32);
+    let v11: u64 = v1 ^ v0;
+    let v01: u64 = v0.wrapping_shl(32u32) | v0.wrapping_shr(32u32);
+    let v2: u64 = (s.v2).wrapping_add(s.v3);
+    let v3: u64 = (s.v3).wrapping_shl(16u32) | (s.v3).wrapping_shr(48u32);
+    let v31: u64 = v3 ^ v2;
+    let v02: u64 = v01.wrapping_add(v31);
+    let v32: u64 = v31.wrapping_shl(21u32) | v31.wrapping_shr(43u32);
+    let v33: u64 = v32 ^ v02;
+    let v21: u64 = v2.wrapping_add(v11);
+    let v12: u64 = v11.wrapping_shl(17u32) | v11.wrapping_shr(47u32);
+    let v13: u64 = v12 ^ v21;
+    let v22: u64 = v21.wrapping_shl(32u32) | v21.wrapping_shr(32u32);
+    sip { v0: v02, v1: v13, v2: v22, v3: v33, nw: s.nw }
+}
+
+fn sip_absorb(s: sip, m: u64) -> sip
+{
+    let s1: sip = sip_round(sip { v0: s.v0, v1: s.v1, v2: s.v2, v3: s.v3 ^ m, nw: s.nw });
+    sip { v0: s1.v0 ^ m, v1: s1.v1, v2: s1.v2, v3: s1.v3, nw: (s.nw).wrapping_add(1u64) }
+}
+
+fn sip_fin(s: sip) -> u64
+{
+    let m: u64 = (s.nw).wrapping_shl(59u32);
+    let s1: sip = sip_round(sip { v0: s.v0, v1: s.v1, v2: s.v2, v3: s.v3 ^ m, nw: s.nw });
+    let s2: sip = sip { v0: s1.v0 ^ m, v1: s1.v1, v2: s1.v2 ^ 0xffu64, v3: s1.v3, nw: s1.nw };
+    let s3: sip = sip_round(sip_round(sip_round(s2)));
+    s3.v0 ^ s3.v1 ^ (s3.v2 ^ s3.v3)
+}
+
+fn hash_word(b: &[u8], x: usize, c: usize) -> u64
+{
+    let mut pj: [usize; 1] = [c; 1usize];
+    let mut pw: [u64; 1] = [0u64; 1usize];
+    while
+    true
+    {
+        let j: usize = (&pj)[0usize];
+        if j <= 0usize { break };
+        let j0: usize = (&pj)[0usize];
+        let w: u64 = (&pw)[0usize];
+        let j·: usize = j0.wrapping_sub(1usize);
+        let y: u8 = b[x.wrapping_add(j·)];
+        (&mut pw)[0usize] = y as u64 | w.wrapping_shl(8u32);
+        (&mut pj)[0usize] = j·
+    };
+    (&pw)[0usize]
+}
+
+fn hash_bytes(b: &[u8], st0: sip, o: usize, len: usize) -> sip
+{
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let mut pst: [sip; 1] = [st0; 1usize];
+    while
+    true
+    {
+        let i: usize = (&pi)[0usize];
+        if i >= len { break };
+        let i0: usize = (&pi)[0usize];
+        let st: sip = (&pst)[0usize];
+        let rem: usize = len.wrapping_sub(i0);
+        let c: usize = if rem < 8usize { rem } else { 8usize };
+        let x: usize = o.wrapping_add(i0);
+        let w: u64 = hash_word(b, x, c);
+        (&mut pst)[0usize] = sip_absorb(st, w);
+        (&mut pi)[0usize] = i0.wrapping_add(c)
+    };
+    (&pst)[0usize]
+}
+
+fn hash_leaf(b: &[u8], is_string: bool, st0: sip, o: usize, len: usize) -> sip
+{ if is_string { hash_bytes(b, st0, o, len) } else { st0 } }
+
+pub(crate) fn hash_items(
+    b: &[u8],
+    k0: u64,
+    k1: u64,
+    st0: sip,
+    o0: usize,
+    c0: usize,
+    pout: &mut [usize]
+) ->
+    sip
+{
+    let mut po: [usize; 1] = [o0; 1usize];
+    let mut pc: [usize; 1] = [c0; 1usize];
+    let mut pst: [sip; 1] = [st0; 1usize];
+    while
+    true
+    {
+        let c: usize = (&pc)[0usize];
+        if c <= 0usize { break };
+        let o: usize = (&po)[0usize];
+        let c1: usize = (&pc)[0usize];
+        let st: sip = (&pst)[0usize];
+        let oh: usize = jump_header(b, o);
+        let _letpattern: (&[u8], &[u8]) = b.split_at(o);
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = _letpattern.0;
+                let input23: &[u8] = _letpattern.1;
+                let consumed: usize = oh.wrapping_sub(o);
+                let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                let input2: &[u8] = _letpattern1.0;
+                let _input3: &[u8] = _letpattern1.1;
+                input2
+            };
+        let
+        h: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+        =
+            read_header(input·);
+        let mt: u8 = get_header_major_type(h);
+        let mt1: u8 = get_header_major_type(h);
+        let hval: u64 =
+            if mt1 == cbor_major_type_simple_value
+            {
+                let v: u8 =
+                    match h._2
+                    {
+                        long_argument::LongArgumentOther => h._1.additional_info,
+                        long_argument::LongArgumentSimpleValue { v } => v,
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                v as u64
+            }
+            else if mt1 == cbor_major_type_uint64 || mt1 == cbor_major_type_neg_int64
+            {
+                let v: raw_uint64 =
+                    match h._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                v.value
+            }
+            else if mt1 == cbor_major_type_byte_string || mt1 == cbor_major_type_text_string
+            {
+                let v: raw_uint64 =
+                    match h._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                v.value
+            }
+            else if mt1 == cbor_major_type_tagged
+            {
+                let v: raw_uint64 =
+                    match h._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                v.value
+            }
+            else if mt1 == cbor_major_type_array
+            {
+                let v: raw_uint64 =
+                    match h._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                v.value
+            }
+            else
+            {
+                let v: raw_uint64 =
+                    match h._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                v.value
+            };
+        let st1: sip = sip_absorb(sip_absorb(st, mt as u64), hval);
+        if mt == cbor_major_type_map
+        {
+            let k: usize =
+                match h._2
+                {
+                    long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
+                    long_argument::LongArgumentU16 { v } =>
+                      raw_uint64 { size: 2u8, value: v as u64 },
+                    long_argument::LongArgumentU32 { v } =>
+                      raw_uint64 { size: 3u8, value: v as u64 },
+                    long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                    long_argument::LongArgumentOther =>
+                      raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                    _ => panic!("Incomplete pattern matching")
+                }.value
+                as
+                usize;
+            let mut pi: [usize; 1] = [0usize; 1usize];
+            let mut pe: [usize; 1] = [oh; 1usize];
+            let mut pacc: [u64; 1] = [0u64; 1usize];
+            while
+            true
+            {
+                let i: usize = (&pi)[0usize];
+                if i >= k { break };
+                let i0: usize = (&pi)[0usize];
+                let e: usize = (&pe)[0usize];
+                let acc: u64 = (&pacc)[0usize];
+                let sk: sip =
+                    hash_items(
+                        b,
+                        k0,
+                        k1,
+                        sip
+                        {
+                            v0: k0 ^ 0x736f6d6570736575u64,
+                            v1: k1 ^ 0x646f72616e646f6du64,
+                            v2: k0 ^ 0x6c7967656e657261u64,
+                            v3: k1 ^ 0x7465646279746573u64,
+                            nw: 0u64
+                        },
+                        e,
+                        1usize,
+                        pout
+                    );
+                let o1: usize = pout[0usize];
+                let sv: sip =
+                    hash_items(
+                        b,
+                        k0,
+                        k1,
+                        sip
+                        {
+                            v0: k0 ^ 0x736f6d6570736575u64,
+                            v1: k1 ^ 0x646f72616e646f6du64,
+                            v2: k0 ^ 0x6c7967656e657261u64,
+                            v3: k1 ^ 0x7465646279746573u64,
+                            nw: 0u64
+                        },
+                        o1,
+                        1usize,
+                        pout
+                    );
+                let o2: usize = pout[0usize];
+                (&mut pacc)[0usize] =
+                    acc.wrapping_add(
+                        sip_fin(
+                            sip_absorb(
+                                sip_absorb(
+                                    sip
+                                    {
+                                        v0: k0 ^ 0x736f6d6570736575u64,
+                                        v1: k1 ^ 0x646f72616e646f6du64,
+                                        v2: k0 ^ 0x6c7967656e657261u64,
+                                        v3: k1 ^ 0x7465646279746573u64,
+                                        nw: 0u64
+                                    },
+                                    sip_fin(sk)
+                                ),
+                                sip_fin(sv)
+                            )
+                        )
+                    );
+                (&mut pe)[0usize] = o2;
+                (&mut pi)[0usize] = i0.wrapping_add(1usize)
+            };
+            let e: usize = (&pe)[0usize];
+            let acc: u64 = (&pacc)[0usize];
+            (&mut pst)[0usize] = sip_absorb(st1, acc);
+            (&mut po)[0usize] = e;
+            (&mut pc)[0usize] = c1.wrapping_sub(1usize)
+        }
+        else
+        {
+            let is_string: bool =
+                mt == cbor_major_type_byte_string || mt == cbor_major_type_text_string;
+            let leaf: usize =
+                if is_string
+                {
+                    match h._2
+                    {
+                        long_argument::LongArgumentU8 { v } =>
+                          raw_uint64 { size: 1u8, value: v as u64 },
+                        long_argument::LongArgumentU16 { v } =>
+                          raw_uint64 { size: 2u8, value: v as u64 },
+                        long_argument::LongArgumentU32 { v } =>
+                          raw_uint64 { size: 3u8, value: v as u64 },
+                        long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                        long_argument::LongArgumentOther =>
+                          raw_uint64 { size: 0u8, value: h._1.additional_info as u64 },
+                        _ => panic!("Incomplete pattern matching")
+                    }.value
+                    as
+                    usize
+                }
+                else
+                { 0usize };
+            let st2: sip = hash_leaf(b, is_string, st1, oh, leaf);
+            let rem: usize = impl_remaining_data_items_header(h);
+            (&mut pst)[0usize] = st2;
+            (&mut po)[0usize] = oh.wrapping_add(leaf);
+            (&mut pc)[0usize] = rem.wrapping_add(c1.wrapping_sub(1usize))
+        }
+    };
+    let o: usize = (&po)[0usize];
+    pout[0usize] = o;
+    (&pst)[0usize]
+}
+
 fn fill_offsets(b: &[u8], ks: &mut [usize], o0: usize) -> usize
 {
     let k: usize = ks.len();
@@ -5887,7 +6240,17 @@ pub(crate) fn cmp_one(b: &[u8], sc: &mut [usize], x: usize, y: usize) -> i16
     (&pres)[0usize]
 }
 
-pub(crate) fn check_items(b: &[u8], sc: &mut [usize], o0: usize, c0: usize, pout: &mut [usize]) ->
+pub(crate) fn check_items(
+    b: &[u8],
+    sc: &mut [usize],
+    k0: u64,
+    k1: u64,
+    hv: &mut [u64],
+    idx: &mut [usize],
+    o0: usize,
+    c0: usize,
+    pout: &mut [usize]
+) ->
     bool
 {
     let mut po: [usize; 1] = [o0; 1usize];
@@ -5952,7 +6315,7 @@ pub(crate) fn check_items(b: &[u8], sc: &mut [usize], o0: usize, c0: usize, pout
                 if ! (r0 && i < k) { break };
                 let i0: usize = (&pi)[0usize];
                 let e: usize = (&pe)[0usize];
-                let ok: bool = check_items(b, rest, e, 2usize, pout);
+                let ok: bool = check_items(b, rest, k0, k1, hv, idx, e, 2usize, pout);
                 if ok
                 {
                     let o·: usize = pout[0usize];
@@ -5969,97 +6332,250 @@ pub(crate) fn check_items(b: &[u8], sc: &mut [usize], o0: usize, c0: usize, pout
                 if r0
                 {
                     pout[0usize] = e;
-                    let n: usize = ks.len();
-                    let mut pw: [usize; 1] = [1usize; 1usize];
-                    let mut pok: [bool; 1] = [true; 1usize];
-                    let mut pdone: [bool; 1] = [n <= 1usize; 1usize];
-                    while
-                    true
+                    let k2: usize = ks.len();
+                    if k2 <= hv.len() && k2 <= idx.len()
                     {
-                        let ok: bool = (&pok)[0usize];
-                        let done: bool = (&pdone)[0usize];
-                        if ! (ok && ! done) { break };
-                        let w: usize = (&pw)[0usize];
-                        let n1: usize = ks.len();
-                        let mut plo: [usize; 1] = [0usize; 1usize];
-                        let mut pok1: [bool; 1] = [true; 1usize];
+                        let _letpattern3: (&mut [u64], &mut [u64]) = hv.split_at_mut(k2);
+                        let hv1: &mut [u64] = _letpattern3.0;
+                        let _hv2: &[u64] = _letpattern3.1;
+                        let _letpattern4: (&mut [usize], &mut [usize]) = idx.split_at_mut(k2);
+                        let idx1: &mut [usize] = _letpattern4.0;
+                        let _idx2: &[usize] = _letpattern4.1;
+                        let k3: usize = ks.len();
+                        let mut pi1: [usize; 1] = [0usize; 1usize];
+                        let mut po1: [usize; 1] = [0usize; 1usize];
                         while
                         true
                         {
-                            let ok0: bool = (&pok1)[0usize];
-                            let lo: usize = (&plo)[0usize];
-                            if ! (ok0 && lo < n1) { break };
-                            let lo0: usize = (&plo)[0usize];
-                            let mid: usize =
-                                if w <= n1.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n1 };
-                            let hi: usize =
-                                if w <= n1.wrapping_sub(mid) { mid.wrapping_add(w) } else { n1 };
-                            let mut pi1: [usize; 1] = [lo0; 1usize];
-                            let mut pi2: [usize; 1] = [mid; 1usize];
-                            let mut pk: [usize; 1] = [lo0; 1usize];
-                            let mut pok2: [bool; 1] = [true; 1usize];
+                            let i: usize = (&pi1)[0usize];
+                            if i >= k3 { break };
+                            let i0: usize = (&pi1)[0usize];
+                            let x: usize = ks[i0];
+                            let sh: sip =
+                                hash_items(
+                                    b,
+                                    k0,
+                                    k1,
+                                    sip
+                                    {
+                                        v0: k0 ^ 0x736f6d6570736575u64,
+                                        v1: k1 ^ 0x646f72616e646f6du64,
+                                        v2: k0 ^ 0x6c7967656e657261u64,
+                                        v3: k1 ^ 0x7465646279746573u64,
+                                        nw: 0u64
+                                    },
+                                    x,
+                                    1usize,
+                                    &mut po1
+                                );
+                            let h1: u64 = sip_fin(sh);
+                            hv1[i0] = h1;
+                            idx1[i0] = i0;
+                            (&mut pi1)[0usize] = i0.wrapping_add(1usize)
+                        };
+                        let n: usize = idx1.len();
+                        let mut pw: [usize; 1] = [1usize; 1usize];
+                        let mut pok: [bool; 1] = [true; 1usize];
+                        let mut pdone: [bool; 1] = [n <= 1usize; 1usize];
+                        while
+                        true
+                        {
+                            let ok: bool = (&pok)[0usize];
+                            let done: bool = (&pdone)[0usize];
+                            if ! (ok && ! done) { break };
+                            let w: usize = (&pw)[0usize];
+                            let n1: usize = idx1.len();
+                            let mut plo: [usize; 1] = [0usize; 1usize];
+                            let mut pok1: [bool; 1] = [true; 1usize];
                             while
                             true
                             {
-                                let ok1: bool = (&pok2)[0usize];
-                                let i1: usize = (&pi1)[0usize];
-                                let i2: usize = (&pi2)[0usize];
-                                if ! (ok1 && (i1 != mid || i2 != hi)) { break };
-                                let i10: usize = (&pi1)[0usize];
-                                let i20: usize = (&pi2)[0usize];
-                                let k1: usize = (&pk)[0usize];
-                                if i10 == mid
+                                let ok0: bool = (&pok1)[0usize];
+                                let lo: usize = (&plo)[0usize];
+                                if ! (ok0 && lo < n1) { break };
+                                let lo0: usize = (&plo)[0usize];
+                                let mid: usize =
+                                    if w <= n1.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n1 };
+                                let hi: usize =
+                                    if w <= n1.wrapping_sub(mid) { mid.wrapping_add(w) } else { n1 };
+                                let mut pi11: [usize; 1] = [lo0; 1usize];
+                                let mut pi2: [usize; 1] = [mid; 1usize];
+                                let mut pk: [usize; 1] = [lo0; 1usize];
+                                let mut pok2: [bool; 1] = [true; 1usize];
+                                while
+                                true
                                 {
-                                    let x: usize = ks[i20];
-                                    tmp[k1] = x;
-                                    (&mut pi2)[0usize] = i20.wrapping_add(1usize);
-                                    (&mut pk)[0usize] = k1.wrapping_add(1usize)
-                                }
-                                else if i20 == hi
-                                {
-                                    let x: usize = ks[i10];
-                                    tmp[k1] = x;
-                                    (&mut pi1)[0usize] = i10.wrapping_add(1usize);
-                                    (&mut pk)[0usize] = k1.wrapping_add(1usize)
-                                }
-                                else
-                                {
-                                    let x1: usize = ks[i10];
-                                    let x2: usize = ks[i20];
-                                    let c10: i16 = cmp_one(b, rest, x1, x2);
-                                    if c10 == 0i16
-                                    { (&mut pok2)[0usize] = false }
-                                    else if c10 < 0i16
+                                    let ok1: bool = (&pok2)[0usize];
+                                    let i1: usize = (&pi11)[0usize];
+                                    let i2: usize = (&pi2)[0usize];
+                                    if ! (ok1 && (i1 != mid || i2 != hi)) { break };
+                                    let i10: usize = (&pi11)[0usize];
+                                    let i20: usize = (&pi2)[0usize];
+                                    let k4: usize = (&pk)[0usize];
+                                    if i10 == mid
                                     {
-                                        tmp[k1] = x1;
-                                        (&mut pi1)[0usize] = i10.wrapping_add(1usize);
-                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                        let x: usize = idx1[i20];
+                                        tmp[k4] = x;
+                                        (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k4.wrapping_add(1usize)
+                                    }
+                                    else if i20 == hi
+                                    {
+                                        let x: usize = idx1[i10];
+                                        tmp[k4] = x;
+                                        (&mut pi11)[0usize] = i10.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k4.wrapping_add(1usize)
                                     }
                                     else
                                     {
-                                        tmp[k1] = x2;
-                                        (&mut pi2)[0usize] = i20.wrapping_add(1usize);
-                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                        let x1: usize = idx1[i10];
+                                        let x2: usize = idx1[i20];
+                                        let hi1: u64 = hv1[x1];
+                                        let hj: u64 = hv1[x2];
+                                        let c10: i16 =
+                                            if hi1 < hj
+                                            { -1i16 }
+                                            else if hj < hi1
+                                            { 1i16 }
+                                            else
+                                            {
+                                                let xi: usize = ks[x1];
+                                                let xj: usize = ks[x2];
+                                                cmp_one(b, rest, xi, xj)
+                                            };
+                                        if c10 == 0i16
+                                        { (&mut pok2)[0usize] = false }
+                                        else if c10 < 0i16
+                                        {
+                                            tmp[k4] = x1;
+                                            (&mut pi11)[0usize] = i10.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k4.wrapping_add(1usize)
+                                        }
+                                        else
+                                        {
+                                            tmp[k4] = x2;
+                                            (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k4.wrapping_add(1usize)
+                                        }
                                     }
-                                }
+                                };
+                                let res: bool = (&pok2)[0usize];
+                                if res
+                                { (&mut plo)[0usize] = hi }
+                                else
+                                { (&mut pok1)[0usize] = false }
                             };
-                            let res: bool = (&pok2)[0usize];
-                            if res { (&mut plo)[0usize] = hi } else { (&mut pok1)[0usize] = false }
-                        };
-                        let res: bool = (&pok1)[0usize];
-                        if res
-                        {
-                            ks.copy_from_slice(tmp);
-                            if n.wrapping_sub(w) <= w
-                            { (&mut pdone)[0usize] = true }
+                            let res: bool = (&pok1)[0usize];
+                            if res
+                            {
+                                idx1.copy_from_slice(tmp);
+                                if n.wrapping_sub(w) <= w
+                                { (&mut pdone)[0usize] = true }
+                                else
+                                { (&mut pw)[0usize] = w.wrapping_add(w) }
+                            }
                             else
-                            { (&mut pw)[0usize] = w.wrapping_add(w) }
-                        }
-                        else
-                        { (&mut pok)[0usize] = false }
-                    };
-                    let ok: bool = (&pok)[0usize];
-                    if ok { ok } else { ok }
+                            { (&mut pok)[0usize] = false }
+                        };
+                        (&pok)[0usize]
+                    }
+                    else
+                    {
+                        let n: usize = ks.len();
+                        let mut pw: [usize; 1] = [1usize; 1usize];
+                        let mut pok: [bool; 1] = [true; 1usize];
+                        let mut pdone: [bool; 1] = [n <= 1usize; 1usize];
+                        while
+                        true
+                        {
+                            let ok: bool = (&pok)[0usize];
+                            let done: bool = (&pdone)[0usize];
+                            if ! (ok && ! done) { break };
+                            let w: usize = (&pw)[0usize];
+                            let n1: usize = ks.len();
+                            let mut plo: [usize; 1] = [0usize; 1usize];
+                            let mut pok1: [bool; 1] = [true; 1usize];
+                            while
+                            true
+                            {
+                                let ok0: bool = (&pok1)[0usize];
+                                let lo: usize = (&plo)[0usize];
+                                if ! (ok0 && lo < n1) { break };
+                                let lo0: usize = (&plo)[0usize];
+                                let mid: usize =
+                                    if w <= n1.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n1 };
+                                let hi: usize =
+                                    if w <= n1.wrapping_sub(mid) { mid.wrapping_add(w) } else { n1 };
+                                let mut pi1: [usize; 1] = [lo0; 1usize];
+                                let mut pi2: [usize; 1] = [mid; 1usize];
+                                let mut pk: [usize; 1] = [lo0; 1usize];
+                                let mut pok2: [bool; 1] = [true; 1usize];
+                                while
+                                true
+                                {
+                                    let ok1: bool = (&pok2)[0usize];
+                                    let i1: usize = (&pi1)[0usize];
+                                    let i2: usize = (&pi2)[0usize];
+                                    if ! (ok1 && (i1 != mid || i2 != hi)) { break };
+                                    let i10: usize = (&pi1)[0usize];
+                                    let i20: usize = (&pi2)[0usize];
+                                    let k3: usize = (&pk)[0usize];
+                                    if i10 == mid
+                                    {
+                                        let x: usize = ks[i20];
+                                        tmp[k3] = x;
+                                        (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k3.wrapping_add(1usize)
+                                    }
+                                    else if i20 == hi
+                                    {
+                                        let x: usize = ks[i10];
+                                        tmp[k3] = x;
+                                        (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k3.wrapping_add(1usize)
+                                    }
+                                    else
+                                    {
+                                        let x1: usize = ks[i10];
+                                        let x2: usize = ks[i20];
+                                        let c10: i16 = cmp_one(b, rest, x1, x2);
+                                        if c10 == 0i16
+                                        { (&mut pok2)[0usize] = false }
+                                        else if c10 < 0i16
+                                        {
+                                            tmp[k3] = x1;
+                                            (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k3.wrapping_add(1usize)
+                                        }
+                                        else
+                                        {
+                                            tmp[k3] = x2;
+                                            (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                            (&mut pk)[0usize] = k3.wrapping_add(1usize)
+                                        }
+                                    }
+                                };
+                                let res: bool = (&pok2)[0usize];
+                                if res
+                                { (&mut plo)[0usize] = hi }
+                                else
+                                { (&mut pok1)[0usize] = false }
+                            };
+                            let res: bool = (&pok1)[0usize];
+                            if res
+                            {
+                                ks.copy_from_slice(tmp);
+                                if n.wrapping_sub(w) <= w
+                                { (&mut pdone)[0usize] = true }
+                                else
+                                { (&mut pw)[0usize] = w.wrapping_add(w) }
+                            }
+                            else
+                            { (&mut pok)[0usize] = false }
+                        };
+                        let ok: bool = (&pok)[0usize];
+                        if ok { ok } else { ok }
+                    }
                 }
                 else
                 { false };
@@ -6125,10 +6641,57 @@ fn dupcheck_sort_scratch_ok(
     map_length_bound <= scratch_len.wrapping_div(3usize).wrapping_div(map_depth_bound)
 }
 
-fn check_dups_top(b: &[u8], sc: &mut [usize]) -> bool
+fn check_dups_top_gen(
+    b: &[u8],
+    sc: &mut [usize],
+    k0: u64,
+    k1: u64,
+    hv: &mut [u64],
+    idx: &mut [usize]
+) ->
+    bool
 {
     let mut pout: [usize; 1] = [0usize; 1usize];
-    check_items(b, sc, 0usize, 1usize, &mut pout)
+    check_items(b, sc, k0, k1, hv, idx, 0usize, 1usize, &mut pout)
+}
+
+fn check_dups_top(b: &[u8], sc: &mut [usize]) -> bool
+{
+    let _letpattern: (&mut [usize], &mut [usize]) = sc.split_at_mut(0usize);
+    let idx: &mut [usize] = _letpattern.0;
+    let sc·: &mut [usize] = _letpattern.1;
+    let mut a: [u64; 1] = [0u64; 1usize];
+    let hv: &mut [u64] = &mut a;
+    check_dups_top_gen(b, sc·, 0u64, 0u64, hv, idx)
+}
+
+fn dupcheck_hash_scratch_ok(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize,
+    hash_scratch_len: usize
+) ->
+    bool
+{
+    if map_length_bound <= scratch_len && map_length_bound <= hash_scratch_len
+    {
+        dupcheck_sort_scratch_ok(
+            map_depth_bound,
+            map_length_bound,
+            scratch_len.wrapping_sub(map_length_bound)
+        )
+    }
+    else
+    { false }
+}
+
+fn check_dups_top_hash(b: &[u8], n: usize, k0: u64, k1: u64, sc: &mut [usize], hv: &mut [u64]) ->
+    bool
+{
+    let _letpattern: (&mut [usize], &mut [usize]) = sc.split_at_mut(n);
+    let idx: &mut [usize] = _letpattern.0;
+    let sc·: &mut [usize] = _letpattern.1;
+    check_dups_top_gen(b, sc·, k0, k1, hv, idx)
 }
 
 fn cbor_validate_nondet(map_key_bound: option__size_t, strict_check: bool, input: &[u8]) ->
@@ -6242,6 +6805,47 @@ fn cbor_validate_nondet_bounded_sort(
         {
             let off: usize = (&poff)[0usize];
             let ok: bool = check_dups_top(input, scratch);
+            if ok { off } else { 0usize }
+        }
+        else
+        { 0usize }
+    }
+}
+
+fn cbor_validate_nondet_bounded_hash_scratch_ok_impl(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize,
+    hash_scratch_len: usize
+) ->
+    bool
+{ dupcheck_hash_scratch_ok(map_depth_bound, map_length_bound, scratch_len, hash_scratch_len) }
+
+fn cbor_validate_nondet_bounded_hash(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    k0: u64,
+    k1: u64,
+    input: &[u8],
+    scratch: &mut [usize],
+    hash_scratch: &mut [u64]
+) ->
+    usize
+{
+    if
+    !
+    dupcheck_hash_scratch_ok(map_depth_bound, map_length_bound, scratch.len(), hash_scratch.len())
+    { 0usize }
+    else
+    {
+        let mut poff: [usize; 1] = [0usize; 1usize];
+        let res: bool =
+            validate_raw_data_item_bounded(map_depth_bound, map_length_bound, input, &mut poff);
+        if res
+        {
+            let off: usize = (&poff)[0usize];
+            let ok: bool =
+                check_dups_top_hash(input, map_length_bound, k0, k1, scratch, hash_scratch);
             if ok { off } else { 0usize }
         }
         else
@@ -6387,6 +6991,79 @@ pub(crate) fn cbor_nondet_parse_bounded_sort <'a>(
 {
     let len: usize =
         cbor_nondet_validate_bounded_sort(map_depth_bound, map_length_bound, scratch, input);
+    if len == 0usize
+    { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
+    else
+    {
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
+        let inl: &[u8] = _letpattern.0;
+        let inr: &[u8] = _letpattern.1;
+        let resl: cbor_raw = cbor_nondet_parse_valid(inl, len);
+        option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+        { v: (resl,inr) }
+    }
+}
+
+pub(crate) fn cbor_nondet_bounded_hash_scratch_ok_impl(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize,
+    hash_scratch_len: usize
+) ->
+    bool
+{
+    cbor_validate_nondet_bounded_hash_scratch_ok_impl(
+        map_depth_bound,
+        map_length_bound,
+        scratch_len,
+        hash_scratch_len
+    )
+}
+
+fn cbor_nondet_validate_bounded_hash(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    k0: u64,
+    k1: u64,
+    scratch: &mut [usize],
+    hash_scratch: &mut [u64],
+    input: &[u8]
+) ->
+    usize
+{
+    cbor_validate_nondet_bounded_hash(
+        map_depth_bound,
+        map_length_bound,
+        k0,
+        k1,
+        input,
+        scratch,
+        hash_scratch
+    )
+}
+
+pub(crate) fn cbor_nondet_parse_bounded_hash <'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    k0: u64,
+    k1: u64,
+    scratch: &'a mut [usize],
+    hash_scratch: &'a mut [u64],
+    input: &'a [u8]
+) ->
+    option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    let len: usize =
+        cbor_nondet_validate_bounded_hash(
+            map_depth_bound,
+            map_length_bound,
+            k0,
+            k1,
+            scratch,
+            hash_scratch,
+            input
+        );
     if len == 0usize
     { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     else

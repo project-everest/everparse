@@ -4706,6 +4706,307 @@ fn cbor_nondet_parse_bounded_sort_from_arrayptr
   }
 }
 
+(* Parsing with a map depth bound and a map length bound, where map key
+   duplicate checking is performed by sorting map keys by their keyed
+   SipHash-1-3 hash under the caller-provided key (k0, k1) first, and
+   comparing them with the CBOR canonical order only when their hashes
+   are equal, in caller-provided scratch spaces, without any
+   allocation. The scratch space must contain at least
+   3 * map_length_bound * map_depth_bound + map_length_bound elements,
+   and the hash scratch space must contain at least map_length_bound
+   elements; otherwise, validation fails. *)
+
+let cbor_nondet_bounded_hash_scratch_ok
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+  (hash_scratch_len: SZ.t)
+: Tot bool
+= 3 * SZ.v map_length_bound * SZ.v map_depth_bound + SZ.v map_length_bound <= SZ.v scratch_len &&
+  SZ.v map_length_bound <= SZ.v hash_scratch_len
+
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_hash_post
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+  (hash_scratch_len: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: GTot bool
+= if cbor_nondet_bounded_hash_scratch_ok map_depth_bound map_length_bound scratch_len hash_scratch_len
+  then cbor_nondet_validate_bounded_post map_depth_bound map_length_bound v res
+  else SZ.v res = 0
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_hash_t
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (k0: U64.t) ->
+  (k1: U64.t) ->
+  (scratch: S.slice SZ.t) ->
+  (hash_scratch: S.slice U64.t) ->
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  (#s: Ghost.erased (Seq.seq SZ.t)) ->
+  (#hs: Ghost.erased (Seq.seq U64.t)) ->
+  stt SZ.t
+    (pts_to input #pm v ** pts_to scratch s ** pts_to hash_scratch hs)
+    (fun res -> pts_to input #pm v ** (exists* s' . pts_to scratch s') ** (exists* hs' . pts_to hash_scratch hs') ** pure (
+      cbor_nondet_validate_bounded_hash_post map_depth_bound map_length_bound (S.len scratch) (S.len hash_scratch) v res
+    ))
+
+let cbor_nondet_parse_bounded_hash_postcond
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+  (hash_scratch_len: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: bool)
+: Tot prop
+= if cbor_nondet_bounded_hash_scratch_ok map_depth_bound map_length_bound scratch_len hash_scratch_len
+  then cbor_nondet_parse_bounded_postcond map_depth_bound map_length_bound v res
+  else res == false
+
+inline_for_extraction
+let cbor_nondet_parse_bounded_hash_t
+  (#cbornondet: Type)
+  (cbor_nondet_match: perm -> cbornondet -> Spec.cbor -> slprop)
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (k0: U64.t) ->
+  (k1: U64.t) ->
+  (scratch: S.slice SZ.t) ->
+  (hash_scratch: S.slice U64.t) ->
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  (#s: Ghost.erased (Seq.seq SZ.t)) ->
+  (#hs: Ghost.erased (Seq.seq U64.t)) ->
+  stt (option (cbornondet & S.slice U8.t))
+    (pts_to input #pm v ** pts_to scratch s ** pts_to hash_scratch hs)
+    (fun res ->
+      cbor_nondet_parse_post cbor_nondet_match input pm v res **
+      (exists* s' . pts_to scratch s') **
+      (exists* hs' . pts_to hash_scratch hs') **
+      pure (cbor_nondet_parse_bounded_hash_postcond map_depth_bound map_length_bound (S.len scratch) (S.len hash_scratch) v (Some? res))
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_parse_bounded_hash
+  (#cbor_nondet_t: Type0)
+  (#cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (validate: cbor_nondet_validate_bounded_hash_t)
+  (f: cbor_nondet_parse_valid_t cbor_nondet_match)
+: cbor_nondet_parse_bounded_hash_t #_ cbor_nondet_match
+=
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (k0: U64.t)
+  (k1: U64.t)
+  (scratch: S.slice SZ.t)
+  (hash_scratch: S.slice U64.t)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+  (#hs: Ghost.erased (Seq.seq U64.t))
+{
+  let len = validate map_depth_bound map_length_bound k0 k1 scratch hash_scratch input;
+  if (len = 0sz) {
+    fold (cbor_nondet_parse_post cbor_nondet_match input pm v None);
+    None
+  } else {
+    S.pts_to_len input;
+    Seq.lemma_split v (SZ.v len);
+    let (inl, inr) = S.split_trade input len;
+    S.pts_to_len inl;
+    S.pts_to_len inr;
+    Spec.cbor_parse_prefix v (Seq.slice v 0 (SZ.v len));
+    let resl = f inl len;
+    Trade.trans_hyp_l _ _ _ _;
+    fold (cbor_nondet_parse_post_some cbor_nondet_match input pm v resl inr);
+    fold (cbor_nondet_parse_post cbor_nondet_match input pm v (Some (resl, inr)));
+    Some (resl, inr);
+  }
+}
+
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_hash_from_arrayptr_post
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch: AP.ptr SZ.t)
+  (scratch_len: SZ.t)
+  (hash_scratch: AP.ptr U64.t)
+  (hash_scratch_len: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: GTot bool
+= if AP.g_is_null scratch || AP.g_is_null hash_scratch
+  then res = 0sz
+  else cbor_nondet_validate_bounded_hash_post map_depth_bound map_length_bound scratch_len hash_scratch_len v res
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_bounded_hash_from_arrayptr_t
+  (#cbor_nondet_t: Type)
+  (cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (k0: U64.t) ->
+  (k1: U64.t) ->
+  (scratch: AP.ptr SZ.t) ->
+  (scratch_len: SZ.t) ->
+  (hash_scratch: AP.ptr U64.t) ->
+  (hash_scratch_len: SZ.t) ->
+  (pinput: R.ref (AP.ptr U8.t)) ->
+  (plen: R.ref SZ.t) ->
+  (dest: R.ref cbor_nondet_t) ->
+  (#input: Ghost.erased (AP.ptr U8.t)) ->
+  (#len: Ghost.erased SZ.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  (#vdest: Ghost.erased cbor_nondet_t) ->
+  (#s: Ghost.erased (Seq.seq SZ.t)) ->
+  (#hs: Ghost.erased (Seq.seq U64.t)) ->
+  stt bool
+    (
+      ref_pts_to_or_null pinput 1.0R input **
+      AP.pts_to_or_null input #pm v **
+      ref_pts_to_or_null plen 1.0R len **
+      ref_pts_to_or_null dest 1.0R vdest **
+      AP.pts_to_or_null scratch s **
+      AP.pts_to_or_null hash_scratch hs **
+      pure (
+      SZ.v len == Seq.length v /\
+      SZ.v scratch_len == Seq.length s /\
+      SZ.v hash_scratch_len == Seq.length hs
+    ))
+    (fun b -> exists* input' len' v' res s' hs' .
+      ref_pts_to_or_null pinput 1.0R input' **
+      AP.pts_to_or_null input' #pm v' **
+      ref_pts_to_or_null plen 1.0R len' **
+      ref_pts_to_or_null dest 1.0R res **
+      AP.pts_to_or_null scratch s' **
+      AP.pts_to_or_null hash_scratch hs' **
+      cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input' pm v res b **
+      pure (
+        SZ.v len == Seq.length v /\
+        SZ.v len' <= SZ.v len /\
+        Seq.length s' == Seq.length s /\
+        Seq.length hs' == Seq.length hs /\
+        v' == Seq.slice v (SZ.v len - SZ.v len') (Seq.length v) /\
+        b == (SZ.v len' < SZ.v len) /\
+        (b == false ==> input' == Ghost.reveal input) /\
+        cbor_nondet_parse_from_arrayptr_gen_postcond (cbor_nondet_validate_bounded_hash_from_arrayptr_post map_depth_bound map_length_bound scratch scratch_len hash_scratch hash_scratch_len) pinput plen input v dest (SZ.sub len len')
+      )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_parse_bounded_hash_from_arrayptr
+  (#cbor_nondet_t: Type0)
+  (#cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (validate: cbor_nondet_validate_bounded_hash_t)
+  (f: cbor_nondet_parse_valid_t cbor_nondet_match)
+: cbor_nondet_parse_bounded_hash_from_arrayptr_t #_ cbor_nondet_match
+=
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (k0: U64.t)
+  (k1: U64.t)
+  (scratch: AP.ptr SZ.t)
+  (scratch_len: SZ.t)
+  (hash_scratch: AP.ptr U64.t)
+  (hash_scratch_len: SZ.t)
+  (pinput: R.ref (AP.ptr U8.t))
+  (plen: R.ref SZ.t)
+  (dest: R.ref cbor_nondet_t)
+  (#input: Ghost.erased (AP.ptr U8.t))
+  (#len: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#vdest: Ghost.erased cbor_nondet_t)
+  (#s: Ghost.erased (Seq.seq SZ.t))
+  (#hs: Ghost.erased (Seq.seq U64.t))
+{
+  cbor_nondet_parse_bounded_sound map_depth_bound map_length_bound;
+  if (R.is_null pinput || R.is_null plen || R.is_null dest) {
+    fold (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input pm v vdest false);
+    false
+  } else {
+    rewrite ref_pts_to_or_null pinput 1.0R input as pts_to pinput input;
+    let input = !pinput;
+    if (AP.is_null !pinput) {
+      rewrite pts_to pinput input as ref_pts_to_or_null pinput 1.0R input;
+      fold (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input pm v vdest false);
+      false
+    } else if (AP.is_null scratch || AP.is_null hash_scratch) {
+      rewrite pts_to pinput input as ref_pts_to_or_null pinput 1.0R input;
+      fold (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input pm v vdest false);
+      false
+    } else {
+      rewrite AP.pts_to_or_null input #pm v as AP.pts_to input #pm v;
+      rewrite AP.pts_to_or_null scratch s as AP.pts_to scratch s;
+      rewrite AP.pts_to_or_null hash_scratch hs as AP.pts_to hash_scratch hs;
+      rewrite ref_pts_to_or_null plen 1.0R len as pts_to plen len;
+      let len = !plen;
+      let s = S.arrayptr_to_slice_intro_trade input len;
+      S.pts_to_len s;
+      let sc = S.arrayptr_to_slice_intro scratch scratch_len;
+      S.pts_to_len sc;
+      let hsc = S.arrayptr_to_slice_intro hash_scratch hash_scratch_len;
+      S.pts_to_len hsc;
+      let consume = validate map_depth_bound map_length_bound k0 k1 sc hsc s;
+      with s1 . assert (pts_to sc s1);
+      S.pts_to_len sc;
+      S.arrayptr_to_slice_elim sc;
+      AP.pts_to_not_null scratch;
+      rewrite AP.pts_to scratch s1 as AP.pts_to_or_null scratch s1;
+      with hs1 . assert (pts_to hsc hs1);
+      S.pts_to_len hsc;
+      S.arrayptr_to_slice_elim hsc;
+      AP.pts_to_not_null hash_scratch;
+      rewrite AP.pts_to hash_scratch hs1 as AP.pts_to_or_null hash_scratch hs1;
+      Trade.elim _ _;
+      if (consume = 0sz) {
+        rewrite pts_to plen len as ref_pts_to_or_null plen 1.0R len;
+        rewrite AP.pts_to input #pm v as AP.pts_to_or_null input #pm v;
+        rewrite pts_to pinput input as ref_pts_to_or_null pinput 1.0R input;
+        fold (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input pm v vdest false);
+        false
+      } else {
+        Seq.lemma_split v (SZ.v consume);
+        Spec.cbor_parse_prefix v (Seq.slice v 0 (SZ.v consume));
+        let input' = AP.split input consume;
+        pinput := input';
+        let len' = SZ.sub len consume;
+        plen := len';
+        let s = S.arrayptr_to_slice_intro_trade input consume;
+        let res = f s consume;
+        Trade.trans _ _ (pts_to input #pm _);
+        rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+        dest := res;
+        rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+        rewrite pts_to plen len' as ref_pts_to_or_null plen 1.0R len';
+        AP.pts_to_not_null input';
+        with v' . rewrite AP.pts_to input' #pm v' as AP.pts_to_or_null input' #pm v';
+        rewrite pts_to pinput input' as ref_pts_to_or_null pinput 1.0R input';
+        fold (cbor_nondet_parse_from_arrayptr_post_true cbor_nondet_match input input' pm v res);
+        rewrite (cbor_nondet_parse_from_arrayptr_post_true cbor_nondet_match input input' pm v res)
+          as (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input' pm v res true);
+        true
+      }
+    }
+  }
+}
+
 noextract [@@noextract_to "krml"]
 let cbor_nondet_serialize_postcond
   (size: nat)
