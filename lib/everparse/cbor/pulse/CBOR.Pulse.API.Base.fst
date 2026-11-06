@@ -5007,6 +5007,203 @@ fn cbor_nondet_parse_bounded_hash_from_arrayptr
   }
 }
 
+(* Parsing with a map depth bound and a map length bound, where map key
+   duplicate checking is performed by sorting (or hashing) map keys in
+   scratch spaces allocated on the heap once per call, and freed before
+   returning. Failure may also be due to allocation failure, so only
+   success is specified. *)
+
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_alloc_post
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: GTot bool
+= SZ.v res = 0 || cbor_nondet_validate_bounded_post map_depth_bound map_length_bound v res
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_sort_alloc_t
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  cbor_nondet_validate_gen_t (cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_validate_bounded_hash_alloc_t
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (k0: U64.t) ->
+  (k1: U64.t) ->
+  cbor_nondet_validate_gen_t (cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+
+let cbor_nondet_parse_bounded_alloc_postcond
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: bool)
+: Tot prop
+= res == true ==> cbor_nondet_parse_bounded_postcond map_depth_bound map_length_bound v true
+
+let cbor_nondet_parse_bounded_alloc_sound
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+: Lemma
+  (cbor_nondet_validate_gen_sound
+    (cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+    (cbor_nondet_parse_bounded_alloc_postcond map_depth_bound map_length_bound)
+  )
+= cbor_nondet_parse_bounded_sound map_depth_bound map_length_bound
+
+inline_for_extraction
+let cbor_nondet_parse_bounded_sort_alloc_t
+  (#cbornondet: Type)
+  (cbor_nondet_match: perm -> cbornondet -> Spec.cbor -> slprop)
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  cbor_nondet_parse_gen_t cbor_nondet_match (cbor_nondet_parse_bounded_alloc_postcond map_depth_bound map_length_bound)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_parse_bounded_sort_alloc
+  (#cbor_nondet_t: Type0)
+  (#cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (validate: cbor_nondet_validate_bounded_sort_alloc_t)
+  (f: cbor_nondet_parse_valid_t cbor_nondet_match)
+: cbor_nondet_parse_bounded_sort_alloc_t #_ cbor_nondet_match
+=
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  cbor_nondet_parse_bounded_alloc_sound map_depth_bound map_length_bound;
+  cbor_nondet_parse_gen
+    #_ #_
+    #(cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+    #(cbor_nondet_parse_bounded_alloc_postcond map_depth_bound map_length_bound)
+    (validate map_depth_bound map_length_bound) f () input
+}
+
+inline_for_extraction
+let cbor_nondet_parse_bounded_hash_alloc_t
+  (#cbornondet: Type)
+  (cbor_nondet_match: perm -> cbornondet -> Spec.cbor -> slprop)
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (k0: U64.t) ->
+  (k1: U64.t) ->
+  cbor_nondet_parse_gen_t cbor_nondet_match (cbor_nondet_parse_bounded_alloc_postcond map_depth_bound map_length_bound)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_parse_bounded_hash_alloc
+  (#cbor_nondet_t: Type0)
+  (#cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (validate: cbor_nondet_validate_bounded_hash_alloc_t)
+  (f: cbor_nondet_parse_valid_t cbor_nondet_match)
+: cbor_nondet_parse_bounded_hash_alloc_t #_ cbor_nondet_match
+=
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (k0: U64.t)
+  (k1: U64.t)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  cbor_nondet_parse_bounded_alloc_sound map_depth_bound map_length_bound;
+  cbor_nondet_parse_gen
+    #_ #_
+    #(cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+    #(cbor_nondet_parse_bounded_alloc_postcond map_depth_bound map_length_bound)
+    (validate map_depth_bound map_length_bound k0 k1) f () input
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_bounded_sort_alloc_from_arrayptr_t
+  (#cbor_nondet_t: Type)
+  (cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  cbor_nondet_parse_from_arrayptr_gen_t cbor_nondet_match (cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_parse_bounded_sort_alloc_from_arrayptr
+  (#cbor_nondet_t: Type0)
+  (#cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (validate: cbor_nondet_validate_bounded_sort_alloc_t)
+  (f: cbor_nondet_parse_valid_t cbor_nondet_match)
+: cbor_nondet_parse_bounded_sort_alloc_from_arrayptr_t #_ cbor_nondet_match
+=
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (pinput: R.ref (AP.ptr U8.t))
+  (plen: R.ref SZ.t)
+  (dest: R.ref cbor_nondet_t)
+  (#input: Ghost.erased (AP.ptr U8.t))
+  (#len: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#vdest: Ghost.erased cbor_nondet_t)
+{
+  cbor_nondet_parse_bounded_alloc_sound map_depth_bound map_length_bound;
+  cbor_nondet_parse_from_arrayptr_gen
+    #_ #_
+    #(cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+    (validate map_depth_bound map_length_bound) f () pinput plen dest
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_bounded_hash_alloc_from_arrayptr_t
+  (#cbor_nondet_t: Type)
+  (cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+=
+  (map_depth_bound: SZ.t) ->
+  (map_length_bound: SZ.t) ->
+  (k0: U64.t) ->
+  (k1: U64.t) ->
+  cbor_nondet_parse_from_arrayptr_gen_t cbor_nondet_match (cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_parse_bounded_hash_alloc_from_arrayptr
+  (#cbor_nondet_t: Type0)
+  (#cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (validate: cbor_nondet_validate_bounded_hash_alloc_t)
+  (f: cbor_nondet_parse_valid_t cbor_nondet_match)
+: cbor_nondet_parse_bounded_hash_alloc_from_arrayptr_t #_ cbor_nondet_match
+=
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (k0: U64.t)
+  (k1: U64.t)
+  (pinput: R.ref (AP.ptr U8.t))
+  (plen: R.ref SZ.t)
+  (dest: R.ref cbor_nondet_t)
+  (#input: Ghost.erased (AP.ptr U8.t))
+  (#len: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#vdest: Ghost.erased cbor_nondet_t)
+{
+  cbor_nondet_parse_bounded_alloc_sound map_depth_bound map_length_bound;
+  cbor_nondet_parse_from_arrayptr_gen
+    #_ #_
+    #(cbor_nondet_validate_bounded_alloc_post map_depth_bound map_length_bound)
+    (validate map_depth_bound map_length_bound k0 k1) f () pinput plen dest
+}
+
 noextract [@@noextract_to "krml"]
 let cbor_nondet_serialize_postcond
   (size: nat)

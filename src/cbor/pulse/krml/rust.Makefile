@@ -16,6 +16,7 @@ CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Det.Dummy
 CUSTARD_ROOTS := $(cbor_raw_dir)/CBOR.Pulse.API.Det.Rust.fst
 else
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.Rust
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.Rust.Alloc
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.Type
 CUSTARD_ROOTS := $(cbor_raw_dir)/CBOR.Pulse.API.Nondet.Rust.fst
 endif
@@ -39,7 +40,7 @@ extract: $(DET_RUST_DIRECTORY)/cbordetver.rs
 else
 
 $(NONDET_RUST_DIRECTORY)/cbornondetver.rs: $(CUSTARD_KRML)
-	$(KRML_EXE) $(KRML_OPTS) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking -bundle 'CBOR.Pulse.API.Nondet.Rust=[rename=CBORNondetVer]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.Raw.Slice+CBOR.Pulse.API.Nondet.Type=\*[rename=CBORNondetVerAux]' -tmpdir $(NONDET_RUST_DIRECTORY) -skip-compilation $^
+	$(KRML_EXE) $(KRML_OPTS) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking -bundle 'CBOR.Pulse.API.Nondet.Rust=[rename=CBORNondetVer]' -bundle 'CBOR.Pulse.API.Nondet.Rust.Alloc=[rename=CBORNondetAlloc,rename-prefix]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.Raw.Slice+CBOR.Pulse.API.Nondet.Type=\*[rename=CBORNondetVerAux]' -tmpdir $(NONDET_RUST_DIRECTORY) -skip-compilation $^
 
 extract: $(NONDET_RUST_DIRECTORY)/cbornondetver.rs
 

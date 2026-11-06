@@ -5,7 +5,8 @@
  * both cases, the result only depends on the input and the bounds (the
  * scratch spaces must satisfy cbor_nondet_bounded_hash_scratch_ok,
  * which implies cbor_nondet_bounded_sort_scratch_ok.) This function
- * allocates nothing.
+ * allocates nothing. See also cbor_nondet_parse_bounded_hash_alloc_random
+ * below, which allocates its scratch spaces.
  *
  * Random key sources: BCryptGenRandom on Windows (link with bcrypt),
  * arc4random_buf on BSDs and macOS, getrandom on Linux (glibc >= 2.25).
@@ -72,6 +73,23 @@ static inline bool cbor_nondet_parse_bounded_hash_random(
   return cbor_nondet_parse_bounded_sort(map_depth_bound, map_length_bound,
                                         scratch, scratch_len, pinput, plen,
                                         dest);
+}
+
+/* Same as cbor_nondet_parse_bounded_hash_random, but with the scratch
+ * spaces allocated on the heap by the verified
+ * cbor_nondet_parse_bounded_{hash,sort}_alloc (which may also fail
+ * because of allocation failure.) */
+static inline bool cbor_nondet_parse_bounded_hash_alloc_random(
+    size_t map_depth_bound, size_t map_length_bound, uint8_t **pinput,
+    size_t *plen, cbor_raw *dest) {
+  uint64_t k[2];
+  if (CBOR_NONDET_HASH_RANDOM_KEY(k))
+    return cbor_nondet_parse_bounded_hash_alloc(map_depth_bound,
+                                                map_length_bound, k[0], k[1],
+                                                pinput, plen, dest);
+  return cbor_nondet_parse_bounded_sort_alloc(map_depth_bound,
+                                              map_length_bound, pinput, plen,
+                                              dest);
 }
 
 #endif

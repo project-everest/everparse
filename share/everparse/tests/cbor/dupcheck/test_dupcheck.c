@@ -8,7 +8,12 @@
  * Every call runs on heap scratch spaces of exactly the minimal size
  * (3 * N * D for sort; 3 * N * D + N and N for hash) so that
  * AddressSanitizer catches overruns; one element less must be rejected. malloc & co. are wrapped at link time and abort if called
- * during a check.
+ * during a check, except for the *_alloc variants
+ * (cbor_nondet_parse_bounded_{sort,hash}_alloc and the
+ * cbor_nondet_parse_bounded_hash_alloc_random wrapper), whose allocations
+ * are counted (exactly one malloc per scratch space, all freed), and
+ * also made to fail one by one (the check must then fail, without
+ * leaking.)
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,17 +22,33 @@
 #include "CBORNondetHashRandom.h"
 #include "gen.h"
 
+/* forbid_alloc: 0 = allowed, 1 = forbidden (abort), 2 = counted, with the
+ * fail_at-th malloc (1-based; 0 = never) failing */
 static int forbid_alloc = 0;
+static unsigned n_malloc, n_malloc_ok, n_free, fail_at;
 void *__real_malloc(size_t); void *__real_calloc(size_t, size_t);
 void *__real_realloc(void *, size_t); void __real_free(void *);
 static void trap(const char *f) {
   fprintf(stderr, "FAIL: %s called during a check\n", f);
   abort();
 }
-void *__wrap_malloc(size_t n) { if (forbid_alloc) trap("malloc"); return __real_malloc(n); }
+void *__wrap_malloc(size_t n) {
+  if (forbid_alloc == 1) trap("malloc");
+  if (forbid_alloc == 2) {
+    if (++n_malloc == fail_at) return NULL;
+    void *p = __real_malloc(n);
+    if (p) n_malloc_ok++;
+    return p;
+  }
+  return __real_malloc(n);
+}
 void *__wrap_calloc(size_t a, size_t n) { if (forbid_alloc) trap("calloc"); return __real_calloc(a, n); }
 void *__wrap_realloc(void *p, size_t n) { if (forbid_alloc) trap("realloc"); return __real_realloc(p, n); }
-void __wrap_free(void *p) { if (forbid_alloc) trap("free"); __real_free(p); }
+void __wrap_free(void *p) {
+  if (forbid_alloc == 1) trap("free");
+  if (forbid_alloc == 2 && p) n_free++;
+  __real_free(p);
+}
 
 static unsigned failures = 0;
 #define CHECK(c, ...) do { if (!(c)) { failures++; \
@@ -64,6 +85,28 @@ static size_t hashed(size_t D, size_t N, uint64_t k0, uint64_t k1, int rnd,
                                                 hs, hlen, &p, &l, &dest);
   forbid_alloc = 0;
   CHECK(r == (l < len), "inconsistent result");
+  return r ? len - l : 0;
+}
+
+/* variant: 0 = sort, 1 = hash, 2 = hash with random key. Runs the check
+ * with the fail_at-th allocation failing (0 = none), and checks that the
+ * check makes exactly 1 (sort) or 2 (hash) allocations if it succeeds,
+ * and frees everything it allocates. */
+static size_t allocd(int variant, size_t D, size_t N, uint64_t k0, uint64_t k1,
+                     unsigned fail, uint8_t *b, size_t len) {
+  uint8_t *p = b; size_t l = len; cbor_raw dest;
+  n_malloc = n_malloc_ok = n_free = 0; fail_at = fail;
+  forbid_alloc = 2;
+  bool r = variant == 0 ? cbor_nondet_parse_bounded_sort_alloc(D, N, &p, &l, &dest)
+         : variant == 1 ? cbor_nondet_parse_bounded_hash_alloc(D, N, k0, k1, &p, &l, &dest)
+         : cbor_nondet_parse_bounded_hash_alloc_random(D, N, &p, &l, &dest);
+  forbid_alloc = 0;
+  CHECK(r == (l < len), "alloc: inconsistent result");
+  CHECK(n_free == n_malloc_ok, "alloc: %u allocations, %u frees", n_malloc_ok, n_free);
+  if (r)
+    CHECK(n_malloc == (variant == 0 ? 1u : 2u), "alloc: %u allocations (variant %d)", n_malloc, variant);
+  else if (fail <= n_malloc)
+    CHECK(!r, "alloc: success despite allocation failure");
   return r ? len - l : 0;
 }
 
@@ -105,6 +148,15 @@ static size_t run(size_t D, size_t N, uint8_t *b, size_t len) {
     CHECK(hashed(D, N, 1, 2, 0, b, len, s, hslen, h, hhlen - 1) == 0, "hash hscratch - 1 accepted");
   }
   free(s); free(h);
+  for (int v = 0; v < 3; v++) {
+    for (int k = 0; k < (v == 1 ? 3 : 1); k++) {
+      size_t r3 = allocd(v, D, N, hkeys[k][0], hkeys[k][1], 0, b, len);
+      CHECK(r0 == r3, "mismatch: bounded=%zu alloc[%d,%d]=%zu (D=%zu N=%zu len=%zu)",
+            r0, v, k, r3, D, N, len);
+    }
+    for (unsigned f = 1; f <= (v == 0 ? 1u : 2u); f++)
+      CHECK(allocd(v, D, N, 1, 2, f, b, len) == 0, "alloc failure %u accepted", f);
+  }
   return r1;
 }
 
@@ -127,6 +179,16 @@ static void test_scratch_ok(void) {
   CHECK(!cbor_nondet_parse_bounded_hash(0, 0, 0, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 2");
   CHECK(!cbor_nondet_parse_bounded_hash_random(0, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 3");
   CHECK(cbor_nondet_parse_bounded_hash(0, 0, 0, 0, sc, 0, hs, 0, &p, &l, &dest), "hash D = 0 ok");
+  /* the *_alloc variants fail without allocating if the scratch size
+     overflows, and fail if the allocation fails (here, because it
+     exceeds the address space), although the input is valid */
+  for (int v = 0; v < 3; v++) {
+    CHECK(allocd(v, M, M, 1, 2, 0, b, 1) == 0 && n_malloc == 0, "alloc overflow %d", v);
+    CHECK(allocd(v, 1, M / 3, 1, 2, 0, b, 1) == 0, "alloc too big %d", v);
+    if (sizeof(size_t) == 8)
+      CHECK(allocd(v, 1, (size_t)1 << 44, 1, 2, 0, b, 1) == 0, "alloc huge %d", v);
+    CHECK(allocd(v, 1, 1, 1, 2, 0, b, 1) == 1, "alloc small %d", v);
+  }
 }
 
 static void test_cases(void) {

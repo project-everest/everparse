@@ -123,6 +123,45 @@ fn parse_bounded_hash()
 }
 
 #[test]
+fn parse_bounded_alloc()
+{
+    let input = [0xa1, 0x00, 0xa1, 0x01, 0x02, 0xff];
+    let dup = [0xa2, 0x00, 0x01, 0x00, 0x02];
+    let ok = [0xa2, 0x00, 0x01, 0x01, 0x02];
+    let dup_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x00, 0x01];
+    let ok_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x01, 0x01];
+    type Parse = Box<dyn for<'a> Fn(usize, usize, &'a [u8]) -> Option<(CborNondet<'a>, &'a [u8])>>;
+    let parsers: [Parse; 4] = [
+        Box::new(cbor_nondet_parse_bounded_sort_alloc),
+        Box::new(|d, n, i| cbor_nondet_parse_bounded_hash_alloc(d, n, 0, 0, i)),
+        Box::new(|d, n, i| cbor_nondet_parse_bounded_hash_alloc(d, n, 0x0706050403020100, 0x0f0e0d0c0b0a0908, i)),
+        Box::new(cbor_nondet_parse_bounded_hash_alloc_random),
+    ];
+    for parse in parsers.iter() {
+        let (object, rem) = parse(2, 1, &input).unwrap();
+        let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
+        assert!(cbor_nondet_get_map_length(map) == 1);
+        assert_eq!(rem, &input[5..]);
+        assert!(parse(1, 1, &input).is_none());
+        assert!(parse(2, 0, &input).is_none());
+        assert!(parse(2, 1, &input[..4]).is_none());
+        assert!(parse(0, 0, &[0x00]).is_some());
+        assert!(parse(1, 0, &[0xa0]).is_some());
+        assert!(parse(1, 2, &dup).is_none());
+        assert!(parse(1, 2, &ok).is_some());
+        assert!(parse(2, 2, &dup_map_keys).is_none());
+        assert!(parse(2, 2, &ok_map_keys).is_some());
+        // scratch size overflow
+        assert!(parse(usize::MAX, 2, &[0x00]).is_none());
+        // allocation failure (3 * 2^44 * 8 bytes exceeds the address space):
+        // fails although the input is valid and meets the bounds
+        if usize::BITS == 64 && !cfg!(miri) {
+            assert!(parse(1, 1 << 44, &[0x00]).is_none());
+        }
+    }
+}
+
+#[test]
 fn parse_map_length_bounded()
 {
     let input = [0xa1, 0x00, 0xa1, 0x01, 0x02, 0xff];

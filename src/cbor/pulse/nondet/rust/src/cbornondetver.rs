@@ -148,6 +148,255 @@ pub fn cbor_nondet_parse_bounded_hash <'a>(
     }
 }
 
+#[derive(PartialEq, Clone, Copy)]
+enum option__uint64_t
+{
+    None,
+    Some { v: u64 }
+}
+
+pub fn cbor_nondet_parse_bounded_sort_alloc <'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &'a [u8]
+) ->
+    crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    let q1: usize = map_depth_bound.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let ok: bool = q4 < 16usize;
+    let od: option__uint64_t =
+        if ok
+        { option__uint64_t::Some { v: map_depth_bound as u64 } }
+        else
+        { option__uint64_t::None };
+    let q11: usize = map_length_bound.wrapping_div(32768usize);
+    let q21: usize = q11.wrapping_div(32768usize);
+    let q31: usize = q21.wrapping_div(32768usize);
+    let q41: usize = q31.wrapping_div(32768usize);
+    let ok1: bool = q41 < 16usize;
+    let on: option__uint64_t =
+        if ok1
+        { option__uint64_t::Some { v: map_length_bound as u64 } }
+        else
+        { option__uint64_t::None };
+    let oc: option__uint64_t =
+        match od
+        {
+            option__uint64_t::None => option__uint64_t::None,
+            option__uint64_t::Some { v: d } =>
+              match on
+              {
+                  option__uint64_t::None => option__uint64_t::None,
+                  option__uint64_t::Some { v: n } =>
+                    if d > 0x5555555555555554u64
+                    { option__uint64_t::None }
+                    else
+                    {
+                        let k: u64 = 3u64.wrapping_mul(d);
+                        if k == 0u64
+                        { option__uint64_t::Some { v: 0u64 } }
+                        else if n > 0xffffffffffffffffu64.wrapping_div(k)
+                        { option__uint64_t::None }
+                        else
+                        { option__uint64_t::Some { v: n.wrapping_mul(k) } }
+                    },
+                  _ => panic!("Incomplete pattern matching")
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    let len: usize =
+        match oc
+        {
+            option__uint64_t::None => 0usize,
+            option__uint64_t::Some { v: c } =>
+              {
+                  let mut osc: crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·size_t =
+                      crate::cbornondetalloc::cbor_nondet_alloc_usize(c);
+                  match osc
+                  {
+                      crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·size_t::None => 0usize,
+                      crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·size_t::Some
+                      { v: ref mut sc }
+                      =>
+                        {
+                            let res: usize =
+                                crate::cbornondetveraux::cbor_nondet_validate_bounded_sort(
+                                    map_depth_bound,
+                                    map_length_bound,
+                                    *sc,
+                                    input
+                                );
+                            crate::cbornondetalloc::cbor_nondet_free_usize(*sc);
+                            res
+                        },
+                      _ => panic!("Incomplete pattern matching")
+                  }
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    if len == 0usize
+    {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
+    }
+    else
+    {
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
+        let inl: &[u8] = _letpattern.0;
+        let inr: &[u8] = _letpattern.1;
+        let resl: crate::cbornondetveraux::cbor_raw =
+            crate::cbornondetveraux::cbor_nondet_parse_valid(inl, len);
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+        { v: (resl,inr) }
+    }
+}
+
+pub fn cbor_nondet_parse_bounded_hash_alloc <'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    k0: u64,
+    k1: u64,
+    input: &'a [u8]
+) ->
+    crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+    <'a>
+{
+    let q1: usize = map_depth_bound.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let ok: bool = q4 < 16usize;
+    let od: option__uint64_t =
+        if ok
+        { option__uint64_t::Some { v: map_depth_bound as u64 } }
+        else
+        { option__uint64_t::None };
+    let q11: usize = map_length_bound.wrapping_div(32768usize);
+    let q21: usize = q11.wrapping_div(32768usize);
+    let q31: usize = q21.wrapping_div(32768usize);
+    let q41: usize = q31.wrapping_div(32768usize);
+    let ok1: bool = q41 < 16usize;
+    let on: option__uint64_t =
+        if ok1
+        { option__uint64_t::Some { v: map_length_bound as u64 } }
+        else
+        { option__uint64_t::None };
+    let oc: option__uint64_t =
+        match od
+        {
+            option__uint64_t::None => option__uint64_t::None,
+            option__uint64_t::Some { v: d } =>
+              match on
+              {
+                  option__uint64_t::None => option__uint64_t::None,
+                  option__uint64_t::Some { v: n } =>
+                    if d > 0x5555555555555554u64
+                    { option__uint64_t::None }
+                    else
+                    {
+                        let k: u64 = 3u64.wrapping_mul(d).wrapping_add(1u64);
+                        if k == 0u64
+                        { option__uint64_t::Some { v: 0u64 } }
+                        else if n > 0xffffffffffffffffu64.wrapping_div(k)
+                        { option__uint64_t::None }
+                        else
+                        { option__uint64_t::Some { v: n.wrapping_mul(k) } }
+                    },
+                  _ => panic!("Incomplete pattern matching")
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    let q12: usize = map_length_bound.wrapping_div(32768usize);
+    let q22: usize = q12.wrapping_div(32768usize);
+    let q32: usize = q22.wrapping_div(32768usize);
+    let q42: usize = q32.wrapping_div(32768usize);
+    let ok2: bool = q42 < 16usize;
+    let ohc: option__uint64_t =
+        if ok2
+        { option__uint64_t::Some { v: map_length_bound as u64 } }
+        else
+        { option__uint64_t::None };
+    let len: usize =
+        match oc
+        {
+            option__uint64_t::None => 0usize,
+            option__uint64_t::Some { v: c } =>
+              match ohc
+              {
+                  option__uint64_t::None => 0usize,
+                  option__uint64_t::Some { v: hc } =>
+                    {
+                        let mut osc: crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·size_t =
+                            crate::cbornondetalloc::cbor_nondet_alloc_usize(c);
+                        match osc
+                        {
+                            crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·size_t::None =>
+                              0usize,
+                            crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·size_t::Some
+                            { v: ref mut sc }
+                            =>
+                              {
+                                  let
+                                  mut
+                                  ohsc:
+                                  crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·uint64_t
+                                  =
+                                      crate::cbornondetalloc::cbor_nondet_alloc_u64(hc);
+                                  match ohsc
+                                  {
+                                      crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·uint64_t::None
+                                      =>
+                                        {
+                                            crate::cbornondetalloc::cbor_nondet_free_usize(*sc);
+                                            0usize
+                                        },
+                                      crate::cbornondetalloc::option__Pulse_Lib_Slice_slice·uint64_t::Some
+                                      { v: ref mut hsc }
+                                      =>
+                                        {
+                                            let res: usize =
+                                                crate::cbornondetveraux::cbor_nondet_validate_bounded_hash(
+                                                    map_depth_bound,
+                                                    map_length_bound,
+                                                    k0,
+                                                    k1,
+                                                    *sc,
+                                                    *hsc,
+                                                    input
+                                                );
+                                            crate::cbornondetalloc::cbor_nondet_free_u64(*hsc);
+                                            crate::cbornondetalloc::cbor_nondet_free_usize(*sc);
+                                            res
+                                        },
+                                      _ => panic!("Incomplete pattern matching")
+                                  }
+                              },
+                            _ => panic!("Incomplete pattern matching")
+                        }
+                    },
+                  _ => panic!("Incomplete pattern matching")
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    if len == 0usize
+    {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
+    }
+    else
+    {
+        let _letpattern: (&[u8], &[u8]) = input.split_at(len);
+        let inl: &[u8] = _letpattern.0;
+        let inr: &[u8] = _letpattern.1;
+        let resl: crate::cbornondetveraux::cbor_raw =
+            crate::cbornondetveraux::cbor_nondet_parse_valid(inl, len);
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+        { v: (resl,inr) }
+    }
+}
+
 pub fn cbor_nondet_size(x: crate::cbornondetveraux::cbor_raw, bound: usize) -> usize
 { crate::cbornondetveraux::cbor_nondet_size(x, bound) }
 

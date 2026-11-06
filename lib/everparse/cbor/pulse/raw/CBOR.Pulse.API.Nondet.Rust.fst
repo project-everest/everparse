@@ -68,6 +68,18 @@ let cbor_nondet_parse_bounded_hash_aux : Base.cbor_nondet_parse_bounded_hash_t c
 
 let cbor_nondet_parse_bounded_hash () map_depth_bound map_length_bound k0 k1 scratch hash_scratch input #pm #v #s #hs = cbor_nondet_parse_bounded_hash_aux map_depth_bound map_length_bound k0 k1 scratch hash_scratch input #pm #v #s #hs
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_bounded_sort_alloc_aux : Base.cbor_nondet_parse_bounded_sort_alloc_t cbor_nondet_match =
+  Base.cbor_nondet_parse_bounded_sort_alloc (CBOR.Pulse.Raw.Nondet.Alloc.cbor_nondet_validate_bounded_sort_alloc_rust (Nondet.cbor_nondet_validate_bounded_sort ())) (Nondet.cbor_nondet_parse_valid ())
+
+let cbor_nondet_parse_bounded_sort_alloc () map_depth_bound map_length_bound input #pm #v = cbor_nondet_parse_bounded_sort_alloc_aux map_depth_bound map_length_bound input #pm #v
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_bounded_hash_alloc_aux : Base.cbor_nondet_parse_bounded_hash_alloc_t cbor_nondet_match =
+  Base.cbor_nondet_parse_bounded_hash_alloc (CBOR.Pulse.Raw.Nondet.Alloc.cbor_nondet_validate_bounded_hash_alloc_rust (Nondet.cbor_nondet_validate_bounded_hash ())) (Nondet.cbor_nondet_parse_valid ())
+
+let cbor_nondet_parse_bounded_hash_alloc () map_depth_bound map_length_bound k0 k1 input #pm #v = cbor_nondet_parse_bounded_hash_alloc_aux map_depth_bound map_length_bound k0 k1 input #pm #v
+
 let cbor_nondet_match_with_size = Nondet.cbor_nondet_match_with_size
 
 let cbor_nondet_match_with_size_intro = Nondet.cbor_nondet_match_with_size_intro

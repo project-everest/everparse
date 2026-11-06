@@ -7,7 +7,8 @@
 //! minus floating-point values, fully
 //! formally verified for functional correctness and absence of panics
 //! related to breach of abstraction, buffer overruns or arithmetic
-//! overflow/underflow. This module never allocates into the heap.
+//! overflow/underflow. This module never allocates into the heap, except
+//! for the `*_alloc` functions, which allocate their scratch space.
 
 /* FIXME: `cbornondet` to be defined as abstract in cbornondetveraux
  * already. I cannot abstract it here since `cbor_nondet_mk_tagged`,
@@ -235,6 +236,53 @@ pub fn cbor_nondet_parse_bounded_hash_random<'a>(
 {
     let (k0, k1) = cbor_nondet_random_hash_key();
     cbor_nondet_parse_bounded_hash(map_depth_bound, map_length_bound, k0, k1, scratch, hash_scratch, input)
+}
+
+/// Same specification as [`cbor_nondet_parse_bounded_sort`], but the
+/// scratch space is allocated on the heap once (with
+/// `Vec::try_reserve_exact`, through a small trusted allocator
+/// interface), and freed before returning. Besides invalid input,
+/// this function may also return `None` if the scratch space size
+/// overflows or cannot be allocated. Allocation failure does not abort.
+pub fn cbor_nondet_parse_bounded_sort_alloc<'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    match crate::cbornondetver::cbor_nondet_parse_bounded_sort_alloc(map_depth_bound, map_length_bound, input) {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    }
+}
+
+/// Same specification as [`cbor_nondet_parse_bounded_hash`], but both
+/// scratch spaces are allocated on the heap once, and freed before
+/// returning (see [`cbor_nondet_parse_bounded_sort_alloc`].)
+pub fn cbor_nondet_parse_bounded_hash_alloc<'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    k0: u64,
+    k1: u64,
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    match crate::cbornondetver::cbor_nondet_parse_bounded_hash_alloc(map_depth_bound, map_length_bound, k0, k1, input) {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    }
+}
+
+/// Same as [`cbor_nondet_parse_bounded_hash_alloc`], with a fresh
+/// random key from [`cbor_nondet_random_hash_key`].
+pub fn cbor_nondet_parse_bounded_hash_alloc_random<'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    let (k0, k1) = cbor_nondet_random_hash_key();
+    cbor_nondet_parse_bounded_hash_alloc(map_depth_bound, map_length_bound, k0, k1, input)
 }
 
 /// Computes the byte size of the binary representation of the

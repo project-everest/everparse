@@ -74,6 +74,20 @@ val cbor_nondet_bounded_hash_scratch_ok
    contents of both scratch spaces are unspecified upon return. *)
 val cbor_nondet_parse_bounded_hash (_: unit) : Base.cbor_nondet_parse_bounded_hash_t cbor_nondet_match
 
+(* Like cbor_nondet_parse_bounded_sort, but the scratch space is
+   allocated on the heap (through the trusted
+   CBOR.Pulse.API.Nondet.Rust.Alloc, implemented with
+   Vec::try_reserve_exact) once per call, and freed before returning.
+   Parsing may also fail because the scratch space size overflows or
+   its allocation fails, so only success is specified: if parsing
+   succeeds, then the CBOR object meets both bounds. *)
+val cbor_nondet_parse_bounded_sort_alloc (_: unit) : Base.cbor_nondet_parse_bounded_sort_alloc_t cbor_nondet_match
+
+(* Like cbor_nondet_parse_bounded_hash, but both scratch spaces are
+   allocated on the heap once per call, and freed before returning (see
+   cbor_nondet_parse_bounded_sort_alloc.) *)
+val cbor_nondet_parse_bounded_hash_alloc (_: unit) : Base.cbor_nondet_parse_bounded_hash_alloc_t cbor_nondet_match
+
 val cbor_nondet_match_with_size
   (size: nat)
   (p: perm)

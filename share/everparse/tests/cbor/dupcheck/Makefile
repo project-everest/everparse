@@ -1,10 +1,12 @@
 # Tests and benchmarks of the verified duplicate map key checks of the
 # EverCBOR nondet API (cbor_nondet_parse_bounded_sort,
 # cbor_nondet_parse_bounded_hash and the hand-written
-# cbor_nondet_parse_bounded_hash_random wrapper), against the verified
+# cbor_nondet_parse_bounded_hash_random wrapper, and their *_alloc
+# variants allocating their scratch space), against the verified
 # reference cbor_nondet_parse_bounded.
 #
-#   make test        differential tests, no-malloc check
+#   make test        differential tests, no-malloc check (allocation
+#                    counting and failure injection for the *_alloc variants)
 #   make test-asan   same, with -fsanitize=address,undefined
 #   make bench       benchmarks -> bench.csv
 
@@ -35,7 +37,7 @@ test: out/test_dupcheck.exe
 
 test-asan:
 	$(MAKE) clean
-	$(MAKE) test OPT="-O1 -g" EXTRA="-fsanitize=address,undefined -fno-sanitize-recover=all"
+	ASAN_OPTIONS=allocator_may_return_null=1 $(MAKE) test OPT="-O1 -g" EXTRA="-fsanitize=address,undefined -fno-sanitize-recover=all"
 	$(MAKE) clean
 
 bench: out/bench_dupcheck.exe

@@ -3,7 +3,7 @@
 This directory tests and benchmarks the three verified duplicate map key checks
 of the EverCBOR non-deterministic API. All three accept exactly the same inputs
 (well-formed CBOR, no duplicate map keys at any depth, map depth ≤ D, map length ≤ N),
-and none of them allocates.
+and none of them allocates (except the `*_alloc` variants below).
 
 | variant | entry point | scratch provided by the caller | key comparisons |
 |---|---|---|---|
@@ -17,6 +17,24 @@ Additional entry points:
 - The hash variant has unverified random-key wrappers:
   - C: `cbor_nondet_parse_bounded_hash_random` in `include/everparse/CBORNondetHashRandom.h`. It uses BCryptGenRandom, arc4random_buf or getrandom, and falls back to sort if the RNG fails.
   - Rust: `cbor_nondet_parse_bounded_hash_random`, keyed from `std`'s `RandomState`.
+
+- Allocating variants: `cbor_nondet_parse_bounded_{sort,hash}_alloc(D, N, …)` (C and Rust) take no scratch.
+  They allocate each scratch space once, with exactly the sizes above, call the
+  verified sort/hash validator, and free the scratch before returning.
+  - The wrappers are verified (`CBOR.Pulse.Raw.Nondet.Alloc`). The size
+    arithmetic is overflow-checked in `uint64_t`.
+  - Only the allocator is trusted: `CBOR.Pulse.API.Nondet.{C,Rust}.Alloc.fsti`.
+    - C: `include/everparse/CBORNondetAlloc.h`, `malloc`/`free` with a checked
+      byte-size multiplication. Define `CBOR_NONDET_CUSTOM_ALLOC` to supply
+      your own.
+    - Rust: `cbornondetallocimpl.rs`, `Vec::try_reserve_exact` + `Box::leak`,
+      freed via `Box::from_raw` on a raw pointer.
+  - Failure is weakly specified: only success is specified (the input then
+    meets the bounds and has no duplicates). `false`/`None` may also mean that
+    the size overflowed or the allocation failed. The trusted allocator spec
+    lets the scratch contents be uninitialized.
+  - Random-key versions: `cbor_nondet_parse_bounded_hash_alloc_random`. In C it
+    falls back to `cbor_nondet_parse_bounded_sort_alloc` if the RNG fails.
 
 Hash correctness does not depend on the key: equal hashes are always confirmed
 by a full comparison. The key only protects the running time against inputs
@@ -32,8 +50,13 @@ crafted to collide.
 plus hand-written cases. The hash variant is tested with three keys,
 including the SipHash test vector key and a random key, and through the
 random wrapper. It also checks rejection at scratch size − 1 and NULL
-scratch handling. Rust tests are in `src/cbor/pulse/nondet/rust/tests/example.rs`
-(`cargo test`).
+scratch handling. The `*_alloc` variants are checked against the reference, and
+their mallocs are counted: exactly one per scratch space on success, all freed.
+Each allocation is also made to fail in turn; the result must then be a
+rejection, with no leak. The tests also cover size overflow and huge
+allocations. Rust tests are in `src/cbor/pulse/nondet/rust/tests/example.rs`
+(`cargo test`; the allocating variants also pass Miri, with both Stacked
+and Tree Borrows.)
 
 ## Benchmark setup
 

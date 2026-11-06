@@ -108,6 +108,26 @@ cbor_nondet_parse_bounded_hash(
   cbor_raw *dest
 );
 
+bool
+cbor_nondet_parse_bounded_sort_alloc(
+  size_t map_depth_bound,
+  size_t map_length_bound,
+  uint8_t **pinput,
+  size_t *plen,
+  cbor_raw *dest
+);
+
+bool
+cbor_nondet_parse_bounded_hash_alloc(
+  size_t map_depth_bound,
+  size_t map_length_bound,
+  uint64_t k0,
+  uint64_t k1,
+  uint8_t **pinput,
+  size_t *plen,
+  cbor_raw *dest
+);
+
 size_t cbor_nondet_size(cbor_raw x, size_t bound);
 
 size_t cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len);
