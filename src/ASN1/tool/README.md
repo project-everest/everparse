@@ -189,7 +189,8 @@ and BIT STRINGs, DEFINED-BY keys of other types, EXTERNAL, EMBEDDED PDV,
 and KEEP-BYTES under IMPLICIT tags and on components. `tests/Features2.asn`
 (with `tests/Features2Base.asn`) and `tests/features2_test.c` cover value
 notations, BOOLEAN constraints, WITH COMPONENTS, parameterized types,
-information object classes and constraint set operations.
+information object classes (also in nested SEQUENCE types), constraint set
+operations, value sets, contained subtypes and extensible constraints.
 
 ### ANY DEFINED BY tables: `--#DEFINED-BY`
 
@@ -267,8 +268,9 @@ Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension {{Exts}}
   extension marker). Object set parameters (`{ EXTENSION : ExtSet }`) and
   class parameters (`{ ALG-TYPE, ALG-TYPE : AlgSet }`) of parameterized
   types are supported.
-* In a SEQUENCE type assignment (or an instance of a parameterized
-  SEQUENCE), a component `C.&T ({Set}{@key})`, possibly under tags, `SET
+* In a SEQUENCE type (a type assignment, an instance of a parameterized
+  SEQUENCE, or a nested SEQUENCE type, which is then generated as a new
+  type), a component `C.&T ({Set}{@key})`, possibly under tags, `SET
   OF` / `SEQUENCE OF` or `OCTET STRING (CONTAINING ...)`, whose key
   component is `C.&id ({Set})`, generates a DEFINED-BY table: each object
   of `Set` gives a case (its `&id` value), where the component has the
@@ -277,13 +279,18 @@ Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension {{Exts}}
   declared component (`C.&T` is ANY); otherwise, they are rejected. A
   `--#DEFINED-BY` directive on the same type takes precedence (with a
   warning).
+* The key `@key` may be written as an absolute (`@a.b.key`, from the type
+  assignment) or relative (`@.key`, from the innermost SEQUENCE, SET or
+  CHOICE; `@..key` from the one enclosing it, ...) component reference,
+  but must designate a component of the same SEQUENCE as the dependent
+  component.
 * Everywhere else, `C.&T` is ANY, `C.&id` has the type of the field, and
   the simple table constraints `({Set})` are ignored: in particular, a key
   component is not checked against the set by itself (only through its
   dependent component, if the set is not extensible).
 * Not supported: several `{@key}` constraints in a SEQUENCE, `{@key}` in
-  nested SEQUENCE, SET or CHOICE types, relative (`@.key`) and nested
-  (`@a.b`) component references, and value sets (`Name Type ::= { ... }`).
+  SET or CHOICE types, keys in another SEQUENCE than the dependent
+  component (e.g. in an enclosing one), and keys of several components.
   The settings of value fields other than the key (e.g. `&Critical`) are
   not checked.
 
@@ -349,9 +356,14 @@ Supported:
   parentheses) and serial constraints (`T (C1) (C2)`, also on a reference
   to a constrained type) are evaluated by the front end; a result that is
   not a single range is expanded into its values (at most 256, see
-  `--max_int_union`). SIZE constraints on OCTET STRING and character
-  strings, with open bounds and set operations whose result is a single
-  range. SIZE counts characters:
+  `--max_int_union`). Contained subtypes (`INCLUDES T`, or `T`) are
+  replaced with the (value or SIZE) constraints of `T`. Value sets
+  (`Name INTEGER ::= { 1 | 3..5 }`) are constrained types, and may be
+  used as such or as contained subtypes. Extensible constraints (`(C,
+  ...)`, `(C, ..., D)`, also within SIZE) do not restrict the values that
+  a DER decoder accepts (X.680 49.4), so they are ignored. SIZE
+  constraints on OCTET STRING and character strings, with open bounds and
+  set operations whose result is a single range. SIZE counts characters:
   octets for OCTET STRING and the ISO 2022 based strings (TeletexString,
   VideotexString, GraphicString, GeneralString, ObjectDescriptor), code
   points for UTF8String, BMPString and UniversalString. SIZE bounds must
@@ -380,11 +392,13 @@ Supported:
 Not supported (rejected with an error message):
 
 * `ENCODED BY`.
-* Extension markers (`...`) in types and constraints, and `EXTENSIBILITY
-  IMPLIED`.
+* Extension markers (`...`) in types, and `EXTENSIBILITY IMPLIED`.
 * SIZE constraints that are not a single range, combinations of SIZE and
-  value constraints, and permitted alphabet (`FROM`), `PATTERN` and
-  contained subtype (`INCLUDES`) constraints.
+  value constraints, and permitted alphabet (`FROM`) and `PATTERN`
+  constraints. Contained subtypes of tagged types, constrained `SEQUENCE
+  OF` / `SET OF` types, or types with constraints other than value and
+  SIZE constraints. Value sets of types other than INTEGER and BOOLEAN
+  (their values are parsed as constraint bounds).
 * ANY as a CHOICE alternative.
 * Recursive types.
 * RELATIVE-OID values.

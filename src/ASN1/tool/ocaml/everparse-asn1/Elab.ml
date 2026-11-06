@@ -488,7 +488,7 @@ let rec norm_constr env (c: constr) : constr =
   | CInter l -> CInter (List.map (norm_constr env) l)
   | CExcept (a, b) -> CExcept (norm_constr env a, norm_constr env b)
   | CAll a -> CAll (norm_constr env a)
-  | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> c
+  | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ | CIncludes _ -> c
 
 (* A union of INTEGER ranges and values, as sorted disjoint intervals
    (None: unbounded) *)
@@ -628,7 +628,56 @@ let rec value_constr = function
   | CSize c | CAll c -> value_constr c
   | CUnion l | CInter l -> List.for_all value_constr l
   | CExcept (a, b) -> value_constr a && value_constr b
+  | CIncludes _ -> true
   | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> false
+
+(* The constraint of a contained subtype INCLUDES T (X.680 51.3): the
+   constraints of T (None: T is not constrained, all the values) *)
+let rec includes_constr env ctx depth (t: typ) : constr option =
+  if depth > 100 then error "%s: circular INCLUDES" ctx;
+  match t with
+  | TRef r ->
+    (match Hashtbl.find_opt env.types (mangle r) with
+     | Some t' -> includes_constr env ctx (depth + 1) t'
+     | None -> error "%s: INCLUDES %s: unknown type" ctx r)
+  | TConstrained (t', c) ->
+    if not (value_constr c) then error "%s: INCLUDES of a type with a constraint other than a value or SIZE constraint" ctx;
+    let c = expand_includes env ctx (depth + 1) c in
+    (match includes_constr env ctx (depth + 1) t', c with
+     | None, c -> c
+     | c', None -> c'
+     | Some c', Some c -> Some (CInter [c'; c]))
+  | TTagged _ -> error "%s: INCLUDES of a tagged type is not supported" ctx
+  | TSequenceOf (Some _, _) | TSetOf (Some _, _) -> error "%s: INCLUDES of a constrained SEQUENCE OF / SET OF is not supported" ctx
+  | _ -> None
+
+(* Replace the contained subtypes of c with their constraints (None: all
+   the values of the parent type) *)
+and expand_includes env ctx depth (c: constr) : constr option =
+  let go = expand_includes env ctx depth in
+  let empty () = error "%s: the constraint admits no value" ctx in
+  match c with
+  | CIncludes t -> includes_constr env ctx depth t
+  | CSize k -> Option.map (fun k -> CSize k) (go k)
+  | CUnion l ->
+    let l = List.map go l in
+    if List.mem None l then None else Some (CUnion (List.filter_map Fun.id l))
+  | CInter l ->
+    (match List.filter_map go l with [] -> None | [k] -> Some k | l -> Some (CInter l))
+  | CExcept (a, b) ->
+    (match go a, go b with
+     | _, None -> empty ()
+     | None, Some b -> Some (CAll b)
+     | Some a, Some b -> Some (CExcept (a, b)))
+  | CAll a -> (match go a with None -> empty () | Some a -> Some (CAll a))
+  | CRange _ | CSingle _ | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> Some c
+
+let rec has_includes = function
+  | CIncludes _ -> true
+  | CSize c | CAll c -> has_includes c
+  | CUnion l | CInter l -> List.exists has_includes l
+  | CExcept (a, b) -> has_includes a || has_includes b
+  | CRange _ | CSingle _ | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _ -> false
 
 (* The KEEP-BYTES definition whose bytes the values of `r` keep, if any *)
 let rec keep_target env (r: string) : string option =
@@ -859,6 +908,10 @@ and node env (ctx: string) (t: typ) : node =
       end
     | _ -> NILC ({ cls; num; cons = true }, CPrefixed inner)  (* X.680 31.2.7 *)
     end
+  | TConstrained (t', c) when has_includes c ->
+    (match expand_includes env ctx 0 c with
+     | Some c -> node env ctx (TConstrained (t', c))
+     | None -> node env ctx t')
   | TConstrained (TConstrained (t'', c1), c2) when value_constr c1 && value_constr c2 ->
     (* serial constraints: their intersection *)
     node env ctx (TConstrained (t'', CInter [c1; c2]))
@@ -921,7 +974,7 @@ and node env (ctx: string) (t: typ) : node =
           NILC (id, CTerm (small_integer_term, Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
         end
       | CSize _ | CContaining _ | CWithComponent _ | CWithComponents _ | CTable _
-      | CInter _ | CExcept _ | CAll _ -> error "%s: unsupported constraint on INTEGER" ctx
+      | CInter _ | CExcept _ | CAll _ | CIncludes _ -> error "%s: unsupported constraint on INTEGER" ctx
       end
     | Some (id, CTerm ({ tk = "ASN1_BOOLEAN"; _ } as tm, None)), CSingle bs ->
       let vs = List.sort_uniq compare (List.map (function
@@ -1166,7 +1219,7 @@ let rec refs (t: typ) : string list =
 
 and constr_refs (c: constr) : string list =
   match c with
-  | CContaining t -> refs t
+  | CContaining t | CIncludes t -> refs t
   | CSize c | CWithComponent c -> constr_refs c
   | CUnion l | CInter l -> List.concat_map constr_refs l
   | CExcept (a, b) -> constr_refs a @ constr_refs b
@@ -1236,6 +1289,7 @@ let expand_params (ms: modul list) : modul list =
     | CExcept (a, b) -> CExcept (constr depth a, constr depth b)
     | CAll a -> CAll (constr depth a)
     | CContaining t -> CContaining (typ depth t)
+    | CIncludes t -> CIncludes (typ depth t)
     | CWithComponent c -> CWithComponent (constr depth c)
     | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, c, pr) -> (n, Option.map (constr depth) c, pr)) l)
     | CRange _ | CSingle _ | CTable _ -> c
@@ -1303,6 +1357,7 @@ let expand_params (ms: modul list) : modul list =
       | CExcept (x, y) -> CExcept (c x, c y)
       | CAll x -> CAll (c x)
       | CContaining t -> CContaining (go t)
+      | CIncludes t -> CIncludes (go t)
       | CWithComponent k -> CWithComponent (c k)
       | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, k, pr) -> (n, Option.map c k, pr)) l)
       | CTable (o, k) -> CTable (set o, k)
@@ -1484,6 +1539,7 @@ let resolve_ioc (ms: modul list) : modul list =
     | CExcept (a, b) -> CExcept (strip_c a, strip_c b)
     | CAll a -> CAll (strip_c a)
     | CContaining t -> CContaining (strip t)
+    | CIncludes t -> CIncludes (strip t)
     | CWithComponent c -> CWithComponent (strip_c c)
     | CWithComponents (p, l) -> CWithComponents (p, List.map (fun (n, c, pr) -> (n, Option.map strip_c c, pr)) l)
     | CRange _ | CSingle _ | CTable _ -> c
@@ -1560,6 +1616,87 @@ let resolve_ioc (ms: modul list) : modul list =
                db_fallback = (if ext then FbDeclared else FbNone); db_line = 0 }
       end
   in
+  (* Resolve the component references {@key} against the position of
+     their dependent component, and lift the nested SEQUENCE types with
+     table constraints into new type assignments, so that every key is a
+     component of the SEQUENCE type assignment of its dependent component *)
+  let rec rekey f (t: typ) : typ =
+    match t with
+    | TConstrained ((TField _ as x), CTable (set, Some k)) -> TConstrained (x, CTable (set, Some (f k)))
+    | TConstrained (t, CContaining t') -> TConstrained (rekey f t, CContaining (rekey f t'))
+    | TConstrained (t, c) -> TConstrained (rekey f t, c)
+    | TTagged (c, n, m, t) -> TTagged (c, n, m, rekey f t)
+    | TSequenceOf (c, t) -> TSequenceOf (c, rekey f t)
+    | TSetOf (c, t) -> TSetOf (c, rekey f t)
+    | _ -> t
+  in
+  let names = Hashtbl.create 17 in
+  List.iter (function TypeAssign (n, _) | TypeTemplate (n, _, _) -> Hashtbl.replace names n () | _ -> ()) all;
+  let lift_module (m: modul) : modul =
+    let lifted = ref [] in
+    (* path: the components (through SEQUENCE, SET and CHOICE types) from
+       the type assignment to t; "" for the elements of SEQUENCE OF / SET OF *)
+    let rec lift aname ctx path ~top (t: typ) : typ =
+      match t with
+      | TSequence cs ->
+        let keyed_here = ref false in
+        let cs = List.map (function
+            | Field (f, ft, d) ->
+              let ft = lift aname (ctx ^ "_" ^ f) (path @ [f]) ~top:false ft in
+              let ft = rekey (fun k ->
+                  keyed_here := true;
+                  let where = Printf.sprintf "%s.%s ({@%s})" ctx f k in
+                  let n = String.length k in
+                  let i = ref 0 in
+                  while !i < n && k.[!i] = '.' do incr i done;
+                  let ks = String.split_on_char '.' (String.sub k !i (n - !i)) in
+                  let target =
+                    if !i = 0 then ks
+                    else begin
+                      let len = List.length path in
+                      if !i - 1 > len then error "%s: no such enclosing type" where;
+                      List.filteri (fun j _ -> j < len - (!i - 1)) path @ ks
+                    end
+                  in
+                  match List.rev target with
+                  | k' :: rest when List.rev rest = path -> k'
+                  | _ -> error "%s: the key must be a component of the SEQUENCE of the dependent component" where)
+                  ft
+              in
+              Field (f, ft, d)
+            | ComponentsOf t -> ComponentsOf t) cs
+        in
+        if !keyed_here && not top then begin
+          let n = if ctx = aname then aname ^ "_seq" else ctx in
+          if Hashtbl.mem names n then error "%s: cannot name the nested SEQUENCE type with a table constraint" n;
+          Hashtbl.replace names n ();
+          lifted := TypeAssign (n, TSequence cs) :: !lifted;
+          TRef n
+        end else TSequence cs
+      | TSet cs ->
+        TSet (List.map (function
+            | Field (f, ft, d) -> Field (f, lift aname (ctx ^ "_" ^ f) (path @ [f]) ~top:false ft, d)
+            | c -> c) cs)
+      | TChoice alts -> TChoice (List.map (fun (a, at) -> (a, lift aname (ctx ^ "_" ^ a) (path @ [a]) ~top:false at)) alts)
+      | TSequenceOf (c, e) -> TSequenceOf (c, lift aname (ctx ^ "_elt") (path @ [""]) ~top:false e)
+      | TSetOf (c, e) -> TSetOf (c, lift aname (ctx ^ "_elt") (path @ [""]) ~top:false e)
+      | TTagged (c, n, md, t) -> TTagged (c, n, md, lift aname ctx path ~top:false t)
+      | TConstrained (t, CContaining t') ->
+        TConstrained (lift aname ctx path ~top:false t, CContaining (lift aname (ctx ^ "_contents") path ~top:false t'))
+      | TConstrained (t, c) -> TConstrained (lift aname ctx path ~top:false t, c)
+      | _ -> t
+    in
+    let assignments = List.concat_map (function
+        | TypeAssign (n, t) ->
+          let t = lift n n [] ~top:true t in
+          let l = List.rev !lifted in
+          lifted := [];
+          l @ [TypeAssign (n, t)]
+        | a -> [a]) m.assignments
+    in
+    { m with assignments }
+  in
+  let ms = List.map lift_module ms in
   List.map (fun (m: modul) ->
       let dbs = ref [] in
       let assignments = List.filter_map (function

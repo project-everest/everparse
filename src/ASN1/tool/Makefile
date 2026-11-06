@@ -59,7 +59,7 @@ test-features: $(OUT)/features_test.exe
 # types (imported), information object classes and table constraints,
 # constraint set operations and serial constraints
 $(OUT)/features2/Features2.c: tests/Features2.asn tests/Features2Base.asn $(TOOL)
-	$(TOOL) --odir $(OUT)/features2 --root Vals,Derived,PRec,AlgId,Exts,Attr,Alg tests/Features2.asn tests/Features2Base.asn
+	$(TOOL) --odir $(OUT)/features2 --root Vals,Derived,PRec,AlgId,Exts,Attr,Alg,More,Outer tests/Features2.asn tests/Features2Base.asn
 
 $(OUT)/features2_test.exe: $(OUT)/features2/Features2.c tests/features2_test.c
 	$(CC) $(TEST_CFLAGS) -I $(OUT)/features2 -o $@ $^

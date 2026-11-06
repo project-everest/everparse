@@ -182,14 +182,16 @@ let bound st = match peek st with
 
 (* The contents of ( ... ): SIZE (c), a union of ranges lo..hi (with lo<
    or <hi for an excluded endpoint) and values v1 | v2 | ..., CONTAINING T,
-   or WITH COMPONENT(S) *)
-let rec constr_body st =
+   or WITH COMPONENT(S). None: an extensible constraint, which does not
+   restrict the values that a DER decoder accepts (X.680 49.4), or a
+   constraint that contains one *)
+let rec constr_body st : constr option =
   match peek st with
   | ID "CONTAINING" ->
     advance st;
     let t = typ st in
     if peek st = ID "ENCODED" then fail st "ENCODED BY is not supported";
-    CContaining t
+    Some (CContaining t)
   | ID "WITH" ->
     advance st;
     if kw st "COMPONENTS" then begin
@@ -202,7 +204,7 @@ let rec constr_body st =
       let rec items acc =
         if peek st = RBRACE then (advance st; List.rev acc) else begin
           let n = lower_ident st in
-          let c = if peek st = LPAREN then Some (constr st) else None in
+          let c = if peek st = LPAREN then constr st else None in
           let p =
             if kw st "PRESENT" then Some PPresent
             else if kw st "ABSENT" then Some PAbsent
@@ -213,12 +215,11 @@ let rec constr_body st =
           if peek st = COMMA then (advance st; items acc) else (expect st RBRACE; List.rev acc)
         end
       in
-      CWithComponents (partial, items [])
+      Some (CWithComponents (partial, items []))
     end else begin
       expect_kw st "COMPONENT";
-      CWithComponent (constr st)
+      Option.map (fun c -> CWithComponent c) (constr st)
     end
-  | ELLIPSIS -> fail st "extensible constraints are not supported"
   | LBRACE ->
     (* a table constraint {Set} or {Set}{@key} *)
     let set = obj_set st in
@@ -226,19 +227,40 @@ let rec constr_body st =
       if peek st = LBRACE then begin
         advance st;
         expect st AT;
-        if peek st = DOT then fail st "relative component references (@.c) are not supported";
-        let k = lower_ident st in
-        if peek st = DOT then fail st "component references of nested components (@a.b) are not supported";
+        (* @a.b (absolute) or @.a, @..a (relative): kept as text, and
+           resolved by Elab.resolve_ioc *)
+        let rec dots acc = match peek st with
+          | DOT -> advance st; dots (acc ^ ".")
+          | DOTDOT -> advance st; dots (acc ^ "..")
+          | ELLIPSIS -> advance st; dots (acc ^ "...")
+          | _ -> acc
+        in
+        let rel = dots "" in
+        let rec path acc =
+          let acc = acc ^ lower_ident st in
+          if peek st = DOT then (advance st; path (acc ^ ".")) else acc
+        in
+        let k = rel ^ path "" in
         if peek st = COMMA then fail st "table constraints with several keys are not supported";
         expect st RBRACE;
         Some k
       end else None
     in
-    CTable (set, key)
-  | _ ->
+    Some (CTable (set, key))
+  | _ -> ext_element_set st
+
+(* An element set with an optional extension marker and additions *)
+and ext_element_set st : constr option =
+  let ext () =
+    expect st ELLIPSIS;
+    if peek st = COMMA then (advance st; ignore (element_set st));
+    None
+  in
+  if peek st = ELLIPSIS then ext ()
+  else begin
     let c = element_set st in
-    if peek st = COMMA then fail st "extensible constraints are not supported";
-    c
+    if peek st = COMMA then (advance st; ext ()) else Some c
+  end
 
 (* X.680 50: ALL EXCEPT e | e1 UNION e2 ^ e3 EXCEPT e4 ..., with the
    precedence EXCEPT > INTERSECTION > UNION *)
@@ -265,8 +287,18 @@ and intersections st =
 and elements st =
   match peek st with
   | LPAREN -> advance st; let c = element_set st in expect st RPAREN; c
-  | ID "SIZE" -> advance st; expect st LPAREN; let c = element_set st in expect st RPAREN; CSize c
-  | ID ("FROM" | "PATTERN" | "INCLUDES" as k) -> fail st "%s constraints are not supported" k
+  | ID "SIZE" ->
+    advance st; expect st LPAREN;
+    let c = ext_element_set st in
+    expect st RPAREN;
+    (* an extensible SIZE constraint: any size *)
+    CSize (match c with Some c -> c | None -> CRange (Val 0, Max))
+  | ID ("FROM" | "PATTERN" as k) -> fail st "%s constraints are not supported" k
+  | ID "INCLUDES" -> advance st; CIncludes (typ st)
+  | ID s when is_upper s && not (List.mem s ["MIN"; "MAX"; "TRUE"; "FALSE"; "ALL"])
+              && not (List.mem s builtin_type_words) && peek2 st <> DOT ->
+    (* a contained subtype without INCLUDES, or a value set reference *)
+    advance st; CIncludes (TRef s)
   | ID ("CONTAINING" | "WITH") | LBRACE -> fail st "this constraint is not supported in a set operation"
   | _ ->
     let lo = bound st in
@@ -285,7 +317,7 @@ and constr st = expect st LPAREN; let c = constr_body st in expect st RPAREN; c
 and typ st =
   let t = base_typ st in
   let rec post t =
-    if peek st = LPAREN then post (TConstrained (t, constr st)) else t
+    if peek st = LPAREN then post (match constr st with Some c -> TConstrained (t, c) | None -> t) else t
   in post t
 
 and base_typ st =
@@ -354,8 +386,8 @@ and base_typ st =
       | LBRACE -> let cs = components st in if set then TSet cs else TSequence cs
       | _ ->
         let c =
-          if peek st = ID "SIZE" then (advance st; Some (CSize (constr st)))
-          else if peek st = LPAREN then Some (constr st)
+          if peek st = ID "SIZE" then (advance st; Option.map (fun c -> CSize c) (constr st))
+          else if peek st = LPAREN then constr st
           else None
         in
         expect_kw st "OF";
@@ -580,11 +612,19 @@ let assignment st =
       let ps = params st in
       expect st ASSIGN; TypeTemplate (n, ps, typ st)
     end else match peek st with
-      | ID c when peek2 st = ASSIGN ->
+      | ID c when peek2 st = ASSIGN && is_class_name c && not (List.mem c builtin_type_words) ->
         (* Name CLASS ::= { ... }: an object set *)
         advance st; advance st;
-        if not (is_class_name c) || List.mem c builtin_type_words then fail st "value sets are not supported";
         ObjectSetAssign (n, c, obj_set st)
+      | t when t <> ASSIGN ->
+        (* Name Type ::= { ... }: a value set, i.e. the type constrained
+           by the element set (X.680 16.7) *)
+        let t = typ st in
+        expect st ASSIGN;
+        expect st LBRACE;
+        let c = ext_element_set st in
+        expect st RBRACE;
+        TypeAssign (n, match c with Some c -> TConstrained (t, c) | None -> t)
       | _ ->
         expect st ASSIGN;
         match peek st, peek2 st with

@@ -1,7 +1,9 @@
 /* Validation through the C API that everparse-asn1 generates for
    Features2.asn: BOOLEAN constraints and DEFAULT values given by value
    notations, WITH COMPONENTS, parameterized types, information object
-   classes with table constraints, and constraint set operations. */
+   classes with table constraints (also in nested SEQUENCE types),
+   constraint set operations, value sets, contained subtypes and
+   extensible constraints. */
 #include "Features2.h"
 #include <stdio.h>
 #include <string.h>
@@ -20,6 +22,8 @@ DEF_VALIDATE(AlgId)
 DEF_VALIDATE(Exts)
 DEF_VALIDATE(Attr)
 DEF_VALIDATE(Alg)
+DEF_VALIDATE(More)
+DEF_VALIDATE(Outer)
 
 #define EXPECT(ok, T, name, ...) do { \
     const uint8_t in_[] = { __VA_ARGS__ }; \
@@ -97,6 +101,34 @@ int main(void) {
   REJECT(Alg, "s ab", 0x30, 0x0f, ALG_I(50), 0x16, 0x02, 0x61, 0x62, ALG_L, ALG_B(0xff));
   REJECT(Alg, "l empty", 0x30, 0x0e, ALG_I(50), ALG_S3, 0x30, 0x00, ALG_B(0xff));
   REJECT(Alg, "b FALSE", 0x30, 0x10, ALG_I(50), ALG_S3, ALG_L, ALG_B(0x00));
+
+  /* a Small {1 | 3..5}; b (INCLUDES Small EXCEPT 4); c (Small | 10);
+     d Odd and e (0..10, ...): extensible, any INTEGER; f IA5String
+     (INCLUDES Short) (SIZE (2..MAX)): 2..4 characters; g (SIZE (1..2, ...)) */
+#define MORE(a, b, c, d) 0x02, 0x01, a, 0x02, 0x01, b, 0x02, 0x01, c, 0x02, 0x01, d, 0x02, 0x01, 0x64
+#define MORE_FG 0x16, 0x02, 0x61, 0x62, 0x04, 0x03, 0x01, 0x02, 0x03
+  ACCEPT(More, "3 5 10 2 100 ab 3 bytes", 0x30, 0x18, MORE(3, 5, 10, 2), MORE_FG);
+  ACCEPT(More, "a 4, c 1", 0x30, 0x18, MORE(4, 5, 1, 2), MORE_FG);
+  REJECT(More, "a 2", 0x30, 0x18, MORE(2, 5, 10, 2), MORE_FG);
+  REJECT(More, "b 4", 0x30, 0x18, MORE(3, 4, 10, 2), MORE_FG);
+  REJECT(More, "c 9", 0x30, 0x18, MORE(3, 5, 9, 2), MORE_FG);
+  REJECT(More, "f a", 0x30, 0x17, MORE(3, 5, 10, 2), 0x16, 0x01, 0x61, 0x04, 0x03, 0x01, 0x02, 0x03);
+  REJECT(More, "f abcde", 0x30, 0x1b, MORE(3, 5, 10, 2), 0x16, 0x05, 0x61, 0x62, 0x63, 0x64, 0x65, 0x04, 0x03, 0x01, 0x02, 0x03);
+  ACCEPT(More, "g empty", 0x30, 0x15, MORE(3, 5, 10, 2), 0x16, 0x02, 0x61, 0x62, 0x04, 0x00);
+
+  /* inner: {@inner.type}; list: SEQUENCE OF with {@.type} */
+#define OUTER_INNER(id, ...) 0x30, 0x07, 0x06, 0x02, 0x2a, id, __VA_ARGS__
+#define OUTER_LIST(id, ...) 0x30, 0x09, 0x30, 0x07, 0x06, 0x02, 0x2a, id, __VA_ARGS__
+  ACCEPT(Outer, "a UTF8String, c INTEGER", 0x30, 0x17, 0x02, 0x01, 0x00,
+         OUTER_INNER(0x03, 0x0c, 0x01, 0x41), OUTER_LIST(0x05, 0x02, 0x01, 0x07));
+  ACCEPT(Outer, "c INTEGER, c INTEGER", 0x30, 0x17, 0x02, 0x01, 0x00,
+         OUTER_INNER(0x05, 0x02, 0x01, 0x41), OUTER_LIST(0x05, 0x02, 0x01, 0x07));
+  REJECT(Outer, "inner a INTEGER", 0x30, 0x17, 0x02, 0x01, 0x00,
+         OUTER_INNER(0x03, 0x02, 0x01, 0x41), OUTER_LIST(0x05, 0x02, 0x01, 0x07));
+  REJECT(Outer, "list c UTF8String", 0x30, 0x17, 0x02, 0x01, 0x00,
+         OUTER_INNER(0x03, 0x0c, 0x01, 0x41), OUTER_LIST(0x05, 0x0c, 0x01, 0x41));
+  REJECT(Outer, "list b (not in the set)", 0x30, 0x17, 0x02, 0x01, 0x00,
+         OUTER_INNER(0x03, 0x0c, 0x01, 0x41), OUTER_LIST(0x04, 0x02, 0x01, 0x07));
 
   if (fails) { printf("%d failures\n", fails); return 1; }
   printf("features2: all tests passed\n");

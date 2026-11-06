@@ -56,7 +56,9 @@ type constr =
                                        (* WITH COMPONENTS { [..., ] name [(c)] [PRESENT|ABSENT|OPTIONAL], ... }:
                                           partial?, component constraints (X.680 51.8) *)
 
-  | CTable of obj_set * string option  (* ({Set}) or ({Set}{@key}): a table constraint (X.682 10) *)
+  | CTable of obj_set * string option  (* ({Set}) or ({Set}{@key}): a table constraint (X.682 10); the key
+                                          as written: a, a.b (absolute), .a, ..a (relative) *)
+  | CIncludes of typ                   (* INCLUDES T, or T: a contained subtype (X.680 51.3) *)
 
 and presence = PPresent | PAbsent | POptional
 
