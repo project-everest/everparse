@@ -6785,9 +6785,9 @@ CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
     uint8_t mt = CBOR_Spec_Raw_EverParse_get_header_major_type(h);
     if (mt == CBOR_MAJOR_TYPE_MAP)
     {
-      CBOR_Spec_Raw_Base_raw_uint64 ite;
+      CBOR_Spec_Raw_Base_raw_uint64 ite0;
       if (h._2.tag == CBOR_Spec_Raw_EverParse_LongArgumentU8)
-        ite =
+        ite0 =
           (
             (CBOR_Spec_Raw_Base_raw_uint64){
               .size = 1U,
@@ -6795,7 +6795,7 @@ CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
             }
           );
       else if (h._2.tag == CBOR_Spec_Raw_EverParse_LongArgumentU16)
-        ite =
+        ite0 =
           (
             (CBOR_Spec_Raw_Base_raw_uint64){
               .size = 2U,
@@ -6803,7 +6803,7 @@ CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
             }
           );
       else if (h._2.tag == CBOR_Spec_Raw_EverParse_LongArgumentU32)
-        ite =
+        ite0 =
           (
             (CBOR_Spec_Raw_Base_raw_uint64){
               .size = 3U,
@@ -6811,9 +6811,9 @@ CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
             }
           );
       else if (h._2.tag == CBOR_Spec_Raw_EverParse_LongArgumentU64)
-        ite = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = h._2.case_LongArgumentU64 });
+        ite0 = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = h._2.case_LongArgumentU64 });
       else if (h._2.tag == CBOR_Spec_Raw_EverParse_LongArgumentOther)
-        ite =
+        ite0 =
           (
             (CBOR_Spec_Raw_Base_raw_uint64){
               .size = 0U,
@@ -6821,23 +6821,42 @@ CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
             }
           );
       else
-        ite =
+        ite0 =
           KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
             "unreachable (pattern matches are exhaustive in F*)");
-      size_t k = (size_t)ite.value;
-      if (!CBOR_Pulse_Raw_EverParse_DupCheck_check_items(b, sc, oh, (size_t)2U * k, pout))
-        pres = false;
-      else
+      size_t k = (size_t)ite0.value;
+      FStar_Pervasives_Native_tuple2__Pulse_Lib_Slice_slice__size_t_Pulse_Lib_Slice_slice__size_t
+      scrut0 = Pulse_Lib_Slice_split__size_t(sc, k);
+      Pulse_Lib_Slice_slice__size_t ks = scrut0._1;
+      FStar_Pervasives_Native_tuple2__Pulse_Lib_Slice_slice__size_t_Pulse_Lib_Slice_slice__size_t
+      scrut = Pulse_Lib_Slice_split__size_t(scrut0._2, k);
+      Pulse_Lib_Slice_slice__size_t tmp = scrut._1;
+      Pulse_Lib_Slice_slice__size_t rest = scrut._2;
+      size_t pi = (size_t)0U;
+      size_t pe = oh;
+      bool pr = true;
+      while (true)
       {
-        size_t o_ = *pout;
-        FStar_Pervasives_Native_tuple2__Pulse_Lib_Slice_slice__size_t_Pulse_Lib_Slice_slice__size_t
-        scrut0 = Pulse_Lib_Slice_split__size_t(sc, k);
-        Pulse_Lib_Slice_slice__size_t ks = scrut0._1;
-        FStar_Pervasives_Native_tuple2__Pulse_Lib_Slice_slice__size_t_Pulse_Lib_Slice_slice__size_t
-        scrut = Pulse_Lib_Slice_split__size_t(scrut0._2, k);
-        Pulse_Lib_Slice_slice__size_t tmp = scrut._1;
-        Pulse_Lib_Slice_slice__size_t rest = scrut._2;
-        CBOR_Pulse_Raw_EverParse_DupCheck_fill_offsets(b, ks, oh);
+        size_t i = pi;
+        if (!(pr && i < k))
+          break;
+        size_t i0 = pi;
+        size_t e = pe;
+        if (CBOR_Pulse_Raw_EverParse_DupCheck_check_items(b, rest, e, (size_t)2U, pout))
+        {
+          size_t o_ = *pout;
+          Pulse_Lib_Slice_op_Array_Assignment__size_t(ks, i0, e);
+          pi = i0 + (size_t)1U;
+          pe = o_;
+        }
+        else
+          pr = false;
+      }
+      size_t e = pe;
+      bool ite;
+      if (pr)
+      {
+        *pout = e;
         size_t n = Pulse_Lib_Slice_len__size_t(ks);
         size_t pw = (size_t)1U;
         bool pok = true;
@@ -6926,14 +6945,17 @@ CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
             pok = false;
         }
         bool ok = pok;
-        if (ok ? ok : ok)
-        {
-          po = o_;
-          pc = c - (size_t)1U;
-        }
-        else
-          pres = false;
+        ite = ok ? ok : ok;
       }
+      else
+        ite = false;
+      if (ite)
+      {
+        po = *pout;
+        pc = c - (size_t)1U;
+      }
+      else
+        pres = false;
     }
     else
     {

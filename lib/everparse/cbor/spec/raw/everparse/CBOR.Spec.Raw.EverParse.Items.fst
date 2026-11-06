@@ -197,3 +197,39 @@ let items_at_cons (b: bytes) (o: nat) (n: pos) (l: list raw_data_item) : Lemma
   end
 
 #pop-options
+
+#push-options "--z3rlimit 64"
+
+(* The size of an item is the size of its header and leaf content plus
+   the size of its children *)
+
+let items_at_cons_size (b: bytes) (o: nat) (n: pos) (l: list raw_data_item) : Lemma
+  (requires items_at b o n l)
+  (ensures (
+    match parse parse_raw_data_item (Seq.slice b o (Seq.length b)) with
+    | None -> False
+    | Some (_, ca) ->
+      match parse parse_header (Seq.slice b o (Seq.length b)) with
+      | None -> False
+      | Some (h, c1) ->
+        o + c1 + leaf_size h <= Seq.length b /\
+        (match parse (parse_nlist (remaining_data_items_header h) parse_raw_data_item) (Seq.slice b (o + c1 + leaf_size h) (Seq.length b)) with
+         | None -> False
+         | Some (_, c3) -> (ca <: nat) == c1 + leaf_size h + c3)
+  ))
+= let sb = Seq.slice b o (Seq.length b) in
+  items_at_hd b o n l;
+  items_at_cons_aux b o n l;
+  items_at_cons b o n l;
+  let Some (_, ca) = parse parse_raw_data_item sb in
+  let Some (lf, cl) = parse parse_leaf sb in
+  parse_dtuple2_eq parse_header parse_leaf_content sb;
+  let Some (h, c1) = parse parse_header sb in
+  let sb1 = Seq.slice sb c1 (Seq.length sb) in
+  parse_leaf_content_size h sb1;
+  let Some (lc, c2) = parse (parse_leaf_content h) sb1 in
+  assert (cl == c1 + c2);
+  slice_slice b o cl;
+  assert (remaining_data_items lf == remaining_data_items_header h)
+
+#pop-options

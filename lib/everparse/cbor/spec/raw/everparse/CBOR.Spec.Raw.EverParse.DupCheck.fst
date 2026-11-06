@@ -1088,3 +1088,176 @@ let map_layout (b: bytes) (o1: nat) (c: pos) (a: raw_data_item) (q: list raw_dat
   assert (r == 2 * List.Tot.length (Map?.v a));
   assert (o1 + leaf_size (get_raw_data_item_header a) == o1);
   assert (List.Tot.append (children a) q == List.Tot.append (list_of_pair_list (Map?.v a)) q)
+
+(* The end offset of a list of consecutive items, so that the walker
+   can record the offsets of map entries while walking them, without
+   jumping over them a second time *)
+
+let rec items_end (b: bytes) (o: nat) (n: nat) : Tot nat (decreases n) =
+  if n = 0 then o else items_end b (item_end b o) (n - 1)
+
+let rec items_end_add (b: bytes) (o: nat) (n1 n2: nat) : Lemma
+  (ensures items_end b o (n1 + n2) == items_end b (items_end b o n1) n2)
+  (decreases n1)
+= if n1 = 0 then () else items_end_add b (item_end b o) (n1 - 1) n2
+
+#push-options "--fuel 3"
+let items_end_2 (b: bytes) (o: nat) : Lemma
+  (items_end b o 2 == item_end b (item_end b o))
+= ()
+#pop-options
+
+let rec items_end_parse (b: bytes) (o: nat) (n m: nat) (l: list raw_data_item) : Lemma
+  (requires items_at b o (n + m) l)
+  (ensures (match parse (parse_nlist n parse_raw_data_item) (Seq.slice b o (Seq.length b)) with
+    | Some (_, c) -> o + c == items_end b o n
+    | None -> False))
+  (decreases n)
+= let sb = Seq.slice b o (Seq.length b) in
+  parse_nlist_eq n parse_raw_data_item sb;
+  if n = 0 then ()
+  else begin
+    items_at_hd b o (n + m) l;
+    item_at_eq b o;
+    let Some (_, c) = parse parse_raw_data_item sb in
+    slice_slice b o c;
+    items_end_parse b (o + c) (n - 1) m (List.Tot.tl l)
+  end
+
+#push-options "--z3rlimit 64"
+
+let items_end_header (b: bytes) (o: nat) (n: pos) (m: nat) (l: list raw_data_item) (h: header) (oh: nat) : Lemma
+  (requires
+    items_at b o (n + m) l /\
+    (match parse parse_header (Seq.slice b o (Seq.length b)) with
+     | Some (h', c) -> h' == h /\ oh == o + c
+     | None -> False)
+  )
+  (ensures
+    oh + leaf_size h <= Seq.length b /\
+    items_end b o n == items_end b (oh + leaf_size h) (remaining_data_items_header h + (n - 1)))
+= items_at_cons_size b o (n + m) l;
+  items_at_cons b o (n + m) l;
+  let k = remaining_data_items_header h in
+  let o1 = oh + leaf_size h in
+  items_end_parse b o1 k (n - 1 + m) (List.Tot.append (children (List.Tot.hd l)) (List.Tot.tl l));
+  item_at_eq b o;
+  items_end_add b o1 k (n - 1)
+
+#pop-options
+
+(* The loop over the entries of a map, recording their offsets while
+   checking them *)
+
+let ment_inv
+  (b: bytes) (s: Seq.seq SZ.t) (i o oh: nat)
+  (v: list (raw_data_item & raw_data_item)) (m: nat) (q: list raw_data_item) (res: bool)
+: prop
+= Seq.length s == List.Tot.length v /\
+  i <= List.Tot.length v /\
+  (res == true ==> (
+    fill_inv b s i o v m q /\
+    o == items_end b oh (2 * i) /\
+    check_dups (list_of_pair_list v) == check_dups (list_of_pair_list (ldrop i v)))) /\
+  (res == false ==> check_dups (list_of_pair_list v) == false)
+
+let ment_init
+  (b: bytes) (s: Seq.seq SZ.t) (oh: nat)
+  (v: list (raw_data_item & raw_data_item)) (m: nat) (q: list raw_data_item)
+: Lemma
+  (requires
+    Seq.length s == List.Tot.length v /\
+    items_at b oh (2 * List.Tot.length v + m) (List.Tot.append (list_of_pair_list v) q))
+  (ensures ment_inv b s 0 oh oh v m q true)
+= fill_inv_init b s oh v m q
+
+let lopl_ldrop_cons (v: list (raw_data_item & raw_data_item)) (i: nat) : Lemma
+  (requires i < List.Tot.length v)
+  (ensures
+    list_of_pair_list (ldrop i v) ==
+      fst (List.Tot.index v i) :: snd (List.Tot.index v i) :: list_of_pair_list (ldrop (i + 1) v))
+= ldrop_cons i v
+
+#push-options "--z3rlimit 64"
+
+let ment_pre
+  (b: bytes) (n f: nat) (s: Seq.seq SZ.t) (i o oh: nat)
+  (v: list (raw_data_item & raw_data_item)) (m: nat) (q: list raw_data_item)
+: Lemma
+  (requires
+    ment_inv b s i o oh v m q true /\
+    i < List.Tot.length v /\
+    List.Tot.for_all (item_bnd n f) (list_of_pair_list v))
+  (ensures (
+    let e = List.Tot.index v i in
+    let l = [fst e; snd e] in
+    List.Tot.length l == 2 /\
+    List.Tot.for_all (item_bnd n f) l /\
+    List.Tot.length (ldrop (i + 1) v) == List.Tot.length v - (i + 1) /\
+    items_at b o (2 + (2 * (List.Tot.length v - (i + 1)) + m))
+      (List.Tot.append l (List.Tot.append (list_of_pair_list (ldrop (i + 1) v)) q))))
+= let e = List.Tot.index v i in
+  lopl_ldrop_cons v i;
+  ldrop_length i v;
+  ldrop_length (i + 1) v;
+  for_all_lopl_index (item_bnd n f) v i;
+  List.Tot.append_assoc [fst e; snd e] (list_of_pair_list (ldrop (i + 1) v)) q
+
+let check_dups_pair (x y: raw_data_item) (l: list raw_data_item) : Lemma
+  (check_dups (x :: y :: l) == (check_dups (List.Tot.append [x; y] []) && check_dups l))
+= check_dups_correct (x :: y :: l);
+  check_dups_correct [x; y];
+  check_dups_correct l
+
+let ment_step_ok
+  (b: bytes) (s: Seq.seq SZ.t) (i: nat) (x: SZ.t) (o' oh: nat)
+  (v: list (raw_data_item & raw_data_item)) (m: nat) (q: list raw_data_item)
+: Lemma
+  (requires (
+    i < List.Tot.length v /\ (
+    let e = List.Tot.index v i in
+    ment_inv b s i (SZ.v x) oh v m q true /\
+    o' == items_end b (SZ.v x) 2 /\
+    check_dups (List.Tot.append [fst e; snd e] []) == true)))
+  (ensures ment_inv b (Seq.upd s i x) (i + 1) o' oh v m q true)
+= let e = List.Tot.index v i in
+  fill_inv_step b s i x v m q;
+  items_end_2 b (SZ.v x);
+  items_end_add b oh (2 * i) 2;
+  assert (o' == items_end b oh (2 * (i + 1)));
+  lopl_ldrop_cons v i;
+  check_dups_pair (fst e) (snd e) (list_of_pair_list (ldrop (i + 1) v));
+  assert (check_dups (list_of_pair_list v) == check_dups (list_of_pair_list (ldrop (i + 1) v)));
+  assert (fill_inv b (Seq.upd s i x) (i + 1) o' v m q)
+
+let ment_step_fail
+  (b: bytes) (s: Seq.seq SZ.t) (i o oh: nat)
+  (v: list (raw_data_item & raw_data_item)) (m: nat) (q: list raw_data_item)
+: Lemma
+  (requires (
+    i < List.Tot.length v /\ (
+    let e = List.Tot.index v i in
+    ment_inv b s i o oh v m q true /\
+    check_dups (List.Tot.append [fst e; snd e] []) == false)))
+  (ensures ment_inv b s i o oh v m q false)
+= let e = List.Tot.index v i in
+  lopl_ldrop_cons v i;
+  check_dups_pair (fst e) (snd e) (list_of_pair_list (ldrop (i + 1) v))
+
+let ment_end
+  (b: bytes) (s: Seq.seq SZ.t) (o oh: nat)
+  (v: list (raw_data_item & raw_data_item)) (m: nat) (q: list raw_data_item)
+: Lemma
+  (requires ment_inv b s (List.Tot.length v) o oh v m q true)
+  (ensures
+    Seq.length s == List.Tot.length v /\
+    offsets_match b s (Seq.length s) v /\
+    (forall (j: nat) . j < Seq.length s ==> entry_struct b (Seq.index s j)) /\
+    items_at b o m q /\
+    o == items_end b oh (2 * List.Tot.length v) /\
+    check_dups (list_of_pair_list v) == true)
+= fill_inv_end b s o v m q;
+  ldrop_length (List.Tot.length v) v;
+  assert (ldrop (List.Tot.length v) v == [])
+
+#pop-options

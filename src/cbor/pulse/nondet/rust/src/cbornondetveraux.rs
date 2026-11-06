@@ -5935,119 +5935,142 @@ pub(crate) fn check_items(b: &[u8], sc: &mut [usize], o0: usize, c0: usize, pout
                 }.value
                 as
                 usize;
-            let res1: bool = check_items(b, sc, oh, 2usize.wrapping_mul(k), pout);
-            if ! res1
-            { (&mut pres)[0usize] = false }
-            else
+            let _letpattern1: (&mut [usize], &mut [usize]) = sc.split_at_mut(k);
+            let ks: &mut [usize] = _letpattern1.0;
+            let r1: &mut [usize] = _letpattern1.1;
+            let _letpattern2: (&mut [usize], &mut [usize]) = r1.split_at_mut(k);
+            let tmp: &mut [usize] = _letpattern2.0;
+            let rest: &mut [usize] = _letpattern2.1;
+            let mut pi: [usize; 1] = [0usize; 1usize];
+            let mut pe: [usize; 1] = [oh; 1usize];
+            let mut pr: [bool; 1] = [true; 1usize];
+            while
+            true
             {
-                let o·: usize = pout[0usize];
-                let _letpattern1: (&mut [usize], &mut [usize]) = sc.split_at_mut(k);
-                let ks: &mut [usize] = _letpattern1.0;
-                let r1: &mut [usize] = _letpattern1.1;
-                let _letpattern2: (&mut [usize], &mut [usize]) = r1.split_at_mut(k);
-                let tmp: &mut [usize] = _letpattern2.0;
-                let rest: &mut [usize] = _letpattern2.1;
-                let _o·: usize = fill_offsets(b, ks, oh);
-                crate::lowstar::ignore::ignore::<usize>(_o·);
-                let n: usize = ks.len();
-                let mut pw: [usize; 1] = [1usize; 1usize];
-                let mut pok: [bool; 1] = [true; 1usize];
-                let mut pdone: [bool; 1] = [n <= 1usize; 1usize];
-                while
-                true
+                let r0: bool = (&pr)[0usize];
+                let i: usize = (&pi)[0usize];
+                if ! (r0 && i < k) { break };
+                let i0: usize = (&pi)[0usize];
+                let e: usize = (&pe)[0usize];
+                let ok: bool = check_items(b, rest, e, 2usize, pout);
+                if ok
                 {
-                    let ok: bool = (&pok)[0usize];
-                    let done: bool = (&pdone)[0usize];
-                    if ! (ok && ! done) { break };
-                    let w: usize = (&pw)[0usize];
-                    let n1: usize = ks.len();
-                    let mut plo: [usize; 1] = [0usize; 1usize];
-                    let mut pok1: [bool; 1] = [true; 1usize];
+                    let o·: usize = pout[0usize];
+                    ks[i0] = e;
+                    (&mut pi)[0usize] = i0.wrapping_add(1usize);
+                    (&mut pe)[0usize] = o·
+                }
+                else
+                { (&mut pr)[0usize] = false }
+            };
+            let r0: bool = (&pr)[0usize];
+            let e: usize = (&pe)[0usize];
+            let ok: bool =
+                if r0
+                {
+                    pout[0usize] = e;
+                    let n: usize = ks.len();
+                    let mut pw: [usize; 1] = [1usize; 1usize];
+                    let mut pok: [bool; 1] = [true; 1usize];
+                    let mut pdone: [bool; 1] = [n <= 1usize; 1usize];
                     while
                     true
                     {
-                        let ok0: bool = (&pok1)[0usize];
-                        let lo: usize = (&plo)[0usize];
-                        if ! (ok0 && lo < n1) { break };
-                        let lo0: usize = (&plo)[0usize];
-                        let mid: usize =
-                            if w <= n1.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n1 };
-                        let hi: usize =
-                            if w <= n1.wrapping_sub(mid) { mid.wrapping_add(w) } else { n1 };
-                        let mut pi1: [usize; 1] = [lo0; 1usize];
-                        let mut pi2: [usize; 1] = [mid; 1usize];
-                        let mut pk: [usize; 1] = [lo0; 1usize];
-                        let mut pok2: [bool; 1] = [true; 1usize];
+                        let ok: bool = (&pok)[0usize];
+                        let done: bool = (&pdone)[0usize];
+                        if ! (ok && ! done) { break };
+                        let w: usize = (&pw)[0usize];
+                        let n1: usize = ks.len();
+                        let mut plo: [usize; 1] = [0usize; 1usize];
+                        let mut pok1: [bool; 1] = [true; 1usize];
                         while
                         true
                         {
-                            let ok1: bool = (&pok2)[0usize];
-                            let i1: usize = (&pi1)[0usize];
-                            let i2: usize = (&pi2)[0usize];
-                            if ! (ok1 && (i1 != mid || i2 != hi)) { break };
-                            let i10: usize = (&pi1)[0usize];
-                            let i20: usize = (&pi2)[0usize];
-                            let k1: usize = (&pk)[0usize];
-                            if i10 == mid
+                            let ok0: bool = (&pok1)[0usize];
+                            let lo: usize = (&plo)[0usize];
+                            if ! (ok0 && lo < n1) { break };
+                            let lo0: usize = (&plo)[0usize];
+                            let mid: usize =
+                                if w <= n1.wrapping_sub(lo0) { lo0.wrapping_add(w) } else { n1 };
+                            let hi: usize =
+                                if w <= n1.wrapping_sub(mid) { mid.wrapping_add(w) } else { n1 };
+                            let mut pi1: [usize; 1] = [lo0; 1usize];
+                            let mut pi2: [usize; 1] = [mid; 1usize];
+                            let mut pk: [usize; 1] = [lo0; 1usize];
+                            let mut pok2: [bool; 1] = [true; 1usize];
+                            while
+                            true
                             {
-                                let x: usize = ks[i20];
-                                tmp[k1] = x;
-                                (&mut pi2)[0usize] = i20.wrapping_add(1usize);
-                                (&mut pk)[0usize] = k1.wrapping_add(1usize)
-                            }
-                            else if i20 == hi
-                            {
-                                let x: usize = ks[i10];
-                                tmp[k1] = x;
-                                (&mut pi1)[0usize] = i10.wrapping_add(1usize);
-                                (&mut pk)[0usize] = k1.wrapping_add(1usize)
-                            }
-                            else
-                            {
-                                let x1: usize = ks[i10];
-                                let x2: usize = ks[i20];
-                                let c10: i16 = cmp_one(b, rest, x1, x2);
-                                if c10 == 0i16
-                                { (&mut pok2)[0usize] = false }
-                                else if c10 < 0i16
+                                let ok1: bool = (&pok2)[0usize];
+                                let i1: usize = (&pi1)[0usize];
+                                let i2: usize = (&pi2)[0usize];
+                                if ! (ok1 && (i1 != mid || i2 != hi)) { break };
+                                let i10: usize = (&pi1)[0usize];
+                                let i20: usize = (&pi2)[0usize];
+                                let k1: usize = (&pk)[0usize];
+                                if i10 == mid
                                 {
-                                    tmp[k1] = x1;
+                                    let x: usize = ks[i20];
+                                    tmp[k1] = x;
+                                    (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                    (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                }
+                                else if i20 == hi
+                                {
+                                    let x: usize = ks[i10];
+                                    tmp[k1] = x;
                                     (&mut pi1)[0usize] = i10.wrapping_add(1usize);
                                     (&mut pk)[0usize] = k1.wrapping_add(1usize)
                                 }
                                 else
                                 {
-                                    tmp[k1] = x2;
-                                    (&mut pi2)[0usize] = i20.wrapping_add(1usize);
-                                    (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                    let x1: usize = ks[i10];
+                                    let x2: usize = ks[i20];
+                                    let c10: i16 = cmp_one(b, rest, x1, x2);
+                                    if c10 == 0i16
+                                    { (&mut pok2)[0usize] = false }
+                                    else if c10 < 0i16
+                                    {
+                                        tmp[k1] = x1;
+                                        (&mut pi1)[0usize] = i10.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                    }
+                                    else
+                                    {
+                                        tmp[k1] = x2;
+                                        (&mut pi2)[0usize] = i20.wrapping_add(1usize);
+                                        (&mut pk)[0usize] = k1.wrapping_add(1usize)
+                                    }
                                 }
-                            }
+                            };
+                            let res: bool = (&pok2)[0usize];
+                            if res { (&mut plo)[0usize] = hi } else { (&mut pok1)[0usize] = false }
                         };
-                        let res: bool = (&pok2)[0usize];
-                        if res { (&mut plo)[0usize] = hi } else { (&mut pok1)[0usize] = false }
-                    };
-                    let res: bool = (&pok1)[0usize];
-                    if res
-                    {
-                        ks.copy_from_slice(tmp);
-                        if n.wrapping_sub(w) <= w
-                        { (&mut pdone)[0usize] = true }
+                        let res: bool = (&pok1)[0usize];
+                        if res
+                        {
+                            ks.copy_from_slice(tmp);
+                            if n.wrapping_sub(w) <= w
+                            { (&mut pdone)[0usize] = true }
+                            else
+                            { (&mut pw)[0usize] = w.wrapping_add(w) }
+                        }
                         else
-                        { (&mut pw)[0usize] = w.wrapping_add(w) }
-                    }
-                    else
-                    { (&mut pok)[0usize] = false }
-                };
-                let ok: bool = (&pok)[0usize];
-                let ok1: bool = if ok { ok } else { ok };
-                if ok1
-                {
-                    (&mut po)[0usize] = o·;
-                    (&mut pc)[0usize] = c1.wrapping_sub(1usize)
+                        { (&mut pok)[0usize] = false }
+                    };
+                    let ok: bool = (&pok)[0usize];
+                    if ok { ok } else { ok }
                 }
                 else
-                { (&mut pres)[0usize] = false }
+                { false };
+            if ok
+            {
+                let o·: usize = pout[0usize];
+                (&mut po)[0usize] = o·;
+                (&mut pc)[0usize] = c1.wrapping_sub(1usize)
             }
+            else
+            { (&mut pres)[0usize] = false }
         }
         else
         {
