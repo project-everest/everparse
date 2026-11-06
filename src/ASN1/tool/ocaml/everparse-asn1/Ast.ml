@@ -37,6 +37,12 @@ type constr =
   | CSingle of bound list              (* v1 | v2 | ... *)
   | CUnion of constr list              (* unions of ranges and values: CRange or CSingle *)
   | CContaining of typ                 (* CONTAINING T (X.682 11) *)
+  | CWithComponent of constr           (* WITH COMPONENT (c): on the elements of a SEQUENCE OF / SET OF *)
+  | CWithComponents of bool * (string * constr option * presence option) list
+                                       (* WITH COMPONENTS { [..., ] name [(c)] [PRESENT|ABSENT|OPTIONAL], ... }:
+                                          partial?, component constraints (X.680 51.8) *)
+
+and presence = PPresent | PAbsent | POptional
 
 and typ =
   | TBuiltin of string                 (* BOOLEAN, NULL, OCTET STRING, ... *)

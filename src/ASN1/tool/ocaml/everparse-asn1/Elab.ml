@@ -485,7 +485,7 @@ let rec norm_constr env (c: constr) : constr =
     CRange (lo, hi)
   | CSingle l -> CSingle (List.map b l)
   | CUnion l -> CUnion (List.map (norm_constr env) l)
-  | CContaining _ -> c
+  | CContaining _ | CWithComponent _ | CWithComponents _ -> c
 
 (* A union of INTEGER ranges and values, as sorted disjoint intervals
    (None: unbounded) *)
@@ -584,6 +584,13 @@ let rec elab_def env (name: string) : unit =
 
 and elab_named env name t =
   if Hashtbl.mem env.state name then error "name clash: %s is defined twice (hoisted anonymous types are named <Type>_<component>)" name;
+  (* T ::= U (WITH COMPONENTS ...): T is the rewritten structure itself *)
+  let t, td = match t with
+    | TConstrained (t', ((CWithComponent _ | CWithComponents _) as c)) -> with_inner env name t' c
+    | _ -> t, env.td
+  in
+  let saved = env.td in
+  env.td <- td;
   Hashtbl.replace env.state name false;
   let d = match t, Hashtbl.find_opt env.dbs name with
     | TSequence cs, Some db -> DAdb (adb env name cs db)
@@ -593,9 +600,93 @@ and elab_named env name t =
     | TChoice alts, None -> DChoice (choice env name alts)
     | _, None -> DNode (node env (name ^ "_body") t)
   in
+  env.td <- saved;
   Hashtbl.replace env.defs name d;
   Hashtbl.replace env.state name true;
   env.order <- name :: env.order
+
+(* Inner subtyping (X.680 51.8): the type `t` constrained by WITH COMPONENT(S)
+   `c`, as a new type (with the tagging environment of its definition). The
+   tags of the components are those of `t` (X.680 25.3: AUTOMATIC tags are
+   computed before the constraint), so they are made explicit. *)
+and with_inner env (where: string) (t: typ) (c: constr) : typ * tag_default =
+  let bad fmt = Printf.ksprintf (fun s -> error "%s: WITH COMPONENT%s: %s" where
+                                    (match c with CWithComponents _ -> "S" | _ -> "") s) fmt in
+  match t, c with
+  | TRef r, _ ->
+    let r = mangle r in
+    let t' = match Hashtbl.find_opt env.types r with Some t' -> t' | None -> error "undefined type %s" r in
+    if Hashtbl.mem env.dbs r then bad "%s has a DEFINED-BY table: not supported" r;
+    let saved = env.td in
+    (match Hashtbl.find_opt env.type_td r with Some td -> env.td <- td | None -> ());
+    let res = try with_inner env where t' c with e -> env.td <- saved; raise e in
+    env.td <- saved;
+    res
+  | TTagged (cls, n, m, t'), _ ->
+    let m = match m with TDefault -> if env.td = DExplicit then TExplicit else TImplicit | m -> m in
+    let t'', td = with_inner env where t' c in
+    TTagged (cls, n, m, t''), td
+  | TConstrained (t', ((CWithComponent _ | CWithComponents _) as c0)), _ ->
+    let t'', td = with_inner env where t' c0 in
+    let saved = env.td in
+    env.td <- td;
+    let res = try with_inner env where t'' c with e -> env.td <- saved; raise e in
+    env.td <- saved;
+    res
+  | (TSequenceOf (sz, elt) | TSetOf (sz, elt)), CWithComponent k ->
+    let elt = under_tags (fun x -> TConstrained (x, k)) elt in
+    (match t with TSetOf _ -> TSetOf (sz, elt) | _ -> TSequenceOf (sz, elt)), env.td
+  | (TSequence cs | TSet cs), CWithComponents (partial, specs) ->
+    let comps = tagged_components env where cs in
+    List.iter (fun (n, _, _) ->
+        if not (List.exists (fun (m, _, _, _) -> m = n) comps) then bad "no component %s" n)
+      specs;
+    let cs' = List.filter_map (fun (n, _, d, t) ->
+        let spec = List.find_opt (fun (m, _, _) -> m = n) specs in
+        let t = match spec with
+          | Some (_, Some k, _) -> under_tags (fun x -> TConstrained (x, k)) t
+          | _ -> t
+        in
+        let pres = match spec with
+          | Some (_, _, p) -> p
+          | None -> if partial || d <> DOptional then None else Some PAbsent  (* X.680 51.8.6 *)
+        in
+        match d, pres with
+        | _, None -> Some (Field (n, t, d))
+        | DOptional, Some POptional -> Some (Field (n, t, d))
+        | DOptional, Some PAbsent -> None
+        | (DOptional | DPlain), Some PPresent -> Some (Field (n, t, DPlain))
+        | DPlain, Some (PAbsent | POptional) -> bad "%s is not OPTIONAL" n
+        | DDefault _, Some _ -> bad "presence constraints on the DEFAULT component %s are not supported" n)
+        comps
+    in
+    (match t with TSet _ -> TSet cs' | _ -> TSequence cs'), env.td
+  | TChoice alts, CWithComponents (partial, specs) ->
+    let alts = auto_tag env alts alts in
+    List.iter (fun (n, _, _) -> if not (List.mem_assoc n alts) then bad "no alternative %s" n) specs;
+    let present = List.filter (fun (_, _, p) -> p = Some PPresent) specs in
+    if List.length present > 1 then bad "at most one alternative may be PRESENT";
+    let alts' = List.filter_map (fun (n, t) ->
+        let spec = List.find_opt (fun (m, _, _) -> m = n) specs in
+        let keep = match spec with
+          | None -> partial && present = []
+          | Some (_, _, Some PAbsent) -> false
+          | Some (_, _, Some PPresent) -> true
+          | Some (_, _, (Some POptional | None)) -> present = []
+        in
+        if not keep then None else
+        let t = match spec with
+          | Some (_, Some k, _) -> under_tags (fun x -> TConstrained (x, k)) t
+          | _ -> t
+        in
+        Some (n, t))
+        alts
+    in
+    if alts' = [] then bad "no alternative remains";
+    TChoice alts', env.td
+  | (TSequence _ | TSet _ | TChoice _), CWithComponent _ -> bad "on a SEQUENCE, SET or CHOICE: write WITH COMPONENTS"
+  | (TSequenceOf _ | TSetOf _), CWithComponents _ -> bad "on a SEQUENCE OF or SET OF: write WITH COMPONENT"
+  | _ -> bad "only on SEQUENCE, SET, CHOICE, SEQUENCE OF and SET OF types"
 
 (* Elaborate a type into a node; anonymous constructed types are hoisted
    under the name `ctx` *)
@@ -651,6 +742,13 @@ and node env (ctx: string) (t: typ) : node =
       end
     | _ -> NILC ({ cls; num; cons = true }, CPrefixed inner)  (* X.680 31.2.7 *)
     end
+  | TConstrained (t', ((CWithComponent _ | CWithComponents _) as c)) ->
+    let t'', td = with_inner env ctx t' c in
+    let saved = env.td in
+    env.td <- td;
+    let res = try node env ctx t'' with e -> env.td <- saved; raise e in
+    env.td <- saved;
+    res
   | TConstrained (t', CContaining t'') ->
     let inner = node env ctx t' in
     begin match resolve_struct env inner with
@@ -689,7 +787,7 @@ and node env (ctx: string) (t: typ) : node =
             error "%s: a union of ranges must be a single range, or have at most %d values" ctx max_values;
           NILC (id, CTerm (small_integer_term, Some (Printf.sprintf "(RESTRICT_INT_IN [%s])" (String.concat "; " (List.map fstar_int vs)))))
         end
-      | CSize _ | CContaining _ -> error "%s: SIZE constraint on INTEGER" ctx
+      | CSize _ | CContaining _ | CWithComponent _ | CWithComponents _ -> error "%s: SIZE constraint on INTEGER" ctx
       end
     | Some (id, CTerm ({ tk = "ASN1_BOOLEAN"; _ } as tm, None)), CSingle bs ->
       let vs = List.sort_uniq compare (List.map (function
@@ -929,9 +1027,16 @@ let rec refs (t: typ) : string list =
     List.concat_map (function Field (_, t, _) -> refs t | ComponentsOf t -> refs t) cs
   | TChoice alts -> List.concat_map (fun (_, t) -> refs t) alts
   | TSequenceOf (_, t) | TSetOf (_, t) | TTagged (_, _, _, t) -> refs t
-  | TConstrained (t, CContaining t') -> refs t @ refs t'
-  | TConstrained (t, _) -> refs t
+  | TConstrained (t, c) -> refs t @ constr_refs c
   | _ -> []
+
+and constr_refs (c: constr) : string list =
+  match c with
+  | CContaining t -> refs t
+  | CSize c | CWithComponent c -> constr_refs c
+  | CUnion l -> List.concat_map constr_refs l
+  | CWithComponents (_, l) -> List.concat_map (fun (_, c, _) -> match c with Some c -> constr_refs c | None -> []) l
+  | CRange _ | CSingle _ -> []
 
 let body_refs = function
   | BAbsent -> []

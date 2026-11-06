@@ -138,7 +138,8 @@ let bound st = match peek st with
   | _ -> Val (number st)
 
 (* The contents of ( ... ): SIZE (c), a union of ranges lo..hi (with lo<
-   or <hi for an excluded endpoint) and values v1 | v2 | ..., or CONTAINING T *)
+   or <hi for an excluded endpoint) and values v1 | v2 | ..., CONTAINING T,
+   or WITH COMPONENT(S) *)
 let rec constr_body st =
   match peek st with
   | ID "SIZE" -> advance st; expect st LPAREN; let c = constr_body st in expect st RPAREN; CSize c
@@ -147,6 +148,34 @@ let rec constr_body st =
     let t = typ st in
     if peek st = ID "ENCODED" then fail st "ENCODED BY is not supported";
     CContaining t
+  | ID "WITH" ->
+    advance st;
+    if kw st "COMPONENTS" then begin
+      expect st LBRACE;
+      let partial = peek st = ELLIPSIS in
+      if partial then begin
+        advance st;
+        if peek st = COMMA then advance st
+      end;
+      let rec items acc =
+        if peek st = RBRACE then (advance st; List.rev acc) else begin
+          let n = lower_ident st in
+          let c = if peek st = LPAREN then Some (constr st) else None in
+          let p =
+            if kw st "PRESENT" then Some PPresent
+            else if kw st "ABSENT" then Some PAbsent
+            else if kw st "OPTIONAL" then Some POptional
+            else None
+          in
+          let acc = (n, c, p) :: acc in
+          if peek st = COMMA then (advance st; items acc) else (expect st RBRACE; List.rev acc)
+        end
+      in
+      CWithComponents (partial, items [])
+    end else begin
+      expect_kw st "COMPONENT";
+      CWithComponent (constr st)
+    end
   | ELLIPSIS -> fail st "extensible constraints are not supported"
   | _ ->
     let elt () =
