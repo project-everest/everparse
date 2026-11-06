@@ -55,6 +55,18 @@ $(OUT)/features_test.exe: $(OUT)/features/Features.c tests/features_test.c
 test-features: $(OUT)/features_test.exe
 	$<
 
+# Value notations, BOOLEAN constraints, WITH COMPONENTS, parameterized
+# types (imported), information object classes and table constraints,
+# constraint set operations and serial constraints
+$(OUT)/features2/Features2.c: tests/Features2.asn tests/Features2Base.asn $(TOOL)
+	$(TOOL) --odir $(OUT)/features2 --root Vals,Derived,PRec,AlgId,Exts,Attr,Alg tests/Features2.asn tests/Features2Base.asn
+
+$(OUT)/features2_test.exe: $(OUT)/features2/Features2.c tests/features2_test.c
+	$(CC) $(TEST_CFLAGS) -I $(OUT)/features2 -o $@ $^
+
+test-features2: $(OUT)/features2_test.exe
+	$<
+
 # The generated schemas agree with the hand translations of difftest/schemas
 GOLDEN := DiffConstructed DiffSet DiffConstraints DiffAny DiffExternal DiffPdv DiffCharStr
 
@@ -66,11 +78,11 @@ test-golden: $(addprefix $(OUT)/golden/,$(addsuffix .fst,$(GOLDEN)))
 	  --include $(EVERPARSE_HOME)/lib/everparse/lowparse --include $(EVERPARSE_HOME)/src/ASN1 --include $(CURDIR)/$(OUT)/golden \
 	  --already_cached '*,-Golden,$(subst $(space),$(comma),$(addprefix -,$(GOLDEN)))' Golden.fst
 
-test: test-golden test-small test-x509lite test-features
+test: test-golden test-small test-x509lite test-features test-features2
 
 clean:
 	rm -rf $(OUT)
 	cd ocaml && $(DUNE) clean
 
-.PHONY: all build test test-small test-x509lite test-features test-golden clean
-.PRECIOUS: $(OUT)/small/Small.c $(OUT)/x509lite/X509Lite.c $(OUT)/features/Features.c $(OUT)/golden/%.fst
+.PHONY: all build test test-small test-x509lite test-features test-features2 test-golden clean
+.PRECIOUS: $(OUT)/small/Small.c $(OUT)/x509lite/X509Lite.c $(OUT)/features/Features.c $(OUT)/features2/Features2.c $(OUT)/golden/%.fst

@@ -35,11 +35,11 @@ From the EverParse root, `make asn1` (or `make asn1-tool`) also builds
 the executable, without copying it to `bin/`.
 
 ```
-make test       # test-small and test-x509lite (C tests), and test-golden
+make test       # C tests (test-small, test-x509lite, test-features, test-features2) and test-golden
 ```
 
 ```
-Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--lax_size_of] [--fstar_only] [--skip_compilation] main.asn [imported.asn ...]
+Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--lax_size_of] [--max_int_union N] [--fstar_only] [--skip_compilation] main.asn [imported.asn ...]
 ```
 
 The first file is the main module: its types are generated, with those of
@@ -58,6 +58,9 @@ imported module must be given on the command line.
   library only supports `SIZE (1..MAX)`). The validators then accept more
   values than the schema. RFC 5280 uses such bounds in its ORAddress types,
   e.g. `SIZE (1..ub-domain-defined-attributes)`.
+* `--max_int_union N`: the maximal number of values of an INTEGER
+  constraint that is not a single range (default 256), expanded into a
+  list of values compared in turn by the validators.
 * `--fstar_only`: generate the F\* modules only.
 * `--skip_compilation`: do not run `cc` on the generated C.
 
@@ -183,14 +186,17 @@ including KEEP-BYTES on `Names`, and `tests/X509Lite.asn` (with
 values, ANY DEFINED BY tables and extension values. `tests/Features.asn`
 and `tests/features_test.c` cover open ranges and unions, DEFAULT strings
 and BIT STRINGs, DEFINED-BY keys of other types, EXTERNAL, EMBEDDED PDV,
-and KEEP-BYTES under IMPLICIT tags and on components.
+and KEEP-BYTES under IMPLICIT tags and on components. `tests/Features2.asn`
+(with `tests/Features2Base.asn`) and `tests/features2_test.c` cover value
+notations, BOOLEAN constraints, WITH COMPONENTS, parameterized types,
+information object classes and constraint set operations.
 
 ### ANY DEFINED BY tables: `--#DEFINED-BY`
 
 ASN.1 (X.208) `ANY DEFINED BY key` does not say which type corresponds to
-which key; X.680 uses information object classes instead, which are not
-supported. A `--#DEFINED-BY` directive (an ASN.1 comment, ignored by other
-tools) gives the table:
+which key; X.680 uses information object classes instead (see below). A
+`--#DEFINED-BY` directive (an ASN.1 comment, ignored by other tools) gives
+the table:
 
 ```
 --#DEFINED-BY AlgorithmIdentifier.parameters {
@@ -210,8 +216,7 @@ tools) gives the table:
 * The key must be a mandatory component of a terminal type other than
   RELATIVE-OID, without constraints (EXPLICIT tags allowed). The keys are
   values (see Values below): value references, `TRUE`/`FALSE`, numbers,
-  `{ ... }` OID values, strings, etc. Time types and OID-IRI keys are not
-  supported, since their literals are not supported.
+  `{ ... }` OID values, strings, times, etc.
 * For each key, `f` becomes, under its declared tags:
   * `ABSENT`: nothing (the component is removed);
   * `U` or `U OPTIONAL`: type `U` (`f` is OPTIONAL only if so marked);
@@ -228,6 +233,69 @@ Without a table, `ANY DEFINED BY x` is parsed as ANY.
 
 The other directives are `--#KEEP-BYTES T1, T2.c ...` (see above).
 
+### Information object classes and table constraints
+
+The common use of information object classes (X.681) and table
+constraints (X.682), an open type selected by an OID, generates a
+DEFINED-BY table:
+
+```
+EXTENSION ::= CLASS {
+  &id OBJECT IDENTIFIER UNIQUE, &ExtnType, &Critical BOOLEAN DEFAULT FALSE
+} WITH SYNTAX { SYNTAX &ExtnType IDENTIFIED BY &id [CRITICALITY &Critical] }
+
+ext-bc EXTENSION ::= { SYNTAX BasicConstraints IDENTIFIED BY id-ce-basicConstraints }
+Exts EXTENSION ::= { ext-bc | ext-ku, ... }
+
+Extension { EXTENSION : ExtSet } ::= SEQUENCE {
+  extnId EXTENSION.&id ({ExtSet}),
+  critical BOOLEAN DEFAULT FALSE,
+  extnValue OCTET STRING (CONTAINING EXTENSION.&ExtnType ({ExtSet}{@extnId}))
+}
+Extensions ::= SEQUENCE SIZE (1..MAX) OF Extension {{Exts}}
+```
+
+* Classes: `CLASS { ... }` with type fields (`&T`, possibly OPTIONAL or
+  DEFAULT) and fixed-type value fields (`&id T [UNIQUE] [OPTIONAL | DEFAULT
+  v]`), with or without `WITH SYNTAX` (with optional groups `[...]`);
+  `TYPE-IDENTIFIER` and `ABSTRACT-SYNTAX`; class aliases (`ALG ::=
+  TYPE-IDENTIFIER`). Other kinds of fields (value sets, objects,
+  variable-type values) are skipped, and cannot be referenced.
+* Objects (`obj CLASS ::= { ... }`, in the default syntax `&f setting, ...`
+  or the class's syntax) and object sets (`Set CLASS ::= { o1 | o2 | { inline
+  object } | OtherSet, ... }`, with `|` or `UNION`, and an optional
+  extension marker). Object set parameters (`{ EXTENSION : ExtSet }`) and
+  class parameters (`{ ALG-TYPE, ALG-TYPE : AlgSet }`) of parameterized
+  types are supported.
+* In a SEQUENCE type assignment (or an instance of a parameterized
+  SEQUENCE), a component `C.&T ({Set}{@key})`, possibly under tags, `SET
+  OF` / `SEQUENCE OF` or `OCTET STRING (CONTAINING ...)`, whose key
+  component is `C.&id ({Set})`, generates a DEFINED-BY table: each object
+  of `Set` gives a case (its `&id` value), where the component has the
+  object's `&T` (or is absent, if the object has no `&T` and the
+  component is OPTIONAL). If `Set` is extensible, unknown keys use the
+  declared component (`C.&T` is ANY); otherwise, they are rejected. A
+  `--#DEFINED-BY` directive on the same type takes precedence (with a
+  warning).
+* Everywhere else, `C.&T` is ANY, `C.&id` has the type of the field, and
+  the simple table constraints `({Set})` are ignored: in particular, a key
+  component is not checked against the set by itself (only through its
+  dependent component, if the set is not extensible).
+* Not supported: several `{@key}` constraints in a SEQUENCE, `{@key}` in
+  nested SEQUENCE, SET or CHOICE types, relative (`@.key`) and nested
+  (`@a.b`) component references, and value sets (`Name Type ::= { ... }`).
+  The settings of value fields other than the key (e.g. `&Critical`) are
+  not checked.
+
+### Parameterized types
+
+Parameterized types (X.683) with type parameters, value parameters
+(`{ INTEGER : ub }`), object set parameters and class parameters, also
+imported (`IMPORTS Name{} FROM M`), are expanded at their use sites: each
+instance `Name { args }` becomes a type `Name_args` of the module of the
+template, with its own C type. Parameterized values, value sets, objects
+and object sets are not supported, nor are recursive instances.
+
 ### IMPORTS and values
 
 `IMPORTS a, B FROM M;` (optionally followed by an OID or a value
@@ -240,9 +308,11 @@ DEFINED-BY keys. OID values use the X.680 syntax
 `itu-t` and `joint-iso-itu-t` predefined). Each OBJECT IDENTIFIER value
 `v` is generated as `oid_v` in `M.fst`.
 
-Values (in DEFAULT and DEFINED-BY keys) of other types:
+Value assignments of all the types with supported values may be used in
+DEFAULT values and DEFINED-BY keys; values of other types (SEQUENCE,
+CHOICE, `SEQUENCE OF`, ...) are parsed and ignored. Values of other types:
 
-* NULL: `NULL`.
+* NULL: `NULL`. BOOLEAN: `TRUE`, `FALSE`.
 * OCTET STRING: `'0A1B'H` or `'00001010'B` (padded with zeros to whole
   octets).
 * BIT STRING: `'1010'B`, `'A0'H`, or named bits `{ a, b }` (with `{}`
@@ -256,9 +326,15 @@ Values (in DEFAULT and DEFINED-BY keys) of other types:
   UniversalString values are re-encoded as UTF-16BE and UTF-32BE.
   PrintableString, NumericString, VisibleString and IA5String values are
   checked against their character sets. The other string types accept
-  printable ASCII only.
-* Not supported: RELATIVE-OID, time types, OID-IRI and RELATIVE-OID-IRI
-  values, and `{ Quadruple }` / `{ Tuple }` character string values.
+  printable ASCII only. Character string lists (`{ "ab", {0, 0, 3, 177},
+  ref }`) with Quadruples and Tuples are supported. String values of
+  SIZE-constrained types are checked against the constraint by F\*
+  (`ASN1.Lit`).
+* Time types: `"YYMMDDhhmmssZ"` (UTCTime), `"YYYYMMDDhhmmss[.f]Z"`
+  (GeneralizedTime), `"YYYY-MM-DD"` (DATE), `"hh:mm:ss"` (TIME-OF-DAY),
+  `"YYYY-MM-DDThh:mm:ss"` (DATE-TIME). OID-IRI and RELATIVE-OID-IRI:
+  `"/ISO/a"`, `"a/1"`. Their DER validity is checked by F\* (`ASN1.Lit`).
+* Not supported: RELATIVE-OID values.
 
 ## Supported ASN.1
 
@@ -268,23 +344,32 @@ Supported:
 * Type assignments and references.
 * All universal terminal types; INTEGER and ENUMERATED with named numbers.
 * Value range and single value constraints on INTEGER, with open bounds
-  (`0<..<10`, `MIN<..0`) and unions (`1..3 | 7 | 10..12`); a union that is
-  not a single range is expanded into its values (at most 256). SIZE
-  constraints on OCTET STRING and character strings, with open bounds and
-  unions that form a single range. SIZE counts characters:
+  (`0<..<10`, `MIN<..0`); single value constraints on BOOLEAN. Set
+  operations (`|` / `UNION`, `^` / `INTERSECTION`, `EXCEPT`, `ALL EXCEPT`,
+  parentheses) and serial constraints (`T (C1) (C2)`, also on a reference
+  to a constrained type) are evaluated by the front end; a result that is
+  not a single range is expanded into its values (at most 256, see
+  `--max_int_union`). SIZE constraints on OCTET STRING and character
+  strings, with open bounds and set operations whose result is a single
+  range. SIZE counts characters:
   octets for OCTET STRING and the ISO 2022 based strings (TeletexString,
   VideotexString, GraphicString, GeneralString, ObjectDescriptor), code
   points for UTF8String, BMPString and UniversalString. SIZE bounds must
   be below 65536.
 * `[n]` / `[APPLICATION n]` / ... tags, IMPLICIT and EXPLICIT.
 * SEQUENCE and SET (at most 64 components) with OPTIONAL and DEFAULT
-  components. DEFAULT applies to components of terminal types, other than
-  RELATIVE-OID, the time types and OID-IRI types, also under one EXPLICIT
-  tag if unconstrained (such as `[0] EXPLICIT Version DEFAULT v1`). Of the
-  constrained types, only INTEGER, ENUMERATED and OCTET STRING allow
-  DEFAULT.
+  components. DEFAULT applies to components of terminal types other than
+  RELATIVE-OID, also under one EXPLICIT tag if unconstrained (such as
+  `[0] EXPLICIT Version DEFAULT v1`), and to constrained INTEGER,
+  ENUMERATED, BOOLEAN, OCTET STRING and character strings.
 * CHOICE, SEQUENCE OF and SET OF (with SIZE), and ANY.
-* IMPORTS, INTEGER and OBJECT IDENTIFIER value assignments.
+* Inner type constraints: `WITH COMPONENTS { [...,] c (C) PRESENT | ABSENT
+  | OPTIONAL, ... }` on SEQUENCE, SET, CHOICE, and the SEQUENCE types of
+  EXTERNAL, EMBEDDED PDV and CHARACTER STRING; `WITH COMPONENT (C)` on
+  SEQUENCE OF and SET OF. A constrained type is generated as a new type.
+* Parameterized types, information object classes and table constraints
+  (see above).
+* IMPORTS and value assignments.
 * EXTERNAL, EMBEDDED PDV and CHARACTER STRING, with their X.680 associated
   types (as in `ASN1.UniversalTypes`). They are defined in a prelude ASN.1
   module (`Prelude.ml`), named `EXTERNAL`, `EMBEDDED-PDV` and
@@ -294,19 +379,17 @@ Supported:
 
 Not supported (rejected with an error message):
 
-* Parameterized types, information object classes, and `ENCODED BY`.
-* Extension markers (`...`) and `EXTENSIBILITY IMPLIED`.
-* Set operators other than unions (`^`, `INTERSECTION`, `EXCEPT`,
-  `ALL EXCEPT`), and unions of SIZE constraints that are not a single
-  range.
+* `ENCODED BY`.
+* Extension markers (`...`) in types and constraints, and `EXTENSIBILITY
+  IMPLIED`.
+* SIZE constraints that are not a single range, combinations of SIZE and
+  value constraints, and permitted alphabet (`FROM`), `PATTERN` and
+  contained subtype (`INCLUDES`) constraints.
 * ANY as a CHOICE alternative.
 * Recursive types.
-* Value assignments of other types.
-* Inner type constraints (`WITH COMPONENTS`) on EXTERNAL, EMBEDDED PDV and
-  CHARACTER STRING.
-* DEFAULT on a constructed type, on an EXPLICIT-tagged restricted
-  INTEGER or ENUMERATED, or on a constrained type other than INTEGER,
-  ENUMERATED and OCTET STRING. The specification allows DEFAULT only on
+* RELATIVE-OID values.
+* DEFAULT on a constructed type, or on an EXPLICIT-tagged restricted
+  INTEGER or ENUMERATED. The specification allows DEFAULT only on
   terminals, possibly under one EXPLICIT tag.
 * `SIZE` on SEQUENCE OF / SET OF other than `SIZE (1..MAX)` (but see
   `--lax_size_of`).
