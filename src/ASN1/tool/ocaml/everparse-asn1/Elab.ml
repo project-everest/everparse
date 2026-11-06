@@ -67,6 +67,7 @@ type env = {
   values: (string, typ * value) Hashtbl.t;
   dbs: (string, defined_by) Hashtbl.t;      (* mangled type name -> its DEFINED-BY table *)
   lax_size_of: bool;                        (* SIZE on SEQUENCE OF / SET OF: only check lo >= 1 *)
+  max_int_union: int;                       (* the maximal number of values of an INTEGER union *)
   defs: (string, def) Hashtbl.t;
   state: (string, bool) Hashtbl.t;          (* false: in progress *)
   mutable order: string list;               (* reverse topological order *)
@@ -327,13 +328,43 @@ let code_points (s: string) : int list =
       go (i + Uchar.utf_decode_length d) (Uchar.to_int (Uchar.utf_decode_uchar d) :: acc)
   in go 0 []
 
-(* The DER contents of a string value of a terminal: OCTET STRING from a
-   bstring or hstring (X.680 22.10), character strings from a cstring *)
-let string_bytes env (tk: string) (v: value) : int list =
-  let cps () = match deref env v with
-    | VCString s -> code_points s
-    | _ -> error "expected a character string value \"...\""
+(* The code points of a character string value: a cstring, or a
+   CharacterStringList of cstrings, value references, Quadruples
+   {group, plane, row, cell} and Tuples {column, row} (X.680 41.8) *)
+let rec char_value ?(depth = 0) env (v: value) : int list =
+  if depth > 100 then error "cyclic values";
+  let item = function
+    | VNumList [g; p; r; c] ->
+      if List.exists (fun x -> x < 0 || x > 255) [g; p; r; c] || g > 127 then error "bad Quadruple";
+      [(g lsl 24) lor (p lsl 16) lor (r lsl 8) lor c]
+    | VNumList [col; row] ->
+      if col < 0 || col > 7 || row < 0 || row > 15 then error "bad Tuple";
+      [col * 16 + row]
+    | VNumList _ -> error "expected a Quadruple {g, p, r, c} or a Tuple {column, row}"
+    | v -> char_value ~depth:(depth + 1) env v
   in
+  match v with
+  | VName n ->
+    (match Hashtbl.find_opt env.values n with
+     | Some (_, v) -> char_value ~depth:(depth + 1) env v
+     | None -> error "unknown value %s" n)
+  | VCString s -> code_points s
+  | VCharList l -> List.concat_map item l
+  | VBits names -> List.concat_map (fun n -> item (VName n)) names (* { ref1, ref2 } *)
+  | _ -> error "expected a character string value \"...\""
+
+let utf8_encode (cps: int list) : int list =
+  let b = Buffer.create 16 in
+  List.iter (fun c ->
+      if not (Uchar.is_valid c) then error "U+%04X is not a Unicode scalar value" c;
+      Buffer.add_utf_8_uchar b (Uchar.of_int c)) cps;
+  List.init (Buffer.length b) (fun i -> Char.code (Buffer.nth b i))
+
+(* The DER contents of a string value of a terminal: OCTET STRING from a
+   bstring or hstring (X.680 22.10), character strings from a cstring or
+   a CharacterStringList *)
+let string_bytes env (tk: string) (v: value) : int list =
+  let cps () = char_value env v in
   let check what ok =
     let l = cps () in
     List.iter (fun c -> if not (ok c) then error "character U+%04X is not allowed in %s" c what) l; l
@@ -354,15 +385,13 @@ let string_bytes env (tk: string) (v: value) : int list =
         in snd (bytes_of_bits bits)
       | _ -> error "expected an OCTET STRING value 'hex'H or 'bits'B"
     end
-  | "ASN1_UTF8STRING" ->
-    (match deref env v with
-     | VCString s -> ignore (code_points s); List.init (String.length s) (fun i -> Char.code s.[i])
-     | _ -> error "expected a character string value \"...\"")
+  | "ASN1_UTF8STRING" -> utf8_encode (cps ())
   | "ASN1_BMPSTRING" ->
     List.concat_map (fun c -> [c lsr 8; c land 0xff])
       (check "BMPString" (fun c -> c <= 0xffff && not (c >= 0xd800 && c <= 0xdfff)))
   | "ASN1_UNIVERSALSTRING" ->
-    List.concat_map (fun c -> [c lsr 24; (c lsr 16) land 0xff; (c lsr 8) land 0xff; c land 0xff]) (cps ())
+    List.concat_map (fun c -> [c lsr 24; (c lsr 16) land 0xff; (c lsr 8) land 0xff; c land 0xff])
+      (check "UniversalString" (fun c -> c <= 0x10ffff && not (c >= 0xd800 && c <= 0xdfff)))
   | "ASN1_PRINTABLESTRING" -> check "PrintableString" printable
   | "ASN1_NUMERICSTRING" -> check "NumericString" (fun c -> c = 32 || (c >= 48 && c <= 57))
   | "ASN1_VISIBLESTRING" -> check "VisibleString" (fun c -> c >= 32 && c <= 126)
@@ -372,6 +401,60 @@ let string_bytes env (tk: string) (v: value) : int list =
     check "this string type (only ASCII values are supported)" (fun c -> c >= 32 && c <= 126)
   | _ -> error "values of this type are not supported"
 
+(* The DER contents of a value of a time type (X.680 38.4.1, 46, 47) or of
+   an OID-IRI / RELATIVE-OID-IRI (X.680 34, 35); their validity is checked
+   by F* (ASN1.Lit) *)
+let time_bytes env (tk: string) (v: value) : int list =
+  let s = match deref env v with
+    | VCString s -> s
+    | _ -> error "expected a string value \"...\""
+  in
+  let ascii s = List.init (String.length s) (fun i -> Char.code s.[i]) in
+  let digits s = String.for_all (fun c -> c >= '0' && c <= '9') s in
+  let fmt what f =
+    match f s with
+    | Some s' when digits s' -> ascii s'
+    | _ -> error "expected a %s value" what
+  in
+  let date d =
+    if String.length d = 10 && d.[4] = '-' && d.[7] = '-'
+    then Some (String.sub d 0 4 ^ String.sub d 5 2 ^ String.sub d 8 2) else None
+  in
+  let tod t =
+    if String.length t = 8 && t.[2] = ':' && t.[5] = ':'
+    then Some (String.sub t 0 2 ^ String.sub t 3 2 ^ String.sub t 6 2) else None
+  in
+  match tk with
+  | "ASN1_UTCTIME" ->
+    if String.length s <> 13 || s.[12] <> 'Z' || not (digits (String.sub s 0 12)) then
+      error "expected a DER UTCTime value \"YYMMDDhhmmssZ\"";
+    ascii s
+  | "ASN1_GENERALIZEDTIME" ->
+    let n = String.length s in
+    if n < 15 || s.[n - 1] <> 'Z' || not (digits (String.sub s 0 14)) ||
+       (n > 15 && (s.[14] <> '.' || n = 16 || not (digits (String.sub s 15 (n - 16))) || s.[n - 2] = '0')) then
+      error "expected a DER GeneralizedTime value \"YYYYMMDDhhmmss[.fff]Z\"";
+    ascii s
+  | "ASN1_DATE" -> fmt "DATE \"YYYY-MM-DD\"" date
+  | "ASN1_TIME_OF_DAY" -> fmt "TIME-OF-DAY \"hh:mm:ss\"" tod
+  | "ASN1_DATE_TIME" ->
+    fmt "DATE-TIME \"YYYY-MM-DDThh:mm:ss\"" (fun s ->
+        if String.length s = 19 && s.[10] = 'T' then
+          match date (String.sub s 0 10), tod (String.sub s 11 8) with
+          | Some d, Some t -> Some (d ^ t)
+          | _ -> None
+        else None)
+  | "ASN1_OID_IRI" | "ASN1_RELATIVE_OID_IRI" -> ignore (code_points s); ascii s
+  | _ -> error "values of this type are not supported"
+
+(* The size of a string value (X.680 51.5): octets of an OCTET STRING and
+   of the ISO 2022 string types, characters of the other ones *)
+let value_size env (tk: string) (v: value) : int =
+  match tk with
+  | "ASN1_OCTETSTRING" | "ASN1_TELETEXSTRING" | "ASN1_VIDEOTEXSTRING" | "ASN1_GRAPHICSTRING"
+  | "ASN1_GENERALSTRING" | "ASN1_OBJECTDESCRIPTOR" -> List.length (string_bytes env tk v)
+  | _ -> ignore (string_bytes env tk v); List.length (char_value env v)
+
 let bytes_lit (l: int list) =
   Printf.sprintf "[%s]" (String.concat "; " (List.map (Printf.sprintf "0x%02xuy") l))
 
@@ -379,7 +462,10 @@ let bytes_lit (l: int list) =
    excluded endpoints of ranges (lo<.. is lo+1.., ..<hi is ..hi-1) *)
 let rec norm_constr env (c: constr) : constr =
   let rec b = function
-    | BRef s -> Val (int_value env (TInteger []) (VName s))
+    | BRef s ->
+      (match deref env (VName s) with
+       | VBool v -> BBool v
+       | _ -> Val (int_value env (TInteger []) (VName s)))
     | Open x -> Open (b x)
     | x -> x
   in
@@ -463,6 +549,24 @@ let rec under_tags f = function
   | t -> f t
 
 let fstar_int i = if i < 0 then Printf.sprintf "(%d)" i else string_of_int i
+
+(* Check that a DEFAULT value satisfies the restriction `r` of its type,
+   for a readable error (F* checks it too) *)
+let check_restricted env (where: string) (tm: term) (r: string) (v: value) : unit =
+  try
+    match Scanf.sscanf_opt r "(RESTRICT_SIZE %d %s@)" (fun lo hi -> (lo, hi)) with
+    | Some (lo, hi) ->
+      let hi = Scanf.sscanf_opt hi "(Some %d)" (fun h -> h) in
+      let n = value_size env tm.tk v in
+      if n < lo || (match hi with Some h -> n > h | None -> false) then
+        error "the value has size %d, out of its SIZE constraint" n
+    | None ->
+      if tm.tk = "ASN1_BOOLEAN" then begin
+        let b = string_of_bool (bool_value env v) in
+        if not (List.mem b (String.split_on_char ' ' (String.map (function '[' | ']' | ';' | '(' | ')' -> ' ' | c -> c) r))) then
+          error "the value %s is not allowed by its constraint" b
+      end
+  with Error s -> error "%s: %s" where s
 
 let rec elab_def env (name: string) : unit =
   match Hashtbl.find_opt env.state name with
@@ -575,7 +679,7 @@ and node env (ctx: string) (t: typ) : node =
           let tm = if lo <> None && hi <> None then small_integer_term else integer_term in
           NILC (id, CTerm (tm, Some (Printf.sprintf "(RESTRICT_INT_RANGE %s %s)" (b lo) (b hi))))
         | ivs ->
-          let max_values = 256 in
+          let max_values = env.max_int_union in
           let vs = List.concat_map (function
               | Some lo, Some hi when hi - lo < max_values -> List.init (hi - lo + 1) (fun i -> lo + i)
               | _ -> error "%s: a union of ranges must be a single range, or have at most %d values" ctx max_values)
@@ -587,6 +691,11 @@ and node env (ctx: string) (t: typ) : node =
         end
       | CSize _ | CContaining _ -> error "%s: SIZE constraint on INTEGER" ctx
       end
+    | Some (id, CTerm ({ tk = "ASN1_BOOLEAN"; _ } as tm, None)), CSingle bs ->
+      let vs = List.sort_uniq compare (List.map (function
+          | BBool b -> b
+          | _ -> error "%s: expected TRUE or FALSE" ctx) bs) in
+      NILC (id, CTerm (tm, Some (Printf.sprintf "(RESTRICT_IN [%s])" (String.concat "; " (List.map string_of_bool vs)))))
     | Some (id, CTerm ({ tk = ("ASN1_OCTETSTRING" | "ASN1_UTF8STRING" | "ASN1_BMPSTRING"
                              | "ASN1_UNIVERSALSTRING" | "ASN1_PRINTABLESTRING" | "ASN1_IA5STRING"
                              | "ASN1_VISIBLESTRING" | "ASN1_NUMERICSTRING" | "ASN1_TELETEXSTRING"
@@ -609,7 +718,7 @@ and node env (ctx: string) (t: typ) : node =
         | _ -> error "%s: unsupported SIZE constraint" ctx
       in
       NILC (id, CTerm (tm, Some (Printf.sprintf "(RESTRICT_SIZE %d %s)" lo hi)))
-    | _ -> error "%s: constraints are supported on INTEGER and on the SIZE of OCTET STRING and character strings only" ctx
+    | _ -> error "%s: constraints are supported on INTEGER, BOOLEAN and on the SIZE of OCTET STRING and character strings only" ctx
     end
 
 and components env (name: string) (cs: component list) : (string * typ * deco) list =
@@ -669,9 +778,16 @@ and literal env (where: string) (src: typ) (tm: term) (v: value) : string =
       (* proved by normalization (ASN1.Lit): SMT may time out *)
       let l = bytes_lit bytes in
       Printf.sprintf "(let l : list FStar.UInt8.t = %s in assert_norm (ASN1.Lit.bitstring_l %duy %s); ASN1.Lit.bitstring_l_correct %duy l; (%duy, l))" l unused l unused unused
-    | ("ASN1_RELATIVE_OID" | "ASN1_UTCTIME" | "ASN1_GENERALIZEDTIME" | "ASN1_DATE" | "ASN1_TIME_OF_DAY"
-      | "ASN1_DATE_TIME" | "ASN1_OID_IRI" | "ASN1_RELATIVE_OID_IRI"), _ ->
-      error "values of this type are not supported"
+    | "ASN1_RELATIVE_OID", _ -> error "values of this type are not supported"
+    | ("ASN1_UTCTIME" | "ASN1_GENERALIZEDTIME" | "ASN1_DATE" | "ASN1_TIME_OF_DAY"
+      | "ASN1_DATE_TIME" | "ASN1_OID_IRI" | "ASN1_RELATIVE_OID_IRI" as tk), _ ->
+      let p = match tk with
+        | "ASN1_UTCTIME" -> "utctime" | "ASN1_GENERALIZEDTIME" -> "gentime" | "ASN1_DATE" -> "date"
+        | "ASN1_TIME_OF_DAY" -> "tod" | "ASN1_DATE_TIME" -> "datetime" | "ASN1_OID_IRI" -> "oid_iri"
+        | _ -> "rel_oid_iri"
+      in
+      let l = bytes_lit (time_bytes env tk v) in
+      Printf.sprintf "(let l : list FStar.UInt8.t = %s in assert_norm (ASN1.Lit.%s_l %s); ASN1.Lit.%s_lit l ())" l p l p
     | _, Some b ->
       let bytes = int_bytes (int_value env src v) in
       Printf.sprintf "(mk_int_lit %s [%s] ())" b
@@ -713,9 +829,10 @@ and elab_field ?(keep_ok = true) env owner ((n, src, d, t): string * typ * deco 
     | DDefault v ->
       let where = Printf.sprintf "%s.%s: DEFAULT" owner n in
       begin match terminal_of env fnode with
-      | Some (_, _, Some _, ltm) when ltm.ibound = None && ltm.tk <> "ASN1_OCTETSTRING" ->
-        error "%s: constraints are supported only on INTEGER and OCTET STRING components with a DEFAULT value" where
-      | Some (id, tm, r, ltm) -> FDefault (id, tm, r, literal env where src ltm v)
+      | Some (id, tm, r, ltm) ->
+        let lit = literal env where src ltm v in
+        (match r with Some r -> check_restricted env where ltm r v | None -> ());
+        FDefault (id, tm, r, lit)
       | None -> error "%s: supported on simple types only (possibly EXPLICIT-tagged, unconstrained)" where
       end
   in
@@ -830,11 +947,11 @@ type result = {
 
 (* Elaborate the main module `m` and the modules it imports from (`deps`),
    with the KEEP-BYTES types and components `keep` (T or T.c) *)
-let elaborate ?(lax_size_of = false) ?(keep = []) (m: modul) (deps: modul list) : result =
+let elaborate ?(lax_size_of = false) ?(max_int_union = 256) ?(keep = []) (m: modul) (deps: modul list) : result =
   let env = {
     mname = m.mname; td = m.tag_default; type_td = Hashtbl.create 17;
     types = Hashtbl.create 17; values = Hashtbl.create 17; dbs = Hashtbl.create 17;
-    lax_size_of; defs = Hashtbl.create 17;
+    lax_size_of; max_int_union; defs = Hashtbl.create 17;
     state = Hashtbl.create 17; order = []; user = Hashtbl.create 17;
     keep = Hashtbl.create 7; keep_alias = Hashtbl.create 7; keep_comps = Hashtbl.create 7;
   } in

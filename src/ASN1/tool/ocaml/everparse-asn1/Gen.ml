@@ -78,8 +78,13 @@ let gen_dv n (f: field) = match f.fdeco with
   | FDefault (_, t, None, lit) ->
     p "noextract\nlet %s : asn1_key_lit %s = %s\n\n" (dv_name n f) t.tk lit
   | FDefault (_, t, Some r, lit) ->
-    p "noextract\nlet %s : (l: asn1_key_lit %s { restriction_pred %s (key_of_lit %s l) = true }) =\n  let l : asn1_key_lit %s = %s in\n  assert_norm (restriction_pred_lit #%s %s %s);\n  restriction_pred_lit_correct #%s %s l;\n  l\n\n"
-      (dv_name n f) t.tk r t.tk t.tk lit t.tk r lit t.tk r
+    (* ASN1.Lit.restriction_lit also decides the SIZE of the strings that are byte sequences *)
+    let pred, lem =
+      if t.ibound <> None || t.tk = "ASN1_OCTETSTRING" then "restriction_pred_lit", "restriction_pred_lit_correct"
+      else "ASN1.Lit.restriction_lit", "ASN1.Lit.restriction_lit_correct"
+    in
+    p "noextract\nlet %s : (l: asn1_key_lit %s { restriction_pred %s (key_of_lit %s l) = true }) =\n  let l : asn1_key_lit %s = %s in\n  assert_norm (%s #%s %s %s);\n  %s #%s %s l;\n  l\n\n"
+      (dv_name n f) t.tk r t.tk t.tk lit pred t.tk r lit lem t.tk r
   | _ -> ()
 
 let dkexpr n (f: field) = match f.fdeco with
@@ -150,7 +155,8 @@ let gen_spec ctx (n: string) =
        (sp "ASN1_ANY_DEFINED_BY _ items_%s %s %s ls_%s %s (_ by (seq_tac ())) (_ by (choice_tac ()))"
           n (idexpr a.key_id) a.key_term.tk n
           (match a.fallback with Some _ -> sp "(Some gitems_%s_other)" n | None -> "None")));
-  p "let _ : squash (asn1_k_wf k_%s) = _ by (wf_tac ())\n\n" n
+  (* an assert, not a squash-typed definition: the latter would add asn1_k_wf k_X to the SMT context of every later module, which may time out *)
+  p "let _ = assert (asn1_k_wf k_%s) by (wf_tac ())\n\n" n
 
 (* Impl types *)
 

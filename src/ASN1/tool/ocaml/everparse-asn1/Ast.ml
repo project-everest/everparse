@@ -16,6 +16,9 @@ type value =
   | VHString of string       (* '0A1F'H: the hexadecimal digits *)
   | VNull                    (* NULL *)
   | VBits of string list     (* { bit1, bit2 }: named bits ({ bit1 } parses as VOid) *)
+  | VNumList of int list     (* { 1, 2, 3, 4 }: a Quadruple or a Tuple (X.680 41.8) *)
+  | VCharList of value list  (* { "abc", ref, {0, 0, 1, 2} }: a CharacterStringList (X.680 41.8) *)
+  | VOpaque of string        (* a value that is parsed but not supported: SEQUENCE, CHOICE, ... values *)
 
 and oid_comp =
   | ONum of int              (* 840 *)
@@ -24,7 +27,8 @@ and oid_comp =
 
 type bound =
   | Min | Max | Val of int
-  | BRef of string                     (* an INTEGER value reference *)
+  | BRef of string                     (* an INTEGER or BOOLEAN value reference *)
+  | BBool of bool                      (* TRUE, FALSE *)
   | Open of bound                      (* an excluded endpoint: lo<.. or ..<hi *)
 
 type constr =

@@ -81,24 +81,58 @@ let bits_value st =
       if peek st = COMMA then (advance st; go acc) else (expect st RBRACE; VBits (List.rev acc))
     in go []
 
-let value st = match peek st with
+(* A comma-separated list of the items `item`, up to the closing brace *)
+let brace_list st item =
+  expect st LBRACE;
+  let rec go acc =
+    let acc = item st :: acc in
+    if peek st = COMMA then (advance st; go acc) else (expect st RBRACE; List.rev acc)
+  in go []
+
+(* `colon`: whether `name : value` is a CHOICE value (not in the cases of
+   a DEFINED-BY directive) *)
+let rec value ?(colon = true) st = match peek st with
   | NUM _ | MINUS -> VInt (number st)
   | ID "TRUE" -> advance st; VBool true
   | ID "FALSE" -> advance st; VBool false
   | ID "NULL" -> advance st; VNull
+  | ID s when is_lower s && colon && peek2 st = COLON ->
+    advance st; advance st; ignore (value st); VOpaque "a CHOICE value"
   | ID s when is_lower s -> advance st; VName s
   | CSTRING s -> advance st; VCString s
   | BSTRING s -> advance st; VBString s
   | HSTRING s -> advance st; VHString s
-  | LBRACE ->
-    begin match peek2 st, fst st.toks.(min (st.pos + 2) (Array.length st.toks - 1)) with
-    | RBRACE, _ | ID _, COMMA -> bits_value st
-    | _ -> oid_value st
-    end
-  | _ -> fail st "unsupported value (only INTEGER, BOOLEAN, NULL, OBJECT IDENTIFIER, string, bit string and named values are supported)"
+  | LBRACE -> brace_value st
+  | _ -> fail st "unsupported value (only INTEGER, BOOLEAN, NULL, OBJECT IDENTIFIER, string, bit string, named and constructed values are supported)"
+
+(* { ... }: named bits, an OBJECT IDENTIFIER, a Quadruple or Tuple, a
+   CharacterStringList, or else a constructed value (SEQUENCE, SET,
+   SEQUENCE OF, ...), which is skipped *)
+and brace_value st =
+  let save = st.pos in
+  let attempt f = try Some (f st) with Error _ -> st.pos <- save; None in
+  let char_item st = match peek st with
+    | CSTRING s -> advance st; VCString s
+    | ID s when is_lower s -> advance st; VName s
+    | LBRACE -> VNumList (brace_list st number)
+    | _ -> fail st "expected a character string"
+  in
+  let alternatives = [
+    (fun st -> match peek2 st, fst st.toks.(min (st.pos + 2) (Array.length st.toks - 1)) with
+       | RBRACE, _ | ID _, COMMA -> bits_value st
+       | _ -> fail st "not named bits");
+    oid_value;
+    (fun st -> VNumList (brace_list st number));
+    (fun st -> VCharList (brace_list st char_item));
+  ] in
+  match List.find_map attempt alternatives with
+  | Some v -> v
+  | None -> skip_braces st; VOpaque "a constructed value"
 
 let bound st = match peek st with
   | ID "MIN" -> advance st; Min
+  | ID "TRUE" -> advance st; BBool true
+  | ID "FALSE" -> advance st; BBool false
   | ID "MAX" -> advance st; Max
   | ID s when is_lower s -> advance st; BRef s
   | _ -> Val (number st)
@@ -360,7 +394,7 @@ let directives st : defined_by list * string list =
       let rec cases acc =
         if peek st = RBRACE then (advance st; List.rev acc)
         else begin
-          let v = value st in
+          let v = value ~colon:false st in
           expect st COLON;
           let b = body st in
           let acc = (v, b) :: acc in

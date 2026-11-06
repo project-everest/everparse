@@ -10,6 +10,7 @@ let keep_bytes = ref ""
 let fstar_only = ref false
 let skip_compilation = ref false
 let lax_size_of = ref false
+let max_int_union = ref 256
 let files = ref []
 
 let speclist = [
@@ -19,6 +20,7 @@ let speclist = [
   "--keep_bytes", Arg.Set_string keep_bytes, "A,B.c,... types (or components c of SEQUENCE/SET types B) whose parsed values keep their bytes (as with --#KEEP-BYTES A B.c in the file)";
   "--fstar_only", Arg.Set fstar_only, " only generate the F* modules";
   "--skip_compilation", Arg.Set skip_compilation, " do not compile the generated C code";
+  "--max_int_union", Arg.Set_int max_int_union, "N the maximal number of values of a union of INTEGER ranges that is not a single range (default 256; each value is compared in turn by the validators)";
   "--lax_size_of", Arg.Set lax_size_of, " accept SIZE (lo..hi) on SEQUENCE OF / SET OF, but only check lo >= 1 (the validators accept more values than the schema)";
 ]
 
@@ -68,7 +70,10 @@ let () =
   in
   let keep = if !keep_bytes = "" then [] else String.split_on_char ',' !keep_bytes in
   let r =
-    try Elab.elaborate ~lax_size_of:!lax_size_of ~keep (List.hd ms) (List.tl ms)
+    if !max_int_union < 1 then (prerr_endline "--max_int_union: expected a positive number"; exit 2);
+    if !max_int_union > 256 then
+      Printf.eprintf "Warning: --max_int_union %d: large unions make large and slow validators\n%!" !max_int_union;
+    try Elab.elaborate ~lax_size_of:!lax_size_of ~max_int_union:!max_int_union ~keep (List.hd ms) (List.tl ms)
     with Ast.Error s -> fail "%s: %s" (String.concat ", " !files) s
   in
   let spec = if !mname <> "" then module_name !mname else module_name r.env.mname in
@@ -91,7 +96,7 @@ let () =
   let rec mkdir_p d =
     if not (Sys.file_exists d) then begin
       mkdir_p (Filename.dirname d);
-      Sys.mkdir d 0o755
+      (try Sys.mkdir d 0o755 with Sys_error _ when Sys.file_exists d -> ())
     end
   in
   mkdir_p !odir;

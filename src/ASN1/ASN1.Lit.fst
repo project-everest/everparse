@@ -169,3 +169,242 @@ let universal_lit (l: list U8.t) (_: squash (universal_l l)) : asn1_key_lit ASN1
 
 let bitstring_lit (unused: U8.t) (l: list U8.t) (_: squash (bitstring_l unused l)) : asn1_key_lit ASN1_BITSTRING =
   bitstring_l_correct unused l; (unused, l)
+
+(* Restrictions of literals (DEFAULT values of restricted types): those
+   of `ASN1.Base.restriction_pred_lit`, and the SIZE of the strings that
+   are byte sequences *)
+
+let rec utf8_count_l (l: list U8.t) : Tot nat =
+  match l with
+  | [] -> 0
+  | c :: t -> (if is_utf8_lead c then 1 else 0) + utf8_count_l t
+
+let rec utf8_count_l_correct (l: list U8.t) (i: nat { i <= L.length l })
+: Lemma (ensures utf8_count_from (Seq.seq_of_list l) i == utf8_count_l (drop i l))
+  (decreases (L.length l - i))
+= if i = L.length l then ()
+  else begin
+    drop_index i l;
+    utf8_count_l_correct l (i + 1)
+  end
+
+let restriction_lit (#k: asn1_terminal_k) (r: asn1_restriction k) (x: asn1_key_lit k) : Tot bool =
+  match k with
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR ->
+    let x : list U8.t = x in
+    (match r with RESTRICT_SIZE lo hi -> size_in_range lo hi (L.length x) | _ -> false)
+  | ASN1_UTF8STRING ->
+    let x : list U8.t = x in
+    (match r with RESTRICT_SIZE lo hi -> size_in_range lo hi (utf8_count_l x) | _ -> false)
+  | ASN1_BMPSTRING ->
+    let x : list U8.t = x in
+    (match r with RESTRICT_SIZE lo hi -> size_in_range lo hi (L.length x / 2) | _ -> false)
+  | ASN1_UNIVERSALSTRING ->
+    let x : list U8.t = x in
+    (match r with RESTRICT_SIZE lo hi -> size_in_range lo hi (L.length x / 4) | _ -> false)
+  | _ -> restriction_pred_lit r x
+
+#push-options "--fuel 2 --ifuel 2"
+let restriction_lit_correct (#k: asn1_terminal_k) (r: asn1_restriction k) (x: asn1_key_lit k)
+: Lemma (requires (restriction_lit r x)) (ensures (restriction_pred r (key_of_lit k x)))
+= reveal_opaque (`%asn1_char_count) (asn1_char_count #k);
+  (match r with RESTRICT_SIZE lo hi -> reveal_opaque (`%size_pred) (size_pred #k lo hi) | _ -> ());
+  match k with
+  | ASN1_TELETEXSTRING
+  | ASN1_VIDEOTEXSTRING
+  | ASN1_GRAPHICSTRING
+  | ASN1_GENERALSTRING
+  | ASN1_OBJECTDESCRIPTOR
+  | ASN1_BMPSTRING
+  | ASN1_UNIVERSALSTRING -> ()
+  | ASN1_UTF8STRING -> utf8_count_l_correct x 0
+  | _ -> restriction_pred_lit_correct r x
+#pop-options
+
+(* Times (ASN1.Spec.Time) *)
+
+module T = ASN1.Spec.Time
+module I = ASN1.Spec.IRI
+module U32 = FStar.UInt32
+
+let rec digits_l (l: list U8.t) (s: nat) (n: nat { s + n <= L.length l }) : Tot bool (decreases n) =
+  if n = 0 then true
+  else T.is_valid_digit (L.index l (s + n - 1)) && digits_l l s (n - 1)
+
+let rec digits_l_correct (l: list U8.t) (s: nat) (n: nat { s + n <= L.length l })
+: Lemma (ensures digits_l l s n == T.is_valid_digit_range (Seq.seq_of_list l) s n) (decreases n)
+= if n = 0 then () else digits_l_correct l s (n - 1)
+
+#push-options "--fuel 8"
+
+let yymmdd_l (l: list U8.t) (s: nat { s + 6 <= L.length l }) : Tot bool =
+  if digits_l l s 6 then
+    let yy = T.read_2dnum (L.index l s) (L.index l (s + 1)) in
+    let mm = T.read_2dnum (L.index l (s + 2)) (L.index l (s + 3)) in
+    let dd = T.read_2dnum (L.index l (s + 4)) (L.index l (s + 5)) in
+    T.is_valid_calendar_date2dy yy mm dd
+  else false
+
+let yyyymmdd_l (l: list U8.t) (s: nat { s + 8 <= L.length l }) : Tot bool =
+  if digits_l l s 8 then
+    let yyyy = T.read_4dnum (L.index l s) (L.index l (s + 1)) (L.index l (s + 2)) (L.index l (s + 3)) in
+    let mm = T.read_2dnum (L.index l (s + 4)) (L.index l (s + 5)) in
+    let dd = T.read_2dnum (L.index l (s + 6)) (L.index l (s + 7)) in
+    T.is_valid_calendar_date4dy yyyy mm dd
+  else false
+
+let hhmmss_l (utc: bool) (l: list U8.t) (s: nat { s + 6 <= L.length l }) : Tot bool =
+  if digits_l l s 6 then
+    let hh = T.read_2dnum (L.index l s) (L.index l (s + 1)) in
+    let mm = T.read_2dnum (L.index l (s + 2)) (L.index l (s + 3)) in
+    let ss = T.read_2dnum (L.index l (s + 4)) (L.index l (s + 5)) in
+    T.is_valid_time_hhmmss utc hh mm ss
+  else false
+
+let basic_year_l (l: list U8.t) (s: nat { s + 4 <= L.length l }) : Tot bool =
+  digits_l l s 4 &&
+  U32.lte 1582ul (T.read_4dnum (L.index l s) (L.index l (s + 1)) (L.index l (s + 2)) (L.index l (s + 3)))
+
+let yymmdd_l_correct (l: list U8.t) (s: nat { s + 6 <= L.length l /\ s <= 8 })
+: Lemma (yymmdd_l l s == T.is_valid_yymmdd (Seq.seq_of_list l) (U32.uint_to_t s))
+= digits_l_correct l s 6; assert (U32.v (U32.uint_to_t s) == s)
+
+let yyyymmdd_l_correct (l: list U8.t) (s: nat { s + 8 <= L.length l /\ s <= 8 })
+: Lemma (yyyymmdd_l l s == T.is_valid_yyyymmdd (Seq.seq_of_list l) (U32.uint_to_t s))
+= digits_l_correct l s 8; assert (U32.v (U32.uint_to_t s) == s)
+
+let hhmmss_l_correct (utc: bool) (l: list U8.t) (s: nat { s + 6 <= L.length l /\ s <= 8 })
+: Lemma (hhmmss_l utc l s == T.is_valid_hhmmss utc (Seq.seq_of_list l) (U32.uint_to_t s))
+= digits_l_correct l s 6; assert (U32.v (U32.uint_to_t s) == s)
+
+let basic_year_l_correct (l: list U8.t) (s: nat { s + 4 <= L.length l /\ s <= 8 })
+: Lemma (basic_year_l l s == T.is_valid_basic_year (Seq.seq_of_list l) (U32.uint_to_t s))
+= digits_l_correct l s 4; assert (U32.v (U32.uint_to_t s) == s)
+
+#pop-options
+
+let utctime_l (l: list U8.t) : Tot bool =
+  L.length l = 13 && yymmdd_l l 0 && hhmmss_l true l 6 && L.index l 12 = 90uy
+
+let gentime_l (l: list U8.t) : Tot bool =
+  let len = L.length l in
+  if len = 15 then
+    yyyymmdd_l l 0 && hhmmss_l true l 8 && L.index l 14 = 90uy
+  else if len >= 17 then
+    yyyymmdd_l l 0 && hhmmss_l true l 8 &&
+    L.index l 14 = 46uy &&
+    digits_l l 15 (len - 16) &&
+    L.index l (len - 2) <> 48uy &&
+    L.index l (len - 1) = 90uy
+  else false
+
+let date_l (l: list U8.t) : Tot bool =
+  L.length l = 8 && yyyymmdd_l l 0 && basic_year_l l 0
+
+let tod_l (l: list U8.t) : Tot bool =
+  L.length l = 6 && hhmmss_l false l 0
+
+let datetime_l (l: list U8.t) : Tot bool =
+  L.length l = 14 && yyyymmdd_l l 0 && basic_year_l l 0 && hhmmss_l false l 8
+
+let utctime_l_correct (l: list U8.t)
+: Lemma (requires utctime_l l) (ensures T.is_valid_ASN1UTCTIME (Seq.seq_of_list l))
+= yymmdd_l_correct l 0; hhmmss_l_correct true l 6
+
+let gentime_l_correct (l: list U8.t)
+: Lemma (requires gentime_l l) (ensures T.is_valid_ASN1GENERALIZEDTIME (Seq.seq_of_list l))
+= yyyymmdd_l_correct l 0; hhmmss_l_correct true l 8;
+  if L.length l >= 17 then digits_l_correct l 15 (L.length l - 16)
+
+let date_l_correct (l: list U8.t)
+: Lemma (requires date_l l) (ensures T.is_valid_ASN1DATE (Seq.seq_of_list l))
+= yyyymmdd_l_correct l 0; basic_year_l_correct l 0
+
+let tod_l_correct (l: list U8.t)
+: Lemma (requires tod_l l) (ensures T.is_valid_ASN1TIMEOFDAY (Seq.seq_of_list l))
+= hhmmss_l_correct false l 0
+
+let datetime_l_correct (l: list U8.t)
+: Lemma (requires datetime_l l) (ensures T.is_valid_ASN1DATETIME (Seq.seq_of_list l))
+= yyyymmdd_l_correct l 0; basic_year_l_correct l 0; hhmmss_l_correct false l 8
+
+(* OID-IRI and RELATIVE-OID-IRI (ASN1.Spec.IRI) *)
+
+let rec iri_l (l: list U8.t) (start: nat) (i: nat { start <= i /\ i <= L.length l }) (digits: bool)
+: Tot bool (decreases (L.length l - i))
+= if i = L.length l || L.index l i = I.iri_slash
+  then
+    i > start &&
+    (not digits || i = start + 1 || L.index l start <> 48uy) &&
+    (i = L.length l || iri_l l (i + 1) (i + 1) true)
+  else
+    I.is_iri_label_char (L.index l i) &&
+    iri_l l start (i + 1) (digits && I.is_iri_digit (L.index l i))
+
+let rec iri_l_correct (l: list U8.t) (start: nat) (i: nat { start <= i /\ i <= L.length l }) (digits: bool)
+: Lemma (ensures iri_l l start i digits == I.iri_labels_ok (Seq.seq_of_list l) start i digits)
+  (decreases (L.length l - i))
+= if i = L.length l then ()
+  else if L.index l i = I.iri_slash then iri_l_correct l (i + 1) (i + 1) true
+  else iri_l_correct l start (i + 1) (digits && I.is_iri_digit (L.index l i))
+
+let rel_oid_iri_l (l: list U8.t) : Tot bool =
+  utf8_l l && iri_l l 0 0 true
+
+let oid_iri_l (l: list U8.t) : Tot bool =
+  utf8_l l && L.length l > 0 && L.index l 0 = I.iri_slash && iri_l l 1 1 true
+
+let rel_oid_iri_l_correct (l: list U8.t)
+: Lemma (requires rel_oid_iri_l l) (ensures I.is_valid_relative_oid_iri (Seq.seq_of_list l))
+= utf8_l_correct l; iri_l_correct l 0 0 true
+
+let oid_iri_l_correct (l: list U8.t)
+: Lemma (requires oid_iri_l l) (ensures I.is_valid_oid_iri (Seq.seq_of_list l))
+= utf8_l_correct l; iri_l_correct l 1 1 true
+
+(* The literals, for generated code:
+   `(let l = [...] in assert_norm (ASN1.Lit.utctime_l [...]); ASN1.Lit.utctime_lit l ())` *)
+
+let bytes_lit_of (p: ASN1.Bytes.asn1_bytes -> Tot bool) (k: asn1_terminal_k { asn1_key_lit k == asn1_bytes_lit p })
+  (l: list U8.t) (_: squash (p (Seq.seq_of_list l)))
+: Tot (asn1_key_lit k)
+= let x : asn1_bytes_lit p = l in x
+
+let utctime_lit (l: list U8.t) (_: squash (utctime_l l)) : asn1_key_lit ASN1_UTCTIME =
+  utctime_l_correct l;
+  assert_norm (asn1_key_lit ASN1_UTCTIME == asn1_bytes_lit T.is_valid_ASN1UTCTIME);
+  bytes_lit_of T.is_valid_ASN1UTCTIME ASN1_UTCTIME l ()
+
+let gentime_lit (l: list U8.t) (_: squash (gentime_l l)) : asn1_key_lit ASN1_GENERALIZEDTIME =
+  gentime_l_correct l;
+  assert_norm (asn1_key_lit ASN1_GENERALIZEDTIME == asn1_bytes_lit T.is_valid_ASN1GENERALIZEDTIME);
+  bytes_lit_of T.is_valid_ASN1GENERALIZEDTIME ASN1_GENERALIZEDTIME l ()
+
+let date_lit (l: list U8.t) (_: squash (date_l l)) : asn1_key_lit ASN1_DATE =
+  date_l_correct l;
+  assert_norm (asn1_key_lit ASN1_DATE == asn1_bytes_lit T.is_valid_ASN1DATE);
+  bytes_lit_of T.is_valid_ASN1DATE ASN1_DATE l ()
+
+let tod_lit (l: list U8.t) (_: squash (tod_l l)) : asn1_key_lit ASN1_TIME_OF_DAY =
+  tod_l_correct l;
+  assert_norm (asn1_key_lit ASN1_TIME_OF_DAY == asn1_bytes_lit T.is_valid_ASN1TIMEOFDAY);
+  bytes_lit_of T.is_valid_ASN1TIMEOFDAY ASN1_TIME_OF_DAY l ()
+
+let datetime_lit (l: list U8.t) (_: squash (datetime_l l)) : asn1_key_lit ASN1_DATE_TIME =
+  datetime_l_correct l;
+  assert_norm (asn1_key_lit ASN1_DATE_TIME == asn1_bytes_lit T.is_valid_ASN1DATETIME);
+  bytes_lit_of T.is_valid_ASN1DATETIME ASN1_DATE_TIME l ()
+
+let oid_iri_lit (l: list U8.t) (_: squash (oid_iri_l l)) : asn1_key_lit ASN1_OID_IRI =
+  oid_iri_l_correct l;
+  assert_norm (asn1_key_lit ASN1_OID_IRI == asn1_bytes_lit I.is_valid_oid_iri);
+  bytes_lit_of I.is_valid_oid_iri ASN1_OID_IRI l ()
+
+let rel_oid_iri_lit (l: list U8.t) (_: squash (rel_oid_iri_l l)) : asn1_key_lit ASN1_RELATIVE_OID_IRI =
+  rel_oid_iri_l_correct l;
+  assert_norm (asn1_key_lit ASN1_RELATIVE_OID_IRI == asn1_bytes_lit I.is_valid_relative_oid_iri);
+  bytes_lit_of I.is_valid_relative_oid_iri ASN1_RELATIVE_OID_IRI l ()
