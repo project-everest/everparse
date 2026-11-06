@@ -25,6 +25,44 @@ fn parse_bounded()
 }
 
 #[test]
+fn parse_bounded_sort()
+{
+    let input = [0xa1, 0x00, 0xa1, 0x01, 0x02, 0xff];
+    assert!(cbor_nondet_bounded_sort_scratch_ok(2, 1, 6));
+    assert!(!cbor_nondet_bounded_sort_scratch_ok(2, 1, 5));
+    assert!(!cbor_nondet_bounded_sort_scratch_ok(usize::MAX, 2, usize::MAX));
+    {
+        let mut scratch = [0usize; 6];
+        let (object, rem) = cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input).unwrap();
+        let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
+        assert!(cbor_nondet_get_map_length(map) == 1);
+        assert_eq!(rem, &input[5..]);
+    }
+    let mut scratch = [0usize; 64];
+    assert!(cbor_nondet_parse_bounded_sort(2, 1, &mut scratch[..5], &input).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(1, 1, &mut scratch, &input).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(2, 0, &mut scratch, &input).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input[..4]).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(0, 0, &mut [], &[0x00]).is_some());
+
+    // {0: 1, 0: 2}: duplicate keys
+    let dup = [0xa2, 0x00, 0x01, 0x00, 0x02];
+    assert!(cbor_nondet_parse_bounded_sort(1, 2, &mut scratch, &dup).is_none());
+    assert!(cbor_nondet_parse_bounded(1, 2, &dup).is_none());
+    // {0: 1, 1: 2}
+    let ok = [0xa2, 0x00, 0x01, 0x01, 0x02];
+    assert!(cbor_nondet_parse_bounded_sort(1, 2, &mut scratch, &ok).is_some());
+    // {{0: 0, 1: 1}: 0, {1: 1, 0: 0}: 1}: equivalent map keys
+    let dup_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x00, 0x01];
+    assert!(cbor_nondet_parse_bounded_sort(2, 2, &mut scratch, &dup_map_keys).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 2, &dup_map_keys).is_none());
+    // {{0: 0, 1: 1}: 0, {1: 1, 0: 1}: 1}
+    let ok_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x01, 0x01];
+    assert!(cbor_nondet_parse_bounded_sort(2, 2, &mut scratch, &ok_map_keys).is_some());
+    assert!(cbor_nondet_parse_bounded(2, 2, &ok_map_keys).is_some());
+}
+
+#[test]
 fn parse_map_length_bounded()
 {
     let input = [0xa1, 0x00, 0xa1, 0x01, 0x02, 0xff];

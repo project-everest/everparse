@@ -101,6 +101,45 @@ pub fn cbor_nondet_parse_bounded<'a>(
     }
 }
 
+/// Returns `true` if and only if a scratch slice of `scratch_len`
+/// elements is large enough for [`cbor_nondet_parse_bounded_sort`]
+/// with these bounds, i.e. `scratch_len >= 3 * map_depth_bound *
+/// map_length_bound` (without overflow.)
+pub fn cbor_nondet_bounded_sort_scratch_ok(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch_len: usize,
+) -> bool
+{
+    crate::cbornondetver::cbor_nondet_bounded_sort_scratch_ok(map_depth_bound, map_length_bound, scratch_len)
+}
+
+/// Same specification as [`cbor_nondet_parse_bounded`], but checks
+/// map keys for duplicates by sorting them, using the caller-provided
+/// `scratch` slice instead of quadratic pairwise comparisons. `scratch`
+/// must satisfy [`cbor_nondet_bounded_sort_scratch_ok`], otherwise this
+/// function returns `None`. This function allocates nothing.
+///
+/// Limitation: `scratch` stays mutably borrowed for as long as the
+/// returned object lives.
+pub fn cbor_nondet_parse_bounded_sort<'a>(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    scratch: &'a mut [usize],
+    input: &'a [u8],
+) -> Option<(CborNondet<'a>, &'a [u8])>
+{
+    match crate::cbornondetver::cbor_nondet_parse_bounded_sort(
+        map_depth_bound,
+        map_length_bound,
+        scratch,
+        input,
+    ) {
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
+        crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
+    }
+}
+
 /// Computes the byte size of the binary representation of the
 /// CBOR object `x`,
 /// but without serializing `x`. Returns `None` if that size is
