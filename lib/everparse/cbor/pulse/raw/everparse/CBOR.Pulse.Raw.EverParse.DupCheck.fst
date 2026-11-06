@@ -24,6 +24,7 @@ module MS = LowParse.Pulse.MergeSort
 module SP = FStar.Seq.Properties
 module CB = CBOR.Pulse.Raw.Compare.Bytes
 module Trade = Pulse.Lib.Trade.Util
+module H = CBOR.Spec.Raw.EverParse.DupCheck.Hash
 
 let jump_item_end (b: bytes) (o r: SZ.t) : Lemma
   (requires validator_success parse_raw_data_item o b r)
@@ -958,6 +959,522 @@ let walk_end (b: bytes) (o: nat) (m: nat) (lw q: list raw_data_item) : Lemma
 
 #pop-options
 
+(* Hashing items with a keyed hash compatible with `cc` *)
+
+inline_for_extraction
+let impl_head_value (a: Ghost.erased raw_data_item) (h: header) : Pure U64.t
+  (requires h == get_raw_data_item_header a)
+  (ensures fun r -> r == H.head_value a)
+= header_major_type a;
+  let mt = get_header_major_type h in
+  if mt = cbor_major_type_simple_value
+  then FStar.Int.Cast.uint8_to_uint64 (get_simple_value a h)
+  else if mt = cbor_major_type_uint64 || mt = cbor_major_type_neg_int64
+  then (get_int64_value a h).value
+  else if mt = cbor_major_type_byte_string || mt = cbor_major_type_text_string
+  then (get_string_length a h).value
+  else if mt = cbor_major_type_tagged
+  then (get_tagged_tag a h).value
+  else if mt = cbor_major_type_array
+  then (get_array_length a h).value
+  else (get_map_length a h).value
+
+fn hash_word
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (x c: SZ.t)
+requires
+  pts_to b #p bB ** pure (SZ.v x + SZ.v c <= Seq.length bB)
+returns w: U64.t
+ensures
+  pts_to b #p bB ** pure (
+    SZ.v x + SZ.v c <= Seq.length bB /\
+    w == H.le_word (Seq.slice bB (SZ.v x) (SZ.v x + SZ.v c))
+  )
+{
+  S.pts_to_len b;
+  let mut pj = c;
+  let mut pw = 0uL;
+  H.le_word_nil bB (SZ.v x + SZ.v c);
+  while (
+    let j = !pj;
+    SZ.gt j 0sz
+  )
+  invariant exists* j w . pts_to pj j ** pts_to pw w ** pts_to b #p bB ** pure (
+    SZ.v j <= SZ.v c /\
+    w == H.le_word (Seq.slice bB (SZ.v x + SZ.v j) (SZ.v x + SZ.v c))
+  )
+  decreases (SZ.v !pj)
+  {
+    let j = !pj;
+    let w = !pw;
+    let j' = SZ.sub j 1sz;
+    let y = S.op_Dot_Lparen_Rparen b (SZ.add x j');
+    H.le_word_step bB (SZ.v x + SZ.v j') (SZ.v x + SZ.v c);
+    pw := U64.logor (FStar.Int.Cast.uint8_to_uint64 y) (U64.shift_left w 8ul);
+    pj := j';
+  };
+  !pw
+}
+
+let hash_bytes_step (bB: bytes) (st0 st: H.sip) (o len i c: nat) (w: U64.t) : Lemma
+  (requires
+    i < len /\ o + len <= Seq.length bB /\
+    c == (if len - i < 8 then len - i else 8) /\
+    w == H.le_word (Seq.slice bB (o + i) (o + i + c)) /\
+    H.absorb_bytes st0 (Seq.slice bB o (o + len)) == H.absorb_bytes st (Seq.slice bB (o + i) (o + len)))
+  (ensures
+    i + c <= len /\
+    H.absorb_bytes st0 (Seq.slice bB o (o + len)) == H.absorb_bytes (H.sip_absorb st w) (Seq.slice bB (o + (i + c)) (o + len)))
+= H.absorb_bytes_step st bB (o + i) (o + len)
+
+#push-options "--fuel 0 --ifuel 1 --z3rlimit 32"
+
+fn hash_bytes
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (st0: H.sip)
+  (o len: SZ.t)
+requires
+  pts_to b #p bB ** pure (SZ.v o + SZ.v len <= Seq.length bB)
+returns st: H.sip
+ensures
+  pts_to b #p bB ** pure (
+    SZ.v o + SZ.v len <= Seq.length bB /\
+    st == H.absorb_bytes st0 (Seq.slice bB (SZ.v o) (SZ.v o + SZ.v len))
+  )
+{
+  S.pts_to_len b;
+  let mut pi = 0sz;
+  let mut pst = st0;
+  while (
+    let i = !pi;
+    SZ.lt i len
+  )
+  invariant exists* i st . pts_to pi i ** pts_to pst st ** pts_to b #p bB ** pure (
+    SZ.v i <= SZ.v len /\
+    H.absorb_bytes st0 (Seq.slice bB (SZ.v o) (SZ.v o + SZ.v len)) ==
+      H.absorb_bytes st (Seq.slice bB (SZ.v o + SZ.v i) (SZ.v o + SZ.v len))
+  )
+  decreases (SZ.v len - SZ.v !pi)
+  {
+    let i = !pi;
+    let st = !pst;
+    let rem = SZ.sub len i;
+    let c = (if SZ.lt rem 8sz then rem else 8sz);
+    let x = SZ.add o i;
+    let w = hash_word b x c;
+    hash_bytes_step bB st0 st (SZ.v o) (SZ.v len) (SZ.v i) (SZ.v c) w;
+    pst := H.sip_absorb st w;
+    pi := SZ.add i c;
+  };
+  with i . assert (pts_to pi i);
+  H.absorb_bytes_nil (Ghost.reveal !pst) bB (SZ.v o + SZ.v len);
+  !pst
+}
+
+#pop-options
+
+fn hash_leaf
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (is_string: bool)
+  (st0: H.sip)
+  (o len: SZ.t)
+requires
+  pts_to b #p bB ** pure (is_string ==> SZ.v o + SZ.v len <= Seq.length bB)
+returns st: H.sip
+ensures
+  pts_to b #p bB ** pure (
+    (is_string ==> (
+      SZ.v o + SZ.v len <= Seq.length bB /\
+      st == H.absorb_bytes st0 (Seq.slice bB (SZ.v o) (SZ.v o + SZ.v len)))) /\
+    (is_string == false ==> st == st0)
+  )
+{
+  if is_string {
+    hash_bytes b st0 o len
+  } else {
+    st0
+  }
+}
+
+let hwalk_inv
+  (b: bytes) (k0 k1: U64.t) (n f: nat) (st0: H.sip) (l0: list raw_data_item) (e: nat)
+  (o c m: nat) (lw q: list raw_data_item) (st: H.sip)
+: prop
+= List.Tot.length lw == c /\
+  items_at b o (c + m) (List.Tot.append lw q) /\
+  List.Tot.for_all (item_bnd n f) lw /\
+  H.rh_feed_list k0 k1 st0 l0 == H.rh_feed_list k0 k1 st lw /\
+  items_end b o c == e
+
+let hash_items_pre (bB: bytes) (n f: nat) (o0 c0: nat) (l0 q: list raw_data_item) (m: nat) : prop =
+  List.Tot.length l0 == c0 /\
+  items_at bB o0 (c0 + m) (List.Tot.append l0 q) /\
+  List.Tot.for_all (item_bnd n f) l0
+
+let hash_items_post (bB: bytes) (k0 k1: U64.t) (st0: H.sip) (o0 c0: nat) (l0 q: list raw_data_item) (m: nat) (st: H.sip) (o: nat) : prop =
+  st == H.rh_feed_list k0 k1 st0 l0 /\
+  items_at bB o m q /\
+  o == items_end bB o0 c0
+
+#push-options "--fuel 2 --ifuel 1 --z3rlimit 64"
+
+let hash_step_nonmap
+  (b: bytes) (k0 k1: U64.t) (n f: nat) (st0: H.sip) (l0: list raw_data_item) (e: nat)
+  (o: nat) (c: pos) (m: nat) (lw q: list raw_data_item) (st: H.sip) (h: header) (oh: nat) (st1: H.sip)
+: Lemma
+  (requires
+    hwalk_inv b k0 k1 n f st0 l0 e o c m lw q st /\
+    (match parse parse_header (Seq.slice b o (Seq.length b)) with
+     | Some (h', l) -> h' == h /\ oh == o + l
+     | None -> False) /\
+    Cons? lw /\ ~ (Map? (lhd lw)) /\
+    oh + CBOR.Spec.Raw.EverParse.Items.leaf_size h <= Seq.length b /\
+    (String? (lhd lw) ==> st1 == H.absorb_bytes (H.rh_head st (get_major_type (lhd lw)) (H.head_value (lhd lw))) (Seq.slice b oh (oh + CBOR.Spec.Raw.EverParse.Items.leaf_size h))) /\
+    (~ (String? (lhd lw)) ==> st1 == H.rh_head st (get_major_type (lhd lw)) (H.head_value (lhd lw))))
+  (ensures (
+    let a = lhd lw in
+    let l' = List.Tot.append (children a) (ltl lw) in
+    List.Tot.length l' == remaining_data_items_header h + (c - 1) /\
+    hwalk_inv b k0 k1 n f st0 l0 e (oh + CBOR.Spec.Raw.EverParse.Items.leaf_size h) (List.Tot.length l') m l' q st1 /\
+    list_sum raw_data_item_size l' < list_sum raw_data_item_size lw))
+= walk_step b n f o c m lw q h oh;
+  items_at_header b o (c + m) (List.Tot.append lw q) h oh;
+  H.rh_step_nonmap k0 k1 st (lhd lw) (ltl lw)
+
+let hash_step_map
+  (b: bytes) (k0 k1: U64.t) (n f: nat) (st0: H.sip) (l0: list raw_data_item) (e: nat)
+  (o: nat) (c: pos) (m: nat) (lw q: list raw_data_item) (st: H.sip) (h: header) (oh: nat)
+  (e': nat) (acc: U64.t)
+: Lemma
+  (requires
+    hwalk_inv b k0 k1 n f st0 l0 e o c m lw q st /\
+    (match parse parse_header (Seq.slice b o (Seq.length b)) with
+     | Some (h', l) -> h' == h /\ oh == o + l
+     | None -> False) /\
+    Cons? lw /\ Map? (lhd lw) /\
+    items_at b e' ((c - 1) + m) (List.Tot.append (ltl lw) q) /\
+    e' == items_end b oh (2 * List.Tot.length (Map?.v (lhd lw))) /\
+    H.msum k0 k1 (Map?.v (lhd lw)) == acc)
+  (ensures
+    hwalk_inv b k0 k1 n f st0 l0 e e' (c - 1) m (ltl lw) q
+      (H.sip_absorb (H.rh_head st cbor_major_type_map (H.head_value (lhd lw))) acc) /\
+    list_sum raw_data_item_size (ltl lw) < list_sum raw_data_item_size lw)
+= walk_step b n f o c m lw q h oh;
+  H.rh_step_map k0 k1 st (lhd lw) (ltl lw)
+
+let hash_end
+  (b: bytes) (k0 k1: U64.t) (n f: nat) (st0: H.sip) (o0 c0: nat) (l0: list raw_data_item)
+  (o: nat) (m: nat) (lw q: list raw_data_item) (st: H.sip)
+: Lemma
+  (requires hwalk_inv b k0 k1 n f st0 l0 (items_end b o0 c0) o 0 m lw q st)
+  (ensures hash_items_post b k0 k1 st0 o0 c0 l0 q m st o)
+= ()
+
+let hash_init
+  (b: bytes) (k0 k1: U64.t) (n f: nat) (st0: H.sip) (o0 c0: nat) (l0 q: list raw_data_item) (m: nat)
+: Lemma
+  (requires hash_items_pre b n f o0 c0 l0 q m)
+  (ensures hwalk_inv b k0 k1 n f st0 l0 (items_end b o0 c0) o0 c0 m l0 q st0)
+= ()
+
+#pop-options
+
+#push-options "--z3rlimit 128"
+
+fn rec hash_items
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (k0 k1: U64.t)
+  (n f: Ghost.erased nat)
+  (st0: H.sip)
+  (o0 c0: SZ.t)
+  (l0 q: Ghost.erased (list raw_data_item))
+  (m: Ghost.erased nat)
+  (pout: ref SZ.t)
+requires
+  pts_to b #p bB ** (exists* o . pts_to pout o) **
+    pure (hash_items_pre bB n f (SZ.v o0) (SZ.v c0) l0 q m)
+returns st: H.sip
+ensures
+  pts_to b #p bB ** (exists* o . pts_to pout o **
+    pure (hash_items_post bB k0 k1 st0 (SZ.v o0) (SZ.v c0) l0 q m st (SZ.v o)))
+decreases (Ghost.reveal f)
+{
+  S.pts_to_len b;
+  hash_init bB k0 k1 n f st0 (SZ.v o0) (SZ.v c0) l0 q m;
+  let mut po = o0;
+  let mut pc = c0;
+  let mut pst = st0;
+  let mut pl : Ghost.erased (list raw_data_item) = l0;
+  while (
+    let c = !pc;
+    SZ.gt c 0sz
+  )
+  invariant exists* o c st (lw: Ghost.erased (list raw_data_item)) .
+    pts_to b #p bB ** (exists* o . pts_to pout o) **
+    pts_to po o ** pts_to pc c ** pts_to pst st ** pts_to pl lw **
+    pure (hwalk_inv bB k0 k1 n f st0 l0 (items_end bB (SZ.v o0) (SZ.v c0)) (SZ.v o) (SZ.v c) m lw q st)
+  decreases (list_sum raw_data_item_size (Ghost.reveal !pl))
+  {
+    let o = !po;
+    let c = !pc;
+    let st = !pst;
+    let lw = !pl;
+    items_at_step bB (SZ.v o) (SZ.v c + m) (List.Tot.append lw q);
+    let oh = jump_header () b o;
+    let h = read_from_validator_success (read_header ()) b o oh;
+    walk_step bB n f (SZ.v o) (SZ.v c) m lw q h (SZ.v oh);
+    major_type_facts (lhd lw);
+    let mt = get_header_major_type h;
+    let hval = impl_head_value (Ghost.hide (lhd lw)) h;
+    let st1 = H.rh_head st mt hval;
+    if (mt = cbor_major_type_map) {
+      let k = SZ.uint64_to_sizet (get_map_length (Ghost.hide (lhd lw)) h).value;
+      let f' : Ghost.erased nat = Ghost.hide (Ghost.reveal f - 1);
+      let v : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (Map?.v (lhd lw));
+      let m' : Ghost.erased nat = Ghost.hide (SZ.v c - 1 + m);
+      let q' : Ghost.erased (list raw_data_item) = Ghost.hide (List.Tot.append (ltl lw) q);
+      assert (pure (SZ.v k == List.Tot.length v));
+      assert (pure (List.Tot.for_all (item_bnd n f') (list_of_pair_list v)));
+      H.hent_init bB k0 k1 (SZ.v oh) v m' q';
+      let mut pi = 0sz;
+      let mut pe = oh;
+      let mut pacc = 0uL;
+      while (
+        let i = !pi;
+        SZ.lt i k
+      )
+      invariant exists* i e acc .
+        pts_to pi i ** pts_to pe e ** pts_to pacc acc **
+        pts_to b #p bB ** (exists* o . pts_to pout o) **
+        pure (SZ.v i <= SZ.v k /\ H.hent_inv bB k0 k1 (SZ.v oh) v m' q' (SZ.v i) (SZ.v e) acc)
+      decreases (SZ.v k - SZ.v !pi)
+      {
+        let i = !pi;
+        let e = !pe;
+        let acc = !pacc;
+        H.hent_pre bB k0 k1 n f' (SZ.v oh) v m' q' (SZ.v i) (SZ.v e) acc;
+        let sk = hash_items b k0 k1 n f' (H.sip_init k0 k1) e 1sz
+          (Ghost.hide [fst (List.Tot.index v (SZ.v i))])
+          (Ghost.hide (List.Tot.append [snd (List.Tot.index v (SZ.v i))] (H.hent_qv v (SZ.v i) q')))
+          (Ghost.hide (1 + H.hent_mk v (SZ.v i) m'))
+          pout;
+        let o1 = !pout;
+        let sv = hash_items b k0 k1 n f' (H.sip_init k0 k1) o1 1sz
+          (Ghost.hide [snd (List.Tot.index v (SZ.v i))])
+          (H.hent_qv v (SZ.v i) q')
+          (Ghost.hide (H.hent_mk v (SZ.v i) m'))
+          pout;
+        let o2 = !pout;
+        H.hent_step bB k0 k1 (SZ.v oh) v m' q' (SZ.v i) (SZ.v e) acc (SZ.v o1) (SZ.v o2) sk sv;
+        pacc := U64.add_mod acc (H.ehash k0 k1 (H.sip_fin sk) (H.sip_fin sv));
+        pe := o2;
+        pi := SZ.add i 1sz;
+      };
+      with i e acc . assert (pts_to pi i ** pts_to pe e ** pts_to pacc acc);
+      H.hent_end bB k0 k1 (SZ.v oh) v m' q' (SZ.v e) acc;
+      hash_step_map bB k0 k1 n f st0 l0 (items_end bB (SZ.v o0) (SZ.v c0)) (SZ.v o) (SZ.v c) m lw q st h (SZ.v oh) (SZ.v e) acc;
+      let e = !pe;
+      let acc = !pacc;
+      pst := H.sip_absorb st1 acc;
+      po := e;
+      pc := SZ.sub c 1sz;
+      pl := Ghost.hide (ltl lw);
+    } else {
+      let is_string = (mt = cbor_major_type_byte_string || mt = cbor_major_type_text_string);
+      let leaf : SZ.t = (if is_string then SZ.uint64_to_sizet (get_string_length (Ghost.hide (lhd lw)) h).value else 0sz);
+      let st2 = hash_leaf b is_string st1 oh leaf;
+      hash_step_nonmap bB k0 k1 n f st0 l0 (items_end bB (SZ.v o0) (SZ.v c0)) (SZ.v o) (SZ.v c) m lw q st h (SZ.v oh) st2;
+      let rem = impl_remaining_data_items_header (Ghost.hide (S.len b)) h;
+      pst := st2;
+      po := SZ.add oh leaf;
+      pc := SZ.add rem (SZ.sub c 1sz);
+      pl := Ghost.hide (List.Tot.append (children (lhd lw)) (ltl lw));
+    }
+  };
+  with o c st lw . assert (pts_to po o ** pts_to pc c ** pts_to pst st ** pts_to pl lw);
+  hash_end bB k0 k1 n f st0 (SZ.v o0) (SZ.v c0) l0 (SZ.v o) m lw q st;
+  let o = !po;
+  pout := o;
+  !pst
+}
+
+#pop-options
+
+(* Sorting the keys of a map by hash first *)
+
+let hcinv
+  (b: S.slice U8.t) (p: perm) (bB: Ghost.erased bytes) (n f: Ghost.erased nat)
+  (rest ks: S.slice SZ.t) (sks: Ghost.erased (Seq.seq SZ.t))
+  (hv: S.slice U64.t) (shv: Ghost.erased (Seq.seq U64.t))
+: slprop
+= cinv b p bB rest ** pts_to ks sks ** pts_to hv shv ** pure (
+    Seq.length shv == Seq.length sks /\
+    (forall (j: nat) . j < Seq.length sks ==> cmp_pre bB n f (SZ.v (S.len rest)) (Seq.index sks j))
+  )
+
+inline_for_extraction
+fn hcmp
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f: Ghost.erased nat)
+  (rec_cmp: rec_cmp_t b p bB n f)
+  (rest ks: S.slice SZ.t) (hv: S.slice U64.t)
+  (sks: Ghost.erased (Seq.seq SZ.t)) (shv: Ghost.erased (Seq.seq U64.t))
+  (i j: SZ.t)
+requires
+  hcinv b p bB n f rest ks sks hv shv ** pure (H.ipre (Seq.length sks) i /\ H.ipre (Seq.length sks) j)
+returns r: I16.t
+ensures
+  hcinv b p bB n f rest ks sks hv shv ** pure (MS.same_sign (I16.v r) (Ghost.reveal (H.icmp_g bB sks shv) i j))
+{
+  unfold (hcinv b p bB n f rest ks sks hv shv);
+  S.pts_to_len hv;
+  S.pts_to_len ks;
+  let hi = S.op_Dot_Lparen_Rparen hv i;
+  let hj = S.op_Dot_Lparen_Rparen hv j;
+  if (U64.lt hi hj) {
+    fold (hcinv b p bB n f rest ks sks hv shv);
+    (-1s)
+  } else if (U64.lt hj hi) {
+    fold (hcinv b p bB n f rest ks sks hv shv);
+    1s
+  } else {
+    let xi = S.op_Dot_Lparen_Rparen ks i;
+    let xj = S.op_Dot_Lparen_Rparen ks j;
+    key_cmp_g_eq bB xi xj;
+    let r = rec_cmp rest xi xj;
+    fold (hcinv b p bB n f rest ks sks hv shv);
+    r
+  }
+}
+
+let entries_cmp_pre_index (b: Ghost.erased bytes) (n f: Ghost.erased nat) (scl: nat) (s: Seq.seq SZ.t) : Lemma
+  (requires entries_ok b n f s /\ scl >= 3 * n * f)
+  (ensures forall (j: nat) . j < Seq.length s ==> cmp_pre b n f scl (Seq.index s j))
+= let prf (j: nat) : Lemma
+    (requires j < Seq.length s)
+    (ensures j < Seq.length s /\ cmp_pre b n f scl (Seq.index s j))
+  = entries_ok_index b n f s j;
+    entry_pre_cmp_pre b n f scl (Seq.index s j)
+  in
+  Classical.forall_intro (Classical.move_requires prf)
+
+let hash_key_pre (bB: bytes) (n f: nat) (x: SZ.t) : Lemma
+  (requires items_at bB (SZ.v x) 1 [item_at bB (SZ.v x)] /\ item_ok n f (item_at bB (SZ.v x)))
+  (ensures hash_items_pre bB n f (SZ.v x) 1 [item_at bB (SZ.v x)] [] 0)
+= items_at_append_nil bB (SZ.v x) 1 [item_at bB (SZ.v x)]
+
+let hash_key_post (bB: bytes) (k0 k1: U64.t) (x: SZ.t) (st: H.sip) (o: nat) : Lemma
+  (requires hash_items_post bB k0 k1 (H.sip_init k0 k1) (SZ.v x) 1 [item_at bB (SZ.v x)] [] 0 st o)
+  (ensures H.sip_fin st == H.key_hash bB k0 k1 x)
+= H.rh_single k0 k1 (item_at bB (SZ.v x));
+  H.key_hash_eq bB k0 k1 x
+
+let iota_seq_pre (s: Seq.seq SZ.t) (k: nat) : Lemma
+  (requires H.is_iota s (Seq.length s) /\ Seq.length s == k)
+  (ensures MS.seq_pre (H.ipre k) s /\ MS.seq_distinct s)
+= H.iota_pre s
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn hash_map_keys
+  (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
+  (n f': Ghost.erased nat)
+  (rec_cmp: rec_cmp_t b p bB n f')
+  (rest: S.slice SZ.t)
+  (k0 k1: U64.t)
+  (ks tmp: S.slice SZ.t)
+  (hv: S.slice U64.t)
+  (idx: S.slice SZ.t)
+  (v: Ghost.erased (list (raw_data_item & raw_data_item)))
+  (#s0: Ghost.erased (Seq.seq SZ.t))
+  (#st: Ghost.erased (Seq.seq SZ.t))
+  (#shv0: Ghost.erased (Seq.seq U64.t))
+  (#sidx0: Ghost.erased (Seq.seq SZ.t))
+requires
+  cinv b p bB rest ** pts_to ks s0 ** pts_to tmp st ** pts_to hv shv0 ** pts_to idx sidx0 ** pure (
+    SZ.v (S.len rest) >= 3 * n * f' /\
+    Seq.length s0 == List.Tot.length v /\
+    Seq.length st == Seq.length s0 /\
+    Seq.length shv0 == Seq.length s0 /\
+    Seq.length sidx0 == Seq.length s0 /\
+    offsets_match bB s0 (Seq.length s0) v /\
+    (forall (j: nat) . j < Seq.length s0 ==> entry_struct bB (Seq.index s0 j)) /\
+    List.Tot.for_all (item_ok n f') (list_of_pair_list v)
+  )
+returns res: bool
+ensures
+  cinv b p bB rest ** pts_to ks s0 ** (exists* st1 shv1 sidx1 .
+    pts_to tmp st1 ** pts_to hv shv1 ** pts_to idx sidx1 ** pure (
+    Seq.length st1 == Seq.length s0 /\
+    Seq.length shv1 == Seq.length s0 /\
+    Seq.length sidx1 == Seq.length s0
+  )) ** pure (
+    res == no_cc_dup (List.Tot.map fst v)
+  )
+{
+  S.pts_to_len ks;
+  S.pts_to_len tmp;
+  S.pts_to_len hv;
+  S.pts_to_len idx;
+  fill_entries_ok bB n f' s0 v;
+  entries_cmp_pre_index bB n f' (SZ.v (S.len rest)) s0;
+  let k = S.len ks;
+  let mut pi = 0sz;
+  let mut po = 0sz;
+  while (
+    let i = !pi;
+    SZ.lt i k
+  )
+  invariant exists* i shv sidx .
+    pts_to pi i ** pts_to hv shv ** pts_to idx sidx ** (exists* o . pts_to po o) **
+    cinv b p bB rest ** pts_to ks s0 ** pure (
+    SZ.v i <= SZ.v k /\
+    H.hv_ok bB k0 k1 s0 shv (SZ.v i) /\
+    Seq.length sidx == SZ.v k /\
+    H.is_iota sidx (SZ.v i)
+  )
+  decreases (SZ.v k - SZ.v !pi)
+  {
+    let i = !pi;
+    S.pts_to_len hv;
+    S.pts_to_len idx;
+    let x = S.op_Dot_Lparen_Rparen ks i;
+    entries_ok_index bB n f' s0 (SZ.v i);
+    entry_pre_elim bB n f' x;
+    hash_key_pre bB n f' x;
+    unfold (cinv b p bB rest);
+    let sh = hash_items b k0 k1 n f' (H.sip_init k0 k1) x 1sz
+      (Ghost.hide [item_at bB (SZ.v x)]) (Ghost.hide []) (Ghost.hide 0) po;
+    fold (cinv b p bB rest);
+    with o . assert (pts_to po o);
+    hash_key_post bB k0 k1 x sh (SZ.v o);
+    let h = H.sip_fin sh;
+    with shv . assert (pts_to hv shv);
+    with sidx . assert (pts_to idx sidx);
+    H.hv_ok_step bB k0 k1 s0 shv (SZ.v i) h;
+    H.is_iota_step sidx (SZ.v i) i;
+    S.op_Dot_Lparen_Rparen_Less_Minus hv i h;
+    S.op_Dot_Lparen_Rparen_Less_Minus idx i i;
+    pi := SZ.add i 1sz;
+  };
+  with shv . assert (pts_to hv shv);
+  with sidx . assert (pts_to idx sidx);
+  H.icmp_props bB s0 shv;
+  iota_seq_pre sidx (Seq.length s0);
+  fold (hcinv b p bB n f' rest ks s0 hv shv);
+  let ok = MS.sort #SZ.t #(hcinv b p bB n f' rest ks s0 hv shv) #(Ghost.hide (H.ipre (Seq.length s0))) #(H.icmp_g bB s0 shv)
+    (hcmp b n f' rec_cmp rest ks hv s0 shv) idx tmp;
+  unfold (hcinv b p bB n f' rest ks s0 hv shv);
+  with s1 . assert (pts_to idx s1);
+  S.pts_to_len idx;
+  S.pts_to_len tmp;
+  H.hash_sort_result bB k0 k1 s0 shv sidx s1 v ok;
+  ok
+}
+
+#pop-options
+
 let walk_inv
   (b: bytes) (n f: nat) (l0: list raw_data_item) (e: nat) (o c m: nat) (lw q: list raw_data_item) (res: bool)
 : prop
@@ -1060,6 +1577,9 @@ fn walk_map_finish
   (n f': Ghost.erased nat)
   (rec_cmp: rec_cmp_t b p bB n f')
   (rest: S.slice SZ.t)
+  (k0 k1: U64.t)
+  (hv: S.slice U64.t)
+  (idx: S.slice SZ.t)
   (ks tmp: S.slice SZ.t)
   (oh: SZ.t)
   (v: Ghost.erased (list (raw_data_item & raw_data_item)))
@@ -1071,7 +1591,8 @@ fn walk_map_finish
   (#s1: Ghost.erased (Seq.seq SZ.t))
   (#st: Ghost.erased (Seq.seq SZ.t))
 requires
-  pts_to b #p bB ** pts_to ks s1 ** pts_to tmp st ** (exists* s . pts_to rest s) ** (exists* o . pts_to pout o) ** pure (
+  pts_to b #p bB ** pts_to ks s1 ** pts_to tmp st ** (exists* s . pts_to rest s) ** (exists* o . pts_to pout o) **
+  (exists* s . pts_to hv s) ** (exists* s . pts_to idx s) ** pure (
     SZ.v (S.len rest) >= 3 * n * f' /\
     Seq.length st == Seq.length s1 /\
     ment_inv_o bB s1 (SZ.v i) (SZ.v o) (SZ.v oh) v m q r /\
@@ -1080,7 +1601,7 @@ requires
   )
 returns res: bool
 ensures
-  pts_to b #p bB ** (exists* s . pts_to rest s) ** (exists* s2 st2 . pts_to ks s2 ** pts_to tmp st2 ** pure (
+  pts_to b #p bB ** (exists* s . pts_to rest s) ** (exists* s . pts_to hv s) ** (exists* s . pts_to idx s) ** (exists* s2 st2 . pts_to ks s2 ** pts_to tmp st2 ** pure (
     Seq.length s2 == Seq.length s1 /\
     Seq.length st2 == Seq.length s1
   )) ** (exists* o' . pts_to pout o' ** pure (
@@ -1094,9 +1615,28 @@ ensures
     bnd_ok_list n f' (list_of_pair_list v);
     pout := o;
     fold (cinv b p bB rest);
-    let ok = sort_map_keys b n f' rec_cmp rest ks tmp v;
-    unfold (cinv b p bB rest);
-    ok
+    S.pts_to_len ks;
+    S.pts_to_len tmp;
+    let k = S.len ks;
+    with shv . assert (pts_to hv shv);
+    with sidx . assert (pts_to idx sidx);
+    S.pts_to_len hv;
+    S.pts_to_len idx;
+    if (SZ.lte k (S.len hv) && SZ.lte k (S.len idx)) {
+      let hv1, hv2 = S.split hv k;
+      let idx1, idx2 = S.split idx k;
+      S.pts_to_len hv1;
+      S.pts_to_len idx1;
+      let ok = hash_map_keys b n f' rec_cmp rest k0 k1 ks tmp hv1 idx1 v;
+      S.join hv1 hv2 hv;
+      S.join idx1 idx2 idx;
+      unfold (cinv b p bB rest);
+      ok
+    } else {
+      let ok = sort_map_keys b n f' rec_cmp rest ks tmp v;
+      unfold (cinv b p bB rest);
+      ok
+    }
   } else {
     false
   }
@@ -1110,16 +1650,21 @@ fn rec check_items
   (b: S.slice U8.t) (#p: perm) (#bB: Ghost.erased bytes)
   (n f: Ghost.erased nat)
   (sc: S.slice SZ.t)
+  (k0 k1: U64.t)
+  (hv: S.slice U64.t)
+  (idx: S.slice SZ.t)
   (o0 c0: SZ.t)
   (l0 q: Ghost.erased (list raw_data_item))
   (m: Ghost.erased nat)
   (pout: ref SZ.t)
 requires
   pts_to b #p bB ** (exists* s . pts_to sc s) ** (exists* o . pts_to pout o) **
+    (exists* s . pts_to hv s) ** (exists* s . pts_to idx s) **
     pure (check_items_pre bB n f (SZ.v (S.len sc)) (SZ.v o0) (SZ.v c0) l0 q m)
 returns res: bool
 ensures
-  pts_to b #p bB ** (exists* s . pts_to sc s) ** (exists* o . pts_to pout o **
+  pts_to b #p bB ** (exists* s . pts_to sc s) **
+  (exists* s . pts_to hv s) ** (exists* s . pts_to idx s) ** (exists* o . pts_to pout o **
     pure (check_items_post bB (SZ.v o0) (SZ.v c0) l0 q m res (SZ.v o)))
 decreases (Ghost.reveal f)
 {
@@ -1135,6 +1680,7 @@ decreases (Ghost.reveal f)
   )
   invariant exists* o c r (lw: Ghost.erased (list raw_data_item)) .
     pts_to b #p bB ** (exists* s . pts_to sc s) ** (exists* o . pts_to pout o) **
+    (exists* s . pts_to hv s) ** (exists* s . pts_to idx s) **
     pts_to po o ** pts_to pc c ** pts_to pres r ** pts_to pl lw **
     pure (walk_inv bB n f l0 (items_end bB (SZ.v o0) (SZ.v c0)) (SZ.v o) (SZ.v c) m lw q r)
   decreases %[(if !pres then 1 else 0); list_sum raw_data_item_size (Ghost.reveal !pl)]
@@ -1182,6 +1728,7 @@ decreases (Ghost.reveal f)
       invariant exists* i e r s1 .
         pts_to pi i ** pts_to pe e ** pts_to pr r ** pts_to ks s1 **
         pts_to b #p bB ** (exists* s . pts_to rest s) ** (exists* o . pts_to pout o) **
+        (exists* s . pts_to hv s) ** (exists* s . pts_to idx s) **
         pure (SZ.v i <= SZ.v k /\ ment_inv_o bB s1 (SZ.v i) (SZ.v e) (SZ.v oh) v m' q' r)
       decreases (ment_measure (SZ.v k) (SZ.v !pi) !pr)
       {
@@ -1191,7 +1738,7 @@ decreases (Ghost.reveal f)
         S.pts_to_len ks;
         ment_inv_o_len bB s1 (SZ.v i) (SZ.v e) (SZ.v oh) v m' q' true;
         ci_pre_entry bB n f' (SZ.v (S.len rest)) s1 (SZ.v i) (SZ.v e) (SZ.v oh) v m' q';
-        let ok = check_items b n f' rest e 2sz
+        let ok = check_items b n f' rest k0 k1 hv idx e 2sz
           (Ghost.hide [fst (List.Tot.index v (SZ.v i)); snd (List.Tot.index v (SZ.v i))])
           (Ghost.hide (List.Tot.append (list_of_pair_list (ldrop (SZ.v i + 1) v)) q'))
           (Ghost.hide (mrest (List.Tot.length v) (SZ.v i) m'))
@@ -1213,7 +1760,7 @@ decreases (Ghost.reveal f)
       with s1 . assert (pts_to ks s1);
       S.pts_to_len ks;
       assert (pure (Seq.length s1 == Seq.length vt));
-      let ok = walk_map_finish b n f' (cmp_one b #p #bB n f') rest ks tmp oh v m' q' pout r i e #s1 #vt;
+      let ok = walk_map_finish b n f' (cmp_one b #p #bB n f') rest k0 k1 hv idx ks tmp oh v m' q' pout r i e #s1 #vt;
       S.join tmp rest r1;
       S.join ks r1 sc;
       walk_map_res n f (lhd lw) (ltl lw) ok;
