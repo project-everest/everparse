@@ -81,12 +81,26 @@ let ins_unfold (lt: lt_t) (e r: SB.bytes)
     else if lt (Seq.slice r 0 n) e then Seq.append (Seq.slice r 0 n) (ins lt e (Seq.slice r n (Seq.length r)))
     else Seq.append e r))
 
+let slice_split (v: SB.bytes) (a b c: nat)
+: Lemma (requires a <= b /\ b <= c /\ c <= Seq.length v)
+  (ensures Seq.slice v a c == Seq.append (Seq.slice v a b) (Seq.slice v b c))
+= assert (Seq.equal (Seq.slice v a c) (Seq.append (Seq.slice v a b) (Seq.slice v b c)))
+
+let ins_step (lt: lt_t) (e r: SB.bytes)
+: Lemma (requires frame_len r > 0 /\ lt (Seq.slice r 0 (frame_len r)) e)
+  (ensures ins lt e r == Seq.append (Seq.slice r 0 (frame_len r)) (ins lt e (Seq.slice r (frame_len r) (Seq.length r))))
+= ins_unfold lt e r
+
 let rec ins_length (lt: lt_t) (e r: SB.bytes)
 : Lemma (ensures Seq.length (ins lt e r) == Seq.length e + Seq.length r) (decreases (Seq.length r))
 = ins_unfold lt e r;
   let n = frame_len r in
   if n = 0 then ()
-  else if lt (Seq.slice r 0 n) e then ins_length lt e (Seq.slice r n (Seq.length r))
+  else if lt (Seq.slice r 0 n) e then begin
+    let r' = Seq.slice r n (Seq.length r) in
+    ins_length lt e r';
+    assert (ins lt e r == Seq.append (Seq.slice r 0 n) (ins lt e r'))
+  end
   else ()
 
 (* Inserting the elements of a list one by one, first to last *)
@@ -317,9 +331,13 @@ let ins_inv_step (lt: lt_t) (v: SB.bytes) (p2 p1 p0 q n: nat)
   let e = Seq.slice v p2 p1 in
   Seq.slice_slice v q p0 0 n;
   Seq.slice_slice v q p0 n (p0 - q);
+  let r = Seq.slice v q p0 in
+  assert (Seq.slice r 0 n == Seq.slice v q (q + n));
+  assert (Seq.slice r n (Seq.length r) == Seq.slice v (q + n) p0);
+  ins_step lt e r;
   assert (ins lt e (Seq.slice v q p0) == Seq.append (Seq.slice v q (q + n)) (ins lt e (Seq.slice v (q + n) p0)));
   Seq.append_assoc (Seq.slice v p1 q) (Seq.slice v q (q + n)) (ins lt e (Seq.slice v (q + n) p0));
-  assert (Seq.equal (Seq.slice v p1 (q + n)) (Seq.append (Seq.slice v p1 q) (Seq.slice v q (q + n))))
+  slice_split v p1 q (q + n)
 
 let ins_inv_stop (lt: lt_t) (v: SB.bytes) (p2 p1 p0 q n: nat)
 : Lemma (requires ins_inv lt v p2 p1 p0 q true /\ n == frame_len (Seq.slice v q p0) /\
@@ -397,8 +415,13 @@ let r2l_post_ins
   ins_length lt enc1 enc2;
   Seq.slice_slice v2 p1 n 0 (p - p1);
   Seq.slice_slice v1 p1 n 0 (p - p1);
+  assert (Seq.slice v2 p1 p == enc2);
+  assert (Seq.slice v2 p2 p1 == enc1);
+  assert (Seq.slice v3 p2 p == ins lt enc1 enc2);
   Seq.slice_slice v2 p1 n (p - p1) (n - p1);
-  Seq.slice_slice v1 p1 n (p - p1) (n - p1)
+  Seq.slice_slice v1 p1 n (p - p1) (n - p1);
+  assert (Seq.slice v2 p n == Seq.slice v1 p n);
+  assert (Seq.slice v3 p n == Seq.slice v p n)
 
 (* Sorted mixed lists *)
 

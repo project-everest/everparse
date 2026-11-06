@@ -76,15 +76,44 @@ let first_byte_spec (id: asn1_id_t) : Tot nat =
 let id_byte_spec (id: asn1_id_t) (i: nat { i < id_len_spec id }) : Tot nat =
   if i = 0 then first_byte_spec id else id_b id.v (i - 1)
 
+let asn1_id_enc_index_short (id: asn1_id_t)
+: Lemma (requires U32.v id.v < 31)
+  (ensures (let e = asn1_id_enc id in
+    Seq.length e == 1 /\ U8.v (Seq.index e 0) == first_byte_spec id))
+= let b = Cast.uint32_to_uint8 id.v in
+  FStar.Math.Lemmas.small_mod (U32.v id.v) (pow2 8);
+  assert (U8.v b == U32.v id.v);
+  encode_asn1_first_byte_value id.c id.f b;
+  let e = encode_asn1_first_byte id.c id.f b in
+  assert (asn1_id_enc id == Seq.create 1 e)
+
 let asn1_id_enc_index (id: asn1_id_t)
 : Lemma (Seq.length (asn1_id_enc id) == id_len_spec id /\
     (forall (i: nat) . i < id_len_spec id ==> U8.v (Seq.index (asn1_id_enc id) i) == id_byte_spec id i))
-= let MK_ASN1_ID c f n = id in
+= let c = id.c in
+  let f = id.f in
+  let n = id.v in
   if U32.v n < 31
-  then encode_asn1_first_byte_value c f (Cast.uint32_to_uint8 n)
+  then begin
+    asn1_id_enc_index_short id;
+    assert (id_len_spec id == 1);
+    assert (id_byte_spec id 0 == first_byte_spec id);
+    let x = U8.v (Seq.index (asn1_id_enc id) 0) in
+    assert (x == id_byte_spec id 0);
+    assert (forall (i: nat) . i < id_len_spec id ==> i == 0)
+  end
   else begin
+    assert (U8.v 31uy == 31);
     encode_asn1_first_byte_value c f 31uy;
-    enc_long_index n
+    enc_long_index n;
+    let e = encode_asn1_first_byte c f 31uy in
+    assert (asn1_id_enc id == Seq.cons e (enc_long n));
+    cons_index e (enc_long n);
+    assert (id_len_spec id == id_bound n + 2);
+    let prf (i: nat) : Lemma (i < id_len_spec id ==> U8.v (Seq.index (asn1_id_enc id) i) == id_byte_spec id i) =
+      if i = 0 then () else if i < id_len_spec id then assert (id_byte_spec id i == id_b n (i - 1)) else ()
+    in
+    Classical.forall_intro prf
   end
 
 inline_for_extraction
@@ -427,7 +456,15 @@ let rt_int_byte (x: I64.t) (n: SZ.t { 1 <= SZ.v n /\ SZ.v n <= 8 }) (i: SZ.t { S
 = let k = SZ.sizet_to_uint32 (SZ.sub (SZ.sub n 1sz) i) in
   assert_norm (pow2 32 == 4294967296);
   let u = Cast.int64_to_uint64 x in
-  let r = Cast.uint64_to_uint8 (U64.shift_right u (U32.mul 8ul k)) in
+  assert (U64.v u == I64.v x % pow2 64);
+  let sh = U32.mul 8ul k in
+  assert (U32.v sh == 8 * (SZ.v n - 1 - SZ.v i));
+  let s = U64.shift_right u sh in
+  UInt.shift_right_value_lemma #64 (U64.v u) (U32.v sh);
+  assert (U64.v s == U64.v u / pow2 (U32.v sh));
+  let r = Cast.uint64_to_uint8 s in
+  assert_norm (pow2 8 == 256);
+  assert (U8.v r == U64.v s % 256);
   rt_int_byte_lemma (I64.v x) (SZ.v n) (SZ.v i);
   U8.v_inj r (int_byte_spec (SZ.v n) (I64.v x) (SZ.v i));
   r

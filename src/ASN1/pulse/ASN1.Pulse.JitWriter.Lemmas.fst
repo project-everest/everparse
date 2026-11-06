@@ -373,6 +373,11 @@ let frame_prefix (r1 r2: bytes) (n: nat)
   Seq.slice_slice r2 0 n n1 (n1 + n2);
   Seq.slice_slice r1 n1 (Seq.length r1) 0 n2;
   Seq.slice_slice r2 n1 (Seq.length r2) 0 n2;
+  assert (n1 + n2 <= n);
+  assert (Seq.slice s1 0 n2 == Seq.slice r1 n1 (n1 + n2));
+  assert (Seq.slice s2 0 n2 == Seq.slice r2 n1 (n1 + n2));
+  assert (Seq.slice r1 n1 (n1 + n2) == Seq.slice (Seq.slice r1 0 n) n1 (n1 + n2));
+  assert (Seq.slice r2 n1 (n1 + n2) == Seq.slice (Seq.slice r2 0 n) n1 (n1 + n2));
   SB.parse_strong_prefix (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) s1 s2
 
 (* The bytes `r` are a sequence of frames, each accepted by `pp`, sorted by
