@@ -14,7 +14,7 @@ NOT_INCLUDED = ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.bak*)
 
 FSTAR_FILES := $(filter-out $(NOT_INCLUDED),$(wildcard *.fst *.fsti))
 
-clean_rules += ocaml.clean evaluation.clean difftest.clean clean-files
+clean_rules += ocaml.clean evaluation.clean difftest.clean tool.clean clean-files
 
 # Whole-program extraction.  ASN1.X509, ASN1.CRL, ASN1.SetTest, ASN1.DiffTest
 # and ASN1.RoundTrip are what ocaml/ASN1_Parser.ml calls into; everything else

@@ -29,6 +29,12 @@ built in `opt/FStar`, and the verified ASN.1 Pulse library
 
 ```
 make build      # ocaml/_build/default/everparse-asn1/Main.exe
+```
+
+From the EverParse root, `make asn1` (or `make asn1-tool`) also builds
+the executable, without copying it to `bin/`.
+
+```
 make test       # test-small and test-x509lite (C tests), and test-golden
 ```
 
