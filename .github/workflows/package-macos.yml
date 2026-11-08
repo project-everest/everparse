@@ -101,6 +101,8 @@ jobs:
             args: -C 3d pulse-subdirs-test
           - part: other
             args: cbor.do cddl.do lowparse.do qd.do
+          - part: asn1
+            args: asn1.do
     steps:
       - name: Install Homebrew tools
         run: |
