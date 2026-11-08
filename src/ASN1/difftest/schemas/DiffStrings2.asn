@@ -1,0 +1,8 @@
+-- Differential testing: GraphicString and GeneralString.
+-- F* translation: src/ASN1/ASN1.DiffTest.Strings.fst
+DiffStrings2 DEFINITIONS ::= BEGIN
+
+Graphic ::= GraphicString
+General ::= GeneralString
+
+END

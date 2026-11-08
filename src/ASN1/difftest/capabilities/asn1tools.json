@@ -1,0 +1,201 @@
+{
+ "impl": "asn1tools",
+ "features": {
+  "id.high-tag": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "id.class.application": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "id.class.context": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "id.class.private": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "len.long": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "BOOLEAN": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "INTEGER": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "ENUMERATED": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "BIT STRING": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "OCTET STRING": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "NULL": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "OBJECT IDENTIFIER": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "RELATIVE-OID": {
+   "status": "unsupported",
+   "source": "compile_files: Type 'RELATIVE-OID' not found (schemas/DiffRelOid.asn)"
+  },
+  "OID-IRI": {
+   "status": "unsupported",
+   "source": "compile_files: Type 'OID-IRI' not found (schemas/DiffIRI.asn)"
+  },
+  "RELATIVE-OID-IRI": {
+   "status": "unsupported",
+   "source": "compile_files fails on schemas/DiffIRI.asn (OID-IRI not found); no RELATIVE-OID-IRI type in asn1tools/codecs/der.py"
+  },
+  "ObjectDescriptor": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "UTF8String": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "NumericString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "PrintableString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "TeletexString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "VideotexString": {
+   "status": "unsupported",
+   "source": "compile_files: Type 'VideotexString' not found (schemas/DiffVideotex.asn)"
+  },
+  "IA5String": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "GraphicString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "VisibleString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "GeneralString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "UniversalString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "BMPString": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "UTCTime": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "GeneralizedTime": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "DATE": {
+   "status": "partial",
+   "source": "asn1tools/codecs/der.py maps DATE to a string type with datetime-based decoding; schema compiles"
+  },
+  "TIME-OF-DAY": {
+   "status": "partial",
+   "source": "asn1tools/codecs/der.py maps TIME-OF-DAY to a string type with datetime-based decoding; schema compiles"
+  },
+  "DATE-TIME": {
+   "status": "partial",
+   "source": "asn1tools/codecs/der.py maps DATE-TIME to a string type with datetime-based decoding; schema compiles"
+  },
+  "SEQUENCE": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "SEQUENCE OF": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "SET": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "SET OF": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "CHOICE": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "OPTIONAL": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "DEFAULT": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "IMPLICIT": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "EXPLICIT": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "ANY": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "ANY DEFINED BY": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "EXTERNAL": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "EMBEDDED PDV": {
+   "status": "unsupported",
+   "source": "compile_files: 'Invalid ASN.1 syntax ... Expected ::=' on 'EMBEDDED PDV' (schemas/DiffPdv.asn)"
+  },
+  "CHARACTER STRING": {
+   "status": "unsupported",
+   "source": "compile_files: Type 'CHARACTER STRING' not found (schemas/DiffCharStr.asn)"
+  },
+  "SIZE": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "value-constraint": {
+   "status": "supported",
+   "source": "asn1tools 0.169.0, 'der' codec, decode_with_length(check_constraints=True); schemas compile and accept vectors decode"
+  },
+  "policy.oid-arc-bound": {
+   "status": "supported",
+   "source": "Python int arcs are unbounded; differences are classified 'policy'"
+  }
+ }
+}

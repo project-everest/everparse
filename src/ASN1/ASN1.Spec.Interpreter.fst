@@ -15,13 +15,19 @@ open ASN1.Spec.Content.OCTETSTRING
 open ASN1.Spec.Content.UTF8STRING
 open ASN1.Spec.Content.PRINTABLESTRING
 open ASN1.Spec.Content.IA5STRING
+open ASN1.Spec.Content.VISIBLESTRING
+open ASN1.Spec.Content.BMPSTRING
+open ASN1.Spec.Content.UNIVERSALSTRING
 open ASN1.Spec.Content.NULL
 open ASN1.Spec.Content.OIDU32
 open ASN1.Spec.Content.TIME
+open ASN1.Spec.Content.NUMERICSTRING
+open ASN1.Spec.Content.IRI
 
 open ASN1.Spec.ILC
 open ASN1.Spec.Choice
 open ASN1.Spec.Sequence
+open ASN1.Spec.SetComponents
 open ASN1.Spec.Any
 open ASN1.Spec.Set
 
@@ -43,18 +49,20 @@ let parse_debugf_and_then_cases_injective
     assert (and_then_cases_injective_precond fp x1 x2 b1 b2)
   )
 
-let parse_non_empty_list 
+let parse_sized_list
+  (nonempty : bool)
   (#k : parser_kind)
   (#t : Type)
   (p : parser k t {k.parser_kind_injective == true})
-: asn1_weak_parser (non_empty_list t)
-= weaken _ ((parse_list p) `parse_filter` isNonEmpty)
+: asn1_weak_parser (sized_list nonempty t)
+= weaken _ ((parse_list p) `parse_filter` list_size_ok nonempty)
 
-let parse_non_empty_set 
+let parse_sized_set
+  (nonempty : bool)
   (#t : Type)
   (p : asn1_strong_parser t)
-: asn1_weak_parser (non_empty_list t)
-= (parse_asn1_set_of p) `parse_filter` isNonEmpty
+: asn1_weak_parser (sized_list nonempty t)
+= (parse_asn1_set_of p) `parse_filter` list_size_ok nonempty
 
 let auto_asn1_sequence_t_core_equiv #id_decs (items:asn1_gen_items_l id_decs)
 : Lemma
@@ -68,17 +76,17 @@ let auto_asn1_sequence_t_core_equiv' (items:list asn1_gen_item_k)
   [SMTPat (asn1_sequence_t items)]
 = asn1_sequence_t_core_equiv' items
 
-let auto_asn1_any_t_equiv (#t:eqtype) (ls:list (t & asn1_gen_items_lk))
+let auto_asn1_any_t_equiv (#lt #t:eqtype) (f: lt -> Tot t) (ls:list (lt & asn1_gen_items_lk))
 : Lemma
-  (ensures asn1_any_t_core t ls == asn1_any_t t (t_lk_as_t_k ls))
-  [SMTPat (asn1_any_t_core t ls)]
-= asn1_any_t_equiv ls
+  (ensures asn1_any_t_core t f ls == asn1_any_t t f (t_lk_as_t_k ls))
+  [SMTPat (asn1_any_t_core t f ls)]
+= asn1_any_t_equiv f ls
 
-let auto_asn1_any_t_equiv' (#t:eqtype) (ls:list (t & asn1_gen_items_k))
+let auto_asn1_any_t_equiv' (#lt #t:eqtype) (f: lt -> Tot t) (ls:list (lt & asn1_gen_items_k))
 : Lemma
-  (ensures asn1_any_t_core t (t_k_as_t_lk ls) == asn1_any_t t ls)
-  [SMTPat (asn1_any_t t ls)]
-= asn1_any_t_equiv' ls
+  (ensures asn1_any_t_core t f (t_k_as_t_lk ls) == asn1_any_t t f ls)
+  [SMTPat (asn1_any_t t f ls)]
+= asn1_any_t_equiv' f ls
 
 let auto_asn1_sequence_any_t_equiv #id_decs (items : asn1_gen_items_l id_decs) (suffix_t : Type)
 : Lemma
@@ -106,10 +114,25 @@ let rec dasn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_
   | ASN1_UTF8STRING -> parse_asn1_utf8string
   | ASN1_PRINTABLESTRING -> parse_asn1_printablestring
   | ASN1_IA5STRING -> parse_asn1_ia5string
+  | ASN1_VISIBLESTRING -> parse_asn1_visiblestring
+  | ASN1_BMPSTRING -> parse_asn1_bmpstring
+  | ASN1_UNIVERSALSTRING -> parse_asn1_universalstring
+  | ASN1_TELETEXSTRING -> parse_asn1_octetstring
+  | ASN1_NUMERICSTRING -> parse_asn1_numericstring
+  | ASN1_VIDEOTEXSTRING -> parse_asn1_octetstring
+  | ASN1_GRAPHICSTRING -> parse_asn1_octetstring
+  | ASN1_GENERALSTRING -> parse_asn1_octetstring
+  | ASN1_OBJECTDESCRIPTOR -> parse_asn1_octetstring
   | ASN1_NULL -> parse_asn1_null
   | ASN1_OID -> parse_asn1_OIDU32
+  | ASN1_RELATIVE_OID -> parse_asn1_RELATIVE_OIDU32
+  | ASN1_OID_IRI -> parse_asn1_OID_IRI
+  | ASN1_RELATIVE_OID_IRI -> parse_asn1_RELATIVE_OID_IRI
   | ASN1_UTCTIME -> parse_asn1_UTCTIME
   | ASN1_GENERALIZEDTIME -> parse_asn1_GENERALIZEDTIME
+  | ASN1_DATE -> parse_asn1_DATE
+  | ASN1_TIME_OF_DAY -> parse_asn1_TIMEOFDAY
+  | ASN1_DATE_TIME -> parse_asn1_DATETIME
   | ASN1_PREFIXED_TERMINAL id k -> weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (dasn1_terminal_as_parser k)))
 
 and dasn1_sequence_as_parser #id_decs (ls:asn1_gen_items_l id_decs)
@@ -121,11 +144,12 @@ and dasn1_sequence_as_parser #id_decs (ls:asn1_gen_items_l id_decs)
 
 and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
   match k with
-  | ASN1_RESTRICTED_TERMINAL k' is_valid -> weaken _ ((dasn1_terminal_as_parser k') `parse_filter` is_valid)
+  | ASN1_RESTRICTED_TERMINAL k' r -> weaken _ ((dasn1_terminal_as_parser k') `parse_filter` (restriction_pred r))
   | ASN1_TERMINAL k' -> dasn1_terminal_as_parser k'
   | ASN1_SEQUENCE gitems -> make_asn1_sequence_parser (dasn1_sequence_as_parser (dsnd gitems))
-  | ASN1_SEQUENCE_OF k' -> parse_non_empty_list (dasn1_as_parser k')
-  | ASN1_SET_OF k' -> parse_non_empty_set (dasn1_as_parser k')
+  | ASN1_SET _ items _ -> make_asn1_set_parser (dasn1_sequence_as_parser items)
+  | ASN1_SEQUENCE_OF ne k' -> parse_sized_list ne (dasn1_as_parser k')
+  | ASN1_SET_OF ne k' -> parse_sized_set ne (dasn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (dasn1_as_parser k')
   | ASN1_ANY_DEFINED_BY id_decs_prefix prefix id key_k ls ofb pf pf' -> 
     let itemtwins = dasn1_sequence_as_parser prefix in //(l_as_list prefix) in
@@ -136,7 +160,7 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
     in
     let key_p = Mkparsertwin?.p key_p_twin in
     let key_fp = Mkparsertwin?.fp key_p_twin in
-    let supported_p = dasn1_ls_as_parser (asn1_terminal_t key_k) ls in
+    let supported_p = dasn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
     (match ofb with
     | None -> 
       assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
@@ -160,12 +184,12 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin) 
 
-and dasn1_ls_as_parser (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
+and dasn1_ls_as_parser (#lt : eqtype) (t : eqtype) (f : lt -> Tot t) (ls : list (lt & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t f ls == extract_types lp}) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    (x, Mkgenparser _ (make_asn1_sequence_parser (dasn1_sequence_as_parser (dsnd y)))) :: (dasn1_ls_as_parser t tl)
+    (f x, Mkgenparser _ (make_asn1_sequence_parser (dasn1_sequence_as_parser (dsnd y)))) :: (dasn1_ls_as_parser t f tl)
 
 and dasn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {asn1_lc_t lc == extract_types lp})  (decreases lc) =
   match lc with
@@ -218,12 +242,14 @@ and dasn1_decorated_as_parser_twin
   | ASN1_OPTION_ILC k -> 
     let (p, fp) = dasn1_as_parser_twin k in
     Mkgendcparser item p fp
-  | ASN1_DEFAULT_TERMINAL id #k defv ->
+  | ASN1_DEFAULT_TERMINAL id #k defv_l ->
+    let defv = key_of_lit k defv_l in
     let p = dasn1_terminal_as_parser k in
     Mkgendcparser item (parse_asn1_ILC id #(ASN1_TERMINAL k) p) (parse_asn1_ILC_twin id #(ASN1_TERMINAL k) p)
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k is_valid defv ->
-    let p : asn1_weak_parser (asn1_decorated_pure_t item) = weaken _ ((dasn1_terminal_as_parser k) `parse_filter` is_valid) in
-    Mkgendcparser item (parse_asn1_ILC id #(ASN1_RESTRICTED_TERMINAL k is_valid) p) (parse_asn1_ILC_twin id #(ASN1_RESTRICTED_TERMINAL k is_valid) p)
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv_l ->
+    let defv : parse_filter_refine (restriction_pred r) = key_of_lit k defv_l in
+    let p : asn1_weak_parser (asn1_decorated_pure_t item) = weaken _ ((dasn1_terminal_as_parser k) `parse_filter` (restriction_pred r)) in
+    Mkgendcparser item (parse_asn1_ILC id #(ASN1_RESTRICTED_TERMINAL k r) p) (parse_asn1_ILC_twin id #(ASN1_RESTRICTED_TERMINAL k r) p)
 
 #pop-options
 
@@ -239,19 +265,35 @@ let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_t
   | ASN1_UTF8STRING -> parse_asn1_utf8string
   | ASN1_PRINTABLESTRING -> parse_asn1_printablestring
   | ASN1_IA5STRING -> parse_asn1_ia5string
+  | ASN1_VISIBLESTRING -> parse_asn1_visiblestring
+  | ASN1_BMPSTRING -> parse_asn1_bmpstring
+  | ASN1_UNIVERSALSTRING -> parse_asn1_universalstring
+  | ASN1_TELETEXSTRING -> parse_asn1_octetstring
+  | ASN1_NUMERICSTRING -> parse_asn1_numericstring
+  | ASN1_VIDEOTEXSTRING -> parse_asn1_octetstring
+  | ASN1_GRAPHICSTRING -> parse_asn1_octetstring
+  | ASN1_GENERALSTRING -> parse_asn1_octetstring
+  | ASN1_OBJECTDESCRIPTOR -> parse_asn1_octetstring
   | ASN1_NULL -> parse_asn1_null
   | ASN1_OID -> parse_asn1_OIDU32
+  | ASN1_RELATIVE_OID -> parse_asn1_RELATIVE_OIDU32
+  | ASN1_OID_IRI -> parse_asn1_OID_IRI
+  | ASN1_RELATIVE_OID_IRI -> parse_asn1_RELATIVE_OID_IRI
   | ASN1_UTCTIME -> parse_asn1_UTCTIME
   | ASN1_GENERALIZEDTIME -> parse_asn1_GENERALIZEDTIME
+  | ASN1_DATE -> parse_asn1_DATE
+  | ASN1_TIME_OF_DAY -> parse_asn1_TIMEOFDAY
+  | ASN1_DATE_TIME -> parse_asn1_DATETIME
   | ASN1_PREFIXED_TERMINAL id k -> weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k))
 
 and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_content_t k)) (decreases k) =
   match k with
-  | ASN1_RESTRICTED_TERMINAL k' is_valid -> weaken _ ((asn1_terminal_as_parser k') `parse_filter` is_valid)
+  | ASN1_RESTRICTED_TERMINAL k' r -> weaken _ ((asn1_terminal_as_parser k') `parse_filter` (restriction_pred r))
   | ASN1_TERMINAL k' -> asn1_terminal_as_parser k'
   | ASN1_SEQUENCE gitems -> make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd gitems))
-  | ASN1_SEQUENCE_OF k' -> parse_non_empty_list (asn1_as_parser k')
-  | ASN1_SET_OF k' -> parse_non_empty_set (asn1_as_parser k')
+  | ASN1_SET _ items _ -> make_asn1_set_parser (asn1_sequence_as_parser items)
+  | ASN1_SEQUENCE_OF ne k' -> parse_sized_list ne (asn1_as_parser k')
+  | ASN1_SET_OF ne k' -> parse_sized_set ne (asn1_as_parser k')
   | ASN1_PREFIXED k' -> weaken _ (asn1_as_parser k')
   | ASN1_ANY_DEFINED_BY id_decs_prefix prefix id key_k ls ofb pf pf' -> 
     let itemtwins = asn1_sequence_as_parser prefix in
@@ -262,7 +304,7 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
     in
     let key_p = Mkparsertwin?.p key_p_twin in
     let key_fp = Mkparsertwin?.fp key_p_twin in
-    let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
+    let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) (key_of_lit key_k) ls in
     (match ofb with
     | None -> 
       assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
@@ -282,12 +324,12 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin) 
 
-and asn1_ls_as_parser (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
+and asn1_ls_as_parser (#lt : eqtype) (t : eqtype) (f : lt -> Tot t) (ls : list (lt & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t f ls == extract_types lp}) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
     let (x, y) = h in
-    (x, Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd y)))) :: (asn1_ls_as_parser t tl)
+    (f x, Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd y)))) :: (asn1_ls_as_parser t f tl)
 
 and asn1_lc_as_parser (lc : list (asn1_id_t & asn1_content_k)) : Tot (lp : list (asn1_id_t & (gen_parser asn1_strong_parser_kind)) {asn1_lc_t lc == extract_types lp})  (decreases lc) =
   match lc with
@@ -333,12 +375,14 @@ and asn1_decorated_as_parser_twin #s #d (dk:asn1_decorated_k s d)
   | ASN1_OPTION_ILC k -> 
     let (p, fp) = asn1_as_parser_twin k in
     Mkgendcparser item p fp
-  | ASN1_DEFAULT_TERMINAL id #k defv ->
+  | ASN1_DEFAULT_TERMINAL id #k defv_l ->
+    let defv = key_of_lit k defv_l in
     let p = asn1_terminal_as_parser k in
     Mkgendcparser item (parse_asn1_ILC id #(ASN1_TERMINAL k) p) (parse_asn1_ILC_twin id #(ASN1_TERMINAL k) p)
-  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k is_valid defv ->
-    let p : asn1_weak_parser (asn1_decorated_pure_t item) = weaken _ ((asn1_terminal_as_parser k) `parse_filter` is_valid) in
-    Mkgendcparser item (parse_asn1_ILC id #(ASN1_RESTRICTED_TERMINAL k is_valid) p) (parse_asn1_ILC_twin id #(ASN1_RESTRICTED_TERMINAL k is_valid) p)
+  | ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv_l ->
+    let defv : parse_filter_refine (restriction_pred r) = key_of_lit k defv_l in
+    let p : asn1_weak_parser (asn1_decorated_pure_t item) = weaken _ ((asn1_terminal_as_parser k) `parse_filter` (restriction_pred r)) in
+    Mkgendcparser item (parse_asn1_ILC id #(ASN1_RESTRICTED_TERMINAL k r) p) (parse_asn1_ILC_twin id #(ASN1_RESTRICTED_TERMINAL k r) p)
 
 and asn1_sequence_as_parser 
   #id_decs (ls:asn1_gen_items_l id_decs)

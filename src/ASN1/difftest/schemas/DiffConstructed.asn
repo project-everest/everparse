@@ -1,0 +1,36 @@
+-- Differential testing: SEQUENCE, SEQUENCE OF, SET OF, CHOICE, tagging.
+-- F* translation: src/ASN1/ASN1.DiffTest.Constructed.fst
+DiffConstructed DEFINITIONS EXPLICIT TAGS ::= BEGIN
+
+Seq ::= SEQUENCE {
+  a INTEGER,
+  b BOOLEAN DEFAULT FALSE,
+  c [0] IMPLICIT OCTET STRING OPTIONAL,
+  d [1] EXPLICIT INTEGER OPTIONAL
+}
+
+IntSeq ::= SEQUENCE OF INTEGER
+
+OctetsSet ::= SET OF OCTET STRING
+
+Choice ::= CHOICE {
+  i INTEGER,
+  b BOOLEAN,
+  o [0] IMPLICIT OCTET STRING
+}
+
+App ::= [APPLICATION 5] IMPLICIT INTEGER
+
+PrivExp ::= [PRIVATE 3] EXPLICIT BOOLEAN
+
+HighCtx ::= [100] IMPLICIT INTEGER
+
+HighApp ::= [APPLICATION 1000] EXPLICIT OCTET STRING
+
+Nested ::= SEQUENCE {
+  s Seq,
+  l IntSeq,
+  ch Choice OPTIONAL
+}
+
+END

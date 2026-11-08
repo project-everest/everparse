@@ -1,0 +1,9 @@
+-- Differential testing: the TIME subtypes DATE, TIME-OF-DAY, DATE-TIME.
+-- F* translation: src/ASN1/ASN1.DiffTest.Time.fst
+DiffTime2 DEFINITIONS ::= BEGIN
+
+Date ::= DATE
+Tod ::= TIME-OF-DAY
+DateTime ::= DATE-TIME
+
+END

@@ -1,0 +1,13 @@
+-- Differential testing: primitive universal types.
+-- F* translation: src/ASN1/ASN1.DiffTest.Prim.fst
+DiffPrim DEFINITIONS ::= BEGIN
+
+Bool ::= BOOLEAN
+Int ::= INTEGER
+Enum ::= ENUMERATED { a(0), b(1), c(5) }
+Bits ::= BIT STRING
+Octets ::= OCTET STRING
+Null ::= NULL
+Oid ::= OBJECT IDENTIFIER
+
+END

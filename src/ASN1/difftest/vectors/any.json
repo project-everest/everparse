@@ -1,0 +1,22 @@
+{
+  "vectors": [
+    {"id": "any/accept/integer", "type": "DiffAny.AnyT", "hex": "020105", "expect": "accept", "clause": "X.208 27", "features": ["ANY"]},
+    {"id": "any/accept/sequence", "type": "DiffAny.AnyT", "hex": "3003020105", "expect": "accept", "clause": "X.208 27", "features": ["ANY"]},
+    {"id": "any/accept/null", "type": "DiffAny.AnyT", "hex": "0500", "expect": "accept", "clause": "X.208 27", "features": ["ANY"]},
+    {"id": "any/accept/high-tag", "type": "DiffAny.AnyT", "hex": "9f6400", "expect": "accept", "clause": "X.208 27", "features": ["ANY", "id.high-tag", "id.class.context"]},
+    {"id": "any/reject/length-long-form", "type": "DiffAny.AnyT", "hex": "048101aa", "expect": "reject", "clause": "X.690 10.1", "features": ["ANY", "len.long"], "mutation": "length-nonminimal"},
+    {"id": "any/reject/indefinite", "type": "DiffAny.AnyT", "hex": "24800401aa0000", "expect": "reject", "clause": "X.690 10.1", "features": ["ANY", "len.long"], "mutation": "length-indefinite"},
+    {"id": "any/reject/truncated", "type": "DiffAny.AnyT", "hex": "0402aa", "expect": "reject", "clause": "X.690 8.1.3", "features": ["ANY"], "mutation": "truncated"},
+    {"id": "any/reject/two", "type": "DiffAny.AnyT", "hex": "05000500", "expect": "reject", "clause": "X.690 8.1.1", "features": ["ANY"], "mutation": "trailing-data"},
+    {"id": "any/reject/tag-nonminimal", "type": "DiffAny.AnyT", "hex": "9f800100", "expect": "reject", "clause": "X.690 8.1.2.4.2 c", "features": ["ANY", "id.high-tag"], "mutation": "tag-nonminimal"},
+    {"id": "any/reject/low-tag-in-high-form", "type": "DiffAny.AnyT", "hex": "1f0500", "expect": "reject", "clause": "X.690 8.1.2.4.2 c", "features": ["ANY", "id.high-tag"], "mutation": "tag-nonminimal"},
+    {"id": "algid/accept/123-null", "type": "DiffAny.AlgId", "hex": "300606022a030500", "expect": "accept", "clause": "X.208 27", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL", "NULL"]},
+    {"id": "algid/accept/124-int", "type": "DiffAny.AlgId", "hex": "300706022a04020105", "expect": "accept", "clause": "X.208 27", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL", "INTEGER"]},
+    {"id": "algid/accept/124-absent", "type": "DiffAny.AlgId", "hex": "300406022a04", "expect": "accept", "clause": "X.208 27", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL"]},
+    {"id": "algid/reject/123-absent", "type": "DiffAny.AlgId", "hex": "300406022a03", "expect": "reject", "clause": "schema (ASN1.DiffTest.Any)", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL"], "mutation": "missing-field", "notes": "our schema fixes the parameters of 1.2.3 to NULL, a table constraint that ANY DEFINED BY cannot express"},
+    {"id": "algid/reject/123-int", "type": "DiffAny.AlgId", "hex": "300706022a03020105", "expect": "reject", "clause": "schema (ASN1.DiffTest.Any)", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL", "INTEGER"], "mutation": "wrong-tag", "notes": "our schema fixes the parameters of 1.2.3 to NULL, a table constraint that ANY DEFINED BY cannot express"},
+    {"id": "algid/reject/124-two-params", "type": "DiffAny.AlgId", "hex": "300906022a040201050500", "expect": "reject", "clause": "X.680 25 (no extension marker)", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL", "INTEGER", "NULL"], "mutation": "extra-field"},
+    {"id": "algid/reject/124-param-length-long-form", "type": "DiffAny.AlgId", "hex": "300706022a04058100", "expect": "reject", "clause": "X.690 10.1", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL", "NULL", "len.long"], "mutation": "length-nonminimal"},
+    {"id": "algid/reject/no-oid", "type": "DiffAny.AlgId", "hex": "30020500", "expect": "reject", "clause": "X.680 25", "features": ["SEQUENCE", "ANY DEFINED BY", "OBJECT IDENTIFIER", "OPTIONAL", "NULL"], "mutation": "missing-field"}
+  ]
+}

@@ -96,12 +96,16 @@ endif
 
 3d: 3d-exe
 
-asn1: asn1-base lowparse
+asn1: asn1-base lowparse asn1-tool
+
+# The everparse-asn1 executable (src/ASN1/tool). Not copied to bin/ yet.
+asn1-tool: $(NEED_OPAM)
+	+$(MAKE) -C src/ASN1/tool build
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
 asn1-base: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
 
-.PHONY: asn1-base
+.PHONY: asn1-base asn1-tool
 
 quackyducky: qd-exe lowparse
 
