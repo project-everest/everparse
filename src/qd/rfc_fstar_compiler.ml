@@ -754,8 +754,11 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   ) cl;
   w o "\n";
   (* copyful parser at the library dependent-pair mid, then bridged to the
-     transparent interface mid/vmatch/conv via [copyful_parse_coerce_mid]. *)
-  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n%s  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.dep_maybe_enum_destr_t_tac ())) () ()\n\n" n n n n n n n n n n same_kind n tn tn n n n n n n n;
+     transparent interface mid/vmatch/conv via [copyful_parse_coerce_mid].
+     The fuel bumps on read/free/write_<n>_sum let Core show that a key of
+     the n-th [enum_tail] is a key of the whole enum (as for dsums). *)
+  w o "#push-options \"--max_fuel 8 --max_ifuel 8\"\n";
+  w o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n%s  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.dep_maybe_enum_destr_t_tac ())) () ()\n#pop-options\n\n" n n n n n n n n n n same_kind n tn tn n n n n n n n;
   w o "let %s_coerce_vmatch_eq (xl: %s_low) (m1: PPS.sum_mid %s_sum %s_mid_of_tag)\n  : Lemma (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch xl m1 == %s_vmatch xl (%s_fg m1))\n  = match m1 with\n  | (| k, cm |) ->\n    (match k with\n" n n n n n n n n n n n;
   List.iter (fun (kcase, kty) ->
     w o "     | %s -> (match xl with\n" (String.capitalize_ascii kcase);
@@ -783,7 +786,8 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   w o "\n";
   (* free at the library mid, then bridged to the interface vmatch via
      [free_coerce_mid]. *)
-  w o "let free_%s_sum : PPB.free_t (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) =\n  PPS.free_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch free_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n n n n n n n n;
+  w o "#push-options \"--max_fuel 8 --max_ifuel 8\"\n";
+  w o "let free_%s_sum : PPB.free_t (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) =\n  PPS.free_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch free_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n#pop-options\n\n" n n n n n n n n n n n n;
   w o "let %s_free_vmatch_eq (xl: %s_low) (m: %s_mid)\n  : Lemma (%s_vmatch xl m == PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch xl (%s_gf m))\n  = match m with\n" n n n n n n n n n n;
   List.iter (fun (mcase, mty) ->
     w o "  | %s_%s_mid cm -> (match xl with\n" cprefix mcase;
@@ -809,7 +813,8 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
     ) cl;
     w o "\n";
     (* safe writer at the library dependent-pair mid *)
-    w o "let write_%s_sum\n  : PPB.l2r_safe_writer (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) (LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases) (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.l2r_safe_writer_sum %s_sum %s_repr_serializer write_%s_key %dsz parse_%s_cases serialize_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag write_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n n n n n n n tn n n n n n tn tn tagsz n n n n n n n n;
+    w o "#push-options \"--max_fuel 8 --max_ifuel 8\"\n";
+    w o "let write_%s_sum\n  : PPB.l2r_safe_writer (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) (LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases) (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.l2r_safe_writer_sum %s_sum %s_repr_serializer write_%s_key %dsz parse_%s_cases serialize_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag write_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n#pop-options\n\n" n n n n n n n tn n n n n n tn tn tagsz n n n n n n n n;
     (* conv bridge in the gf direction (mirrors <n>_free_vmatch_eq for vmatch). *)
     w o "let %s_write_conv_eq (m: %s_mid)\n  : Lemma (%s_conv m == PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m))\n  = match m with\n" n n n n n n n;
     List.iter (fun (mcase, _) ->
