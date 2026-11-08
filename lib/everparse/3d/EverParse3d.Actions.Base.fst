@@ -433,6 +433,7 @@ fn validate_dep_pair_with_refinement_and_action'
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
+      (err: t1 -> constraint_error_code)
       (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
       (#nz2:_)
       (#wk2: _)
@@ -473,7 +474,7 @@ fn validate_dep_pair_with_refinement_and_action'
         validator_error_action_failed
       }
     } else {
-      validator_error_constraint_failed
+      err val_key
     }
   } else {
     res_key
@@ -500,6 +501,7 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
         k1.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
       ))
       (f: t1 -> bool)
+      (err: t1 -> constraint_error_code)
       (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
       (#nz2:_)
       (#wk2: _)
@@ -539,7 +541,7 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
       validator_error_action_failed
     }
   } else {
-    validator_error_constraint_failed
+    err val_key
   }
 }
 
@@ -560,6 +562,7 @@ let validate_dep_pair_with_refinement_and_action
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
+      (err: t1 -> constraint_error_code)
       (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
       (#nz2:_)
       (#wk2: _)
@@ -579,9 +582,9 @@ let validate_dep_pair_with_refinement_and_action
      (k1.LP.parser_kind_high = Some 0) &&
      (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal))
   then
-    validate_dep_pair_with_refinement_and_action_total_zero_parser' name1 r1 () f a v2
+    validate_dep_pair_with_refinement_and_action_total_zero_parser' name1 r1 () f err a v2
   else
-    validate_dep_pair_with_refinement_and_action' name1 v1 r1 f a v2
+    validate_dep_pair_with_refinement_and_action' name1 v1 r1 f err a v2
 
 #pop-options
 
@@ -600,6 +603,7 @@ fn validate_filter
        (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
+       (err: t -> constraint_error_code)
        (cr:string)
        (cf:string)
   : validate_with_action_read #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler
@@ -625,7 +629,7 @@ fn validate_filter
     if (ok) {
       validator_success
     } else {
-      validator_error_constraint_failed
+      err val_key
     }
   } else {
     res_key
@@ -648,6 +652,7 @@ fn validate_filter_with_action
        (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
+       (err: t -> constraint_error_code)
        (cr:string)
        (cf:string)
        (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
@@ -685,7 +690,7 @@ fn validate_filter_with_action
         validator_error_action_failed
       }
     } else {
-      validator_error_constraint_failed
+      err val_key
     }
   } else {
     res_key
@@ -1929,6 +1934,7 @@ fn validate_dep_pair_with_refinement'
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
+      (err: t1 -> constraint_error_code)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
@@ -1962,7 +1968,7 @@ fn validate_dep_pair_with_refinement'
     if (ok) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
-      validator_error_constraint_failed
+      err val_key
     }
   } else {
     res_key
@@ -1987,6 +1993,7 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
         k1.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
       ))
       (f: t1 -> bool)
+      (err: t1 -> constraint_error_code)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
@@ -2020,7 +2027,7 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
   if (ok) {
     v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
   } else {
-    validator_error_constraint_failed
+    err val_key
   }
 }
 
@@ -2040,6 +2047,7 @@ let validate_dep_pair_with_refinement
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
+      (err: t1 -> constraint_error_code)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
@@ -2058,9 +2066,9 @@ let validate_dep_pair_with_refinement
      (k1.LP.parser_kind_high = Some 0) &&
      (k1.LP.parser_kind_metadata = Some LP.ParserKindMetadataTotal))
   then
-    validate_dep_pair_with_refinement_total_zero_parser' name1 r1 () f has_action1 v2
+    validate_dep_pair_with_refinement_total_zero_parser' name1 r1 () f err has_action1 v2
   else
-    validate_dep_pair_with_refinement' name1 v1 r1 f v2
+    validate_dep_pair_with_refinement' name1 v1 r1 f err v2
 
 inline_for_extraction noextract
 fn validate_with_dep_action
@@ -2761,7 +2769,7 @@ let validate_all_zeros
   (#use_error_handler:bool)
 : validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
 = validate_list
-    (validate_filter "parse_zeros" (validate____UINT8 "") read____UINT8 is_zero "check if zero" "")
+    (validate_filter "parse_zeros" (validate____UINT8 "") read____UINT8 is_zero (fun _ -> validator_error_constraint_failed) "check if zero" "")
 
 ////////////////////////////////////////////////////////////////////////////////
 // Lists up to a terminator (strings)

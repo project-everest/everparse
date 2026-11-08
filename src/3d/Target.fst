@@ -537,7 +537,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_ident x)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_refine t e ->
+  | T_refine t e _ ->
     Printf.sprintf "(refine %s %s)"
       (print_typ mname t)
       (print_expr_lam mname e)

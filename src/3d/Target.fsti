@@ -189,7 +189,7 @@ type typ =
   | T_nlist    : elt: typ -> bytesize: expr -> typ
   | T_pair     : fst: typ -> snd: typ -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
-  | T_refine   : base:typ -> refinement:lam expr -> typ
+  | T_refine   : base:typ -> refinement:lam expr -> err:option expr -> typ //err: UINT8 error code if the refinement fails, in the scope of the refinement binder (--api pulse only)
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
   | T_pointer  : typ -> pointer_size:A.integer_type -> typ
   | T_with_action: typ -> action -> typ
@@ -292,12 +292,12 @@ type parser' =
   | Parse_t_exact   : n:expr -> t:parser -> parser'
   | Parse_pair      : n1: A.ident -> p_is_const: bool -> p:parser -> q_is_const: bool -> q:parser -> parser' // p_is_const, q_is_const record whether p and q are total compile-time constant size parsers
   | Parse_dep_pair  : n1: A.ident -> p:parser -> k:lam parser -> parser'
-  | Parse_dep_pair_with_refinement: n1: A.ident -> dfst:parser -> refinement:lam expr -> dsnd:lam parser -> parser'
+  | Parse_dep_pair_with_refinement: n1: A.ident -> dfst:parser -> refinement:lam expr -> err:option expr -> dsnd:lam parser -> parser'
   | Parse_dep_pair_with_action: dfst:parser -> a:lam action -> dsnd:lam parser -> parser'
-  | Parse_dep_pair_with_refinement_and_action: n1: A.ident -> dfst:parser -> refinement:lam expr -> a:lam action -> dsnd:lam parser -> parser'
+  | Parse_dep_pair_with_refinement_and_action: n1: A.ident -> dfst:parser -> refinement:lam expr -> err:option expr -> a:lam action -> dsnd:lam parser -> parser'
   | Parse_map       : p:parser -> f:lam expr -> parser'
-  | Parse_refinement: n:A.ident -> p:parser -> f:lam expr -> parser'
-  | Parse_refinement_with_action : n:A.ident -> p:parser -> f:lam expr -> a:lam action -> parser'
+  | Parse_refinement: n:A.ident -> p:parser -> f:lam expr -> err:option expr -> parser'
+  | Parse_refinement_with_action : n:A.ident -> p:parser -> f:lam expr -> err:option expr -> a:lam action -> parser'
   | Parse_with_dep_action : name:A.ident -> p:parser -> a:lam action -> parser'
   | Parse_with_action: name: A.ident -> p:parser -> a:action -> parser'
   | Parse_weaken_left: p:parser ->  k:parser_kind -> parser'

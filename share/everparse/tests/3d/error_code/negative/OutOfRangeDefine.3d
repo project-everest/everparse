@@ -1,0 +1,8 @@
+// The range check also applies to #define'd codes
+#define MY_CODE 7
+
+entrypoint
+typedef struct _T
+{
+  UINT8 x { x == 0 } {:error-code MY_CODE};
+} T;

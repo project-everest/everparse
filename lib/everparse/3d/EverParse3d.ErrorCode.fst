@@ -29,6 +29,14 @@ let validator_error_unexpected_padding = 7uy
 [@@CMacro; FStar.Attributes.rename_let "EVERPARSE_STATUS_ERROR_PROBE_FAILED"]
 let validator_error_probe_failed = 8uy
 
+(* The status codes that a failing refinement may return: the default
+   constraint failure, or a user-defined code in [128, 255], set with the 3D
+   `{:error-code ...}` field annotation (`--api pulse` only; see
+   doc/3d-lang.rst). Codes 9 to 127 are reserved for EverParse. *)
+inline_for_extraction noextract
+let constraint_error_code : Type0 =
+  c: U8.t { c == validator_error_constraint_failed \/ U8.v c >= 128 }
+
 noextract
 let is_validation_error (code:U8.t) : bool =
   code <> validator_success && code <> validator_error_action_failed
@@ -46,7 +54,7 @@ let error_reason_of_result (code:U8.t) : string =
   | 6uy -> "constraint failed"
   | 7uy -> "unexpected padding"
   | 8uy -> "probe failed"
-  | _ -> "unspecified"
+  | _ -> if U8.gte code 128uy then "user-defined constraint failed" else "unspecified"
 
 // Some generic helpers
 

@@ -237,7 +237,8 @@ let padding_field (env:env_t) (diag_enclosing_type_name:ident (* for diagnostics
       field_constraint=None;
       field_bitwidth=None;
       field_action=None;
-      field_probe=None
+      field_probe=None;
+      field_error_code=None
     } in
     let af = with_dummy_range sf in
     let f = with_dummy_range (AtomicField af) in

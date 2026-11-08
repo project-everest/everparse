@@ -115,7 +115,8 @@ let gen_atomic_field (e:env_t) (af:atomic_field)
     | None -> false, None
     | Some constr -> true, Some (specialize_expr e constr)
   in
-  let af32 = { af with v = { af.v with field_type = ft; field_probe=None; field_array_opt=arr; field_constraint=constr } } in
+  let ec = map_opt (specialize_expr e) af.v.field_error_code in
+  let af32 = { af with v = { af.v with field_type = ft; field_probe=None; field_array_opt=arr; field_constraint=constr; field_error_code=ec } } in
   b||b'||b'', af32
 
 

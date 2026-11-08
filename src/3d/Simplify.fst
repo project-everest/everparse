@@ -175,11 +175,13 @@ let simplify_atomic_field (env:T.env_t) (f:atomic_field)
       | None -> None
       | Some (a, b) -> Some (simplify_action env a, b)
     in
+    let fec = sf.field_error_code |> map_opt (simplify_expr env) in
     let sf = { sf with field_type = ft;
                        field_array_opt = fa; 
                        field_constraint = fc;
                        field_action = fact;
-                       field_probe = fp } in
+                       field_probe = fp;
+                       field_error_code = fec } in
     { f with v = sf }
 
 let rec simplify_field (env:T.env_t) (f:field)

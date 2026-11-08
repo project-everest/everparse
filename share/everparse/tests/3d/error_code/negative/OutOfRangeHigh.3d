@@ -1,0 +1,6 @@
+// Error codes must fit in a byte
+entrypoint
+typedef struct _T
+{
+  UINT8 x { x == 0 } {:error-code 256};
+} T;

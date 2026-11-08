@@ -96,9 +96,20 @@ let simplify_atomic_field (env:env) (f:atomic_field)
                 | None, Some c -> Some c
                 | Some c1, Some c2 -> Some (with_dummy_range (App And [c1;c2]))
               in
+              // The inlined (inner) constraint is checked first by the
+              // original validator, so its error code takes precedence
+              let join_error_codes () =
+                match field.field_constraint, inlined_field.v.field_constraint with
+                | None, None -> None
+                | Some _, None -> field.field_error_code
+                | None, Some _ -> inlined_field.v.field_error_code
+                | Some _, Some c2 ->
+                  Ast.join_error_codes c2 inlined_field.v.field_error_code field.field_error_code
+              in
               { field with 
                 field_type = inlined_field.v.field_type;
                 field_constraint = join_constraints field.field_constraint inlined_field.v.field_constraint;
+                field_error_code = join_error_codes ();
                 field_action = choose_one field.field_action inlined_field.v.field_action }
           end
     in
@@ -167,7 +178,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
           field_constraint = Some constraint;
           field_bitwidth = None;
           field_action = None;
-          field_probe = None }
+          field_probe = None;
+          field_error_code = None }
     in
     let af = with_dummy_range field in
     Options.debug_print_string 

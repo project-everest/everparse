@@ -309,12 +309,12 @@ let tag_of_parser p
     | Parse_t_exact _ _ -> "Parse_t_exact"
     | Parse_pair _ _ _ _ _ -> "Parse_pair"
     | Parse_dep_pair _ _ _ -> "Parse_dep_pair"
-    | Parse_dep_pair_with_refinement _ _ _ _ -> "Parse_dep_pair_with_refinement"
+    | Parse_dep_pair_with_refinement _ _ _ _ _ -> "Parse_dep_pair_with_refinement"
     | Parse_dep_pair_with_action _ _ _ -> "Parse_dep_pair_with_action"
-    | Parse_dep_pair_with_refinement_and_action _ _ _ _ _ -> "Parse_dep_pair_with_refinement_and_action"
+    | Parse_dep_pair_with_refinement_and_action _ _ _ _ _ _ -> "Parse_dep_pair_with_refinement_and_action"
     | Parse_map _ _ -> "Parse_map"
-    | Parse_refinement _ _ _ -> "Parse_refinement"
-    | Parse_refinement_with_action _ _ _ _ -> "Parse_refinement_with_action"
+    | Parse_refinement _ _ _ _ -> "Parse_refinement"
+    | Parse_refinement_with_action _ _ _ _ _ -> "Parse_refinement_with_action"
     | Parse_with_dep_action _ _ _ -> "Parse_with_dep_action"
     | Parse_with_action _ _ _ -> "Parse_with_action"
     | Parse_weaken_left _ _ -> "Parse_weaken_left"
@@ -335,6 +335,26 @@ let as_lam (x:T.lam 'a)
     i, snd x
 
 let id_as_expr (i:A.ident) = T.mk_expr (T.Identifier i)
+
+(* Refer to the CMacro constant rather than the literal 6uy, so that the
+   generated C code reads EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED *)
+let constraint_failed_code : T.expr =
+  id_as_expr A.(with_dummy_range {
+    modul_name = Some "EverParse3d.ErrorCode";
+    name = "validator_error_constraint_failed" })
+
+(* Leaves of an error code (see Ast.join_error_codes) may be the default code 6 *)
+let rec name_default_error_code (e:T.expr) : T.expr =
+  match fst e with
+  | T.Constant (A.Int _ 6) -> constraint_failed_code
+  | T.App T.IfThenElse [c; a; b] ->
+    T.mk_expr (T.App T.IfThenElse [c; name_default_error_code a; name_default_error_code b])
+  | _ -> e
+
+let error_code_or_default (err:option T.expr) : T.expr =
+  match err with
+  | Some e -> name_default_error_code e
+  | None -> constraint_failed_code
 
 let rec typ_indexes_of_action (a:T.action)
   : ML typ_indexes
@@ -426,12 +446,12 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
       typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_parser q)
 
     | T.Parse_dep_pair _ p (_, q)
-    | T.Parse_dep_pair_with_refinement _ p _ (_, q) ->
+    | T.Parse_dep_pair_with_refinement _ p _ _ (_, q) ->
       typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_parser q)
 
     | T.Parse_weaken_left p _
     | T.Parse_weaken_right p _
-    | T.Parse_refinement _ p _
+    | T.Parse_refinement _ p _ _
     | T.Parse_with_comment p _
     | T.Parse_nlist _ _ p
     | T.Parse_t_at_most _ p
@@ -439,7 +459,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
       typ_indexes_of_parser p
 
     | T.Parse_dep_pair_with_action p (_, a) (_, q)
-    | T.Parse_dep_pair_with_refinement_and_action _ p _ (_, a) (_, q) ->
+    | T.Parse_dep_pair_with_refinement_and_action _ p _ _ (_, a) (_, q) ->
       typ_indexes_union
         (typ_indexes_of_parser p)
         (typ_indexes_union
@@ -459,7 +479,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
     | T.Parse_string p _ ->
       typ_indexes_nil
 
-    | T.Parse_refinement_with_action n p f (_, a) ->
+    | T.Parse_refinement_with_action n p f _ (_, a) ->
       typ_indexes_union 
         (typ_indexes_of_parser p)
         (typ_indexes_of_action a)
@@ -532,13 +552,13 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
       else
         failwith "typ_of_parser: Parse_dep_pair: tag not readable"
 
-    | T.Parse_dep_pair_with_refinement _ p r k ->
+    | T.Parse_dep_pair_with_refinement _ p r err k ->
       let i, r = as_lam r in
       let j, k = as_lam k in
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_dep_pair_with_refinement fn d (i, r) (j, typ_of_parser k)
+        T_dep_pair_with_refinement fn d (i, r) (error_code_or_default err) (j, typ_of_parser k)
       else
         failwith "typ_of_parser: Parse_dep_pair_with_refinement: tag not readable"
 
@@ -551,14 +571,14 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
       else
         failwith "typ_of_parser: Parse_dep_pair_with_action: tag not readable"
 
-    | T.Parse_dep_pair_with_refinement_and_action _ p r a k ->
+    | T.Parse_dep_pair_with_refinement_and_action _ p r err a k ->
       let a = as_lam a in
       let (i, k) = as_lam k in
       let r = as_lam r in
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_dep_pair_with_refinement_and_action fn d r (i, typ_of_parser k) a
+        T_dep_pair_with_refinement_and_action fn d r (error_code_or_default err) (i, typ_of_parser k) a
       else
         failwith "typ_of_parser: Parse_dep_pair_with_refinement_and_action: tag not readable"
 
@@ -582,19 +602,19 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
       else
         failwith "typ_of_parser: Parse_string: element not readable"
 
-    | T.Parse_refinement _ p f ->
+    | T.Parse_refinement _ p f err ->
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_refine fn d (as_lam f)
+        T_refine fn d (as_lam f) (error_code_or_default err)
       else
         failwith "typ_of_parser: Parse_refinement: element not readable"
 
-    | T.Parse_refinement_with_action _ p f a ->
+    | T.Parse_refinement_with_action _ p f err a ->
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_refine_with_action fn d (as_lam f) (as_lam a)
+        T_refine_with_action fn d (as_lam f) (error_code_or_default err) (as_lam a)
       else
         failwith "typ_of_parser: Parse_refinement_with_action: element not readable"
 
@@ -663,11 +683,11 @@ let rec has_action_of_typ (t:typ)
     has_action_of_typ t1 || has_action_of_typ t2
   | T_dep_pair _ t1 (_, t2) ->
     has_action_of_dtyp t1 || has_action_of_typ t2
-  | T_refine _ t _ -> has_action_of_dtyp t
-  | T_refine_with_action _ _ _ _ -> true
-  | T_dep_pair_with_refinement _ t _ (_, t2) -> has_action_of_dtyp t || has_action_of_typ t2
+  | T_refine _ t _ _ -> has_action_of_dtyp t
+  | T_refine_with_action _ _ _ _ _ -> true
+  | T_dep_pair_with_refinement _ t _ _ (_, t2) -> has_action_of_dtyp t || has_action_of_typ t2
   | T_dep_pair_with_action _ _ _ _ -> true
-  | T_dep_pair_with_refinement_and_action _ _ _ _ _ -> true
+  | T_dep_pair_with_refinement_and_action _ _ _ _ _ _ -> true
   | T_if_else _ t1 t2 -> has_action_of_typ t1 || has_action_of_typ t2
   | T_with_action _ _ _ -> true
   | T_with_dep_action _ _ _ -> true
@@ -1167,24 +1187,27 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname t)
                      (print_lam mname (print_typ mname) k)
 
-    | T_refine fn d r ->
-      Printf.sprintf "(T_refine \"%s\" %s %s)"
+    | T_refine fn d r err ->
+      Printf.sprintf "(T_refine \"%s\" %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
 
-    | T_refine_with_action fn d r a ->
-      Printf.sprintf "(T_refine_with_action \"%s\" %s %s %s)"
+    | T_refine_with_action fn d r err a ->
+      Printf.sprintf "(T_refine_with_action \"%s\" %s %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
                      (print_lam mname (print_action mname) a)
 
-    | T_dep_pair_with_refinement fn d r k ->
-      Printf.sprintf "(T_dep_pair_with_refinement \"%s\" %s %s %s)"
+    | T_dep_pair_with_refinement fn d r err k ->
+      Printf.sprintf "(T_dep_pair_with_refinement \"%s\" %s %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
                      (print_lam mname (print_typ mname) k)
 
     | T_dep_pair_with_action fn d k a ->
@@ -1194,11 +1217,12 @@ let rec print_typ (mname:string) (t:typ)
                      (print_lam mname (print_typ mname) k)
                      (print_lam mname (print_action mname) a)
 
-    | T_dep_pair_with_refinement_and_action fn d r k a ->
-      Printf.sprintf "(T_dep_pair_with_refinement_and_action \"%s\" %s %s %s %s)"
+    | T_dep_pair_with_refinement_and_action fn d r err k a ->
+      Printf.sprintf "(T_dep_pair_with_refinement_and_action \"%s\" %s %s %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
                      (print_lam mname (print_typ mname) k)
                      (print_lam mname (print_action mname) a)
 

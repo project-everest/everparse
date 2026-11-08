@@ -1,0 +1,6 @@
+// An error code is only meaningful on a refined field
+entrypoint
+typedef struct _T
+{
+  UINT8 x {:error-code 200};
+} T;

@@ -66,6 +66,7 @@ module U8 = FStar.UInt8
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module A = EverParse3d.Actions.Base
+module E = EverParse3d.ErrorCode
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module I = EverParse3d.InputStream.Base
@@ -882,6 +883,7 @@ type typ
       #ha1:_ ->
       base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
       refinement:(dtyp_as_type base -> bool) ->
+      err:(dtyp_as_type base -> E.constraint_error_code) ->
       typ base_t len_t pos_t inst d use_error_handler (P.filter_kind pk1) ha1 false
 
   | T_refine_with_action:
@@ -890,6 +892,7 @@ type typ
       #ha1:_ -> #b2:_ -> #rt2:_ ->
       base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
       refinement:(dtyp_as_type base -> bool) ->
+      err:(dtyp_as_type base -> E.constraint_error_code) ->
       act:(dtyp_as_type base -> action base_t len_t pos_t inst d use_error_handler b2 rt2 bool) ->
       typ base_t len_t pos_t inst d use_error_handler (P.filter_kind pk1) true false
 
@@ -901,6 +904,7 @@ type typ
       #ha2:_ -> #b2:_ ->
       base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
       refinement:(dtyp_as_type base -> bool) ->
+      err:(dtyp_as_type base -> E.constraint_error_code) ->
       k:(x:dtyp_as_type base { refinement x } ->
          typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2) ->
       typ base_t len_t pos_t inst d use_error_handler
@@ -928,6 +932,7 @@ type typ
       #b3:_ -> #rt3:_ ->
       base:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
       refinement:(dtyp_as_type base -> bool) ->
+      err:(dtyp_as_type base -> E.constraint_error_code) ->
       k:(x:dtyp_as_type base { refinement x } ->
          typ base_t len_t pos_t inst d use_error_handler pk2 ha2 b2) ->
       act:(dtyp_as_type base -> action base_t len_t pos_t inst d use_error_handler b3 rt3 bool) ->
@@ -1044,16 +1049,16 @@ let rec as_type
     | T_dep_pair_with_action _ i t _ ->
       x:dtyp_as_type i & as_type (t x)
 
-    | T_refine _ base refinement ->
+    | T_refine _ base refinement _ ->
       P.refine (dtyp_as_type base) refinement
 
-    | T_refine_with_action _ base refinement _ ->
+    | T_refine_with_action _ base refinement _ _ ->
       P.refine (dtyp_as_type base) refinement
 
-    | T_dep_pair_with_refinement _ base refinement t ->
+    | T_dep_pair_with_refinement _ base refinement _ t ->
       x:P.refine (dtyp_as_type base) refinement & as_type (t x)
 
-    | T_dep_pair_with_refinement_and_action _ base refinement t _ ->
+    | T_dep_pair_with_refinement_and_action _ base refinement _ t _ ->
       x:P.refine (dtyp_as_type base) refinement & as_type (t x)
 
     | T_if_else b t0 t1 ->
@@ -1110,15 +1115,15 @@ let rec as_parser
       let pi = dtyp_as_parser i in
       P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> as_parser (t x))
 
-    | T_refine _ base refinement
-    | T_refine_with_action _ base refinement _ ->
+    | T_refine _ base refinement _
+    | T_refine_with_action _ base refinement _ _ ->
       let pi = dtyp_as_parser base in
       P.parse_filter pi refinement
 
-    | T_dep_pair_with_refinement _ base refinement k ->
+    | T_dep_pair_with_refinement _ base refinement _ k ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
-    | T_dep_pair_with_refinement_and_action _ base refinement k _ ->
+    | T_dep_pair_with_refinement_and_action _ base refinement _ k _ ->
       P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
 
     | T_if_else b t0 t1 ->
@@ -1238,35 +1243,35 @@ let rec as_validator
           (dtyp_as_leaf_reader i)
           (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x)))
 
-    | T_refine fldname t f ->
-      assert_norm (as_type (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f) == P.refine (dtyp_as_type t) f);
-      assert_norm (as_parser (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f) == P.parse_filter (dtyp_as_parser t) f);
+    | T_refine fldname t f err ->
+      assert_norm (as_type (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err) == P.refine (dtyp_as_type t) f);
+      assert_norm (as_parser (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err) == P.parse_filter (dtyp_as_parser t) f);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_filter fldname
           (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
-          f "reading field_value" "checking constraint")
+          f err "reading field_value" "checking constraint")
 
-    | T_refine_with_action fldname t f a ->
-      assert_norm (as_type (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f a) == P.refine (dtyp_as_type t) f);
-      assert_norm (as_parser (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f a) == P.parse_filter (dtyp_as_parser t) f);
+    | T_refine_with_action fldname t f err a ->
+      assert_norm (as_type (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err a) == P.refine (dtyp_as_type t) f);
+      assert_norm (as_parser (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err a) == P.parse_filter (dtyp_as_parser t) f);
       A.validate_with_error_handler ehm typename fldname
         (A.validate_filter_with_action fldname
           (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
-          f "reading field_value" "checking constraint"
+          f err "reading field_value" "checking constraint"
           (fun x -> action_as_action (a x)))
 
-    | T_dep_pair_with_refinement fldname #_ #_ #ha1 #_ #_ #_ #_ #_ base refinement k ->
-      assert_norm (as_type (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k) ==
+    | T_dep_pair_with_refinement fldname #_ #_ #ha1 #_ #_ #_ #_ #_ base refinement err k ->
+      assert_norm (as_type (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k) ==
                         x:P.refine (dtyp_as_type base) refinement & as_type (k x));
-      assert_norm (as_parser (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k) ==
+      assert_norm (as_parser (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_dep_pair_with_refinement (not ha1) fldname
             (dtyp_as_validator_no_read fldname base)
             (dtyp_as_leaf_reader base)
-            refinement
+            refinement err
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x))))
 
     | T_dep_pair_with_action fldname base t act ->
@@ -1281,16 +1286,16 @@ let rec as_validator
             (fun x -> action_as_action (act x))
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x))))
 
-    | T_dep_pair_with_refinement_and_action fldname #_ #_ #ha1 #_ #_ #_ #_ #_ #_ #_ base refinement k act ->
-      assert_norm (as_type (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k act) ==
+    | T_dep_pair_with_refinement_and_action fldname #_ #_ #ha1 #_ #_ #_ #_ #_ #_ #_ base refinement err k act ->
+      assert_norm (as_type (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k act) ==
                         x:P.refine (dtyp_as_type base) refinement & as_type (k x));
-      assert_norm (as_parser (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement k act) ==
+      assert_norm (as_parser (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k act) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
       A.validate_dep_pair_with_refinement_and_action (not ha1) fldname
             (A.validate_with_error_handler_no_read ehm typename fldname
               (dtyp_as_validator_no_read fldname base))
             (dtyp_as_leaf_reader base)
-            refinement
+            refinement err
             (fun x -> action_as_action (act x))
             (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x)))
 

@@ -2296,7 +2296,9 @@ The ``ErrorReason`` and ``ErrorCode`` pairs are:
   - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
   - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
   - "probe failed", ``EVERPARSE_ERROR_PROBE_FAILED`` (8uL)
-  - "unspecified", with ``ErrorCode == 1uL`` or ``ErrorCode > 8uL``
+  - "user-defined constraint failed", with ``128uL <= ErrorCode <= 255uL``
+    (see :ref:`custom error codes <sec-custom-error-codes>`)
+  - "unspecified", with ``ErrorCode == 1uL`` or ``9uL <= ErrorCode <= 127uL``
 
 In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
@@ -2310,6 +2312,43 @@ the callback signatures and byte return type are unchanged.
 
 The ``EVERPARSE_PROBE_FAILURE_*`` codes returned by the probe wrappers are
 unaffected and keep the same values under both backends.
+
+.. _sec-custom-error-codes:
+
+**Custom error codes.** Under ``--api pulse`` only, a refined field may
+specify the error code to report when its constraint fails, with an
+``{:error-code ...}`` annotation placed after the constraint and before
+any action:
+
+.. code-block:: c
+
+  #define BAD_KIND 201
+
+  entrypoint
+  typedef struct _Header(mutable UINT32 *out)
+  {
+    UINT8 version { version == 1 } {:error-code 200};
+    UINT8 kind { kind <= 3 } {:error-code BAD_KIND};
+    UINT32 tag { tag == 42 } {:error-code 203}
+      {:on-success *out = tag; return true; };
+  } Header;
+
+The error code must be an integer literal or a ``#define``'d integer
+constant between 128 and 255; codes below 128 are reserved for
+EverParse. When the constraint of such a field fails, the validator
+returns this code instead of ``EVERPARSE_ERROR_CONSTRAINT_FAILED``, and
+the error handler receives it as its ``ErrorCode`` argument, with the
+``ErrorReason`` "user-defined constraint failed", at every enclosing type
+level. Fields without the annotation still report
+``EVERPARSE_ERROR_CONSTRAINT_FAILED``.
+
+EverParse may merge the constraints of several fields into one, as with
+bit fields or enum-typed fields; each constraint still reports its own
+code (or ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` if it has none), namely
+the code of the first constraint that fails, in field order.
+
+Using ``{:error-code ...}`` on a field without a constraint, or under
+``--api lowstar``, is an error: the Low\* API packs error kinds into 4 bits.
 
 Fully worked examples: TCP Segment Headers
 -------------------------------------------

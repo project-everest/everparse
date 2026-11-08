@@ -179,7 +179,7 @@ let rec is_compile_time_fixed_size (env:global_env) (t:T.typ)
       with _ -> false
     end
   | T.T_pointer _ _ -> true
-  | T.T_refine base _ -> is_compile_time_fixed_size env base
+  | T.T_refine base _ _ -> is_compile_time_fixed_size env base
   | T.T_with_comment t _ -> is_compile_time_fixed_size env t
   | T.T_nlist elt n -> // this is the main reason why we need T.T_pair
     if Some? (T.as_constant n)
@@ -233,9 +233,9 @@ let dep_pair_parser n1 p1 (p2:A.ident & T.parser) =
       t_id
       (ident_to_string n1)
       (Parse_dep_pair n1 p1 (Some (fst p2), snd p2))
-let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (p2:A.ident & T.parser) =
+let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (err:option T.expr) (p2:A.ident & T.parser) =
   let open T in
-  let t1 = T_refine p1.p_typ e in
+  let t1 = T_refine p1.p_typ e err in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
   let k1 = pk_filter p1.p_kind in
   let t_id = with_dummy_range (to_ident' "dtuple2") in
@@ -244,10 +244,10 @@ let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (p2:A.ident & T.parse
       t
       t_id
       (ident_to_string n1)
-      (Parse_dep_pair_with_refinement n1 p1 e (Some (fst p2), snd p2))
-let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
+      (Parse_dep_pair_with_refinement n1 p1 e err (Some (fst p2), snd p2))
+let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (err:option T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
-  let t1 = T_refine p1.p_typ e in
+  let t1 = T_refine p1.p_typ e err in
   let t = T_dep_pair t1 (fst p2, (snd p2).p_typ) in
   let k1 = pk_filter p1.p_kind in
   let t_id = with_dummy_range (to_ident' "dtuple2") in  
@@ -256,7 +256,7 @@ let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (a:T.lam T
       t
       t_id
       (ident_to_string n1)
-      (Parse_dep_pair_with_refinement_and_action n1 p1 e a (Some (fst p2), snd p2))
+      (Parse_dep_pair_with_refinement_and_action n1 p1 e err a (Some (fst p2), snd p2))
 let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
   let t1 = p1.p_typ in
@@ -467,16 +467,16 @@ let make_enum_typ (t:T.typ) (ids:list ident) =
       ids
       (T.mk_expr (T.Constant (Bool false)))
   in
-  T.T_refine t (mk_lam refinement)
+  T.T_refine t (mk_lam refinement) None
 
 let rec has_refinement_and_action (t:T.typ)
   : ML (option (T.typ &
-                option (T.lam T.expr) &
+                option (T.lam T.expr & option T.expr) &
                 option (either T.action (T.lam T.action)) &
                 option comments))
   = let open T in
     match t with
-    | T_refine t e -> Some (t, Some e, None, None)
+    | T_refine t e err -> Some (t, Some (e, err), None, None)
     | T_with_action t a ->
       begin
       match has_refinement_and_action t with
@@ -572,9 +572,9 @@ let rec parse_typ (env:global_env)
               fieldname
               (T.Parse_app hd args)
 
-  | T.T_refine t_base refinement ->
+  | T.T_refine t_base refinement err ->
     let base = parse_typ env typename fieldname t_base in
-    let refined = T.Parse_refinement typename base refinement in
+    let refined = T.Parse_refinement typename base refinement err in
     mk_parser (pk_filter base.p_kind) t typename (extend_fieldname "refinement") refined
 
   | T.T_if_else e t1 t2 ->
@@ -607,22 +607,22 @@ let rec parse_typ (env:global_env)
       let t = maybe_add_comment t copt in    
       let p = parse_typ env typename (extend_fieldname "base") t in
       mk_parser p.p_kind t typename fieldname (T.Parse_with_dep_action typename p a)
-    | Some (t, Some r, Some (Inl a), copt) ->
+    | Some (t, Some (r, err), Some (Inl a), copt) ->
       let t = maybe_add_comment t copt in        
       let p = parse_typ env typename (extend_fieldname "base") t in
       mk_parser (pk_filter p.p_kind)
-                (T.T_refine t r)
+                (T.T_refine t r err)
                 typename
                 fieldname
-                (T.Parse_refinement_with_action typename p r (Some underscore_ident, a))
-    | Some (t, Some r, Some (Inr a), copt) ->
+                (T.Parse_refinement_with_action typename p r err (Some underscore_ident, a))
+    | Some (t, Some (r, err), Some (Inr a), copt) ->
       let t = maybe_add_comment t copt in            
       let p = parse_typ env typename (extend_fieldname "base") t in
       mk_parser (pk_filter p.p_kind)
-                (T.T_refine t r)
+                (T.T_refine t r err)
                 typename
                 fieldname
-                (T.Parse_refinement_with_action typename p r a)
+                (T.Parse_refinement_with_action typename p r err a)
     end
   | T.T_with_comment t c ->
     let p = parse_typ env typename fieldname t in
@@ -783,7 +783,7 @@ let rec parser_is_constant_size_without_actions
       then parser_is_constant_size_without_actions env tl
       else false
   | T.Parse_dep_pair _ parse_key (_, parse_value)
-  | T.Parse_dep_pair_with_refinement _ parse_key _ (_, parse_value)
+  | T.Parse_dep_pair_with_refinement _ parse_key _ _ (_, parse_value)
     -> (* the lambda identifier is not global, because the 3d syntax does not allow higher-order types *)
       if parser_is_constant_size_without_actions env parse_key
       then parser_is_constant_size_without_actions env parse_value
@@ -791,8 +791,8 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_t_at_most _ _
   | T.Parse_t_exact _ _  
   | T.Parse_dep_pair_with_action _ _ _
-  | T.Parse_dep_pair_with_refinement_and_action _ _ _ _ _
-  | T.Parse_refinement_with_action _ _ _ _
+  | T.Parse_dep_pair_with_refinement_and_action _ _ _ _ _ _
+  | T.Parse_refinement_with_action _ _ _ _ _
   | T.Parse_with_dep_action _ _ _
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
@@ -800,7 +800,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_probe _ _ _ _ _ _ _ _
     -> false
   | T.Parse_map p _
-  | T.Parse_refinement _ p _
+  | T.Parse_refinement _ p _ _
   | T.Parse_weaken_left p _
   | T.Parse_weaken_right p _  
   | T.Parse_with_comment p _
@@ -938,7 +938,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
       match sf.field_constraint with
       | None -> t
       | Some e ->
-        T.T_refine t (Some sf.field_ident, translate_expr e)
+        T.T_refine t (Some sf.field_ident, translate_expr e) (map_opt translate_expr sf.field_error_code)
     in
     let t, ds2 =
       match sf.field_action with
@@ -1004,18 +1004,18 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
             (parse_typ sf.sf_ident (maybe_add_comment sf.sf_typ copt))
             (sf.sf_ident, aux gfs)
 
-        | Some (t, Some e, None, copt) ->
+        | Some (t, Some (e, err), None, copt) ->
           dep_pair_with_refinement_parser
             sf.sf_ident
             (parse_typ sf.sf_ident (maybe_add_comment t copt))
-            e
+            e err
             (sf.sf_ident, aux gfs)
 
-        | Some (t, Some e, Some a, copt) ->
+        | Some (t, Some (e, err), Some a, copt) ->
           dep_pair_with_refinement_and_action_parser
             sf.sf_ident
             (parse_typ sf.sf_ident (maybe_add_comment t copt))
-            e
+            e err
             (get_action a)
             (sf.sf_ident, aux gfs)
 
@@ -1150,7 +1150,7 @@ let rec hoist_typ
       let ds, t1 = hoist_typ fn genv env t1 in
       let ds', t2 = hoist_typ fn genv ((x, t1)::env) t2 in
       ds@ds', T_dep_pair t1 (x, t2)
-    | T_refine t1 (Some x, e) ->
+    | T_refine t1 (Some x, e) err ->
       let ds, t1 = hoist_typ fn genv env t1 in
       // let fvs = env in //free_vars_expr genv env [] e in
       let params = List.rev env in
@@ -1167,13 +1167,13 @@ let rec hoist_typ
         T.mk_expr app
       in
       let d = Definition def in
-      let t = T_refine t1 (None, app) in
+      let t = T_refine t1 (None, app) err in
       ds@[with_attrs d true false false false true []],  //hoisted, not entrypoint, not exported, inlineable
       t
 
-    | T_refine t1 (None, e) ->
+    | T_refine t1 (None, e) err ->
       let ds, t1 = hoist_typ fn genv env t1 in
-      ds, T_refine t1 (None, e)
+      ds, T_refine t1 (None, e) err
 
     | T_if_else e t f ->
       let d1, t = hoist_typ fn genv env t in
