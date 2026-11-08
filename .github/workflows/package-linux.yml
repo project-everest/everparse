@@ -50,6 +50,7 @@ jobs:
           sparse-checkout: |
             share/everparse/tests/3d
             share/everparse/tests/cddl/demo/test.cddl
+            share/everparse/tests/asn1/tool/Small.asn
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse (--api lowstar)
         run: |
@@ -76,6 +77,9 @@ jobs:
       - name: Test EverCDDL
         run: |
           ${{ github.workspace }}/test/bin/everparse-cddl.exe ${{ github.workspace }}/everparse/share/everparse/tests/cddl/demo/test.cddl
+      - name: Test everparse-asn1
+        run: |
+          ${{ github.workspace }}/test/bin/everparse-asn1.exe --odir ${{ github.workspace }}/test-asn1 --root Msg,Names,Wrapper ${{ github.workspace }}/everparse/share/everparse/tests/asn1/tool/Small.asn
 
   # The shared test suite, split into parts of comparable length, as in
   # package-macos.yml.
