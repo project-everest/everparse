@@ -1,6 +1,6 @@
 # everparse-asn1: build and tests.
 # Prerequisites: OCaml with dune (e.g. the opam switch of EverParse), and
-# the verified ASN.1 Pulse library (`make -C ../pulse verify`).
+# the verified ASN.1 Pulse library (`make asn1` at the toplevel).
 
 all: test
 
@@ -75,7 +75,7 @@ $(OUT)/golden/%.fst: ../difftest/schemas/%.asn $(TOOL)
 
 test-golden: $(addprefix $(OUT)/golden/,$(addsuffix .fst,$(GOLDEN)))
 	cd tests && $(FSTAR_EXE) --smt $(EVERPARSE_HOME)/opt/z3/z3-5.3.0 --z3version 5.3.0 \
-	  --include $(EVERPARSE_HOME)/lib/everparse/lowparse --include $(EVERPARSE_HOME)/src/ASN1 --include $(CURDIR)/$(OUT)/golden \
+	  --include $(EVERPARSE_HOME)/lib/everparse/lowparse --include $(EVERPARSE_HOME)/lib/everparse/asn1/spec --include $(EVERPARSE_HOME)/src/ASN1 --include $(CURDIR)/$(OUT)/golden \
 	  --already_cached '*,-Golden,$(subst $(space),$(comma),$(addprefix -,$(GOLDEN)))' Golden.fst
 
 test: test-golden test-small test-x509lite test-features test-features2

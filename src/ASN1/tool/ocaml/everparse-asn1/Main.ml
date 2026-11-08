@@ -33,7 +33,7 @@ let everparse_home () =
   | Some h -> h
   | None ->
     let rec up d =
-      if file_exists_dir d "src/ASN1/pulse" then d
+      if file_exists_dir d "lib/everparse/asn1/pulse" then d
       else
         let d' = Filename.dirname d in
         if d' = d then fail "cannot find EverParse: please set EVERPARSE_HOME"
@@ -114,10 +114,10 @@ let () =
     let z3 = Filename.concat home "opt/z3/z3-5.3.0" in
     let z3_opts = if Sys.file_exists z3 then ["--smt"; z3; "--z3version"; "5.3.0"] else ["--z3version"; "4.13.3"] in
     let fstar_args = [fstar] @ z3_opts @ [
-        "--ext"; "optimize_let_vc"; "--ext"; "context_pruning";
+        "--ext"; "context_pruning";
         "--include"; Filename.concat home "lib/everparse/lowparse";
-        "--include"; Filename.concat home "src/ASN1";
-        "--include"; Filename.concat home "src/ASN1/pulse";
+        "--include"; Filename.concat home "lib/everparse/asn1/spec";
+        "--include"; Filename.concat home "lib/everparse/asn1/pulse";
         "--include"; !odir;
         "--cache_checked_modules";
         "--already_cached"; Printf.sprintf "*,-%s,-%s" spec pulse;

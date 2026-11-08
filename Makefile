@@ -37,7 +37,7 @@ EVERPARSE_HOME := $(realpath .)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += lib/everparse/lowparse src/ASN1 lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse lib/everparse/cddl/spec
+SRC_DIRS += lib/everparse/lowparse lib/everparse/asn1/spec lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse lib/everparse/cddl/spec
 
 # LowParse's specification and its Pulse implementation share one directory, so
 # the two are told apart by module name: everything the Pulse implementation
@@ -47,6 +47,7 @@ LOWPARSE_PULSE_PATTERN := lib/everparse/lowparse/LowParse.Pulse%
 ifeq (,$(NO_PULSE))
   SRC_DIRS += lib/everparse/cbor/pulse lib/everparse/cbor/pulse/raw lib/everparse/cbor/pulse/raw/everparse lib/everparse/cddl/pulse src/cddl/tool
   SRC_DIRS += lib/everparse/3d
+  SRC_DIRS += lib/everparse/asn1/pulse
 else
   FSTAR_FILES_EXCLUDE += $(LOWPARSE_PULSE_PATTERN)
 endif
@@ -96,16 +97,24 @@ endif
 
 3d: 3d-exe
 
-asn1: asn1-base lowparse asn1-tool
+asn1: asn1-base lowparse
+
+# The ASN.1 DER specification (lib/everparse/asn1/spec)
+asn1-base: $(filter lib/everparse/asn1/spec/%,$(ALL_CHECKED_FILES))
+
+# The Pulse implementation (lib/everparse/asn1/pulse) and the everparse-asn1
+# executable, which generates Pulse code, need Pulse.
+ifeq (,$(NO_PULSE))
+asn1: asn1-pulse asn1-tool
+endif
+
+asn1-pulse: $(filter lib/everparse/asn1/pulse/%,$(ALL_CHECKED_FILES))
 
 # The everparse-asn1 executable (src/ASN1/tool). Not copied to bin/ yet.
 asn1-tool: $(NEED_OPAM)
 	+$(MAKE) -C src/ASN1/tool build
 
-# filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
-asn1-base: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
-
-.PHONY: asn1-base asn1-tool
+.PHONY: asn1-base asn1-pulse asn1-tool
 
 quackyducky: qd-exe lowparse
 
@@ -416,6 +425,7 @@ cddl-test: cddl cddl-unit-tests cddl-roundtrip-test
 
 clean-asn1:
 	+$(MAKE) -C src/ASN1 clean
+	rm -f $(addprefix lib/everparse/asn1/,$(addsuffix /*.checked,spec pulse))
 
 .PHONY: clean-asn1
 

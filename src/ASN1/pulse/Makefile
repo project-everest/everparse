@@ -3,10 +3,13 @@ all: verify
 EVERPARSE_HOME = $(realpath ../../..)
 LOWPARSE_HOME = $(EVERPARSE_HOME)/lib/everparse/lowparse
 
-INCLUDE_PATHS += $(LOWPARSE_HOME) $(realpath ..)
+ASN1_HOME = $(EVERPARSE_HOME)/lib/everparse/asn1
+INCLUDE_PATHS += $(LOWPARSE_HOME) $(ASN1_HOME)/spec $(ASN1_HOME)/pulse $(realpath ..)
 
-ALREADY_CACHED := *,-ASN1.Pulse,
-FSTAR_OPTIONS += --ext optimize_let_vc
+# The library (lib/everparse/asn1) is verified by the toplevel Makefile
+# (`make asn1`), and the test schemas of .. by ../Makefile; only the test
+# modules of this directory are checked here.
+ALREADY_CACHED := *,-ASN1.Pulse.DiffTest,-ASN1.Pulse.ParseTest,-ASN1.Pulse.RawWriteTest,-ASN1.Pulse.NamedTest,-ASN1.Pulse.X509,
 
 include $(EVERPARSE_HOME)/lib/everparse/pulse.Makefile
 include $(EVERPARSE_HOME)/lib/everparse/common.Makefile

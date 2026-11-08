@@ -4,9 +4,11 @@ EVERPARSE_HOME = $(realpath ../..)
 
 LOWPARSE_HOME = $(EVERPARSE_HOME)/lib/everparse/lowparse
 
-INCLUDE_PATHS += $(LOWPARSE_HOME)
+INCLUDE_PATHS += $(LOWPARSE_HOME) $(EVERPARSE_HOME)/lib/everparse/asn1/spec
 
-ALREADY_CACHED := *,-ASN1,
+# The library (lib/everparse/asn1/spec) is verified by the toplevel Makefile
+# (`make asn1`); only the test modules of this directory are checked here.
+ALREADY_CACHED := *,-ASN1.X509,-ASN1.CRL,-ASN1.SetTest,-ASN1.RoundTrip,-ASN1.DiffTest,-ASN1.ExtractionRoot,-ASN1.Spec.Conformance.Examples,
 
 OUTPUT_DIRECTORY := ocaml/extracted
 
@@ -27,8 +29,6 @@ CUSTARD_ENTRY_MODULES += ASN1.RoundTrip
 CUSTARD_ROOTS := ASN1.ExtractionRoot.fst
 
 include $(EVERPARSE_HOME)/lib/everparse/common.Makefile
-
-FSTAR_OPTIONS += --ext optimize_let_vc
 
 extract: $(CUSTARD_STAMP)
 
