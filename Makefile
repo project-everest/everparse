@@ -18,7 +18,7 @@ include nofstar.Makefile
 include deps.Makefile
 
 ifneq (1,$(EVERPARSE_ONLY_3D))
-package-subset: cddl
+package-subset: cddl asn1
 endif
 
 # Disable COSE on MacOS because we don't know how to link with OpenSSL
@@ -69,6 +69,10 @@ ifeq (1,$(ADMIT_CBOR_CDDL))
 $(filter lib/everparse/cbor/% lib/everparse/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
+ifeq (1,$(ADMIT_ASN1))
+$(filter lib/everparse/asn1/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+endif
+
 LOWPARSE_PULSE_CHECKED_FILES := $(filter $(LOWPARSE_PULSE_PATTERN),$(ALL_CHECKED_FILES))
 
 lowparse: $(filter-out $(LOWPARSE_PULSE_CHECKED_FILES),$(filter lib/everparse/lowparse/%,$(ALL_CHECKED_FILES)))
@@ -110,7 +114,7 @@ endif
 
 asn1-pulse: $(filter lib/everparse/asn1/pulse/%,$(ALL_CHECKED_FILES))
 
-# The everparse-asn1 executable (src/ASN1/tool). Not copied to bin/ yet.
+# The everparse-asn1 executable (src/ASN1/tool), copied to bin/
 asn1-tool: $(NEED_OPAM)
 	+$(MAKE) -C src/ASN1/tool build
 

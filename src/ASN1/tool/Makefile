@@ -14,11 +14,23 @@ TEST_CFLAGS := -std=c11 -Wall -Wextra -Werror -Wno-type-limits -Wno-unused-varia
 comma := ,
 empty :=
 space := $(empty) $(empty)
-TOOL := ocaml/_build/default/everparse-asn1/Main.exe
+TOOL := $(EVERPARSE_HOME)/bin/everparse-asn1.exe
 OUT := _output
 
-$(TOOL): $(wildcard ocaml/dune-project ocaml/everparse-asn1/*.ml ocaml/everparse-asn1/*.mll ocaml/everparse-asn1/dune)
+include $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+
+# The Z3 version that the tool asks F* for, as for EverCDDL
+Z3VERSION_ML := ocaml/everparse-asn1/Z3Version.ml
+
+$(Z3VERSION_ML): $(EVERPARSE_HOME)/lib/everparse/z3-version.Makefile
+	echo 'let z3_version = "$(EVERPARSE_Z3_VERSION)"' > $@.tmp
+	mv $@.tmp $@
+
+$(TOOL): $(Z3VERSION_ML) $(wildcard ocaml/dune-project ocaml/everparse-asn1/*.ml ocaml/everparse-asn1/*.mll ocaml/everparse-asn1/dune)
 	cd ocaml && $(DUNE) build
+	mkdir -p $(dir $@)
+	cp ocaml/_build/install/default/bin/everparse-asn1.exe $@
+	chmod +w $@ # because dune produces read-only executables
 
 build: $(TOOL)
 
@@ -81,7 +93,7 @@ test-golden: $(addprefix $(OUT)/golden/,$(addsuffix .fst,$(GOLDEN)))
 test: test-golden test-small test-x509lite test-features test-features2
 
 clean:
-	rm -rf $(OUT)
+	rm -rf $(OUT) $(Z3VERSION_ML)
 	cd ocaml && $(DUNE) clean
 
 .PHONY: all build test test-small test-x509lite test-features test-features2 test-golden clean

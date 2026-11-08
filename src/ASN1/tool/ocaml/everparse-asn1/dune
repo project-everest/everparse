@@ -2,4 +2,5 @@
 
 (executable
  (name Main)
- (libraries unix))
+ (public_name everparse-asn1.exe)
+ (modes native))

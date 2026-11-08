@@ -1,1 +1,7 @@
 (lang dune 3.0)
+(name everparse-asn1)
+(generate_opam_files false)
+
+(package
+  (name everparse-asn1)
+  (synopsis "The EverParse ASN.1 DER parser generator"))

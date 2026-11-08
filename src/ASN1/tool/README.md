@@ -3,7 +3,7 @@
 `everparse-asn1` takes an ASN.1 module and generates, for each root type, a C
 struct/union type with a validator, a zero-copy parser, and a right-to-left
 DER writer. The parser and writer are verified against the pure F\* ASN.1 DER
-specification (`..`). It works like the CDDL front end of EverParse:
+specification (`lib/everparse/asn1/spec`). It works like the CDDL front end of EverParse:
 
 1. Parse the `.asn` files, resolve type and value references (across
    IMPORTS), and elaborate tags.
@@ -16,30 +16,25 @@ specification (`..`). It works like the CDDL front end of EverParse:
      component, and an impl descriptor `d_T : adesc k_T t_T` that ties each
      C type to its schema (`ASN1.Pulse.Rel`). The roots `validate_T`,
      `parse_T`, `write_T` and `write_T_typed` instantiate the generic Pulse interpreters
-     of `../pulse` with these descriptors.
+     of the ASN.1 Pulse library (`lib/everparse/asn1/pulse`) with these
+     descriptors.
 3. Verify both modules with F\*, then extract `M.Impl` to `M.c`/`M.h` with
    Custard, F\*'s direct-to-C backend (no KaRaMeL).
 4. Compile `M.c` (`cc -c`) as a sanity check.
 
 ## Building and running
 
-Prerequisites: OCaml with `dune` (e.g. the opam switch of EverParse), F\*
-built in `opt/FStar`, and the verified ASN.1 Pulse library
-(`make -C ../pulse verify`).
-
-```
-make build      # ocaml/_build/default/everparse-asn1/Main.exe
-```
-
-From the EverParse root, `make asn1` (or `make asn1-tool`) also builds
-the executable, without copying it to `bin/`.
+From the EverParse root, `make asn1` verifies the ASN.1 library
+(`lib/everparse/asn1/{spec,pulse}`) and builds `bin/everparse-asn1.exe`
+(`make asn1-tool` only builds the executable). Both are part of the
+binary package, and installed by `make install`.
 
 ```
 make test       # C tests (test-small, test-x509lite, test-features, test-features2) and test-golden
 ```
 
 ```
-Main.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--lax_size_of] [--max_int_union N] [--fstar_only] [--skip_compilation] main.asn [imported.asn ...]
+everparse-asn1.exe [--odir DIR] [--mname NAME] [--root A,B,...] [--keep_bytes A,B,...] [--lax_size_of] [--max_int_union N] [--fstar_only] [--skip_compilation] [--fstar PATH] [--z3 PATH] main.asn [imported.asn ...]
 ```
 
 The first file is the main module: its types are generated, with those of
@@ -63,10 +58,16 @@ imported module must be given on the command line.
   list of values compared in turn by the validators.
 * `--fstar_only`: generate the F\* modules only.
 * `--skip_compilation`: do not run `cc` on the generated C.
+* `--fstar PATH`: the F\* executable (default: `$FSTAR_EXE`, then
+  `opt/FStar/bin/fstar.exe` or `bin/fstar.exe` of the EverParse home, then
+  `fstar.exe` in the `PATH`).
+* `--z3 PATH`: the Z3 executable (default: the one that F\* finds for the
+  Z3 version of EverParse, then `opt/z3/z3-<version>` of the EverParse
+  home).
 
-`EVERPARSE_HOME` is the EverParse root; by default it is found by
-searching upward from the executable. `FSTAR_EXE` defaults to
-`$EVERPARSE_HOME/opt/FStar/out/bin/fstar.exe`, and `CC` to `cc`.
+The EverParse home is `$EVERPARSE_HOME` if set, else the parent of the
+directory of the executable (`bin/`); the ASN.1 and LowParse libraries are
+taken from its `lib/everparse`. `CC` defaults to `cc`.
 Extraction can take several minutes per schema.
 
 ## Generated C API
