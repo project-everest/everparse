@@ -1,6 +1,6 @@
 //! asn1-rs runner for the ASN.1 DER differential tests; see difftest-common.
 //!
-//! asn1-rs has no ASN.1 compiler: every type of ../../../schemas/*.asn
+//! asn1-rs has no ASN.1 compiler: every type of share/everparse/tests/asn1/difftest/schemas/*.asn
 //! is translated by hand below, with the asn1-rs types and derive macros,
 //! as a user of the library would. The translations add no check of their
 //! own: in particular, asn1-rs has no notion of constraints, so constrained

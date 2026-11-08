@@ -1,5 +1,5 @@
 //! rasn runner for the ASN.1 DER differential tests; see difftest-common.
-//! Types are generated from ../../../schemas/*.asn by build.rs. Types that
+//! Types are generated from share/everparse/tests/asn1/difftest/schemas/*.asn by build.rs. Types that
 //! rasn-compiler does not translate faithfully (EXTERNAL and EMBEDDED PDV
 //! become an untagged ANY) are not dispatched; see
 //! ../../../capabilities/rasn.json.

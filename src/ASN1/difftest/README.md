@@ -27,13 +27,17 @@ They run as part of `make -C src/ASN1 test`, and so as part of the toplevel
 
 ## Layout
 
+`$SHARE` is `share/everparse/tests/asn1/difftest`: the schemas, their F\*
+translations and the hand-written vectors are shared with the tests of
+the binary package.
+
 | Path | Contents |
 |---|---|
-| `schemas/*.asn` | ASN.1 modules, the input for asn1tools and rasn-compiler |
-| `../ASN1.DiffTest.*.fst` | F\* translations of the schemas |
-| `../ASN1.DiffTest.fst` | name-based dispatch (`"Module.Type"`), extracted with the parser |
+| `$SHARE/schemas/*.asn` | ASN.1 modules, the input for asn1tools and rasn-compiler |
+| `$SHARE/ASN1.DiffTest.*.fst` | F\* translations of the schemas |
+| `$SHARE/ASN1.DiffTest.fst` | name-based dispatch (`"Module.Type"`), extracted with the parser |
 | `features.json` | the catalog of feature tags |
-| `vectors/*.json` | hand-written test vectors: `id`, `type`, `hex`, `expect`, `clause`, `features`, optional `mutation`, `notes` |
+| `$SHARE/vectors/*.json` | hand-written test vectors: `id`, `type`, `hex`, `expect`, `clause`, `features`, optional `mutation`, `notes` |
 | `gen/mutate.py` | derives `reject` vectors from the hand-written `accept` vectors, into `out/gen/` |
 | `capabilities/<impl>.json` | per-implementation feature support, with the evidence for it |
 | `triage/known.json` | triaged discrepancies: `impl`, `id`, `got`, `class`, `clause`, `rationale`, `upstream` |
@@ -204,12 +208,12 @@ because its UTF-8 decoding also rejects valid UCS-4 contents.
 
 ## Adding a test
 
-1. Add or extend a module in `schemas/`.
-2. Translate it to F\* in `../ASN1.DiffTest.<Module>.fst`, and add each type
-   to the dispatch in `../ASN1.DiffTest.fst`.
+1. Add or extend a module in `$SHARE/schemas/`.
+2. Translate it to F\* in `$SHARE/ASN1.DiffTest.<Module>.fst`, and add each
+   type to the dispatch in `$SHARE/ASN1.DiffTest.fst`.
 3. Add each type to the dispatch in `harness/rust/rasn-runner/src/main.rs`,
    and translate it by hand in `harness/rust/asn1rs-runner/src/main.rs`.
-4. Add vectors to `vectors/`, tagged with features from `features.json`.
+4. Add vectors to `$SHARE/vectors/`, tagged with features from `features.json`.
    Each `accept` vector also yields generated mutations.
-5. Run `make -C src/ASN1 test`, then triage any new discrepancies.
+5. Run `make asn1-test`, then triage any new discrepancies.
    Run `check-all` before `rebaseline`.

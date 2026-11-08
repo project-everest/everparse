@@ -213,8 +213,33 @@ endif
 
 endif
 
-asn1-test: asn1
+# The F* schemas of the ASN.1 differential tests, shared by the tests of
+# share/everparse/tests/asn1 and of src/ASN1
+asn1-difftest: asn1-base lowparse
+	+$(MAKE) -C share/everparse/tests/asn1/difftest
+
+asn1-src-test: asn1 asn1-difftest
+
+asn1-share-test: asn1 asn1-difftest
+
+ifeq (,$(NO_PULSE))
+# The C files of the validators of the differential tests are extracted in
+# share/everparse/tests/asn1/pulse, and also used by src/ASN1/pulse
+asn1-share-pulse-extract: asn1 asn1-difftest
+	+$(MAKE) -C share/everparse/tests/asn1/pulse extract
+
+asn1-src-test: asn1-share-pulse-extract
+
+asn1-share-test: asn1-share-pulse-extract
+	+$(MAKE) -C share/everparse/tests/asn1 pulse tool
+endif
+
+asn1-src-test:
 	+$(MAKE) -C src/ASN1 test
+
+asn1-test: asn1-src-test asn1-share-test
+
+.PHONY: asn1-difftest asn1-src-test asn1-share-test asn1-share-pulse-extract
 
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test: lowparse $(NEED_KRML)

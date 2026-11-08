@@ -1,5 +1,5 @@
 -- Differential testing: restricted character string types.
--- F* translation: src/ASN1/ASN1.DiffTest.Strings.fst
+-- F* translation: ../ASN1.DiffTest.Strings.fst
 DiffStrings DEFINITIONS ::= BEGIN
 
 Utf8 ::= UTF8String

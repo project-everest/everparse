@@ -4,11 +4,16 @@ EVERPARSE_HOME = $(realpath ../..)
 
 LOWPARSE_HOME = $(EVERPARSE_HOME)/lib/everparse/lowparse
 
-INCLUDE_PATHS += $(LOWPARSE_HOME) $(EVERPARSE_HOME)/lib/everparse/asn1/spec
+# The F* schemas of the differential tests (ASN1.DiffTest.*), shared with
+# the tests of the binary package
+DIFFTEST_HOME = $(EVERPARSE_HOME)/share/everparse/tests/asn1/difftest
+
+INCLUDE_PATHS += $(LOWPARSE_HOME) $(EVERPARSE_HOME)/lib/everparse/asn1/spec $(DIFFTEST_HOME)
 
 # The library (lib/everparse/asn1/spec) is verified by the toplevel Makefile
-# (`make asn1`); only the test modules of this directory are checked here.
-ALREADY_CACHED := *,-ASN1.X509,-ASN1.CRL,-ASN1.SetTest,-ASN1.RoundTrip,-ASN1.DiffTest,-ASN1.ExtractionRoot,-ASN1.Spec.Conformance.Examples,
+# (`make asn1`), and ASN1.DiffTest.* by $(DIFFTEST_HOME) (`make
+# asn1-difftest`); only the test modules of this directory are checked here.
+ALREADY_CACHED := *,-ASN1.X509,-ASN1.CRL,-ASN1.SetTest,-ASN1.RoundTrip,-ASN1.ExtractionRoot,-ASN1.Spec.Conformance.Examples,
 
 OUTPUT_DIRECTORY := ocaml/extracted
 
@@ -49,8 +54,9 @@ ifeq (,$(NO_PULSE))
 test: pulse-test
 endif
 
+# The other C tests of the Pulse library are in share/everparse/tests/asn1/pulse
 pulse-test: compile
-	+$(MAKE) -C pulse test test-oracle test-corpus test-deep-any stack-check test-parse
+	+$(MAKE) -C pulse test
 
 eval: compile
 	$(MAKE) -C evaluation

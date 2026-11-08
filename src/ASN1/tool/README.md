@@ -29,6 +29,10 @@ From the EverParse root, `make asn1` verifies the ASN.1 library
 (`make asn1-tool` only builds the executable). Both are part of the
 binary package, and installed by `make install`.
 
+The tests are in `share/everparse/tests/asn1/tool` (`make asn1-test` at the
+toplevel), and run against `$EVERPARSE_HOME` (by default, the EverParse
+repository):
+
 ```
 make test       # C tests (test-small, test-x509lite, test-features, test-features2) and test-golden
 ```
@@ -414,9 +418,9 @@ Ambiguous schemas are reported by F\*, not by the front end: verifying
 component followed by a component that can start with the same tag.
 
 `make test-golden` checks that the schemas generated from
-`../difftest/schemas/{DiffConstructed,DiffSet,DiffConstraints,DiffAny,DiffExternal,DiffPdv,DiffCharStr}.asn` are
-equal, by normalization, to the hand-written translations in
-`../difftest`.
+`share/everparse/tests/asn1/difftest/schemas/{DiffConstructed,DiffSet,DiffConstraints,DiffAny,DiffExternal,DiffPdv,DiffCharStr}.asn`
+are equal, by normalization, to the hand-written translations
+`ASN1.DiffTest.*` of that directory.
 
 Custard emits Warning 377 for `Pulse_Lib_Slice_slice__uint8`. This warning
 is expected.

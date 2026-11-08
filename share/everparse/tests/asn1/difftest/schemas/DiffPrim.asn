@@ -1,5 +1,5 @@
 -- Differential testing: primitive universal types.
--- F* translation: src/ASN1/ASN1.DiffTest.Prim.fst
+-- F* translation: ../ASN1.DiffTest.Prim.fst
 DiffPrim DEFINITIONS ::= BEGIN
 
 Bool ::= BOOLEAN

@@ -1,4 +1,5 @@
-// Compiles ../../../schemas/*.asn into Rust bindings for rasn, with
+// Compiles the ASN.1 schemas of the differential tests ($ASN1_DIFFTEST_SCHEMAS,
+// by default share/everparse/tests/asn1/difftest/schemas) into Rust bindings for rasn, with
 // rasn-compiler. Each module is compiled on its own, so that a module that
 // rasn-compiler rejects only makes its own types unsupported.
 use rasn_compiler::{prelude::*, OutputMode};
@@ -9,7 +10,12 @@ use std::path::PathBuf;
 const SKIP: &[&str] = &["DiffDesc"];
 
 fn main() {
-    let schemas = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("../../../schemas");
+    println!("cargo:rerun-if-env-changed=ASN1_DIFFTEST_SCHEMAS");
+    let schemas = match std::env::var("ASN1_DIFFTEST_SCHEMAS") {
+        Ok(dir) => PathBuf::from(dir),
+        Err(_) => PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
+            .join("../../../../../../share/everparse/tests/asn1/difftest/schemas"),
+    };
     println!("cargo:rerun-if-changed={}", schemas.display());
     let mut paths: Vec<PathBuf> = std::fs::read_dir(&schemas)
         .unwrap()
