@@ -62,8 +62,15 @@ eval: compile
 	$(MAKE) -C evaluation
 
 # Differential tests against asn1tools, rasn and asn1-rs (difftest/README.md)
-difftest: compile
+difftest: difftest-ours
 	+$(MAKE) -C difftest
+
+# The spec runner's verdicts, shared by difftest and pulse-test: built once
+# here, so that the two do not race to write them
+difftest-ours: compile
+	+$(MAKE) -C difftest ours
+
+pulse-test: difftest-ours
 
 clean-files:
 	-rm -rf *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
@@ -75,4 +82,4 @@ clean-files:
 
 .PHONY: %.clean
 
-.PHONY: all compile test eval difftest pulse-test
+.PHONY: all compile test eval difftest difftest-ours pulse-test
