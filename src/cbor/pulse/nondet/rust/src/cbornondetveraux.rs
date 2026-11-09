@@ -3239,6 +3239,149 @@ fn impl_check_map_depth_opt(bound: option__size_t, n0: usize, l0: &[u8]) -> bool
     }
 }
 
+fn impl_check_map_key_depth(bound: usize, l1: &[u8]) -> bool
+{
+    let mut pn: [usize; 1] = [1usize; 1usize];
+    let mut pres: [bool; 1] = [true; 1usize];
+    let mut ppi: [&[u8]; 1] = [l1; 1usize];
+    while
+    true
+    {
+        let res: bool = (&pres)[0usize];
+        let n: usize = (&pn)[0usize];
+        if ! (res && n > 0usize) { break };
+        let n0: usize = (&pn)[0usize];
+        let pi: &[u8] = (&ppi)[0usize];
+        let i: usize = jump_header(pi, 0usize);
+        let _letpattern: (&[u8], &[u8]) = pi.split_at(i);
+        let res0: bool =
+            {
+                let ah: &[u8] = _letpattern.0;
+                let _a1: &[u8] = _letpattern.1;
+                let
+                h:
+                dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                =
+                    read_header(ah);
+                if get_header_major_type(h) == cbor_major_type_map
+                {
+                    let i1: usize = jump_raw_data_item(pi, 0usize);
+                    let _letpattern1: (&[u8], &[u8]) = pi.split_at(i1);
+                    let hd: &[u8] =
+                        {
+                            let input1: &[u8] = _letpattern1.0;
+                            let _input2: &[u8] = _letpattern1.1;
+                            input1
+                        };
+                    let
+                    mut
+                    ph:
+                    [dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument;
+                    1]
+                    =
+                        [h; 1usize];
+                    let i2: usize = jump_header(hd, 0usize);
+                    let _letpattern2: (&[u8], &[u8]) = hd.split_at(i2);
+                    let c: &[u8] =
+                        {
+                            let ph1: &[u8] = _letpattern2.0;
+                            let outc: &[u8] = _letpattern2.1;
+                            let
+                            h1:
+                            dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+                            =
+                                read_header(ph1);
+                            (&mut ph)[0usize] = h1;
+                            outc
+                        };
+                    let mut pl: [&[u8]; 1] = [c; 1usize];
+                    let mut pn1: [usize; 1] =
+                        [argument_as_uint64(
+                                dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                    h
+                                ),
+                                dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                                    h
+                                )
+                            )
+                            as
+                            usize;
+                            1usize];
+                    let mut pres1: [bool; 1] = [true; 1usize];
+                    while
+                    true
+                    {
+                        let n1: usize = (&pn1)[0usize];
+                        let res0: bool = (&pres1)[0usize];
+                        if ! (n1 > 0usize && res0) { break };
+                        let n10: usize = (&pn1)[0usize];
+                        let n·: usize = n10.wrapping_sub(1usize);
+                        let l: &[u8] = (&pl)[0usize];
+                        let i3: usize = jump_raw_data_item(l, 0usize);
+                        let _letpattern3: (&[u8], &[u8]) = l.split_at(i3);
+                        let lh: &[u8] = _letpattern3.0;
+                        let lt: &[u8] = _letpattern3.1;
+                        let i4: usize = jump_raw_data_item(lt, 0usize);
+                        let _letpattern4: (&[u8], &[u8]) = lt.split_at(i4);
+                        let _lv: &[u8] = _letpattern4.0;
+                        let lt·: &[u8] = _letpattern4.1;
+                        let __anf0: bool = impl_check_map_depth(bound, 1usize, lh);
+                        if __anf0
+                        {
+                            (&mut pn1)[0usize] = n·;
+                            (&mut pl)[0usize] = lt·
+                        }
+                        else
+                        { (&mut pres1)[0usize] = false }
+                    };
+                    (&pres1)[0usize]
+                }
+                else
+                { true }
+            };
+        if ! res0
+        { (&mut pres)[0usize] = false }
+        else
+        {
+            let off1: usize = jump_header(pi, 0usize);
+            let _letpattern1: (&[u8], &[u8]) = pi.split_at(0usize);
+            let input·: &[u8] =
+                {
+                    let _input1: &[u8] = _letpattern1.0;
+                    let input23: &[u8] = _letpattern1.1;
+                    let consumed: usize = off1.wrapping_sub(0usize);
+                    let _letpattern2: (&[u8], &[u8]) = input23.split_at(consumed);
+                    let input2: &[u8] = _letpattern2.0;
+                    let _input3: &[u8] = _letpattern2.1;
+                    input2
+                };
+            let
+            x: dtuple2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument
+            =
+                read_header(input·);
+            let b: initial_byte_t = x._1;
+            let i1: usize =
+                if
+                b.major_type == cbor_major_type_byte_string
+                ||
+                b.major_type == cbor_major_type_text_string
+                { off1.wrapping_add(argument_as_uint64(x._1, x._2) as usize) }
+                else
+                { off1 };
+            let _letpattern2: (&[u8], &[u8]) = pi.split_at(i1);
+            let ph: &[u8] = _letpattern2.0;
+            let pc: &[u8] = _letpattern2.1;
+            let unused: usize = pc.len();
+            crate::lowstar::ignore::ignore::<usize>(unused);
+            let count: usize = jump_recursive_step_count_leaf(ph);
+            let n·: usize = n0.wrapping_sub(1usize).wrapping_add(count);
+            (&mut pn)[0usize] = n·;
+            (&mut ppi)[0usize] = pc
+        }
+    };
+    (&pres)[0usize]
+}
+
 pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8], l2: &[u8]) ->
     option__bool
 {
@@ -6751,7 +6894,37 @@ fn cbor_validate_nondet_map_length_bounded(
     { 0usize }
 }
 
-fn cbor_validate_nondet_bounded(map_depth_bound: usize, map_length_bound: usize, input: &[u8]) ->
+fn check_map_key_bound_after_validate(map_key_bound: option__size_t, input: &[u8], off: usize) ->
+    bool
+{
+    match map_key_bound
+    {
+        option__size_t::None => true,
+        option__size_t::Some { v: kb } =>
+          {
+              let _letpattern: (&[u8], &[u8]) = input.split_at(0usize);
+              let input·: &[u8] =
+                  {
+                      let _input1: &[u8] = _letpattern.0;
+                      let input23: &[u8] = _letpattern.1;
+                      let consumed: usize = off.wrapping_sub(0usize);
+                      let _letpattern1: (&[u8], &[u8]) = input23.split_at(consumed);
+                      let input2: &[u8] = _letpattern1.0;
+                      let _input3: &[u8] = _letpattern1.1;
+                      input2
+                  };
+              impl_check_map_key_depth(kb, input·)
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_validate_nondet_bounded(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    map_key_bound: option__size_t,
+    input: &[u8]
+) ->
     usize
 {
     let mut poff: [usize; 1] = [0usize; 1usize];
@@ -6772,7 +6945,13 @@ fn cbor_validate_nondet_bounded(map_depth_bound: usize, map_length_bound: usize,
                 input2
             };
         let res1: bool = impl_check_valid_basic(option__size_t::None, false, input·);
-        if res1 { off } else { 0usize }
+        if res1
+        {
+            let ok: bool = check_map_key_bound_after_validate(map_key_bound, input, off);
+            if ok { off } else { 0usize }
+        }
+        else
+        { 0usize }
     }
     else
     { 0usize }
@@ -6789,6 +6968,7 @@ fn cbor_validate_nondet_bounded_sort_scratch_ok_impl(
 fn cbor_validate_nondet_bounded_sort(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     input: &[u8],
     scratch: &mut [usize]
 ) ->
@@ -6805,7 +6985,13 @@ fn cbor_validate_nondet_bounded_sort(
         {
             let off: usize = (&poff)[0usize];
             let ok: bool = check_dups_top(input, scratch);
-            if ok { off } else { 0usize }
+            if ok
+            {
+                let ok·: bool = check_map_key_bound_after_validate(map_key_bound, input, off);
+                if ok· { off } else { 0usize }
+            }
+            else
+            { 0usize }
         }
         else
         { 0usize }
@@ -6824,6 +7010,7 @@ fn cbor_validate_nondet_bounded_hash_scratch_ok_impl(
 fn cbor_validate_nondet_bounded_hash(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     k0: u64,
     k1: u64,
     input: &[u8],
@@ -6846,7 +7033,13 @@ fn cbor_validate_nondet_bounded_hash(
             let off: usize = (&poff)[0usize];
             let ok: bool =
                 check_dups_top_hash(input, map_length_bound, k0, k1, scratch, hash_scratch);
-            if ok { off } else { 0usize }
+            if ok
+            {
+                let ok·: bool = check_map_key_bound_after_validate(map_key_bound, input, off);
+                if ok· { off } else { 0usize }
+            }
+            else
+            { 0usize }
         }
         else
         { 0usize }
@@ -6931,19 +7124,26 @@ pub(crate) fn cbor_nondet_parse_map_length_bounded <'a>(
     }
 }
 
-fn cbor_nondet_validate_bounded(map_depth_bound: usize, map_length_bound: usize, input: &[u8]) ->
+fn cbor_nondet_validate_bounded(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    map_key_bound: option__size_t,
+    input: &[u8]
+) ->
     usize
-{ cbor_validate_nondet_bounded(map_depth_bound, map_length_bound, input) }
+{ cbor_validate_nondet_bounded(map_depth_bound, map_length_bound, map_key_bound, input) }
 
 pub(crate) fn cbor_nondet_parse_bounded <'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     input: &'a [u8]
 ) ->
     option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
-    let len: usize = cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, input);
+    let len: usize =
+        cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, map_key_bound, input);
     if len == 0usize
     { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     else
@@ -6974,11 +7174,20 @@ pub(crate) fn cbor_nondet_bounded_sort_scratch_ok_impl(
 pub(crate) fn cbor_nondet_validate_bounded_sort(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     scratch: &mut [usize],
     input: &[u8]
 ) ->
     usize
-{ cbor_validate_nondet_bounded_sort(map_depth_bound, map_length_bound, input, scratch) }
+{
+    cbor_validate_nondet_bounded_sort(
+        map_depth_bound,
+        map_length_bound,
+        map_key_bound,
+        input,
+        scratch
+    )
+}
 
 pub(crate) fn cbor_nondet_bounded_hash_scratch_ok_impl(
     map_depth_bound: usize,
@@ -6999,6 +7208,7 @@ pub(crate) fn cbor_nondet_bounded_hash_scratch_ok_impl(
 pub(crate) fn cbor_nondet_validate_bounded_hash(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     k0: u64,
     k1: u64,
     scratch: &mut [usize],
@@ -7010,6 +7220,7 @@ pub(crate) fn cbor_nondet_validate_bounded_hash(
     cbor_validate_nondet_bounded_hash(
         map_depth_bound,
         map_length_bound,
+        map_key_bound,
         k0,
         k1,
         input,
