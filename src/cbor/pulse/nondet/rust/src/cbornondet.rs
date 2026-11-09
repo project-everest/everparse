@@ -83,18 +83,30 @@ pub fn cbor_nondet_parse_map_length_bounded<'a>(
     }
 }
 
+fn option_size_t_of_option(x: Option<usize>) -> crate::cbornondetveraux::option__size_t
+{
+    match x {
+        None => crate::cbornondetveraux::option__size_t::None,
+        Some(v) => crate::cbornondetveraux::option__size_t::Some { v },
+    }
+}
+
 /// Parses a CBOR object with map nesting depth at most `map_depth_bound`
-/// and at most `map_length_bound` entries in every map. Returns `None`
-/// on failure, or the object and the remaining input on success.
+/// and at most `map_length_bound` entries in every map. If
+/// `map_key_bound` is `Some(b)`, also rejects any object in which some
+/// map key has map nesting depth more than `b`. Returns `None` on
+/// failure, or the object and the remaining input on success.
 pub fn cbor_nondet_parse_bounded<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: Option<usize>,
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {
     match crate::cbornondetver::cbor_nondet_parse_bounded(
         map_depth_bound,
         map_length_bound,
+        option_size_t_of_option(map_key_bound),
         input,
     ) {
         crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
@@ -125,6 +137,7 @@ pub fn cbor_nondet_bounded_sort_scratch_ok(
 pub fn cbor_nondet_parse_bounded_sort<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: Option<usize>,
     scratch: &mut [usize],
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
@@ -139,6 +152,7 @@ pub fn cbor_nondet_parse_bounded_sort<'a>(
     let len = crate::cbornondetveraux::cbor_nondet_validate_bounded_sort(
         map_depth_bound,
         map_length_bound,
+        option_size_t_of_option(map_key_bound),
         scratch,
         input,
     );
@@ -181,6 +195,7 @@ pub fn cbor_nondet_bounded_hash_scratch_ok(
 pub fn cbor_nondet_parse_bounded_hash<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: Option<usize>,
     k0: u64,
     k1: u64,
     scratch: &mut [usize],
@@ -194,6 +209,7 @@ pub fn cbor_nondet_parse_bounded_hash<'a>(
     let len = crate::cbornondetveraux::cbor_nondet_validate_bounded_hash(
         map_depth_bound,
         map_length_bound,
+        option_size_t_of_option(map_key_bound),
         k0,
         k1,
         scratch,
@@ -229,13 +245,14 @@ pub fn cbor_nondet_random_hash_key() -> (u64, u64)
 pub fn cbor_nondet_parse_bounded_hash_random<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: Option<usize>,
     scratch: &mut [usize],
     hash_scratch: &mut [u64],
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {
     let (k0, k1) = cbor_nondet_random_hash_key();
-    cbor_nondet_parse_bounded_hash(map_depth_bound, map_length_bound, k0, k1, scratch, hash_scratch, input)
+    cbor_nondet_parse_bounded_hash(map_depth_bound, map_length_bound, map_key_bound, k0, k1, scratch, hash_scratch, input)
 }
 
 /// Same specification as [`cbor_nondet_parse_bounded_sort`], but the
@@ -247,10 +264,11 @@ pub fn cbor_nondet_parse_bounded_hash_random<'a>(
 pub fn cbor_nondet_parse_bounded_sort_alloc<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: Option<usize>,
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {
-    match crate::cbornondetver::cbor_nondet_parse_bounded_sort_alloc(map_depth_bound, map_length_bound, input) {
+    match crate::cbornondetver::cbor_nondet_parse_bounded_sort_alloc(map_depth_bound, map_length_bound, option_size_t_of_option(map_key_bound), input) {
         crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
         crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
     }
@@ -262,12 +280,13 @@ pub fn cbor_nondet_parse_bounded_sort_alloc<'a>(
 pub fn cbor_nondet_parse_bounded_hash_alloc<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: Option<usize>,
     k0: u64,
     k1: u64,
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {
-    match crate::cbornondetver::cbor_nondet_parse_bounded_hash_alloc(map_depth_bound, map_length_bound, k0, k1, input) {
+    match crate::cbornondetver::cbor_nondet_parse_bounded_hash_alloc(map_depth_bound, map_length_bound, option_size_t_of_option(map_key_bound), k0, k1, input) {
         crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => None,
         crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some { v } => Some(v),
     }
@@ -278,11 +297,12 @@ pub fn cbor_nondet_parse_bounded_hash_alloc<'a>(
 pub fn cbor_nondet_parse_bounded_hash_alloc_random<'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: Option<usize>,
     input: &'a [u8],
 ) -> Option<(CborNondet<'a>, &'a [u8])>
 {
     let (k0, k1) = cbor_nondet_random_hash_key();
-    cbor_nondet_parse_bounded_hash_alloc(map_depth_bound, map_length_bound, k0, k1, input)
+    cbor_nondet_parse_bounded_hash_alloc(map_depth_bound, map_length_bound, map_key_bound, k0, k1, input)
 }
 
 /// Computes the byte size of the binary representation of the

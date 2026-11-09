@@ -1971,3 +1971,247 @@ fn impl_check_valid
     (impl_check_valid_item map_bound impl_check_equiv strict_bound_check)
     l1
 }
+
+#push-options "--z3rlimit_factor 4"
+inline_for_extraction
+fn impl_check_map_key_depth_list
+  (bound: SZ.t)
+  (n0: SZ.t)
+  (l0: S.slice byte)
+  (#pm: perm)
+  (#gl0: Ghost.erased (nlist (SZ.v n0) (raw_data_item & raw_data_item)))
+requires
+  pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0
+returns res: bool
+ensures
+  pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0 **
+  pure (
+    res == check_map_key_depth_list (SZ.v bound) gl0
+  )
+{
+  Trade.refl
+    (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0);
+  let mut pl = l0;
+  let mut pn = n0;
+  let mut pres = true;
+  while (
+    let n = !pn;
+    let res = !pres;
+    (SZ.gt n 0sz && res)
+  ) invariant exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
+    pts_to pn n **
+    pts_to pl l **
+    pts_to_serialized (serialize_nlist (SZ.v n) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l #pm gl **
+    Trade.trade
+      (pts_to_serialized (serialize_nlist (SZ.v n) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l #pm gl)
+      (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0) **
+    pts_to pres res **
+    pure (
+      check_map_key_depth_list (SZ.v bound) gl0 == (if res then check_map_key_depth_list (SZ.v bound) gl else false)
+    )
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v (!pn))] // fstar2 only
+  {
+    let n = !pn;
+    let n' = SZ.sub n 1sz;
+    let l = !pl;
+    with gn (gl: nlist (SZ.v gn) (raw_data_item & raw_data_item)) . assert (
+      pts_to pn gn **
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    nlist_cons_as_nondep_then'
+      (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+      (SZ.v n)
+      (SZ.v n')
+      l;
+    pts_to_serialized_nondep_then_assoc_l2r
+      serialize_raw_data_item
+      serialize_raw_data_item
+      (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+      l;
+    Trade.trans _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    let ki : Ghost.erased parser_kind = and_then_kind
+      parse_raw_data_item_kind
+      (parse_nlist_kind (SZ.v n') (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind));
+    let pi : parser ki (raw_data_item & nlist (SZ.v n') (raw_data_item & raw_data_item)) = nondep_then
+        parse_raw_data_item
+        (parse_nlist (SZ.v n') (nondep_then parse_raw_data_item parse_raw_data_item));
+    let si : serializer pi = serialize_nondep_then
+        serialize_raw_data_item
+        (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
+    let (lh, lt) = split_nondep_then'
+      serialize_raw_data_item
+      (jump_raw_data_item ())
+      si
+      l;
+    trade_trans_nounify (_ ** _) _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    let kj : Ghost.erased parser_kind = (parse_nlist_kind (SZ.v n') (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind));
+    let pj : parser kj (nlist (SZ.v n') (raw_data_item & raw_data_item)) =
+        (parse_nlist (SZ.v n') (nondep_then parse_raw_data_item parse_raw_data_item));
+    let sj : serializer pj =
+        (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
+    assert (pure (si == serialize_nondep_then serialize_raw_data_item sj));
+    let sq : squash (split_nondep_then''_precond pi parse_raw_data_item pj) = ();
+    let (lv, lt') = split_nondep_then''
+      serialize_raw_data_item
+      (jump_raw_data_item ())
+      sj
+      lt
+      sq;
+    Trade.elim_hyp_l (pts_to_serialized serialize_raw_data_item lv #pm _) _ _;
+    Trade.trans_hyp_r _ _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    pts_to_serialized_ext_trade
+      sj
+      (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+      lt';
+    Trade.trans_hyp_r _ _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    pts_to_serialized_nlist_1
+      serialize_raw_data_item
+      lh;
+    with _v' . assert (pts_to_serialized (serialize_nlist 1 serialize_raw_data_item) lh #pm _v');
+    trade_trans_hyp_l_nounify (pts_to_serialized (serialize_nlist 1 serialize_raw_data_item)
+        lh #pm
+        _v') _ _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    if impl_check_map_depth bound 1sz lh {
+      Trade.trans _ (
+        pts_to_serialized
+          (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+          l #pm
+          gl
+      ) _;
+      Trade.elim_hyp_l _ _ _;
+      pn := n';
+      pl := lt' ;
+      ()
+    } else {
+      Trade.elim _  (
+        pts_to_serialized
+          (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+          l #pm
+          gl
+      );
+      pres := false;
+    }
+  };
+  Trade.elim _ _;
+  !pres
+}
+#pop-options
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn impl_check_map_key_depth_item
+  (bound: SZ.t)
+: LowParse.Pulse.Recursive.impl_pred_t #_ serialize_raw_data_item_param (check_map_key_depth_item (SZ.v bound))
+=
+  (a: S.slice byte)
+  (n: SZ.t)
+  (#pm: perm)
+  (#va: _)
+{
+  pts_to_serialized_nlist_raw_data_item_head_header
+    a
+    (SZ.v n);
+  with l gh v' . assert (
+    pts_to_serialized
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        serialize_header
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (serialize_leaf_content gh)
+          (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+        )
+      )
+      a #pm v'
+  );
+  let (ah, a1) = split_nondep_then'
+    _ (jump_header ())
+    _ a;
+  Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  let h = read_header () ah;
+  Trade.elim _ _;
+  if (get_header_major_type h = cbor_major_type_map) {
+    pts_to_serialized_nlist_ext
+      _
+      (SZ.v n)
+      a
+      serialize_raw_data_item
+      (SZ.v n);
+    let hd = nlist_hd
+      serialize_raw_data_item
+      (jump_raw_data_item ())
+      (SZ.v n)
+      a;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+    let mut ph = h;
+    let c = get_header_and_contents hd ph;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+    let vhd = hd_map (SZ.v n) va h;
+    get_map_payload c vhd;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+    assert_norm ((LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind).parser_kind_low == 2);
+    CBOR.Pulse.Raw.EverParse.SizeComparison.nlist_count_fits
+      (LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+      (U64.v (Map?.len (Ghost.reveal vhd)).value)
+      c;
+    let res = impl_check_map_key_depth_list
+      bound
+      (SZ.uint64_to_sizet (argument_as_uint64 (dfst h) (dsnd h)))
+      c;
+    Trade.elim _ _;
+    res
+  } else {
+    true
+  }
+}
+
+#pop-options
+
+fn impl_check_map_key_depth
+  (bound: SZ.t)
+  (l1: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased raw_data_item)
+requires
+  pts_to_serialized serialize_raw_data_item l1 #p1 gl1
+returns res: bool
+ensures
+  pts_to_serialized serialize_raw_data_item l1 #p1 gl1 **
+  pure (
+    res == (map_key_depth gl1 <= SZ.v bound)
+  )
+{
+  holds_on_check_map_key_depth_item (SZ.v bound) gl1;
+  impl_holds_on_raw_data_item
+    _
+    (impl_check_map_key_depth_item bound)
+    l1
+}

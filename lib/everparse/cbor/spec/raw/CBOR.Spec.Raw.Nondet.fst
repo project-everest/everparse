@@ -1041,3 +1041,92 @@ let check_valid_correct
   else if Valid.valid data_model x
   then valid_bounded_implies_check_valid data_model map_bound strict_bound_check x
   else ()
+
+(* Checking the map key depth bound alone, without checking validity:
+   every map key has map depth at most `bound`. This is meant to be
+   implemented with `holds_on_raw_data_item`, and is used after
+   validating with a map depth bound, to also enforce a (smaller) map
+   key depth bound. *)
+
+let rec check_map_key_depth_list
+  (bound: nat)
+  (l: list (raw_data_item & raw_data_item))
+: Tot bool
+= match l with
+  | [] -> true
+  | kv :: q -> check_map_depth bound [fst kv] && check_map_key_depth_list bound q
+
+let check_map_key_depth_item
+  (bound: nat)
+  (x: raw_data_item)
+: Tot bool
+= match x with
+  | Map _ l -> check_map_key_depth_list bound l
+  | _ -> true
+
+let rec check_map_key_depth_list_correct
+  (bound: nat)
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (ensures (check_map_key_depth_list bound l == (list_max map_depth (List.Tot.map fst l) <= bound)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | kv :: q ->
+    check_map_depth_correct bound [fst kv];
+    check_map_key_depth_list_correct bound q
+
+let map_key_depth_le
+  (bound: nat)
+  (x: raw_data_item)
+: Tot bool
+= map_key_depth x <= bound
+
+let rec list_for_all_map_key_depth_le
+  (bound: nat)
+  (l: list raw_data_item)
+: Lemma
+  (ensures (List.Tot.for_all (map_key_depth_le bound) l == (list_max map_key_depth l <= bound)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_map_key_depth_le bound q
+
+let rec list_for_all_pair_map_key_depth_le
+  (bound: nat)
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (list_max map_depth (List.Tot.map fst l) <= bound))
+  (ensures (List.Tot.for_all (holds_on_pair (map_key_depth_le bound)) l == (list_max map_key_depth (List.Tot.map snd l) <= bound)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | kv :: q ->
+    map_key_depth_le_map_depth (fst kv);
+    list_for_all_pair_map_key_depth_le bound q
+
+let rec holds_on_check_map_key_depth_item
+  (bound: nat)
+  (x: raw_data_item)
+: Lemma
+  (ensures (holds_on_raw_data_item (check_map_key_depth_item bound) x == (map_key_depth x <= bound)))
+  (decreases x)
+= holds_on_raw_data_item_eq (check_map_key_depth_item bound) x;
+  map_key_depth_eq x;
+  match x with
+  | Tagged _ y -> holds_on_check_map_key_depth_item bound y
+  | Array _ l ->
+    list_for_all_ext (holds_on_raw_data_item (check_map_key_depth_item bound)) (map_key_depth_le bound) l (fun y ->
+      holds_on_check_map_key_depth_item bound y
+    );
+    list_for_all_map_key_depth_le bound l
+  | Map _ l ->
+    check_map_key_depth_list_correct bound l;
+    list_max_map_key_dep_pair l;
+    list_for_all_ext (holds_on_pair (holds_on_raw_data_item (check_map_key_depth_item bound))) (holds_on_pair (map_key_depth_le bound)) l (fun kv ->
+      holds_on_check_map_key_depth_item bound (fst kv);
+      holds_on_check_map_key_depth_item bound (snd kv)
+    );
+    if list_max map_depth (List.Tot.map fst l) <= bound
+    then list_for_all_pair_map_key_depth_le bound l
+  | _ -> ()

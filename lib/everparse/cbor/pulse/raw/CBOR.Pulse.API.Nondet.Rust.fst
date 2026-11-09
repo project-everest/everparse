@@ -44,7 +44,7 @@ let cbor_nondet_parse_map_length_bounded () map_length_bound map_key_bound stric
 inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_nondet_parse_bounded_aux : Base.cbor_nondet_parse_bounded_t cbor_nondet_match = Nondet.cbor_nondet_parse_bounded ()
 
-let cbor_nondet_parse_bounded () map_depth_bound map_length_bound input #pm #v = cbor_nondet_parse_bounded_aux map_depth_bound map_length_bound input #pm #v
+let cbor_nondet_parse_bounded () map_depth_bound map_length_bound map_key_bound input #pm #v = cbor_nondet_parse_bounded_aux map_depth_bound map_length_bound map_key_bound input #pm #v
 
 let cbor_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len = Nondet.cbor_nondet_bounded_sort_scratch_ok_impl map_depth_bound map_length_bound scratch_len
 
@@ -58,7 +58,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_nondet_parse_bounded_sort_aux : Base.cbor_nondet_parse_bounded_sort_t cbor_nondet_match =
   Base.cbor_nondet_parse_bounded_sort (Nondet.cbor_nondet_validate_bounded_sort ()) (Nondet.cbor_nondet_parse_valid ())
 
-let cbor_nondet_parse_bounded_sort () map_depth_bound map_length_bound scratch input #pm #v #s = cbor_nondet_parse_bounded_sort_aux map_depth_bound map_length_bound scratch input #pm #v #s
+let cbor_nondet_parse_bounded_sort () map_depth_bound map_length_bound map_key_bound scratch input #pm #v #s = cbor_nondet_parse_bounded_sort_aux map_depth_bound map_length_bound map_key_bound scratch input #pm #v #s
 
 let cbor_nondet_bounded_hash_scratch_ok map_depth_bound map_length_bound scratch_len hash_scratch_len = Nondet.cbor_nondet_bounded_hash_scratch_ok_impl map_depth_bound map_length_bound scratch_len hash_scratch_len
 
@@ -66,19 +66,19 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_nondet_parse_bounded_hash_aux : Base.cbor_nondet_parse_bounded_hash_t cbor_nondet_match =
   Base.cbor_nondet_parse_bounded_hash (Nondet.cbor_nondet_validate_bounded_hash ()) (Nondet.cbor_nondet_parse_valid ())
 
-let cbor_nondet_parse_bounded_hash () map_depth_bound map_length_bound k0 k1 scratch hash_scratch input #pm #v #s #hs = cbor_nondet_parse_bounded_hash_aux map_depth_bound map_length_bound k0 k1 scratch hash_scratch input #pm #v #s #hs
+let cbor_nondet_parse_bounded_hash () map_depth_bound map_length_bound map_key_bound k0 k1 scratch hash_scratch input #pm #v #s #hs = cbor_nondet_parse_bounded_hash_aux map_depth_bound map_length_bound map_key_bound k0 k1 scratch hash_scratch input #pm #v #s #hs
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_nondet_parse_bounded_sort_alloc_aux : Base.cbor_nondet_parse_bounded_sort_alloc_t cbor_nondet_match =
   Base.cbor_nondet_parse_bounded_sort_alloc (CBOR.Pulse.Raw.Nondet.Alloc.cbor_nondet_validate_bounded_sort_alloc_rust (Nondet.cbor_nondet_validate_bounded_sort ())) (Nondet.cbor_nondet_parse_valid ())
 
-let cbor_nondet_parse_bounded_sort_alloc () map_depth_bound map_length_bound input #pm #v = cbor_nondet_parse_bounded_sort_alloc_aux map_depth_bound map_length_bound input #pm #v
+let cbor_nondet_parse_bounded_sort_alloc () map_depth_bound map_length_bound map_key_bound input #pm #v = cbor_nondet_parse_bounded_sort_alloc_aux map_depth_bound map_length_bound map_key_bound input #pm #v
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_nondet_parse_bounded_hash_alloc_aux : Base.cbor_nondet_parse_bounded_hash_alloc_t cbor_nondet_match =
   Base.cbor_nondet_parse_bounded_hash_alloc (CBOR.Pulse.Raw.Nondet.Alloc.cbor_nondet_validate_bounded_hash_alloc_rust (Nondet.cbor_nondet_validate_bounded_hash ())) (Nondet.cbor_nondet_parse_valid ())
 
-let cbor_nondet_parse_bounded_hash_alloc () map_depth_bound map_length_bound k0 k1 input #pm #v = cbor_nondet_parse_bounded_hash_alloc_aux map_depth_bound map_length_bound k0 k1 input #pm #v
+let cbor_nondet_parse_bounded_hash_alloc () map_depth_bound map_length_bound map_key_bound k0 k1 input #pm #v = cbor_nondet_parse_bounded_hash_alloc_aux map_depth_bound map_length_bound map_key_bound k0 k1 input #pm #v
 
 let cbor_nondet_match_with_size = Nondet.cbor_nondet_match_with_size
 

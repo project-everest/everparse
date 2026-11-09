@@ -28,9 +28,10 @@ val cbor_nondet_parse_map_length_bounded (_: unit) : Base.cbor_nondet_parse_map_
 
 (* Like cbor_nondet_parse, but only accepts CBOR objects whose map
    nesting depth is at most map_depth_bound, and in which every map has
-   at most map_length_bound entries; there is no map key depth bound,
-   as it is implied by the map depth bound. Validation fails as soon as
-   either bound is exceeded. *)
+   at most map_length_bound entries. If map_key_bound is Some b, then
+   this function additionally rejects any CBOR object in which some map
+   key has map nesting depth more than b; this bound is always checked
+   strictly. Validation fails as soon as any bound is exceeded. *)
 val cbor_nondet_parse_bounded (_: unit) : Base.cbor_nondet_parse_bounded_t cbor_nondet_match
 
 (* Returns true if and only if 3 * map_length_bound * map_depth_bound
@@ -80,7 +81,7 @@ val cbor_nondet_parse_bounded_hash (_: unit) : Base.cbor_nondet_parse_bounded_ha
    Vec::try_reserve_exact) once per call, and freed before returning.
    Parsing may also fail because the scratch space size overflows or
    its allocation fails, so only success is specified: if parsing
-   succeeds, then the CBOR object meets both bounds. *)
+   succeeds, then the CBOR object meets all bounds. *)
 val cbor_nondet_parse_bounded_sort_alloc (_: unit) : Base.cbor_nondet_parse_bounded_sort_alloc_t cbor_nondet_match
 
 (* Like cbor_nondet_parse_bounded_hash, but both scratch spaces are
