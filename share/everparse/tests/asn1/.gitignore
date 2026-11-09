@@ -1,0 +1,4 @@
+*.checked
+.depend
+.depend.rsp
+_output/

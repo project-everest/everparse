@@ -1,8 +1,11 @@
 # Verified C validators for ASN.1 DER (Pulse + Custard)
 
-This directory implements, in Pulse, validators for the pure F\* ASN.1 DER
-specification of `..` (`ASN1.Spec.Interpreter`), and extracts them to C
-with Custard (F\*'s direct-to-C backend; no KaRaMeL).
+The ASN.1 Pulse library (`lib/everparse/asn1/pulse`) implements, in Pulse,
+validators for the pure F\* ASN.1 DER specification of
+`lib/everparse/asn1/spec` (`ASN1.Spec.Interpreter`), extracted to C with
+Custard (F\*'s direct-to-C backend; no KaRaMeL). This directory holds the
+tests that need the rest of `src/ASN1` (X.509 and CRL schemas, OCaml spec
+runner); the other tests are in `share/everparse/tests/asn1/pulse`.
 
 A validator for a schema `k` checks that a byte buffer starts with a value
 of `asn1_as_parser k` and returns the number of bytes consumed; it is
@@ -128,9 +131,10 @@ holding fractional permission `pm` on the input bytes it borrows.
   `arel false` together with a trade back to `arel true`. Its frame is
   the pure fact `kept_a d x'` (every `kraw` is `Some`), so it releases no
   permission (`weaken` / `restore`). Tests: `ASN1.Pulse.NamedTest`
-  (`Outer`, `roundtrip_outer`) and `test/named_test.c`.
+  (`Outer`, `roundtrip_outer`) and `test/named_test.c` in
+  `share/everparse/tests/asn1/pulse`.
 
-`make test-parse` runs the parsers extracted from `ASN1.Pulse.ParseTest`
+In `share/everparse/tests/asn1/pulse`, `make test-parse` runs the parsers extracted from `ASN1.Pulse.ParseTest`
 on hand-written encodings (`test/parse_test.c`). `make test-raw-write`
 runs the JIT writers extracted from `ASN1.Pulse.RawWriteTest`
 (`jit_<name>` and `jit_raw_<name>`) on values built in C, including
@@ -162,9 +166,9 @@ one byte short.
 | `ASN1.Pulse.RawVConv`, `ASN1.Pulse.TypedWriter` | from the typed relation `arel false` to `raw_varel` (`arel_to_raw`), and typed writers `write_typed_d` |
 | `ASN1.Pulse.RelKeep` | KEEP-BYTES: from the parser relation `arel true` to the writer relation `arel false` and back (`weaken`, `restore`, `to_writer`) |
 | `ASN1.Pulse.SortedInsert` | on-the-fly insertion sort of SET components and SET OF elements for the raw writers |
-| `ASN1.Pulse.ParseTest`, `ASN1.Pulse.RawWriteTest` | extraction roots for parser and writer tests |
-| `ASN1.Pulse.DiffTest.*` | extraction roots for the difftest schemas (`../difftest`) |
-| `ASN1.Pulse.X509` | extraction roots for X.509 certificates and CRLs |
+| `ASN1.Pulse.X509` (here) | extraction roots for X.509 certificates and CRLs |
+| `ASN1.Pulse.ParseTest`, `ASN1.Pulse.RawWriteTest`, `ASN1.Pulse.NamedTest` (`share/everparse/tests/asn1/pulse`) | extraction roots for parser and writer tests |
+| `ASN1.Pulse.DiffTest.*` (`share/everparse/tests/asn1/pulse`) | extraction roots for the difftest schemas (`share/everparse/tests/asn1/difftest`) |
 
 Generic parts live in LowParse (`lib/everparse/lowparse`), e.g.
 `LowParse.PulseParse.VReader` (validate-and-read combinators) and
@@ -200,20 +204,28 @@ Custard pitfalls met in this code (comments in `ASN1.Pulse.Interpreter`):
 
 ## Build and test
 
+In this directory:
+
 ```
-make            # verify
-make test       # difftest vectors (committed verdicts)
+make            # verify ASN1.Pulse.X509
+make test       # test-oracle, test-corpus and stack-check
 make test-oracle  # difftest vectors and mutations, against the F* spec runner
 make test-corpus  # X.509 and CRL corpora (../evaluation/data), against the spec runner
-make test-deep-any  # ANY nested 4000 deep, under a 64 KiB stack limit
 make stack-check    # no recursion, and worst-case stack of the X.509/CRL validators
-make test-parse     # zero-copy parsers on hand-written encodings
-make test-raw-write  # JIT writers: OK, INVALID and NO_SPACE cases
 ```
 
-`make -C .. test` runs all of these but `test-raw-write`, unless
-`NO_PULSE` is set. C files
-go to `_output/`.
+In `share/everparse/tests/asn1/pulse` (`make` runs all of these):
+
+```
+make test       # difftest vectors (committed verdicts)
+make test-deep-any  # ANY nested 4000 deep, under a 64 KiB stack limit
+make test-parse     # zero-copy parsers on hand-written encodings
+make test-raw-write  # JIT writers: OK, INVALID and NO_SPACE cases
+make test-named     # named C types, KEEP-BYTES
+```
+
+`make asn1-test` at the toplevel runs both, unless `NO_PULSE` is set.
+C files go to `_output/`.
 
 Reference numbers (one core, x86-64): extracting `ASN1.Pulse.X509`
 (certificates and CRLs) takes about 5 minutes and yields 959 KB of C

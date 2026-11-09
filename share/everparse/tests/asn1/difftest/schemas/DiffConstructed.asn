@@ -1,5 +1,5 @@
 -- Differential testing: SEQUENCE, SEQUENCE OF, SET OF, CHOICE, tagging.
--- F* translation: src/ASN1/ASN1.DiffTest.Constructed.fst
+-- F* translation: ../ASN1.DiffTest.Constructed.fst
 DiffConstructed DEFINITIONS EXPLICIT TAGS ::= BEGIN
 
 Seq ::= SEQUENCE {

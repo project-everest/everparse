@@ -1,6 +1,6 @@
 -- Differential testing: EXTERNAL (separate module, as not every
 -- implementation supports it).
--- F* translation: src/ASN1/ASN1.DiffTest.Presentation.fst
+-- F* translation: ../ASN1.DiffTest.Presentation.fst
 DiffExternal DEFINITIONS ::= BEGIN
 
 Ext ::= EXTERNAL

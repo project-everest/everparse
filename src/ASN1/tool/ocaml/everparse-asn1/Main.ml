@@ -11,6 +11,8 @@ let fstar_only = ref false
 let skip_compilation = ref false
 let lax_size_of = ref false
 let max_int_union = ref 256
+let fstar_exe = ref None
+let z3_exe = ref None
 let files = ref []
 
 let speclist = [
@@ -22,38 +24,73 @@ let speclist = [
   "--skip_compilation", Arg.Set skip_compilation, " do not compile the generated C code";
   "--max_int_union", Arg.Set_int max_int_union, "N the maximal number of values of a union of INTEGER ranges that is not a single range (default 256; each value is compared in turn by the validators)";
   "--lax_size_of", Arg.Set lax_size_of, " accept SIZE (lo..hi) on SEQUENCE OF / SET OF, but only check lo >= 1 (the validators accept more values than the schema)";
+  "--fstar", Arg.String (fun s -> fstar_exe := Some s), "PATH the F* executable (default: $FSTAR_EXE, then the one of EverParse, then fstar.exe in the PATH)";
+  "--z3", Arg.String (fun s -> z3_exe := Some s), "PATH the Z3 executable (default: the one found by F*, then the one of EverParse)";
 ]
 
 let fail fmt = Printf.ksprintf (fun s -> prerr_endline ("everparse-asn1: " ^ s); exit 1) fmt
 
-let file_exists_dir d f = Sys.file_exists (Filename.concat d f)
+let filename_is_relative n =
+  Filename.is_relative n &&
+  not (Sys.win32 && String.length n >= 3 && n.[1] = ':' && (n.[2] = '/' || n.[2] = '\\'))
 
+let get_absolute_filename n =
+  if filename_is_relative n then Filename.concat (Sys.getcwd ()) n else n
+
+(* EVERPARSE_HOME if set, else the parent of the directory of this
+   executable, which is in bin/, both in the source tree and in the binary
+   package *)
 let everparse_home () =
   match Sys.getenv_opt "EVERPARSE_HOME" with
   | Some h -> h
   | None ->
-    let rec up d =
-      if file_exists_dir d "src/ASN1/pulse" then d
-      else
-        let d' = Filename.dirname d in
-        if d' = d then fail "cannot find EverParse: please set EVERPARSE_HOME"
-        else up d'
-    in
-    let exe = Sys.executable_name in
-    let exe = if Filename.is_relative exe then Filename.concat (Sys.getcwd ()) exe else exe in
-    up (Filename.dirname exe)
+    get_absolute_filename (Filename.concat (Filename.dirname Sys.executable_name) Filename.parent_dir_name)
+
+let path home l = List.fold_left Filename.concat home l
 
 let write_file path contents =
   let oc = open_out_bin path in
   output_string oc contents;
   close_out oc
 
-let run (args: string list) =
-  let cmd = String.concat " " (List.map Filename.quote args) in
-  prerr_endline ("+ " ^ cmd);
-  match Unix.system cmd with
-  | Unix.WEXITED 0 -> ()
-  | _ -> fail "command failed: %s" cmd
+let run_cmd ?(silent = false) prog args =
+  let cmd =
+    if silent then Filename.quote_command prog ~stdout:Filename.null ~stderr:Filename.null args
+    else Filename.quote_command prog args
+  in
+  if not silent then prerr_endline ("+ " ^ cmd);
+  Sys.command cmd
+
+let run = function
+  | [] -> assert false
+  | prog :: args ->
+    if run_cmd prog args <> 0 then fail "command failed: %s" (Filename.quote_command prog args)
+
+let resolve_fstar_exe home =
+  match !fstar_exe with
+  | Some f -> f
+  | None ->
+    match Sys.getenv_opt "FSTAR_EXE" with
+    | Some f -> f
+    | None ->
+      let opt_fstar = path home ["opt"; "FStar"; "bin"; "fstar.exe"] in
+      if Sys.file_exists opt_fstar then opt_fstar
+      else
+        (* assume a binary package *)
+        let bin_fstar = path home ["bin"; "fstar.exe"] in
+        if Sys.file_exists bin_fstar then bin_fstar
+        else "fstar.exe" (* rely on PATH *)
+
+let z3_options home fstar =
+  let v = Z3Version.z3_version in
+  match !z3_exe with
+  | Some z3 -> ["--smt"; z3; "--z3version"; v]
+  | None ->
+    if run_cmd ~silent:true fstar ["--locate_z3"; v] = 0 then ["--z3version"; v]
+    else
+      let opt_z3 = path home ["opt"; "z3"; "z3-" ^ v] in
+      if Sys.file_exists opt_z3 then ["--smt"; opt_z3; "--z3version"; v]
+      else ["--z3version"; v]
 
 (* An F* module name component: capitalized, alphanumeric or _ *)
 let module_name s =
@@ -107,17 +144,14 @@ let () =
   prerr_endline ("Wrote " ^ spec_file ^ " and " ^ pulse_file);
   if not !fstar_only then begin
     let home = everparse_home () in
-    let fstar = match Sys.getenv_opt "FSTAR_EXE" with
-      | Some f -> f
-      | None -> Filename.concat home "opt/FStar/out/bin/fstar.exe"
-    in
-    let z3 = Filename.concat home "opt/z3/z3-5.3.0" in
-    let z3_opts = if Sys.file_exists z3 then ["--smt"; z3; "--z3version"; "5.3.0"] else ["--z3version"; "4.13.3"] in
+    let fstar = resolve_fstar_exe home in
+    let z3_opts = z3_options home fstar in
+    let asn1_lib = path home ["lib"; "everparse"; "asn1"] in
     let fstar_args = [fstar] @ z3_opts @ [
-        "--ext"; "optimize_let_vc"; "--ext"; "context_pruning";
-        "--include"; Filename.concat home "lib/everparse/lowparse";
-        "--include"; Filename.concat home "src/ASN1";
-        "--include"; Filename.concat home "src/ASN1/pulse";
+        "--ext"; "context_pruning";
+        "--include"; path home ["lib"; "everparse"; "lowparse"];
+        "--include"; Filename.concat asn1_lib "spec";
+        "--include"; Filename.concat asn1_lib "pulse";
         "--include"; !odir;
         "--cache_checked_modules";
         "--already_cached"; Printf.sprintf "*,-%s,-%s" spec pulse;

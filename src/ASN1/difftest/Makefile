@@ -23,8 +23,12 @@ OURS ?= $(local_curdir)/../evaluation/ASN1_Parser.exe
 OUT := $(local_curdir)/out
 MANIFEST := $(OUT)/manifest.json
 REPORT := $(OUT)/report.md
-SCHEMAS := $(local_curdir)/schemas
-VECTORS := $(wildcard vectors/*.json)
+# The schemas and the hand-written vectors are shared with the tests of
+# the binary package
+SHARE_DIFFTEST := $(local_curdir)/../../../share/everparse/tests/asn1/difftest
+SCHEMAS := $(SHARE_DIFFTEST)/schemas
+VECTOR_DIR := $(SHARE_DIFFTEST)/vectors
+VECTORS := $(wildcard $(VECTOR_DIR)/*.json)
 
 PYTHON ?= python3
 VENV_DIR := $(local_curdir)/.venv
@@ -79,8 +83,8 @@ GEN := $(OUT)/gen
 
 $(MANIFEST): $(VECTORS) features.json report.py gen/mutate.py
 	mkdir -p $(GEN)
-	$(PYTHON) gen/mutate.py vectors $(GEN)/mutations.json
-	$(PYTHON) report.py manifest vectors features.json $@ --gen $(GEN)
+	$(PYTHON) gen/mutate.py $(VECTOR_DIR) $(GEN)/mutations.json
+	$(PYTHON) report.py manifest $(VECTOR_DIR) features.json $@ --gen $(GEN)
 
 $(OUT)/ours.jsonl: $(MANIFEST) $(OURS)
 	$(OURS) DIFFTEST $(MANIFEST) $@
@@ -96,19 +100,19 @@ $(VENV_STAMP): harness/asn1tools/requirements.txt
 
 venv: $(VENV_STAMP)
 
-$(OUT)/asn1tools.jsonl: $(MANIFEST) $(VENV_STAMP) harness/asn1tools/runner.py $(wildcard schemas/*.asn)
+$(OUT)/asn1tools.jsonl: $(MANIFEST) $(VENV_STAMP) harness/asn1tools/runner.py $(wildcard $(SCHEMAS)/*.asn)
 	$(VENV_PYTHON) harness/asn1tools/runner.py $(SCHEMAS) $(MANIFEST) $@
 
 $(NEW)/manifest.%.json: $(MANIFEST) $(KNOWN) report.py
 	mkdir -p $(NEW)
 	$(PYTHON) report.py filter --manifest $(MANIFEST) --known $(KNOWN) --impl $* $@
 
-$(NEW)/asn1tools.jsonl: $(NEW)/manifest.asn1tools.json $(VENV_STAMP) harness/asn1tools/runner.py $(wildcard schemas/*.asn)
+$(NEW)/asn1tools.jsonl: $(NEW)/manifest.asn1tools.json $(VENV_STAMP) harness/asn1tools/runner.py $(wildcard $(SCHEMAS)/*.asn)
 	$(VENV_PYTHON) harness/asn1tools/runner.py $(SCHEMAS) $< $@
 
 # cargo does its own dependency tracking, so always ask it.
 build-rust:
-	cd $(RUST_DIR) && $(CARGO) build --release --locked --quiet
+	cd $(RUST_DIR) && ASN1_DIFFTEST_SCHEMAS=$(SCHEMAS) $(CARGO) build --release --locked --quiet
 
 $(OUT)/rasn.jsonl: $(MANIFEST) build-rust
 	$(RUST_BIN)/rasn-runner $(MANIFEST) $@
