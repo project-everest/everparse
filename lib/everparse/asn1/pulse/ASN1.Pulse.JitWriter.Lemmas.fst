@@ -974,8 +974,7 @@ let acc_tlv_inv (id: asn1_id_t) (#ack: asn1_content_k) (p: asn1_weak_parser (asn
   assert (b == IE.asn1_id_enc id `Seq.append` rest);
   IE.parse_asn1_identifier_U32_enc id rest;
   ILC.ilc_eq id p b;
-  let c1 = Seq.length (IE.asn1_id_enc id) in
-  assert (Seq.equal (Seq.slice b c1 (Seq.length b)) rest);
+  Seq.append_slices (IE.asn1_id_enc id) rest;
   C.vlgen_eq p rest;
   if Seq.length c >= 4294967296
   then hdr_big_none (Seq.length c) c

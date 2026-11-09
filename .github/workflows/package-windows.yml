@@ -204,6 +204,7 @@ jobs:
           sparse-checkout: |
             share/everparse/tests/3d
             share/everparse/tests/cddl/demo/test.cddl
+            share/everparse/tests/asn1/tool/Small.asn
           path: ${{ github.workspace }}\everparse
       - name: Test EverParse (--api lowstar)
         shell: cmd
@@ -248,6 +249,11 @@ jobs:
         if: ${{ !inputs.only_build_3d }}
         run: |
           ${{ github.workspace }}\test\bin\everparse-cddl.exe ${{ github.workspace }}\everparse\share\everparse\tests\cddl\demo\test.cddl
+      # No C compiler on the runner: only generate the C code
+      - name: Test everparse-asn1
+        if: ${{ !inputs.only_build_3d }}
+        run: |
+          ${{ github.workspace }}\test\bin\everparse-asn1.exe --skip_compilation --odir ${{ github.workspace }}\test-asn1 --root Msg,Names,Wrapper ${{ github.workspace }}\everparse\share\everparse\tests\asn1\tool\Small.asn
 
   test:
     needs: [testpackage, testci]

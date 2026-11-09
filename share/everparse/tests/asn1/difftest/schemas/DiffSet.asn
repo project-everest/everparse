@@ -1,5 +1,5 @@
 -- Differential testing: SET { ... } (X.690 10.3 canonical order).
--- F* translation: src/ASN1/ASN1.DiffTest.Set.fst
+-- F* translation: ../ASN1.DiffTest.Set.fst
 DiffSet DEFINITIONS ::= BEGIN
 
 Set ::= SET {
