@@ -10,6 +10,8 @@
       "./src/cddl/tool",
       "./src/3d",
       "./src/3d/prelude",
+      "./lib/everparse/asn1/spec",
+      "./lib/everparse/asn1/pulse",
       "./src/ASN1"
     ]
   }

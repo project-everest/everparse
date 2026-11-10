@@ -18,9 +18,12 @@ run_X509_positive: prepare
 run_X509_negative: prepare
 	./run.sh X509 negative
 
-run: run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
+run_SETTEST:
+	./settest.sh
 
-.PHONY: prepare all run run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
+run: run_SETTEST run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
+
+.PHONY: prepare all run run_SETTEST run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
 
 clean:
 	rm -rf ASN1_Parser.exe data

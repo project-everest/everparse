@@ -103,7 +103,7 @@ let curve
   (_ by (seq_tac ()))
 
 let eCPVer
-= mk_restricted_field asn1_integer (fun x -> x = 1)
+= mk_restriction_field asn1_integer (RESTRICT_INT_IN [1])
 
 let id_fieldType = ansi_X9_62 /+ 1
 
@@ -198,7 +198,7 @@ let supported_algorithms
    (id_ecPublicKey, ecpkParameters_field)]
 
 let version
-= mk_restricted_field asn1_integer (fun x -> x = 2)
+= mk_restriction_field asn1_integer (RESTRICT_INT_IN [2])
 
 let certificateSerialNumber = asn1_integer
 
@@ -269,13 +269,18 @@ let attributeTypeAndValue
     (_ by (choice_tac ()))
 
 let relativeDistinguishedName
-= asn1_set_of attributeTypeAndValue
+= asn1_nonempty_set_of attributeTypeAndValue
 
 let rDNSequence
 = asn1_sequence_of relativeDistinguishedName
 
 let name
 = asn1_choice ["rsnSequence" ^* rDNSequence] (_ by (choice_tac ()))
+
+(* RFC 5280 §4.1.2.4 and §5.1.2.3: the issuer field MUST contain a non-empty
+   distinguished name. *)
+let issuerName
+= asn1_choice ["rsnSequence" ^* asn1_nonempty_sequence_of relativeDistinguishedName] (_ by (choice_tac ()))
 
 let time
 = asn1_choice [
@@ -315,10 +320,10 @@ let critical_field
 = mk_default_field asn1_boolean false
 
 let critical_field_MUST_false
-= mk_restricted_default_field asn1_boolean (fun b -> b = false) false
+= mk_restriction_default_field asn1_boolean (RESTRICT_IN [false]) false
 
 let critical_field_MUST_true
-= mk_restricted_field asn1_boolean (fun b -> b = true)
+= mk_restriction_field asn1_boolean (RESTRICT_IN [true])
 
 let id_pe_ipAddrBlocks = id_pe /+ 7
 
@@ -346,7 +351,7 @@ let iPAddressChoice
 
 let iPAddressFamily
 = asn1_sequence [
-    "addressFamily" *^ (PLAIN ^: (mk_restricted_field asn1_octetstring (fun s -> let l = Seq.length s in 2 <= l && l <= 3)));
+    "addressFamily" *^ (PLAIN ^: (mk_restriction_field asn1_octetstring (RESTRICT_SIZE 2 (Some 3))));
     "ipAddressChoice" *^ (PLAIN ^: iPAddressChoice)]
     (_ by (seq_tac ()))
 
@@ -363,7 +368,7 @@ let id_ad_caIssuers = id_ad /+ 1
 let id_ad_ocsp = id_ad /+ 2
 
 let accessMethod
-= mk_restricted_field asn1_oid (fun oid -> oid = id_ad_caIssuers || oid = id_ad_ocsp)
+= mk_restriction_field asn1_oid (RESTRICT_IN [id_ad_caIssuers; id_ad_ocsp])
 
 let otherName
 = asn1_any_oid_with_fallback
@@ -384,7 +389,7 @@ let generalName
     "registeredID" ^* (mk_retagged (mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 8) asn1_oid)]
     (_ by (choice_tac ()))
 
-let generalNames = asn1_sequence_of generalName
+let generalNames = asn1_nonempty_sequence_of generalName
 
 let accessDescription
 = asn1_sequence [
@@ -392,7 +397,7 @@ let accessDescription
     "accessLocation" *^ (PLAIN ^: generalName)]
     (_ by (seq_tac ()))
 
-let authorityInfoAccessSyntax = asn1_sequence_of accessDescription
+let authorityInfoAccessSyntax = asn1_nonempty_sequence_of accessDescription
 
 let authorityInformationAccess_expansion
 = mk_expansion (DEFAULT ^: critical_field_MUST_false) authorityInfoAccessSyntax (_ by (seq_tac ()))
@@ -425,7 +430,7 @@ let id_ce_basicConstraints = id_ce /+ 19
 let basicConstraints
 = asn1_sequence [
     "cA" *^ (DEFAULT ^: (mk_default_field asn1_boolean false));
-    "pathLenConstraint" *^ (OPTION ^: (mk_restricted_field asn1_integer (fun x -> x >= 0)))]
+    "pathLenConstraint" *^ (OPTION ^: (mk_restriction_field asn1_integer (RESTRICT_INT_RANGE (Some 0) None)))]
     (_ by (seq_tac ()))
 
 let basicConstraints_expansion
@@ -449,7 +454,7 @@ let distributionPoint
     (_ by (seq_tac ()))
 
 let cRLDistributionPoints
-= asn1_sequence_of distributionPoint
+= asn1_nonempty_sequence_of distributionPoint
 
 let cRLDistributionPoints_expansion
 = mk_expansion (DEFAULT ^: critical_field) cRLDistributionPoints (_ by (seq_tac ()))
@@ -507,11 +512,11 @@ let certPolicyId = asn1_oid
 let policyInformation
 = asn1_sequence [
     "policyIdentifier" *^ (PLAIN ^: certPolicyId);
-    "policyQualifiers" *^ (OPTION ^: asn1_sequence_of policyQualifierInfo)]
+    "policyQualifiers" *^ (OPTION ^: asn1_nonempty_sequence_of policyQualifierInfo)]
     (_ by (seq_tac ())) 
 
 let certificatePolicies
-= asn1_sequence_of policyInformation
+= asn1_nonempty_sequence_of policyInformation
 
 let certificatePolicies_expansion
 = mk_expansion (DEFAULT ^: critical_field) certificatePolicies (_ by (seq_tac ()))
@@ -531,7 +536,7 @@ let authorityKeyIdentifier_expansion
 
 let id_ce_extKeyUsage = id_ce /+ 37
 
-let extKeyUsageSyntax = asn1_sequence_of asn1_oid
+let extKeyUsageSyntax = asn1_nonempty_sequence_of asn1_oid
   
 let extKeyUsage_expansion
 = mk_expansion (DEFAULT ^: critical_field) extKeyUsageSyntax (_ by (seq_tac ()))
@@ -563,7 +568,7 @@ let extension
     (_ by (choice_tac ()))
 
 let extensions
-= asn1_sequence_of extension
+= asn1_nonempty_sequence_of extension
 
 #push-options "--fuel 0 --z3rlimit_factor 2"
 let x509_TBSCertificate
@@ -571,7 +576,7 @@ let x509_TBSCertificate
     "version" *^ (PLAIN ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) version));
     "serialNumber" *^ (PLAIN ^: certificateSerialNumber);
     "signature" *^ (PLAIN ^: algorithmIdentifier);
-    "issuer" *^ (PLAIN ^: name);
+    "issuer" *^ (PLAIN ^: issuerName);
     "validity" *^ (PLAIN ^: validity);
     "subject" *^ (PLAIN ^: name);
     "subjectPublicKeyInfo" *^ (PLAIN ^: subjectPublicKeyInfo);
@@ -587,6 +592,7 @@ let x509_certificate
     "signatureValue" *^ (PLAIN ^: asn1_bitstring)]
     (_ by (seq_tac ()))
 #pop-options
+
 
 // let's go boom!
 

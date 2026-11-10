@@ -1,0 +1,9 @@
+[package]
+name = "asn1rs-runner"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+difftest-common = { path = "../common" }
+asn1-rs = "=0.7.2"

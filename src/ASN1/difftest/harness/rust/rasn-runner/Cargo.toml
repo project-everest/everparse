@@ -1,0 +1,12 @@
+[package]
+name = "rasn-runner"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+difftest-common = { path = "../common" }
+rasn = "=0.29.0"
+
+[build-dependencies]
+rasn-compiler = "=0.16.0"

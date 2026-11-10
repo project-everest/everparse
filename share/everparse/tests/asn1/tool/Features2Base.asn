@@ -1,0 +1,19 @@
+-- Imported by Features2.asn: a parameterized type, an information object
+-- class with WITH SYNTAX, and a parameterized type with a table constraint
+Features2Base DEFINITIONS EXPLICIT TAGS ::= BEGIN
+
+Pair { A, B } ::= SEQUENCE { a A, b B }
+
+EXT ::= CLASS {
+  &id OBJECT IDENTIFIER UNIQUE,
+  &ExtnType,
+  &Critical BOOLEAN DEFAULT FALSE
+} WITH SYNTAX { SYNTAX &ExtnType IDENTIFIED BY &id [CRITICALITY &Critical] }
+
+Extension { EXT : ExtSet } ::= SEQUENCE {
+  extnId EXT.&id ({ExtSet}),
+  critical BOOLEAN DEFAULT FALSE,
+  extnValue OCTET STRING (CONTAINING EXT.&ExtnType ({ExtSet}{@extnId}))
+}
+
+END

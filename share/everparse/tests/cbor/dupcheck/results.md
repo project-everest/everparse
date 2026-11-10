@@ -2,14 +2,21 @@
 
 This directory tests and benchmarks the three verified duplicate map key checks
 of the EverCBOR non-deterministic API. All three accept exactly the same inputs
-(well-formed CBOR, no duplicate map keys at any depth, map depth ≤ D, map length ≤ N),
+(well-formed CBOR, no duplicate map keys at any depth, map depth ≤ D, map length ≤ N,
+and, optionally, map key depth ≤ K),
 and none of them allocates (except the `*_alloc` variants below).
+The optional map key depth bound `K` is passed right after `N`: in C as
+`check_map_key_bound, map_key_bound` (written `kb` below), in Rust as
+`map_key_bound: Option<usize>`. It is checked during validation, in the
+same pass as the map depth and length bounds (map keys are validated with
+map depth budget `min(K, d - 1)` instead of `d - 1`), so it does not change
+the complexities below.
 
 | variant | entry point | scratch provided by the caller | key comparisons |
 |---|---|---|---|
-| bounded (reference) | `cbor_nondet_parse_bounded(D, N, …)` | none | pairwise, O(N²) per map, recursive |
-| sort | `cbor_nondet_parse_bounded_sort(D, N, scratch, len, …)` | `3·N·D` `size_t` | index sort of each map's entries (in-place heap sort over index triples), adjacent equality |
-| hash | `cbor_nondet_parse_bounded_hash(D, N, k0, k1, scratch, len, hscratch, hlen, …)` | `3·N·D + N` `size_t` and `N` `uint64_t` | keyed SipHash-1-3 of each key (canonical: invariant under map entry order and non-minimal heads), then index sort on (hash, key); keys are compared only on equal hashes |
+| bounded (reference) | `cbor_nondet_parse_bounded(D, N, kb, …)` | none | pairwise, O(N²) per map, recursive |
+| sort | `cbor_nondet_parse_bounded_sort(D, N, kb, scratch, len, …)` | `3·N·D` `size_t` | index sort of each map's entries (in-place heap sort over index triples), adjacent equality |
+| hash | `cbor_nondet_parse_bounded_hash(D, N, kb, k0, k1, scratch, len, hscratch, hlen, …)` | `3·N·D + N` `size_t` and `N` `uint64_t` | keyed SipHash-1-3 of each key (canonical: invariant under map entry order and non-minimal heads), then index sort on (hash, key); keys are compared only on equal hashes |
 
 Additional entry points:
 
@@ -18,7 +25,7 @@ Additional entry points:
   - C: `cbor_nondet_parse_bounded_hash_random` in `include/everparse/CBORNondetHashRandom.h`. It uses BCryptGenRandom, arc4random_buf or getrandom, and falls back to sort if the RNG fails.
   - Rust: `cbor_nondet_parse_bounded_hash_random`, keyed from `std`'s `RandomState`.
 
-- Allocating variants: `cbor_nondet_parse_bounded_{sort,hash}_alloc(D, N, …)` (C and Rust) take no scratch.
+- Allocating variants: `cbor_nondet_parse_bounded_{sort,hash}_alloc(D, N, kb, …)` (C and Rust) take no scratch.
   They allocate each scratch space once, with exactly the sizes above, call the
   verified sort/hash validator, and free the scratch before returning.
   - The wrappers are verified (`CBOR.Pulse.Raw.Nondet.Alloc`). The size

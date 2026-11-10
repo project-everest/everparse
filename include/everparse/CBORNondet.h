@@ -62,6 +62,8 @@ bool
 cbor_nondet_parse_bounded(
   size_t map_depth_bound,
   size_t map_length_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
   uint8_t **pinput,
   size_t *plen,
   cbor_raw *dest
@@ -78,6 +80,8 @@ bool
 cbor_nondet_parse_bounded_sort(
   size_t map_depth_bound,
   size_t map_length_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
   size_t *scratch,
   size_t scratch_len,
   uint8_t **pinput,
@@ -97,6 +101,8 @@ bool
 cbor_nondet_parse_bounded_hash(
   size_t map_depth_bound,
   size_t map_length_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
   uint64_t k0,
   uint64_t k1,
   size_t *scratch,
@@ -112,6 +118,8 @@ bool
 cbor_nondet_parse_bounded_sort_alloc(
   size_t map_depth_bound,
   size_t map_length_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
   uint8_t **pinput,
   size_t *plen,
   cbor_raw *dest
@@ -121,6 +129,8 @@ bool
 cbor_nondet_parse_bounded_hash_alloc(
   size_t map_depth_bound,
   size_t map_length_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
   uint64_t k0,
   uint64_t k1,
   uint8_t **pinput,

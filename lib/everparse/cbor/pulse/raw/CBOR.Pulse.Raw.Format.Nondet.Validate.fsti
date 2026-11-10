@@ -73,34 +73,45 @@ val cbor_validate_nondet_map_length_bounded
       cbor_validate_nondet_map_length_bounded_post map_length_bound map_key_bound strict_check v res
     ))
 
+let map_key_depth_bounded_opt
+  (map_key_bound: option SZ.t)
+  (x: raw_data_item)
+: Tot bool
+= match map_key_bound with
+  | None -> true
+  | Some b -> map_key_depth x <= SZ.v b
+
 unfold
 let cbor_validate_nondet_bounded_post
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (v: Seq.seq U8.t)
   (res: SZ.t)
 : Tot prop
 =
   let r = parse_cbor v in
   if SZ.v res = 0
-  then ~ (Some? r /\ valid_raw_data_item (fst (Some?.v r)) /\ CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound) (fst (Some?.v r)))
+  then ~ (Some? r /\ valid_raw_data_item (fst (Some?.v r)) /\ CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound) (fst (Some?.v r)) /\ map_key_depth_bounded_opt map_key_bound (fst (Some?.v r)))
   else (
     Some? r /\
     valid_raw_data_item (fst (Some?.v r)) /\
     CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound) (fst (Some?.v r)) /\
+    map_key_depth_bounded_opt map_key_bound (fst (Some?.v r)) /\
     SZ.v res == snd (Some?.v r)
   )
 
 val cbor_validate_nondet_bounded
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (input: slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 : stt SZ.t
     (pts_to input #pm v)
     (fun res -> pts_to input #pm v ** pure (
-      cbor_validate_nondet_bounded_post map_depth_bound map_length_bound v res
+      cbor_validate_nondet_bounded_post map_depth_bound map_length_bound map_key_bound v res
     ))
 
 (* Sort-based variant of `cbor_validate_nondet_bounded`, checking map
@@ -120,12 +131,13 @@ unfold
 let cbor_validate_nondet_bounded_sort_post
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (scratch_len: SZ.t)
   (v: Seq.seq U8.t)
   (res: SZ.t)
 : Tot prop
 = if cbor_validate_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len
-  then cbor_validate_nondet_bounded_post map_depth_bound map_length_bound v res
+  then cbor_validate_nondet_bounded_post map_depth_bound map_length_bound map_key_bound v res
   else SZ.v res == 0
 
 val cbor_validate_nondet_bounded_sort_scratch_ok_impl
@@ -137,6 +149,7 @@ val cbor_validate_nondet_bounded_sort_scratch_ok_impl
 val cbor_validate_nondet_bounded_sort
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (input: slice U8.t)
   (scratch: slice SZ.t)
   (#pm: perm)
@@ -145,7 +158,7 @@ val cbor_validate_nondet_bounded_sort
 : stt SZ.t
     (pts_to input #pm v ** pts_to scratch s)
     (fun res -> pts_to input #pm v ** (exists* s' . pts_to scratch s' ** pure (
-      cbor_validate_nondet_bounded_sort_post map_depth_bound map_length_bound (len scratch) v res
+      cbor_validate_nondet_bounded_sort_post map_depth_bound map_length_bound map_key_bound (len scratch) v res
     )))
 
 (* Hash-based variant of `cbor_validate_nondet_bounded_sort`: map keys
@@ -169,13 +182,14 @@ unfold
 let cbor_validate_nondet_bounded_hash_post
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (scratch_len: SZ.t)
   (hash_scratch_len: SZ.t)
   (v: Seq.seq U8.t)
   (res: SZ.t)
 : Tot prop
 = if cbor_validate_nondet_bounded_hash_scratch_ok map_depth_bound map_length_bound scratch_len hash_scratch_len
-  then cbor_validate_nondet_bounded_post map_depth_bound map_length_bound v res
+  then cbor_validate_nondet_bounded_post map_depth_bound map_length_bound map_key_bound v res
   else SZ.v res == 0
 
 val cbor_validate_nondet_bounded_hash_scratch_ok_impl
@@ -188,6 +202,7 @@ val cbor_validate_nondet_bounded_hash_scratch_ok_impl
 val cbor_validate_nondet_bounded_hash
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (k0 k1: U64.t)
   (input: slice U8.t)
   (scratch: slice SZ.t)
@@ -199,5 +214,5 @@ val cbor_validate_nondet_bounded_hash
 : stt SZ.t
     (pts_to input #pm v ** pts_to scratch s ** pts_to hash_scratch hs)
     (fun res -> pts_to input #pm v ** (exists* s' hs' . pts_to scratch s' ** pts_to hash_scratch hs' ** pure (
-      cbor_validate_nondet_bounded_hash_post map_depth_bound map_length_bound (len scratch) (len hash_scratch) v res
+      cbor_validate_nondet_bounded_hash_post map_depth_bound map_length_bound map_key_bound (len scratch) (len hash_scratch) v res
     )))

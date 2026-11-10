@@ -944,8 +944,23 @@ fn validate_raw_data_item_map_length_bounded(n: usize, input: &[u8], poffset: &m
     (&pres)[0usize]
 }
 
+#[derive(PartialEq, Clone, Copy)]
+enum option__size_t_tags
+{
+    None,
+    Some
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum option__size_t
+{
+    None,
+    Some { v: usize }
+}
+
 pub(crate) fn validate_raw_data_item_nlist_bounded(
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     d: usize,
     n: usize,
     input: &[u8],
@@ -1169,18 +1184,96 @@ pub(crate) fn validate_raw_data_item_nlist_bounded(
                         else
                         {
                             let d·: usize = d.wrapping_sub(1usize);
-                            let res3: bool =
-                                validate_raw_data_item_nlist_bounded(
-                                    map_length_bound,
-                                    d·,
-                                    count,
-                                    input,
-                                    poffset
-                                );
-                            if ! res3
-                            { (&mut pres)[0usize] = false }
+                            if
+                            if d == 0usize
+                            { 0usize }
                             else
-                            { (&mut pn)[0usize] = n10.wrapping_sub(1usize) }
+                            {
+                                match map_key_bound
+                                {
+                                    option__size_t::None => d.wrapping_sub(1usize),
+                                    option__size_t::Some { v: k } =>
+                                      if k < d.wrapping_sub(1usize)
+                                      { k }
+                                      else
+                                      { d.wrapping_sub(1usize) },
+                                    _ => panic!("Incomplete pattern matching")
+                                }
+                            }
+                            ==
+                            d·
+                            {
+                                let res3: bool =
+                                    validate_raw_data_item_nlist_bounded(
+                                        map_length_bound,
+                                        map_key_bound,
+                                        d·,
+                                        count,
+                                        input,
+                                        poffset
+                                    );
+                                if ! res3
+                                { (&mut pres)[0usize] = false }
+                                else
+                                { (&mut pn)[0usize] = n10.wrapping_sub(1usize) }
+                            }
+                            else
+                            {
+                                let mut pn1: [usize; 1] = [count; 1usize];
+                                let mut pfirst: [bool; 1] = [true; 1usize];
+                                let mut pres1: [bool; 1] = [true; 1usize];
+                                while
+                                true
+                                {
+                                    let res0: bool = (&pres1)[0usize];
+                                    let n2: usize = (&pn1)[0usize];
+                                    if ! (res0 && n2 > 0usize) { break };
+                                    let n20: usize = (&pn1)[0usize];
+                                    let first: bool = (&pfirst)[0usize];
+                                    let dc: usize =
+                                        if first
+                                        {
+                                            if d == 0usize
+                                            { 0usize }
+                                            else
+                                            {
+                                                match map_key_bound
+                                                {
+                                                    option__size_t::None => d.wrapping_sub(1usize),
+                                                    option__size_t::Some { v: k } =>
+                                                      if k < d.wrapping_sub(1usize)
+                                                      { k }
+                                                      else
+                                                      { d.wrapping_sub(1usize) },
+                                                    _ => panic!("Incomplete pattern matching")
+                                                }
+                                            }
+                                        }
+                                        else
+                                        { d· };
+                                    let res11: bool =
+                                        validate_raw_data_item_nlist_bounded(
+                                            map_length_bound,
+                                            map_key_bound,
+                                            dc,
+                                            1usize,
+                                            input,
+                                            poffset
+                                        );
+                                    if ! res11
+                                    { (&mut pres1)[0usize] = false }
+                                    else
+                                    {
+                                        (&mut pn1)[0usize] = n20.wrapping_sub(1usize);
+                                        (&mut pfirst)[0usize] = ! first
+                                    }
+                                };
+                                let res3: bool = (&pres1)[0usize];
+                                if ! res3
+                                { (&mut pres)[0usize] = false }
+                                else
+                                { (&mut pn)[0usize] = n10.wrapping_sub(1usize) }
+                            }
                         }
                     }
                     else
@@ -1195,12 +1288,20 @@ pub(crate) fn validate_raw_data_item_nlist_bounded(
 fn validate_raw_data_item_bounded(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     input: &[u8],
     poffset: &mut [usize]
 ) ->
     bool
 {
-    validate_raw_data_item_nlist_bounded(map_length_bound, map_depth_bound, 1usize, input, poffset)
+    validate_raw_data_item_nlist_bounded(
+        map_length_bound,
+        map_key_bound,
+        map_depth_bound,
+        1usize,
+        input,
+        poffset
+    )
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -2225,13 +2326,6 @@ fn size_header(
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
-{
-    None,
-    Some
-}
-
-#[derive(PartialEq, Clone, Copy)]
 enum option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw <'a>
 {
     None,
@@ -3142,13 +3236,6 @@ fn eq_Some_true(x: option__bool) -> bool
 
 fn eq_Some_false(x: option__bool) -> bool
 { match x { option__bool::Some { v: b } => ! b, _ => false } }
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum option__size_t
-{
-    None,
-    Some { v: usize }
-}
 
 fn eq_Some_0sz(x: option__size_t) -> bool
 { match x { option__size_t::Some { v: y } => y == 0usize, _ => false } }
@@ -6751,12 +6838,23 @@ fn cbor_validate_nondet_map_length_bounded(
     { 0usize }
 }
 
-fn cbor_validate_nondet_bounded(map_depth_bound: usize, map_length_bound: usize, input: &[u8]) ->
+fn cbor_validate_nondet_bounded(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    map_key_bound: option__size_t,
+    input: &[u8]
+) ->
     usize
 {
     let mut poff: [usize; 1] = [0usize; 1usize];
     let res: bool =
-        validate_raw_data_item_bounded(map_depth_bound, map_length_bound, input, &mut poff);
+        validate_raw_data_item_bounded(
+            map_depth_bound,
+            map_length_bound,
+            map_key_bound,
+            input,
+            &mut poff
+        );
     if res
     {
         let off: usize = (&poff)[0usize];
@@ -6789,6 +6887,7 @@ fn cbor_validate_nondet_bounded_sort_scratch_ok_impl(
 fn cbor_validate_nondet_bounded_sort(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     input: &[u8],
     scratch: &mut [usize]
 ) ->
@@ -6800,7 +6899,13 @@ fn cbor_validate_nondet_bounded_sort(
     {
         let mut poff: [usize; 1] = [0usize; 1usize];
         let res: bool =
-            validate_raw_data_item_bounded(map_depth_bound, map_length_bound, input, &mut poff);
+            validate_raw_data_item_bounded(
+                map_depth_bound,
+                map_length_bound,
+                map_key_bound,
+                input,
+                &mut poff
+            );
         if res
         {
             let off: usize = (&poff)[0usize];
@@ -6824,6 +6929,7 @@ fn cbor_validate_nondet_bounded_hash_scratch_ok_impl(
 fn cbor_validate_nondet_bounded_hash(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     k0: u64,
     k1: u64,
     input: &[u8],
@@ -6840,7 +6946,13 @@ fn cbor_validate_nondet_bounded_hash(
     {
         let mut poff: [usize; 1] = [0usize; 1usize];
         let res: bool =
-            validate_raw_data_item_bounded(map_depth_bound, map_length_bound, input, &mut poff);
+            validate_raw_data_item_bounded(
+                map_depth_bound,
+                map_length_bound,
+                map_key_bound,
+                input,
+                &mut poff
+            );
         if res
         {
             let off: usize = (&poff)[0usize];
@@ -6931,19 +7043,26 @@ pub(crate) fn cbor_nondet_parse_map_length_bounded <'a>(
     }
 }
 
-fn cbor_nondet_validate_bounded(map_depth_bound: usize, map_length_bound: usize, input: &[u8]) ->
+fn cbor_nondet_validate_bounded(
+    map_depth_bound: usize,
+    map_length_bound: usize,
+    map_key_bound: option__size_t,
+    input: &[u8]
+) ->
     usize
-{ cbor_validate_nondet_bounded(map_depth_bound, map_length_bound, input) }
+{ cbor_validate_nondet_bounded(map_depth_bound, map_length_bound, map_key_bound, input) }
 
 pub(crate) fn cbor_nondet_parse_bounded <'a>(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     input: &'a [u8]
 ) ->
     option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
-    let len: usize = cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, input);
+    let len: usize =
+        cbor_nondet_validate_bounded(map_depth_bound, map_length_bound, map_key_bound, input);
     if len == 0usize
     { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     else
@@ -6974,11 +7093,20 @@ pub(crate) fn cbor_nondet_bounded_sort_scratch_ok_impl(
 pub(crate) fn cbor_nondet_validate_bounded_sort(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     scratch: &mut [usize],
     input: &[u8]
 ) ->
     usize
-{ cbor_validate_nondet_bounded_sort(map_depth_bound, map_length_bound, input, scratch) }
+{
+    cbor_validate_nondet_bounded_sort(
+        map_depth_bound,
+        map_length_bound,
+        map_key_bound,
+        input,
+        scratch
+    )
+}
 
 pub(crate) fn cbor_nondet_bounded_hash_scratch_ok_impl(
     map_depth_bound: usize,
@@ -6999,6 +7127,7 @@ pub(crate) fn cbor_nondet_bounded_hash_scratch_ok_impl(
 pub(crate) fn cbor_nondet_validate_bounded_hash(
     map_depth_bound: usize,
     map_length_bound: usize,
+    map_key_bound: option__size_t,
     k0: u64,
     k1: u64,
     scratch: &mut [usize],
@@ -7010,6 +7139,7 @@ pub(crate) fn cbor_nondet_validate_bounded_hash(
     cbor_validate_nondet_bounded_hash(
         map_depth_bound,
         map_length_bound,
+        map_key_bound,
         k0,
         k1,
         input,

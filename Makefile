@@ -18,7 +18,7 @@ include nofstar.Makefile
 include deps.Makefile
 
 ifneq (1,$(EVERPARSE_ONLY_3D))
-package-subset: cddl
+package-subset: cddl asn1
 endif
 
 # Disable COSE on MacOS because we don't know how to link with OpenSSL
@@ -37,7 +37,7 @@ EVERPARSE_HOME := $(realpath .)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += lib/everparse/lowparse src/ASN1 lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse lib/everparse/cddl/spec
+SRC_DIRS += lib/everparse/lowparse lib/everparse/asn1/spec lib/everparse/cbor/spec lib/everparse/cbor/spec/raw lib/everparse/cbor/spec/raw/everparse lib/everparse/cddl/spec
 
 # LowParse's specification and its Pulse implementation share one directory, so
 # the two are told apart by module name: everything the Pulse implementation
@@ -47,6 +47,7 @@ LOWPARSE_PULSE_PATTERN := lib/everparse/lowparse/LowParse.Pulse%
 ifeq (,$(NO_PULSE))
   SRC_DIRS += lib/everparse/cbor/pulse lib/everparse/cbor/pulse/raw lib/everparse/cbor/pulse/raw/everparse lib/everparse/cddl/pulse src/cddl/tool
   SRC_DIRS += lib/everparse/3d
+  SRC_DIRS += lib/everparse/asn1/pulse
 else
   FSTAR_FILES_EXCLUDE += $(LOWPARSE_PULSE_PATTERN)
 endif
@@ -66,6 +67,10 @@ endif
 
 ifeq (1,$(ADMIT_CBOR_CDDL))
 $(filter lib/everparse/cbor/% lib/everparse/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+endif
+
+ifeq (1,$(ADMIT_ASN1))
+$(filter lib/everparse/asn1/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 LOWPARSE_PULSE_CHECKED_FILES := $(filter $(LOWPARSE_PULSE_PATTERN),$(ALL_CHECKED_FILES))
@@ -98,10 +103,22 @@ endif
 
 asn1: asn1-base lowparse
 
-# filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
-asn1-base: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+# The ASN.1 DER specification (lib/everparse/asn1/spec)
+asn1-base: $(filter lib/everparse/asn1/spec/%,$(ALL_CHECKED_FILES))
 
-.PHONY: asn1-base
+# The Pulse implementation (lib/everparse/asn1/pulse) and the everparse-asn1
+# executable, which generates Pulse code, need Pulse.
+ifeq (,$(NO_PULSE))
+asn1: asn1-pulse asn1-tool
+endif
+
+asn1-pulse: $(filter lib/everparse/asn1/pulse/%,$(ALL_CHECKED_FILES))
+
+# The everparse-asn1 executable (src/ASN1/tool), copied to bin/
+asn1-tool: $(NEED_OPAM)
+	+$(MAKE) -C src/ASN1/tool build
+
+.PHONY: asn1-base asn1-pulse asn1-tool
 
 quackyducky: qd-exe lowparse
 
@@ -196,8 +213,33 @@ endif
 
 endif
 
-asn1-test: asn1
+# The F* schemas of the ASN.1 differential tests, shared by the tests of
+# share/everparse/tests/asn1 and of src/ASN1
+asn1-difftest: asn1-base lowparse
+	+$(MAKE) -C share/everparse/tests/asn1/difftest
+
+asn1-src-test: asn1 asn1-difftest
+
+asn1-share-test: asn1 asn1-difftest
+
+ifeq (,$(NO_PULSE))
+# The C files of the validators of the differential tests are extracted in
+# share/everparse/tests/asn1/pulse, and also used by src/ASN1/pulse
+asn1-share-pulse-extract: asn1 asn1-difftest
+	+$(MAKE) -C share/everparse/tests/asn1/pulse extract
+
+asn1-src-test: asn1-share-pulse-extract
+
+asn1-share-test: asn1-share-pulse-extract
+	+$(MAKE) -C share/everparse/tests/asn1 pulse tool
+endif
+
+asn1-src-test:
 	+$(MAKE) -C src/ASN1 test
+
+asn1-test: asn1-src-test asn1-share-test
+
+.PHONY: asn1-difftest asn1-src-test asn1-share-test asn1-share-pulse-extract
 
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test: lowparse $(NEED_KRML)
@@ -412,6 +454,7 @@ cddl-test: cddl cddl-unit-tests cddl-roundtrip-test
 
 clean-asn1:
 	+$(MAKE) -C src/ASN1 clean
+	rm -f $(addprefix lib/everparse/asn1/,$(addsuffix /*.checked,spec pulse))
 
 .PHONY: clean-asn1
 

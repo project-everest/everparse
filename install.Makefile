@@ -7,7 +7,7 @@ all: install-makefiles install-lowparse install-quackyducky
 
 all: install-3d
 
-# EverCBOR and EverCDDL are not built at all when only 3d is requested, so
+# EverCBOR, EverCDDL and the ASN.1 library are not built at all when only 3d is requested, so
 # there is nothing to install then. Mirrors the EVERPARSE_ONLY_3D guard on
 # `package-subset` in the top-level Makefile.
 ifneq (1,$(EVERPARSE_ONLY_3D))
@@ -15,6 +15,8 @@ ifneq (1,$(EVERPARSE_ONLY_3D))
 all: install-cbor
 
 all: install-cddl
+
+all: install-asn1
 
 endif
 
@@ -110,5 +112,23 @@ install-cddl-pulse:
 	install -m 644 $(wildcard $(addprefix lib/everparse/cddl/pulse/*.,fst fsti checked)) $(PREFIX)/lib/everparse/cddl/pulse
 
 .PHONY: install-cddl install-cddl-pulse
+
+# The ASN.1 DER library, and its Pulse implementation and the everparse-asn1
+# tool, which are only built when Pulse is enabled.
+install-asn1:
+	install -d $(PREFIX)/lib/everparse/asn1/spec
+	install -m 644 $(wildcard $(addprefix lib/everparse/asn1/spec/*.,fst fsti checked)) $(PREFIX)/lib/everparse/asn1/spec
+
+ifeq (,$(NO_PULSE))
+install-asn1: install-asn1-pulse
+endif
+
+install-asn1-pulse:
+	install -d $(PREFIX)/bin
+	install -m 755 bin/everparse-asn1.exe $(PREFIX)/bin
+	install -d $(PREFIX)/lib/everparse/asn1/pulse
+	install -m 644 $(wildcard $(addprefix lib/everparse/asn1/pulse/*.,fst fsti checked)) $(PREFIX)/lib/everparse/asn1/pulse
+
+.PHONY: install-asn1 install-asn1-pulse
 
 .PHONY: all install-makefiles install-lowparse install-quackyducky
