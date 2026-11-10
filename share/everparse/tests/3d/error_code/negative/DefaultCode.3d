@@ -1,0 +1,6 @@
+// The default constraint-failure code 6 cannot be given explicitly
+entrypoint
+typedef struct _T
+{
+  UINT8 x { x == 0 } {:error-code 6};
+} T;

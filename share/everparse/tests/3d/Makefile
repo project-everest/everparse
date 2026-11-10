@@ -137,7 +137,7 @@ boolean-abi-test:
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
   probe field_ptr output_state_name field_pos_32_backend copy_buffer_backend \
-  check_complete
+  check_complete error_code
 
 # Mirrors the guard in share/everparse/tests/3d/lowstar/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and

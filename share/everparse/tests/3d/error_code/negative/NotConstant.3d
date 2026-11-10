@@ -1,0 +1,7 @@
+// The error code must be a constant
+entrypoint
+typedef struct _T
+{
+  UINT8 y;
+  UINT8 x { x == 0 } {:error-code y};
+} T;

@@ -538,6 +538,7 @@ type atomic_field' = {
   field_bitwidth:option field_bitwidth_t;  //bits used for the field; elaborate from Inl to Inr
   field_action:option (action & bool); //bool indicates if the action depends on the field value
   field_probe:option probe_call; //set in case this field has to be probed then validated
+  field_error_code:option expr; //UINT8 status code returned if field_constraint fails (--api pulse only); in the scope of field_ident
 }
 
 and atomic_field = with_meta_t atomic_field'
@@ -996,13 +997,14 @@ and print_atomic_field (f:atomic_field) : ML string =
     | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
   let sf = f.v in
-    Printf.sprintf "%s%s %s%s%s%s%s;"
+    Printf.sprintf "%s%s %s%s%s%s%s%s;"
       (if sf.field_dependence then "dependent " else "")
       (print_typ sf.field_type)
       (print_ident sf.field_ident)
       (print_bitfield sf.field_bitwidth)
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
+      (print_opt sf.field_error_code (fun e -> Printf.sprintf " {:error-code %s}" (print_expr e)))
       (print_opt sf.field_probe
         (fun p -> Printf.sprintf "\nprobe %s" (print_probe_call p)))
 
@@ -1514,6 +1516,17 @@ let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
 let as_u64_identity = with_dummy_range <| to_ident' "as_u64_identity"
 let probe_m_t = mk_prim_t "probe_m_unit"
 let tunknown = mk_prim_t "?"
+(* Error code of the conjunction `c1 && c2` of two field constraints, where
+   `k1` and `k2` are the optional error codes of `c1` and `c2` (None meaning
+   the default constraint-failure code 6): `if c1 then k2 else k1` *)
+let join_error_codes (c1:expr) (k1 k2:option expr) : option expr =
+  match k1, k2 with
+  | None, None -> None
+  | _ ->
+    let default_code = with_range (Constant (Int UInt8 6)) c1.range in
+    let get (k:option expr) = match k with Some k -> k | None -> default_code in
+    Some (with_range (App IfThenElse [c1; get k2; get k1]) c1.range)
+
 let unit_atomic_field rng = 
     let dummy_identifier = with_range (to_ident' "_empty_") rng in
     let f = {
@@ -1524,7 +1537,8 @@ let unit_atomic_field rng =
          field_constraint=None;
          field_bitwidth=None;
          field_action=None;
-         field_probe=None
+         field_probe=None;
+         field_error_code=None
         } in
     with_range f rng
 
@@ -1660,7 +1674,8 @@ and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
       field_array_opt = subst_field_array s sf.field_array_opt;
       field_constraint = map_opt (subst_expr s) sf.field_constraint;
       field_action = a;
-      field_probe = pa
+      field_probe = pa;
+      field_error_code = map_opt (subst_expr s) sf.field_error_code
   } in
   { f with v = sf }  
 and subst_record (s:subst) (f:record) : ML record   

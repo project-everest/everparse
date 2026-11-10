@@ -76,10 +76,10 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
       | Some (Inr bf) -> bf.v
       | _ -> failwith "Must have elaborated bitfield"
     in
-    let field_dependence, field_constraint, field_action, subst =
+    let field_dependence, (field_constraint, field_error_code), field_action, subst =
       List.fold_left
-        (fun (acc:(bool & _ & option (action & bool) & _)) f ->
-          let (dep, acc_constraint, acc_action, subst) = acc in
+        (fun (acc:(bool & (option expr & option expr) & option (action & bool) & _)) f ->
+          let (dep, (acc_constraint, acc_error_code), acc_action, subst) = acc in
           let f = f.v in
           let acc_action, acc_dep = 
             match acc_action, f.field_action with
@@ -96,11 +96,13 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
                 failwith "Multiple, potentially failing actions are not supported on bitfields"
           in
           let dep = dep || acc_dep || f.field_dependence in
-          let acc_constraint =
+          let acc_constraint_and_error_code =
             match f.field_constraint, acc_constraint with
-            | None, _ -> acc_constraint
-            | Some _, None -> f.field_constraint
-            | Some c, Some acc -> Some (mk_e (App And [acc; c]))
+            | None, _ -> acc_constraint, acc_error_code
+            | Some _, None -> f.field_constraint, f.field_error_code
+            | Some c, Some acc ->
+              Some (mk_e (App And [acc; c])),
+              Ast.join_error_codes acc acc_error_code f.field_error_code
           in
           let bf_exp =
             App
@@ -110,8 +112,8 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
               mk_e (Constant (Int UInt32 (bitfield_attrs f).bitfield_to))]
           in
           let subst = (f.field_ident, mk_e bf_exp) :: subst in
-          dep, acc_constraint, acc_action, subst)
-       (false, None, None, [])
+          dep, acc_constraint_and_error_code, acc_action, subst)
+       (false, (None, None), None, [])
        fields
     in
     let struct_field = {
@@ -122,7 +124,8 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
       field_constraint = field_constraint;
       field_bitwidth = None;
       field_action = field_action;
-      field_probe = None
+      field_probe = None;
+      field_error_code = field_error_code
     } in
     let af = with_dummy_range struct_field in
     with_dummy_range (AtomicField af),

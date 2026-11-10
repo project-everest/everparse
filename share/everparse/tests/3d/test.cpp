@@ -44,7 +44,9 @@ int main(int argc, char** argv) {
     {7, "unexpected padding"},
     {8, "probe failed"},
     {9, "unspecified"},
-    {255, "unspecified"}
+    {127, "unspecified"},
+    {128, "user-defined constraint failed"},
+    {255, "user-defined constraint failed"}
   };
   for (const auto &error : errors) {
     if (std::strcmp(EverParseErrorReasonOfResult(error.code), error.reason) != 0) {
