@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
 RUN apt-get update && sudo apt-get install --yes --no-install-recommends \
     cmake \
     clang \
+    python3 \
     python3-pip \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
