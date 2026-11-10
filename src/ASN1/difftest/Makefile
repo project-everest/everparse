@@ -89,6 +89,9 @@ $(MANIFEST): $(VECTORS) features.json report.py gen/mutate.py
 $(OUT)/ours.jsonl: $(MANIFEST) $(OURS)
 	$(OURS) DIFFTEST $(MANIFEST) $@
 
+# The verdicts of the spec runner, also the oracle of ../pulse
+ours: $(OUT)/ours.jsonl
+
 # The stamp is only written once the pinned requirements are installed
 # (the venv python itself may be a symlink to the system interpreter).
 VENV_STAMP := $(VENV_DIR)/.installed
@@ -146,4 +149,4 @@ clean:
 	rm -rf $(OUT) $(VENV_DIR)
 	-cd $(RUST_DIR) && $(CARGO) clean
 
-.PHONY: all venv build-rust run run-new check check-all rebaseline clean
+.PHONY: all ours venv build-rust run run-new check check-all rebaseline clean

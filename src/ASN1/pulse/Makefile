@@ -64,7 +64,7 @@ test-oracle-%: $(C_OUTPUT_DIR)/test_%.exe
 
 $(addprefix test-oracle-,$(C_TESTS)): $(DIFFTEST_OUT)/ours.jsonl
 $(DIFFTEST_OUT)/ours.jsonl: FORCE
-	$(MAKE) -C ../difftest out/ours.jsonl
+	+$(MAKE) -C ../difftest ours
 FORCE:
 
 test-oracle: $(addprefix test-oracle-,$(C_TESTS))
