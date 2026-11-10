@@ -1,0 +1,57 @@
+opam-version: "2.0"
+maintainer: "protz@microsoft.com"
+authors: "Jonathan Protzenko <jonathan.protzenko@gmail.com>"
+homepage: "https://github.com/fstarlang/karamel"
+license: "Apache-2.0"
+depends: [
+  "ocaml" {>= "4.10.0"}
+  "ocamlfind" {build}
+  "batteries"
+  "zarith"
+  "stdint"
+  "yojson"
+  "ocamlbuild" {build}
+  "fileutils"
+  "menhir" {>= "20161115"}
+  "pprint"
+  "process"
+  "fix"
+  "visitors"
+  "wasm" {>= "2.0.0"}
+  "ppx_deriving"
+  "ppx_deriving_yojson"
+  "fstar"
+  "ctypes"
+  "ctypes-foreign"
+  "uucp"
+]
+# require modern GNU make (brew package 'make') on mac
+depexts: ["coreutils" "make"] {os = "macos" & os-distribution = "homebrew"}
+build: [
+  # Makefile requires modern make - build with gmake on mac, disable logging to avoid sandbox issues
+  ["gmake" "PREFIX=%{prefix}%" "NOSHORTLOG=1"] { os = "macos" }
+  [make "PREFIX=%{prefix}%"] { os != "macos" }
+]
+install: [
+  ["gmake" "PREFIX=%{prefix}%" "NOSHORTLOG=1" "install"] { os = "macos" }
+  [make "PREFIX=%{prefix}%" "install"] { os != "macos" }
+]
+remove: [
+  [ "rm" "-rf"
+      "%{prefix}%/lib/krml"
+      "%{prefix}%/include/krml"
+      "%{prefix}%/doc/karamel"
+      "%{prefix}%/bin/krml"
+      "%{prefix}%/share/krml" ]
+]
+dev-repo: "git+https://github.com/FStarLang/karamel"
+bug-reports: "https://github.com/FStarLang/karamel/issues"
+synopsis: "A compiler from Low*, a low-level subset of F*, to C"
+flags: light-uninstall
+url {
+  src: "https://github.com/FStarLang/karamel/archive/refs/tags/v1.0.0.zip"
+  checksum: [
+    "md5=683260ca8947fcb0ce134cb8385193fc"
+    "sha512=d63930487484d82114c7621a34fd31923bacb735aafdb6c9fe4d6de45c01b6a31cff235abcc2e22d2a1445b9b17d321023d2e731c725986021d371be36a6df6b"
+  ]
+}
