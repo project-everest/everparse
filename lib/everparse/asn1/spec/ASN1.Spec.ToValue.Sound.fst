@@ -767,7 +767,9 @@ let rec any_vmachine (its: list gen_decorated_parser_twin) (#t: Type) (sfx: pars
       end
     | Some id ->
       and_then_eq (any_guard_p st) pb b;
+      assert (parse (any_guard_p st) b == Some (id, 0));
       Seq.lemma_eq_elim b (Seq.slice b 0 (Seq.length b));
+      assert (parse (make_asn1_sequence_any_parser' its sfx st) b == parse (pb id) b);
       any_vtwin its sfx sv id b
 
 and any_vtwin (its: list gen_decorated_parser_twin) (#t: Type) (sfx: parser_twin asn1_weak_parser_kind t) (sv: t -> GTot (list asn1_value)) (id: asn1_id_t) (b: bytes)
@@ -809,6 +811,7 @@ and any_vtwin (its: list gen_decorated_parser_twin) (#t: Type) (sfx: parser_twin
       let p1 = weaken asn1_strong_parser_kind (parse_ret defv) in
       let p2 = make_asn1_sequence_any_parser' [] sfx (Some id) in
       nondep_then_eq p1 p2 b;
+      assert (parse p1 b == Some (defv, 0));
       Seq.lemma_eq_elim b (Seq.slice b 0 (Seq.length b));
       any_vmachine [] sfx sv (Some id) b
     end
@@ -839,6 +842,7 @@ and any_vtwin (its: list gen_decorated_parser_twin) (#t: Type) (sfx: parser_twin
       let p1 = weaken asn1_strong_parser_kind (parse_ret defv) in
       let p2 = make_asn1_sequence_any_parser' tl sfx (Some id) in
       nondep_then_eq p1 p2 b;
+      assert (parse p1 b == Some (defv, 0));
       Seq.lemma_eq_elim b (Seq.slice b 0 (Seq.length b));
       any_vmachine tl sfx sv (Some id) b
     end
