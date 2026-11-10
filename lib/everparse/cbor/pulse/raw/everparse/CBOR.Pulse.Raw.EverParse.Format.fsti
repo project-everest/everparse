@@ -47,7 +47,22 @@ val validate_raw_data_item (_: unit) : validator #raw_data_item #parse_raw_data_
 
 val validate_raw_data_item_map_length_bounded (n: SZ.t) : validator #(LowParse.Spec.Combinators.parse_filter_refine (map_length_bounded (SZ.v n))) #(LowParse.Spec.Combinators.parse_filter_kind parse_raw_data_item_kind) (LowParse.Spec.Combinators.parse_filter parse_raw_data_item (map_length_bounded (SZ.v n)))
 
-val validate_raw_data_item_bounded (map_depth_bound: SZ.t) (map_length_bound: SZ.t) : validator #(LowParse.Spec.Combinators.parse_filter_refine (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))) #(LowParse.Spec.Combinators.parse_filter_kind parse_raw_data_item_kind) (LowParse.Spec.Combinators.parse_filter parse_raw_data_item (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound)))
+(* Every map in a raw data item has at most `n` entries, maps are
+   nested at most `d` levels deep, and, if `kb == Some k`, maps nested
+   in map keys are nested at most `k` levels deep *)
+
+let raw_data_item_bounded_key
+  (d n: nat)
+  (kb: option SZ.t)
+  (x: raw_data_item)
+: Tot bool
+= raw_data_item_bounded d n x && (
+    match kb with
+    | None -> true
+    | Some k -> CBOR.Spec.Raw.Base.map_key_depth x <= SZ.v k
+  )
+
+val validate_raw_data_item_bounded (map_depth_bound: SZ.t) (map_length_bound: SZ.t) (map_key_bound: option SZ.t) : validator #(LowParse.Spec.Combinators.parse_filter_refine (raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)) #(LowParse.Spec.Combinators.parse_filter_kind parse_raw_data_item_kind) (LowParse.Spec.Combinators.parse_filter parse_raw_data_item (raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound))
 
 val jump_raw_data_item (_: unit) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
 

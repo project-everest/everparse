@@ -7,8 +7,10 @@ and, optionally, map key depth ≤ K),
 and none of them allocates (except the `*_alloc` variants below).
 The optional map key depth bound `K` is passed right after `N`: in C as
 `check_map_key_bound, map_key_bound` (written `kb` below), in Rust as
-`map_key_bound: Option<usize>`. It is checked by a separate O(L·D) pass
-after validation, so it does not change the complexities below.
+`map_key_bound: Option<usize>`. It is checked during validation, in the
+same pass as the map depth and length bounds (map keys are validated with
+map depth budget `min(K, d - 1)` instead of `d - 1`), so it does not change
+the complexities below.
 
 | variant | entry point | scratch provided by the caller | key comparisons |
 |---|---|---|---|

@@ -212,19 +212,3 @@ val impl_check_valid
 : impl_fun_with_invariant_t #_
     (check_valid data_model (option_sz_v map_bound) strict_bound_check)
     emp
-
-val impl_check_map_key_depth
-  (bound: SZ.t)
-  (l1: S.slice byte)
-  (#p1: perm)
-  (#gl1: Ghost.erased raw_data_item)
-: stt bool
-(requires
-  pts_to_serialized serialize_raw_data_item l1 #p1 gl1
-)
-(ensures fun res ->
-  pts_to_serialized serialize_raw_data_item l1 #p1 gl1 **
-  pure (
-    res == (map_key_depth gl1 <= SZ.v bound)
-  )
-)

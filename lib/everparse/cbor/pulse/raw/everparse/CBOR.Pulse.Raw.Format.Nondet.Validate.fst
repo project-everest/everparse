@@ -94,41 +94,6 @@ ensures
   }
 }
 
-fn check_map_key_bound_after_validate
-  (map_key_bound: option SZ.t)
-  (input: slice U8.t)
-  (off: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased (Seq.seq U8.t))
-requires
-  (pts_to input #pm v ** pure (
-    LowParse.Pulse.Base.validator_success CBOR.Spec.Raw.EverParse.parse_raw_data_item 0sz v off
-  ))
-returns res: bool
-ensures
-  (pts_to input #pm v ** pure (
-    Some? (LowParse.Spec.Base.parse CBOR.Spec.Raw.EverParse.parse_raw_data_item v) /\
-    res == map_key_depth_bounded_opt map_key_bound (fst (Some?.v (LowParse.Spec.Base.parse CBOR.Spec.Raw.EverParse.parse_raw_data_item v)))
-  ))
-{
-  Seq.slice_length v;
-  match map_key_bound {
-    None -> {
-      true
-    }
-    Some kb -> {
-      let input' = LowParse.Pulse.Base.peek_trade_gen
-        CBOR.Spec.Raw.EverParse.serialize_raw_data_item
-        input
-        0sz
-        off;
-      let res = CBOR.Pulse.Raw.EverParse.Nondet.Gen.impl_check_map_key_depth kb input';
-      Trade.elim _ _;
-      res
-    }
-  }
-}
-
 fn cbor_validate_nondet_bounded
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
@@ -146,10 +111,10 @@ ensures
 {
   LowParse.Spec.Combinators.parse_filter_eq
     CBOR.Spec.Raw.EverParse.parse_raw_data_item
-    (CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+    (EP.raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)
     v;
   let mut poff = 0sz;
-  let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound input poff;
+  let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound map_key_bound input poff;
   if (res) {
     let off = !poff;
     let input' = LowParse.Pulse.Base.peek_trade_gen
@@ -163,12 +128,7 @@ ensures
     Trade.elim _ _;
     CBOR.Spec.Raw.Nondet.check_valid_correct basic_data_model None false v';
     if (res) {
-      let ok = check_map_key_bound_after_validate map_key_bound input off;
-      if (ok) {
-        off
-      } else {
-        0sz
-      }
+      off
     } else {
       0sz
     }
@@ -202,22 +162,17 @@ ensures
   } else {
     LowParse.Spec.Combinators.parse_filter_eq
       CBOR.Spec.Raw.EverParse.parse_raw_data_item
-      (CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+      (EP.raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)
       v;
     Seq.slice_length v;
     let mut poff = 0sz;
-    let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound input poff;
+    let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound map_key_bound input poff;
     if (res) {
       let off = !poff;
       let x : Ghost.erased CBOR.Spec.Raw.Base.raw_data_item = Ghost.hide (fst (Some?.v (LowParse.Spec.Base.parse CBOR.Spec.Raw.EverParse.parse_raw_data_item v)));
       let ok = CBOR.Pulse.Raw.EverParse.DupCheck.Top.check_dups_top input map_depth_bound map_length_bound scratch x (Ghost.hide (SZ.v off));
       if (ok) {
-        let ok' = check_map_key_bound_after_validate map_key_bound input off;
-        if (ok') {
-          off
-        } else {
-          0sz
-        }
+        off
       } else {
         0sz
       }
@@ -255,22 +210,17 @@ ensures
   } else {
     LowParse.Spec.Combinators.parse_filter_eq
       CBOR.Spec.Raw.EverParse.parse_raw_data_item
-      (CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+      (EP.raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)
       v;
     Seq.slice_length v;
     let mut poff = 0sz;
-    let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound input poff;
+    let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound map_key_bound input poff;
     if (res) {
       let off = !poff;
       let x : Ghost.erased CBOR.Spec.Raw.Base.raw_data_item = Ghost.hide (fst (Some?.v (LowParse.Spec.Base.parse CBOR.Spec.Raw.EverParse.parse_raw_data_item v)));
       let ok = CBOR.Pulse.Raw.EverParse.DupCheck.Top.check_dups_top_hash input map_depth_bound map_length_bound k0 k1 scratch hash_scratch x (Ghost.hide (SZ.v off));
       if (ok) {
-        let ok' = check_map_key_bound_after_validate map_key_bound input off;
-        if (ok') {
-          off
-        } else {
-          0sz
-        }
+        off
       } else {
         0sz
       }
