@@ -91,7 +91,7 @@ static size_t cbor_v_validate(uint8_t *bytes, size_t len) {
   size_t l = len;
   cbor_t dest;
   if (!cbor_nondet_parse_bounded(MAP_DEPTH_BOUND, MAP_LENGTH_BOUND,
-                                 &p, &l, &dest)) return 0;
+                                 false, 0, &p, &l, &dest)) return 0;
   return len - l;
 #else
   uint8_t *p = bytes;

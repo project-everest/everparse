@@ -55,11 +55,15 @@ static unsigned failures = 0;
   fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__); \
   fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } } while (0)
 
+/* Map key depth bound passed to all variants (none by default). */
+static bool kbc = false;
+static size_t kb = 0;
+
 /* Returns the number of bytes consumed, 0 on failure. */
 static size_t ref(size_t D, size_t N, uint8_t *b, size_t len) {
   uint8_t *p = b; size_t l = len; cbor_raw dest;
   forbid_alloc = 1;
-  bool r = cbor_nondet_parse_bounded(D, N, &p, &l, &dest);
+  bool r = cbor_nondet_parse_bounded(D, N, kbc, kb, &p, &l, &dest);
   forbid_alloc = 0;
   return r ? len - l : 0;
 }
@@ -68,7 +72,7 @@ static size_t sorted(size_t D, size_t N, uint8_t *b, size_t len,
                      size_t *scratch, size_t slen) {
   uint8_t *p = b; size_t l = len; cbor_raw dest;
   forbid_alloc = 1;
-  bool r = cbor_nondet_parse_bounded_sort(D, N, scratch, slen, &p, &l, &dest);
+  bool r = cbor_nondet_parse_bounded_sort(D, N, kbc, kb, scratch, slen, &p, &l, &dest);
   forbid_alloc = 0;
   CHECK(r == (l < len), "inconsistent result");
   return r ? len - l : 0;
@@ -79,9 +83,9 @@ static size_t hashed(size_t D, size_t N, uint64_t k0, uint64_t k1, int rnd,
                      uint64_t *hs, size_t hlen) {
   uint8_t *p = b; size_t l = len; cbor_raw dest;
   forbid_alloc = 1;
-  bool r = rnd ? cbor_nondet_parse_bounded_hash_random(D, N, scratch, slen, hs,
-                                                       hlen, &p, &l, &dest)
-               : cbor_nondet_parse_bounded_hash(D, N, k0, k1, scratch, slen,
+  bool r = rnd ? cbor_nondet_parse_bounded_hash_random(D, N, kbc, kb, scratch, slen,
+                                                       hs, hlen, &p, &l, &dest)
+               : cbor_nondet_parse_bounded_hash(D, N, kbc, kb, k0, k1, scratch, slen,
                                                 hs, hlen, &p, &l, &dest);
   forbid_alloc = 0;
   CHECK(r == (l < len), "inconsistent result");
@@ -97,9 +101,9 @@ static size_t allocd(int variant, size_t D, size_t N, uint64_t k0, uint64_t k1,
   uint8_t *p = b; size_t l = len; cbor_raw dest;
   n_malloc = n_malloc_ok = n_free = 0; fail_at = fail;
   forbid_alloc = 2;
-  bool r = variant == 0 ? cbor_nondet_parse_bounded_sort_alloc(D, N, &p, &l, &dest)
-         : variant == 1 ? cbor_nondet_parse_bounded_hash_alloc(D, N, k0, k1, &p, &l, &dest)
-         : cbor_nondet_parse_bounded_hash_alloc_random(D, N, &p, &l, &dest);
+  bool r = variant == 0 ? cbor_nondet_parse_bounded_sort_alloc(D, N, kbc, kb, &p, &l, &dest)
+         : variant == 1 ? cbor_nondet_parse_bounded_hash_alloc(D, N, kbc, kb, k0, k1, &p, &l, &dest)
+         : cbor_nondet_parse_bounded_hash_alloc_random(D, N, kbc, kb, &p, &l, &dest);
   forbid_alloc = 0;
   CHECK(r == (l < len), "alloc: inconsistent result");
   CHECK(n_free == n_malloc_ok, "alloc: %u allocations, %u frees", n_malloc_ok, n_free);
@@ -168,17 +172,17 @@ static void test_scratch_ok(void) {
   CHECK(cbor_nondet_bounded_sort_scratch_ok(1, M / 3, M), "max");
   /* NULL scratch is rejected */
   uint8_t b[1] = { 0 }; uint8_t *p = b; size_t l = 1; cbor_raw dest;
-  CHECK(!cbor_nondet_parse_bounded_sort(0, 0, NULL, 0, &p, &l, &dest), "NULL");
+  CHECK(!cbor_nondet_parse_bounded_sort(0, 0, false, 0, NULL, 0, &p, &l, &dest), "NULL");
   CHECK(cbor_nondet_bounded_hash_scratch_ok(0, M, M, M), "hash D = 0");
   CHECK(!cbor_nondet_bounded_hash_scratch_ok(0, M, M, M - 1), "hash D = 0, hs");
   CHECK(!cbor_nondet_bounded_hash_scratch_ok(M, M, M, M), "hash overflow");
   CHECK(!cbor_nondet_bounded_hash_scratch_ok(1, M / 4 + 1, M, M), "hash overflow 2");
   CHECK(cbor_nondet_bounded_hash_scratch_ok(1, M / 4, M, M), "hash max");
   size_t sc[1]; uint64_t hs[1];
-  CHECK(!cbor_nondet_parse_bounded_hash(0, 0, 0, 0, NULL, 0, hs, 0, &p, &l, &dest), "hash NULL 1");
-  CHECK(!cbor_nondet_parse_bounded_hash(0, 0, 0, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 2");
-  CHECK(!cbor_nondet_parse_bounded_hash_random(0, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 3");
-  CHECK(cbor_nondet_parse_bounded_hash(0, 0, 0, 0, sc, 0, hs, 0, &p, &l, &dest), "hash D = 0 ok");
+  CHECK(!cbor_nondet_parse_bounded_hash(0, 0, false, 0, 0, 0, NULL, 0, hs, 0, &p, &l, &dest), "hash NULL 1");
+  CHECK(!cbor_nondet_parse_bounded_hash(0, 0, false, 0, 0, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 2");
+  CHECK(!cbor_nondet_parse_bounded_hash_random(0, 0, false, 0, sc, 0, NULL, 0, &p, &l, &dest), "hash NULL 3");
+  CHECK(cbor_nondet_parse_bounded_hash(0, 0, false, 0, 0, 0, sc, 0, hs, 0, &p, &l, &dest), "hash D = 0 ok");
   /* the *_alloc variants fail without allocating if the scratch size
      overflows, and fail if the allocation fails (here, because it
      exceeds the address space), although the input is valid */
@@ -246,6 +250,38 @@ static void test_cases(void) {
   o = emit_head(b, 0, 5, 1); o = emit_head(b, o, 0, 1); o = emit_head(b, o, 0, 0);
   b[o] = 0;
   { size_t r = run(1, 1, b, o + 1); CHECK(r == o, "trailing: %zu", r); }
+  /* map key depth bound: {{1: 0}: 0, 2: 0} has map depth 2, map key
+     depth 1 */
+  o = emit_head(b, 0, 5, 2);
+  o = emit_head(b, o, 5, 1); o = emit_head(b, o, 0, 1); o = emit_head(b, o, 0, 0);
+  o = emit_head(b, o, 0, 0);
+  o = emit_head(b, o, 0, 2); o = emit_head(b, o, 0, 0);
+  kbc = true; kb = 0;
+  CASE("map-key-bound-0", false, 2, 2);
+  kb = 1;
+  CASE("map-key-bound-1", true, 2, 2);
+  kbc = false; kb = 0;
+  CASE("map-key-bound-ignored", true, 2, 2);
+  /* {0: {{1: 0}: 0}}: the map with a map key is a map value; its map
+     key depth is still 1 */
+  o = emit_head(b, 0, 5, 1); o = emit_head(b, o, 0, 0);
+  o = emit_head(b, o, 5, 1);
+  o = emit_head(b, o, 5, 1); o = emit_head(b, o, 0, 1); o = emit_head(b, o, 0, 0);
+  o = emit_head(b, o, 0, 0);
+  kbc = true; kb = 0;
+  CASE("nested-map-key-bound-0", false, 3, 1);
+  kb = 1;
+  CASE("nested-map-key-bound-1", true, 3, 1);
+  /* {{{1: 0}: 0}: 0} has map key depth 2 */
+  o = emit_head(b, 0, 5, 1);
+  o = emit_head(b, o, 5, 1);
+  o = emit_head(b, o, 5, 1); o = emit_head(b, o, 0, 1); o = emit_head(b, o, 0, 0);
+  o = emit_head(b, o, 0, 0);
+  o = emit_head(b, o, 0, 0);
+  CASE("deep-map-key-bound-1", false, 3, 1);
+  kb = 2;
+  CASE("deep-map-key-bound-2", true, 3, 1);
+  kbc = false; kb = 0;
 #undef CASE
 }
 

@@ -12,20 +12,27 @@ extern "C" {
 #include "CBORNondetType.h"
 #include <everparse/CBORNondet.h>
 
+#define FStar_Pervasives_Native_None 0
+#define FStar_Pervasives_Native_Some 1
+
+typedef uint8_t FStar_Pervasives_Native_option__size_t_tags;
+
+typedef struct FStar_Pervasives_Native_option__size_t_s
+{
+  FStar_Pervasives_Native_option__size_t_tags tag;
+  size_t v;
+}
+FStar_Pervasives_Native_option__size_t;
+
 bool
 CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
   size_t map_length_bound,
+  FStar_Pervasives_Native_option__size_t map_key_bound,
   size_t d,
   size_t n,
   CBOR_Pulse_Raw_Slice_byte_slice input,
   size_t *poffset
 );
-
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t
-FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags;
 
 bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out);
 
@@ -38,17 +45,10 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
 
 typedef struct FStar_Pervasives_Native_option__bool_s
 {
-  FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags tag;
+  FStar_Pervasives_Native_option__size_t_tags tag;
   bool v;
 }
 FStar_Pervasives_Native_option__bool;
-
-typedef struct FStar_Pervasives_Native_option__size_t_s
-{
-  FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags tag;
-  size_t v;
-}
-FStar_Pervasives_Native_option__size_t;
 
 bool
 CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(

@@ -57,12 +57,14 @@ static inline int cbor_nondet_hash_random_key(uint64_t k[2]) {
 #endif
 
 static inline bool cbor_nondet_parse_bounded_hash_random(
-    size_t map_depth_bound, size_t map_length_bound, size_t *scratch,
+    size_t map_depth_bound, size_t map_length_bound, bool check_map_key_bound,
+    size_t map_key_bound, size_t *scratch,
     size_t scratch_len, uint64_t *hash_scratch, size_t hash_scratch_len,
     uint8_t **pinput, size_t *plen, cbor_raw *dest) {
   uint64_t k[2];
   if (CBOR_NONDET_HASH_RANDOM_KEY(k))
     return cbor_nondet_parse_bounded_hash(map_depth_bound, map_length_bound,
+                                          check_map_key_bound, map_key_bound,
                                           k[0], k[1], scratch, scratch_len,
                                           hash_scratch, hash_scratch_len,
                                           pinput, plen, dest);
@@ -71,6 +73,7 @@ static inline bool cbor_nondet_parse_bounded_hash_random(
                                            scratch_len, hash_scratch_len))
     return false;
   return cbor_nondet_parse_bounded_sort(map_depth_bound, map_length_bound,
+                                        check_map_key_bound, map_key_bound,
                                         scratch, scratch_len, pinput, plen,
                                         dest);
 }
@@ -80,16 +83,16 @@ static inline bool cbor_nondet_parse_bounded_hash_random(
  * cbor_nondet_parse_bounded_{hash,sort}_alloc (which may also fail
  * because of allocation failure.) */
 static inline bool cbor_nondet_parse_bounded_hash_alloc_random(
-    size_t map_depth_bound, size_t map_length_bound, uint8_t **pinput,
-    size_t *plen, cbor_raw *dest) {
+    size_t map_depth_bound, size_t map_length_bound, bool check_map_key_bound,
+    size_t map_key_bound, uint8_t **pinput, size_t *plen, cbor_raw *dest) {
   uint64_t k[2];
   if (CBOR_NONDET_HASH_RANDOM_KEY(k))
-    return cbor_nondet_parse_bounded_hash_alloc(map_depth_bound,
-                                                map_length_bound, k[0], k[1],
-                                                pinput, plen, dest);
-  return cbor_nondet_parse_bounded_sort_alloc(map_depth_bound,
-                                              map_length_bound, pinput, plen,
-                                              dest);
+    return cbor_nondet_parse_bounded_hash_alloc(
+        map_depth_bound, map_length_bound, check_map_key_bound, map_key_bound,
+        k[0], k[1], pinput, plen, dest);
+  return cbor_nondet_parse_bounded_sort_alloc(
+      map_depth_bound, map_length_bound, check_map_key_bound, map_key_bound,
+      pinput, plen, dest);
 }
 
 #endif

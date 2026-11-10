@@ -7,21 +7,21 @@ fn parse_bounded()
 {
     let input = [0xa1, 0x00, 0xa1, 0x01, 0x02, 0xff];
     let parsed: Option<(CborNondet<'_>, &[u8])> =
-        cbor_nondet_parse_bounded(2, 1, &input);
+        cbor_nondet_parse_bounded(2, 1, None, &input);
     let (object, rem) = parsed.unwrap();
     let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
     assert!(cbor_nondet_get_map_length(map) == 1);
     assert_eq!(rem, &input[5..]);
-    assert!(cbor_nondet_parse_bounded(1, 1, &input).is_none());
-    assert!(cbor_nondet_parse_bounded(2, 0, &input).is_none());
-    assert!(cbor_nondet_parse_bounded(2, 1, &input[..4]).is_none());
-    assert!(cbor_nondet_parse_bounded(2, 1, &[]).is_none());
-    assert!(cbor_nondet_parse_bounded(0, 0, &[0x00]).is_some());
-    assert!(cbor_nondet_parse_bounded(1, 0, &[0xa0]).is_some());
+    assert!(cbor_nondet_parse_bounded(1, 1, None, &input).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 0, None, &input).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 1, None, &input[..4]).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 1, None, &[]).is_none());
+    assert!(cbor_nondet_parse_bounded(0, 0, None, &[0x00]).is_some());
+    assert!(cbor_nondet_parse_bounded(1, 0, None, &[0xa0]).is_some());
 
     let nested_map = [0xa1, 0x00, 0xa2, 0x01, 0x02, 0x03, 0x04];
-    assert!(cbor_nondet_parse_bounded(2, 1, &nested_map).is_none());
-    assert!(cbor_nondet_parse_bounded(2, 2, &nested_map).is_some());
+    assert!(cbor_nondet_parse_bounded(2, 1, None, &nested_map).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 2, None, &nested_map).is_some());
 }
 
 #[test]
@@ -33,41 +33,41 @@ fn parse_bounded_sort()
     assert!(!cbor_nondet_bounded_sort_scratch_ok(usize::MAX, 2, usize::MAX));
     {
         let mut scratch = [0usize; 6];
-        let (object, rem) = cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input).unwrap();
+        let (object, rem) = cbor_nondet_parse_bounded_sort(2, 1, None, &mut scratch, &input).unwrap();
         let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
         assert!(cbor_nondet_get_map_length(map) == 1);
         assert_eq!(rem, &input[5..]);
     }
     let mut scratch = [0usize; 64];
-    assert!(cbor_nondet_parse_bounded_sort(2, 1, &mut scratch[..5], &input).is_none());
-    assert!(cbor_nondet_parse_bounded_sort(1, 1, &mut scratch, &input).is_none());
-    assert!(cbor_nondet_parse_bounded_sort(2, 0, &mut scratch, &input).is_none());
-    assert!(cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input[..4]).is_none());
-    assert!(cbor_nondet_parse_bounded_sort(0, 0, &mut [], &[0x00]).is_some());
+    assert!(cbor_nondet_parse_bounded_sort(2, 1, None, &mut scratch[..5], &input).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(1, 1, None, &mut scratch, &input).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(2, 0, None, &mut scratch, &input).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(2, 1, None, &mut scratch, &input[..4]).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(0, 0, None, &mut [], &[0x00]).is_some());
 
     // the same scratch can be reused while earlier results are alive
     {
-        let (o1, _) = cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input).unwrap();
-        let (o2, _) = cbor_nondet_parse_bounded_sort(2, 1, &mut scratch, &input).unwrap();
+        let (o1, _) = cbor_nondet_parse_bounded_sort(2, 1, None, &mut scratch, &input).unwrap();
+        let (o2, _) = cbor_nondet_parse_bounded_sort(2, 1, None, &mut scratch, &input).unwrap();
         scratch[0] = 0;
         assert!(cbor_nondet_equal(o1, o2));
     }
 
     // {0: 1, 0: 2}: duplicate keys
     let dup = [0xa2, 0x00, 0x01, 0x00, 0x02];
-    assert!(cbor_nondet_parse_bounded_sort(1, 2, &mut scratch, &dup).is_none());
-    assert!(cbor_nondet_parse_bounded(1, 2, &dup).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(1, 2, None, &mut scratch, &dup).is_none());
+    assert!(cbor_nondet_parse_bounded(1, 2, None, &dup).is_none());
     // {0: 1, 1: 2}
     let ok = [0xa2, 0x00, 0x01, 0x01, 0x02];
-    assert!(cbor_nondet_parse_bounded_sort(1, 2, &mut scratch, &ok).is_some());
+    assert!(cbor_nondet_parse_bounded_sort(1, 2, None, &mut scratch, &ok).is_some());
     // {{0: 0, 1: 1}: 0, {1: 1, 0: 0}: 1}: equivalent map keys
     let dup_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x00, 0x01];
-    assert!(cbor_nondet_parse_bounded_sort(2, 2, &mut scratch, &dup_map_keys).is_none());
-    assert!(cbor_nondet_parse_bounded(2, 2, &dup_map_keys).is_none());
+    assert!(cbor_nondet_parse_bounded_sort(2, 2, None, &mut scratch, &dup_map_keys).is_none());
+    assert!(cbor_nondet_parse_bounded(2, 2, None, &dup_map_keys).is_none());
     // {{0: 0, 1: 1}: 0, {1: 1, 0: 1}: 1}
     let ok_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x01, 0x01];
-    assert!(cbor_nondet_parse_bounded_sort(2, 2, &mut scratch, &ok_map_keys).is_some());
-    assert!(cbor_nondet_parse_bounded(2, 2, &ok_map_keys).is_some());
+    assert!(cbor_nondet_parse_bounded_sort(2, 2, None, &mut scratch, &ok_map_keys).is_some());
+    assert!(cbor_nondet_parse_bounded(2, 2, None, &ok_map_keys).is_some());
 }
 
 #[test]
@@ -83,43 +83,43 @@ fn parse_bounded_hash()
         {
             let mut scratch = [0usize; 7];
             let mut hscratch = [0u64; 1];
-            let (object, rem) = cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
+            let (object, rem) = cbor_nondet_parse_bounded_hash(2, 1, None, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
             let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
             assert!(cbor_nondet_get_map_length(map) == 1);
             assert_eq!(rem, &input[5..]);
         }
         let mut scratch = [0usize; 64];
         let mut hscratch = [0u64; 8];
-        assert!(cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch[..6], &mut hscratch, &input).is_none());
-        assert!(cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut [], &input).is_none());
-        assert!(cbor_nondet_parse_bounded_hash(1, 1, k0, k1, &mut scratch, &mut hscratch, &input).is_none());
-        assert!(cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut hscratch, &input[..4]).is_none());
-        assert!(cbor_nondet_parse_bounded_hash(0, 0, k0, k1, &mut [], &mut [], &[0x00]).is_some());
+        assert!(cbor_nondet_parse_bounded_hash(2, 1, None, k0, k1, &mut scratch[..6], &mut hscratch, &input).is_none());
+        assert!(cbor_nondet_parse_bounded_hash(2, 1, None, k0, k1, &mut scratch, &mut [], &input).is_none());
+        assert!(cbor_nondet_parse_bounded_hash(1, 1, None, k0, k1, &mut scratch, &mut hscratch, &input).is_none());
+        assert!(cbor_nondet_parse_bounded_hash(2, 1, None, k0, k1, &mut scratch, &mut hscratch, &input[..4]).is_none());
+        assert!(cbor_nondet_parse_bounded_hash(0, 0, None, k0, k1, &mut [], &mut [], &[0x00]).is_some());
         {
-            let (o1, _) = cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
-            let (o2, _) = cbor_nondet_parse_bounded_hash(2, 1, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
+            let (o1, _) = cbor_nondet_parse_bounded_hash(2, 1, None, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
+            let (o2, _) = cbor_nondet_parse_bounded_hash(2, 1, None, k0, k1, &mut scratch, &mut hscratch, &input).unwrap();
             scratch[0] = 0;
             hscratch[0] = 0;
             assert!(cbor_nondet_equal(o1, o2));
         }
         let dup = [0xa2, 0x00, 0x01, 0x00, 0x02];
-        assert!(cbor_nondet_parse_bounded_hash(1, 2, k0, k1, &mut scratch, &mut hscratch, &dup).is_none());
+        assert!(cbor_nondet_parse_bounded_hash(1, 2, None, k0, k1, &mut scratch, &mut hscratch, &dup).is_none());
         let ok = [0xa2, 0x00, 0x01, 0x01, 0x02];
-        assert!(cbor_nondet_parse_bounded_hash(1, 2, k0, k1, &mut scratch, &mut hscratch, &ok).is_some());
+        assert!(cbor_nondet_parse_bounded_hash(1, 2, None, k0, k1, &mut scratch, &mut hscratch, &ok).is_some());
         // {0: 1, 0x1b0000000000000000: 2}: non-minimal duplicate
         let dup_nm = [0xa2, 0x00, 0x01, 0x1b, 0, 0, 0, 0, 0, 0, 0, 0, 0x02];
-        assert!(cbor_nondet_parse_bounded_hash(1, 2, k0, k1, &mut scratch, &mut hscratch, &dup_nm).is_none());
+        assert!(cbor_nondet_parse_bounded_hash(1, 2, None, k0, k1, &mut scratch, &mut hscratch, &dup_nm).is_none());
         let dup_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x00, 0x01];
-        assert!(cbor_nondet_parse_bounded_hash(2, 2, k0, k1, &mut scratch, &mut hscratch, &dup_map_keys).is_none());
+        assert!(cbor_nondet_parse_bounded_hash(2, 2, None, k0, k1, &mut scratch, &mut hscratch, &dup_map_keys).is_none());
         let ok_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x01, 0x01];
-        assert!(cbor_nondet_parse_bounded_hash(2, 2, k0, k1, &mut scratch, &mut hscratch, &ok_map_keys).is_some());
+        assert!(cbor_nondet_parse_bounded_hash(2, 2, None, k0, k1, &mut scratch, &mut hscratch, &ok_map_keys).is_some());
     }
     let mut scratch = [0usize; 64];
     let mut hscratch = [0u64; 8];
     let dup_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x00, 0x01];
-    assert!(cbor_nondet_parse_bounded_hash_random(2, 2, &mut scratch, &mut hscratch, &dup_map_keys).is_none());
+    assert!(cbor_nondet_parse_bounded_hash_random(2, 2, None, &mut scratch, &mut hscratch, &dup_map_keys).is_none());
     let ok_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x01, 0x01];
-    assert!(cbor_nondet_parse_bounded_hash_random(2, 2, &mut scratch, &mut hscratch, &ok_map_keys).is_some());
+    assert!(cbor_nondet_parse_bounded_hash_random(2, 2, None, &mut scratch, &mut hscratch, &ok_map_keys).is_some());
 }
 
 #[test]
@@ -130,14 +130,20 @@ fn parse_bounded_alloc()
     let ok = [0xa2, 0x00, 0x01, 0x01, 0x02];
     let dup_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x00, 0x01];
     let ok_map_keys = [0xa2, 0xa2, 0x00, 0x00, 0x01, 0x01, 0x00, 0xa2, 0x01, 0x01, 0x00, 0x01, 0x01];
-    type Parse = Box<dyn for<'a> Fn(usize, usize, &'a [u8]) -> Option<(CborNondet<'a>, &'a [u8])>>;
-    let parsers: [Parse; 4] = [
+    type ParseK = Box<dyn for<'a> Fn(usize, usize, Option<usize>, &'a [u8]) -> Option<(CborNondet<'a>, &'a [u8])>>;
+    let parsers: [ParseK; 4] = [
         Box::new(cbor_nondet_parse_bounded_sort_alloc),
-        Box::new(|d, n, i| cbor_nondet_parse_bounded_hash_alloc(d, n, 0, 0, i)),
-        Box::new(|d, n, i| cbor_nondet_parse_bounded_hash_alloc(d, n, 0x0706050403020100, 0x0f0e0d0c0b0a0908, i)),
+        Box::new(|d, n, k, i| cbor_nondet_parse_bounded_hash_alloc(d, n, k, 0, 0, i)),
+        Box::new(|d, n, k, i| cbor_nondet_parse_bounded_hash_alloc(d, n, k, 0x0706050403020100, 0x0f0e0d0c0b0a0908, i)),
         Box::new(cbor_nondet_parse_bounded_hash_alloc_random),
     ];
-    for parse in parsers.iter() {
+    for parse_k in parsers.iter() {
+        let parse = |d, n, i| parse_k(d, n, None, i);
+        // {{1: 0}: 0, 2: 0}: map key depth 1
+        let map_key = [0xa2, 0xa1, 0x01, 0x00, 0x00, 0x02, 0x00];
+        assert!(parse_k(2, 2, Some(0), &map_key).is_none());
+        assert!(parse_k(2, 2, Some(1), &map_key).is_some());
+        assert!(parse_k(2, 2, None, &map_key).is_some());
         let (object, rem) = parse(2, 1, &input).unwrap();
         let Map { _0: map } = cbor_nondet_destruct(object) else { panic!("Map expected!"); };
         assert!(cbor_nondet_get_map_length(map) == 1);
@@ -262,4 +268,33 @@ fn test_on(test: CborNondet)
 
     // Alternatively, check with the cbornondet equality comparison
     assert!(cbor_nondet_equal(bar_value, cbor_nondet_mk_int64(NegInt64, 42)));
+}
+
+#[test]
+fn parse_bounded_map_key_bound()
+{
+    // {{1: 0}: 0, 2: 0}: map depth 2, map key depth 1
+    let map_key = [0xa2, 0xa1, 0x01, 0x00, 0x00, 0x02, 0x00];
+    // {0: {{1: 0}: 0}}: map key depth 1, in a map value
+    let nested = [0xa1, 0x00, 0xa1, 0xa1, 0x01, 0x00, 0x00];
+    // {{{1: 0}: 0}: 0}: map key depth 2
+    let deep = [0xa1, 0xa1, 0xa1, 0x01, 0x00, 0x00, 0x00];
+    let cases: [(&[u8], usize, usize, usize); 3] = [(&map_key, 2, 2, 1), (&nested, 3, 1, 1), (&deep, 3, 1, 2)];
+    let mut scratch = [0usize; 3 * 2 * 3];
+    let mut hscratch = [0u64; 2];
+    let mut hs = [0usize; 3 * 2 * 3 + 2];
+    for (input, d, n, k) in cases {
+        for kb in [None, Some(k - 1), Some(k), Some(k + 1)] {
+            let ok = kb.map_or(true, |kb| k <= kb);
+            assert_eq!(cbor_nondet_parse_bounded(d, n, kb, input).is_some(), ok);
+            assert_eq!(cbor_nondet_parse_bounded_sort(d, n, kb, &mut scratch, input).is_some(), ok);
+            assert_eq!(cbor_nondet_parse_bounded_hash(d, n, kb, 1, 2, &mut hs, &mut hscratch, input).is_some(), ok);
+            assert_eq!(cbor_nondet_parse_bounded_hash_random(d, n, kb, &mut hs, &mut hscratch, input).is_some(), ok);
+            assert_eq!(cbor_nondet_parse_bounded_sort_alloc(d, n, kb, input).is_some(), ok);
+            assert_eq!(cbor_nondet_parse_bounded_hash_alloc(d, n, kb, 1, 2, input).is_some(), ok);
+            assert_eq!(cbor_nondet_parse_bounded_hash_alloc_random(d, n, kb, input).is_some(), ok);
+        }
+        // the map key depth bound does not relax the other bounds
+        assert!(cbor_nondet_parse_bounded(d - 1, n, None, input).is_none());
+    }
 }

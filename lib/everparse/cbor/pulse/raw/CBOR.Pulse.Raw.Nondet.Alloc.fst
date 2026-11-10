@@ -87,6 +87,7 @@ fn cbor_nondet_validate_bounded_sort_alloc_c
 =
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (input: S.slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
@@ -106,7 +107,7 @@ fn cbor_nondet_validate_bounded_sort_alloc_c
       } else {
         rewrite (AP.pts_to_or_null p vp) as (AP.pts_to p vp);
         let sc = S.arrayptr_to_slice_intro p (SZ.uint64_to_sizet c);
-        let res = validate map_depth_bound map_length_bound sc input;
+        let res = validate map_depth_bound map_length_bound map_key_bound sc input;
         S.arrayptr_to_slice_elim sc;
         CA.cbor_nondet_free_size_t p;
         res
@@ -123,6 +124,7 @@ fn cbor_nondet_validate_bounded_hash_alloc_c
 =
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (k0: U64.t)
   (k1: U64.t)
   (input: S.slice U8.t)
@@ -160,7 +162,7 @@ fn cbor_nondet_validate_bounded_hash_alloc_c
               rewrite (AP.pts_to_or_null hp vhp) as (AP.pts_to hp vhp);
               let sc = S.arrayptr_to_slice_intro p (SZ.uint64_to_sizet c);
               let hsc = S.arrayptr_to_slice_intro hp (SZ.uint64_to_sizet hc);
-              let res = validate map_depth_bound map_length_bound k0 k1 sc hsc input;
+              let res = validate map_depth_bound map_length_bound map_key_bound k0 k1 sc hsc input;
               S.arrayptr_to_slice_elim hsc;
               S.arrayptr_to_slice_elim sc;
               CA.cbor_nondet_free_uint64_t hp;
@@ -184,6 +186,7 @@ fn cbor_nondet_validate_bounded_sort_alloc_rust
 =
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (input: S.slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
@@ -200,7 +203,7 @@ fn cbor_nondet_validate_bounded_sort_alloc_rust
         }
         Some sc -> {
           unfold (RA.cbor_nondet_alloc_post RA.cbor_nondet_freeable_usize c (Some sc));
-          let res = validate map_depth_bound map_length_bound sc input;
+          let res = validate map_depth_bound map_length_bound map_key_bound sc input;
           RA.cbor_nondet_free_usize sc;
           res
         }
@@ -217,6 +220,7 @@ fn cbor_nondet_validate_bounded_hash_alloc_rust
 =
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (k0: U64.t)
   (k1: U64.t)
   (input: S.slice U8.t)
@@ -248,7 +252,7 @@ fn cbor_nondet_validate_bounded_hash_alloc_rust
                 }
                 Some hsc -> {
                   unfold (RA.cbor_nondet_alloc_post RA.cbor_nondet_freeable_u64 hc (Some hsc));
-                  let res = validate map_depth_bound map_length_bound k0 k1 sc hsc input;
+                  let res = validate map_depth_bound map_length_bound map_key_bound k0 k1 sc hsc input;
                   RA.cbor_nondet_free_u64 hsc;
                   RA.cbor_nondet_free_usize sc;
                   res

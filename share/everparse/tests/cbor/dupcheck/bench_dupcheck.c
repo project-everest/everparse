@@ -38,10 +38,10 @@ static uint64_t hkey[2];
 static int call(int v, size_t len, size_t D, size_t N, size_t *s, size_t sz,
                 uint64_t *h) {
   uint8_t *p = buf; size_t l = len; cbor_raw dest;
-  bool r = v == VB ? cbor_nondet_parse_bounded(D, N, &p, &l, &dest)
-         : v == SORT ? cbor_nondet_parse_bounded_sort(D, N, s, sz, &p, &l, &dest)
-         : cbor_nondet_parse_bounded_hash(D, N, hkey[0], hkey[1], s, sz, h, N,
-                                          &p, &l, &dest);
+  bool r = v == VB ? cbor_nondet_parse_bounded(D, N, false, 0, &p, &l, &dest)
+         : v == SORT ? cbor_nondet_parse_bounded_sort(D, N, false, 0, s, sz, &p, &l, &dest)
+         : cbor_nondet_parse_bounded_hash(D, N, false, 0, hkey[0], hkey[1], s, sz,
+                                          h, N, &p, &l, &dest);
   return r && l == 0 ? 0 : 1;
 }
 
