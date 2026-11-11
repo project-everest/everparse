@@ -47,6 +47,22 @@ let id_then_v (#t: Type) (fp: asn1_id_t -> parser asn1_strong_parser_kind t) (b:
     | None -> None
     | Some (x, c2) -> Some (x, c1 + c2)
 
+(* The proofs below are brittle when the SMT solver must re-derive these
+   facts inside large contexts (e.g. after `parse_rec_vlgen_eq`): they used
+   to time out depending on the Z3 seed or platform. Hence these small
+   helper lemmas, each proven in a clean context. *)
+
+let id_then_v_some (#t: Type) (fp: asn1_id_t -> parser asn1_strong_parser_kind t) (b: bytes)
+  (id: asn1_id_t) (c1: consumed_length b) (x: t) (c2: consumed_length (Seq.slice b c1 (Seq.length b)))
+: Lemma
+  (requires (
+    parse parse_asn1_identifier_U32 b == Some (id, c1) /\
+    parse (fp id) (Seq.slice b c1 (Seq.length b)) == Some (x, c2)))
+  (ensures (id_then_v fp b == Some (x, c1 + c2)))
+= ()
+
+let add_assoc (a b c: nat) : Lemma (a + b + c == a + (b + c)) = ()
+
 let eq_opt_pair (#t: Type) (b: bytes) (r1 r2: option (t & consumed_length b))
 : Lemma
   (requires (match r1, r2 with
@@ -87,7 +103,8 @@ let any_id_then (b: bytes)
               let n1 : consumed_length b1 = sz + U32.v len in
               let r1 : option (asn1_value & consumed_length b1) = Some (synth_asn1_value_twin id x, n1) in
               assert (parse (parse_asn1_value_twin id) b1 == r1);
-              assert (id_then_v parse_asn1_value_twin b == r);
+              id_then_v_some parse_asn1_value_twin b id c1 (synth_asn1_value_twin id x) n1;
+              add_assoc c1 sz (U32.v len);
               eq_opt_pair b (parse parse_asn1_value b) (id_then_v parse_asn1_value_twin b)
             end
         end
@@ -224,7 +241,7 @@ let seq_parsed (its: list gen_decorated_parser_twin) (w: bytes) (v: asn1_sequenc
 let absent (hd: gen_decorated_parser_twin) (v: asn1_decorated_t (Mkgendcparser?.d hd)) : prop =
   generate_defaultable_item hd == Some v
 
-#push-options "--fuel 1 --ifuel 1"
+#push-options "--z3rlimit 20 --fuel 1 --ifuel 1"
 let identifier_nonempty (b: bytes)
 : Lemma (match parse parse_asn1_identifier_U32 b with
     | Some (_, c) -> c > 0
@@ -318,6 +335,44 @@ let slice_prefix_slice (w: bytes) (c1 n2: nat)
 = Seq.lemma_eq_elim (Seq.slice (Seq.slice w 0 (c1 + n2)) 0 c1) (Seq.slice w 0 c1);
   Seq.lemma_eq_elim (Seq.slice (Seq.slice w 0 (c1 + n2)) c1 (c1 + n2)) (Seq.slice (Seq.slice w c1 (Seq.length w)) 0 n2)
 
+#push-options "--z3rlimit 20"
+let item_parsed_prefix (hd: gen_decorated_parser_twin) (w: bytes) (v: asn1_decorated_t (Mkgendcparser?.d hd))
+  (id: asn1_id_t) (c1: consumed_length w) (n2: consumed_length (Seq.slice w c1 (Seq.length w)))
+: Lemma
+  (requires (
+    parse parse_asn1_identifier_U32 w == Some (id, c1) /\
+    parse (parse_asn1_sequence_item_twin hd id) (Seq.slice w c1 (Seq.length w)) == Some (v, n2)))
+  (ensures (
+    c1 + n2 <= Seq.length w /\
+    item_parsed hd (Seq.slice w 0 (c1 + n2)) v))
+= let b1 = Seq.slice w c1 (Seq.length w) in
+  slice_prefix_slice w c1 n2;
+  parse_strong_prefix #asn1_strong_parser_kind parse_asn1_identifier_U32 w (Seq.slice w 0 (c1 + n2));
+  parse_strong_prefix #asn1_strong_parser_kind (parse_asn1_sequence_item_twin hd id) b1 (Seq.slice b1 0 n2)
+#pop-options
+
+#push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
+let seq_cons_present (hd hd': gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (w: bytes) (v1: asn1_decorated_t (Mkgendcparser?.d hd)) (v2: asn1_sequence_t (List.Tot.map Mkgendcparser?.d (hd' :: tl)))
+  (id: asn1_id_t) (c1: consumed_length w) (n2: consumed_length (Seq.slice w c1 (Seq.length w)))
+: Lemma
+  (requires (
+    let b1 = Seq.slice w c1 (Seq.length w) in
+    Seq.length w <> 0 /\
+    item_shaped hd /\
+    parse parse_asn1_identifier_U32 w == Some (id, c1) /\
+    Set.mem id (Sq.item_set hd) /\
+    parse (parse_asn1_sequence_item_twin hd id) b1 == Some (v1, n2) /\
+    seq_parsed (hd' :: tl) (Seq.slice b1 n2 (Seq.length b1)) v2))
+  (ensures (seq_cons_post hd hd' tl w v1 v2))
+= let b1 = Seq.slice w c1 (Seq.length w) in
+  let p1 = parse_asn1_sequence_item_twin hd id in
+  assert (lc_shaped p1);
+  assert (Sq.consumed #asn1_strong_parser_kind p1 b1 == Some n2);
+  assert (tlv_size w == Some (c1 + n2));
+  item_parsed_prefix hd w v1 id c1 n2;
+  Seq.slice_slice w c1 (Seq.length w) n2 (Seq.length b1)
+#pop-options
+
 #push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
 let seq_cons (hd hd': gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (w: bytes) (v1: asn1_decorated_t (Mkgendcparser?.d hd)) (v2: asn1_sequence_t (List.Tot.map Mkgendcparser?.d (hd' :: tl)))
 : Lemma
@@ -345,15 +400,15 @@ let seq_cons (hd hd': gen_decorated_parser_twin) (tl: list gen_decorated_parser_
       let p1 = parse_asn1_sequence_item_twin hd id in
       let p2 = make_asn1_sequence_parser' (hd' :: tl) None in
       nondep_then_eq p1 p2 b1;
+      assert (parse (pbt id) b1 == parse (p1 `nondep_then` p2) b1);
+      assert (match parse (p1 `nondep_then` p2) b1 with Some (v, n) -> v == (v1, v2) /\ c1 + n == Seq.length w | None -> False);
       let Some (x1, n2) = parse p1 b1 in
-      assert (lc_shaped p1);
-      assert (Sq.consumed #asn1_strong_parser_kind p1 b1 == Some n2);
-      assert (tlv_size w == Some (c1 + n2));
-      let w' = Seq.slice w 0 (c1 + n2) in
-      slice_prefix_slice w c1 n2;
-      parse_strong_prefix #asn1_strong_parser_kind parse_asn1_identifier_U32 w w';
-      parse_strong_prefix #asn1_strong_parser_kind p1 b1 (Seq.slice b1 0 n2);
-      Seq.slice_slice w c1 (Seq.length w) n2 (Seq.length b1)
+      assert (x1 == v1);
+      let b2 = Seq.slice b1 n2 (Seq.length b1) in
+      let Some (x2, n3) = parse p2 b2 in
+      assert (x2 == v2 /\ c1 + (n2 + n3) == Seq.length w);
+      assert (n3 == Seq.length b2);
+      seq_cons_present hd hd' tl w v1 v2 id c1 n2
     end
     else match de with
     | PLAIN -> ()
