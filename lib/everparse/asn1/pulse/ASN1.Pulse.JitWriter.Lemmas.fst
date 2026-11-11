@@ -84,16 +84,50 @@ let lacc (lc: list (asn1_id_t & asn1_content_k)) (b: bytes) : prop =
   | None -> False
   | Some (id, c1) -> acc #asn1_strong_parser_kind (make_gen_choice_strong_payload_parser (asn1_lc_as_parser lc) id) (Seq.slice b c1 (Seq.length b))
 
+(* Proven in a clean context: letting SMT unfold `id_then_v` and
+   `consumed` inside `lacc_choice` was brittle (failed for most Z3
+   seeds, and on macOS CI). *)
+let id_then_v_acc (#t: Type) (fp: asn1_id_t -> parser asn1_strong_parser_kind t) (b: bytes)
+  (id: asn1_id_t) (c1: SB.consumed_length b)
+: Lemma
+  (requires (
+    parse parse_asn1_identifier_U32 b == Some (id, c1) /\
+    acc #asn1_strong_parser_kind (fp id) (Seq.slice b c1 (Seq.length b))))
+  (ensures (
+    match PSL.id_then_v fp b with
+    | Some (_, c) -> c == Seq.length b
+    | None -> False))
+= ()
+
 let lacc_choice (lc: list (asn1_id_t & asn1_content_k)) (pf: squash (List.Tot.noRepeats (List.Tot.map fst lc))) (b: bytes)
 : Lemma (requires (lacc lc b)) (ensures (acc #asn1_strong_parser_kind (asn1_as_parser (ASN1_CHOICE_ILC lc pf)) b))
-= PSL.k_id_then (ASN1_CHOICE_ILC lc pf) b;
+= let k = ASN1_CHOICE_ILC lc pf in
+  PSL.k_id_then k b;
   let Some (id, c1) = parse parse_asn1_identifier_U32 b in
-  Co.asn1_choice_twin_consumed lc pf id (Seq.slice b c1 (Seq.length b))
+  Co.asn1_choice_twin_consumed lc pf id (Seq.slice b c1 (Seq.length b));
+  id_then_v_acc (snd (asn1_as_parser_twin k)) b id c1
+
+(* Acceptance of an ILC, given the identifier at the start of `b`. Proven
+   on its own: unfolding `ILC.ilc_eq` inside `lacc_hd`/`lacc_hd_inv` was
+   brittle. *)
+let ilc_acc (id': asn1_id_t) (#ack: asn1_content_k) (p: asn1_weak_parser (asn1_content_t ack)) (b: bytes)
+  (id: asn1_id_t) (c1: SB.consumed_length b)
+: Lemma
+  (requires (parse parse_asn1_identifier_U32 b == Some (id, c1)))
+  (ensures (acc #asn1_strong_parser_kind (parse_asn1_ILC id' p) b <==>
+    (id == id' /\ acc #asn1_strong_parser_kind (parse_asn1_LC p) (Seq.slice b c1 (Seq.length b)))))
+= ILC.ilc_eq id' p b;
+  if id = id'
+  then match parse (parse_asn1_LC p) (Seq.slice b c1 (Seq.length b)) with
+    | None -> ()
+    | Some (_, c2) -> ()
+  else ()
 
 let lacc_hd (id': asn1_id_t) (c: asn1_content_k) (tl: list (asn1_id_t & asn1_content_k)) (b: bytes)
 : Lemma (requires (acc #asn1_strong_parser_kind (parse_asn1_ILC id' (asn1_content_as_parser c)) b)) (ensures (lacc ((id', c) :: tl) b))
 = ILC.ilc_eq id' (asn1_content_as_parser c) b;
   let Some (id, c1) = parse parse_asn1_identifier_U32 b in
+  ilc_acc id' (asn1_content_as_parser c) b id c1;
   Co.asn1_choice_payload_cons id' c tl id (Seq.slice b c1 (Seq.length b))
 
 let rec payload_mem (lc: list (asn1_id_t & asn1_content_k)) (id: asn1_id_t) (b: bytes)
@@ -312,6 +346,20 @@ let strong_ext (#k: parser_kind) (#t: Type) (p: SB.parser k t) (b x: bytes)
   assert (Seq.equal (Seq.slice (Seq.append b x) 0 c) (Seq.slice b 0 c));
   SB.parse_strong_prefix p b (Seq.append b x)
 
+(* Sequence facts proven on their own rather than by `Seq.equal` in large
+   contexts, where they were brittle *)
+let slice_split (r: bytes) (n: nat { n <= Seq.length r })
+: Lemma (r == Seq.append (Seq.slice r 0 n) (Seq.slice r n (Seq.length r)))
+= assert (Seq.equal r (Seq.append (Seq.slice r 0 n) (Seq.slice r n (Seq.length r))))
+
+let slice_append_suffix (b x: bytes) (c1: nat { c1 <= Seq.length b })
+: Lemma (Seq.slice (Seq.append b x) c1 (Seq.length b + Seq.length x) == Seq.append (Seq.slice b c1 (Seq.length b)) x)
+= assert (Seq.equal (Seq.slice (Seq.append b x) c1 (Seq.length b + Seq.length x)) (Seq.append (Seq.slice b c1 (Seq.length b)) x))
+
+let slice_append_prefix (b x: bytes)
+: Lemma (Seq.slice (Seq.append b x) 0 (Seq.length b) == b)
+= assert (Seq.equal (Seq.slice (Seq.append b x) 0 (Seq.length b)) b)
+
 #push-options "--fuel 2 --ifuel 1 --z3rlimit 32"
 let rec list_parse (#t: Type) (pp: asn1_strong_parser t) (l: list bytes)
 : Lemma (requires (all_eacc pp l))
@@ -457,7 +505,7 @@ let rec sf_aux (#t: Type) (tbo: bytes -> bytes -> bool) (pp: asn1_strong_parser 
     SI.frame_len_le r;
     let f = Seq.slice r 0 n in
     let r' = Seq.slice r n (Seq.length r) in
-    assert (Seq.equal r (Seq.append f r'));
+    slice_split r n;
     strong_ext #asn1_strong_parser_kind pp f r';
     sf_aux tbo pp f r'
   end
@@ -488,7 +536,7 @@ let acc_sized_set (ne: bool) (#t: Type) (pp: asn1_strong_parser t) (r: bytes)
     SI.frame_len_le r;
     let f = Seq.slice r 0 n in
     let r' = Seq.slice r n (Seq.length r) in
-    assert (Seq.equal r (Seq.append f r'));
+    slice_split r n;
     strong_ext #asn1_strong_parser_kind pp f r';
     sf_aux tbo pp f r';
     let Some (_, c1) = SB.parse pp r in
@@ -771,7 +819,7 @@ let set_cons_ok (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_t
 let ins_empty (r: bytes) : Lemma (SI.ins SI.lt_tag Seq.empty r == r) =
   SI.ins_unfold SI.lt_tag Seq.empty r;
   ident_empty ();
-  assert (Seq.equal (Seq.append Seq.empty r) r)
+  Seq.append_empty_l r
 
 let ins_empty_r (e: bytes) : Lemma (SI.ins SI.lt_tag e Seq.empty == e) =
   SI.ins_unfold SI.lt_tag e Seq.empty;
@@ -1189,8 +1237,8 @@ let lacc_hd_inv (id': asn1_id_t) (c: asn1_content_k) (tl: list (asn1_id_t & asn1
 : Lemma (requires (lacc ((id', c) :: tl) b /\ framed (FStar.Set.singleton id') b))
   (ensures (acc #asn1_strong_parser_kind (parse_asn1_ILC id' (asn1_content_as_parser c)) b))
 = framed_pid (FStar.Set.singleton id') b;
-  ILC.ilc_eq id' (asn1_content_as_parser c) b;
   let Some (id, c1) = parse parse_asn1_identifier_U32 b in
+  ilc_acc id' (asn1_content_as_parser c) b id c1;
   Co.asn1_choice_payload_cons id' c tl id (Seq.slice b c1 (Seq.length b))
 
 let rec as_set'_mem (l: list asn1_id_t) (x: asn1_id_t)
@@ -1256,7 +1304,7 @@ let tlv_size_ext (b x: bytes)
 = let Some (_, c1) = parse parse_asn1_identifier_U32 b in
   strong_ext #asn1_strong_parser_kind parse_asn1_identifier_U32 b x;
   let b1 = Seq.slice b c1 (Seq.length b) in
-  assert (Seq.equal (Seq.slice (Seq.append b x) c1 (Seq.length b + Seq.length x)) (Seq.append b1 x));
+  slice_append_suffix b x c1;
   strong_ext #parse_asn1_length_u32_t_kind parse_asn1_length_u32_t b1 x
 
 let tlv_enc_ext (id: asn1_id_t) (c x: bytes)
@@ -1292,7 +1340,7 @@ let tlvish_inv (#t: Type) (pp: asn1_strong_parser t) (y x: bytes)
   | None -> ()
   | Some (_, n) ->
     assert (PSL.tlv_size b == Some n);
-    assert (Seq.equal (Seq.slice b 0 (Seq.length y)) y);
+    slice_append_prefix y x;
     strong_prefix_down pp y b n
 
 #push-options "--fuel 2 --ifuel 1 --z3rlimit 32"
@@ -1346,7 +1394,9 @@ let p_raw_tlvish (w y: bytes)
 
 let frame_len_tlv_size (b: bytes)
 : Lemma (SI.frame_len b == (match PSL.tlv_size b with Some n -> if n <= Seq.length b then n else 0 | None -> 0))
-= assert_norm (ILC.asn1_length_max == 4294967295)
+= match parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (_, n1) -> ILC.length_eq (Seq.slice b n1 (Seq.length b))
 
 let acc_frame (#t: Type) (pp: asn1_strong_parser t) (b: bytes)
 : Lemma (requires (tlv_shaped pp /\ acc #asn1_strong_parser_kind pp b))
