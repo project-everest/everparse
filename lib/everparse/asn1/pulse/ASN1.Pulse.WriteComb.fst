@@ -69,6 +69,33 @@ fn write_slice_ser (#u: Type0) (enc: u -> GTot SB.bytes) (pm: perm)
 (* A generic jumper over TLV elements: the identifier and the length header
    give the size of the element *)
 
+let jump_k_arith (r: option nat) (c off off2 l len: nat)
+: Lemma (requires (r == Some c /\ off + Some?.v r == off2 + l /\ c <= len - off))
+  (ensures (off + c == off2 + l /\ off2 + l <= len))
+= ()
+
+#push-options "--fuel 0 --ifuel 1"
+let jump_k_post (#s: Ghost.erased (Set.set asn1_id_t)) (k: asn1_k s) (v: SB.bytes) (offset: SZ.t) (off1 off2: nat) (l: U32.t)
+: Lemma
+  (requires (SZ.fits (Seq.length v) /\
+    SZ.v offset <= Seq.length v /\
+    Some? (SB.parse (asn1_as_parser k <: SB.parser asn1_strong_parser_kind (asn1_t k)) (Seq.slice v (SZ.v offset) (Seq.length v))) /\
+    (match SB.parse parse_asn1_identifier_U32 (Seq.slice v (SZ.v offset) (Seq.length v)) with Some (_, c) -> off1 == SZ.v offset + c | None -> False) /\
+    off1 <= Seq.length v /\
+    (match SB.parse (LowParse.Spec.DER.parse_bounded_der_length32 0 ILC.asn1_length_max) (Seq.slice v off1 (Seq.length v)) with Some (len', c2) -> (len' <: U32.t) == l /\ off2 == off1 + c2 | None -> False)))
+  (ensures (SZ.fits (off2 + U32.v l) /\
+    (match SB.parse (asn1_as_parser k <: SB.parser asn1_strong_parser_kind (asn1_t k)) (Seq.slice v (SZ.v offset) (Seq.length v)) with
+     | Some (_, c) -> SZ.v offset + c == off2 + U32.v l
+     | None -> False)))
+= let b = Seq.slice v (SZ.v offset) (Seq.length v) in
+  PSO.tlv_size_at v (SZ.v offset) off1 off2 l;
+  PSO.tlv_consumed k b;
+  match SB.parse (asn1_as_parser k <: SB.parser asn1_strong_parser_kind (asn1_t k)) b with
+  | Some (_, c) ->
+    jump_k_arith (ASN1.Pulse.ParseSequence.Lemmas.tlv_size b) c (SZ.v offset) off2 (U32.v l) (Seq.length v);
+    SZ.fits_lte (off2 + U32.v l) (Seq.length v)
+#pop-options
+
 inline_for_extraction
 fn jump_k (#s: Ghost.erased (Set.set asn1_id_t)) (k: Ghost.erased (asn1_k s))
 : LPS.jumper #(asn1_t k) #asn1_strong_parser_kind (asn1_as_parser k)
@@ -88,8 +115,7 @@ fn jump_k (#s: Ghost.erased (Set.set asn1_id_t)) (k: Ghost.erased (asn1_k s))
         Some l -> {
           let off2 = !poff;
           assert (pure (match SB.parse (LowParse.Spec.DER.parse_bounded_der_length32 0 ILC.asn1_length_max) (Seq.slice v (SZ.v off1) (Seq.length v)) with Some (len', c2) -> (len' <: U32.t) == l /\ SZ.v off2 == SZ.v off1 + c2 | None -> False));
-          PSO.tlv_size_at v (SZ.v offset) (SZ.v off1) (SZ.v off2) l;
-          SZ.fits_lte (SZ.v off2 + U32.v l) (Seq.length v);
+          jump_k_post k v offset (SZ.v off1) (SZ.v off2) l;
           SZ.add off2 (SZ.uint32_to_sizet l)
         }
         None -> {

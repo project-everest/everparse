@@ -115,6 +115,33 @@ let any_body_veq (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_
   | [] -> TS.any_body_veq_single hd sfx id b
   | hd' :: tl' -> TS.any_body_veq_cons hd hd' tl' sfx id b
 
+#push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
+private
+let seqa_cons_present (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (#t: Type) (sfx: parser_twin asn1_weak_parser_kind t) (w: bytes)
+  (v1: asn1_decorated_t (Mkgendcparser?.d hd)) (v2: asn1_sequence_any_t (List.Tot.map Mkgendcparser?.d tl) t)
+  (id: asn1_id_t) (c1: consumed_length w) (n2: consumed_length (Seq.slice w c1 (Seq.length w)))
+: Lemma
+  (requires (
+    let b1 = Seq.slice w c1 (Seq.length w) in
+    L.item_shaped hd /\
+    parse parse_asn1_identifier_U32 w == Some (id, c1) /\
+    Set.mem id (Sq.item_set hd) /\
+    parse (parse_asn1_sequence_item_twin hd id) b1 == Some (v1, n2) /\
+    seqa_parsed tl sfx (Seq.slice b1 n2 (Seq.length b1)) v2))
+  (ensures (
+    L.tlv_size w == Some (c1 + n2) /\
+    c1 + n2 <= Seq.length w /\
+    L.item_parsed hd (Seq.slice w 0 (c1 + n2)) v1 /\
+    seqa_parsed tl sfx (Seq.slice w (c1 + n2) (Seq.length w)) v2))
+= let b1 = Seq.slice w c1 (Seq.length w) in
+  let p1 = parse_asn1_sequence_item_twin hd id in
+  assert (L.lc_shaped p1);
+  assert (Sq.consumed #asn1_strong_parser_kind p1 b1 == Some n2);
+  assert (L.tlv_size w == Some (c1 + n2));
+  L.item_parsed_prefix hd w v1 id c1 n2;
+  Seq.slice_slice w c1 (Seq.length w) n2 (Seq.length b1)
+#pop-options
+
 #push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
 let seqa_cons (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (#t: Type) (sfx: parser_twin asn1_weak_parser_kind t) (w: bytes)
   (v: asn1_sequence_any_t (List.Tot.map Mkgendcparser?.d (hd :: tl)) t)
@@ -139,15 +166,13 @@ let seqa_cons (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twi
       let p1 = parse_asn1_sequence_item_twin hd id in
       let p2 = make_asn1_sequence_any_parser' tl sfx None in
       nondep_then_eq p1 p2 b1;
+      let v' : asn1_decorated_t (Mkgendcparser?.d hd) & asn1_sequence_any_t (List.Tot.map Mkgendcparser?.d tl) t = v in
       let Some (x1, n2) = parse p1 b1 in
-      assert (L.lc_shaped p1);
-      assert (Sq.consumed #asn1_strong_parser_kind p1 b1 == Some n2);
-      assert (L.tlv_size w == Some (c1 + n2));
-      let w' = Seq.slice w 0 (c1 + n2) in
-      L.slice_prefix_slice w c1 n2;
-      parse_strong_prefix #asn1_strong_parser_kind parse_asn1_identifier_U32 w w';
-      parse_strong_prefix #asn1_strong_parser_kind p1 b1 (Seq.slice b1 0 n2);
-      Seq.slice_slice w c1 (Seq.length w) n2 (Seq.length b1)
+      assert (x1 == fst v');
+      let b2 = Seq.slice b1 n2 (Seq.length b1) in
+      let Some (x2, n3) = parse p2 b2 in
+      assert (x2 == snd v' /\ n3 == Seq.length b2);
+      seqa_cons_present hd tl sfx w x1 x2 id c1 n2
     end
     else match de with
     | PLAIN -> ()
@@ -181,7 +206,29 @@ let ptu_twin (kid: asn1_id_t) (key_k: asn1_terminal_k) (#data_t: Type)
 : Tot (parser (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind) data_t)
 = T.parse_tagged_union (ADB.key_fp kid key_k id) tag pl
 
-#push-options "--z3rlimit 64 --fuel 1 --ifuel 2"
+#push-options "--fuel 1 --ifuel 1"
+private
+let key_shift (kid: asn1_id_t) (key_k: asn1_terminal_k) (w: bytes)
+: Lemma (match parse parse_asn1_identifier_U32 w with
+    | None -> parse (ADB.key_p kid key_k) w == None
+    | Some (id, c1) -> L.parsed_shift (L.res_nat (parse (ADB.key_p kid key_k) w)) (L.res_nat (parse (ADB.key_fp kid key_k id) (Seq.slice w c1 (Seq.length w)))) c1)
+= ILC.ilc_eq kid #(ASN1_TERMINAL key_k) (asn1_terminal_as_parser key_k) w
+
+private
+let tu_shift (#k1 #k2: parser_kind) (#tag_t: Type) (p1: parser k1 tag_t) (p2: parser k2 tag_t)
+  (#data_t: Type) (tag: data_t -> Tot tag_t)
+  (#k: parser_kind) (pl: (x: tag_t) -> Tot (parser k (refine_with_tag tag x)))
+  (w: bytes) (c1: nat { c1 <= Seq.length w })
+: Lemma
+  (requires (L.parsed_shift (L.res_nat (parse p1 w)) (L.res_nat (parse p2 (Seq.slice w c1 (Seq.length w)))) c1))
+  (ensures (L.parsed_shift (L.res_nat (parse (T.parse_tagged_union p1 tag pl) w)) (L.res_nat (parse (T.parse_tagged_union p2 tag pl) (Seq.slice w c1 (Seq.length w)))) c1))
+= let b1 = Seq.slice w c1 (Seq.length w) in
+  T.parse_tagged_union_eq p1 tag pl w;
+  T.parse_tagged_union_eq p2 tag pl b1;
+  match parse p2 b1 with
+  | None -> ()
+  | Some (_, n2) -> Seq.slice_slice w c1 (Seq.length w) n2 (Seq.length b1)
+
 let ptu_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (#data_t: Type)
   (tag: data_t -> Tot (asn1_terminal_t key_k))
   (pl: (x: asn1_terminal_t key_k) -> Tot (asn1_weak_parser (refine_with_tag tag x)))
@@ -189,21 +236,11 @@ let ptu_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (#data_t: Type)
 : Lemma (match parse parse_asn1_identifier_U32 w with
     | None -> parse (ptu kid key_k tag pl) w == None
     | Some (id, c1) -> L.parsed_shift (L.res_nat (parse (ptu kid key_k tag pl) w)) (L.res_nat (parse (ptu_twin kid key_k tag pl id) (Seq.slice w c1 (Seq.length w)))) c1)
-= let p = asn1_terminal_as_parser key_k in
+= key_shift kid key_k w;
   T.parse_tagged_union_eq (ADB.key_p kid key_k) tag pl w;
-  ILC.ilc_eq kid #(ASN1_TERMINAL key_k) p w;
   match parse parse_asn1_identifier_U32 w with
   | None -> ()
-  | Some (id, c1) ->
-    let b1 = Seq.slice w c1 (Seq.length w) in
-    T.parse_tagged_union_eq (ADB.key_fp kid key_k id) tag pl b1;
-    if id = kid
-    then begin
-      match parse (parse_asn1_LC #(ASN1_TERMINAL key_k) p) b1 with
-      | None -> ()
-      | Some (_, c2) ->
-        Seq.slice_slice w c1 (Seq.length w) c2 (Seq.length b1)
-    end
+  | Some (id, c1) -> tu_shift (ADB.key_p kid key_k) (ADB.key_fp kid key_k id) tag pl w c1
 #pop-options
 
 let sfx_none_shaped (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
@@ -404,19 +441,46 @@ let layout_post (key_k: asn1_terminal_k) (key: asn1_terminal_t key_k) (q: bytes 
       P.parsed #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (Seq.slice w (c1 + c2) n) key /\
       q (Seq.slice w n (Seq.length w))
 
+#push-options "--fuel 0 --ifuel 1"
+private
+let sfx_layout_elim (key_k: asn1_terminal_k) (#data_t: Type)
+  (tag: data_t -> Tot (asn1_terminal_t key_k))
+  (pl: (x: asn1_terminal_t key_k) -> Tot (asn1_weak_parser (refine_with_tag tag x)))
+  (w: bytes) (v: data_t) (q: bytes -> prop)
+: Lemma
+  (requires (sfx_layout_post key_k tag pl w v /\
+    (forall (wp: bytes) . (match parse (pl (tag v)) wp with
+       | Some (v', c3) -> (v' <: data_t) == v /\ c3 == Seq.length wp
+       | None -> False) ==> q wp)))
+  (ensures (layout_post key_k (tag v) q w))
+= match parse parse_asn1_identifier_U32 w with
+  | None -> ()
+  | Some (_, c1) ->
+    match parse (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) (Seq.slice w c1 (Seq.length w)) with
+    | None -> ()
+    | Some (len, c2) ->
+      let n = c1 + c2 + U32.v len in
+      assert (q (Seq.slice w n (Seq.length w)))
+#pop-options
+
+#push-options "--fuel 1 --ifuel 2"
 let sfx_none_layout (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (w: bytes) (v: ady key_k ls)
 : Lemma
   (requires P.parsed #asn1_weak_parser_kind (Mkparsertwin?.p (ADB.adb_sfx_none kid key_k ls)) w v)
   (ensures layout_post key_k (dfst v) (fun wp -> pl_parsed key_k ls wp v) w)
 = let lp = lp_of key_k ls in
-  sfx_layout kid key_k (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) w v
+  sfx_layout kid key_k (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) w v;
+  sfx_layout_elim key_k (tag_of_gen_choice_type (extract_types lp)) (make_gen_choice_weak_payload_parser lp) w v (fun wp -> pl_parsed key_k ls wp v)
 
 let sfx_some_layout (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk) (w: bytes) (v: ady_fb key_k ls fb)
 : Lemma
   (requires P.parsed #asn1_weak_parser_kind (Mkparsertwin?.p (ADB.adb_sfx_some kid key_k ls fb)) w v)
   (ensures layout_post key_k (dfst v) (fun wp -> pl_fb_parsed key_k ls fb wp v) w)
 = let lp = lp_of key_k ls in
-  sfx_layout kid key_k (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (ADB.adb_fb fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (ADB.adb_fb fb)) w v
+  sfx_layout kid key_k (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (ADB.adb_fb fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (ADB.adb_fb fb)) w v;
+  sfx_layout_elim key_k (tag_of_gen_choice_type_with_fallback (extract_types lp) (Mkgenparser?.t (ADB.adb_fb fb))) (make_gen_choice_with_fallback_weak_payload_parser lp (ADB.adb_fb fb)) w v (fun wp -> pl_fb_parsed key_k ls fb wp v)
+
+#pop-options
 
 (* Comparing the key *)
 

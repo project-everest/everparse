@@ -61,11 +61,13 @@ let frame_len_le (r: SB.bytes) : Lemma (frame_len r <= Seq.length r) = ()
 let lt_t = SB.bytes -> SB.bytes -> GTot bool
 
 (* Insert `e` into `r`, after all the leading frames of `r` smaller than `e` *)
+#push-options "--fuel 0 --ifuel 1"
 let rec ins (lt: lt_t) (e r: SB.bytes) : GTot SB.bytes (decreases (Seq.length r)) =
   let n = frame_len r in
   if n = 0 then Seq.append e r
   else if lt (Seq.slice r 0 n) e then Seq.append (Seq.slice r 0 n) (ins lt e (Seq.slice r n (Seq.length r)))
   else Seq.append e r
+#pop-options
 
 #push-options "--fuel 2 --ifuel 1"
 
@@ -91,17 +93,29 @@ let ins_step (lt: lt_t) (e r: SB.bytes)
   (ensures ins lt e r == Seq.append (Seq.slice r 0 (frame_len r)) (ins lt e (Seq.slice r (frame_len r) (Seq.length r))))
 = ins_unfold lt e r
 
+let ins_nostep (lt: lt_t) (e r: SB.bytes)
+: Lemma (requires frame_len r == 0 \/ (frame_len_le r; not (lt (Seq.slice r 0 (frame_len r)) e)))
+  (ensures ins lt e r == Seq.append e r)
+= ins_unfold lt e r
+
+#push-options "--fuel 0 --ifuel 0 --using_facts_from '* -ASN1.Pulse.SortedInsert.frame_len'"
+
 let rec ins_length (lt: lt_t) (e r: SB.bytes)
 : Lemma (ensures Seq.length (ins lt e r) == Seq.length e + Seq.length r) (decreases (Seq.length r))
-= ins_unfold lt e r;
+= frame_len_le r;
   let n = frame_len r in
-  if n = 0 then ()
-  else if lt (Seq.slice r 0 n) e then begin
+  if n > 0 && lt (Seq.slice r 0 n) e then begin
     let r' = Seq.slice r n (Seq.length r) in
+    ins_step lt e r;
     ins_length lt e r';
-    assert (ins lt e r == Seq.append (Seq.slice r 0 n) (ins lt e r'))
+    Seq.lemma_len_append (Seq.slice r 0 n) (ins lt e r')
   end
-  else ()
+  else begin
+    ins_nostep lt e r;
+    Seq.lemma_len_append e r
+  end
+
+#pop-options
 
 (* Inserting the elements of a list one by one, first to last *)
 let rec sort_acc (#u: Type) (lt: lt_t) (enc: u -> GTot SB.bytes) (acc: SB.bytes) (l: list u)
@@ -123,7 +137,10 @@ let rec sort_acc_length (#u: Type) (lt: lt_t) (enc: u -> GTot SB.bytes) (acc: SB
 : Lemma (ensures Seq.length (sort_acc lt enc acc l) == Seq.length acc + Seq.length (enc_list enc l)) (decreases l)
 = match l with
   | [] -> ()
-  | a :: q -> ins_length lt (enc a) acc; sort_acc_length lt enc (ins lt (enc a) acc) q
+  | a :: q ->
+    ins_length lt (enc a) acc;
+    sort_acc_length lt enc (ins lt (enc a) acc) q;
+    Seq.lemma_len_append (enc a) (enc_list enc q)
 
 let sort_list_length (#u: Type) (lt: lt_t) (enc: u -> GTot SB.bytes) (l: list u)
 : Lemma (Seq.length (sort_list lt enc l) == Seq.length (enc_list enc l))
@@ -203,6 +220,20 @@ fn lt_tag_impl (_: unit)
   }
 }
 
+let frame_len_id_none (r: SB.bytes) (off1: SZ.t)
+: Lemma (requires VR.vreader_postcond #asn1_strong_parser_kind IdU.parse_asn1_identifier_U32 0sz r off1 None)
+  (ensures frame_len r == 0)
+= slice_full r
+
+let frame_len_read_len (r: SB.bytes) (off1: SZ.t) (id: asn1_id_t) (off2: SZ.t)
+  (ol: option (LowParse.Spec.BoundedInt.bounded_int32 0 ILC.asn1_length_max))
+: Lemma (requires VR.vreader_postcond #asn1_strong_parser_kind IdU.parse_asn1_identifier_U32 0sz r off1 (Some id) /\
+    VR.vreader_postcond (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) off1 r off2 ol)
+  (ensures (match ol with
+    | None -> frame_len r == 0
+    | Some len -> frame_len r == (if SZ.v off2 + U32.v len <= Seq.length r then SZ.v off2 + U32.v len else 0)))
+= slice_full r
+
 (* The length of the frame at `out[q..p0)` *)
 fn read_frame (out: S.slice U8.t) (#v: Ghost.erased SB.bytes) (q p0: SZ.t)
 requires S.pts_to out v ** pure (SZ.v q <= SZ.v p0 /\ SZ.v p0 <= Seq.length v)
@@ -214,13 +245,17 @@ ensures S.pts_to out v ** pure (SZ.v q <= SZ.v p0 /\ SZ.v p0 <= Seq.length v /\ 
   slice_full (Seq.slice v (SZ.v q) (SZ.v p0));
   let mut poff = 0sz;
   let oid = I.vread_identifier sub poff;
+  with off1 . assert (pts_to poff off1);
   match oid {
     None -> {
+      frame_len_id_none (Seq.slice v (SZ.v q) (SZ.v p0)) off1;
       Trade.elim _ _;
       0sz
     }
-    Some _ -> {
+    Some id -> {
       let ol = ILC.vread_length sub poff;
+      with off2 . assert (pts_to poff off2);
+      frame_len_read_len (Seq.slice v (SZ.v q) (SZ.v p0)) off1 id off2 ol;
       match ol {
         None -> {
           Trade.elim _ _;
@@ -406,6 +441,15 @@ ensures exists* v' . S.pts_to out v' ** pure (insert_post lt v (SZ.v p2) (SZ.v p
 
 (* Inserting right after an R2L write *)
 
+let slice_eq_sub (a b: SB.bytes) (i k j1 j2: nat)
+: Lemma (requires i <= j1 /\ j1 <= j2 /\ j2 <= k /\ k <= Seq.length a /\ Seq.length b == Seq.length a /\
+    Seq.slice a i k == Seq.slice b i k)
+  (ensures Seq.slice a j1 j2 == Seq.slice b j1 j2)
+= Seq.slice_slice a i k (j1 - i) (j2 - i);
+  Seq.slice_slice b i k (j1 - i) (j2 - i)
+
+#push-options "--fuel 0 --ifuel 0"
+
 let r2l_post_ins
   (lt: lt_t) (enc1 enc2: SB.bytes) (p: nat) (v: SB.bytes) (p1: nat) (v1: SB.bytes) (p2: nat) (v2: SB.bytes) (v3: SB.bytes)
 : Lemma
@@ -413,15 +457,10 @@ let r2l_post_ins
   (ensures r2l_post (ins lt enc1 enc2) p v true p2 v3)
 = let n = Seq.length v in
   ins_length lt enc1 enc2;
-  Seq.slice_slice v2 p1 n 0 (p - p1);
-  Seq.slice_slice v1 p1 n 0 (p - p1);
-  assert (Seq.slice v2 p1 p == enc2);
-  assert (Seq.slice v2 p2 p1 == enc1);
-  assert (Seq.slice v3 p2 p == ins lt enc1 enc2);
-  Seq.slice_slice v2 p1 n (p - p1) (n - p1);
-  Seq.slice_slice v1 p1 n (p - p1) (n - p1);
-  assert (Seq.slice v2 p n == Seq.slice v1 p n);
-  assert (Seq.slice v3 p n == Seq.slice v p n)
+  slice_eq_sub v2 v1 p1 n p1 p;
+  slice_eq_sub v2 v1 p1 n p n
+
+#pop-options
 
 (* Sorted mixed lists *)
 

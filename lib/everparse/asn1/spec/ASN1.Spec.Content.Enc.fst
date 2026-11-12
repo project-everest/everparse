@@ -193,7 +193,15 @@ let oid_enc (l: asn1_oid_t) : Tot bytes =
   match l with
   | _ :: _ :: tl -> enc_arc (oid_head l) `Seq.append` list_enc enc_arc tl
 
-#push-options "--z3rlimit 32"
+private
+let synth_OIDU32_oid_head (l: asn1_oid_t)
+: Lemma (match l with _ :: _ :: tl -> synth_OIDU32 (oid_head l, tl) == l)
+= let x :: y :: tl = l in
+  assert (U32.v (oid_head l) == 40 * U32.v x + U32.v y);
+  if U32.v x = 0 then ()
+  else if U32.v x = 1 then ()
+  else ()
+
 let parse_oid_enc (l: asn1_oid_t)
 : Lemma (parse parse_asn1_OIDU32 (oid_enc l) == Some (l, Seq.length (oid_enc l)))
 = let _ :: _ :: tl = l in
@@ -205,8 +213,7 @@ let parse_oid_enc (l: asn1_oid_t)
   parse_arc_enc h (list_enc enc_arc tl);
   Seq.lemma_eq_elim (Seq.slice b (Seq.length (enc_arc h)) (Seq.length b)) (list_enc enc_arc tl);
   parse_arcs_enc tl;
-  assert (synth_OIDU32 (h, tl) == l)
-#pop-options
+  synth_OIDU32_oid_head l
 
 let parse_relative_oid_enc (l: asn1_relative_oid_t)
 : Lemma (parse parse_asn1_RELATIVE_OIDU32 (list_enc enc_arc l) == Some (l, Seq.length (list_enc enc_arc l)))

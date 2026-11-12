@@ -229,7 +229,66 @@ let terminal_value_enc (id: asn1_id_t) (k: asn1_terminal_k) (x: asn1_terminal_t 
   (ensures (asn1_value_enc (terminal_to_value id k x) == enc_tlv id true (tbytes id k x)))
 = terminal_shape id k x
 
-#push-options "--z3rlimit 32"
+private
+let leaf_tbytes (id: asn1_id_t) (k: leaf_k) (x: asn1_terminal_t k)
+: Lemma (tbytes id k x == leaf_enc k x)
+= ()
+
+private
+let leaf_esound_at (id: asn1_id_t) (k: leaf_k) (b: bytes)
+: Lemma (match parse (asn1_terminal_as_parser k) b with
+    | Some (x, n) -> Seq.slice b 0 n == tbytes id k x
+    | None -> True)
+= leaf_enc_consumed k b;
+  match parse (asn1_terminal_as_parser k) b with
+  | Some (x, _) -> leaf_tbytes id k x
+  | None -> ()
+
+private
+let prefixed_tbytes (id: asn1_id_t) (id2: asn1_id_t) (k2: asn1_terminal_k) (x: asn1_terminal_t (ASN1_PREFIXED_TERMINAL id2 k2))
+: Lemma
+  (requires (wf_terminal id (ASN1_PREFIXED_TERMINAL id2 k2)))
+  (ensures (tbytes id (ASN1_PREFIXED_TERMINAL id2 k2) x == enc_tlv id2 true (tbytes id2 k2 (FStar.Pervasives.coerce_eq #(asn1_terminal_t (ASN1_PREFIXED_TERMINAL id2 k2)) #(asn1_terminal_t k2) () x))))
+= let x' : asn1_terminal_t k2 = FStar.Pervasives.coerce_eq #(asn1_terminal_t (ASN1_PREFIXED_TERMINAL id2 k2)) #(asn1_terminal_t k2) () x in
+  mk_encap_shape id (terminal_to_value id2 k2 x');
+  terminal_value_enc id2 k2 x'
+
+#push-options "--fuel 1 --ifuel 0"
+private
+let prefixed_parse_eq (id2: asn1_id_t) (k2: asn1_terminal_k) (b: bytes)
+: Lemma (match parse (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2)) b with
+    | Some (x, n) -> (match parse (parse_asn1_ILC id2 #(ASN1_TERMINAL k2) (asn1_terminal_as_parser k2)) b with
+      | Some (x', n') -> n == n' /\ (FStar.Pervasives.coerce_eq #(asn1_terminal_t (ASN1_PREFIXED_TERMINAL id2 k2)) #(asn1_terminal_t k2) () x) == x'
+      | None -> False)
+    | None -> True)
+= ()
+#pop-options
+
+private
+let prefixed_esound_some (id: asn1_id_t) (id2: asn1_id_t) (k2: asn1_terminal_k) (b: bytes) (x: asn1_terminal_t (ASN1_PREFIXED_TERMINAL id2 k2)) (x': asn1_terminal_t k2) (n: nat)
+: Lemma
+  (requires (wf_terminal id (ASN1_PREFIXED_TERMINAL id2 k2) /\ n <= Seq.length b /\
+    (FStar.Pervasives.coerce_eq #(asn1_terminal_t (ASN1_PREFIXED_TERMINAL id2 k2)) #(asn1_terminal_t k2) () x) == x' /\ Seq.slice b 0 n == enc_tlv id2 true (tbytes id2 k2 x')))
+  (ensures (Seq.slice b 0 n == tbytes id (ASN1_PREFIXED_TERMINAL id2 k2) x))
+= prefixed_tbytes id id2 k2 x
+
+private
+let prefixed_esound_at (id: asn1_id_t) (id2: asn1_id_t) (k2: asn1_terminal_k) (b: bytes)
+: Lemma
+  (requires (wf_terminal id (ASN1_PREFIXED_TERMINAL id2 k2) /\ esound (asn1_terminal_as_parser k2) (tbytes id2 k2)))
+  (ensures (match parse (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2)) b with
+    | Some (x, n) -> Seq.slice b 0 n == tbytes id (ASN1_PREFIXED_TERMINAL id2 k2) x
+    | None -> True))
+= ilc_at id2 #(ASN1_TERMINAL k2) (asn1_terminal_as_parser k2) (tbytes id2 k2) b;
+  prefixed_parse_eq id2 k2 b;
+  match parse (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2)) b with
+  | Some (x, n) ->
+    begin match parse (parse_asn1_ILC id2 #(ASN1_TERMINAL k2) (asn1_terminal_as_parser k2)) b with
+    | Some (x', _) -> prefixed_esound_some id id2 k2 b x x' n
+    | None -> ()
+    end
+  | None -> ()
+
 let rec terminal_esound (id: asn1_id_t) (k: asn1_terminal_k)
 : Lemma
   (requires (wf_terminal id k))
@@ -238,15 +297,8 @@ let rec terminal_esound (id: asn1_id_t) (k: asn1_terminal_k)
 = match k with
   | ASN1_PREFIXED_TERMINAL id2 k2 ->
     terminal_esound id2 k2;
-    ilc_esound id2 #(ASN1_TERMINAL k2) (asn1_terminal_as_parser k2) (tbytes id2 k2);
-    let prf (x: asn1_terminal_t k) : Lemma (tbytes id k x == enc_tlv id2 true (tbytes id2 k2 (FStar.Pervasives.coerce_eq #(asn1_terminal_t k) #(asn1_terminal_t k2) () x))) =
-      let x' : asn1_terminal_t k2 = FStar.Pervasives.coerce_eq #(asn1_terminal_t k) #(asn1_terminal_t k2) () x in
-      mk_encap_shape id (terminal_to_value id2 k2 x');
-      terminal_value_enc id2 k2 x'
-    in
-    Classical.forall_intro prf
-  | _ -> Classical.forall_intro (leaf_enc_consumed k)
-#pop-options
+    Classical.forall_intro (Classical.move_requires (prefixed_esound_at id id2 k2))
+  | _ -> Classical.forall_intro (leaf_esound_at id k)
 
 (* SEQUENCE OF, SET OF *)
 

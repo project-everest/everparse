@@ -173,6 +173,39 @@ let lc_rel_cons_eq' (id': asn1_id_t) (#c: asn1_content_k) (#t1: Type0) (cd: cdes
     | Inl a -> if id = id' then crel true cd pm a v else pure False
     | Inr b -> if id = id' then pure False else lcrel true dtl pm b (| id, v |)))
 
+let choice_head_step (id': asn1_id_t) (c: asn1_content_k) (tl: list (asn1_id_t & asn1_content_k))
+  (pf: squash (List.Tot.noRepeats (List.Tot.map fst ((id', c) :: tl))))
+  (w: SB.bytes) (v: make_gen_choice_type (asn1_lc_t ((id', c) :: tl))) (id: asn1_id_t)
+: Lemma
+  (requires parsed #asn1_strong_parser_kind (asn1_as_parser (choice_k ((id', c) :: tl) pf)) w v /\ dfst v == id /\ id == id')
+  (ensures dfst v == id' /\ parsed #asn1_strong_parser_kind (asn1_as_parser (ASN1_ILC id' c)) w (choice_head_val id' c tl pf v ()))
+= choice_head id' c tl pf w v
+
+let choice_tail_step (hd: asn1_id_t & asn1_content_k) (tl: list (asn1_id_t & asn1_content_k))
+  (pf: squash (List.Tot.noRepeats (List.Tot.map fst (hd :: tl))))
+  (w: SB.bytes) (v: make_gen_choice_type (asn1_lc_t (hd :: tl))) (id: asn1_id_t)
+: Lemma
+  (requires parsed #asn1_strong_parser_kind (asn1_as_parser (choice_k (hd :: tl) pf)) w v /\ dfst v == id /\ ~ (id == fst hd))
+  (ensures dfst v <> fst hd /\ parsed #asn1_strong_parser_kind (asn1_as_parser (choice_k tl ())) w (choice_tail_val hd tl pf v ()) /\ dfst (choice_tail_val hd tl pf v ()) == id)
+= choice_tail hd tl pf w v
+
+let lc_rel_cons_head (id': asn1_id_t) (#c: asn1_content_k) (#t1: Type0) (cd: cdesc c t1)
+  (#hd2: asn1_id_t & asn1_content_k) (#tl2: list (asn1_id_t & asn1_content_k)) (#t2: Type0) (dtl: lcdesc (hd2 :: tl2) t2)
+  (pf: squash (List.Tot.noRepeats (List.Tot.map fst ((id', c) :: hd2 :: tl2))))
+  (pm: perm) (r: t1) (v: make_gen_choice_type (asn1_lc_t ((id', c) :: hd2 :: tl2))) (sq: squash (dfst v == id'))
+: Lemma (lcrel true (LC_CONS id' cd dtl) pm (Inl #_ #t2 r) v == crel true cd pm r (choice_head_val id' c (hd2 :: tl2) pf v ()))
+= lc_rel_cons_eq' id' cd dtl pm (Inl #_ #t2 r) v
+
+let lc_rel_cons_tail (id': asn1_id_t) (#c: asn1_content_k) (#t1: Type0) (cd: cdesc c t1)
+  (#hd2: asn1_id_t & asn1_content_k) (#tl2: list (asn1_id_t & asn1_content_k)) (#t2: Type0) (dtl: lcdesc (hd2 :: tl2) t2)
+  (pf: squash (List.Tot.noRepeats (List.Tot.map fst ((id', c) :: hd2 :: tl2))))
+  (pm: perm) (r: t2) (v: make_gen_choice_type (asn1_lc_t ((id', c) :: hd2 :: tl2))) (sq: squash (dfst v <> id'))
+: Lemma (lcrel true (LC_CONS id' cd dtl) pm (Inr #t1 r) v == lcrel true dtl pm r (choice_tail_val (id', c) (hd2 :: tl2) pf v ()))
+= let (| id, x |) = v in
+  lc_rel_cons_eq' id' cd dtl pm (Inr #t1 r) (| id, x |);
+  assert (choice_tail_val (id', c) (hd2 :: tl2) pf (| id, x |) () == (| id, x |))
+    by (FStar.Tactics.norm [delta_only [`%choice_tail_val]; iota; zeta; primops]; FStar.Tactics.trefl ())
+
 (* A parser for a CHOICE whose identifier has already been read *)
 
 inline_for_extraction
@@ -221,17 +254,17 @@ fn choice_cons
 = (id: _) (input: _) (#pm: _) (#w: _) (#v: _)
 {
   if (ILC.asn1_id_eq id id') {
-    choice_head id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf w v;
+    choice_head_step id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf w v id;
     let r = phead input #pm #w #(choice_head_val id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ());
     let res : either t1 t2 = Inl #_ #t2 r;
-    lc_rel_cons_eq' id' cd dtl pm res v;
+    lc_rel_cons_head id' cd dtl pf pm r v ();
     rewrite each (crel true cd pm r (choice_head_val id' c (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ())) as (lcrel true (LC_CONS id' (Ghost.reveal cd) (Ghost.reveal dtl)) pm res v);
     res
   } else {
-    choice_tail (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf w v;
+    choice_tail_step (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf w v id;
     let r = ptail id input #pm #w #(choice_tail_val (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ());
     let res : either t1 t2 = Inr #t1 r;
-    lc_rel_cons_eq' id' cd dtl pm res v;
+    lc_rel_cons_tail id' cd dtl pf pm r v ();
     rewrite each (lcrel true dtl pm r (choice_tail_val (id', Ghost.reveal c) (Ghost.reveal hd2 :: Ghost.reveal tl2) pf v ())) as (lcrel true (LC_CONS id' (Ghost.reveal cd) (Ghost.reveal dtl)) pm res v);
     res
   }

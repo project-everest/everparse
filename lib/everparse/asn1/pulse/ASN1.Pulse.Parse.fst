@@ -162,6 +162,35 @@ fn parse_any ()
 
 (* TLV: the content slice of an ILC *)
 
+#push-options "--fuel 0 --ifuel 1 --z3rlimit 16"
+let ilc_content_spec
+  (id: asn1_id_t)
+  (#ack: asn1_content_k)
+  (p: asn1_weak_parser (asn1_content_t ack))
+  (w: SB.bytes)
+  (v: asn1_content_t ack)
+: Lemma
+  (requires (parsed #asn1_strong_parser_kind #(asn1_content_t ack) (parse_asn1_ILC id #ack p) w v))
+  (ensures (
+    match SB.parse ASN1.Spec.IdentifierU32.parse_asn1_identifier_U32 (Seq.slice w 0 (Seq.length w)) with
+    | None -> False
+    | Some (_, c1) ->
+      c1 <= Seq.length w /\ (
+      match SB.parse (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) (Seq.slice w c1 (Seq.length w)) with
+      | None -> False
+      | Some (_, c2) ->
+        c1 + c2 <= Seq.length w /\
+        parsed #asn1_weak_parser_kind #(asn1_content_t ack) p (Seq.slice w (c1 + c2) (Seq.length w)) v)))
+= assert (Seq.equal (Seq.slice w 0 (Seq.length w)) w);
+  ILC.ilc_eq id #ack p w;
+  let Some (_, c1) = SB.parse ASN1.Spec.IdentifierU32.parse_asn1_identifier_U32 w in
+  let wl = Seq.slice w c1 (Seq.length w) in
+  ILC.lc_eq #asn1_weak_parser_kind #(asn1_content_t ack) p wl;
+  SVG.parse_vlgen_weak_unfold 0 ILC.asn1_length_max #(SDER.parse_bounded_der_length32_kind 0 ILC.asn1_length_max) (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) #asn1_weak_parser_kind #(asn1_content_t ack) p wl;
+  let Some (_, c2) = SB.parse (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) wl in
+  Seq.slice_slice w c1 (Seq.length w) c2 (Seq.length w - c1)
+#pop-options
+
 #push-options "--z3rlimit 64"
 
 inline_for_extraction
@@ -177,18 +206,14 @@ fn ilc_content
   returns c: S.slice U8.t
   ensures exists* wc . S.pts_to c #pm wc ** Trade.trade (S.pts_to c #pm wc) (S.pts_to input #pm w) ** pure (parsed #asn1_weak_parser_kind #(asn1_content_t ack) p wc v)
 {
-  ILC.ilc_eq id #ack p w;
+  ilc_content_spec id #ack p w v;
   S.pts_to_len input;
   let off1 = I.jump_identifier input 0sz;
-  let wl = Ghost.hide (Seq.slice w (SZ.v off1) (Seq.length w));
-  ILC.lc_eq #asn1_weak_parser_kind #(asn1_content_t ack) p wl;
-  SVG.parse_vlgen_weak_unfold 0 ILC.asn1_length_max #(SDER.parse_bounded_der_length32_kind 0 ILC.asn1_length_max) (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) #asn1_weak_parser_kind #(asn1_content_t ack) p wl;
   let mut poff = off1;
   let r = ILC.vread_length input poff;
   match r {
     Some len -> {
       let off2 = !poff;
-      Seq.slice_slice w (SZ.v off1) (Seq.length w) (SZ.v off2 - SZ.v off1) (Seq.length w - SZ.v off1);
       let c = subslice_trade input off2 (S.len input);
       c
     }

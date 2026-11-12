@@ -87,6 +87,16 @@ let asn1_id_enc_index_short (id: asn1_id_t)
   let e = encode_asn1_first_byte id.c id.f b in
   assert (asn1_id_enc id == Seq.create 1 e)
 
+#push-options "--fuel 0 --ifuel 0"
+let asn1_id_enc_index_short_all (id: asn1_id_t)
+: Lemma (requires U32.v id.v < 31)
+  (ensures Seq.length (asn1_id_enc id) == id_len_spec id /\
+    (forall (i: nat) . i < id_len_spec id ==> U8.v (Seq.index (asn1_id_enc id) i) == id_byte_spec id i))
+= asn1_id_enc_index_short id;
+  assert (id_len_spec id == 1);
+  assert (id_byte_spec id 0 == first_byte_spec id)
+#pop-options
+
 let asn1_id_enc_index (id: asn1_id_t)
 : Lemma (Seq.length (asn1_id_enc id) == id_len_spec id /\
     (forall (i: nat) . i < id_len_spec id ==> U8.v (Seq.index (asn1_id_enc id) i) == id_byte_spec id i))
@@ -95,12 +105,7 @@ let asn1_id_enc_index (id: asn1_id_t)
   let n = id.v in
   if U32.v n < 31
   then begin
-    asn1_id_enc_index_short id;
-    assert (id_len_spec id == 1);
-    assert (id_byte_spec id 0 == first_byte_spec id);
-    let x = U8.v (Seq.index (asn1_id_enc id) 0) in
-    assert (x == id_byte_spec id 0);
-    assert (forall (i: nat) . i < id_len_spec id ==> i == 0)
+    asn1_id_enc_index_short_all id
   end
   else begin
     assert (U8.v 31uy == 31);
@@ -130,12 +135,14 @@ let rt_bound (v: U32.t { 31 <= U32.v v }) : Tot (j: U32.t { U32.v j == id_bound 
   else if U32.lt v 268435456ul then (lemma_partial_state_bound_f32_intro v 3; 3ul)
   else (lemma_partial_state_bound_f32_intro v 4; 4ul)
 
+#push-options "--fuel 0 --ifuel 0"
 let rt_digit_lemma (v: U32.t { 31 <= U32.v v }) (j: nat) (m: nat) (q: U32.t)
 : Lemma
   (requires (j == id_bound v /\ m <= j /\ U32.v q == U32.v v / pow2 (7 * (j - m))))
-  (ensures (U32.v q % 128 == id_digit v m))
+  (ensures (U32.v (U32.rem q 128ul) == id_digit v m))
 = lemma_partial_state_prefixf_val v m;
-  assert ((j - m) * 7 == 7 * (j - m))
+  FStar.Math.Lemmas.swap_mul (j - m) 7
+#pop-options
 
 inline_for_extraction
 let rt_id_b (v: U32.t { 31 <= U32.v v }) (m: U32.t { U32.v m <= id_bound v })
@@ -144,10 +151,9 @@ let rt_id_b (v: U32.t { 31 <= U32.v v }) (m: U32.t { U32.v m <= id_bound v })
   let q = U32.shift_right v (U32.mul 7ul (U32.sub j m)) in
   rt_digit_lemma v (U32.v j) (U32.v m) q;
   let r = U32.rem q 128ul in
-  FStar.Math.Lemmas.euclidean_division_definition (U32.v q) 128;
-  assert (FStar.UInt.mod #32 (U32.v q) 128 == U32.v q % 128);
   assert (U32.v r == id_digit v (U32.v m));
   assert_norm (pow2 8 == 256);
+  FStar.Math.Lemmas.small_mod (U32.v r) (pow2 8);
   let d = Cast.uint32_to_uint8 r in
   assert (U8.v d == id_digit v (U32.v m));
   if U32.lt m j then U8.add d 128uy else d

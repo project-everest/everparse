@@ -488,6 +488,11 @@ ensures pts_to s #pm v ** pure (U32.v st + 4 <= Seq.length v /\ r == is_valid_ba
 
 #pop-options
 
+let utctime_last (v: bytes)
+: Lemma (requires Seq.length v == 13 /\ is_valid_yymmdd v 0ul /\ is_valid_hhmmss true v 6ul)
+  (ensures is_valid_ASN1UTCTIME v == (Seq.index v 12 = 90uy))
+= ()
+
 fn check_utctime
   (s: S.slice byte)
   (#pm: perm)
@@ -503,6 +508,7 @@ ensures pts_to s #pm v ** pure (r == is_valid_ASN1UTCTIME v)
       let b = check_hhmmss true s 6ul;
       if (b) {
         let z = s.(12sz);
+        utctime_last v;
         (z = 90uy)
       } else {
         false

@@ -131,14 +131,15 @@ let iacc_cons_inv_wf (hd: gen_decorated_parser_twin) (tl: list gen_decorated_par
 : Lemma
   (requires (dfe hd x1 /\ avoids (hs hd) x2 /\ PSL.item_shaped hd /\ iacc (hd :: tl) (x1 `Seq.append` x2)))
   (ensures (iacc [hd] x1 /\ iacc tl x2))
-= Classical.move_requires (iacc_cons_inv hd tl x1) x2;
-  if Seq.length x1 = 0
+= if Seq.length x1 = 0
   then begin
     Classical.move_requires (framed_ne (Sq.item_set hd)) x1;
-    assert (Seq.equal (x1 `Seq.append` x2) x2);
+    assert (x1 == Seq.empty /\ ~ (PLAIN? (Sq.item_dec hd)) /\ Some? (generate_defaultable_item hd));
+    Seq.append_empty_l x2;
     iacc_single_empty hd;
     iacc_absent_head hd tl x2
   end
+  else iacc_cons_inv hd tl x1 x2
 
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 64"
 let iacc_cons_wf (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin { Cons? tl })

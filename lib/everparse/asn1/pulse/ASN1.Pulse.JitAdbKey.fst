@@ -239,7 +239,45 @@ let lit_pre (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items
   (pre tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) : prop =
   In.adb_key_supported key_k /\ List.Tot.noRepeats (List.Tot.map fst (pre `List.Tot.append` ((kx, y) :: tl)))
 
-#push-options "--z3rlimit 64"
+private
+let acc_items_iff (y: asn1_gen_items_lk) (b: bytes)
+: Lemma (L.acc #asn1_weak_parser_kind (Mkgenparser?.p (ADB.adb_fb y)) b <==> L.iacc (In.twins_of (dsnd y)) b)
+= ()
+
+private
+let kd_hdr (kid: asn1_id_t) (#t: Type) (dp: (l: nat) -> SB.parser (ADB.disp_kind l) t) (w: bytes) (h l: nat)
+: Lemma (requires (JA.hdr kid w == Some (h, l) /\ h <= Seq.length w))
+  (ensures (JA.kd kid dp w <==> Sq.consumed (dp l) (Seq.slice w h (Seq.length w)) == Some (Seq.length w - h)))
+= ()
+
+private
+let lit_sel_iff (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (c: bytes)
+: Lemma ((lit_sel key_k kx y c == Some (Seq.length (raw_key_c key_k kx) + Seq.length c)) <==> L.iacc (In.twins_of (dsnd y)) c)
+= acc_items_iff y c;
+  match Sq.consumed #asn1_weak_parser_kind (Mkgenparser?.p (ADB.adb_fb y)) c with
+  | None -> ()
+  | Some n -> assert (lit_sel key_k kx y c == Some (Seq.length (raw_key_c key_k kx) + n))
+
+#push-options "--fuel 0 --ifuel 1"
+private
+let lit_hdr (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (c: bytes)
+: Lemma (requires (Seq.length (raw_key_c key_k kx) < 4294967296))
+  (ensures (let w = Seq.append (WA.raw_key_enc kid key_k kx) c in
+    let k = raw_key_c key_k kx in
+    Some? (JA.hdr kid w) /\ (let Some (h, l) = JA.hdr kid w in
+    l == Seq.length k /\ h <= Seq.length w /\ Seq.slice w h (Seq.length w) == Seq.append k c /\
+    Seq.length w - h == Seq.length k + Seq.length c)))
+= let k = raw_key_c key_k kx in
+  raw_key_enc_c kid key_k kx;
+  hdr_tlv kid k c;
+  let w = Seq.append (WA.raw_key_enc kid key_k kx) c in
+  assert (w == Seq.append (enc_tlv kid true k) c);
+  let Some (h, l) = JA.hdr kid w in
+  assert (Seq.slice w h (Seq.length w) == Seq.append k c);
+  assert (Seq.length (Seq.slice w h (Seq.length w)) == Seq.length w - h)
+#pop-options
+
+#push-options "--fuel 0 --ifuel 1"
 let lit_iff (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk)
   (pre tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (c: bytes)
 : Lemma
@@ -252,7 +290,14 @@ let lit_iff (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (
   raw_key_enc_c kid key_k kx;
   hdr_tlv kid k c;
   if Seq.length k < 4294967296
-  then disp_lit key_k kx y lsf c
+  then begin
+    let w = Seq.append (WA.raw_key_enc kid key_k kx) c in
+    lit_hdr kid key_k kx c;
+    let Some (h, l) = JA.hdr kid w in
+    kd_hdr kid (ADB.choice_disp_p key_k (JA.lp key_k lsf)) w h l;
+    disp_lit key_k kx y lsf c;
+    lit_sel_iff key_k kx y c
+  end
   else ()
 
 let lit_fb_iff (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk)
@@ -267,7 +312,14 @@ let lit_fb_iff (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k
   raw_key_enc_c kid key_k kx;
   hdr_tlv kid k c;
   if Seq.length k < 4294967296
-  then disp_fb_lit key_k kx y lsf (ADB.adb_fb fb) c
+  then begin
+    let w = Seq.append (WA.raw_key_enc kid key_k kx) c in
+    lit_hdr kid key_k kx c;
+    let Some (h, l) = JA.hdr kid w in
+    kd_hdr kid (ADB.choice_fb_disp_p key_k (JA.lp key_k lsf) (ADB.adb_fb fb)) w h l;
+    disp_fb_lit key_k kx y lsf (ADB.adb_fb fb) c;
+    lit_sel_iff key_k kx y c
+  end
   else ()
 #pop-options
 

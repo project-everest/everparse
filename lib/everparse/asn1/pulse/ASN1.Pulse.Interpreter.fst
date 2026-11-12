@@ -225,6 +225,21 @@ inline_for_extraction
 let pick (b: bool) (j: U32.t) (r: option U32.t) : Tot (o: option U32.t { o == (if b then Some j else r) }) =
   if b then Some j else r
 
+let comp_of_id_cons (#i: _) (ls: asn1_gen_items_l i { ASN1_GEN_ITEMS_CONS? ls }) (id: asn1_id_t)
+: Lemma (let ASN1_GEN_ITEMS_CONS s _ _ _ tl = ls in
+    SC.comp_of_id (asn1_sequence_as_parser ls) id ==
+    (if Set.mem id s then Some 0 else match SC.comp_of_id (asn1_sequence_as_parser tl) id with None -> None | Some c -> Some (c + 1)))
+= let ASN1_GEN_ITEMS_CONS s _ dk _ tl = ls in
+  assert (asn1_sequence_as_parser ls == twin_of dk :: twins_of tl);
+  assert (item_set (twin_of dk) == s)
+
+let set_comp_cons (#i: _) (ls: asn1_gen_items_l i { ASN1_GEN_ITEMS_CONS? ls }) (j: U32.t) (id: asn1_id_t)
+: Lemma (let ASN1_GEN_ITEMS_CONS s _ _ _ tl = ls in
+    forall (r: option U32.t) .
+    SC.opt_u32_v r == (match SC.comp_of_id (asn1_sequence_as_parser tl) id with None -> None | Some c -> Some (U32.v j + 1 + c)) ==>
+    SC.opt_u32_v (if Set.mem id s then Some j else r) == (match SC.comp_of_id (asn1_sequence_as_parser ls) id with None -> None | Some c -> Some (U32.v j + c)))
+= comp_of_id_cons ls id
+
 [@@asn1_pulse_attr]
 let rec set_comp (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (u: squash (supported_items ls))
   (j: U32.t { U32.v j + items_len ls <= 64 }) (id: asn1_id_t)
@@ -233,6 +248,7 @@ let rec set_comp (#[@@@FStar.Attributes.monomorphize] i: _) ([@@@FStar.Attribute
 = match ls with
   | ASN1_GEN_ITEMS_NIL -> None
   | ASN1_GEN_ITEMS_CONS _ _ dk _ tl ->
+    set_comp_cons ls j id;
     pick (has_id_dec dk () id) j (set_comp tl () (U32.add j 1ul) id)
 
 [@@asn1_pulse_attr]
