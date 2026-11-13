@@ -354,7 +354,8 @@ let offsets_match_step
     (forall (j: nat) . j < i ==> SZ.v (Seq.index s j) < SZ.v x)
   )
   (ensures offsets_match b s' (i + 1) v)
-= ()
+= assert (forall (j: nat) . j < i ==> Seq.index s' j == Seq.index s j);
+  assert (Seq.index s' i == x)
 
 let offsets_sort_ok
   (b: bytes) (s0: Seq.seq SZ.t) (v: list (raw_data_item & raw_data_item))
@@ -1224,6 +1225,8 @@ let ment_step_ok
   fill_inv_step b s i x v m q;
   items_end_2 b (SZ.v x);
   items_end_add b oh (2 * i) 2;
+  assert (SZ.v x == items_end b oh (2 * i));
+  assert (2 * (i + 1) == 2 * i + 2);
   assert (o' == items_end b oh (2 * (i + 1)));
   lopl_ldrop_cons v i;
   check_dups_pair (fst e) (snd e) (list_of_pair_list (ldrop (i + 1) v));
