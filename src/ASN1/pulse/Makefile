@@ -96,12 +96,23 @@ test-corpus-%: $(C_OUTPUT_DIR)/corpus_%.exe $(SPEC_RUNNER) $(EVALUATION_DIR)/dat
 test-corpus: $(addprefix test-corpus-,$(CORPUS_TESTS))
 
 # Static stack bound: no recursion, and a bounded worst case, for the X.509
-# and CRL entry points (from the gcc call graph, at -O0 = no inlining)
+# and CRL entry points (from the compiler call graph, at -O0 = no inlining).
+# gcc provides it with -fcallgraph-info=su; clang (the default cc on macOS)
+# does not, so with clang, take frame sizes from -fstack-usage and the call
+# graph from the LLVM IR.
 STACK_BUDGET := 32768
+STACK_ENTRIES := ASN1_Pulse_X509_validate_certificate ASN1_Pulse_X509_validate_crl
+CC_IS_CLANG := $(shell $(CC) --version 2>/dev/null | grep -q clang && echo 1)
 stack-check: $(C_OUTPUT_DIR)/ASN1.Pulse.X509.c test/stack.py
+ifeq ($(CC_IS_CLANG),1)
+	cd $(C_OUTPUT_DIR) && $(CC) -std=c11 -O0 -fstack-usage -c ASN1.Pulse.X509.c -o stack.o
+	cd $(C_OUTPUT_DIR) && $(CC) -std=c11 -O0 -S -emit-llvm ASN1.Pulse.X509.c -o stack.ll
+	python3 test/stack.py --budget $(STACK_BUDGET) \
+	  --su $(C_OUTPUT_DIR)/stack.su --ll $(C_OUTPUT_DIR)/stack.ll $(STACK_ENTRIES)
+else
 	cd $(C_OUTPUT_DIR) && $(CC) -std=c11 -O0 -fcallgraph-info=su -c ASN1.Pulse.X509.c -o stack.o
-	python3 test/stack.py --budget $(STACK_BUDGET) $(C_OUTPUT_DIR)/stack.ci \
-	  ASN1_Pulse_X509_validate_certificate ASN1_Pulse_X509_validate_crl
+	python3 test/stack.py --budget $(STACK_BUDGET) --ci $(C_OUTPUT_DIR)/stack.ci $(STACK_ENTRIES)
+endif
 
 .PRECIOUS: $(C_OUTPUT_DIR)/%.c $(C_OUTPUT_DIR)/%.h $(C_OUTPUT_DIR)/test_%.exe $(C_OUTPUT_DIR)/corpus_%.exe
 .PHONY: test test-oracle test-corpus stack-check share-extract FORCE

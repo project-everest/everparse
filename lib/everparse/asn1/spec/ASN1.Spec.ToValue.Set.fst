@@ -92,10 +92,14 @@ let rec elem_values_len (its: list gen_decorated_parser_twin) (e: set_elem_t its
     | Inr e' -> elem_values_len tl e'
 #pop-options
 
+#push-options "--fuel 0 --ifuel 1"
 let asn1_id_enc_nonempty (id: asn1_id_t)
 : Lemma (Seq.length (asn1_id_enc id) > 0)
-= parse_asn1_identifier_U32_enc id Seq.empty;
-  Seq.append_empty_r (asn1_id_enc id)
+= let MK_ASN1_ID c f n = id in
+  if U32.v n < 31
+  then assert (Seq.length (asn1_id_enc id) == 1)
+  else assert (Seq.length (asn1_id_enc id) == 1 + Seq.length (enc_long n))
+#pop-options
 
 #push-options "--fuel 2 --ifuel 1"
 let elem_values_shape (its: list gen_decorated_parser_twin) (e: set_elem_t its) (id: asn1_id_t) (c: bytes)

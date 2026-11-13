@@ -278,6 +278,7 @@ let rec lex_total (a b: bytes)
   if Seq.length a = 0 || Seq.length b = 0 then ()
   else lex_total (Seq.slice a 1 (Seq.length a)) (Seq.slice b 1 (Seq.length b))
 
+#push-options "--fuel 0 --ifuel 0"
 let rec lex_trans (a b c: bytes)
 : Lemma (requires (Set_.lex_byte_order a b /\ Set_.lex_byte_order b c)) (ensures (Set_.lex_byte_order a c)) (decreases (Seq.length a))
 = lex_unfold a b;
@@ -287,6 +288,7 @@ let rec lex_trans (a b c: bytes)
   else if Seq.index a 0 = Seq.index b 0 && Seq.index b 0 = Seq.index c 0
   then lex_trans (Seq.slice a 1 (Seq.length a)) (Seq.slice b 1 (Seq.length b)) (Seq.slice c 1 (Seq.length c))
   else ()
+#pop-options
 
 let rec lex_antisym (a b: bytes)
 : Lemma (requires (Set_.lex_byte_order a b /\ Set_.lex_byte_order b a)) (ensures (a == b)) (decreases (Seq.length a))

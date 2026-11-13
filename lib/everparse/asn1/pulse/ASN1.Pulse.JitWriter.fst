@@ -293,6 +293,13 @@ fn jit_weak (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm
   w x' #x out pos
 }
 
+let sz_u32_fits (len: SZ.t)
+: Lemma (SZ.fits (U32.v (SZ.sizet_to_uint32 len)))
+= let n = SZ.v len in
+  let m = U32.v (SZ.sizet_to_uint32 len) in
+  if n < pow2 32 then FStar.Math.Lemmas.small_mod n (pow2 32);
+  SZ.fits_lte m n
+
 let tlv_overflow (len: SZ.t)
 : Lemma (requires (~ (SZ.uint32_to_sizet (SZ.sizet_to_uint32 len) == len))) (ensures (SZ.v len >= 4294967296))
 = assert_norm (pow2 32 == 4294967296)
@@ -313,6 +320,7 @@ fn jit_tlv (#ex: bool) (id: asn1_id_t) (#t: Type0) (r: bprel t)
     let p1r = !pos;
     let len = SZ.sub p0 p1r;
     assert_norm (pow2 32 == 4294967296);
+    sz_u32_fits len;
     if (SZ.eq (SZ.uint32_to_sizet (SZ.sizet_to_uint32 len)) len) {
       fold (W.vmatch_sz len (Seq.length c));
       let ok2 = WL.r2l_write_hdr true len #(Seq.length c) out pos;
@@ -1434,6 +1442,9 @@ let acons_correct (aa: list gen_decorated_parser_twin -> SB.bytes -> prop) (hd: 
   let n = Seq.length v in
   Seq.slice_slice v1 p1 n 0 (p - p1);
   Seq.slice_slice v2 p1 n 0 (p - p1);
+  assert (Seq.slice v2 p1 p == c2);
+  assert (Seq.slice v2 p2 p1 == c1);
+  assert (Seq.slice v2 p2 p == Seq.append c1 c2);
   assert (acons_at aa hd tl v2 p2 p1 p)
 
 let aan (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
@@ -1598,7 +1609,7 @@ fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k)
       let len = SZ.sub p1r p2r;
       assert_norm (pow2 32 == 4294967296);
       let len32 = SZ.sizet_to_uint32 len;
-      SZ.fits_lte (U32.v len32) (SZ.v len);
+      sz_u32_fits len;
       if (SZ.eq (SZ.uint32_to_sizet len32) len) {
         fold (W.vmatch_sz len (Seq.length (JK.raw_key_c key_k kx)));
         let ok3 = WL.r2l_write_hdr true len #(Seq.length (JK.raw_key_c key_k kx)) out pos;
@@ -1735,6 +1746,45 @@ let rec not_lits (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn
   | (kx, y) :: tl -> nl_cons kid key_k () kx y tl (fun out p2 p0 #v -> not_lits kid key_k () tl out p2 p0 #v))
   in vf out p2 p0 #v
 
+let ns_or_retry_post (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (r: jit_result) (p': nat) (v': SB.bytes)
+: Lemma
+  (requires (Seq.length v' == Seq.length v /\ p <= Seq.length v /\
+    Seq.slice v' p (Seq.length v) == Seq.slice v p (Seq.length v) /\
+    (r == JIT_NO_SPACE ==> Seq.length x > p)))
+  (ensures (jit_post_g false x a p v (ns_or_retry r) p' v'))
+= ()
+
+let cat_ns (c1 c2: SB.bytes) (p: nat) (v: SB.bytes) (p1: nat) (v1: SB.bytes) (r: jit_result)
+: Lemma
+  (requires (W.r2l_post c2 p v true p1 v1 /\ (r == JIT_NO_SPACE ==> Seq.length c1 > p1)))
+  (ensures (r == JIT_NO_SPACE ==> Seq.length (Seq.append c1 c2) > p))
+= Seq.lemma_len_append c1 c2
+
+let jit_retry_post (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (p': nat) (v': SB.bytes)
+: Lemma
+  (requires (Seq.length v' == Seq.length v /\ p <= Seq.length v /\
+    Seq.slice v' p (Seq.length v) == Seq.slice v p (Seq.length v)))
+  (ensures (jit_post_g false x a p v JIT_RETRY p' v'))
+= ()
+
+let jit_ok_post (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (p': nat) (v': SB.bytes)
+: Lemma
+  (requires (W.r2l_post x p v true p' v' /\ a))
+  (ensures (jit_post_g false x a p v JIT_OK p' v'))
+= ()
+
+let jit_fb_ok (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
+  (c1 c2: SB.bytes) (p: nat) (v: SB.bytes) (p2: nat) (v2: SB.bytes)
+: Lemma
+  (requires (W.r2l_post (Seq.append c1 c2) p v true p2 v2 /\
+    nl kid key_k lsf (Seq.slice v2 p2 p) /\
+    L.acc #asn1_strong_parser_kind (parse_asn1_ILC kid (asn1_content_as_parser (ASN1_TERMINAL key_k))) c1 /\
+    L.iacc (In.twins_of (dsnd fb)) c2))
+  (ensures (jit_post_g false (Seq.append c1 c2) (JA.afbacc kid key_k lsf fb (Seq.append c1 c2)) p v JIT_OK p2 v2))
+= JA.fbr_acc kid key_k fb c1 c2;
+  nl_afb kid key_k lsf fb (Seq.append c1 c2);
+  jit_ok_post (Seq.append c1 c2) (JA.afbacc kid key_k lsf fb (Seq.append c1 c2)) p v p2 v2
+
 (* The fallback: the payload, then the key, both written and checked;
    then, if the key is none of the literals of the table, the dispatch
    selects the fallback. Otherwise, the payload would be parsed as that of
@@ -1764,16 +1814,21 @@ fn jit_fb (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: Ghost.erased (list (as
       let p2r = !pos;
       let n = nlw out p2r p0;
       if n {
-        JA.fbr_acc kid key_k fb c1 c2;
-        nl_afb kid key_k lsf fb (Seq.append c1 c2);
+        jit_fb_ok kid key_k lsf fb c1 c2 (SZ.v p) v (SZ.v p2) v2;
         JIT_OK
       } else {
+        jit_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v (SZ.v p2) v2;
         JIT_RETRY
       }
     } else {
+      cat_ns c1 c2 (SZ.v p) v (SZ.v p1) v1 res;
+      ns_or_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v res (SZ.v p2) v2;
       ns_or_retry res
     }
   } else {
+    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    Seq.lemma_len_append c1 c2;
+    ns_or_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v ok (SZ.v p1) v1;
     fold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
     rewrite (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x) as (raw_dfbr kid key_k #fb dfb pm x' x);
     ns_or_retry ok

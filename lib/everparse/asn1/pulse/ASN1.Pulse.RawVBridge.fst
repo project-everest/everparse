@@ -73,6 +73,7 @@ fn split_keep_v (#s: _) (k: asn1_k s) (pm: perm) (r: option (S.slice U8.t)) (y: 
 requires keep_v k pm r y
 ensures keep_v k (pm /. 2.0R) r y ** keep_own (pm /. 2.0R) r
 {
+  half_perm_pos pm;
   match r {
     None -> {
       unfold (keep_v k pm None y);
@@ -172,6 +173,7 @@ fn split_gml_gen (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (#t: Type0) (a: pr
 requires gml_rel k a pm x y
 ensures gml_rel k a (pm /. 2.0R) x y ** It.mixed_list_match r ml_ops #asn1_strong_parser_kind p_raw (pm /. 2.0R) x (rb_list k y)
 {
+  half_perm_pos pm;
   rb_parsers_fwd k u;
   rb_r_functional k;
   rb_list_rel k y;

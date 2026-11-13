@@ -160,7 +160,130 @@ let ilc_eq
 = let pf = parse_asn1_identifier_U32 `T.parse_filter` (fun id' -> id' = id) in
   T.parse_synth_eq (pf `T.nondep_then` parse_asn1_LC p) snd b;
   T.nondep_then_eq pf (parse_asn1_LC p) b;
-  T.parse_filter_eq parse_asn1_identifier_U32 (fun id' -> id' = id) b
+  T.parse_filter_eq parse_asn1_identifier_U32 (fun id' -> id' = id) b;
+  match parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id', c1) ->
+    if id' = id
+    then match parse (parse_asn1_LC p) (Seq.slice b c1 (Seq.length b)) with
+      | None -> ()
+      | Some _ -> ()
+    else ()
+
+let ilc_eq_proj
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+  (b: bytes) (c1: nat) (b2: bytes)
+: Lemma
+  (requires (
+    let r1 = parse parse_asn1_identifier_U32 b in
+    Some? r1 /\ snd (Some?.v r1) == c1 /\
+    c1 <= Seq.length b /\ b2 == Seq.slice b c1 (Seq.length b)
+  ))
+  (ensures (
+    c1 <= Seq.length b /\ (
+    let r1 = Some?.v (parse parse_asn1_identifier_U32 b) in
+    let r = parse (parse_asn1_ILC id p) b in
+    let r2 = parse (parse_asn1_LC p) b2 in
+    (Some? r <==> (fst r1 == id /\ Some? r2)) /\
+    (Some? r ==> snd (Some?.v r) == c1 + snd (Some?.v r2))
+  )))
+= ilc_eq id p b
+
+let slice_from_slice_from (b: bytes) (i j: nat)
+: Lemma
+  (requires (i <= j /\ j <= Seq.length b))
+  (ensures (Seq.slice (Seq.slice b i (Seq.length b)) (j - i) (Seq.length (Seq.slice b i (Seq.length b))) == Seq.slice b j (Seq.length b)))
+= Seq.slice_slice b i (Seq.length b) (j - i) (Seq.length b - i)
+
+let add_shift (a b c d: nat)
+: Lemma
+  (requires (b <= c /\ a == (c - b) + d))
+  (ensures (b + a == c + d))
+= ()
+
+let ilc_eq_off
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+  (vb: bytes) (offset off1: nat)
+: Lemma
+  (requires (
+    offset <= Seq.length vb /\ (
+    let r1 = parse parse_asn1_identifier_U32 (Seq.slice vb offset (Seq.length vb)) in
+    Some? r1 /\ offset + snd (Some?.v r1) == off1
+  )))
+  (ensures (
+    off1 <= Seq.length vb /\ (
+    let r1 = Some?.v (parse parse_asn1_identifier_U32 (Seq.slice vb offset (Seq.length vb))) in
+    let r = parse (parse_asn1_ILC id p) (Seq.slice vb offset (Seq.length vb)) in
+    let r2 = parse (parse_asn1_LC p) (Seq.slice vb off1 (Seq.length vb)) in
+    (Some? r <==> (fst r1 == id /\ Some? r2)) /\
+    (Some? r ==> offset + snd (Some?.v r) == off1 + snd (Some?.v r2))
+  )))
+= slice_from_slice_from vb offset off1;
+  let s0 = Seq.slice vb offset (Seq.length vb) in
+  let s1 = Seq.slice vb off1 (Seq.length vb) in
+  ilc_eq_proj id p s0 (off1 - offset) s1;
+  let r = parse (parse_asn1_ILC id p) s0 in
+  if Some? r
+  then
+    let r2 = parse (parse_asn1_LC p) s1 in
+    add_shift (snd (Some?.v r)) offset off1 (snd (Some?.v r2))
+
+let ilc_validate_fail
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+  (vb: bytes) (offset off1: SZ.t) (r: option asn1_id_t)
+: Lemma
+  (requires (
+    vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 offset vb off1 r /\
+    (match r with None -> True | Some id' -> ~ (id' == id))
+  ))
+  (ensures (LPS.validator_postcond #asn1_strong_parser_kind (parse_asn1_ILC id p) offset vb off1 false))
+= ilc_eq id p (Seq.slice vb (SZ.v offset) (Seq.length vb))
+
+let ilc_validate_ok
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+  (vb: bytes) (offset off1 off2: SZ.t) (res: bool)
+: Lemma
+  (requires (
+    vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 offset vb off1 (Some id) /\
+    LPS.validator_postcond #asn1_strong_parser_kind (parse_asn1_LC p) off1 vb off2 res
+  ))
+  (ensures (LPS.validator_postcond #asn1_strong_parser_kind (parse_asn1_ILC id p) offset vb off2 res))
+= ilc_eq_off id p vb (SZ.v offset) (SZ.v off1)
+
+let ilc_jump_pre
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+  (vb: bytes) (offset off1: SZ.t)
+: Lemma
+  (requires (
+    LPS.validator_success #asn1_strong_parser_kind parse_asn1_identifier_U32 offset vb off1 /\
+    LPS.jumper_pre #_ #asn1_strong_parser_kind (parse_asn1_ILC id p) offset vb
+  ))
+  (ensures (LPS.jumper_pre' #_ #asn1_strong_parser_kind (parse_asn1_LC p) off1 vb))
+= ilc_eq_off id p vb (SZ.v offset) (SZ.v off1)
+
+let ilc_jump_post
+  (id : asn1_id_t)
+  (#ack : asn1_content_k)
+  (p : asn1_weak_parser (asn1_content_t ack))
+  (vb: bytes) (offset off1 res: SZ.t)
+: Lemma
+  (requires (
+    LPS.validator_success #asn1_strong_parser_kind parse_asn1_identifier_U32 offset vb off1 /\
+    LPS.jumper_pre #_ #asn1_strong_parser_kind (parse_asn1_ILC id p) offset vb /\
+    LPS.validator_success #asn1_strong_parser_kind (parse_asn1_LC p) off1 vb res
+  ))
+  (ensures (LPS.validator_success #asn1_strong_parser_kind (parse_asn1_ILC id p) offset vb res))
+= ilc_eq_off id p vb (SZ.v offset) (SZ.v off1)
 
 inline_for_extraction
 let asn1_id_eq (id1 id2: asn1_id_t) : Tot (b: bool { b == (id1 = id2) }) =
@@ -183,19 +306,21 @@ fn validate_asn1_ILC
   (#pm: perm)
   (#vb: Ghost.erased bytes)
 {
-  let sinput = Ghost.hide (Seq.slice vb (SZ.v offset) (Seq.length vb));
-  ilc_eq id p sinput;
   let r = I.vread_identifier input poffset;
+  with off1 . assert (R.pts_to poffset off1);
   match r {
     None -> {
+      ilc_validate_fail id p vb offset off1 r;
       false
     }
     Some id' -> {
       if (asn1_id_eq id' id) {
-        with off1 . assert (R.pts_to poffset off1);
-        Seq.slice_slice vb (SZ.v offset) (Seq.length vb) (SZ.v off1 - SZ.v offset) (Seq.length vb - SZ.v offset);
-        validate_asn1_LC #ack #p v input poffset
+        let res = validate_asn1_LC #ack #p v input poffset;
+        with off2 . assert (R.pts_to poffset off2);
+        ilc_validate_ok id p vb offset off1 off2 res;
+        res
       } else {
+        ilc_validate_fail id p vb offset off1 r;
         false
       }
     }
@@ -214,11 +339,12 @@ fn jump_asn1_ILC
   (#pm: perm)
   (#vb: Ghost.erased bytes)
 {
-  let sinput = Ghost.hide (Seq.slice vb (SZ.v offset) (Seq.length vb));
-  ilc_eq id p sinput;
+  ilc_eq id p (Seq.slice vb (SZ.v offset) (Seq.length vb));
   let off1 = I.jump_identifier input offset;
-  Seq.slice_slice vb (SZ.v offset) (Seq.length vb) (SZ.v off1 - SZ.v offset) (Seq.length vb - SZ.v offset);
-  jump_asn1_LC #ack p input off1
+  ilc_jump_pre id p vb offset off1;
+  let res = jump_asn1_LC #ack p input off1;
+  ilc_jump_post id p vb offset off1 res;
+  res
 }
 
 #pop-options

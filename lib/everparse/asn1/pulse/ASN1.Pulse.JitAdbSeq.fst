@@ -115,13 +115,18 @@ let aacc_cons_inv_wf (hd: gen_decorated_parser_twin) (tl: list gen_decorated_par
 : Lemma
   (requires (JA.twin_ok sfx /\ SL.dfe hd x1 /\ SL.avoids (SL.hs hd) x2 /\ PSL.item_shaped hd /\ JA.aacc (hd :: tl) sfx (x1 `Seq.append` x2)))
   (ensures (L.iacc [hd] x1 /\ JA.aacc tl sfx x2))
-= Classical.move_requires (aacc_cons_inv hd tl sfx x1) x2;
-  if Seq.length x1 = 0
+= if Seq.length x1 = 0
   then begin
+    Seq.lemma_empty x1;
     Classical.move_requires (L.framed_ne (Sq.item_set hd)) x1;
-    assert (Seq.equal (x1 `Seq.append` x2) x2);
+    assert (~ (PLAIN? (Sq.item_dec hd)) /\ SL.avoids (Sq.item_set hd) x2);
+    Seq.append_empty_l x2;
     L.iacc_single_empty hd;
     aacc_absent_head hd tl sfx x2
+  end
+  else begin
+    assert (L.framed (Sq.item_set hd) x1);
+    aacc_cons_inv hd tl sfx x1 x2
   end
 
 let slice_pre (v: SB.bytes) (a b: nat)

@@ -108,6 +108,10 @@ let list_rest_step (#s: _) (k: asn1_k s) (w: SB.bytes) (off: nat) (n: nat)
   assert (L.tlv_size b == Some c)
 #pop-options
 
+let tlv_size_at_arith (off off1 off2 c1 c2 l: nat)
+: Lemma (requires off1 == off + c1 /\ off2 == off1 + c2) (ensures off + (c1 + c2 + l) == off2 + l)
+= ()
+
 let tlv_size_at (w: SB.bytes) (off: nat) (off1: nat) (off2: nat) (len: U32.t)
 : Lemma
   (requires (
@@ -115,15 +119,14 @@ let tlv_size_at (w: SB.bytes) (off: nat) (off1: nat) (off2: nat) (len: U32.t)
     (match SB.parse parse_asn1_identifier_U32 (Seq.slice w off (Seq.length w)) with Some (_, c) -> off1 == off + c | None -> False) /\
     off1 <= Seq.length w /\
     (match SB.parse (LowParse.Spec.DER.parse_bounded_der_length32 0 ILC.asn1_length_max) (Seq.slice w off1 (Seq.length w)) with Some (len', c2) -> (len' <: U32.t) == len /\ off2 == off1 + c2 | None -> False)))
-  (ensures L.tlv_size (Seq.slice w off (Seq.length w)) == Some (off2 - off + U32.v len))
+  (ensures (let r = L.tlv_size (Seq.slice w off (Seq.length w)) in Some? r /\ off + Some?.v r == off2 + U32.v len))
 = let b = Seq.slice w off (Seq.length w) in
-  let Some (_, c) = SB.parse parse_asn1_identifier_U32 b in
-  let c1 : nat = c in
+  let c1 = snd (Some?.v (SB.parse parse_asn1_identifier_U32 b)) in
   assert (off1 == off + c1);
-  assert (Seq.length b == Seq.length w - off);
   assert (Seq.equal (Seq.slice b c1 (Seq.length b)) (Seq.slice w off1 (Seq.length w)));
-  let Some (_, c2) = SB.parse (LowParse.Spec.DER.parse_bounded_der_length32 0 ILC.asn1_length_max) (Seq.slice w off1 (Seq.length w)) in
-  PS.tlv_size_eq b c1 c2 len
+  let c2 = snd (Some?.v (SB.parse (LowParse.Spec.DER.parse_bounded_der_length32 0 ILC.asn1_length_max) (Seq.slice w off1 (Seq.length w)))) in
+  PS.tlv_size_eq b c1 c2 len;
+  tlv_size_at_arith off off1 off2 c1 c2 (U32.v len)
 
 #push-options "--z3rlimit 32 --fuel 0 --ifuel 1"
 let list_rest_next (#s: _) (k: asn1_k s) (w: SB.bytes) (off: nat) (off1: nat) (off2: nat) (len: U32.t) (n: nat)
@@ -139,7 +142,6 @@ let list_rest_next (#s: _) (k: asn1_k s) (w: SB.bytes) (off: nat) (off1: nat) (o
 = list_rest_step k w off n;
   tlv_size_at w off off1 off2 len;
   let Some c = L.tlv_size (Seq.slice w off (Seq.length w)) in
-  assert (c == off2 - off + U32.v len);
   assert (off + c == off2 + U32.v len)
 #pop-options
 
@@ -153,6 +155,18 @@ let tlv_parts (w: SB.bytes) (off: nat)
   let Some (_, c) = SB.parse parse_asn1_identifier_U32 b in
   assert (Seq.equal (Seq.slice b c (Seq.length b)) (Seq.slice w (off + c) (Seq.length w)));
   ILC.length_eq (Seq.slice w (off + c) (Seq.length w))
+
+let list_rest_end (#s: _) (k: asn1_k s) (w: SB.bytes) (off: nat) (n: nat)
+: Lemma
+  (requires list_rest k w off n /\ off >= Seq.length w)
+  (ensures n == 0)
+= Seq.slice_length w;
+  SL.parse_list_eq #asn1_strong_parser_kind (asn1_as_parser k) (Seq.slice w off (Seq.length w))
+
+inline_for_extraction
+let sz_add_u32 (a: SZ.t) (b: U32.t)
+: Pure SZ.t (requires SZ.fits (SZ.v a + U32.v b)) (ensures fun r -> SZ.v r == SZ.v a + U32.v b)
+= SZ.add a (SZ.uint32_to_sizet b)
 
 (* Counting the elements *)
 
@@ -202,7 +216,7 @@ ensures S.pts_to input #pm w ** pure (SZ.v res == List.Tot.length v)
             list_rest_next k w (SZ.v off) (SZ.v off1) (SZ.v off2) l (List.Tot.length v - SZ.v cnt);
             SZ.fits_lte (SZ.v off2 + U32.v l) (Seq.length w);
             SZ.fits_lte (SZ.v cnt + 1) (Seq.length w);
-            let noff = SZ.add off2 (SZ.uint32_to_sizet l);
+            let noff = sz_add_u32 off2 l;
             let ncnt = SZ.add cnt 1sz;
             assert (pure (SZ.v noff == SZ.v off2 + U32.v l /\ SZ.v ncnt == SZ.v cnt + 1));
             assert (pure (List.Tot.length v - SZ.v ncnt == List.Tot.length v - SZ.v cnt - 1));
@@ -220,9 +234,9 @@ ensures S.pts_to input #pm w ** pure (SZ.v res == List.Tot.length v)
     }
   };
   let off = !poff;
-  Seq.slice_length w;
-  SL.parse_list_eq #asn1_strong_parser_kind (asn1_as_parser k) (Seq.slice w (SZ.v off) (Seq.length w));
-  !pcnt
+  let cnt = !pcnt;
+  list_rest_end k w (SZ.v off) (List.Tot.length v - SZ.v cnt);
+  cnt
 }
 
 (* The mixed list: the whole contents, serialized *)

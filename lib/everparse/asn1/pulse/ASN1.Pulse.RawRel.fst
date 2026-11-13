@@ -379,11 +379,14 @@ let id_enc_injective () : squash (RS.enc_injective id_enc) = ()
 let share_raw_slice () : share_t raw_slice = RS.share_slice_ser id_enc
 let gather_raw_slice () : gather_t raw_slice = RS.gather_slice_ser id_enc (id_enc_injective ())
 
+let half_perm_pos (p: perm) : Lemma (p /. 2.0R >. 0.0R) = ()
+
 ghost
 fn share_raw_tlv (id: asn1_id_t) (#t: Type0) (r: bprel t) (sh: share_t r)
 : share_t #t (raw_tlv id r)
 = (x: t) (#p: perm) (#y: SB.bytes)
 {
+  half_perm_pos p;
   unfold (raw_tlv id r p x y);
   with c . assert (r p x c);
   sh x #p #c;
@@ -668,6 +671,7 @@ fn share_raw_int (_: unit)
 : share_t #asn1_int_impl raw_int
 = (x: asn1_int_impl) (#p: perm) (#y: SB.bytes)
 {
+  half_perm_pos p;
   match x {
     Small i -> {
       rewrite (raw_int p x y) as (pure (y == i64_enc i));

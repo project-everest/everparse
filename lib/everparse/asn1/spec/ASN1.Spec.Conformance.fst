@@ -130,20 +130,71 @@ let slice_slice_3 (b: bytes) (c1 c2 len: nat)
   (ensures (Seq.slice (Seq.slice b c1 (Seq.length b)) c2 (c2 + len) == Seq.slice b (c1 + c2) (c1 + c2 + len)))
 = Seq.slice_slice b c1 (Seq.length b) c2 (c2 + len)
 
-#push-options "--z3rlimit 64"
+private
+let slice_from_slice (b: bytes) (c1 c2 n: nat)
+: Lemma
+  (requires (c1 <= n /\ c2 <= n - c1 /\ n <= Seq.length b))
+  (ensures (Seq.slice (Seq.slice b c1 (Seq.length b)) c2 (n - c1) == Seq.slice b (c1 + c2) n))
+= Seq.slice_slice b c1 (Seq.length b) c2 (n - c1)
+
+private
+let twin_at_some (id: asn1_id_t) (b1: bytes) (n2: nat) (len: U32.t) (c2: nat)
+: Lemma
+  (requires (twin_at id b1 n2 /\ c2 <= Seq.length b1 /\ parse parse_asn1_length_u32_t b1 == Some (len, c2)))
+  (ensures (asn1_any_id_valid id /\ c2 + U32.v len == n2 /\ n2 <= Seq.length b1 /\
+    (match parse (RV.rec_vlgen_body asn1_value_param pv id) (Seq.slice b1 c2 n2) with
+     | Some (_, c) -> c == U32.v len
+     | None -> False)))
+= if asn1_any_id_valid id then twin_eq id b1
+
+private
+let twin_at_len (id: asn1_id_t) (b1: bytes) (n2: nat)
+: Lemma
+  (requires (twin_at id b1 n2))
+  (ensures (asn1_any_id_valid id /\ Some? (parse parse_asn1_length_u32_t b1)))
+= if asn1_any_id_valid id then twin_eq id b1
+
+private
+let any_identifier_of_u32 (b: bytes) (c1: nat) (id: asn1_id_t)
+: Lemma
+  (requires (c1 <= Seq.length b /\ parse parse_asn1_identifier_U32 b == Some (id, c1) /\ asn1_any_id_valid id))
+  (ensures (parse parse_asn1_any_identifier b == Some ((id <: asn1_any_id_t), c1)))
+= parse_any_identifier_consumed b
+
+private
+let value_at_intro (b: bytes) (id: asn1_any_id_t) (c1 c2 n2: nat) (len: U32.t)
+: Lemma
+  (requires (c1 <= Seq.length b /\ RV.rec_vlgen_header asn1_value_param b == Some (id, c1 + c2, U32.v len) /\
+    c2 + U32.v len == n2 /\ n2 <= Seq.length (Seq.slice b c1 (Seq.length b)) /\
+    (match parse (RV.rec_vlgen_body asn1_value_param pv id) (Seq.slice (Seq.slice b c1 (Seq.length b)) c2 n2) with
+     | Some (_, c) -> c == U32.v len
+     | None -> False)))
+  (ensures (value_at b (c1 + n2)))
+= slice_slice_3 b c1 c2 (U32.v len);
+  RV.parse_rec_vlgen_eq asn1_value_param b
+
+private
+let header_intro (b: bytes) (c1: nat) (id: asn1_any_id_t)
+: Lemma
+  (requires (c1 <= Seq.length b /\ parse parse_asn1_any_identifier b == Some (id, c1)))
+  (ensures (match parse parse_asn1_length_u32_t (Seq.slice b c1 (Seq.length b)) with
+    | Some (len, c2) -> RV.rec_vlgen_header asn1_value_param b == Some (id, c1 + c2, U32.v len)
+    | None -> True))
+= ()
+
 let value_of_twin (b: bytes) (c1: nat) (id: asn1_id_t) (n2: nat)
 : Lemma
   (requires (c1 <= Seq.length b /\ parse parse_asn1_identifier_U32 b == Some (id, c1) /\ twin_at id (Seq.slice b c1 (Seq.length b)) n2))
   (ensures (value_at b (c1 + n2)))
-= RV.parse_rec_vlgen_eq asn1_value_param b;
-  parse_any_identifier_consumed b;
-  let b1 = Seq.slice b c1 (Seq.length b) in
-  twin_eq id b1;
-  let Some (len, c2) = parse parse_asn1_length_u32_t b1 in
-  parser_kind_prop_equiv asn1_any_identifier_kind parse_asn1_any_identifier;
-  assert (RV.rec_vlgen_header asn1_value_param b == Some (id, c1 + c2, U32.v len));
-  slice_slice_3 b c1 c2 (U32.v len)
-#pop-options
+= let b1 = Seq.slice b c1 (Seq.length b) in
+  twin_at_len id b1 n2;
+  any_identifier_of_u32 b c1 id;
+  header_intro b c1 id;
+  match parse parse_asn1_length_u32_t b1 with
+  | Some (len, c2) ->
+    twin_at_some id b1 n2 len c2;
+    value_at_intro b id c1 c2 n2 len
+  | None -> ()
 
 let twin_at_valid (id: asn1_id_t) (b: bytes) (n: nat)
 : Lemma
@@ -191,7 +242,7 @@ let list_ok_twin (b: bytes) (c1: nat) (id: asn1_id_t) (n: nat)
 = let b1 = Seq.slice b c1 (Seq.length b) in
   let Some (_, c2) = parse (parse_asn1_value_twin id) b1 in
   value_of_twin b c1 id c2;
-  Seq.slice_slice b c1 (Seq.length b) c2 (n - c1);
+  slice_from_slice b c1 c2 n;
   list_ok_cons b (c1 + c2) n
 
 let list_ok_single (b: bytes)
@@ -401,28 +452,42 @@ let terminal_leaf (id: asn1_id_t) (k: asn1_terminal_k) (b: bytes)
   | _ -> ()
 #pop-options
 
+let terminal_sound_post (id: asn1_id_t) (k: asn1_terminal_k) (b: bytes) : prop =
+  Seq.length b < 4294967296 ==> (match parse (asn1_terminal_as_parser k) b with
+    | Some (_, n) -> n == Seq.length b ==> content_ok id b == true
+    | None -> True)
+
+private
+let terminal_sound_leaf (id: asn1_id_t) (k: asn1_terminal_k) (b: bytes)
+: Lemma
+  (requires (wf_terminal id k /\ ~ (ASN1_PREFIXED_TERMINAL? k)))
+  (ensures (terminal_sound_post id k b))
+= match parse (asn1_terminal_as_parser k) b with
+  | Some (_, n) -> if n = Seq.length b && Seq.length b < 4294967296 then terminal_leaf id k b
+  | None -> ()
+
+private
+let terminal_sound_prefixed (id: asn1_id_t) (id2: asn1_id_t) (k2: asn1_terminal_k) (b: bytes)
+: Lemma
+  (requires (wf_terminal id (ASN1_PREFIXED_TERMINAL id2 k2) /\ (forall b' . terminal_sound_post id2 k2 b')))
+  (ensures (terminal_sound_post id (ASN1_PREFIXED_TERMINAL id2 k2) b))
+= ilc_value_at id2 #(ASN1_TERMINAL k2) (asn1_terminal_as_parser k2) b;
+  match parse (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id2 k2)) b with
+  | Some (_, n) ->
+    if n = Seq.length b && Seq.length b < 4294967296 then
+      (if CONSTRUCTED? id.f then list_ok_single b else opaque_leaf_ok id b)
+  | None -> ()
+
 let rec terminal_sound_at (id: asn1_id_t) (k: asn1_terminal_k) (b: bytes)
 : Lemma
   (requires (wf_terminal id k))
-  (ensures (Seq.length b < 4294967296 ==> (match parse (asn1_terminal_as_parser k) b with
-    | Some (_, n) -> n == Seq.length b ==> content_ok id b == true
-    | None -> True)))
+  (ensures (terminal_sound_post id k b))
   (decreases k)
 = match k with
   | ASN1_PREFIXED_TERMINAL id2 k2 ->
     Classical.forall_intro (Classical.move_requires (terminal_sound_at id2 k2));
-    ilc_value_at id2 #(ASN1_TERMINAL k2) (asn1_terminal_as_parser k2) b;
-    begin match parse (asn1_terminal_as_parser k) b with
-    | Some (_, n) ->
-      if n = Seq.length b && Seq.length b < 4294967296 then
-        (if CONSTRUCTED? id.f then list_ok_single b else opaque_leaf_ok id b)
-    | None -> ()
-    end
-  | _ ->
-    begin match parse (asn1_terminal_as_parser k) b with
-    | Some (_, n) -> if n = Seq.length b && Seq.length b < 4294967296 then terminal_leaf id k b
-    | None -> ()
-    end
+    terminal_sound_prefixed id id2 k2 b
+  | _ -> terminal_sound_leaf id k b
 
 let terminal_sound (id: asn1_id_t) (k: asn1_terminal_k)
 : Lemma
@@ -439,15 +504,24 @@ let rec list_sound_at (#t: Type) (p: asn1_strong_parser t) (b: bytes)
     | Some (_, n) -> list_ok b == true
     | None -> True))
   (decreases (Seq.length b))
-= (* recurse first, so that the termination check does not see the
-     unfoldings of parse_list *)
-  (if Seq.length b > 0
-   then match parse p b with
-   | Some (_, c) ->
-     if c > 0 then list_sound_at p (Seq.slice b c (Seq.length b))
-   | None -> ());
-  tot_parse_list_eq p b;
-  tot_parse_list_eq pv b
+= if Seq.length b = 0
+  then list_ok_empty b
+  else match parse p b with
+  | None -> tot_parse_list_eq p b
+  | Some (_, c) ->
+    if c = 0
+    then tot_parse_list_eq p b
+    else begin
+      let b' = Seq.slice b c (Seq.length b) in
+      list_sound_at p b';
+      tot_parse_list_eq p b;
+      assert (value_at b c);
+      if Some? (parse (parse_list p) b)
+      then begin
+        list_ok_cons b c (Seq.length b);
+        Seq.lemma_eq_elim b (Seq.slice b 0 (Seq.length b))
+      end
+    end
 
 let sized_list_sound (ne: bool) (#t: Type) (p: asn1_strong_parser t)
 : Lemma
@@ -607,7 +681,10 @@ let rest_ok_cons (id: asn1_id_t) (b: bytes) (c n: nat)
 : Lemma
   (requires (twin_at id b c /\ c <= n /\ n <= Seq.length b /\ list_ok (Seq.slice (Seq.slice b c (Seq.length b)) 0 (n - c))))
   (ensures (rest_ok id b n))
-= Seq.slice_slice b c (Seq.length b) 0 (n - c)
+= slice_from_slice b c 0 n;
+  match parse (parse_asn1_value_twin id) b with
+  | Some (_, c') -> assert (c' == c)
+  | None -> ()
 
 let list_ok_slice_0 (b: bytes) (n: nat)
 : Lemma
@@ -1477,6 +1554,14 @@ let rec value_ids_sorted (l: list asn1_value) : Tot bool =
   | x :: y :: q -> asn1_tag_lt (asn1_value_id x) (asn1_value_id y) && value_ids_sorted (y :: q)
   | _ -> true
 
+private
+let synth_asn1_value_id
+  (x : dtuple2 asn1_any_id_t (fun id -> RV.rec_vlgen_payload asn1_value asn1_octetstring_t))
+: Lemma (asn1_value_id (synth_asn1_value x) == dfst x)
+= match x with
+  | (| _, RV.RNode _ |) -> ()
+  | (| _, RV.RLeaf _ |) -> ()
+
 let pv_value_id (b: bytes)
 : Lemma
   (match parse pv b with
@@ -1485,7 +1570,14 @@ let pv_value_id (b: bytes)
      | None -> False)
    | None -> True)
 = RV.parse_rec_vlgen_eq asn1_value_param b;
-  parse_any_identifier_consumed b
+  parse_any_identifier_consumed b;
+  match RV.rec_vlgen_header asn1_value_param b with
+  | None -> ()
+  | Some (h, hs, len) ->
+    if hs + len > Seq.length b then ()
+    else match parse (RV.rec_vlgen_body asn1_value_param pv h) (Seq.slice b hs (hs + len)) with
+    | None -> ()
+    | Some (pl, _) -> synth_asn1_value_id (| h, pl |)
 
 let choice_twin_tag (lp: list (asn1_id_t & gen_parser asn1_strong_parser_kind)) (id: asn1_id_t) (b: bytes)
 : Lemma

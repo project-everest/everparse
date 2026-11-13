@@ -285,6 +285,57 @@ let tparse_exact (#k: parser_kind) (#t: Type) (p: parser k t) (b: bytes)
      | None -> True))
 = ()
 
+private
+let slice_append_mid (a c s: bytes)
+: Lemma (Seq.slice ((a `Seq.append` c) `Seq.append` s) (Seq.length a) (Seq.length a + Seq.length c) == c)
+= Seq.lemma_eq_elim (Seq.slice ((a `Seq.append` c) `Seq.append` s) (Seq.length a) (Seq.length a + Seq.length c)) c
+
+private
+let parse_hdr_ok (v: asn1_value) (s: bytes)
+: Lemma
+  (requires (hdr_ok v))
+  (ensures (
+    let b = vtl v `Seq.append` s in
+    let y = U32.uint_to_t (Seq.length (vcont v)) in
+    let sz = Seq.length (enc_len y) in
+    vtl v == enc_len y `Seq.append` vcont v /\
+    parse parse_asn1_length_u32_t b == Some (y, sz) /\
+    sz + U32.v y == Seq.length (vtl v) /\
+    Seq.slice b sz (sz + U32.v y) == vcont v))
+= let c = vcont v in
+  let n = Seq.length c in
+  let b = vtl v `Seq.append` s in
+  let y = U32.uint_to_t n in
+  assert (vtl v == enc_len y `Seq.append` c);
+  Seq.append_assoc (enc_len y) c s;
+  parse_enc_len y (c `Seq.append` s);
+  slice_append_mid (enc_len y) c s
+
+private
+let parse_len_ff (b: bytes)
+: Lemma
+  (requires (Seq.length b > 0 /\ Seq.index b 0 == 0xFFuy))
+  (ensures (parse parse_asn1_length_u32_t b == None))
+= parse_len_consumed b;
+  match parse parse_asn1_length_u32_t b with
+  | Some (y, sz) ->
+    enc_len_head y;
+    assert (Seq.index (Seq.slice b 0 sz) 0 == Seq.index b 0)
+  | None -> ()
+
+private
+let vtl_not_ok_head (v: asn1_value) (s: bytes)
+: Lemma
+  (requires (hdr_ok v == false))
+  (ensures (let b = vtl v `Seq.append` s in Seq.length b > 0 /\ Seq.index b 0 == 0xFFuy))
+= let c = vcont v in
+  let n = Seq.length c in
+  let h = Seq.create 1 0xFFuy `Seq.append` (Seq.create 1 (if vflag_ok v then 0uy else 1uy) `Seq.append` enc_unary n) in
+  assert (enc_hdr (vflag_ok v) n == h);
+  Seq.append_assoc h c s;
+  index_append_l (Seq.create 1 0xFFuy) (Seq.create 1 (if vflag_ok v then 0uy else 1uy) `Seq.append` enc_unary n) 0;
+  index_append_l h (c `Seq.append` s) 0
+
 let parse_hdr (v: asn1_value) (s: bytes)
 : Lemma (
     let b = vtl v `Seq.append` s in
@@ -292,29 +343,11 @@ let parse_hdr (v: asn1_value) (s: bytes)
     | Some (y, sz) -> hdr_ok v /\ U32.v y == Seq.length (vcont v) /\ sz == Seq.length (enc_len y) /\
       Seq.slice b sz (sz + U32.v y) == vcont v /\ sz + U32.v y == Seq.length (vtl v)
     | None -> hdr_ok v == false)
-= let c = vcont v in
-  let n = Seq.length c in
-  let b = vtl v `Seq.append` s in
-  if hdr_ok v
-  then begin
-    let y = U32.uint_to_t n in
-    Seq.append_assoc (enc_len y) c s;
-    parse_enc_len y (c `Seq.append` s);
-    Seq.lemma_eq_elim (Seq.slice b (Seq.length (enc_len y)) (Seq.length (enc_len y) + n)) c
-  end
+= if hdr_ok v
+  then parse_hdr_ok v s
   else begin
-    let h = Seq.create 1 0xFFuy `Seq.append` (Seq.create 1 (if vflag_ok v then 0uy else 1uy) `Seq.append` enc_unary n) in
-    assert (enc_hdr (vflag_ok v) n == h);
-    Seq.append_assoc h c s;
-    index_append_l (Seq.create 1 0xFFuy) (Seq.create 1 (if vflag_ok v then 0uy else 1uy) `Seq.append` enc_unary n) 0;
-    index_append_l h (c `Seq.append` s) 0;
-    assert (Seq.index b 0 == 0xFFuy);
-    parse_len_consumed b;
-    match parse parse_asn1_length_u32_t b with
-    | Some (y, sz) ->
-      enc_len_head y;
-      assert (Seq.index (Seq.slice b 0 sz) 0 == Seq.index b 0)
-    | None -> ()
+    vtl_not_ok_head v s;
+    parse_len_ff (vtl v `Seq.append` s)
   end
 
 let vlc (#k: parser_kind) (#t: Type) (p: parser k t) =
@@ -365,24 +398,79 @@ let id_split (v: asn1_value) (s: bytes)
 
 (* ANY *)
 
-#push-options "--z3rlimit 64"
+private
+let body_olen (id: asn1_any_id_t) (s: bytes) (len: nat) (n: nat) : GTot (option nat) =
+  match parse (RV.rec_vlgen_body asn1_value_param pv id) s with
+  | Some (_, c) -> if c = len then Some n else None
+  | None -> None
+
+private
+let pv_hdr_eq (b: bytes) (id: asn1_any_id_t) (hs len: nat)
+: Lemma
+  (requires (RV.rec_vlgen_header asn1_value_param b == Some (id, hs, len)))
+  (ensures (olen (parse pv b) == (if hs + len > Seq.length b then None else body_olen id (Seq.slice b hs (hs + len)) len (hs + len))))
+= RV.parse_rec_vlgen_eq asn1_value_param b
+
+private
+let twin_len_eq (id: asn1_any_id_t) (b1: bytes) (len: U32.t) (c2: nat)
+: Lemma
+  (requires (c2 <= Seq.length b1 /\ parse parse_asn1_length_u32_t b1 == Some (len, c2)))
+  (ensures (olen (parse (parse_asn1_value_twin id) b1) == (if Seq.length b1 < c2 + U32.v len then None else body_olen id (Seq.slice b1 c2 (c2 + U32.v len)) (U32.v len) (c2 + U32.v len))))
+= twin_eq id b1
+
+private
+let shift_olen (c1: nat) (o: option nat) : Tot (option nat) =
+  match o with Some n -> Some (c1 + n) | None -> None
+
+private
+let body_olen_shift (id: asn1_any_id_t) (s: bytes) (len c1 n: nat)
+: Lemma (body_olen id s len (c1 + n) == shift_olen c1 (body_olen id s len n))
+= ()
+
+private
+let pv_hdr_body (b: bytes) (id: asn1_any_id_t) (c1 c2 len: nat)
+: Lemma
+  (requires (c1 + c2 + len <= Seq.length b /\ RV.rec_vlgen_header asn1_value_param b == Some (id, c1 + c2, len)))
+  (ensures (olen (parse pv b) == body_olen id (Seq.slice b (c1 + c2) (c1 + c2 + len)) len (c1 + (c2 + len))))
+= pv_hdr_eq b id (c1 + c2) len
+
+private
+let pv_twin_body (b: bytes) (id: asn1_any_id_t) (c1 c2 len: nat)
+: Lemma
+  (requires (c1 + c2 + len <= Seq.length b /\ RV.rec_vlgen_header asn1_value_param b == Some (id, c1 + c2, len)))
+  (ensures (olen (parse pv b) == shift_olen c1 (body_olen id (Seq.slice (Seq.slice b c1 (Seq.length b)) c2 (c2 + len)) len (c2 + len))))
+= let s = Seq.slice b (c1 + c2) (c1 + c2 + len) in
+  body_olen_shift id s len c1 (c2 + len);
+  pv_hdr_body b id c1 c2 len;
+  slice_slice_3 b c1 c2 len
+
+private
+let pv_twin_some (b: bytes) (id: asn1_any_id_t) (c1 c2: nat) (len: U32.t)
+: Lemma
+  (requires (c1 + c2 <= Seq.length b /\
+    RV.rec_vlgen_header asn1_value_param b == Some (id, c1 + c2, U32.v len) /\
+    parse parse_asn1_length_u32_t (Seq.slice b c1 (Seq.length b)) == Some (len, c2)))
+  (ensures (olen (parse pv b) == shift_olen c1 (olen (parse (parse_asn1_value_twin id) (Seq.slice b c1 (Seq.length b))))))
+= let b1 = Seq.slice b c1 (Seq.length b) in
+  twin_len_eq id b1 len c2;
+  if Seq.length b1 < c2 + U32.v len
+  then pv_hdr_eq b id (c1 + c2) (U32.v len)
+  else pv_twin_body b id c1 c2 (U32.v len)
+
 let pv_twin (b: bytes) (id: asn1_any_id_t) (c1: nat)
 : Lemma
   (requires (c1 <= Seq.length b /\ parse parse_asn1_any_identifier b == Some (id, c1)))
   (ensures (olen (parse pv b) == (match olen (parse (parse_asn1_value_twin id) (Seq.slice b c1 (Seq.length b))) with
     | Some n -> Some (c1 + n)
     | None -> None)))
-= RV.parse_rec_vlgen_eq asn1_value_param b;
-  let b1 = Seq.slice b c1 (Seq.length b) in
-  twin_eq id b1;
-  parser_kind_prop_equiv asn1_any_identifier_kind parse_asn1_any_identifier;
+= let b1 = Seq.slice b c1 (Seq.length b) in
   match parse parse_asn1_length_u32_t b1 with
-  | None -> ()
+  | None ->
+    RV.parse_rec_vlgen_eq asn1_value_param b;
+    twin_eq id b1
   | Some (len, c2) ->
     assert (RV.rec_vlgen_header asn1_value_param b == Some (id, c1 + c2, U32.v len));
-    if Seq.length b1 < c2 + U32.v len then ()
-    else slice_slice_3 b c1 c2 (U32.v len)
-#pop-options
+    pv_twin_some b id c1 c2 len
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 1"
 let rec any_twin (v: asn1_value) (s: bytes)
@@ -536,16 +624,21 @@ let k_top (#s: _) (k: asn1_k s) (v: asn1_value) (sfx: bytes)
 
 (* SEQUENCE items *)
 
+private
+let asn1_id_enc_nonempty (id: asn1_id_t)
+: Lemma (Seq.length (asn1_id_enc id) > 0)
+= let MK_ASN1_ID _ _ n = id in
+  if U32.v n < 31
+  then assert (Seq.length (asn1_id_enc id) == 1)
+  else assert (Seq.length (asn1_id_enc id) == 1 + Seq.length (enc_long n))
+
 let id_empty (b: bytes)
 : Lemma (requires (Seq.length b == 0)) (ensures (parse parse_asn1_identifier_U32 b == None))
 = parse_asn1_identifier_U32_consumed b;
   match parse parse_asn1_identifier_U32 b with
   | Some (id, c) ->
-    let MK_ASN1_ID cl f n = id in
-    assert (Seq.length (Seq.slice b 0 c) == 0);
-    if U32.v n < 31
-    then assert (Seq.length (asn1_id_enc id) == 1)
-    else assert (Seq.length (asn1_id_enc id) == 1 + Seq.length (enc_long n))
+    asn1_id_enc_nonempty id;
+    assert (Seq.length (Seq.slice b 0 c) == 0)
   | None -> ()
 
 let list_enc_empty (l: list asn1_value)

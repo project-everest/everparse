@@ -26,6 +26,7 @@ module T = LowParse.Tot.Combinators
 module I = ASN1.Pulse.Identifier
 module L = FStar.List.Tot
 module Conf = ASN1.Spec.Conformance
+module VR = LowParse.PulseParse.VReader
 
 (* Component index of an element *)
 
@@ -101,6 +102,10 @@ let comp_ok_iff (hd: gen_decorated_parser_twin) (h: list (asn1_decorated_t (Mkge
   | [_] -> ()
   | _ :: _ :: _ -> ()
 
+let index_cons (#a: Type) (hd: a) (tl: list a) (j: nat { j < L.length tl })
+: Lemma (L.index (hd :: tl) (j + 1) == L.index tl j)
+= ()
+
 #push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
 let rec comps_ok_iff (its: list gen_decorated_parser_twin) (l: list (set_elem_t its))
 : Lemma (ensures (comps_ok its l <==> comps_spec its l)) (decreases its)
@@ -113,7 +118,7 @@ let rec comps_ok_iff (its: list gen_decorated_parser_twin) (l: list (set_elem_t 
     comp_ok_iff hd (heads l');
     forall_nat_split (comps_q its l);
     let prf (j: nat) : Lemma (comps_q its l (j + 1) <==> comps_q tl (tails l') j)
-    = if j < L.length tl then assert (L.index its (j + 1) == L.index tl j) else ()
+    = if j < L.length tl then index_cons hd tl j else ()
     in
     Classical.forall_intro prf;
     assert (comps_q its l 0 <==> comp_ok hd (heads l'))
@@ -183,10 +188,13 @@ let rec final_ok'_iff (its: list gen_decorated_parser_twin) (j: nat) (m: U64.t)
   | [] -> ()
   | hd :: tl ->
     final_ok'_iff tl (j + 1) m;
-    assert (forall (i: nat) . i < L.length tl ==> L.index its (i + 1) == L.index tl i);
-    assert ((forall (i: nat) . i < L.length its ==> (bit m (i + j) \/ defaultable its i)) <==> (
-      (bit m j \/ defaultable its 0) /\
-      (forall (i: nat) . i < L.length tl ==> (bit m ((i + 1) + j) \/ defaultable its (i + 1)))))
+    let p (i: nat) : prop = i < L.length its ==> (bit m (i + j) \/ defaultable its i) in
+    forall_nat_split p;
+    let prf (i: nat) : Lemma (p (i + 1) <==> (i < L.length tl ==> (bit m (i + (j + 1)) \/ defaultable tl i)))
+    = if i < L.length tl then index_cons hd tl i else ()
+    in
+    Classical.forall_intro prf;
+    assert (p 0 <==> (bit m j \/ Some? (generate_defaultable_item hd)))
 #pop-options
 
 (* The loop, as a fold over the list of elements *)
@@ -214,11 +222,14 @@ let sorted_from (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (
    | Some p, x :: _ -> opt_tag_lt (Some p) (elem_tag its x)
    | _ -> true)
 
+let loop_q (its: list gen_decorated_parser_twin) (m: U64.t) (l: list (set_elem_t its)) (i: nat) : prop =
+  i < L.length its ==>
+    (count_comp its l i + (if bit' m i then 1 else 0) <= 1 /\
+     ((count_comp its l i == 0 /\ bit' m i == false) ==> defaultable its i))
+
 let loop_spec (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (m: U64.t) (l: list (set_elem_t its)) : prop =
   sorted_from its prev l /\
-  (forall (i: nat) . i < L.length its ==>
-    (count_comp its l i + (if bit' m i then 1 else 0) <= 1 /\
-     ((count_comp its l i == 0 /\ bit' m i == false) ==> defaultable its i)))
+  (forall (i: nat) . loop_q its m l i)
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 let rec set_loop_iff (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (m: U64.t) (l: list (set_elem_t its))
@@ -237,11 +248,14 @@ let rec set_loop_iff (its: list gen_decorated_parser_twin) (prev: option asn1_id
       Classical.forall_intro (set_bit_spec m (U32.uint_to_t c));
       set_loop_iff its (Some t) m' q;
       assert (sorted_from its prev l <==> (prev_ok prev t /\ sorted_from its (Some t) q));
-      assert (forall (i: nat) . count_comp its l i == count_comp its q i + (if i = c then 1 else 0));
       if bit m c then begin
-        assert (~ (count_comp its l c + (if bit' m c then 1 else 0) <= 1))
+        assert (count_comp its l c == count_comp its q c + 1);
+        assert (~ (loop_q its m l c))
       end else begin
-        assert (forall (i: nat) . i < L.length its ==> (if bit' m' i then 1 else 0) == (if bit' m i then 1 else 0) + (if i = c then 1 else 0))
+        let prf (i: nat) : Lemma (loop_q its m l i <==> loop_q its m' q i)
+        = assert (count_comp its l i == count_comp its q i + (if i = c then 1 else 0))
+        in
+        Classical.forall_intro prf
       end
     end
 #pop-options
@@ -356,6 +370,15 @@ let set_elem_fail (its: list gen_decorated_parser_twin) (b: bytes)
 = parse_set_elem_twin_cases_injective its;
   T.and_then_eq parse_asn1_identifier_U32 #asn1_strong_parser_kind #(set_elem_t its) (parse_set_elem_twin its) b
 
+let set_elem_consumed_some (its: list gen_decorated_parser_twin) (b: bytes) (id: asn1_id_t) (n1 n2: nat)
+: Lemma
+  (requires (
+    n1 <= Seq.length b /\
+    SB.parse parse_asn1_identifier_U32 b == Some (id, n1) /\
+    consumed #asn1_strong_parser_kind (parse_set_elem_twin its id) (Seq.slice b n1 (Seq.length b)) == Some n2))
+  (ensures (consumed #asn1_strong_parser_kind (parse_set_elem its) b == Some (n1 + n2)))
+= set_elem_fail its b
+
 let opt_u32_v (o: option U32.t) : Tot (option nat) =
   match o with
   | None -> None
@@ -431,6 +454,12 @@ let rest_step_fail
     assert (None? (SB.parse (parse_set_elem its) b));
     assert (SB.parse (parse_list (parse_set_elem its)) b == None)
 
+let parse_list_consumes_zero (#t: Type) (p: parser asn1_strong_parser_kind t) (b: bytes)
+: Lemma
+  (requires (Seq.length b > 0 /\ consumed #asn1_strong_parser_kind p b == Some 0))
+  (ensures (SB.parse (parse_list p) b == None))
+= LowParse.Spec.List.tot_parse_list_eq p b
+
 let rest_step_empty
   (its: list gen_decorated_parser_twin)
   (prev: option asn1_id_t) (m: U64.t)
@@ -442,11 +471,9 @@ let rest_step_empty
     consumed #asn1_strong_parser_kind (parse_set_elem_twin its id) (Seq.slice v off (Seq.length v)) == Some 0))
   (ensures (rest_ok its prev m (Seq.slice v off (Seq.length v)) == false))
 = let b = Seq.slice v off (Seq.length v) in
-  LowParse.Spec.List.tot_parse_list_eq (parse_set_elem its) b;
-  set_elem_fail its b;
   slice_tail v off 0;
-  assert (consumed #asn1_strong_parser_kind (parse_set_elem its) b == Some 0);
-  assert (SB.parse (parse_list (parse_set_elem its)) b == None)
+  set_elem_consumed_some its b id 0 0;
+  parse_list_consumes_zero (parse_set_elem its) b
 
 let rest_empty (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (m: U64.t) (b: bytes)
 : Lemma
@@ -482,10 +509,98 @@ let tag_lt (a b: asn1_id_t) : Tot (r: bool { r == asn1_tag_lt a b }) =
 
 (* The validator *)
 
-let vreader_some_le (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) (x: t)
-: Lemma (requires LowParse.PulseParse.VReader.vreader_postcond p offset v off (Some x))
-    (ensures SZ.v offset <= SZ.v off /\ SZ.v off <= Seq.length v)
+let vreader_some_parse (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) (x: t)
+: Lemma (requires VR.vreader_postcond p offset v off (Some x))
+    (ensures SZ.v offset <= SZ.v off /\ SZ.v off <= Seq.length v /\
+      SB.parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, (SZ.v off - SZ.v offset <: nat)))
 = ()
+
+let vreader_none_parse (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t)
+: Lemma (requires VR.vreader_postcond p offset v off None)
+    (ensures SZ.v off <= Seq.length v /\ None? (SB.parse p (Seq.slice v (SZ.v offset) (Seq.length v))))
+= ()
+
+let validator_true_consumed (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t)
+: Lemma (requires LPS.validator_postcond p offset v off true)
+    (ensures SZ.v offset <= SZ.v off /\ SZ.v off <= Seq.length v /\
+      consumed p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (SZ.v off - SZ.v offset <: nat))
+= ()
+
+let validator_false_consumed (#k: SB.parser_kind) (#t: Type) (p: SB.parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t)
+: Lemma (requires LPS.validator_postcond p offset v off false)
+    (ensures SZ.v off <= Seq.length v /\ None? (consumed p (Seq.slice v (SZ.v offset) (Seq.length v))))
+= ()
+
+(* Pure summaries of each branch of the loop body, so that the Pulse
+   function only has to combine them. *)
+
+let step_id_fail
+  (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (m: U64.t)
+  (v: bytes) (off off1: SZ.t)
+: Lemma
+  (requires (SZ.v off < Seq.length v /\ VR.vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1 None))
+  (ensures (SZ.v off1 <= Seq.length v /\ rest_ok its prev m (Seq.slice v (SZ.v off) (Seq.length v)) == false))
+= vreader_none_parse #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1;
+  rest_step_fail its prev m v (SZ.v off)
+
+let step_comp_fail
+  (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (m: U64.t)
+  (v: bytes) (off off1: SZ.t) (id: asn1_id_t)
+: Lemma
+  (requires (Conf.items_tagged its /\ SZ.v off < Seq.length v /\
+    VR.vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1 (Some id) /\
+    None? (comp_of_id its id)))
+  (ensures (SZ.v off1 <= Seq.length v /\ rest_ok its prev m (Seq.slice v (SZ.v off) (Seq.length v)) == false))
+= vreader_some_parse #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1 id;
+  rest_step_fail its prev m v (SZ.v off)
+
+let step_twin_fail
+  (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (m: U64.t)
+  (v: bytes) (off off1 off2: SZ.t) (id: asn1_id_t)
+: Lemma
+  (requires (Conf.items_tagged its /\ SZ.v off < Seq.length v /\
+    VR.vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1 (Some id) /\
+    LPS.validator_postcond #asn1_strong_parser_kind (parse_set_elem_twin its id) off1 v off2 false))
+  (ensures (SZ.v off2 <= Seq.length v /\ rest_ok its prev m (Seq.slice v (SZ.v off) (Seq.length v)) == false))
+= vreader_some_parse #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1 id;
+  validator_false_consumed #asn1_strong_parser_kind (parse_set_elem_twin its id) off1 v off2;
+  rest_step_fail its prev m v (SZ.v off)
+
+#push-options "--fuel 0 --ifuel 0"
+let step_twin_ok
+  (its: list gen_decorated_parser_twin) (prev: option asn1_id_t) (m: U64.t)
+  (v: bytes) (off off1 off2: SZ.t) (id: asn1_id_t) (c: U32.t)
+: Lemma
+  (requires (Conf.items_tagged its /\ SZ.v off < Seq.length v /\
+    VR.vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1 (Some id) /\
+    comp_of_id its id == Some (U32.v c) /\ U32.v c < 64 /\
+    LPS.validator_postcond #asn1_strong_parser_kind (parse_set_elem_twin its id) off1 v off2 true))
+  (ensures (
+    SZ.v off <= SZ.v off2 /\ SZ.v off2 <= Seq.length v /\
+    (SZ.v off2 == SZ.v off ==> rest_ok its prev m (Seq.slice v (SZ.v off) (Seq.length v)) == false) /\
+    (SZ.v off2 <> SZ.v off ==>
+      rest_ok its prev m (Seq.slice v (SZ.v off) (Seq.length v)) ==
+        (prev_ok prev id && not (bit m (U32.v c)) && rest_ok its (Some id) (set_bit m c) (Seq.slice v (SZ.v off2) (Seq.length v))))))
+= vreader_some_parse #asn1_strong_parser_kind parse_asn1_identifier_U32 off v off1 id;
+  validator_true_consumed #asn1_strong_parser_kind (parse_set_elem_twin its id) off1 v off2;
+  if SZ.v off2 = SZ.v off
+  then rest_step_empty its prev m v (SZ.v off) id
+  else rest_step its prev m v (SZ.v off) id (SZ.v off1) (U32.v c) (SZ.v off2)
+#pop-options
+
+let step_continue
+  (its: list gen_decorated_parser_twin) (b0: bytes) (first: bool) (prev: asn1_id_t) (m: U64.t)
+  (b b': bytes) (id: asn1_id_t) (c: U32.t { U32.v c < 64 })
+: Lemma
+  (requires (
+    rest_ok its None 0uL b0 == rest_ok its (if first then None else Some prev) m b /\
+    rest_ok its (if first then None else Some prev) m b ==
+      (prev_ok (if first then None else Some prev) id && not (bit m (U32.v c)) && rest_ok its (Some id) (set_bit m c) b')))
+  (ensures (
+    let ok = (first || asn1_tag_lt prev id) && not (test_bit m c) in
+    (ok ==> rest_ok its None 0uL b0 == rest_ok its (Some id) (set_bit m c) b') /\
+    (ok == false ==> rest_ok its None 0uL b0 == false)))
+= test_bit_spec m c
 
 let set_ready (its: list gen_decorated_parser_twin) : prop =
   Conf.items_tagged its /\ L.length its <= 64
@@ -540,35 +655,29 @@ fn validate_set
     let oid = I.vread_identifier input poffset;
     match oid {
       None -> {
-        rest_step_fail its (if first then None else Some prev) m v_bytes (SZ.v off);
+        with off1 . assert (R.pts_to poffset off1);
+        step_id_fail its (if first then None else Some prev) m v_bytes off off1;
         pcontinue := false
       }
       Some id -> {
         with off1 . assert (R.pts_to poffset off1);
-        vreader_some_le #asn1_strong_parser_kind parse_asn1_identifier_U32 off v_bytes off1 id;
-        Seq.slice_slice v_bytes (SZ.v off) (Seq.length v_bytes) (SZ.v off1 - SZ.v off) (Seq.length v_bytes - SZ.v off);
+        vreader_some_parse #asn1_strong_parser_kind parse_asn1_identifier_U32 off v_bytes off1 id;
         match comp id {
           None -> {
-            rest_step_fail its (if first then None else Some prev) m v_bytes (SZ.v off);
+            step_comp_fail its (if first then None else Some prev) m v_bytes off off1 id;
             pcontinue := false
           }
           Some c -> {
             let is_valid = vtwin id input poffset;
+            with off2 . assert (R.pts_to poffset off2);
             if is_valid {
+              step_twin_ok its (if first then None else Some prev) m v_bytes off off1 off2 id c;
               let off2 = !poffset;
               if (off2 = off) {
-                assert (pure (SZ.v off1 == SZ.v off));
-                assert (pure (SB.parse parse_asn1_identifier_U32 (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes)) == Some (id, 0)));
-                assert (pure (consumed #asn1_strong_parser_kind (parse_set_elem_twin its id) (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes)) == Some 0));
-                rest_step_empty its (if first then None else Some prev) m v_bytes (SZ.v off) id;
                 pcontinue := false
               } else {
-                assert (pure (SZ.v off <= SZ.v off1 /\ SZ.v off1 <= SZ.v off2 /\ SZ.v off <> SZ.v off2));
-                assert (pure (comp_of_id its id == Some (U32.v c) /\ U32.v c < 64));
-                assert (pure (SB.parse parse_asn1_identifier_U32 (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes)) == Some (id, (SZ.v off1 - SZ.v off <: nat))));
-                assert (pure (consumed #asn1_strong_parser_kind (parse_set_elem_twin its id) (Seq.slice v_bytes (SZ.v off1) (Seq.length v_bytes)) == Some (SZ.v off2 - SZ.v off1 <: nat)));
-                rest_step its (if first then None else Some prev) m v_bytes (SZ.v off) id (SZ.v off1) (U32.v c) (SZ.v off2);
-                test_bit_spec m c;
+                step_continue its (Seq.slice v_bytes (SZ.v offset) (Seq.length v_bytes)) first prev m
+                  (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes)) (Seq.slice v_bytes (SZ.v off2) (Seq.length v_bytes)) id c;
                 let ok = ((first || tag_lt prev id) && not (test_bit m c));
                 if ok {
                   pfirst := false;
@@ -579,7 +688,7 @@ fn validate_set
                 }
               }
             } else {
-              rest_step_fail its (if first then None else Some prev) m v_bytes (SZ.v off);
+              step_twin_fail its (if first then None else Some prev) m v_bytes off off1 off2 id;
               pcontinue := false
             }
           }

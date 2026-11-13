@@ -239,35 +239,69 @@ let rec digits_l_correct (l: list U8.t) (s: nat) (n: nat { s + n <= L.length l }
 : Lemma (ensures digits_l l s n == T.is_valid_digit_range (Seq.seq_of_list l) s n) (decreases n)
 = if n = 0 then () else digits_l_correct l s (n - 1)
 
-#push-options "--fuel 8"
+let rec digits_l_index (l: list U8.t) (s: nat) (n: nat { s + n <= L.length l }) (i: nat { i < n })
+: Lemma (requires digits_l l s n) (ensures T.is_valid_digit (L.index l (s + i))) (decreases n)
+= if i = n - 1 then () else digits_l_index l s (n - 1) i
+
+let digits_l_6 (l: list U8.t) (s: nat { s + 6 <= L.length l })
+: Lemma (requires digits_l l s 6)
+  (ensures T.is_valid_digit (L.index l s) /\ T.is_valid_digit (L.index l (s + 1)) /\
+    T.is_valid_digit (L.index l (s + 2)) /\ T.is_valid_digit (L.index l (s + 3)) /\
+    T.is_valid_digit (L.index l (s + 4)) /\ T.is_valid_digit (L.index l (s + 5)))
+= digits_l_index l s 6 0; digits_l_index l s 6 1; digits_l_index l s 6 2;
+  digits_l_index l s 6 3; digits_l_index l s 6 4; digits_l_index l s 6 5
+
+let digits_l_8 (l: list U8.t) (s: nat { s + 8 <= L.length l })
+: Lemma (requires digits_l l s 8)
+  (ensures T.is_valid_digit (L.index l s) /\ T.is_valid_digit (L.index l (s + 1)) /\
+    T.is_valid_digit (L.index l (s + 2)) /\ T.is_valid_digit (L.index l (s + 3)) /\
+    T.is_valid_digit (L.index l (s + 4)) /\ T.is_valid_digit (L.index l (s + 5)) /\
+    T.is_valid_digit (L.index l (s + 6)) /\ T.is_valid_digit (L.index l (s + 7)))
+= digits_l_6 l s; digits_l_index l s 8 6; digits_l_index l s 8 7
+
+let digits_l_4 (l: list U8.t) (s: nat { s + 4 <= L.length l })
+: Lemma (requires digits_l l s 4)
+  (ensures T.is_valid_digit (L.index l s) /\ T.is_valid_digit (L.index l (s + 1)) /\
+    T.is_valid_digit (L.index l (s + 2)) /\ T.is_valid_digit (L.index l (s + 3)))
+= digits_l_index l s 4 0; digits_l_index l s 4 1; digits_l_index l s 4 2; digits_l_index l s 4 3
+
+#push-options "--fuel 0 --ifuel 0"
 
 let yymmdd_l (l: list U8.t) (s: nat { s + 6 <= L.length l }) : Tot bool =
-  if digits_l l s 6 then
+  if digits_l l s 6 then begin
+    digits_l_6 l s;
     let yy = T.read_2dnum (L.index l s) (L.index l (s + 1)) in
     let mm = T.read_2dnum (L.index l (s + 2)) (L.index l (s + 3)) in
     let dd = T.read_2dnum (L.index l (s + 4)) (L.index l (s + 5)) in
     T.is_valid_calendar_date2dy yy mm dd
-  else false
+  end else false
 
 let yyyymmdd_l (l: list U8.t) (s: nat { s + 8 <= L.length l }) : Tot bool =
-  if digits_l l s 8 then
+  if digits_l l s 8 then begin
+    digits_l_8 l s;
     let yyyy = T.read_4dnum (L.index l s) (L.index l (s + 1)) (L.index l (s + 2)) (L.index l (s + 3)) in
     let mm = T.read_2dnum (L.index l (s + 4)) (L.index l (s + 5)) in
     let dd = T.read_2dnum (L.index l (s + 6)) (L.index l (s + 7)) in
     T.is_valid_calendar_date4dy yyyy mm dd
-  else false
+  end else false
 
 let hhmmss_l (utc: bool) (l: list U8.t) (s: nat { s + 6 <= L.length l }) : Tot bool =
-  if digits_l l s 6 then
+  if digits_l l s 6 then begin
+    digits_l_6 l s;
     let hh = T.read_2dnum (L.index l s) (L.index l (s + 1)) in
     let mm = T.read_2dnum (L.index l (s + 2)) (L.index l (s + 3)) in
     let ss = T.read_2dnum (L.index l (s + 4)) (L.index l (s + 5)) in
     T.is_valid_time_hhmmss utc hh mm ss
-  else false
+  end else false
 
 let basic_year_l (l: list U8.t) (s: nat { s + 4 <= L.length l }) : Tot bool =
   digits_l l s 4 &&
-  U32.lte 1582ul (T.read_4dnum (L.index l s) (L.index l (s + 1)) (L.index l (s + 2)) (L.index l (s + 3)))
+  (digits_l_4 l s;
+   U32.lte 1582ul (T.read_4dnum (L.index l s) (L.index l (s + 1)) (L.index l (s + 2)) (L.index l (s + 3))))
+
+#pop-options
+
+#push-options "--fuel 8"
 
 let yymmdd_l_correct (l: list U8.t) (s: nat { s + 6 <= L.length l /\ s <= 8 })
 : Lemma (yymmdd_l l s == T.is_valid_yymmdd (Seq.seq_of_list l) (U32.uint_to_t s))

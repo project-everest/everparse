@@ -119,6 +119,15 @@ let is_some_fill (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_g
     (is_some (cons_l dk tl) st c || SC.comp_of_id (In.twins_of (cons_l dk tl)) id = Some c)))
 = PS.twin_d_eq dk
 
+let is_some_pass_at (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2)
+  (st: opt_tuple (cons_l dk tl)) (st': opt_tuple tl) (id: asn1_id_t) (c: nat)
+: Lemma
+  (requires (~ (Set.mem id s) /\
+    (c > 0 ==> is_some tl st' (c - 1) == (is_some tl (ssnd dk tl st) (c - 1) || SC.comp_of_id (In.twins_of tl) id = Some (c - 1)))))
+  (ensures (is_some (cons_l dk tl) (scons dk tl (sfst dk tl st) st') c ==
+    (is_some (cons_l dk tl) st c || SC.comp_of_id (In.twins_of (cons_l dk tl)) id = Some c)))
+= PS.twin_d_eq dk
+
 let is_some_pass (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2)
   (st: opt_tuple (cons_l dk tl)) (st': opt_tuple tl) (id: asn1_id_t)
 : Lemma
@@ -126,10 +135,9 @@ let is_some_pass (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_g
     (forall (c: nat) . is_some tl st' c == (is_some tl (ssnd dk tl st) c || SC.comp_of_id (In.twins_of tl) id = Some c))))
   (ensures (forall (c: nat) . is_some (cons_l dk tl) (scons dk tl (sfst dk tl st) st') c ==
     (is_some (cons_l dk tl) st c || SC.comp_of_id (In.twins_of (cons_l dk tl)) id = Some c)))
-= PS.twin_d_eq dk;
-  let prf (c: nat) : Lemma (is_some (cons_l dk tl) (scons dk tl (sfst dk tl st) st') c ==
+= let prf (c: nat) : Lemma (is_some (cons_l dk tl) (scons dk tl (sfst dk tl st) st') c ==
     (is_some (cons_l dk tl) st c || SC.comp_of_id (In.twins_of (cons_l dk tl)) id = Some c))
-  = if c = 0 then () else assert (is_some tl st' (c - 1) == (is_some tl (ssnd dk tl st) (c - 1) || SC.comp_of_id (In.twins_of tl) id = Some (c - 1)))
+  = is_some_pass_at dk tl st st' id c
   in
   Classical.forall_intro prf
 
@@ -359,6 +367,16 @@ let step_post (#i: _) (ls: asn1_gen_items_l i) (w wr: bytes) (st st': opt_tuple 
 
 (* Filling the empty slots *)
 
+#push-options "--fuel 2 --ifuel 1"
+let fin_rec_tail (#s: _) (#d: _) (dk: asn1_decorated_k s d) (#i2: _) (tl: asn1_gen_items_l i2)
+  (lL: list (set_elem_t (In.twins_of (cons_l dk tl)))) (st: opt_tuple (cons_l dk tl)) (c: nat)
+: Lemma
+  (requires (is_some (cons_l dk tl) st (c + 1) == false ==> SC.count_comp (In.twins_of (cons_l dk tl)) lL (c + 1) == 0))
+  (ensures (is_some tl (ssnd dk tl st) c == false ==>
+    SC.count_comp (In.twins_of tl) (tails (SL.as_either (In.twin_of dk) (In.twins_of tl) lL)) c == 0))
+= SC.heads_tails_count (In.twin_of dk) (In.twins_of tl) (SL.as_either (In.twin_of dk) (In.twins_of tl) lL)
+#pop-options
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 let rec fin_rec (#i: _) (ls: asn1_gen_items_l i) (lL: list (set_elem_t (In.twins_of ls))) (st: opt_tuple ls) (v: asn1_sequence_t_core ls)
 : Lemma
@@ -379,7 +397,7 @@ let rec fin_rec (#i: _) (ls: asn1_gen_items_l i) (lL: list (set_elem_t (In.twins
     SC.heads_tails_count hd its' lL';
     assert (is_some ls st 0 == false ==> SC.count_comp (In.twins_of ls) lL 0 == 0);
     let prf (c: nat) : Lemma (is_some tl (ssnd dk tl st) c == false ==> SC.count_comp its' (tails lL') c == 0)
-    = assert (is_some ls st (c + 1) == false ==> SC.count_comp (In.twins_of ls) lL (c + 1) == 0)
+    = fin_rec_tail dk tl lL st c
     in
     Classical.forall_intro prf;
     fin_rec tl (tails lL') (ssnd dk tl st) (vtl dk tl v)

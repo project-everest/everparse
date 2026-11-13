@@ -226,7 +226,11 @@ let frame_len_value (v: asn1_value) (rest: bytes)
   | ASN1_VALUE_PRIMITIVE id b -> frame_len_tlv id (PRIMITIVE? id.f) b rest
   | ASN1_VALUE_CONSTRUCTED id l -> frame_len_tlv id (CONSTRUCTED? id.f) (asn1_value_list_enc l) rest
 
-let frame_len_empty () : Lemma (SI.frame_len Seq.empty == 0) = SI.frame_len_le Seq.empty
+let nat_le_zero (x: nat) : Lemma (requires x <= 0) (ensures x == 0) = ()
+
+let frame_len_empty () : Lemma (SI.frame_len Seq.empty == 0) =
+  SI.frame_len_le Seq.empty;
+  nat_le_zero (SI.frame_len Seq.empty)
 
 #push-options "--fuel 2 --ifuel 1 --z3rlimit 32"
 let rec vins_enc (lt: SI.lt_t) (vlt: vlt_t) (e l: list asn1_value)

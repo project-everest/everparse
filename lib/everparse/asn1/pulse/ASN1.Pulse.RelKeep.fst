@@ -389,6 +389,7 @@ fn kc_keep_weaken (b: bool) (sq: squash (b == true)) (#s: _) (#k: asn1_k s) (#t:
     as (cv b (arel false (D_KEEP d wf) pm x y) (arel true (D_KEEP d wf) pm x y))
 }
 
+#push-options "--fuel 0 --ifuel 0"
 ghost
 fn kc_keep_restore (b: bool) (sq: squash (b == false)) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (wf: squash (Conf.wf k))
   (c: kc_t b (arel true d) (arel false d) (kept_a d))
@@ -405,6 +406,7 @@ fn kc_keep_restore (b: bool) (sq: squash (b == false)) (#s: _) (#k: asn1_k s) (#
   rewrite (arel true d (pm /. 2.0R) x.kval y ** keep_rel k (pm /. 2.0R) x.kraw y ** pure (Some? x.kraw))
     as (cv b (arel false (D_KEEP d wf) pm x y) (arel true (D_KEEP d wf) pm x y))
 }
+#pop-options
 
 let kc_keep (b: bool) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (wf: squash (Conf.wf k))
   (c: kc_t b (arel true d) (arel false d) (kept_a d))

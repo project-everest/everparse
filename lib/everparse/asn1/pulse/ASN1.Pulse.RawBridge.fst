@@ -248,6 +248,7 @@ fn split_int (bound: pos)
 : split_t #asn1_int_impl #int (raw_int_rel bound) raw_int (raw_leaf_enc (ASN1_INTEGER bound))
 = (pm: perm) (x: asn1_int_impl) (y: int)
 {
+  half_perm_pos pm;
   match x {
     Small i -> {
       rewrite (raw_int_rel bound pm x y) as (pure (I64.v i == y));
@@ -927,6 +928,7 @@ fn split_ml_gen (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (c: split_t (asn1_r
 requires ml_rel k pm x y
 ensures ml_rel k (pm /. 2.0R) x y ** It.mixed_list_match (raw_rel k) ml_ops #asn1_strong_parser_kind p_raw (pm /. 2.0R) x (rb_list k y)
 {
+  half_perm_pos pm;
   rb_parsers_fwd k u;
   rb_r_functional k;
   rb_list_rel k y;

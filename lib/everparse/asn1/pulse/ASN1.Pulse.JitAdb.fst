@@ -55,7 +55,23 @@ let kd (kid: asn1_id_t) (#t: Type) (dp: (l: nat) -> SB.parser (ADB.disp_kind l) 
 
 let kd_nonempty (kid: asn1_id_t) (#t: Type) (dp: (l: nat) -> SB.parser (ADB.disp_kind l) t) (w: bytes)
 : Lemma (requires (kd kid dp w)) (ensures (Seq.length w > 0))
-= L.ident_empty ()
+= L.ident_empty ();
+  if Seq.length w = 0
+  then begin
+    Seq.lemma_empty w;
+    assert (hdr kid w == None)
+  end
+
+private
+let opt_shift (o: option nat) (c1 c2 n: nat)
+: Lemma ((c1 + c2 <= n /\ o == Some (n - (c1 + c2))) <==> (match o with None -> None | Some c3 -> Some (c1 + (c2 + c3))) == Some n)
+= ()
+
+private
+let slice_tail2 (w: bytes) (c1: nat) (c2: nat)
+: Lemma (requires (c1 <= Seq.length w /\ c2 <= Seq.length w - c1))
+  (ensures (Seq.slice (Seq.slice w c1 (Seq.length w)) c2 (Seq.length w - c1) == Seq.slice w (c1 + c2) (Seq.length w)))
+= Seq.slice_slice w c1 (Seq.length w) c2 (Seq.length w - c1)
 
 #push-options "--z3rlimit 32"
 let kd_tu
@@ -76,7 +92,14 @@ let kd_tu
       let b1 = Seq.slice w c1 (Seq.length w) in
       match SB.parse (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) b1 with
       | None -> ()
-      | Some (len, c2) -> Seq.slice_slice w c1 (Seq.length w) c2 (Seq.length b1)
+      | Some (len, c2) ->
+        let l = U32.v len in
+        let b2 = Seq.slice b1 c2 (Seq.length b1) in
+        slice_tail2 w c1 c2;
+        assert (hdr kid w == Some (c1 + c2, l));
+        assert (kd kid (ADB.disp_p key_k tag pl) w <==>
+          (c1 + c2 <= Seq.length w /\ Sq.consumed (ADB.disp_p key_k tag pl l) b2 == Some (Seq.length w - (c1 + c2))));
+        opt_shift (Sq.consumed (ADB.disp_p key_k tag pl l) b2) c1 c2 (Seq.length w)
     end
     else ()
 #pop-options
@@ -420,6 +443,41 @@ let km_post (kid: asn1_id_t) (key_k: asn1_terminal_k) (x0: asn1_terminal_t key_k
       (m == true <==> Some? (Sq.consumed (ADB.key_eq_fldata key_k x0 l) (Seq.slice w h (Seq.length w)))) /\
       (m == true ==> (h + l <= Seq.length w /\ SZ.v e == p2 + h + l))
 
+#push-options "--ifuel 2"
+private
+let vpc_some (#k: parser_kind) (#t: Type) (p: SB.parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) (x: t)
+: Lemma (requires (LowParse.PulseParse.VReader.vreader_postcond p offset v off (Some x)))
+  (ensures (SZ.v offset <= SZ.v off /\ SZ.v off <= Seq.length v /\
+    SB.parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off - SZ.v offset)))
+= ()
+#pop-options
+
+#push-options "--fuel 0 --ifuel 1 --z3rlimit 32"
+private
+let km_intro (kid: asn1_id_t) (key_k: asn1_terminal_k) (x0: asn1_terminal_t key_k) (v: bytes) (p2 off1 off2 off3: SZ.t)
+  (len: LowParse.Spec.BoundedInt.bounded_int32 0 ILC.asn1_length_max) (ok: bool)
+: Lemma
+  (requires (
+    LowParse.PulseParse.VReader.vreader_postcond #asn1_strong_parser_kind parse_asn1_identifier_U32 p2 v off1 (Some kid) /\
+    LowParse.PulseParse.VReader.vreader_postcond #(SDER.parse_bounded_der_length32_kind 0 ILC.asn1_length_max) (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) off1 v off2 (Some len) /\
+    U32.v len <= Seq.length v - SZ.v off2 /\
+    LPS.validator_postcond (ADB.key_eq_fldata key_k x0 (U32.v len)) off2 v off3 ok))
+  (ensures (km_post kid key_k x0 (Seq.slice v (SZ.v p2) (Seq.length v)) (SZ.v p2) (Some (off3, ok))))
+= vpc_some #asn1_strong_parser_kind parse_asn1_identifier_U32 p2 v off1 kid;
+  vpc_some #(SDER.parse_bounded_der_length32_kind 0 ILC.asn1_length_max) (SDER.parse_bounded_der_length32 0 ILC.asn1_length_max) off1 v off2 len;
+  let w = Seq.slice v (SZ.v p2) (Seq.length v) in
+  let c1 = SZ.v off1 - SZ.v p2 in
+  let c2 = SZ.v off2 - SZ.v off1 in
+  let l = U32.v len in
+  slice_tail2 v (SZ.v p2) c1;
+  slice_tail2 v (SZ.v off1) c2;
+  slice_tail2 v (SZ.v p2) (c1 + c2);
+  assert (hdr kid w == Some (c1 + c2, l));
+  let b2 = Seq.slice v (SZ.v off2) (Seq.length v) in
+  assert (Seq.slice w (c1 + c2) (Seq.length w) == b2);
+  ADB.fldata_eq #(SCo.parse_filter_kind asn1_weak_parser_kind) (SCo.parse_filter #asn1_weak_parser_kind (asn1_terminal_as_parser key_k) (ADB.key_eq x0)) l b2
+#pop-options
+
 #push-options "--z3rlimit 64"
 inline_for_extraction
 fn key_match_in (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) (kx: asn1_key_lit key_k)
@@ -438,7 +496,6 @@ ensures S.pts_to input #pm v ** pure (SZ.v p2 <= Seq.length v /\ km_post kid key
     Some id -> {
       if (ILC.asn1_id_eq id kid) {
         with off1 . assert (R.pts_to off off1);
-        Seq.slice_slice v (SZ.v p2) (Seq.length v) (SZ.v off1 - SZ.v p2) (Seq.length v - SZ.v p2);
         let rl = ILC.vread_length input off;
         match rl {
           None -> {
@@ -446,14 +503,13 @@ ensures S.pts_to input #pm v ** pure (SZ.v p2 <= Seq.length v /\ km_post kid key
           }
           Some len -> {
             with off2 . assert (R.pts_to off off2);
-            Seq.slice_slice v (SZ.v off1) (Seq.length v) (SZ.v off2 - SZ.v off1) (Seq.length v - SZ.v off1);
-            Seq.slice_slice v (SZ.v p2) (Seq.length v) (SZ.v off2 - SZ.v p2) (Seq.length v - SZ.v p2);
             let o2 = !off;
             let rem = SZ.sub (S.len input) o2;
             if (LowParse.Pulse.SizeComparison.u32_lte_sizet len rem) {
               SZ.fits_lte (U32.v len) (SZ.v rem);
               let ok = In.validate_key_eq_fl key_k () kx (SZ.uint32_to_sizet len) input off;
               let e = !off;
+              km_intro kid key_k (key_of_lit key_k kx) v p2 off1 off2 e len ok;
               Some (e, ok)
             } else {
               None #(SZ.t & bool)
@@ -479,6 +535,7 @@ ensures pts_to out v ** pure (SZ.v p2 <= SZ.v p0 /\ SZ.v p0 <= Seq.length v /\ k
   match sp {
     Mktuple2 s1 s2 -> {
       Seq.slice_slice v 0 (SZ.v p0) (SZ.v p2) (SZ.v p0);
+      assert (pure (Seq.slice (Seq.slice v 0 (SZ.v p0)) (SZ.v p2) (Seq.length (Seq.slice v 0 (SZ.v p0))) == Seq.slice v (SZ.v p2) (SZ.v p0)));
       let res = key_match_in kid key_k u kx s1 p2;
       S.join s1 s2 out;
       Seq.lemma_split v (SZ.v p0);

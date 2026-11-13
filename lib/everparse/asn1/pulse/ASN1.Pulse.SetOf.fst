@@ -26,6 +26,26 @@ module Lex = LowParse.Pulse.Lex
 
 (* The ASN.1 byte order is the LowParse lexicographic byte comparison *)
 
+let bytes_lex_compare_cons (b1 b2: bytes)
+: Lemma
+  (requires (Seq.length b1 > 0 /\ Seq.length b2 > 0))
+  (ensures (SSB.bytes_lex_compare b1 b2 == (
+    let c = SSB.byte_compare (Seq.index b1 0) (Seq.index b2 0) in
+    if c = 0
+    then SSB.bytes_lex_compare (Seq.slice b1 1 (Seq.length b1)) (Seq.slice b2 1 (Seq.length b2))
+    else c)))
+= assert (b1 `Seq.equal` Seq.cons (Seq.index b1 0) (Seq.slice b1 1 (Seq.length b1)));
+  assert (b2 `Seq.equal` Seq.cons (Seq.index b2 0) (Seq.slice b2 1 (Seq.length b2)));
+  Seq.lemma_seq_to_list_cons (Seq.index b1 0) (Seq.slice b1 1 (Seq.length b1));
+  Seq.lemma_seq_to_list_cons (Seq.index b2 0) (Seq.slice b2 1 (Seq.length b2))
+
+let bytes_lex_compare_empty (b1 b2: bytes)
+: Lemma
+  (requires (Seq.length b1 == 0 \/ Seq.length b2 == 0))
+  (ensures ((SSB.bytes_lex_compare b1 b2 <= 0) == (Seq.length b1 = 0)))
+= ()
+
+#push-options "--fuel 1 --ifuel 0"
 let rec lex_byte_order'_eq
   (n1: nat)
   (b1: Seq.lseq byte n1)
@@ -35,14 +55,12 @@ let rec lex_byte_order'_eq
   (ensures (lex_byte_order' n1 b1 n2 b2 == (SSB.bytes_lex_compare b1 b2 <= 0)))
   (decreases (n1 + n2))
 = if n1 = 0 || n2 = 0
-  then ()
+  then bytes_lex_compare_empty b1 b2
   else begin
-    assert (b1 `Seq.equal` Seq.cons (Seq.index b1 0) (Seq.slice b1 1 n1));
-    assert (b2 `Seq.equal` Seq.cons (Seq.index b2 0) (Seq.slice b2 1 n2));
-    Seq.lemma_seq_to_list_cons (Seq.index b1 0) (Seq.slice b1 1 n1);
-    Seq.lemma_seq_to_list_cons (Seq.index b2 0) (Seq.slice b2 1 n2);
+    bytes_lex_compare_cons b1 b2;
     lex_byte_order'_eq (n1 - 1) (Seq.slice b1 1 n1) (n2 - 1) (Seq.slice b2 1 n2)
   end
+#pop-options
 
 let lex_byte_order_eq (b1 b2: bytes)
 : Lemma (lex_byte_order b1 b2 == (SSB.bytes_lex_compare b1 b2 <= 0))
@@ -103,6 +121,7 @@ let sized_set_eq (ne: bool) (#t: Type) (p: parser asn1_strong_parser_kind t) (b:
     if n = 0 then ()
     else aux_consumes_all p (Seq.slice b 0 n) (Seq.slice b n (Seq.length b))
 
+#push-options "--fuel 1 --ifuel 2"
 let aux_step
   (#t: Type)
   (p: parser asn1_strong_parser_kind t)
@@ -123,6 +142,7 @@ let aux_step
   | Some (_, n) ->
     Seq.slice_slice v off (Seq.length v) 0 n;
     Seq.slice_slice v off (Seq.length v) n (Seq.length v - off)
+#pop-options
 
 let bare_step
   (#t: Type)
@@ -146,6 +166,12 @@ let bare_step
 
 (* Compare two (possibly overlapping) byte ranges of the same input *)
 
+let lex_compare_result (c: I16.t) (b1 b2: bytes)
+: Lemma
+  (requires ((I16.v c == 0 <==> SSB.bytes_lex_compare b1 b2 == 0) /\ (I16.v c < 0 <==> SSB.bytes_lex_compare b1 b2 < 0)))
+  (ensures (I16.lte c 0s == lex_byte_order b1 b2))
+= lex_byte_order_eq b1 b2
+
 inline_for_extraction
 fn compare_ranges
   (input: slice byte)
@@ -168,7 +194,7 @@ ensures
   Trade.elim (S.pts_to i1 #(pm /. 2.0R) (Seq.slice v (SZ.v s1) (SZ.v e1))) _;
   Trade.elim (S.pts_to i2 #(pm /. 2.0R) (Seq.slice v (SZ.v s2) (SZ.v e2))) _;
   S.gather input;
-  lex_byte_order_eq (Seq.slice v (SZ.v s1) (SZ.v e1)) (Seq.slice v (SZ.v s2) (SZ.v e2));
+  lex_compare_result c (Seq.slice v (SZ.v s1) (SZ.v e1)) (Seq.slice v (SZ.v s2) (SZ.v e2));
   (I16.lte c 0s)
 }
 

@@ -387,11 +387,16 @@ let first_eq_all (buf : U8.t)
   assert (parse_asn1_identifier_first buf == T.parse_synth p f);
   Classical.forall_intro (T.parse_synth_eq p f)
 
+let rem32_bound (buf: U8.t)
+: Lemma (U8.v (U8.rem buf 32uy) <= 31)
+= FStar.Math.Lemmas.lemma_mod_lt (U8.v buf) 32
+
 inline_for_extraction
 let vread_first
   (buf : U8.t)
 : vreader (parse_asn1_identifier_first buf)
-= first_eq_all buf;
+= rem32_bound buf;
+  first_eq_all buf;
   vread_map
     (vread_first' (U8.rem buf 32uy))
     (MK_ASN1_ID (decode_asn1_identifier_class' buf) (decode_asn1_identifier_flag' buf))

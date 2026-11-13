@@ -128,6 +128,23 @@ let parse_integer (bound: pos)
   then coerce_eq () (parse_small_integer bound)
   else coerce_eq () (parse_big_integer bound)
 
+#push-options "--fuel 1 --ifuel 0"
+private noextract
+let prefixed_terminal_p (id: asn1_id_t) (k': asn1_terminal_k)
+: Tot (p2: SB.parser asn1_weak_parser_kind (asn1_terminal_t k') {
+    p2 == asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id k') /\
+    (forall b . SB.parse (parse_asn1_ILC id #(ASN1_TERMINAL k') (asn1_terminal_as_parser k')) b == SB.parse p2 b) })
+= assert_norm (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id k') == weaken asn1_weak_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k') (asn1_terminal_as_parser k')));
+  asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id k')
+#pop-options
+
+[@@asn1_pulse_attr]
+inline_for_extraction
+let parse_prefixed_terminal (id: asn1_id_t) (k': asn1_terminal_k)
+  (f: aparser #(asn1_terminal_impl_t k') #(asn1_terminal_t k') (asn1_terminal_rel k') #asn1_weak_parser_kind (asn1_terminal_as_parser k'))
+: aparser #(asn1_terminal_impl_t (ASN1_PREFIXED_TERMINAL id k')) #(asn1_terminal_t (ASN1_PREFIXED_TERMINAL id k')) (asn1_terminal_rel (ASN1_PREFIXED_TERMINAL id k')) #asn1_weak_parser_kind (asn1_terminal_as_parser (ASN1_PREFIXED_TERMINAL id k'))
+= parse_ext #(asn1_terminal_impl_t k') #(asn1_terminal_t k') #(asn1_terminal_rel k') (parse_ilc id #(ASN1_TERMINAL k') #_ #_ #(asn1_terminal_as_parser k') f) #asn1_weak_parser_kind (prefixed_terminal_p id k')
+
 [@@asn1_pulse_attr]
 let rec parse_terminal ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k)
   (input: S.slice U8.t) (#pm: perm) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_terminal_t k))
@@ -140,7 +157,7 @@ let rec parse_terminal ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k)
   | ASN1_INTEGER bound -> parse_integer bound
   | ASN1_BITSTRING -> parse_bitstring ()
   | ASN1_PREFIXED_TERMINAL id k' ->
-    parse_ext (parse_ilc id #(ASN1_TERMINAL k') #_ #_ #(asn1_terminal_as_parser k') (fun input #pm #w #v -> parse_terminal k' input #pm #w #v)) #asn1_weak_parser_kind (asn1_terminal_as_parser k)
+    parse_prefixed_terminal id k' (fun input #pm #w #v -> parse_terminal k' input #pm #w #v)
   | ASN1_OCTETSTRING -> parse_slice_leaf k
   | ASN1_PRINTABLESTRING -> parse_slice_leaf k
   | ASN1_UTF8STRING -> parse_slice_leaf k
@@ -226,7 +243,7 @@ let parsed_encodable_d (#s: _) (k: asn1_k s) (w: SB.bytes) (v: asn1_t k)
   Ser.asn1_as_parser_consumed k w;
   assert (Seq.equal (Seq.slice w 0 (Seq.length w)) w)
 
-let half_perm_pos (pm: perm) : Lemma (pm /. 2.0R >. 0.0R) = ()
+private let half_perm_pos (pm: perm) : Lemma (pm /. 2.0R >. 0.0R) [SMTPat (pm /. 2.0R)] = ()
 
 inline_for_extraction
 fn parse_keep

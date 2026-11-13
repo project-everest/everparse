@@ -324,9 +324,30 @@ let enc_tlv_prefix_free (id1 id2: asn1_id_t) (ok1 ok2: bool) (c1 c2 s1 s2: bytes
   enc_hdr_prefix_free ok1 ok2 (Seq.length c1) (Seq.length c2) (c1 `Seq.append` s1) (c2 `Seq.append` s2);
   append_inj c1 s1 c2 s2
 
+#push-options "--fuel 0 --ifuel 1"
+private
+let asn1_id_enc_length_pos (id: asn1_id_t)
+: Lemma (Seq.length (asn1_id_enc id) > 0)
+= let MK_ASN1_ID c f n = id in
+  if U32.v n < 31
+  then assert (Seq.length (asn1_id_enc id) == 1)
+  else assert (Seq.length (asn1_id_enc id) == 1 + Seq.length (enc_long n))
+
+private
+let enc_tlv_length_pos (id: asn1_id_t) (ok: bool) (c: bytes)
+: Lemma (Seq.length (enc_tlv id ok c) > 0)
+= asn1_id_enc_length_pos id;
+  Seq.lemma_len_append (enc_hdr ok (Seq.length c)) c;
+  Seq.lemma_len_append (asn1_id_enc id) (enc_hdr ok (Seq.length c) `Seq.append` c)
+#pop-options
+
+#push-options "--fuel 1 --ifuel 1"
 let asn1_value_enc_nonempty (v: asn1_value)
 : Lemma (Seq.length (asn1_value_enc v) > 0)
-= ()
+= match v with
+  | ASN1_VALUE_PRIMITIVE id b -> enc_tlv_length_pos id (PRIMITIVE? id.f) b
+  | ASN1_VALUE_CONSTRUCTED id l -> enc_tlv_length_pos id (CONSTRUCTED? id.f) (asn1_value_list_enc l)
+#pop-options
 
 let rec asn1_value_enc_prefix_free (v1 v2: asn1_value) (s1 s2: bytes)
 : Lemma

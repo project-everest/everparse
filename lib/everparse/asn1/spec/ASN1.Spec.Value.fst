@@ -127,13 +127,31 @@ let parse_asn1_value_twin (id : asn1_id_t) : asn1_strong_parser asn1_value
   then weaken _ (RV.rec_vlgen_payload_parser asn1_value_param (RV.parse_rec_vlgen asn1_value_param) id `parse_synth` synth_asn1_value_twin id)
   else fail_parser _ _
 
+private
+let asn1_value_twin_id (v: asn1_value) : Tot asn1_any_id_t =
+  match v with
+  | ASN1_VALUE_PRIMITIVE id _ -> id
+  | ASN1_VALUE_CONSTRUCTED id _ -> id
+
+private
+let parse_asn1_value_twin_id (id: asn1_id_t) (b: bytes)
+: Lemma
+  (match parse (parse_asn1_value_twin id) b with
+   | Some (v, _) -> asn1_value_twin_id v == id
+   | None -> True)
+= if asn1_any_id_valid id
+  then begin
+    let p = RV.rec_vlgen_payload_parser asn1_value_param (RV.parse_rec_vlgen asn1_value_param) id in
+    parse_synth_eq p (synth_asn1_value_twin id) b;
+    match parse p b with
+    | Some (RV.RNode _, _) -> ()
+    | Some (RV.RLeaf _, _) -> ()
+    | None -> ()
+  end
+
 let parse_asn1_value_twin_and_then_cases_injective ()
 : Lemma (and_then_cases_injective parse_asn1_value_twin)
 = and_then_cases_injective_intro parse_asn1_value_twin (fun id1 id2 b1 b2 ->
-    if asn1_any_id_valid id1 && asn1_any_id_valid id2
-    then begin
-      parse_synth_eq (RV.rec_vlgen_payload_parser asn1_value_param (RV.parse_rec_vlgen asn1_value_param) id1) (synth_asn1_value_twin id1) b1;
-      parse_synth_eq (RV.rec_vlgen_payload_parser asn1_value_param (RV.parse_rec_vlgen asn1_value_param) id2) (synth_asn1_value_twin id2) b2
-    end
-    else ()
+    parse_asn1_value_twin_id id1 b1;
+    parse_asn1_value_twin_id id2 b2
   )
