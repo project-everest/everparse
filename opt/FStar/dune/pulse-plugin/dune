@@ -1,0 +1,11 @@
+(include_subdirs unqualified)
+(library
+ (name pulse_plugin)
+ (libraries
+   fstarcompiler
+ )
+ (modes native)
+ (wrapped false)
+ (preprocess (pps ppx_deriving.show ppx_deriving_yojson))
+ ; ^ Needed for some of the base modules.
+)
