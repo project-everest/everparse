@@ -100,7 +100,7 @@ jobs:
 
   ci-linux:
     needs: deps-upgrade
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, upgrade]
     env:
       COPILOT_FIX_ATTEMPTS: ${{ inputs.copilot_fix_attempts }}
       COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
