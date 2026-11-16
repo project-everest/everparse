@@ -301,9 +301,9 @@ let dec_rel_default_some (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_
 
 inline_for_extraction
 fn dec_default_present
-  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k))
+  (id0: Ghost.erased asn1_id_t) (#k: asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k))
   (pt: aparser #(asn1_terminal_impl_t k) #(asn1_terminal_t k) (asn1_terminal_rel k) #asn1_weak_parser_kind (asn1_terminal_as_parser k))
-: dpresent (DD_DEFAULT (Ghost.reveal id0) #(Ghost.reveal k) defv)
+: dpresent (DD_DEFAULT (Ghost.reveal id0) #k defv)
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_default_lemma id0 #k defv w v;
@@ -311,7 +311,7 @@ fn dec_default_present
   let r = parse_ilc id0 #(ASN1_TERMINAL k) #_ #_ #(asn1_terminal_as_parser k) pt input #pm #w #(nondefault_v (Ghost.reveal gv));
   let res : option (asn1_terminal_impl_t k) = Some r;
   dec_rel_default_some id0 #k defv pm r v;
-  rel_rewrite (drel true (DD_DEFAULT (Ghost.reveal id0) #(Ghost.reveal k) defv) pm res v);
+  rel_rewrite (drel true (DD_DEFAULT (Ghost.reveal id0) #k defv) pm res v);
   res
 }
 
@@ -350,9 +350,9 @@ let dec_rel_default_restricted_some (id0: asn1_id_t) (#k: asn1_terminal_k) (r: a
 
 inline_for_extraction
 fn dec_default_restricted_present
-  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) }))
+  (id0: Ghost.erased asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) }))
   (pc: aparser #(asn1_content_impl_t (ASN1_RESTRICTED_TERMINAL k r)) #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)))
-: dpresent (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #(Ghost.reveal k) r defv)
+: dpresent (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #k r defv)
 = (input: _) (#pm: _) (#w: _) (#v: _)
 {
   dec_default_restricted_lemma id0 #k r defv w v;
@@ -360,7 +360,7 @@ fn dec_default_restricted_present
   let x = parse_ilc id0 #(ASN1_RESTRICTED_TERMINAL k r) #_ #_ #(asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) pc input #pm #w #(nondefault_r r (Ghost.reveal gv));
   let res : option (asn1_terminal_impl_t k) = Some x;
   dec_rel_default_restricted_some id0 #k r defv pm x v;
-  rel_rewrite (drel true (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #(Ghost.reveal k) r defv) pm res v);
+  rel_rewrite (drel true (DD_DEFAULT_RESTRICTED (Ghost.reveal id0) #k r defv) pm res v);
   res
 }
 
