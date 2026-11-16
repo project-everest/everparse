@@ -354,7 +354,8 @@ let offsets_match_step
     (forall (j: nat) . j < i ==> SZ.v (Seq.index s j) < SZ.v x)
   )
   (ensures offsets_match b s' (i + 1) v)
-= ()
+= assert (Seq.index s' i == x);
+  assert (forall (j: nat) . j < i ==> Seq.index s' j == Seq.index s j)
 
 let offsets_sort_ok
   (b: bytes) (s0: Seq.seq SZ.t) (v: list (raw_data_item & raw_data_item))
