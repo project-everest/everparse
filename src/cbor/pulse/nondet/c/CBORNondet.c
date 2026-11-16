@@ -59,15 +59,19 @@ static bool CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(CBOR_Pulse_Raw_Slice_byte
         if (!(0x80U <= byte3 && byte3 <= 0xbfU))
           pres = false;
         else if (byte1 == 0xe0U)
+        {
           if (0xa0U <= byte2 && byte2 <= 0xbfU)
             pi = i3;
           else
             pres = false;
+        }
         else if (byte1 == 0xedU)
+        {
           if (0x80U <= byte2 && byte2 <= 0x9fU)
             pi = i3;
           else
             pres = false;
+        }
         else if (0xe1U <= byte1 && byte1 <= 0xefU && 0x80U <= byte2 && byte2 <= 0xbfU)
           pi = i3;
         else if (i3 == len)
@@ -360,6 +364,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
             offset)._2,
           off - offset)._1);
     if (x.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+    {
       if (x.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
       {
         size_t offset3 = *poffset;
@@ -396,6 +401,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
           return true;
         }
       }
+    }
     else if (x.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
     {
       size_t offset3 = *poffset;
@@ -446,6 +452,7 @@ CBOR_Pulse_Raw_EverParse_Format_read_header(CBOR_Pulse_Raw_Slice_byte_slice inpu
   x1 = CBOR_Pulse_Raw_EverParse_Format_read_initial_byte_t(scrut._1);
   CBOR_Spec_Raw_EverParse_long_argument ite;
   if (x1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+  {
     if (x1.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
       ite =
         (
@@ -465,6 +472,7 @@ CBOR_Pulse_Raw_EverParse_Format_read_header(CBOR_Pulse_Raw_Slice_byte_slice inpu
             { .case_LongArgumentU8 = Pulse_Lib_Slice_op_Array_Access__uint8_t(input2, (size_t)0U) }
           }
         );
+  }
   else if (x1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
   {
     uint8_t last = Pulse_Lib_Slice_op_Array_Access__uint8_t(input2, (size_t)1U);
@@ -1093,6 +1101,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
           if (r == 1U || count > bound)
             pres = false;
           else if (r == 3U)
+          {
             if (d == (size_t)0U)
               pres = false;
             else
@@ -1111,6 +1120,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
               else
                 ite0 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
               if (ite0 == d_)
+              {
                 if
                 (
                   !CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(map_length_bound,
@@ -1123,6 +1133,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
                   pres = false;
                 else
                   pn = n1 - (size_t)1U;
+              }
               else
               {
                 size_t pn1 = count;
@@ -1137,6 +1148,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
                   bool first = pfirst;
                   size_t ite;
                   if (first)
+                  {
                     if (d == (size_t)0U)
                       ite = (size_t)0U;
                     else if (map_key_bound.tag == FStar_Pervasives_Native_None)
@@ -1150,6 +1162,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
                       ite =
                         KRML_EABORT(size_t,
                           "unreachable (pattern matches are exhaustive in F*)");
+                  }
                   else
                     ite = d_;
                   if
@@ -1174,6 +1187,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
                   pn = n1 - (size_t)1U;
               }
             }
+          }
           else
             pn = n1 - (size_t)1U + count;
         }
@@ -2263,6 +2277,7 @@ static uint8_t CBOR_Pulse_Raw_Compare_impl_major_type(cbor_raw x)
   if (x.tag == CBOR_Case_Simple)
     return CBOR_MAJOR_TYPE_SIMPLE_VALUE;
   else if (x.tag == CBOR_Case_Int)
+  {
     if (x.tag == CBOR_Case_Int)
       return x.case_CBOR_Case_Int.cbor_int_type;
     else
@@ -2273,7 +2288,9 @@ static uint8_t CBOR_Pulse_Raw_Compare_impl_major_type(cbor_raw x)
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else if (x.tag == CBOR_Case_String)
+  {
     if (x.tag == CBOR_Case_String)
       return x.case_CBOR_Case_String.cbor_string_type;
     else
@@ -2284,6 +2301,7 @@ static uint8_t CBOR_Pulse_Raw_Compare_impl_major_type(cbor_raw x)
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else if (x.tag == CBOR_Case_Tagged)
     return CBOR_MAJOR_TYPE_TAGGED;
   else if (x.tag == CBOR_Case_Serialized_Tagged)
@@ -2328,6 +2346,7 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_match_tagged_get_tag_with_depth(cbor_raw c)
   if (c.tag == CBOR_Case_Tagged)
     return c.case_CBOR_Case_Tagged.cbor_tagged_tag;
   else if (c.tag == CBOR_Case_Serialized_Tagged)
+  {
     if (c.tag == CBOR_Case_Tagged)
       return c.case_CBOR_Case_Tagged.cbor_tagged_tag;
     else if (c.tag == CBOR_Case_Serialized_Tagged)
@@ -2340,6 +2359,7 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_match_tagged_get_tag_with_depth(cbor_raw c)
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -2365,6 +2385,7 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_match_array_get_length_with_depth(cbor_raw 
       );
   }
   else if (c.tag == CBOR_Case_Serialized_Array)
+  {
     if (c.tag == CBOR_Case_Array)
     {
       cbor_array c_ = c.case_CBOR_Case_Array;
@@ -2386,6 +2407,7 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_match_array_get_length_with_depth(cbor_raw 
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -2411,6 +2433,7 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_match_map_get_length_with_depth(cbor_raw c)
       );
   }
   else if (c.tag == CBOR_Case_Serialized_Map)
+  {
     if (c.tag == CBOR_Case_Map)
     {
       cbor_map c_ = c.case_CBOR_Case_Map;
@@ -2432,6 +2455,7 @@ CBOR_Pulse_Raw_Format_Serialize_cbor_match_map_get_length_with_depth(cbor_raw c)
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -2566,6 +2590,7 @@ CBOR_Pulse_Raw_Format_Serialize_size_header(
     ite = true;
   }
   if (ite)
+  {
     if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
     {
       size_t capacity1 = *out;
@@ -2612,6 +2637,7 @@ CBOR_Pulse_Raw_Format_Serialize_size_header(
     }
     else
       return true;
+  }
   else
     return false;
 }
@@ -2662,6 +2688,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
         }
       }
       else if (xh1._1.major_type == CBOR_MAJOR_TYPE_ARRAY)
+      {
         if (x_.tag == CBOR_Case_Array)
         {
           FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
@@ -2724,7 +2751,9 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             return true;
           }
         }
+      }
       else if (xh1._1.major_type == CBOR_MAJOR_TYPE_MAP)
+      {
         if (x_.tag == CBOR_Case_Map)
         {
           FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
@@ -2789,7 +2818,9 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             return true;
           }
         }
+      }
       else if (xh1._1.major_type == CBOR_MAJOR_TYPE_TAGGED)
+      {
         if (x_.tag == CBOR_Case_Tagged)
         {
           cbor_raw ite;
@@ -2818,6 +2849,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             return true;
           }
         }
+      }
       else
         return true;
     }
@@ -2852,6 +2884,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
         }
       }
       else if (xh1._1.major_type == CBOR_MAJOR_TYPE_ARRAY)
+      {
         if (x_.tag == CBOR_Case_Array)
           return true;
         else
@@ -2873,7 +2906,9 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             return true;
           }
         }
+      }
       else if (xh1._1.major_type == CBOR_MAJOR_TYPE_MAP)
+      {
         if (x_.tag == CBOR_Case_Map)
           return true;
         else
@@ -2895,8 +2930,11 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             return true;
           }
         }
+      }
       else if (xh1._1.major_type == CBOR_MAJOR_TYPE_TAGGED)
+      {
         if (x_.tag == CBOR_Case_Tagged)
+        {
           if (x_.tag == CBOR_Case_Tagged)
             return false;
           else
@@ -2907,6 +2945,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
               "unreachable (pattern matches are exhaustive in F*)");
             KRML_HOST_EXIT(255U);
           }
+        }
         else
         {
           CBOR_Pulse_Raw_Slice_byte_slice ite;
@@ -2926,6 +2965,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
             return true;
           }
         }
+      }
       else
         return true;
     }
@@ -2985,6 +3025,7 @@ CBOR_Pulse_Raw_Format_Serialize_write_header(
   x2_ =
     fstar_pervasives_dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
   if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+  {
     if (xh1.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
     {
       size_t pos_1 = pos_ + (size_t)1U;
@@ -3007,6 +3048,7 @@ CBOR_Pulse_Raw_Format_Serialize_write_header(
       Pulse_Lib_Slice_op_Array_Assignment__uint8_t(out, pos_1 - (size_t)1U, ite);
       return pos_1;
     }
+  }
   else if (xh1.additional_info == CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
   {
     size_t pos_1 = pos_ + (size_t)2U;
@@ -3141,6 +3183,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
       return res1 + length;
     }
     else if (xh1._1.major_type == CBOR_MAJOR_TYPE_ARRAY)
+    {
       if (x_.tag == CBOR_Case_Array)
       {
         FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
@@ -3198,7 +3241,9 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
           x2_);
         return res1 + length;
       }
+    }
     else if (xh1._1.major_type == CBOR_MAJOR_TYPE_MAP)
+    {
       if (x_.tag == CBOR_Case_Map)
       {
         FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
@@ -3257,7 +3302,9 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
           x2_);
         return res1 + length;
       }
+    }
     else if (xh1._1.major_type == CBOR_MAJOR_TYPE_TAGGED)
+    {
       if (x_.tag == CBOR_Case_Tagged)
       {
         cbor_raw ite;
@@ -3283,6 +3330,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
           x2_);
         return res1 + length;
       }
+    }
     else
       return res1;
   }
@@ -3309,6 +3357,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
       return res1 + length;
     }
     else if (xh1._1.major_type == CBOR_MAJOR_TYPE_ARRAY)
+    {
       if (x_.tag == CBOR_Case_Array)
         return res1;
       else
@@ -3327,7 +3376,9 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
           x2_);
         return res1 + length;
       }
+    }
     else if (xh1._1.major_type == CBOR_MAJOR_TYPE_MAP)
+    {
       if (x_.tag == CBOR_Case_Map)
         return res1;
       else
@@ -3346,8 +3397,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
           x2_);
         return res1 + length;
       }
+    }
     else if (xh1._1.major_type == CBOR_MAJOR_TYPE_TAGGED)
+    {
       if (x_.tag == CBOR_Case_Tagged)
+      {
         if (x_.tag == CBOR_Case_Tagged)
           return res1;
         else
@@ -3358,6 +3412,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
             "unreachable (pattern matches are exhaustive in F*)");
           KRML_HOST_EXIT(255U);
         }
+      }
       else
       {
         CBOR_Pulse_Raw_Slice_byte_slice x2_;
@@ -3374,6 +3429,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser__d(
           x2_);
         return res1 + length;
       }
+    }
     else
       return res1;
   }
@@ -3492,6 +3548,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
       pn = CBOR_Pulse_Raw_EverParse_Format_impl_remaining_data_items_header(h) + n_;
     }
     else if (m == CBOR_MAJOR_TYPE_MAP)
+    {
       if (bound == (size_t)0U)
         pres = false;
       else
@@ -3507,6 +3564,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
         else
           pres = false;
       }
+    }
     else
     {
       *pl = tl;
@@ -3565,6 +3623,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
   uint8_t mt1 = CBOR_Spec_Raw_EverParse_get_header_major_type(h1);
   uint8_t mt2 = CBOR_Spec_Raw_EverParse_get_header_major_type(h2);
   if (mt1 == CBOR_MAJOR_TYPE_MAP && mt2 == CBOR_MAJOR_TYPE_MAP)
+  {
     if (CBOR_Pulse_Raw_Util_eq_Some_0sz(map_bound))
       return ((FStar_Pervasives_Native_option__bool){ .tag = FStar_Pervasives_Native_None });
     else
@@ -4444,6 +4503,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
       else
         return res;
     }
+  }
   else
     return
       ((FStar_Pervasives_Native_option__bool){ .tag = FStar_Pervasives_Native_Some, .v = false });
@@ -4965,6 +5025,7 @@ static uint8_t CBOR_Pulse_Raw_Nondet_Compare_impl_major_type_with_depth(cbor_raw
   if (x.tag == CBOR_Case_Simple)
     return CBOR_MAJOR_TYPE_SIMPLE_VALUE;
   else if (x.tag == CBOR_Case_Int)
+  {
     if (x.tag == CBOR_Case_Int)
       return x.case_CBOR_Case_Int.cbor_int_type;
     else
@@ -4975,7 +5036,9 @@ static uint8_t CBOR_Pulse_Raw_Nondet_Compare_impl_major_type_with_depth(cbor_raw
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else if (x.tag == CBOR_Case_String)
+  {
     if (x.tag == CBOR_Case_String)
       return x.case_CBOR_Case_String.cbor_string_type;
     else
@@ -4986,6 +5049,7 @@ static uint8_t CBOR_Pulse_Raw_Nondet_Compare_impl_major_type_with_depth(cbor_raw
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else if (x.tag == CBOR_Case_Tagged)
     return CBOR_MAJOR_TYPE_TAGGED;
   else if (x.tag == CBOR_Case_Serialized_Tagged)
@@ -5014,6 +5078,7 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_match_tagged_get_tag_with_depth(cbor_raw c)
   if (c.tag == CBOR_Case_Tagged)
     return c.case_CBOR_Case_Tagged.cbor_tagged_tag;
   else if (c.tag == CBOR_Case_Serialized_Tagged)
+  {
     if (c.tag == CBOR_Case_Tagged)
       return c.case_CBOR_Case_Tagged.cbor_tagged_tag;
     else if (c.tag == CBOR_Case_Serialized_Tagged)
@@ -5026,6 +5091,7 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_match_tagged_get_tag_with_depth(cbor_raw c)
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -5051,6 +5117,7 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_match_array_get_length_with_depth(cbor_raw c)
       );
   }
   else if (c.tag == CBOR_Case_Serialized_Array)
+  {
     if (c.tag == CBOR_Case_Array)
     {
       cbor_array c_ = c.case_CBOR_Case_Array;
@@ -5072,6 +5139,7 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_match_array_get_length_with_depth(cbor_raw c)
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -5194,6 +5262,7 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_raw
     scrut = { ._1 = x1, ._2 = x2 };
     if (scrut._1.tag == CBOR_Case_Serialized_Tagged && scrut._2.tag == CBOR_Case_Serialized_Tagged)
+    {
       if (x1.tag == CBOR_Case_Serialized_Tagged)
       {
         cbor_serialized cs1 = x1.case_CBOR_Case_Serialized_Tagged;
@@ -5218,6 +5287,7 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
           "unreachable (pattern matches are exhaustive in F*)");
         KRML_HOST_EXIT(255U);
       }
+    }
     else
     {
       CBOR_Spec_Raw_Base_raw_uint64
@@ -5239,6 +5309,7 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_raw
     scrut = { ._1 = x1, ._2 = x2 };
     if (scrut._1.tag == CBOR_Case_Serialized_Array && scrut._2.tag == CBOR_Case_Serialized_Array)
+    {
       if (x1.tag == CBOR_Case_Serialized_Array)
       {
         cbor_serialized cs1 = x1.case_CBOR_Case_Serialized_Array;
@@ -5263,6 +5334,7 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
           "unreachable (pattern matches are exhaustive in F*)");
         KRML_HOST_EXIT(255U);
       }
+    }
     else
     {
       CBOR_Spec_Raw_Base_raw_uint64
@@ -5297,6 +5369,7 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
     FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_raw
     scrut = { ._1 = x1, ._2 = x2 };
     if (scrut._1.tag == CBOR_Case_Serialized_Map && scrut._2.tag == CBOR_Case_Serialized_Map)
+    {
       if (x1.tag == CBOR_Case_Serialized_Map)
       {
         cbor_serialized cs1 = x1.case_CBOR_Case_Serialized_Map;
@@ -5321,6 +5394,7 @@ bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbo
           "unreachable (pattern matches are exhaustive in F*)");
         KRML_HOST_EXIT(255U);
       }
+    }
     else
     {
       cbor_nondet_map_iterator_t i1 = CBOR_Pulse_Raw_Read_cbor_map_iterator_init_with_depth(x1);

@@ -8,7 +8,7 @@ pub fn mk_int(i: i32) -> crate::coseformat::evercddl_int
 {
     if i < 0i32
     {
-        let k: i32 = -1i32.wrapping_sub(i);
+        let k: i32 = (-1i32).wrapping_sub(i);
         let j: u64 = k as u64;
         crate::coseformat::evercddl_int::Mkevercddl_int1 { _x0: j }
     }
