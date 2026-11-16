@@ -552,7 +552,7 @@ let r2l_mls_inv_end_fail
 inline_for_extraction
 fn r2l_write_mixed_list_sorted_gen
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: Ghost.erased parser_kind) (#p: parser k u) (enc: u -> GTot SB.bytes)
+  (#k: parser_kind) (#p: parser k u) (enc: u -> GTot SB.bytes)
   (enc_ok: enc_consumed p enc)
   (j: LPS.jumper p)
   (w: (pm: perm) -> r2l_writer_f (vmatch pm) enc)
