@@ -283,7 +283,7 @@ fn r2l_write_elt_or_serialized_gen
 inline_for_extraction
 fn r2l_write_mixed_list_gen
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: Ghost.erased parser_kind) (#p: parser k u) (enc: u -> GTot bytes)
+  (#k: parser_kind) (#p: parser k u) (enc: u -> GTot bytes)
   (enc_ok: enc_consumed p enc)
   (j: LPS.jumper p)
   (w: (pm: perm) -> r2l_writer_f (vmatch pm) enc)
@@ -381,7 +381,7 @@ fn r2l_write_mixed_list_gen
 inline_for_extraction
 let r2l_write_mixed_list
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: Ghost.erased parser_kind) (#p: parser k u) (s: serializer p)
+  (#k: parser_kind) (#p: parser k u) (s: serializer p)
   (sq: squash (k.parser_kind_injective == true))
   (j: LPS.jumper p)
   (w: (pm: perm) -> r2l_writer_f (vmatch pm) (bare_serialize s))
