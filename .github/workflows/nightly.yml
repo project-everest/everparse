@@ -172,6 +172,9 @@ jobs:
         run: |
           cd everparse && bash .github/commit-copilot-fixes.sh "Copilot: fix the test suite after the dependency upgrade"
       - name: Remove container
+        # Always: on a self-hosted runner, a failed run would otherwise leave
+        # the container running forever.
+        if: always() && env.container != ''
         run: |
           docker stop $container && docker rm $container
       - name: Record hash
