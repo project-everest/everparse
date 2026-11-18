@@ -922,7 +922,7 @@ let rec pulse_state_dict_leaves (mname:string) (i:inv)
     | Inv_ptr x ->
       let e = T.print_expr mname x in
       [e, pulse_key_of e,
-       Printf.sprintf "(EverParse3d.State.state_dict_singleton %s (Pulse.Class.PtsTo.pts_to %s #1.0R))"
+       Printf.sprintf "(EverParse3d.State.state_dict_singleton %s (Pulse.Lib.Reference.pts_to %s #1.0R))"
          (pulse_key_of e) e]
     | Inv_copy_buf x ->
       let e = T.print_expr mname x in

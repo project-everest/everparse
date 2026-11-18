@@ -342,6 +342,8 @@ let offsets_match (b: bytes) (s: Seq.seq SZ.t) (i: nat) (v: list (raw_data_item 
   (forall (j: nat) . j < i ==> entry_of b (Seq.index s j) == List.Tot.index v j) /\
   (forall (j1 j2: nat) . (j1 < j2 /\ j2 < i) ==> SZ.v (Seq.index s j1) < SZ.v (Seq.index s j2))
 
+#push-options "--z3rlimit 20"
+
 let offsets_match_step
   (b: bytes) (s s': Seq.seq SZ.t) (i: nat) (v: list (raw_data_item & raw_data_item)) (x: SZ.t)
 : Lemma
@@ -355,6 +357,8 @@ let offsets_match_step
   )
   (ensures offsets_match b s' (i + 1) v)
 = ()
+
+#pop-options
 
 let offsets_sort_ok
   (b: bytes) (s0: Seq.seq SZ.t) (v: list (raw_data_item & raw_data_item))
