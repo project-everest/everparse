@@ -58,7 +58,7 @@ inline_for_extraction
 fn l2r_write_base_serialized
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (#p: parser k u)
+  (#k: Ghost.erased parser_kind) (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (j: LPS.jumper p)
   (pm: perm)
@@ -149,7 +149,7 @@ inline_for_extraction
 fn l2r_write_base_slice
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (#p: parser k u)
+  (#k: Ghost.erased parser_kind) (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (w: (pm': perm) -> LPS.l2r_writer (vmatch pm') s)
   (pm: perm)
@@ -298,7 +298,7 @@ inline_for_extraction
 fn l2r_write_base_singleton
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (#p: parser k u)
+  (#k: Ghost.erased parser_kind) (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (w: (pm': perm) -> LPS.l2r_writer (vmatch pm') s)
   (pm: perm)
@@ -353,7 +353,7 @@ fn l2r_write_mixed_list
   (#t: Type0) (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (w: (pm': perm) -> LPS.l2r_writer (vmatch pm') s)
@@ -649,7 +649,7 @@ inline_for_extraction
 fn compute_remaining_size_base_serialized
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (#p: parser k u)
+  (#k: Ghost.erased parser_kind) (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (j: LPS.jumper p)
   (pm: perm)
@@ -712,7 +712,7 @@ inline_for_extraction
 fn compute_remaining_size_base_slice
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (#p: parser k u)
+  (#k: Ghost.erased parser_kind) (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (cr: (pm': perm) -> LPS.compute_remaining_size (vmatch pm') s)
   (pm: perm)
@@ -816,7 +816,7 @@ inline_for_extraction
 fn compute_remaining_size_base_singleton
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (#p: parser k u)
+  (#k: Ghost.erased parser_kind) (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (cr: (pm': perm) -> LPS.compute_remaining_size (vmatch pm') s)
   (pm: perm)
@@ -860,7 +860,7 @@ fn compute_remaining_size_mixed_list
   (#t: Type0) (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k u)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (cr: (pm': perm) -> LPS.compute_remaining_size (vmatch pm') s)

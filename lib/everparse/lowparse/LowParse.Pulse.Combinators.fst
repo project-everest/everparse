@@ -181,7 +181,7 @@ let validator_postcond_parse_synth
 inline_for_extraction
 let validator_ext
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p2: parser k t)
   (p1: parser k t)
   (w: validator p1)
@@ -210,7 +210,7 @@ fn validate_synth
 inline_for_extraction
 let jumper_ext
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p2: parser k t)
   (p1: parser k t)
   (j: jumper p1)
@@ -3040,7 +3040,7 @@ let leaf_size_false (_: unit) : leaf_size serialize_false =
    same bytes as its preimage (mirrors [l2r_leaf_write_synth]). *)
 inline_for_extraction
 let leaf_size_synth
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
   (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
   (f1': ((x2: t2) -> (x1: t1 { x1 == f1 x2 })))
 : leaf_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
@@ -3050,7 +3050,7 @@ let leaf_size_synth
 
 inline_for_extraction
 let leaf_size_synth'
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
   (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
 : leaf_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
 = leaf_size_synth w f2 f1 (mk_synth f1)
@@ -3061,9 +3061,9 @@ let leaf_size_synth'
 inline_for_extraction
 let leaf_size_pair
   (#t1 #t2: Type0)
-  (#k1: parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w1: leaf_size s1)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w1: leaf_size s1)
   (sqs: squash (k1.parser_kind_subkind == Some ParserStrong))
-  (#k2: parser_kind) (#p2: parser k2 t2) (#s2: serializer p2) (w2: leaf_size s2)
+  (#k2: Ghost.erased parser_kind) (#p2: parser k2 t2) (#s2: serializer p2) (w2: leaf_size s2)
   (sqb: squash (match (and_then_kind k1 k2).parser_kind_high with | Some h -> h < pow2 16 | None -> False))
 : leaf_size #(t1 & t2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
 = fun x ->
@@ -3080,7 +3080,7 @@ let leaf_size_pair
 inline_for_extraction
 let leaf_size_filter
   (#t1: Type0)
-  (#k1: parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size #t1 s1)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size #t1 s1)
   (f: (t1 -> GTot bool))
 : leaf_size #(parse_filter_refine u#0 f) #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
 = fun x -> w x

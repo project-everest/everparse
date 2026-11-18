@@ -2705,7 +2705,7 @@ inline_for_extraction
 ```pulse
 fn base_mixed_list_narrow_n_serialized
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (off: Ghost.erased nat) (n: Ghost.erased nat)
   (pm: perm)
@@ -2768,7 +2768,7 @@ inline_for_extraction
 ```pulse
 fn base_mixed_list_narrow_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (off: Ghost.erased nat) (n: Ghost.erased nat)
   (pm: perm) (il: base_mixed_list i t) (l: Ghost.erased (list u))
@@ -3068,7 +3068,7 @@ inline_for_extraction
 ```pulse
 fn mixed_list_narrow_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (off: Ghost.erased nat) (n: Ghost.erased nat)
   (pm: perm) (il: mixed_list i t) (l: Ghost.erased (list u))
@@ -3564,7 +3564,7 @@ inline_for_extraction
 ```pulse
 fn base_mixed_list_match_n_rescale
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
   (cur: perm) (tgt: perm)
   (il: base_mixed_list i t) (l: Ghost.erased (list u))
@@ -3663,7 +3663,7 @@ inline_for_extraction
 ```pulse
 fn mixed_list_extract_first_base_loop
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
   (off_sz: i)
@@ -4064,7 +4064,7 @@ inline_for_extraction
 ```pulse
 fn base_mixed_list_next_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
   (off_sz: i) (n_sz: i)
   (pm: perm) (bi: base_mixed_list i t) (l: Ghost.erased (list u))
@@ -4330,7 +4330,7 @@ inline_for_extraction
 ```pulse
 fn iterator_start
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (pm: perm) (ml: mixed_list i t) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
@@ -4629,7 +4629,7 @@ inline_for_extraction
 ```pulse
 fn base_mixed_list_next_n_eos
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
   (off_sz: i) (n_sz: i)
   (pm: perm) (bi: base_mixed_list i t) (l: Ghost.erased (list u))
@@ -4887,7 +4887,7 @@ inline_for_extraction
 ```pulse
 fn iterator_next_eos
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (pm: perm) (r: R.ref (iterator i t)) (i_orig: Ghost.erased (iterator i t)) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
@@ -5220,7 +5220,7 @@ inline_for_extraction
 ```pulse
 fn iterator_next
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (pm: perm) (r: R.ref (iterator i t)) (i_orig: Ghost.erased (iterator i t)) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
@@ -5311,7 +5311,7 @@ inline_for_extraction
 ```pulse
 fn base_iterator_start
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (pm: perm) (bml: base_mixed_list i t) (l: Ghost.erased (list u))
 requires
   base_mixed_list_match vmatch io p pm bml l
@@ -5357,7 +5357,7 @@ inline_for_extraction
 ```pulse
 fn base_iterator_next_eos
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (pm: perm) (r: R.ref (base_iterator i t)) (i_orig: Ghost.erased (base_iterator i t)) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
@@ -5522,7 +5522,7 @@ inline_for_extraction
 ```pulse
 fn base_iterator_next
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (pm: perm) (r: R.ref (base_iterator i t)) (i_orig: Ghost.erased (base_iterator i t)) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)

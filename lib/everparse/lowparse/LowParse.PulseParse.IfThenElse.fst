@@ -290,7 +290,7 @@ let test_seqbytes_cond_prop
 
 inline_for_extraction
 fn seqbytes_eq_test
-  (#kt: parser_kind) (#tag_t: Type0)
+  (#kt: Ghost.erased parser_kind) (#tag_t: Type0)
   (pt: parser kt tag_t)
   (cond: tag_t -> Tot bool)
   (clen: SZ.t)

@@ -789,8 +789,8 @@ let clens_parser_ext
 
 inline_for_extraction
 fn accessor_parser_ext
-  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (p2: parser k2 t2)
   (sq: squash (LPS.pts_to_serialized_ext_trade_gen_precond p1 p2))
 : accessor p1 p2 (clens_parser_ext ())
 =
@@ -1142,7 +1142,7 @@ let l2r_safe_writer
 inline_for_extraction
 fn l2r_safe_writer_leaf
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (sz: SZ.t {
@@ -1181,7 +1181,7 @@ fn l2r_safe_writer_leaf
 inline_for_extraction
 fn l2r_safe_writer_leaf_vl
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x))))
@@ -1220,11 +1220,11 @@ fn l2r_safe_writer_ext
   (#t' #tm #t1: Type0)
   (#vmatch1: t' -> tm -> slprop)
   (#conv1: tm -> GTot (option t1))
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 t1)
   (#s1: serializer p1)
   (w: l2r_safe_writer vmatch1 s1 conv1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 t1)
   (s2: serializer p2)
   (vmatch2: t' -> tm -> slprop)
@@ -1255,7 +1255,7 @@ inline_for_extraction
 fn l2r_safe_writer_synth_lhs
   (#t1' #tm #t: Type0)
   (#vmatch: t1' -> tm -> slprop)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (#conv: tm -> GTot (option t))
@@ -1281,7 +1281,7 @@ inline_for_extraction
 fn l2r_safe_writer_coerce_mid
   (#t' #tm1 #t: Type0)
   (#vmatch1: t' -> tm1 -> slprop)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (#conv1: tm1 -> GTot (option t))
@@ -1470,7 +1470,7 @@ fn size_add_checked_budget (budget: SZ.t) (x: SZ.t) (y: SZ.t) (perr: ref bool)
 inline_for_extraction
 fn l2r_safe_size_leaf
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (sz: SZ.t {
@@ -1497,7 +1497,7 @@ fn l2r_safe_size_leaf
 inline_for_extraction
 fn l2r_safe_size_leaf_vl
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x))))
