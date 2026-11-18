@@ -197,7 +197,7 @@ inline_for_extraction
 fn ilc_content
   (id: Ghost.erased asn1_id_t)
   (#ack: Ghost.erased asn1_content_k)
-  (p: asn1_weak_parser (asn1_content_t ack))
+  (p: Ghost.erased (asn1_weak_parser (asn1_content_t ack)))
   (input: S.slice U8.t)
   (#pm: perm)
   (#w: Ghost.erased SB.bytes)
@@ -231,7 +231,7 @@ fn parse_ilc
   (#ack: Ghost.erased asn1_content_k)
   (#t: Type0)
   (#r: prel t (asn1_content_t ack))
-  (#p: asn1_weak_parser (asn1_content_t ack))
+  (#p: Ghost.erased (asn1_weak_parser (asn1_content_t ack)))
   (f: aparser #t #(asn1_content_t ack) r #asn1_weak_parser_kind p)
 : aparser #t #(asn1_content_t ack) r #asn1_strong_parser_kind (parse_asn1_ILC (Ghost.reveal id) #(Ghost.reveal ack) p)
 = (input: _) (#pm: _) (#w: _) (#v: _)
