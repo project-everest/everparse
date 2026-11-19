@@ -1,6 +1,6 @@
 
 
-#include "internal/CBORNondet.h"
+#include "CBORNondet.h"
 
 #include "CBORNondetType.h"
 #include "CBORNondetAlloc.h"
@@ -349,7 +349,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
             offset1)._2,
           off - offset1)._1);
     ite1 =
-      (!(x.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE) ||
+      (x.major_type != CBOR_MAJOR_TYPE_SIMPLE_VALUE ||
         x.additional_info <= CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
       && x.additional_info < CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_UNASSIGNED_MIN;
   }
@@ -944,7 +944,19 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_map_length_bounded(
   return pres;
 }
 
-bool
+#define FStar_Pervasives_Native_None 0
+#define FStar_Pervasives_Native_Some 1
+
+typedef uint8_t FStar_Pervasives_Native_option__size_t_tags;
+
+typedef struct FStar_Pervasives_Native_option__size_t_s
+{
+  FStar_Pervasives_Native_option__size_t_tags tag;
+  size_t v;
+}
+FStar_Pervasives_Native_option__size_t;
+
+static bool
 CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item_nlist_bounded(
   size_t map_length_bound,
   FStar_Pervasives_Native_option__size_t map_key_bound,
@@ -2330,12 +2342,12 @@ static bool CBOR_Pulse_Raw_Format_Serialize_compute_deep(cbor_raw c)
     return true;
   else if (c.tag == CBOR_Case_Array)
     return
-      !(Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_raw(c.case_CBOR_Case_Array.cbor_array_ptr) ==
-        (size_t)0U);
+      Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_raw(c.case_CBOR_Case_Array.cbor_array_ptr) !=
+        (size_t)0U;
   else if (c.tag == CBOR_Case_Map)
     return
-      !(Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(c.case_CBOR_Case_Map.cbor_map_ptr)
-      == (size_t)0U);
+      Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(c.case_CBOR_Case_Map.cbor_map_ptr) !=
+        (size_t)0U;
   else
     return false;
 }
@@ -2658,7 +2670,7 @@ FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_
 }
 FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry;
 
-bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
+static bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out)
 {
   if (CBOR_Pulse_Raw_Format_Serialize_compute_deep(x_))
   {
@@ -3153,7 +3165,7 @@ Pulse_Lib_Slice_copy__uint8_t(
   memcpy(dst.elt, src.elt, src.len * sizeof (uint8_t));
 }
 
-size_t
+static size_t
 CBOR_Pulse_Raw_Format_Serialize_ser__d(
   cbor_raw x_,
   CBOR_Pulse_Raw_Slice_byte_slice out,
@@ -3494,6 +3506,13 @@ CBOR_Pulse_Raw_Compare_Bytes_lex_compare_bytes(
   return pres;
 }
 
+typedef struct FStar_Pervasives_Native_option__bool_s
+{
+  FStar_Pervasives_Native_option__size_t_tags tag;
+  bool v;
+}
+FStar_Pervasives_Native_option__bool;
+
 static bool CBOR_Pulse_Raw_Util_eq_Some_true(FStar_Pervasives_Native_option__bool x)
 {
   return x.tag == FStar_Pervasives_Native_Some && x.v;
@@ -3509,7 +3528,7 @@ static bool CBOR_Pulse_Raw_Util_eq_Some_0sz(FStar_Pervasives_Native_option__size
   return x.tag == FStar_Pervasives_Native_Some && x.v == (size_t)0U;
 }
 
-bool
+static bool
 CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
   size_t bound,
   CBOR_Pulse_Raw_Slice_byte_slice *pl,
@@ -3605,7 +3624,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_opt(
   }
 }
 
-FStar_Pervasives_Native_option__bool
+static FStar_Pervasives_Native_option__bool
 CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
   FStar_Pervasives_Native_option__size_t map_bound,
   CBOR_Pulse_Raw_Slice_byte_slice l1,
@@ -5158,7 +5177,8 @@ FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type
 }
 FStar_Pervasives_Native_tuple2__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_raw;
 
-bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbor_raw x2)
+static bool
+CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv_with_depth(cbor_raw x1, cbor_raw x2)
 {
   uint8_t mt1 = CBOR_Pulse_Raw_Nondet_Compare_impl_major_type_with_depth(x1);
   if (mt1 != CBOR_Pulse_Raw_Nondet_Compare_impl_major_type_with_depth(x2))
@@ -5515,6 +5535,16 @@ CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_no_setoid_repeats(
   return pres;
 }
 
+typedef struct CBOR_Spec_Raw_Hash_sip_s
+{
+  uint64_t v0;
+  uint64_t v1;
+  uint64_t v2;
+  uint64_t v3;
+  uint64_t nw;
+}
+CBOR_Spec_Raw_Hash_sip;
+
 static CBOR_Spec_Raw_Hash_sip CBOR_Spec_Raw_Hash_sip_round(CBOR_Spec_Raw_Hash_sip s)
 {
   uint64_t v0 = s.v0 + s.v1;
@@ -5635,7 +5665,7 @@ CBOR_Pulse_Raw_EverParse_DupCheck_hash_leaf(
     return st0;
 }
 
-CBOR_Spec_Raw_Hash_sip
+static CBOR_Spec_Raw_Hash_sip
 CBOR_Pulse_Raw_EverParse_DupCheck_hash_items(
   CBOR_Pulse_Raw_Slice_byte_slice b,
   uint64_t k0,
@@ -6059,6 +6089,13 @@ CBOR_Pulse_Raw_EverParse_DupCheck_hash_items(
   return pst;
 }
 
+typedef struct Pulse_Lib_Slice_slice__size_t_s
+{
+  size_t *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__size_t;
+
 static size_t Pulse_Lib_Slice_len__size_t(Pulse_Lib_Slice_slice__size_t s)
 {
   return s.len;
@@ -6169,7 +6206,7 @@ Pulse_Lib_Slice_copy__size_t(
   memcpy(dst.elt, src.elt, src.len * sizeof (size_t));
 }
 
-int16_t
+static int16_t
 CBOR_Pulse_Raw_EverParse_DupCheck_cmp_one(
   CBOR_Pulse_Raw_Slice_byte_slice b,
   Pulse_Lib_Slice_slice__size_t sc,
@@ -7447,6 +7484,13 @@ CBOR_Pulse_Raw_EverParse_DupCheck_cmp_one(
   return pres;
 }
 
+typedef struct Pulse_Lib_Slice_slice__uint64_t_s
+{
+  uint64_t *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__uint64_t;
+
 static size_t Pulse_Lib_Slice_len__uint64_t(Pulse_Lib_Slice_slice__uint64_t s)
 {
   return s.len;
@@ -7488,7 +7532,7 @@ Pulse_Lib_Slice_op_Array_Access__uint64_t(Pulse_Lib_Slice_slice__uint64_t a, siz
   return a.elt[i];
 }
 
-bool
+static bool
 CBOR_Pulse_Raw_EverParse_DupCheck_check_items(
   CBOR_Pulse_Raw_Slice_byte_slice b,
   Pulse_Lib_Slice_slice__size_t sc,
@@ -9994,8 +10038,8 @@ cbor_nondet_map_get_multiple(
       size_t i = pi;
       if
       (
-        !(i <
-          Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests))
+        i >=
+          Pulse_Lib_Slice_len__CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t_CBOR_Pulse_Raw_Type_cbor_raw(dests)
       )
         break;
       size_t i0 = pi;

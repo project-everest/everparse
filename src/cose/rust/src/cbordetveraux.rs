@@ -2073,7 +2073,7 @@ fn cbor_match_map_get_length_with_depth(c: cbor_raw) -> raw_uint64
     }
 }
 
-pub(crate) fn cbor_compare_with_depth(x1: cbor_raw, x2: cbor_raw) -> i16
+fn cbor_compare_with_depth(x1: cbor_raw, x2: cbor_raw) -> i16
 {
     let ty1: u8 = impl_major_type_with_depth(x1);
     let ty2: u8 = impl_major_type_with_depth(x2);
@@ -2854,7 +2854,7 @@ enum option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
     Some { v: &'a [cbor_map_entry <'a>] }
 }
 
-pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
+fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
 {
     let deep: bool = compute_deep(x·);
     if deep
@@ -3372,7 +3372,7 @@ fn write_header(
     { pos· }
 }
 
-pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
+fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
 {
     let deep: bool = compute_deep(x·);
     if deep
@@ -3924,7 +3924,7 @@ fn cbor_raw_compare(x1: cbor_raw, x2: cbor_raw) -> i16 { impl_cbor_compare(x1, x
 fn cbor_map_entry_raw_compare(x1: cbor_map_entry, x2: cbor_map_entry) -> i16
 { cbor_raw_compare(x1.cbor_map_entry_key, x2.cbor_map_entry_key) }
 
-pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
+fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
 {
     let len: usize = a.len();
     if len < 2usize
