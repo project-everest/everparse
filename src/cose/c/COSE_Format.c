@@ -11,7 +11,7 @@
 static bool sizet_lte_u64(size_t b, uint64_t a)
 {
   return
-    !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
+    b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U < (size_t)16U &&
       (uint64_t)b <= a;
 }
 
@@ -30,7 +30,7 @@ static bool sizet_fits_u64(size_t b)
 static bool sizet_eq_u64(size_t b, uint64_t a)
 {
   return
-    !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
+    b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U < (size_t)16U &&
       (uint64_t)b == a;
 }
 
@@ -4471,7 +4471,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
             }
             else
               ite1 = false;
-            if (!!ite1)
+            if (ite1)
               remaining--;
           }
           sw = MGOK;
@@ -5868,7 +5868,7 @@ COSE_Format_serialize_cose_key_generic(
         if (!(pres1 && !test))
           break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-        if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+        if (c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
       }
@@ -6081,7 +6081,7 @@ COSE_Format_serialize_cose_key_generic(
                         if (!(pres2 && !test))
                           break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
-                        if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+                        if (__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
@@ -6257,7 +6257,7 @@ COSE_Format_is_empty_iterate_map_evercddl_label_and_values(
     if (!(pres && !test))
       break;
     cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-    if (!!i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+    if (i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
       if (!i.cddl_map_iterator_impl_validate_ex(elt))
         pres = !i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
   }
@@ -7144,7 +7144,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
             }
             else
               ite1 = false;
-            if (!!ite1)
+            if (ite1)
               remaining--;
           }
           sw = MGOK;
@@ -8035,7 +8035,7 @@ COSE_Format_serialize_cose_key_okp(
         if (!(pres1 && !test))
           break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-        if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+        if (c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
       }
@@ -8248,7 +8248,7 @@ COSE_Format_serialize_cose_key_okp(
                         if (!(pres2 && !test))
                           break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
-                        if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+                        if (__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
@@ -9638,7 +9638,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
             }
             else
               ite1 = false;
-            if (!!ite1)
+            if (ite1)
               remaining--;
           }
           sw = MGOK;
@@ -11991,7 +11991,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
         if (!(pres1 && !test))
           break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-        if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+        if (c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
       }
@@ -12204,7 +12204,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                         if (!(pres2 && !test))
                           break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
-                        if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+                        if (__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
