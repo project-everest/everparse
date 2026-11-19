@@ -958,7 +958,7 @@ pub enum option__size_t
     Some { v: usize }
 }
 
-pub(crate) fn validate_raw_data_item_nlist_bounded(
+fn validate_raw_data_item_nlist_bounded(
     map_length_bound: usize,
     map_key_bound: option__size_t,
     d: usize,
@@ -2339,7 +2339,7 @@ enum option__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
     Some { v: &'a [cbor_map_entry <'a>] }
 }
 
-pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
+fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
 {
     let deep: bool = compute_deep(x·);
     if deep
@@ -2857,7 +2857,7 @@ fn write_header(
     { pos· }
 }
 
-pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
+fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
 {
     let deep: bool = compute_deep(x·);
     if deep
@@ -3225,7 +3225,7 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub(crate) enum option__bool
+enum option__bool
 {
     None,
     Some { v: bool }
@@ -3240,7 +3240,7 @@ fn eq_Some_false(x: option__bool) -> bool
 fn eq_Some_0sz(x: option__size_t) -> bool
 { match x { option__size_t::Some { v: y } => y == 0usize, _ => false } }
 
-pub(crate) fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize) -> bool
+fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize) -> bool
 {
     let mut pn: [usize; 1] = [n1; 1usize];
     let mut pres: [bool; 1] = [true; 1usize];
@@ -3326,7 +3326,7 @@ fn impl_check_map_depth_opt(bound: option__size_t, n0: usize, l0: &[u8]) -> bool
     }
 }
 
-pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8], l2: &[u8]) ->
+fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8], l2: &[u8]) ->
     option__bool
 {
     let i: usize = jump_header(l1, 0usize);
@@ -4922,7 +4922,7 @@ fn cbor_match_array_get_length_with_depth0(c: cbor_raw) -> raw_uint64
     }
 }
 
-pub(crate) fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
+fn cbor_nondet_equiv_with_depth(x1: cbor_raw, x2: cbor_raw) -> bool
 {
     let mt1: u8 = impl_major_type_with_depth(x1);
     let mt2: u8 = impl_major_type_with_depth(x2);
@@ -5242,7 +5242,7 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub(crate) struct sip
+struct sip
 { pub v0: u64, pub v1: u64, pub v2: u64, pub v3: u64, pub nw: u64 }
 
 fn sip_round(s: sip) -> sip
@@ -5322,15 +5322,7 @@ fn hash_bytes(b: &[u8], st0: sip, o: usize, len: usize) -> sip
 fn hash_leaf(b: &[u8], is_string: bool, st0: sip, o: usize, len: usize) -> sip
 { if is_string { hash_bytes(b, st0, o, len) } else { st0 } }
 
-pub(crate) fn hash_items(
-    b: &[u8],
-    k0: u64,
-    k1: u64,
-    st0: sip,
-    o0: usize,
-    c0: usize,
-    pout: &mut [usize]
-) ->
+fn hash_items(b: &[u8], k0: u64, k1: u64, st0: sip, o0: usize, c0: usize, pout: &mut [usize]) ->
     sip
 {
     let mut po: [usize; 1] = [o0; 1usize];
@@ -5625,7 +5617,7 @@ fn cmp_str(b: &[u8], o1: usize, o2: usize, len: usize) -> i16
 fn cmp_leaf(b: &[u8], is_string: bool, o1: usize, o2: usize, len: usize) -> i16
 { if is_string { cmp_str(b, o1, o2, len) } else { 0i16 } }
 
-pub(crate) fn cmp_one(b: &[u8], sc: &mut [usize], x: usize, y: usize) -> i16
+fn cmp_one(b: &[u8], sc: &mut [usize], x: usize, y: usize) -> i16
 {
     let mut po1: [usize; 1] = [x; 1usize];
     let mut po2: [usize; 1] = [y; 1usize];
@@ -6327,7 +6319,7 @@ pub(crate) fn cmp_one(b: &[u8], sc: &mut [usize], x: usize, y: usize) -> i16
     (&pres)[0usize]
 }
 
-pub(crate) fn check_items(
+fn check_items(
     b: &[u8],
     sc: &mut [usize],
     k0: u64,

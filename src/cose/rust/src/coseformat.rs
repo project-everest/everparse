@@ -3530,7 +3530,7 @@ pub fn validate_cose_key_generic(c: crate::cbordetveraux::cbor_raw) -> bool
                           =
                               (&pj)[0usize];
                           let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                          if ! ! is_empty { break };
+                          if is_empty { break };
                           let chd: crate::cbordetveraux::cbor_map_entry =
                               crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                           let k: crate::cbordetveraux::cbor_raw =
@@ -5480,7 +5480,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                               let elt_key: crate::cbordetveraux::cbor_raw =
                                   crate::cbordetver::cbor_det_map_entry_key(elt);
                               let test_key: bool = (c21.cddl_map_iterator_impl_validate1)(elt_key);
-                              if ! ! test_key
+                              if test_key
                               {
                                   let test_ex: bool = (c21.cddl_map_iterator_impl_validate_ex)(elt);
                                   if ! test_ex
@@ -5763,7 +5763,7 @@ serialize_cose_key_generic(c: cose_key_generic, out: &mut [u8]) ->
                                                                               (__anf00.cddl_map_iterator_impl_validate1)(
                                                                                   elt_key
                                                                               );
-                                                                          if ! ! test_key
+                                                                          if test_key
                                                                           {
                                                                               let test_ex: bool =
                                                                                   (__anf00.cddl_map_iterator_impl_validate_ex)(
@@ -5937,7 +5937,7 @@ pub fn is_empty_iterate_map_evercddl_label_and_values(
         let elt_key: crate::cbordetveraux::cbor_raw =
             crate::cbordetver::cbor_det_map_entry_key(elt);
         let test_key: bool = (i.cddl_map_iterator_impl_validate1)(elt_key);
-        if ! ! test_key
+        if test_key
         {
             let test_ex: bool = (i.cddl_map_iterator_impl_validate_ex)(elt);
             if ! test_ex
@@ -6910,7 +6910,7 @@ pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
                           =
                               (&pj)[0usize];
                           let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                          if ! ! is_empty { break };
+                          if is_empty { break };
                           let chd: crate::cbordetveraux::cbor_map_entry =
                               crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                           let k: crate::cbordetveraux::cbor_raw =
@@ -8036,7 +8036,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                               let elt_key: crate::cbordetveraux::cbor_raw =
                                   crate::cbordetver::cbor_det_map_entry_key(elt);
                               let test_key: bool = (c21.cddl_map_iterator_impl_validate1)(elt_key);
-                              if ! ! test_key
+                              if test_key
                               {
                                   let test_ex: bool = (c21.cddl_map_iterator_impl_validate_ex)(elt);
                                   if ! test_ex
@@ -8319,7 +8319,7 @@ serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
                                                                               (__anf00.cddl_map_iterator_impl_validate1)(
                                                                                   elt_key
                                                                               );
-                                                                          if ! ! test_key
+                                                                          if test_key
                                                                           {
                                                                               let test_ex: bool =
                                                                                   (__anf00.cddl_map_iterator_impl_validate_ex)(
@@ -9615,7 +9615,7 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                           =
                               (&pj)[0usize];
                           let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                          if ! ! is_empty { break };
+                          if is_empty { break };
                           let chd: crate::cbordetveraux::cbor_map_entry =
                               crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
                           let k: crate::cbordetveraux::cbor_raw =
@@ -12714,7 +12714,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                               let elt_key: crate::cbordetveraux::cbor_raw =
                                   crate::cbordetver::cbor_det_map_entry_key(elt);
                               let test_key: bool = (c21.cddl_map_iterator_impl_validate1)(elt_key);
-                              if ! ! test_key
+                              if test_key
                               {
                                   let test_ex: bool = (c21.cddl_map_iterator_impl_validate_ex)(elt);
                                   if ! test_ex
@@ -12997,7 +12997,7 @@ serialize_header_map(c: header_map, out: &mut [u8]) ->
                                                                               (__anf00.cddl_map_iterator_impl_validate1)(
                                                                                   elt_key
                                                                               );
-                                                                          if ! ! test_key
+                                                                          if test_key
                                                                           {
                                                                               let test_ex: bool =
                                                                                   (__anf00.cddl_map_iterator_impl_validate_ex)(
