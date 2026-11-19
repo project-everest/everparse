@@ -168,7 +168,7 @@ inline_for_extraction
 ```pulse
 fn mixed_list_insert_sorted_find
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (lt_spec: Ghost.erased (u -> u -> bool))
   (cmp: cmp_t vmatch (Ghost.reveal lt_spec))
@@ -553,7 +553,7 @@ inline_for_extraction
 ```pulse
 fn mixed_list_insert_sorted
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop) (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (lt_spec: Ghost.erased (u -> u -> bool))
   (cmp: cmp_t vmatch (Ghost.reveal lt_spec))

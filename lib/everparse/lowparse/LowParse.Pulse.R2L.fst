@@ -317,7 +317,7 @@ inline_for_extraction
 let r2l_writer_zero_size
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (sq: squash (k.parser_kind_high == Some 0))

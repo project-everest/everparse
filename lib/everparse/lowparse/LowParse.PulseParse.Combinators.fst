@@ -481,7 +481,7 @@ fn read_false ()
 
 inline_for_extraction
 let validate_strengthen
-  (k2: parser_kind)
+  (k2: Ghost.erased parser_kind)
   (#k1: Ghost.erased parser_kind)
   (#t: Type0)
   (#p1: parser k1 t)
@@ -696,7 +696,7 @@ fn validate_nondep_then
 
 inline_for_extraction
 let validate_compose_context
-  (#pk: parser_kind)
+  (#pk: Ghost.erased parser_kind)
   (#kt1 #kt2: Type0)
   (f: (kt2 -> Tot kt1))
   (t: (kt1 -> Tot Type0))
@@ -708,7 +708,7 @@ let validate_compose_context
 
 inline_for_extraction
 let jump_compose_context
-  (#pk: parser_kind)
+  (#pk: Ghost.erased parser_kind)
   (#kt1 #kt2: Type0)
   (f: (kt2 -> Tot kt1))
   (t: (kt1 -> Tot Type0))
@@ -816,7 +816,7 @@ let l2r_safe_writer_postcond_synth_bridge
 
 inline_for_extraction
 fn l2r_safe_writer_synth
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
   (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1))
   (w: PPB.l2r_safe_writer vmatch s1 conv)
   (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
@@ -907,14 +907,14 @@ inline_for_extraction
 fn l2r_safe_writer_pair
   (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
   (#vmatch1: tl1 -> tm1 -> slprop)
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 th1)
   (#s1: serializer p1)
   (#conv1: tm1 -> GTot (option th1))
   (w1: PPB.l2r_safe_writer vmatch1 s1 conv1)
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#vmatch2: tl2 -> tm2 -> slprop)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 th2)
   (#s2: serializer p2)
   (#conv2: tm2 -> GTot (option th2))
@@ -1628,7 +1628,7 @@ let l2r_safe_size_postcond_synth_bridge
 
 inline_for_extraction
 fn l2r_safe_size_synth
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
   (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1))
   (w: PPB.l2r_safe_size vmatch s1 conv)
   (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
@@ -1652,14 +1652,14 @@ inline_for_extraction
 fn l2r_safe_size_pair
   (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
   (#vmatch1: tl1 -> tm1 -> slprop)
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 th1)
   (#s1: serializer p1)
   (#conv1: tm1 -> GTot (option th1))
   (w1: PPB.l2r_safe_size vmatch1 s1 conv1)
   (sqs: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#vmatch2: tl2 -> tm2 -> slprop)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 th2)
   (#s2: serializer p2)
   (#conv2: tm2 -> GTot (option th2))

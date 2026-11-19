@@ -57,7 +57,7 @@ fn validate_fldata
 
 inline_for_extraction
 let validate_fldata_gen
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (v: LPS.validator p)
@@ -67,7 +67,7 @@ let validate_fldata_gen
 
 inline_for_extraction
 let validate_fldata_consumes_all
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (v: LPS.validator p)

@@ -244,11 +244,11 @@ open LowParse.Pulse.Combinators
 inline_for_extraction
 fn nondep_then_fst_tot_kind
   (#t1 #t2: Type0)
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (j1: jumper p1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (input: slice byte)
@@ -355,11 +355,11 @@ let rec sorted2_correct
 inline_for_extraction
 fn split_nondep_then_tot_kind
   (#t1 #t2: Type0)
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 t1)
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (j1: jumper p1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 t2)
   (s2: serializer p2)
   (input: slice byte)

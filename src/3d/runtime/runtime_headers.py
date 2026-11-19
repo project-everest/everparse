@@ -76,6 +76,16 @@ def native_path(path):
     return str(path)
 
 
+def cygwin_path(path):
+    # On Cygwin, the Makefiles pass Windows paths (D:/...), which Cygwin's
+    # Python does not recognize as absolute.
+    if sys.platform == "cygwin":
+        return Path(subprocess.check_output(
+            ["cygpath", "-u", str(path)], text=True
+        ).strip())
+    return path
+
+
 def profile_config(profile):
     p = PROFILES[profile]
     lowstar = p["api"] == "lowstar"
@@ -247,6 +257,9 @@ def main():
     parser.add_argument("--fstar-options", default="")
     parser.add_argument("--jobs", type=int, default=4)
     args = parser.parse_args()
+    args.output = cygwin_path(args.output)
+    if args.build_dir:
+        args.build_dir = cygwin_path(args.build_dir)
     if args.jobs < 1:
         parser.error("--jobs must be positive")
     if args.companion_only:

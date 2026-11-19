@@ -65,7 +65,7 @@ inline_for_extraction
 fn mixed_list_singleton
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (pm_y: perm)
   (y_elem: t) (y: Ghost.erased u)
   (ry: R.ref t)
@@ -132,7 +132,7 @@ inline_for_extraction
 fn mixed_list_singleton_gen
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (a: perm)
   (pm_y: perm)
   (y_elem: t) (y: Ghost.erased u)
@@ -208,7 +208,7 @@ inline_for_extraction
 fn mixed_list_append
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (pm: perm)
   (ml_a: mixed_list i t) (l_a: Ghost.erased (list u))
   (ml_b: mixed_list i t) (l_b: Ghost.erased (list u))
@@ -336,7 +336,7 @@ inline_for_extraction
 fn mixed_list_wrap_scaled
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#i: Type0) (io: IO.int_ops i)
-  (#k: parser_kind) (p: parser k u)
+  (#k: Ghost.erased parser_kind) (p: parser k u)
   (q: perm)
   (ml: mixed_list i t) (l: Ghost.erased (list u))
   (r1 r2: R.ref (mixed_list i t))
