@@ -1073,6 +1073,32 @@ let acc_tlv_iff (id: asn1_id_t) (#ack: asn1_content_k) (p: asn1_weak_parser (asn
 = Classical.move_requires (acc_tlv_inv id p) c;
   Classical.move_requires (acc_tlv id p) c
 
+(* Conversely, an accepted ILC is a TLV *)
+#push-options "--z3rlimit 64 --fuel 0 --ifuel 1"
+let ilc_tlv (id: asn1_id_t) (#ack: asn1_content_k) (p: asn1_weak_parser (asn1_content_t ack)) (b: bytes)
+: Lemma (requires (acc #asn1_strong_parser_kind (parse_asn1_ILC id p) b))
+  (ensures (exists (c: bytes) . b == enc_tlv id true c /\ acc #asn1_weak_parser_kind p c /\ Seq.length c < 4294967296))
+= ILC.ilc_eq id p b;
+  match parse parse_asn1_identifier_U32 b with
+  | None -> ()
+  | Some (id', c1) ->
+    ilc_acc id p b id' c1;
+    IE.parse_asn1_identifier_U32_consumed b;
+    let rest = Seq.slice b c1 (Seq.length b) in
+    C.vlgen_eq p rest;
+    parse_len_consumed rest;
+    let Some (len, c2) = parse parse_asn1_length_u32_t rest in
+    let c = Seq.slice rest c2 (Seq.length rest) in
+    assert (U32.v len == Seq.length c);
+    assert (U32.uint_to_t (Seq.length c) == len);
+    assert (enc_hdr true (Seq.length c) == enc_len len);
+    assert (Seq.equal (Seq.slice rest c2 (c2 + U32.v len)) c);
+    assert (Seq.equal rest (Seq.append (enc_len len) c));
+    assert (id' == id);
+    Seq.lemma_split b c1;
+    assert (b == Seq.append (IE.asn1_id_enc id) rest)
+#pop-options
+
 
 (* Framed chunks: one TLV with one of the given identifiers. A present
    component (other than ANY) is framed, and the acceptance of a framed
