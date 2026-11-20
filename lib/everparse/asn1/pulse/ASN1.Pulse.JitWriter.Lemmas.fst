@@ -26,6 +26,8 @@ module C = ASN1.Spec.Conformance
 module IE = ASN1.Spec.IdentifierU32.Enc
 module In = ASN1.Pulse.Interpreter
 module PS = ASN1.Pulse.ParseSequence
+module RV = LowParse.Spec.RecursiveVLGen
+module V = ASN1.Spec.Value
 
 let acc (#k: parser_kind) (#t: Type) (p: SB.parser k t) (b: bytes) : prop =
   Sq.consumed p b == Some (Seq.length b)
@@ -1421,6 +1423,48 @@ let p_raw_tlvish (w y: bytes)
   tlv_shaped_k' ASN1_ANY_ILC w;
   ASN1.Spec.Serializer.asn1_as_parser_consumed ASN1_ANY_ILC w;
   assert (Seq.equal (Seq.slice w 0 (Seq.length w)) w)
+
+(* An accepted ANY value is exactly one TLV (with any identifier): so a
+   validated ANY slice is framed, with no need to read it back once
+   written *)
+
+#push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
+let pv_tlv (b: bytes)
+: Lemma (match parse pv b with
+   | Some (_, n) -> exists (id: asn1_id_t) (c: bytes) . Seq.slice b 0 n == enc_tlv id true c
+   | None -> True)
+= parse_asn1_value_consumed b;
+  RV.parse_rec_vlgen_eq V.asn1_value_param b;
+  match parse pv b with
+  | None -> ()
+  | Some (v, n) ->
+    parse_any_identifier_consumed b;
+    let Some (id, c1) = parse V.parse_asn1_any_identifier b in
+    let b1 = Seq.slice b c1 (Seq.length b) in
+    let Some (len, c2) = parse parse_asn1_length_u32_t b1 in
+    let hs = c1 + c2 in
+    parser_kind_prop_equiv V.asn1_any_identifier_kind V.parse_asn1_any_identifier;
+    assert (RV.rec_vlgen_header V.asn1_value_param b == Some (id, hs, U32.v len));
+    let ct = Seq.slice b hs (hs + U32.v len) in
+    rec_vlgen_body_eq id ct;
+    assert (U32.uint_to_t (U32.v len) == len);
+    if CONSTRUCTED? id.f
+    then begin
+      let Some (l, _) = parse (LowParse.Tot.List.tot_parse_list pv) ct in
+      assert (v == ASN1_VALUE_CONSTRUCTED id l);
+      assert (Seq.slice b 0 n == enc_tlv id true (asn1_value_list_enc l))
+    end else begin
+      assert (v == ASN1_VALUE_PRIMITIVE id ct);
+      assert (Seq.slice b 0 n == enc_tlv id true ct)
+    end
+#pop-options
+
+let acc_any_framed (b: bytes)
+: Lemma (requires (acc #asn1_strong_parser_kind (asn1_as_parser ASN1_ANY_ILC) b))
+  (ensures (framed (FStar.Set.complement FStar.Set.empty) b))
+= assert_norm (asn1_as_parser ASN1_ANY_ILC == weaken _ pv);
+  pv_tlv b;
+  assert (Seq.equal (Seq.slice b 0 (Seq.length b)) b)
 
 (* SET OF: converses. An accepted element is one frame, so that the
    runtime frame check is not needed. If all the elements are one TLV,

@@ -223,6 +223,26 @@ let any_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : bool =
   | ASN1_OPTION_ILC k -> ASN1_ANY_ILC? k
   | _ -> false
 
+(* An accepted ANY component is empty (if OPTIONAL) or exactly one TLV *)
+let dfe_any (#s: _) (#d: _) (dk: asn1_decorated_k s d) (x: SB.bytes)
+: Lemma (requires (any_dec dk /\ L.iacc [In.twin_of dk] x))
+  (ensures (SL.dfe (In.twin_of dk) x))
+= match dk with
+  | ASN1_PLAIN_ILC k ->
+    L.iacc_plain_iff k x;
+    L.acc_any_framed x;
+    SL.dfe_framed dk x
+  | ASN1_OPTION_ILC k ->
+    if Seq.length x = 0
+    then begin
+      assert (Seq.equal x Seq.empty);
+      SL.dfe_empty dk
+    end else begin
+      L.iacc_option_iff k x;
+      L.acc_any_framed x;
+      SL.dfe_framed dk x
+    end
+
 let fe_t (#t: Type0) (r: bprel t) (hd: gen_decorated_parser_twin) =
   (pm: perm) -> (y: t) -> (x: Ghost.erased SB.bytes) ->
   stt_ghost unit emp_inames (r pm y x) (fun _ -> r pm y x ** pure (SL.dfe hd x))
