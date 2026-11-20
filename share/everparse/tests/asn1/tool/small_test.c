@@ -388,7 +388,6 @@ static void test_seq_iter(void) {
 }
 
 int main(void) {
-  custard_init_globals();
   Msg m1 = msg1(), m2 = msg2(), m3 = msg3();
   write_ok("msg1", m1, msg1_der, sizeof msg1_der);
   write_ok("msg2", m2, msg2_der, sizeof msg2_der);

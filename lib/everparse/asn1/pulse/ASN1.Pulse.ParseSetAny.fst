@@ -64,6 +64,12 @@ let rec dnone (#[@@@FStar.Attributes.monomorphize] ids: _) (#[@@@FStar.Attribute
   | ID_SINGLE #_ #_ #_ #t1 _ -> (None #t1, ())
   | ID_CONS #_ #_ #_ #t1 _ dtl -> (None #t1, dnone dtl)
 
+(* Inlined and reduced at each use, so that a concrete [di] gives a literal
+   tuple rather than a Custard global initialized in custard_init_globals *)
+inline_for_extraction noextract
+let dnone_inl (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (di: idesc ls t) : Tot (x: dtuple di { x == dnone di }) =
+  norm [delta_only [`%dnone]; zeta; iota] (dnone di)
+
 let opres (#t: Type0) (o: option t) : Tot (option unit) =
   match o with
   | None -> None

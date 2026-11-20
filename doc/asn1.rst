@@ -206,8 +206,6 @@ For each root type ``T``:
 
 .. code-block:: c
 
-   void custard_init_globals(void);  /* call once, before anything else */
-
    bool validate_T(Pulse_Lib_Slice_slice__uint8 input, size_t *offset);
 
    T parse_T(Pulse_Lib_Slice_slice__uint8 validated_input);
@@ -268,7 +266,6 @@ Here is a round trip with ``Msg``:
    #include "Small.h"
 
    int roundtrip(uint8_t *in, size_t len, uint8_t *buf, size_t buf_len) {
-     custard_init_globals();
      Pulse_Lib_Slice_slice__uint8 s = { .elt = in, .len = len };
      size_t off = 0;
      if (!validate_Msg(s, &off) || off != len)

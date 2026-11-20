@@ -325,7 +325,7 @@ let rec parse_cd (#[@@@FStar.Attributes.monomorphize] k: asn1_content_k) (#[@@@F
   | CD_SEQUENCE_OF ne d' -> seq_of_parser ne d'
   | CD_SET_OF ne d' -> set_of_parser ne d'
   | CD_SET _ items pf di ->
-    set_any_parser items pf di (dnone di)
+    set_any_parser items pf di (dnone_inl di)
       (fun id e #pm #we st #v -> parse_sdisp di () id e #pm #we st #v)
       (fun st #pm #v -> parse_sfin di st #pm #v)
   | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->

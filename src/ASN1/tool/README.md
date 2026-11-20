@@ -83,7 +83,6 @@ Extraction can take several minutes per schema.
 For each root type `T` of a module `M`:
 
 ```c
-void custard_init_globals(void);  /* call once before anything else */
 bool validate_T(Pulse_Lib_Slice_slice__uint8 input, size_t *offset);
 T    parse_T(Pulse_Lib_Slice_slice__uint8 validated_input);
 ASN1_Pulse_JitWriter_jit_result
