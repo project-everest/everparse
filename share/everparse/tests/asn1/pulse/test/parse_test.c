@@ -79,6 +79,44 @@ int main(void) {
       || lo.val.Base.tag != LOWPARSE_PULSEPARSE_ITERATOR_TYPE_SERIALIZED__UINTSIZE_SLICE_UINT8
       || lo.val.Base.val.Serialized.count != 2 || lo.val.Base.val.Serialized.payload.elt != l3 + 2
       || lo.val.Base.val.Serialized.payload.len != 7) { printf("setOfOctets\n"); fails++; }
+  /* Iterators (ASN1.Pulse.ListIter) */
+  {
+    li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));
+    ASN1_Pulse_ListIter_iter it = ASN1_Pulse_ParseTest_seqOfInt_iter_start(li);
+    if (ASN1_Pulse_ParseTest_iter_length(it) != 3) { printf("seqOfInt iter length\n"); fails++; }
+    int64_t expect = 5;
+    while (!ASN1_Pulse_ParseTest_iter_is_empty(it)) {
+      ASN1_Pulse_Rel_asn1_int_impl e = ASN1_Pulse_ParseTest_seqOfInt_iter_next(&it);
+      if (e.tag != ASN1_PULSE_REL_SMALL || e.val.Small != expect) { printf("seqOfInt iter %lld\n", (long long)expect); fails++; }
+      expect++;
+    }
+    if (expect != 8) { printf("seqOfInt iter count\n"); fails++; }
+    li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l2));
+    it = ASN1_Pulse_ParseTest_seqOfInt_iter_start(li);
+    if (!ASN1_Pulse_ParseTest_iter_is_empty(it) || ASN1_Pulse_ParseTest_iter_length(it) != 0) { printf("seqOfInt iter empty\n"); fails++; }
+    lo = ASN1_Pulse_ParseTest_parse_setOfOctets(SL(l3));
+    it = ASN1_Pulse_ParseTest_setOfOctets_iter_start(lo);
+    Pulse_Lib_Slice_slice__uint8 e1 = ASN1_Pulse_ParseTest_setOfOctets_iter_next(&it);
+    Pulse_Lib_Slice_slice__uint8 e2 = ASN1_Pulse_ParseTest_setOfOctets_iter_next(&it);
+    if (e1.len != 1 || e1.elt != l3 + 4 || e2.len != 2 || e2.elt != l3 + 7
+        || !ASN1_Pulse_ParseTest_iter_is_empty(it)) { printf("setOfOctets iter\n"); fails++; }
+    /* { { 1, 2 }, {}, { 3 } } */
+    uint8_t n1[] = {0x30, 0x0d, 0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02, 0x30, 0x00, 0x30, 0x03, 0x02, 0x01, 0x03};
+    ASN1_Pulse_ListIter_iter outer = ASN1_Pulse_ParseTest_seqOfSeqOfInt_iter_start(ASN1_Pulse_ParseTest_parse_seqOfSeqOfInt(SL(n1)));
+    size_t lens[3] = {2, 0, 1};
+    int64_t next = 1;
+    for (size_t i = 0; i < 3; i++) {
+      if (ASN1_Pulse_ParseTest_iter_is_empty(outer)) { printf("nested outer %zu\n", i); fails++; break; }
+      ASN1_Pulse_ListIter_iter inner = ASN1_Pulse_ParseTest_seqOfInt_iter_start(ASN1_Pulse_ParseTest_seqOfSeqOfInt_iter_next(&outer));
+      if (ASN1_Pulse_ParseTest_iter_length(inner) != lens[i]) { printf("nested length %zu\n", i); fails++; }
+      while (!ASN1_Pulse_ParseTest_iter_is_empty(inner)) {
+        ASN1_Pulse_Rel_asn1_int_impl e = ASN1_Pulse_ParseTest_seqOfInt_iter_next(&inner);
+        if (e.val.Small != next) { printf("nested %lld\n", (long long)next); fails++; }
+        next++;
+      }
+    }
+    if (next != 4 || !ASN1_Pulse_ParseTest_iter_is_empty(outer)) { printf("nested end\n"); fails++; }
+  }
   /* SET { b BOOLEAN, a [0] IMPLICIT INTEGER OPTIONAL, c [1] IMPLICIT OCTET STRING } */
   uint8_t t1[] = {0x31, 0x0a, 0x01, 0x01, 0xff, 0x80, 0x01, 0x07, 0x81, 0x02, 0xaa, 0xbb};
   FStar_Pervasives_Native_tuple2__bool_tuple2_option_asn1_int_impl_slice_uint8 st = ASN1_Pulse_ParseTest_parse_setBAC(SL(t1));
