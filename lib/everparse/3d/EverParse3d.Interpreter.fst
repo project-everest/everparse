@@ -26,7 +26,10 @@ module EverParse3d.Interpreter
      2. `as_parser` interprets a `t:typ` as a parser of values of the type
         denotation of `t`;
      3. `as_validator` interprets a `t:typ` as a Pulse validator corresponding
-        to the parser denotation of `t`.
+        to the parser denotation of `t`, and functionally correct with respect
+        to the spec denotation of `t`, `as_vspec`, which specifies the effect
+        of the actions of `t` on the action state (see
+        `EverParse3d.Actions.Spec`).
 
    Partially evaluating `as_validator` at a concrete `t` yields an EverParse
    validator specialized to `t`, which Custard extracts to C (an instance of
@@ -66,6 +69,7 @@ module U8 = FStar.UInt8
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module A = EverParse3d.Actions.Base
+module S = EverParse3d.Actions.Spec
 module E = EverParse3d.ErrorCode
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
@@ -207,6 +211,7 @@ let itype_as_validator
       false
       (allow_reader_of_itype i)
       use_error_handler
+      (S.vspec_of_parser (itype_as_parser i))
   = match i
     returns
       A.validate_with_action_t #base_t #len_t #pos_t #inst
@@ -215,6 +220,7 @@ let itype_as_validator
         false
         (allow_reader_of_itype i)
         use_error_handler
+        (S.vspec_of_parser (itype_as_parser i))
     with
     | UInt8 -> A.validate____UINT8 name
     | UInt16 -> A.validate____UINT16 name
@@ -239,8 +245,8 @@ let leaf_reader
   = _:squash (wk == P.WeakKindStrongPrefix /\ hasEq t) &
     A.leaf_reader #base_t #len_t #pos_t p
 
-(* The denotation of a top-level name: a quadruple of
-   {type, parser, validator, optional reader}. *)
+(* The denotation of a top-level name: a quintuple of
+   {type, parser, spec, validator, optional reader}. *)
 noeq
 type global_binding
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
@@ -259,13 +265,16 @@ type global_binding
   p_p : P.parser parser_kind p_t;
   //Whether the type can be read -- to avoid double fetches
   p_reader: option (leaf_reader #base_t #len_t #pos_t #inst p_p);
+  //Its spec denotation
+  p_s : S.vspec d;
   //Its validate-with-action denotation
   p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst
           p_p
           d
           parser_has_action
           (Some? p_reader)
-          use_error_handler;
+          use_error_handler
+          p_s;
 }
 
 let projector_names : list string = [
@@ -276,6 +285,7 @@ let projector_names : list string = [
   `%Mkglobal_binding?.p_t;
   `%Mkglobal_binding?.p_p;
   `%Mkglobal_binding?.p_reader;
+  `%Mkglobal_binding?.p_s;
   `%Mkglobal_binding?.p_v;
 ]
 
@@ -286,6 +296,7 @@ let has_action_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:boo
 let type_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_t g
 let parser_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_p g
 let leaf_reader_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_reader g
+let spec_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_s g
 let validator_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_v g
 
 let has_reader #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) =
@@ -362,6 +373,14 @@ let dtyp_as_parser #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
     | DT_IType i -> itype_as_parser i
     | DT_App _ _ _ b _ -> parser_of_binding b
 
+let dtyp_as_vspec #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
+                   #nz #wk (#pk:P.parser_kind nz wk) #ha #hr
+                   (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha hr)
+  : S.vspec d
+  = match t with
+    | DT_IType i -> S.vspec_of_parser (itype_as_parser i)
+    | DT_App _ _ _ b _ -> spec_of_binding b
+
 [@@specialize]
 let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
                       #nz #wk (#pk:P.parser_kind nz wk) (#ha #hr:_)
@@ -371,12 +390,14 @@ let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t l
         (dtyp_as_parser t)
         d
         ha hr use_error_handler
+        (dtyp_as_vspec t)
   = match t
     returns
       A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(dtyp_as_type t)
         (dtyp_as_parser t)
         d
         ha hr use_error_handler
+        (dtyp_as_vspec t)
     with
     | DT_IType i -> itype_as_validator #base_t #len_t #pos_t #inst #_extra #d #use_error_handler name i
     | DT_App _ _ _ b _ -> validator_of_binding b
@@ -393,6 +414,7 @@ let dtyp_as_validator_no_read #base_t #len_t #pos_t (#inst: I.input_stream_inst 
         (dtyp_as_parser t)
         d
         ha use_error_handler
+        (dtyp_as_vspec t)
   = dtyp_as_validator name t
 
 [@@specialize]
@@ -579,7 +601,7 @@ let action_binding
       (use_error_handler:bool)
       (a:Type0)
   : Type u#0
-  = A.action #base_t #len_t #pos_t #inst d a use_error_handler
+  = A.action #base_t #len_t #pos_t #inst d a use_error_handler S.aspec_unknown
 
 [@@specialize]
 let extern_action ([@@@erasable] d: state_dict) (t: Type0) = A.external_action d t
@@ -599,7 +621,7 @@ let mk_action_binding
     ([@@@erasable] d: state_dict)
     (sq: squash (state_dict_weaken_prop d' d))
   : action_binding base_t len_t pos_t inst d use_error_handler t
-  = A.action_weaken #base_t #len_t #pos_t #inst (A.mk_external_action f) d sq
+  = A.action_forget_spec (A.action_weaken #base_t #len_t #pos_t #inst (A.mk_external_action f) d sq)
 
 (* The field-pointer setter is an external action in disguise: `write_to` runs
    at the output type's own `state_dict`, not at the ambient one. Building it
@@ -624,9 +646,9 @@ let mk_field_ptr_after_with_setter
     ([@@@erasable] d: state_dict)
     (sq: squash (state_dict_weaken_prop d' d))
   : action_binding base_t len_t pos_t inst d use_error_handler bool
-  = A.action_weaken #base_t #len_t #pos_t #inst
+  = A.action_forget_spec (A.action_weaken #base_t #len_t #pos_t #inst
       (A.action_field_ptr_after_with_setter #_ #_ #_ #inst (Some?.v f) sz write_to)
-      d sq
+      d sq)
 
 noeq
 type atomic_action
@@ -704,6 +726,35 @@ type atomic_action
       action_binding base_t len_t pos_t inst d use_error_handler t ->
       atomic_action base_t len_t pos_t inst d use_error_handler b false t
 
+(* The spec denotation of atomic actions. Actions stored with `Action_call`
+   (external actions, probes) are unspecified. *)
+let atomic_action_as_spec
+   (#base_t #len_t #pos_t: Type0)
+   (#inst: I.input_stream_inst base_t len_t pos_t)
+   (#d: state_dict)
+   (#use_error_handler:bool)
+   (#b #rt #t:_)
+   (a:atomic_action base_t len_t pos_t inst d use_error_handler b rt t)
+  : Tot (S.action_spec d t)
+  = match a
+    returns Tot (S.action_spec d t)
+    with
+    | Action_return x -> S.aspec_return x
+    | Action_return_true -> S.aspec_return true
+    | Action_abort -> S.aspec_return false
+    | Action_field_pos_64 -> S.aspec_field_pos_64
+    | Action_field_pos_32 -> S.aspec_field_pos_32
+    | Action_field_ptr f sq -> S.aspec_unknown
+    | Action_field_ptr_after f sq name sz write_to sq' ->
+      S.aspec_weaken S.aspec_unknown d sq'
+    | Action_deref name x sq ->
+      S.aspec_weaken (S.aspec_deref name (pts_to x #1.0R)) d sq
+    | Action_deref_map decode name x sq ->
+      S.aspec_weaken (S.aspec_deref_map decode name (pts_to x #1.0R)) d sq
+    | Action_assignment name x rhs sq ->
+      S.aspec_weaken (S.aspec_assignment name (pts_to x #1.0R) rhs) d sq
+    | Action_call c -> S.aspec_unknown
+
 [@@specialize]
 let atomic_action_as_action
    (#base_t #len_t #pos_t: Type0)
@@ -713,9 +764,9 @@ let atomic_action_as_action
    (#use_error_handler:bool)
    (#b #rt #t:_)
    (a:atomic_action base_t len_t pos_t inst d use_error_handler b rt t)
-  : Tot (A.action #base_t #len_t #pos_t #inst d t use_error_handler)
+  : Tot (A.action #base_t #len_t #pos_t #inst d t use_error_handler (atomic_action_as_spec a))
   = match a
-    returns Tot (A.action #base_t #len_t #pos_t #inst d t use_error_handler)
+    returns Tot (A.action #base_t #len_t #pos_t #inst d t use_error_handler (atomic_action_as_spec a))
     with
     | Action_return x ->
       A.action_return x
@@ -780,6 +831,24 @@ type action
       act:action base_t len_t pos_t inst d use_error_handler b0 rt0 unit ->
       action base_t len_t pos_t inst d use_error_handler b0 true bool
 
+let rec action_as_spec
+   (#base_t #len_t #pos_t: Type0)
+   (#inst: I.input_stream_inst base_t len_t pos_t)
+   (#d: state_dict)
+   (#use_error_handler:bool)
+   (#b #rt #t:_)
+   (a:action base_t len_t pos_t inst d use_error_handler b rt t)
+  : Tot (S.action_spec d t)
+    (decreases a)
+  = match a with
+    | Atomic_action a -> atomic_action_as_spec a
+    | Action_seq hd tl -> S.aspec_seq (atomic_action_as_spec hd) (action_as_spec tl)
+    | Action_ite hd t e ->
+      S.aspec_ite hd (fun x -> action_as_spec (t x)) (fun x -> action_as_spec (e x))
+    | Action_let hd k ->
+      S.aspec_bind (atomic_action_as_spec hd) (fun x -> action_as_spec (k x))
+    | Action_act a -> S.aspec_seq (action_as_spec a) (S.aspec_return true)
+
 [@@specialize]
 let rec action_as_action
    (#base_t #len_t #pos_t: Type0)
@@ -789,9 +858,11 @@ let rec action_as_action
    (#use_error_handler:bool)
    (#b #rt #t:_)
    (a:action base_t len_t pos_t inst d use_error_handler b rt t)
-  : Tot (A.action #base_t #len_t #pos_t #inst d t use_error_handler)
+  : Tot (A.action #base_t #len_t #pos_t #inst d t use_error_handler (action_as_spec a))
     (decreases a)
-  = match a with
+  = match a
+    returns Tot (A.action #base_t #len_t #pos_t #inst d t use_error_handler (action_as_spec a))
+    with
     | Atomic_action a ->
       atomic_action_as_action a
 
@@ -801,11 +872,15 @@ let rec action_as_action
       A.action_seq a1 tl
 
     | Action_ite hd t e ->
+      assert_norm (action_as_spec (Action_ite #base_t #len_t #pos_t #inst #d #use_error_handler hd t e) ==
+                   S.aspec_ite hd (fun x -> action_as_spec (t x)) (fun x -> action_as_spec (e x)));
       let then_ (x:squash (hd == true)) = action_as_action (t x) in
       let else_ (x:squash (hd == false)) = action_as_action (e x) in
       A.action_ite hd then_ else_
 
     | Action_let hd k ->
+      assert_norm (action_as_spec (Action_let #base_t #len_t #pos_t #inst #d #use_error_handler hd k) ==
+                   S.aspec_bind (atomic_action_as_spec hd) (fun x -> action_as_spec (k x)));
       let head = atomic_action_as_action hd in
       let k x = action_as_action (k x) in
       A.action_bind "hd" head k
@@ -1192,6 +1267,90 @@ let rec as_reader
       assert_norm (as_parser (T_false #base_t #len_t #pos_t #inst #d #use_error_handler _n) == P.parse_impos());
       (| (), A.read_impos () |)
 
+(* Spec denotation of `typ`: the purely functional specification of the
+   validator denotation, including the effect of its actions on the action
+   state. It mirrors the control flow of `as_validator`, including the
+   choices of fast paths.
+
+   Like `as_validator`, it takes the name of the enclosing type, on which the
+   actions of `T_with_dep_action` may depend. *)
+let rec as_vspec
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (typename: string)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : Tot (S.vspec d)
+        (decreases t)
+  = match t with
+    | T_false _ ->
+      S.vspec_of_parser (P.parse_impos ())
+
+    | T_denoted _ td ->
+      dtyp_as_vspec td
+
+    | T_pair _ #_ #_ #ha1 #_ #_ #_ #_ #ha2 #_ k1_const t1 k2_const t2 ->
+      S.vspec_pair (as_parser t1) k1_const ha1 (as_vspec typename t1)
+                   (as_parser t2) k2_const ha2 (as_vspec typename t2)
+
+    | T_dep_pair _ i t ->
+      S.vspec_dep_pair (dtyp_as_parser i) (dtyp_as_vspec i) (fun x -> as_vspec typename (t x))
+
+    | T_refine _ base f _ ->
+      S.vspec_filter (dtyp_as_parser base) (dtyp_as_vspec base) f None
+
+    | T_refine_with_action _ base f _ a ->
+      S.vspec_filter (dtyp_as_parser base) (dtyp_as_vspec base) f
+        (Some (fun x -> action_as_spec (a x)))
+
+    | T_dep_pair_with_refinement _ #_ #_ #ha1 #_ #_ #_ #_ #_ base f _ k ->
+      S.vspec_dep_pair_with_refinement_gen (not ha1)
+        (dtyp_as_parser base) (dtyp_as_vspec base) f None
+        (fun x -> as_vspec typename (k x))
+
+    | T_dep_pair_with_action _ base t a ->
+      S.vspec_dep_pair_with_action (dtyp_as_parser base) (dtyp_as_vspec base)
+        (fun x -> action_as_spec (a x))
+        (fun x -> as_vspec typename (t x))
+
+    | T_dep_pair_with_refinement_and_action _ #_ #_ #ha1 #_ #_ #_ #_ #_ #_ #_ base f _ k a ->
+      S.vspec_dep_pair_with_refinement_gen (not ha1)
+        (dtyp_as_parser base) (dtyp_as_vspec base) f
+        (Some (fun x -> action_as_spec (a x)))
+        (fun x -> as_vspec typename (k x))
+
+    | T_if_else b t0 t1 ->
+      S.vspec_ite b (fun _ -> as_vspec typename (t0 ())) (fun _ -> as_vspec typename (t1 ()))
+
+    | T_cases b t0 t1 ->
+      S.vspec_ite b (fun _ -> as_vspec typename t0) (fun _ -> as_vspec typename t1)
+
+    | T_with_action _ t a ->
+      S.vspec_with_success_action (as_parser t) (as_vspec typename t) (action_as_spec a)
+
+    | T_with_dep_action _ i a ->
+      S.vspec_with_dep_action (dtyp_as_parser i) (dtyp_as_vspec i) (fun x -> action_as_spec (a typename x))
+
+    | T_drop t ->
+      as_vspec typename t
+
+    | T_with_comment _ t _ ->
+      as_vspec typename t
+
+    | T_nlist _ n n_is_const _ t ->
+      S.vspec_default ha (P.parse_nlist n n_is_const (as_parser t))
+
+    | T_at_most _ n t ->
+      S.vspec_t_at_most n (as_vspec typename t)
+
+    | T_exact _ n t ->
+      S.vspec_t_exact n (as_parser t) (as_vspec typename t)
+
+    | T_string _ elt_t terminator ->
+      S.vspec_default ha (P.parse_string (dtyp_as_parser elt_t) terminator)
+
 (* The main result: a validator denotation of `typ`, related by construction
    to the parser and type denotations. *)
 #push-options "--z3rlimit_factor 4 --z3cliopt 'smt.qi.eager_threshold=100'"
@@ -1211,21 +1370,26 @@ let rec as_validator
   : Tot (A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(as_type t)
             (as_parser t)
             d
-            ha b use_error_handler)
+            ha b use_error_handler
+            (as_vspec typename t))
         (decreases t)
   = match t
-    returns Tot (A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(as_type t) (as_parser t) d ha b use_error_handler)
+    returns Tot (A.validate_with_action_t #base_t #len_t #pos_t #inst #nz #wk #pk #(as_type t) (as_parser t) d ha b use_error_handler (as_vspec typename t))
     with
     | T_false fldname ->
+      assert_norm (as_vspec typename (T_false #base_t #len_t #pos_t #inst #d #use_error_handler fldname) == S.vspec_of_parser (P.parse_impos ()));
       A.validate_with_error_handler_no_read ehm typename fldname (A.validate_impos_no_read #base_t #len_t #pos_t #inst #d #use_error_handler ())
 
     | T_denoted fldname td ->
       assert_norm (as_type (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_type td);
       assert_norm (as_parser (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_parser td);
+      assert_norm (as_vspec typename (T_denoted #base_t #len_t #pos_t #inst #d #use_error_handler fldname td) == dtyp_as_vspec td);
       A.validate_with_error_handler_gen ehm typename fldname _
         (A.validate_eta_gen _ (dtyp_as_validator fldname td))
 
-    | T_pair fldname k1_const t1 k2_const t2 ->
+    | T_pair fldname #_ #_ #ha1 #_ #_ #_ #_ #ha2 #_ k1_const t1 k2_const t2 ->
+      assert_norm (as_vspec typename (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) ==
+                   S.vspec_pair (as_parser t1) k1_const ha1 (as_vspec typename t1) (as_parser t2) k2_const ha2 (as_vspec typename t2));
       assert_norm (as_type (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == as_type t1 & as_type t2);
       assert_norm (as_parser (T_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname k1_const t1 k2_const t2) == P.parse_pair (as_parser t1) (as_parser t2));
       A.validate_pair ehm typename fldname
@@ -1238,47 +1402,60 @@ let rec as_validator
       assert_norm (as_type (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) == x:dtyp_as_type i & as_type (t x));
       assert_norm (as_parser (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) ==
                    P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
+      assert_norm (as_vspec typename (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) ==
+                   S.vspec_dep_pair (dtyp_as_parser i) (dtyp_as_vspec i) (fun x -> as_vspec typename (t x)));
       A.validate_dep_pair fldname
           (A.validate_with_error_handler_no_read ehm typename fldname (dtyp_as_validator_no_read fldname i))
           (dtyp_as_leaf_reader i)
           (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (t x)))
 
-    | T_refine fldname t f err ->
+    | T_refine fldname #_ #_ #ha1 t f err ->
       assert_norm (as_type (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err) == P.refine (dtyp_as_type t) f);
       assert_norm (as_parser (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err) == P.parse_filter (dtyp_as_parser t) f);
-      A.validate_with_error_handler ehm typename fldname
-        (A.validate_filter fldname
-          (dtyp_as_validator_no_read fldname t)
+      assert_norm (as_vspec typename (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err) == S.vspec_filter (dtyp_as_parser t) (dtyp_as_vspec t) f None);
+      let v2 : A.validate_with_action_read (P.parse_filter (dtyp_as_parser t) f) d ha1 use_error_handler (S.vspec_filter (dtyp_as_parser t) (dtyp_as_vspec t) f None) =
+        A.validate_filter fldname (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
-          f err "reading field_value" "checking constraint")
+          f err "reading field_value" "checking constraint" in
+      A.validate_with_error_handler ehm typename fldname v2
 
     | T_refine_with_action fldname t f err a ->
       assert_norm (as_type (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err a) == P.refine (dtyp_as_type t) f);
       assert_norm (as_parser (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err a) == P.parse_filter (dtyp_as_parser t) f);
-      A.validate_with_error_handler ehm typename fldname
-        (A.validate_filter_with_action fldname
+      assert_norm (as_vspec typename (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t f err a) ==
+                   S.vspec_filter (dtyp_as_parser t) (dtyp_as_vspec t) f (Some (fun x -> action_as_spec (a x))));
+      let v2 : A.validate_with_action_read (P.parse_filter (dtyp_as_parser t) f) d true use_error_handler
+                 (S.vspec_filter (dtyp_as_parser t) (dtyp_as_vspec t) f (Some (fun x -> action_as_spec (a x)))) =
+        A.validate_filter_with_action fldname
           (dtyp_as_validator_no_read fldname t)
           (dtyp_as_leaf_reader t)
           f err "reading field_value" "checking constraint"
-          (fun x -> action_as_action (a x)))
+          (fun x -> action_as_action (a x)) in
+      A.validate_with_error_handler ehm typename fldname v2
 
     | T_dep_pair_with_refinement fldname #_ #_ #ha1 #_ #_ #_ #_ #_ base refinement err k ->
       assert_norm (as_type (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k) ==
                         x:P.refine (dtyp_as_type base) refinement & as_type (k x));
       assert_norm (as_parser (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
-      A.validate_with_error_handler ehm typename fldname
-        (A.validate_dep_pair_with_refinement (not ha1) fldname
+      assert_norm (as_vspec typename (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k) ==
+                   S.vspec_dep_pair_with_refinement_gen (not ha1) (dtyp_as_parser base) (dtyp_as_vspec base) refinement None (fun x -> as_vspec typename (k x)));
+      let v2 : A.validate_with_action_read P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))) d ha use_error_handler
+                 (S.vspec_dep_pair_with_refinement_gen (not ha1) (dtyp_as_parser base) (dtyp_as_vspec base) refinement None (fun x -> as_vspec typename (k x))) =
+        A.validate_dep_pair_with_refinement (not ha1) fldname
             (dtyp_as_validator_no_read fldname base)
             (dtyp_as_leaf_reader base)
             refinement err
-            (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x))))
+            (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x))) in
+      A.validate_with_error_handler ehm typename fldname v2
 
     | T_dep_pair_with_action fldname base t act ->
       assert_norm (as_type (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t act) ==
                         x:dtyp_as_type base & as_type (t x));
       assert_norm (as_parser (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t act) ==
                         P.(dtyp_as_parser base `parse_dep_pair` (fun x -> as_parser (t x))));
+      assert_norm (as_vspec typename (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t act) ==
+                   S.vspec_dep_pair_with_action (dtyp_as_parser base) (dtyp_as_vspec base) (fun x -> action_as_spec (act x)) (fun x -> as_vspec typename (t x)));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_dep_pair_with_action
             (dtyp_as_validator_no_read fldname base)
@@ -1291,19 +1468,27 @@ let rec as_validator
                         x:P.refine (dtyp_as_type base) refinement & as_type (k x));
       assert_norm (as_parser (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k act) ==
                         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))));
-      A.validate_dep_pair_with_refinement_and_action (not ha1) fldname
+      assert_norm (as_vspec typename (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base refinement err k act) ==
+                   S.vspec_dep_pair_with_refinement_gen (not ha1) (dtyp_as_parser base) (dtyp_as_vspec base) refinement
+                     (Some (fun x -> action_as_spec (act x))) (fun x -> as_vspec typename (k x)));
+      let v2 : A.validate_with_action_read P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x))) d true use_error_handler
+                 (S.vspec_dep_pair_with_refinement_gen (not ha1) (dtyp_as_parser base) (dtyp_as_vspec base) refinement
+                     (Some (fun x -> action_as_spec (act x))) (fun x -> as_vspec typename (k x))) =
+        A.validate_dep_pair_with_refinement_and_action (not ha1) fldname
             (A.validate_with_error_handler_no_read ehm typename fldname
               (dtyp_as_validator_no_read fldname base))
             (dtyp_as_leaf_reader base)
             refinement err
             (fun x -> action_as_action (act x))
-            (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x)))
+            (fun x -> A.validate_without_reading_gen _ (as_validator ehm typename (k x))) in
+      v2
 
     | T_if_else b t0 t1 ->
       assert_norm (as_type (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
       let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
       let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) _ in
       assert_norm (as_parser (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.parse_ite b p0 p1);
+      assert_norm (as_vspec typename (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == S.vspec_ite b (fun _ -> as_vspec typename (t0 ())) (fun _ -> as_vspec typename (t1 ())));
       let v0 (_:squash b) =
         A.validate_weaken_right (A.validate_without_reading_gen _ (as_validator ehm typename (t0()))) _
       in
@@ -1317,6 +1502,7 @@ let rec as_validator
       let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
       let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
       assert_norm (as_parser (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.parse_ite b p0 p1);
+      assert_norm (as_vspec typename (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == S.vspec_ite b (fun _ -> as_vspec typename t0) (fun _ -> as_vspec typename t1));
       let v0 (_:squash b) =
         A.validate_weaken_right (A.validate_without_reading_gen _ (as_validator ehm typename t0)) _
       in
@@ -1328,6 +1514,7 @@ let rec as_validator
     | T_with_action fldname t a ->
       assert_norm (as_type (T_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t a) == as_type t);
       assert_norm (as_parser (T_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t a) == as_parser t);
+      assert_norm (as_vspec typename (T_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname t a) == S.vspec_with_success_action (as_parser t) (as_vspec typename t) (action_as_spec a));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_with_success_action fldname
           (A.validate_without_reading_gen _ (as_validator ehm typename t))
@@ -1336,6 +1523,7 @@ let rec as_validator
     | T_with_dep_action fldname i a ->
       assert_norm (as_type (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == dtyp_as_type i);
       assert_norm (as_parser (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == dtyp_as_parser i);
+      assert_norm (as_vspec typename (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == S.vspec_with_dep_action (dtyp_as_parser i) (dtyp_as_vspec i) (fun x -> action_as_spec (a typename x)));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_with_dep_action fldname
             (dtyp_as_validator_no_read fldname i)
@@ -1345,19 +1533,22 @@ let rec as_validator
     | T_drop t ->
       assert_norm (as_type (T_drop #base_t #len_t #pos_t #inst #d #use_error_handler t) == as_type t);
       assert_norm (as_parser (T_drop #base_t #len_t #pos_t #inst #d #use_error_handler t) == as_parser t);
+      assert_norm (as_vspec typename (T_drop #base_t #len_t #pos_t #inst #d #use_error_handler t) == as_vspec typename t);
       A.validate_without_reading_gen _ (as_validator ehm typename t)
 
     | T_with_comment fldname t c ->
       assert_norm (as_type (T_with_comment #base_t #len_t #pos_t #inst #d #use_error_handler fldname t c) == as_type t);
       assert_norm (as_parser (T_with_comment #base_t #len_t #pos_t #inst #d #use_error_handler fldname t c) == as_parser t);
+      assert_norm (as_vspec typename (T_with_comment #base_t #len_t #pos_t #inst #d #use_error_handler fldname t c) == as_vspec typename t);
       A.validate_with_comment_gen c _ (as_validator ehm typename t)
 
     | T_nlist fldname n n_is_const payload_is_constant_size t ->
       assert_norm (as_type (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.nlist n (as_type t));
       assert_norm (as_parser (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.parse_nlist n n_is_const (as_parser t));
+      assert_norm (as_vspec typename (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == S.vspec_default ha (P.parse_nlist n n_is_const (as_parser t)));
       let body = A.validate_without_reading_gen _ (as_validator ehm typename t) in
       (match ha
-      returns (A.validate_with_action_read #base_t #len_t #pos_t (P.parse_nlist n n_is_const (as_parser t)) d ha use_error_handler)
+      returns (A.validate_with_action_read #base_t #len_t #pos_t (P.parse_nlist n n_is_const (as_parser t)) d ha use_error_handler (S.vspec_default ha (P.parse_nlist n n_is_const (as_parser t))))
       with
       | true -> A.validate_with_error_handler ehm typename fldname (A.validate_nlist n n_is_const body)
       | false -> A.validate_with_error_handler ehm typename fldname
@@ -1366,18 +1557,21 @@ let rec as_validator
     | T_at_most fldname n t ->
       assert_norm (as_type (T_at_most #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.t_at_most n (as_type t));
       assert_norm (as_parser (T_at_most #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.parse_t_at_most n (as_parser t));
+      assert_norm (as_vspec typename (T_at_most #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == S.vspec_t_at_most n (as_vspec typename t));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_t_at_most n (A.validate_without_reading_gen _ (as_validator ehm typename t)))
 
     | T_exact fldname n t ->
       assert_norm (as_type (T_exact #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.t_exact n (as_type t));
       assert_norm (as_parser (T_exact #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == P.parse_t_exact n (as_parser t));
+      assert_norm (as_vspec typename (T_exact #base_t #len_t #pos_t #inst #d #use_error_handler fldname n t) == S.vspec_t_exact n (as_parser t) (as_vspec typename t));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_t_exact n (A.validate_without_reading_gen _ (as_validator ehm typename t)))
 
     | T_string fldname elt_t terminator ->
       assert_norm (as_type (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.cstring (dtyp_as_type elt_t) terminator);
       assert_norm (as_parser (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.parse_string (dtyp_as_parser elt_t) terminator);
+      assert_norm (as_vspec typename (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == S.vspec_default ha (P.parse_string (dtyp_as_parser elt_t) terminator));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_string (dtyp_as_validator_no_read fldname elt_t)
                            (dtyp_as_leaf_reader elt_t)
@@ -1422,6 +1616,21 @@ let coerce (#[@@@erasable]a:Type)
            (x:a)
   : b
   = x
+
+(* Fix the (ghost) spec index of a validator. Used by generated code to
+   determine the spec of `validate_X` when it is coerced into a `dtyp`. *)
+[@@specialize]
+inline_for_extraction
+let with_vspec
+      (#base_t #len_t #pos_t: Type0)
+      (#inst: I.input_stream_inst base_t len_t pos_t)
+      (#nz:_) (#wk:_) (#k:P.parser_kind nz wk) (#t:Type0) (#p:P.parser k t)
+      (#[@@@erasable] d: state_dict)
+      (#ha #ar #eh: bool)
+      ([@@@erasable] s: S.vspec d)
+      (v: A.validate_with_action_t #base_t #len_t #pos_t #inst p d ha ar eh s)
+  : A.validate_with_action_t #base_t #len_t #pos_t #inst p d ha ar eh s
+  = v
 
 (* Probe-then-validate.
 
@@ -1563,12 +1772,12 @@ let t_probe_then_validate_gen
      (DT_IType pointer_size)
      (fun typename src ->
         Atomic_action (atomic_action_call
-          (A.action_weaken
+          (A.action_forget_spec (A.action_weaken
             (A.probe_then_validate ehm typename fldname
                (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
                src as_u64 nullable dest_name dest init_cb dest_sz probe sq)
             d
-            sq_weaken)))
+            sq_weaken))))
 
 [@@specialize]
 let t_probe_then_validate_alt_gen
@@ -1617,6 +1826,7 @@ let validator_of
       (#inst: I.input_stream_inst base_t len_t pos_t)
       ([@@@erasable] d: state_dict)
       (use_error_handler:bool)
+      (typename: string)
       #ha #allow_reading #nz #wk (#k:P.parser_kind nz wk)
       (t:typ base_t len_t pos_t inst d use_error_handler k ha allow_reading)
   = A.validate_with_action_t #base_t #len_t #pos_t #inst
@@ -1625,6 +1835,7 @@ let validator_of
       ha
       allow_reading
       use_error_handler
+      (as_vspec typename t)
 
 [@@noextract_to "krml"; specialize]
 inline_for_extraction noextract
@@ -1678,7 +1889,8 @@ let mk_global_binding
       ([@@@erasable] p_p : P.parser pk p_t)
       (p_reader: option (leaf_reader #base_t #len_t #pos_t #inst p_p))
       (#ha b:bool)
-      (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler)
+      (#[@@@erasable] p_s: S.vspec d)
+      (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler p_s)
       ([@@@erasable] pf:squash (b == Some? p_reader))
    : global_binding base_t len_t pos_t inst d use_error_handler
    = {
@@ -1689,6 +1901,7 @@ let mk_global_binding
        p_t = p_t;
        p_p = p_p;
        p_reader = p_reader;
+       p_s = p_s;
        p_v = p_v
      }
 
@@ -1720,7 +1933,8 @@ let mk_dtyp_app
       ([@@@erasable] p_p : P.parser pk p_t)
       (p_reader: option (leaf_reader #base_t #len_t #pos_t #inst p_p))
       (ha b:bool)
-      (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler)
+      (#[@@@erasable] p_s: S.vspec d)
+      (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler p_s)
       ([@@@erasable] pf:squash (b == Some? p_reader))
    : dtyp base_t len_t pos_t inst d use_error_handler #nz #wk pk ha b
    = let gb = {
@@ -1731,6 +1945,7 @@ let mk_dtyp_app
        p_t = p_t;
        p_p = p_p;
        p_reader = p_reader;
+       p_s = p_s;
        p_v = p_v
      } in
      DT_App pk ha b gb ()

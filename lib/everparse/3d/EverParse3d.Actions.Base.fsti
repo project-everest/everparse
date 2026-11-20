@@ -16,6 +16,7 @@ module U64 = FStar.UInt64
 module P = EverParse3d.Prelude
 module SZ = FStar.SizeT
 open EverParse3d.State
+module S = EverParse3d.Actions.Spec
 module LP = LowParse.Spec.Base
 module FLD = LowParse.Spec.FLData
 module LPL = LowParse.Spec.List
@@ -37,6 +38,7 @@ val action
   (extra_state: state_dict)
   (a: Type0)
   (use_error_handler: bool)
+  (sp: S.action_spec extra_state a)
 : Type0
 
 inline_for_extraction noextract
@@ -51,6 +53,7 @@ val validate_with_action_read
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
+     (s: S.vspec extra_state)
 : Type0
 
 inline_for_extraction noextract
@@ -65,6 +68,7 @@ val validate_with_action_no_read
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
+     (s: S.vspec extra_state)
 : Type0
 
 
@@ -84,10 +88,11 @@ let validate_with_action_t
      (has_action:bool)
      (allow_reading:bool)
      (use_error_handler:bool)
+     (s: S.vspec extra_state)
 : Type0
 = if allow_reading
-  then validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
-  else validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+  then validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
+  else validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val validate_eta
@@ -101,8 +106,9 @@ val validate_eta
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val act_with_comment
@@ -112,8 +118,9 @@ val act_with_comment
       (extra_state: state_dict)
       (#use_error_handler:bool)
       (#res:Type)
-      (a: action #base_t #len_t #pos_t extra_state res use_error_handler)
-: action #base_t #len_t #pos_t extra_state res use_error_handler
+      (#sp: S.action_spec extra_state res)
+      (a: action #base_t #len_t #pos_t extra_state res use_error_handler sp)
+: action #base_t #len_t #pos_t extra_state res use_error_handler sp
 
 inline_for_extraction
 val leaf_reader
@@ -139,9 +146,11 @@ val validate_with_success_action
       (#extra: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra has_action use_error_handler)
-      (a:action #base_t #len_t #pos_t extra bool use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t p1 extra true use_error_handler
+      (#s1: S.vspec extra)
+      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra has_action use_error_handler s1)
+      (#sa: S.action_spec extra bool)
+      (a:action #base_t #len_t #pos_t extra bool use_error_handler sa)
+  : validate_with_action_read #base_t #len_t #pos_t p1 extra true use_error_handler (S.vspec_with_success_action p1 s1 sa)
 
 inline_for_extraction noextract
 val validate_with_error_handler
@@ -158,8 +167,9 @@ val validate_with_error_handler
       (#extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s)
+  : validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val validate_ret
@@ -167,7 +177,7 @@ val validate_ret
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler (S.vspec_of_parser (parse_ret ()))
 
 
 inline_for_extraction noextract
@@ -184,24 +194,28 @@ val validate_dep_pair_with_refinement_and_action
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
-      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#sa: t1 -> S.action_spec extra_state bool)
+      (a:(x: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
       (#t2:refine _ f -> Type)
       (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#s2: refine _ f -> S.vspec extra_state)
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       true
       use_error_handler
+      (S.vspec_dep_pair_with_refinement_gen p1_is_constant_size_without_actions p1 s1 f (Some sa) s2)
 
 inline_for_extraction noextract
 val validate_filter
@@ -215,13 +229,14 @@ val validate_filter
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#s: S.vspec extra_state)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
        (err: t -> constraint_error_code)
        (cr:string)
        (cf:string)
-  : validate_with_action_read #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler (S.vspec_filter p s f None)
 
 inline_for_extraction noextract
 val validate_filter_with_action
@@ -236,19 +251,22 @@ val validate_filter_with_action
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#s: S.vspec extra_state)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
        (err: t -> constraint_error_code)
        (cr:string)
        (cf:string)
-       (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+       (#sa: t -> S.action_spec extra_state bool)
+       (a: (x: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p `parse_filter` f)
       extra_state
       true
       use_error_handler
+      (S.vspec_filter p s f (Some sa))
 
 inline_for_extraction noextract
 val validate_weaken_left
@@ -262,11 +280,12 @@ val validate_weaken_left
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_left p k') extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_left p k') extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val validate_weaken_right
@@ -280,11 +299,12 @@ val validate_weaken_right
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_right p k') extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_right p k') extra_state has_action use_error_handler s
 
 noextract
 inline_for_extraction
@@ -300,10 +320,11 @@ val validate_weaken
        (#d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p d1 has_action use_error_handler)
+       (#s: S.vspec d1)
+       (v:validate_with_action_read #base_t #len_t #pos_t p d1 has_action use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: validate_with_action_read #base_t #len_t #pos_t p d2 has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p d2 has_action use_error_handler (S.vspec_weaken s d2 d2_extends)
 
 noextract
 inline_for_extraction
@@ -319,12 +340,13 @@ val validate_call
        (#d': state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p d' has_action use_error_handler)
+       (#s: S.vspec d')
+       (v:validate_with_action_read #base_t #len_t #pos_t p d' has_action use_error_handler s)
       (d: state_dict)
       (#f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
       (#g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
       (sq: squash (state_dict_rename_prop d d' f g))
-: validate_with_action_read #base_t #len_t #pos_t p d has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p d has_action use_error_handler (S.vspec_call s d f g sq)
 
 inline_for_extraction noextract
 val validate_impos
@@ -333,7 +355,7 @@ val validate_impos
        (#extra_state: _)
        (#use_error_handler:bool)
        (_:unit)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler (S.vspec_of_parser (parse_impos ()))
 
 noextract inline_for_extraction
 val validate_ite
@@ -349,16 +371,19 @@ val validate_ite
        (#ha1:_)
        (#ha2:_)
        (#use_error_handler:bool)
+       (#s1: squash e -> S.vspec extra_state)
+       (#s2: squash (not e) -> S.vspec extra_state)
        (p1:squash e -> parser k (a()))
-       (v1:(squash e -> validate_with_action_read #base_t #len_t #pos_t (p1()) extra_state ha1 use_error_handler))
+       (v1:(x_: squash e -> validate_with_action_read #base_t #len_t #pos_t (p1()) extra_state ha1 use_error_handler (s1 x_)))
        (p2:squash (not e) -> parser k (b()))
-       (v2:(squash (not e) -> validate_with_action_read #base_t #len_t #pos_t (p2()) extra_state ha2 use_error_handler))
+       (v2:(x_: squash (not e) -> validate_with_action_read #base_t #len_t #pos_t (p2()) extra_state ha2 use_error_handler (s2 x_)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (parse_ite e p1 p2)
       extra_state
       (ha1 || ha2)
       use_error_handler
+      (S.vspec_ite e s1 s2)
 
 noextract inline_for_extraction
 val validate_nlist
@@ -374,8 +399,9 @@ val validate_nlist
        (#extra_state: _)
        (#ha:bool)
        (#use_error_handler:bool)
-       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler
+       (#s: S.vspec extra_state)
+       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler (S.vspec_default ha (parse_nlist n n_is_const p))
 
 noextract inline_for_extraction
 val validate_t_at_most
@@ -391,8 +417,9 @@ val validate_t_at_most
        (#extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler
+       (#s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
+  : validate_with_action_read #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler (S.vspec_t_at_most n s)
 
 noextract inline_for_extraction
 val validate_t_exact
@@ -408,8 +435,9 @@ val validate_t_exact
        (#extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler
+       (#s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
+  : validate_with_action_read #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler (S.vspec_t_exact n p s)
 
 inline_for_extraction noextract
 val read_filter
@@ -439,9 +467,12 @@ val action_bind
       (#extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action #base_t #len_t #pos_t extra_state a use_error_handler)
-      (#b:Type) (g: (a -> action #base_t #len_t #pos_t extra_state b use_error_handler))
-: action #base_t #len_t #pos_t extra_state b use_error_handler
+      (#sf: S.action_spec extra_state a)
+      (f: action #base_t #len_t #pos_t extra_state a use_error_handler sf)
+      (#b:Type)
+      (#sg: a -> S.action_spec extra_state b)
+      (g: (x: a -> action #base_t #len_t #pos_t extra_state b use_error_handler (sg x)))
+: action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_bind sf sg)
 
 noextract
 inline_for_extraction
@@ -451,10 +482,26 @@ val action_weaken
       (#d1: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action #base_t #len_t #pos_t d1 a use_error_handler)
+      (#sf: S.action_spec d1 a)
+      (f: action #base_t #len_t #pos_t d1 a use_error_handler sf)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: action #base_t #len_t #pos_t d2 a use_error_handler
+: action #base_t #len_t #pos_t d2 a use_error_handler (S.aspec_weaken sf d2 d2_extends)
+
+(* Forget the spec of an action. Used for actions whose spec cannot be
+   expressed at the level of the interpreter's AST (external actions, probes),
+   so that they can be stored in the AST at a uniform spec. *)
+noextract
+inline_for_extraction
+val action_forget_spec
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#d: state_dict)
+      (#use_error_handler:bool)
+      (#a: Type)
+      (#sf: S.action_spec d a)
+      (f: action #base_t #len_t #pos_t d a use_error_handler sf)
+: action #base_t #len_t #pos_t d a use_error_handler S.aspec_unknown
 
 noextract
 inline_for_extraction
@@ -464,12 +511,13 @@ val action_call
       (#d': state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (act: action #base_t #len_t #pos_t d' a use_error_handler)
+      (#sf: S.action_spec d' a)
+      (act: action #base_t #len_t #pos_t d' a use_error_handler sf)
       (d: state_dict)
       (#f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
       (#g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
       (sq: squash (state_dict_rename_prop d d' f g))
-: action #base_t #len_t #pos_t d a use_error_handler
+: action #base_t #len_t #pos_t d a use_error_handler (S.aspec_call sf d f g sq)
 
 noextract
 inline_for_extraction
@@ -478,7 +526,7 @@ val action_deref
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (name: Ghost.erased string)
       (#a:Type0) (x:ref a) (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler (S.aspec_deref name (pts_to x #1.0R))
 
 noextract
 inline_for_extraction
@@ -487,7 +535,7 @@ val action_assignment
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (name: Ghost.erased string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler (S.aspec_assignment name (pts_to x #1.0R) w)
 
 noextract
 inline_for_extraction
@@ -499,7 +547,7 @@ val action_deref_map
   (name: Ghost.erased string)
   (x: ref a)
   (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) b use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) b use_error_handler (S.aspec_deref_map decode name (pts_to x #1.0R))
 
 noextract
 inline_for_extraction
@@ -510,7 +558,7 @@ val action_return
       (#use_error_handler:bool)
       (#a: Type)
       (x: a)
-: action #base_t #len_t #pos_t extra_state a use_error_handler
+: action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_return x)
 
 noextract
 inline_for_extraction
@@ -519,7 +567,7 @@ val action_return_true
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler
+: action #base_t #len_t #pos_t extra_state bool use_error_handler (S.aspec_return true)
 
 noextract
 inline_for_extraction
@@ -528,7 +576,7 @@ val action_abort
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler
+: action #base_t #len_t #pos_t extra_state bool use_error_handler (S.aspec_return false)
 
 noextract
 inline_for_extraction
@@ -538,10 +586,12 @@ val action_seq
       (#extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action #base_t #len_t #pos_t extra_state a use_error_handler)
+      (#sf: S.action_spec extra_state a)
+      (f: action #base_t #len_t #pos_t extra_state a use_error_handler sf)
       (#b: Type)
-      (g: action #base_t #len_t #pos_t extra_state b use_error_handler)
-: action #base_t #len_t #pos_t extra_state b use_error_handler
+      (#sg: S.action_spec extra_state b)
+      (g: action #base_t #len_t #pos_t extra_state b use_error_handler sg)
+: action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_seq sf sg)
 
 noextract
 inline_for_extraction
@@ -552,9 +602,11 @@ val action_ite
       (#use_error_handler:bool)
       (#a: Type)
       (guard: bool)
-      (then_: (squash (guard == true) -> action #base_t #len_t #pos_t extra_state a use_error_handler))
-      (else_: (squash (guard == false) -> action #base_t #len_t #pos_t extra_state a use_error_handler))
-: action #base_t #len_t #pos_t extra_state a use_error_handler
+      (#st: squash (guard == true) -> S.action_spec extra_state a)
+      (then_: (sq: squash (guard == true) -> action #base_t #len_t #pos_t extra_state a use_error_handler (st sq)))
+      (#se: squash (guard == false) -> S.action_spec extra_state a)
+      (else_: (sq: squash (guard == false) -> action #base_t #len_t #pos_t extra_state a use_error_handler (se sq)))
+: action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_ite guard st se)
 
 inline_for_extraction noextract
 val validate_with_comment_no_read
@@ -569,8 +621,9 @@ val validate_with_comment_no_read
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val validate_with_comment
@@ -585,8 +638,9 @@ val validate_with_comment
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val validate_unit
@@ -594,7 +648,7 @@ val validate_unit
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler (S.vspec_of_parser parse_unit)
 
 inline_for_extraction noextract
 val validate_unit_refinement
@@ -604,7 +658,7 @@ val validate_unit_refinement
       (cf: string)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler (S.vspec_of_parser (parse_filter parse_unit f))
 
 inline_for_extraction noextract
 val validate_dep_pair
@@ -618,7 +672,8 @@ val validate_dep_pair
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (#nz2:_)
       (#wk2: _)
@@ -626,13 +681,15 @@ val validate_dep_pair
       (#t2:t1 -> Type)
       (#p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#s2: t1 -> S.vspec extra_state)
+      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_dep_pair` p2)
       extra_state
       (has_action1 || has_action2)
       use_error_handler
+      (S.vspec_dep_pair p1 s1 s2)
 
 inline_for_extraction noextract
 val validate_dep_pair_with_action
@@ -646,22 +703,26 @@ val validate_dep_pair_with_action
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
-      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#sa: t1 -> S.action_spec extra_state bool)
+      (a:(x: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
       (#t2:t1 -> Type)
       (#p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#s2: t1 -> S.vspec extra_state)
+      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_dep_pair` p2)
       extra_state
       true
       use_error_handler
+      (S.vspec_dep_pair_with_action p1 s1 sa s2)
 
 inline_for_extraction noextract
 val validate_dep_pair_with_refinement
@@ -676,7 +737,8 @@ val validate_dep_pair_with_refinement
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
@@ -686,13 +748,15 @@ val validate_dep_pair_with_refinement
       (#t2:refine _ f -> Type)
       (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#s2: refine _ f -> S.vspec extra_state)
+      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       (has_action1 || has_action2)
       use_error_handler
+      (S.vspec_dep_pair_with_refinement_gen p1_is_constant_size_without_actions p1 s1 f None s2)
 
 inline_for_extraction noextract
 val validate_with_dep_action
@@ -707,10 +771,12 @@ val validate_with_dep_action
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+      (#s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
       (r:leaf_reader #base_t #len_t #pos_t p)
-      (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler
+      (#sa: t -> S.action_spec extra_state bool)
+      (a: (x: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
+  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_action p s sa)
 
 inline_for_extraction noextract
 val validate____UINT8
@@ -720,7 +786,7 @@ val validate____UINT8
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler (S.vspec_of_parser parse____UINT8)
 
 inline_for_extraction noextract
 val read____UINT8
@@ -737,7 +803,7 @@ val validate____UINT8BE
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT8BE)
 
 inline_for_extraction noextract
 val read____UINT8BE
@@ -754,7 +820,7 @@ val validate____UINT16BE
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT16BE)
 
 inline_for_extraction noextract
 val read____UINT16BE
@@ -771,7 +837,7 @@ val validate____UINT32BE
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT32BE)
 
 inline_for_extraction noextract
 val read____UINT32BE
@@ -788,7 +854,7 @@ val validate____UINT64BE
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT64BE)
 
 inline_for_extraction noextract
 val read____UINT64BE
@@ -805,7 +871,7 @@ val validate____UINT16
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler (S.vspec_of_parser parse____UINT16)
 
 inline_for_extraction noextract
 val read____UINT16
@@ -822,7 +888,7 @@ val validate____UINT32
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler (S.vspec_of_parser parse____UINT32)
 
 inline_for_extraction noextract
 val read____UINT32
@@ -839,7 +905,7 @@ val validate____UINT64
   (name: string)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler (S.vspec_of_parser parse____UINT64)
 
 inline_for_extraction noextract
 val read____UINT64
@@ -861,7 +927,7 @@ val validate_all_bytes
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler (S.vspec_of_parser parse_all_bytes)
 
 inline_for_extraction noextract
 val validate_drop
@@ -876,8 +942,9 @@ val validate_drop
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val validate_pair
@@ -895,7 +962,8 @@ val validate_pair
        (#extra_state: state_dict)
        (#has_action1:bool)
        (#use_error_handler:bool)
-       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+       (#s1: S.vspec extra_state)
+       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
        (#nz2:_)
        (#wk2: _)
        (#k2:parser_kind nz2 wk2)
@@ -903,13 +971,15 @@ val validate_pair
        (#p2:parser k2 t2)
        (k2_const: bool)
        (#has_action2:bool)
-       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
+       (#s2: S.vspec extra_state)
+       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler s2)
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_pair` p2)
       extra_state
       (has_action1 || has_action2)
       use_error_handler
+      (S.vspec_pair p1 k1_const has_action1 s1 p2 k2_const has_action2 s2)
 
 inline_for_extraction noextract
 val validate_without_reading
@@ -924,8 +994,9 @@ val validate_without_reading
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
 noextract
 inline_for_extraction
@@ -934,7 +1005,7 @@ val action_field_pos_64
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state U64.t use_error_handler
+: action #base_t #len_t #pos_t extra_state U64.t use_error_handler S.aspec_field_pos_64
 
 noextract
 inline_for_extraction
@@ -944,7 +1015,7 @@ val action_field_pos_32
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state U32.t use_error_handler
+: action #base_t #len_t #pos_t extra_state U32.t use_error_handler S.aspec_field_pos_32
 
 inline_for_extraction noextract
 let field_ptr_t
@@ -994,7 +1065,7 @@ val action_field_ptr
       (f: field_ptr_t base_t len_t pos_t ptr_t)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state ptr_t use_error_handler
+: action #base_t #len_t #pos_t extra_state ptr_t use_error_handler S.aspec_unknown
 
 noextract
 inline_for_extraction
@@ -1008,7 +1079,7 @@ val action_field_ptr_after
       (sz: U64.t)
       (write_to: ref ptr_t)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to write_to #1.0R)) bool use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to write_to #1.0R)) bool use_error_handler S.aspec_unknown
 
 inline_for_extraction noextract
 val validate_all_zeros
@@ -1017,7 +1088,7 @@ val validate_all_zeros
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler (S.vspec_of_parser parse_all_zeros)
 
 inline_for_extraction noextract
 val validate_string
@@ -1029,10 +1100,11 @@ val validate_string
       (#extra_state: state_dict)
       (#ha:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
-: validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler (S.vspec_default ha (parse_string p terminator))
 
 inline_for_extraction noextract
 val validate_nlist_constant_size_without_actions
@@ -1048,8 +1120,9 @@ val validate_nlist_constant_size_without_actions
       (#p:parser k t)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_default false (parse_nlist n n_is_const p))
 
 inline_for_extraction noextract
 let external_action
@@ -1117,7 +1190,7 @@ val mk_external_action
       (#a: Type0)
       (f: external_action extra_state a)
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state a use_error_handler
+: action #base_t #len_t #pos_t extra_state a use_error_handler S.aspec_unknown
 
 noextract
 inline_for_extraction
@@ -1131,7 +1204,7 @@ val action_field_ptr_after_with_setter
       (sz: U64.t)
       (write_to: (ptr_t -> external_action extra_state unit))
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler
+: action #base_t #len_t #pos_t extra_state bool use_error_handler S.aspec_unknown
 
 noextract
 inline_for_extraction
@@ -1153,7 +1226,8 @@ val probe_then_validate
       (#extra_state: state_dict)
       (#ha: bool)
       (#use_error_handler: bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (#ptr_t: Type0)
       (src: ptr_t)
       (as_u64: (ptr_t -> PA.pure_external_action U64.t))
@@ -1171,6 +1245,7 @@ val probe_then_validate
     (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
     bool
     use_error_handler
+    S.aspec_unknown
 
 inline_for_extraction noextract
 val validate_impos_no_read
@@ -1179,7 +1254,7 @@ val validate_impos_no_read
        (#extra_state: _)
        (#use_error_handler:bool)
        (_:unit)
-: validate_with_action_no_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler (S.vspec_of_parser (parse_impos ()))
 
 inline_for_extraction noextract
 val validate_eta_no_read
@@ -1193,8 +1268,9 @@ val validate_eta_no_read
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
 inline_for_extraction noextract
 val validate_with_error_handler_no_read
@@ -1211,8 +1287,9 @@ val validate_with_error_handler_no_read
       (#extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (v1: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v1: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s)
+: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s
 
 (* Versions polymorphic in `allow_reading`, for the interpreter. The `match ...
    returns` makes the choice reduce definitionally, so no SMT reasoning about
@@ -1231,10 +1308,11 @@ let validate_eta_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s)
+: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s
 = match allow_reading
-  returns validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler
+  returns validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s
   with
   | true -> validate_eta_no_read #base_t #len_t #pos_t v
   | false -> validate_eta #base_t #len_t #pos_t v
@@ -1253,10 +1331,11 @@ let validate_with_comment_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s)
+: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s
 = match allow_reading
-  returns validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler
+  returns validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s
   with
   | true -> validate_with_comment_no_read #base_t #len_t #pos_t c v
   | false -> validate_with_comment #base_t #len_t #pos_t c v
@@ -1277,10 +1356,11 @@ let validate_with_error_handler_gen
       (#has_action: _)
       (allow_reading: bool)
       (#use_error_handler:bool)
-      (v1: validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler)
-: validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler
+      (#s: S.vspec extra_state)
+      (v1: validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler s)
+: validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler s
 = match allow_reading
-  returns validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler
+  returns validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler s
   with
   | true -> validate_with_error_handler_no_read #base_t #len_t #pos_t error_handler_macro typename fieldname v1
   | false -> validate_with_error_handler #base_t #len_t #pos_t error_handler_macro typename fieldname v1
@@ -1299,10 +1379,11 @@ let validate_without_reading_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#s: S.vspec extra_state)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 = match allow_reading
-  returns (validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+  returns (validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
   with
   | true -> validate_without_reading #base_t #len_t #pos_t v
   | false -> v
@@ -1313,7 +1394,7 @@ val validate_unit_no_read
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler (S.vspec_of_parser parse_unit)
 
 noextract
 inline_for_extraction
@@ -1329,10 +1410,11 @@ val validate_weaken_no_read
        (#d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read #base_t #len_t #pos_t p d1 has_action use_error_handler)
+       (#s: S.vspec d1)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p d1 has_action use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: validate_with_action_no_read #base_t #len_t #pos_t p d2 has_action use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t p d2 has_action use_error_handler (S.vspec_weaken s d2 d2_extends)
 
 inline_for_extraction noextract
 let validate_weaken_gen
@@ -1348,12 +1430,13 @@ let validate_weaken_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t #base_t #len_t #pos_t p d1 has_action allow_reading use_error_handler)
+      (#s: S.vspec d1)
+      (v: validate_with_action_t #base_t #len_t #pos_t p d1 has_action allow_reading use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler
+: validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler (S.vspec_weaken s d2 d2_extends)
 = match allow_reading
-  returns (validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler)
+  returns (validate_with_action_t #base_t #len_t #pos_t p d2 has_action allow_reading use_error_handler (S.vspec_weaken s d2 d2_extends))
   with
   | true -> validate_weaken_no_read #base_t #len_t #pos_t name v d2 d2_extends
   | false -> validate_weaken #base_t #len_t #pos_t name v d2 d2_extends

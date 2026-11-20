@@ -15,6 +15,7 @@ module FL = LowParse.Spec.FLData
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module EC = EverParse3d.ErrorCode
+module S = EverParse3d.Actions.Spec
 
 noextract let count = 4294967304
 noextract let kind : P.parser_kind true P.WeakKindStrongPrefix =
@@ -32,6 +33,7 @@ inline_for_extraction noextract
 fn scan_worker (extra: B.extra_t)
   : A.validate_with_action_no_read #B.base_t #B.len_t #B.pos_t
       #B.input_stream_extern parser state_dict_empty false false
+      (S.vspec_of_parser parser)
   = (ctxt: _) (handler: _) (base: _) (len: _) (cursor: _)
     (lookahead: _) (state: _) (contents: _) (remaining: _) (old: _)
 {

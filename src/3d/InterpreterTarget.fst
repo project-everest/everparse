@@ -1467,12 +1467,13 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args public_binde
       ar
   in
   let validator_t =
-    Printf.sprintf "%sval validate_%s %s : validator_of %s %b (def'_%s %s)"
+    Printf.sprintf "%sval validate_%s %s : validator_of %s %b \"%s\" (def'_%s %s)"
       (if lowstar_api () then "[@@ \"KrmlPrivate\"]\n" else "")
       (pulse_worker_name root_name)
       binders
       sd
       (use_error_handler ())
+      root_name
       root_name args
   in
   let public_t =
@@ -1797,7 +1798,7 @@ let print_binding mname (td:type_decl)
                                     %s\n\
                                     %b\n\
                                     %b\n\
-                                    (A.validate_weaken_gen \"%s\" %b (coerce (_ by %s) (validate_%s %s)) ___d ___sq)\n\
+                                    (A.validate_weaken_gen \"%s\" %b (with_vspec (as_vspec \"%s\" (def'_%s %s)) (coerce (_ by %s) (validate_%s %s))) ___d ___sq)\n\
                                     (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
                       root_name binders sd
                       (pulse_inst_args ())
@@ -1814,6 +1815,7 @@ let print_binding mname (td:type_decl)
                       td.allow_reading
                       root_name
                       td.allow_reading
+                      root_name root_name args
                       coerce_validator worker_name args
     else
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\

@@ -649,6 +649,47 @@ Restrictions
 
 * Actions cannot be associated with bit fields.
 
+Functional specification of actions (Pulse backend)
+...................................................
+
+With the Pulse backend, the F* validator generated for a type ``T`` is
+verified against a purely functional specification of its actions. Its
+type, ``validator_of d eh "T" (def'_T ...)``, includes the ghost spec
+``EverParse3d.Interpreter.as_vspec "T" (def'_T ...)``, of type
+``EverParse3d.Actions.Spec.vspec d``. Given the input and the values of
+the action state (the ``mutable`` parameters) before validation, the spec
+returns one of:
+
+* ``VOk final``: validation succeeds, and ``final`` holds the values of
+  the action state afterwards;
+
+* ``VErr``: validation fails (the data is ill-formed, or an action
+  returned ``false``). The action state is then unspecified, since actions
+  may have run partially;
+
+* ``VUnknown``: the result is not specified.
+
+So, beyond rejecting ill-formed data, the validator is now proven to
+accept well-formed data whenever the spec says the actions succeed, and to
+leave the action state as the spec says. Specs are ghost: the generated C
+code is unchanged.
+
+The spec mirrors the validator: return, ``field_pos``, dereference,
+assignment, sequencing, ``var`` bindings and conditionals all get exact
+specs. The following are currently specified as ``VUnknown`` or as
+returning an unknown result:
+
+* ``extern`` functions and output-type setters;
+* ``field_ptr`` and ``field_ptr_after``;
+* probes;
+* loops (arrays, strings) whose element types have actions.
+
+Clients can reason about the spec in F*.
+``EverParse3d.Actions.Spec.Test`` proves that a field
+``UINT32 x {:act *out = x; }`` validates if, and only if, the input starts
+with a 32-bit integer, and that it then stores that integer into
+``*out``.
+
 .. _sec-alignment:
 
 Alignment
