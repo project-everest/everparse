@@ -224,7 +224,7 @@ let vspec_of_parser (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parse
   | None -> VErr
 
 (* The spec of a validator about which we know nothing but whether it has
-   actions. Used for loops. *)
+   actions. Only used by `validate_list`, which is never used with actions. *)
 let vspec_default (#d: state_dict) (ha: bool) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type) (p: P.parser k t) : vspec d =
   if ha then vspec_unknown else vspec_of_parser p
 
@@ -419,6 +419,84 @@ let vspec_t_at_most
   if Seq.length i.rest < U32.v n
   then VErr
   else s (vtruncate i (U32.v n)) x
+
+(** Loops *)
+
+(* The spec of a loop over the elements of a list that consumes all of its
+   input, as done by `validate_nlist`: a left fold of the spec `s` of the
+   element over the input, stopping at the first failure. Each step runs `s`
+   on the remaining input `rest`, then continues after the bytes consumed by
+   the element. *)
+let rec vspec_list_fold
+  (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type) (p: P.parser k t)
+  (s: vspec d) (contents rest: Seq.seq U8.t) (x: forevery_values d)
+: GTot (vres d) (decreases (Seq.length rest))
+= if Seq.length rest = 0
+  then VOk x
+  else match s ({ contents = contents; rest = rest }) x with
+  | VOk x' ->
+    begin match P.parse p rest with
+    | Some (_, n) ->
+      if n > 0
+      then vspec_list_fold p s contents (Seq.slice rest n (Seq.length rest)) x'
+      else VUnknown
+    | None -> VUnknown
+    end
+  | r -> r
+
+(* The spec of `validate_nlist`. Without actions, it is the spec of the parser,
+   which also covers the fast paths of `validate_nlist_constant_size_without_actions`. *)
+let vspec_nlist
+  (#d: state_dict) (ha: bool)
+  (n: U32.t) (n_is_const: option nat { P.memoizes_n_as_const n_is_const n })
+  (#wk: P.weak_kind) (#k: P.parser_kind true wk) (#t: Type) (p: P.parser k t)
+  (s: vspec d)
+: vspec d
+= if ha
+  then fun i x ->
+    if Seq.length i.rest < U32.v n
+    then VErr
+    else
+      let i' = vtruncate i (U32.v n) in
+      vspec_list_fold p s i'.contents i'.rest x
+  else vspec_of_parser (P.parse_nlist n n_is_const p)
+
+(* The spec of a loop over the elements of a list up to a terminator, as done
+   by `validate_string`: like `vspec_list_fold`, but stops after the
+   terminator. *)
+let rec vspec_string_fold
+  (#d: state_dict) (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
+  (terminator: t) (s: vspec d) (contents rest: Seq.seq U8.t) (x: forevery_values d)
+: GTot (vres d) (decreases (Seq.length rest))
+= match s ({ contents = contents; rest = rest }) x with
+  | VOk x' ->
+    begin match P.parse p rest with
+    | Some (y, n) ->
+      if y = terminator
+      then VOk x'
+      else if n > 0
+      then vspec_string_fold p terminator s contents (Seq.slice rest n (Seq.length rest)) x'
+      else VUnknown
+    | None -> VUnknown
+    end
+  | r -> r
+
+let vspec_string_gen
+  (#d: state_dict) (ha: bool)
+  (#nzq: bool) (#wkq: P.weak_kind) (#kq: P.parser_kind nzq wkq) (#tq: Type) (q: P.parser kq tq)
+  (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
+  (terminator: t) (s: vspec d)
+: vspec d
+= if ha
+  then fun i x -> vspec_string_fold p terminator s i.contents i.rest x
+  else vspec_of_parser q
+
+let vspec_string
+  (#d: state_dict) (ha: bool)
+  (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
+  (terminator: t) (s: vspec d)
+: vspec d
+= vspec_string_gen ha (P.parse_string p terminator) p terminator s
 
 (* The dispatcher of `validate_pair`. *)
 let vspec_pair

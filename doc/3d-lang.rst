@@ -676,19 +676,23 @@ code is unchanged.
 
 The spec mirrors the validator: return, ``field_pos``, dereference,
 assignment, sequencing, ``var`` bindings and conditionals all get exact
-specs. The following are currently specified as ``VUnknown`` or as
+specs. Arrays and strings whose element types have actions are specified
+as a left fold (like ``fold_left``) of the element spec over the
+elements: the action state after the array is the result of running the
+element spec on each element in turn, stopping at the first failure. The
+following are currently specified as ``VUnknown`` or as
 returning an unknown result:
 
 * ``extern`` functions and output-type setters;
 * ``field_ptr`` and ``field_ptr_after``;
-* probes;
-* loops (arrays, strings) whose element types have actions.
+* probes.
 
 Clients can reason about the spec in F*.
 ``EverParse3d.Actions.Spec.Test`` proves that a field
 ``UINT32 x {:act *out = x; }`` validates if, and only if, the input starts
 with a 32-bit integer, and that it then stores that integer into
-``*out``.
+``*out``; and that for an array ``T(out) a[:byte-size 8]`` of two such
+fields, ``*out`` ends up holding the second integer.
 
 .. _sec-alignment:
 

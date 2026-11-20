@@ -1340,7 +1340,7 @@ let rec as_vspec
       as_vspec typename t
 
     | T_nlist _ n n_is_const _ t ->
-      S.vspec_default ha (P.parse_nlist n n_is_const (as_parser t))
+      S.vspec_nlist ha n n_is_const (as_parser t) (as_vspec typename t)
 
     | T_at_most _ n t ->
       S.vspec_t_at_most n (as_vspec typename t)
@@ -1349,7 +1349,7 @@ let rec as_vspec
       S.vspec_t_exact n (as_parser t) (as_vspec typename t)
 
     | T_string _ elt_t terminator ->
-      S.vspec_default ha (P.parse_string (dtyp_as_parser elt_t) terminator)
+      S.vspec_string ha (dtyp_as_parser elt_t) terminator (dtyp_as_vspec elt_t)
 
 (* The main result: a validator denotation of `typ`, related by construction
    to the parser and type denotations. *)
@@ -1545,10 +1545,10 @@ let rec as_validator
     | T_nlist fldname n n_is_const payload_is_constant_size t ->
       assert_norm (as_type (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.nlist n (as_type t));
       assert_norm (as_parser (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == P.parse_nlist n n_is_const (as_parser t));
-      assert_norm (as_vspec typename (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == S.vspec_default ha (P.parse_nlist n n_is_const (as_parser t)));
+      assert_norm (as_vspec typename (T_nlist #base_t #len_t #pos_t #inst #d #use_error_handler fldname n n_is_const payload_is_constant_size t) == S.vspec_nlist ha n n_is_const (as_parser t) (as_vspec typename t));
       let body = A.validate_without_reading_gen _ (as_validator ehm typename t) in
       (match ha
-      returns (A.validate_with_action_read #base_t #len_t #pos_t (P.parse_nlist n n_is_const (as_parser t)) d ha use_error_handler (S.vspec_default ha (P.parse_nlist n n_is_const (as_parser t))))
+      returns (A.validate_with_action_read #base_t #len_t #pos_t (P.parse_nlist n n_is_const (as_parser t)) d ha use_error_handler (S.vspec_nlist ha n n_is_const (as_parser t) (as_vspec typename t)))
       with
       | true -> A.validate_with_error_handler ehm typename fldname (A.validate_nlist n n_is_const body)
       | false -> A.validate_with_error_handler ehm typename fldname
@@ -1571,7 +1571,7 @@ let rec as_validator
     | T_string fldname elt_t terminator ->
       assert_norm (as_type (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.cstring (dtyp_as_type elt_t) terminator);
       assert_norm (as_parser (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == P.parse_string (dtyp_as_parser elt_t) terminator);
-      assert_norm (as_vspec typename (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == S.vspec_default ha (P.parse_string (dtyp_as_parser elt_t) terminator));
+      assert_norm (as_vspec typename (T_string #base_t #len_t #pos_t #inst #d #use_error_handler fldname elt_t terminator) == S.vspec_string ha (dtyp_as_parser elt_t) terminator (dtyp_as_vspec elt_t));
       A.validate_with_error_handler ehm typename fldname
         (A.validate_string (dtyp_as_validator_no_read fldname elt_t)
                            (dtyp_as_leaf_reader elt_t)

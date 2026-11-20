@@ -401,7 +401,7 @@ val validate_nlist
        (#use_error_handler:bool)
        (#s: S.vspec extra_state)
        (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
-: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler (S.vspec_default ha (parse_nlist n n_is_const p))
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler (S.vspec_nlist ha n n_is_const p s)
 
 noextract inline_for_extraction
 val validate_t_at_most
@@ -1104,7 +1104,7 @@ val validate_string
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
-: validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler (S.vspec_default ha (parse_string p terminator))
+: validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler (S.vspec_string ha p terminator s)
 
 inline_for_extraction noextract
 val validate_nlist_constant_size_without_actions
@@ -1122,7 +1122,7 @@ val validate_nlist_constant_size_without_actions
       (#use_error_handler:bool)
       (#s: S.vspec extra_state)
       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler s)
-: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_default false (parse_nlist n n_is_const p))
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_nlist false n n_is_const p s)
 
 inline_for_extraction noextract
 let external_action
