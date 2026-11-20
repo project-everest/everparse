@@ -282,6 +282,79 @@ static void test_wrapper(void) {
         "wrapper: write back");
 }
 
+/* Lazy iteration over the components of a SEQUENCE (ASN1.Pulse.SeqIter):
+   the indices of the present components, each read on demand */
+static void seq_iter_msg(const char *name, const uint8_t *der, size_t len, const char *exp) {
+  char got[16] = { 0 };
+  int n = 0;
+  ASN1_Pulse_SeqIter_seq_iter it = Msg_seq_start((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)der, .len = len });
+  while (!Msg_seq_is_empty(it) && n < 15) {
+    ASN1_Pulse_SeqIter_seq_item x = Msg_seq_next(&it);
+    CHECK(x.bytes.elt > der && x.bytes.elt + x.bytes.len <= der + len, "%s: item bytes", name);
+    got[n++] = (char)('0' + x.comp);
+    switch (x.comp) {
+    case Msg_version_index: {
+      Msg_version_opt v = Msg_version_get(x);
+      CHECK(v.tag == SMALL_IMPL_MSG_VERSION_PRESENT && v.val.Msg_version_present == 2, "%s: version", name);
+      break; }
+    case Msg_id_index: {
+      ASN1_Pulse_Rel_asn1_int_impl v = Msg_id_get(x);
+      CHECK(v.tag == ASN1_PULSE_REL_SMALL && (v.val.Small == 5 || v.val.Small == -1), "%s: id", name);
+      break; }
+    case Msg_critical_index: {
+      Msg_critical_opt v = Msg_critical_get(x);
+      CHECK(v.tag == SMALL_IMPL_MSG_CRITICAL_PRESENT && v.val.Msg_critical_present, "%s: critical", name);
+      break; }
+    case Msg_color_index: {
+      Msg_color_opt v = Msg_color_get(x);
+      CHECK(v.tag == SMALL_IMPL_MSG_COLOR_PRESENT && v.val.Msg_color_present == 5, "%s: color", name);
+      break; }
+    case Msg_body_index: {
+      Alt v = Msg_body_get(x);
+      CHECK(v.tag == SMALL_IMPL_ALT_INNER || (v.tag == SMALL_IMPL_ALT_NAME && v.val.Alt_name.elt[0] == 'n'), "%s: body", name);
+      break; }
+    case Msg_pair_index: {
+      Msg_pair_opt v = Msg_pair_get(x);
+      CHECK(v.tag == SMALL_IMPL_MSG_PAIR_PRESENT && v.val.Msg_pair_present.left == 7, "%s: pair", name);
+      break; }
+    case Msg_items_index: {
+      ASN1_Pulse_ListIter_iter li = Msg_items_iter_start(Msg_items_get(x));
+      CHECK(Msg_items_iter_length(li) >= 1, "%s: items", name);
+      break; }
+    case Msg_extra_index: {
+      Msg_extra_opt v = Msg_extra_get(x);
+      CHECK(v.tag == SMALL_IMPL_MSG_EXTRA_PRESENT && v.val.Msg_extra_present.a.val.Small == 300, "%s: extra", name);
+      break; }
+    default:
+      CHECK(0, "%s: unexpected index %u", name, (unsigned)x.comp);
+    }
+  }
+  CHECK(strcmp(got, exp) == 0, "%s: components %s, expected %s", name, got, exp);
+}
+
+static void test_seq_iter(void) {
+  seq_iter_msg("seq_iter msg1", msg1_der, sizeof msg1_der, "123456");
+  seq_iter_msg("seq_iter msg2", msg2_der, sizeof msg2_der, "01467");
+  /* a nested SEQUENCE: from the bytes of the item */
+  ASN1_Pulse_SeqIter_seq_iter it = Wrapper_seq_start((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)wrapper_der, .len = sizeof wrapper_der });
+  ASN1_Pulse_SeqIter_seq_item x = Wrapper_seq_next(&it);
+  CHECK(x.comp == Wrapper_n_index && Wrapper_n_get(x) == 3, "seq_iter wrapper: n");
+  x = Wrapper_seq_next(&it);
+  CHECK(x.comp == Wrapper_names_index, "seq_iter wrapper: names");
+  ASN1_Pulse_SeqIter_seq_iter ni = Names_seq_start(x.bytes);
+  ASN1_Pulse_SeqIter_seq_item y = Names_seq_next(&ni);
+  Pulse_Lib_Slice_slice__uint8 sh = Names_short_get(y);
+  CHECK(y.comp == Names_short_index && sh.len == 2 && sh.elt == wrapper_der + 9, "seq_iter wrapper: names.short (zero-copy)");
+  y = Names_seq_next(&ni);
+  CHECK(y.comp == Names_wide_index && Names_seq_is_empty(ni), "seq_iter wrapper: names end");
+  Names_kept nk = Wrapper_names_get(x);
+  CHECK(nk.raw.tag == SMALL_IMPL_NAMES_RAW_PRESENT && nk.raw.val.Names_raw_present.elt == wrapper_der + 5, "seq_iter wrapper: names kept");
+  x = Wrapper_seq_next(&it);
+  CHECK(x.comp == Wrapper_alt_index && Wrapper_seq_is_empty(it), "seq_iter wrapper: alt");
+  Wrapper_alt_opt a = Wrapper_alt_get(x);
+  CHECK(a.tag == SMALL_IMPL_WRAPPER_ALT_PRESENT && a.val.Wrapper_alt_present.value.bmp.tag == SMALL_IMPL_NAMES_BMP_PRESENT, "seq_iter wrapper: alt value");
+}
+
 int main(void) {
   custard_init_globals();
   Msg m1 = msg1(), m2 = msg2(), m3 = msg3();
@@ -290,6 +363,7 @@ int main(void) {
   write_ok("msg3", m3, msg3_der, sizeof msg3_der);
   test_names();
   test_wrapper();
+  test_seq_iter();
 
   /* a DEFAULT component present with its default value is omitted (DER) */
   Msg bad = msg1();

@@ -1,3 +1,4 @@
+#include <string.h>
 /* Sanity test of the extracted zero-copy parsers (ASN1.Pulse.ParseTest) */
 #include "ASN1.Pulse.ParseTest.h"
 #include <stdio.h>
@@ -63,6 +64,41 @@ int main(void) {
   if (q._1.val.Small != 5 || q._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__BOOL
       || q._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8
       || q._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || q._2._2._2.val.Some.val.Small != 7) { printf("seq ad\n"); fails++; }
+  /* the same SEQUENCE, component by component (ASN1.Pulse.SeqIter) */
+  {
+    uint8_t *ins[3] = { q3, q4, q5 };
+    size_t lens[3] = { sizeof(q3), sizeof(q4), sizeof(q5) };
+    const char *exp[3] = { "a", "abcd", "ad" };
+    for (int k = 0; k < 3; k++) {
+      char got[8] = { 0 };
+      int n = 0;
+      ASN1_Pulse_SeqIter_seq_iter it = ASN1_Pulse_ParseTest_seq_iter_start((Pulse_Lib_Slice_slice__uint8){ .elt = ins[k], .len = lens[k] });
+      while (!ASN1_Pulse_ParseTest_seq_iter_is_empty(it) && n < 7) {
+        ASN1_Pulse_SeqIter_seq_item x = ASN1_Pulse_ParseTest_seq_iter_next(&it);
+        got[n++] = (char)('a' + x.comp);
+        switch (x.comp) {
+        case 0: {
+          ASN1_Pulse_Rel_asn1_int_impl v = ASN1_Pulse_ParseTest_seq_get_a(x);
+          if (v.tag != ASN1_PULSE_REL_SMALL || v.val.Small != 5) { printf("seq_get_a %d\n", k); fails++; }
+          break; }
+        case 1: {
+          FStar_Pervasives_Native_option__bool v = ASN1_Pulse_ParseTest_seq_get_b(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__BOOL || !v.val.Some) { printf("seq_get_b %d\n", k); fails++; }
+          break; }
+        case 2: {
+          FStar_Pervasives_Native_option__slice_uint8 v = ASN1_Pulse_ParseTest_seq_get_c(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8 || v.val.Some.len != 2 || v.val.Some.elt != q4 + 10) { printf("seq_get_c %d\n", k); fails++; }
+          break; }
+        case 3: {
+          FStar_Pervasives_Native_option__asn1_int_impl v = ASN1_Pulse_ParseTest_seq_get_d(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || v.val.Some.val.Small != 7) { printf("seq_get_d %d\n", k); fails++; }
+          break; }
+        default: printf("seq_iter comp %d\n", k); fails++;
+        }
+      }
+      if (strcmp(got, exp[k])) { printf("seq_iter %d: %s\n", k, got); fails++; }
+    }
+  }
   /* SEQUENCE OF INTEGER and SET OF OCTET STRING: lazy, count + payload */
   uint8_t l1[] = {0x30, 0x09, 0x02, 0x01, 0x05, 0x02, 0x01, 0x06, 0x02, 0x01, 0x07};
   LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_asn1_int_impl li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));

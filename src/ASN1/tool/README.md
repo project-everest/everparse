@@ -20,6 +20,8 @@ specification (`lib/everparse/asn1/spec`). It works like the CDDL front end of E
      descriptors, the `L_iter_*` roots iterate over parsed SEQUENCE OF
      and SET OF values, and the `L_witer_*` roots over any such list in
      writer form (built with `L_empty`, `L_of_slice` and `L_append`).
+     The `T_seq_*` and `T_c_get` roots iterate lazily over the components
+     of a SEQUENCE `T`.
 3. Verify both modules with F\*, then extract `M.Impl` to `M.c`/`M.h` with
    Custard, F\*'s direct-to-C backend (no KaRaMeL).
 4. Compile `M.c` (`cc -c`) as a sanity check.
@@ -162,6 +164,30 @@ E    L_witer_next(LowParse_PulseParse_Iterator_Type_iterator__uintsize_E *it);  
 ones zero-copy. The C iterator and list types are generic instances
 (Custard warning 377): typedef them once if needed. A SET OF is iterated
 in list order; the writers sort it.
+
+### Iterators over the components of a SEQUENCE
+
+Instead of parsing a whole SEQUENCE `T` with `parse_T`, its components can
+be visited one at a time, each parsed only on demand. For each non-empty
+SEQUENCE `T` reachable from the roots (named, or anonymous `T_c`), the tool
+generates
+
+```c
+ASN1_Pulse_SeqIter_seq_iter T_seq_start(Pulse_Lib_Slice_slice__uint8 input);
+bool T_seq_is_empty(ASN1_Pulse_SeqIter_seq_iter it);
+ASN1_Pulse_SeqIter_seq_item T_seq_next(ASN1_Pulse_SeqIter_seq_iter *it);  /* requires !T_seq_is_empty(*it) */
+#define T_c_index (<i>U)                       /* for each component c, the i-th */
+<C type of c> T_c_get(ASN1_Pulse_SeqIter_seq_item x);  /* requires x.comp == T_c_index */
+```
+
+`T_seq_start` takes the bytes of a validated `T` (`validate_T`). Each item
+returned by `T_seq_next` is a *present* component: `x.comp` is its index
+(absent OPTIONAL and DEFAULT components are skipped) and `x.bytes` its
+encoding (a slice of the input), so a caller dispatches with
+`switch (x.comp) { case T_c_index: ... T_c_get(x) ... }`. `T_c_get` returns
+the same value as the `c` field of `parse_T` (an OPTIONAL or DEFAULT
+component is `T_c_present`). A component whose type is itself a named
+SEQUENCE `U` can be iterated in turn with `U_seq_start(x.bytes)`.
 
 ### KEEP-BYTES
 
