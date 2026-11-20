@@ -624,29 +624,33 @@ let gen_iters ctx ns (n: string) =
       p "let append_%s : LW.append_t %s =\n  fun rb ra #pb #lb #pa #la #pm -> LW.append %s rb ra #pb #lb #pa #la #pm\n\n" m dt d)
     (lists_of ctx n)
 
-(* Lazy iteration over the components of a SEQUENCE `T`
-   (ASN1.Pulse.SeqIter): `T_seq_start` on the bytes of a validated `T`, then
-   `T_seq_next` while not `T_seq_is_empty`; each item carries the index
-   `T_<c>_index` of a present component `c` and its bytes, which
-   `T_<c>_get` parses (zero-copy) *)
+(* Lazy iteration over the components of a SEQUENCE or SET `T`
+   (ASN1.Pulse.SeqIter, ASN1.Pulse.SetIter): `T_seq_start` (resp.
+   `T_set_start`) on the bytes of a validated `T`, then `T_seq_next` while not
+   `T_seq_is_empty`; each item carries the index `T_<c>_index` of a present
+   component `c` and its bytes, which `T_<c>_get` parses (zero-copy). SET
+   components come in encoding (DER tag) order. *)
 let gen_seq_iters ctx ns (n: string) =
   match def ctx n with
-  | DStruct (false, (_ :: _ as fields)) ->
+  | DStruct (set, (_ :: _ as fields)) ->
     let tac = "(_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ()))" in
     let attr = norm_attr ns ("`%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer; `%ml" ^
       (if has_adb ctx then "; `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t" else "")) in
-    let ls = sp "(Mkdtuple2?._2 gitems_%s)" n in
+    let ls = if set then sp "items_%s" n else sp "(Mkdtuple2?._2 gitems_%s)" n in
+    let (m, kind, items) =
+      if set then ("SetI", "set", sp "items_%s (ASN1_SET?.pf c_%s)" n n)
+      else ("SI", "seq", sp "gitems_%s" n) in
     p "(* Iterate over the components of a %s, given the bytes of a\n   validated one: start, then next while not is_empty *)\n" n;
-    p "[@@%s;\n  FStar.Attributes.rename_let \"%s_seq_start\"]\n" attr n;
-    p "let seq_start_%s : SI.start_t id_%s gitems_%s =\n  fun input #pm #w #v -> SI.start id_%s gitems_%s input #pm #w #v\n\n" n n n n n;
-    p "[@@%s;\n  FStar.Attributes.rename_let \"%s_seq_is_empty\"]\n" attr n;
-    p "let seq_is_empty_%s : SI.is_empty_t %s =\n  fun it #pm #v #w -> SI.is_empty %s it #pm #v #w\n\n" n ls ls;
-    p "[@@%s;\n  FStar.Attributes.rename_let \"%s_seq_next\"]\n" attr n;
-    p "let seq_next_%s : SI.next_t %s =\n  fun pi #it #pm #v #w -> SI.next %s (SI.comp %s %s) pi #it #pm #v #w\n\n" n ls ls ls tac;
+    p "[@@%s;\n  FStar.Attributes.rename_let \"%s_%s_start\"]\n" attr n kind;
+    p "let %s_start_%s : %s.start_t id_%s %s =\n  fun input #pm #w #v -> %s.start id_%s %s input #pm #w #v\n\n" kind n m n items m n items;
+    p "[@@%s;\n  FStar.Attributes.rename_let \"%s_%s_is_empty\"]\n" attr n kind;
+    p "let %s_is_empty_%s : %s.is_empty_t %s =\n  fun it #pm #v #w -> %s.is_empty %s it #pm #v #w\n\n" kind n m ls m ls;
+    p "[@@%s;\n  FStar.Attributes.rename_let \"%s_%s_next\"]\n" attr n kind;
+    p "let %s_next_%s : %s.next_t %s =\n  fun pi #it #pm #v #w -> %s.next %s (%s.comp %s %s) pi #it #pm #v #w\n\n" kind n m ls m ls m ls tac;
     List.iteri (fun j f ->
         let c = sp "%s_%s" n f.fname in
         let dd = ddexpr n f in
-        p "(* The index of %s.%s in the items of %s_seq_next *)\n" n f.fname n;
+        p "(* The index of %s.%s in the items of %s_%s_next *)\n" n f.fname n kind;
         p "[@@FStar.Attributes.CMacro; FStar.Attributes.rename_let \"%s_index\"]\nlet index_%s : FStar.UInt32.t = %dul\n\n" c c j;
         p "(* Read the component %s.%s of an item with that index *)\n" n f.fname;
         p "[@@%s;\n  FStar.Attributes.rename_let \"%s_get\"]\n" attr c;
@@ -684,7 +688,7 @@ let gen_pulse_module (r: result) ~src ~spec ~pulse ~(roots: string list) : strin
   let ctx = { r; spec; keep = r.keep } in
   p "module %s\n#lang-pulse\n%s" pulse (header src);
   p "open Pulse.Lib.Pervasives\nopen ASN1.Base\nopen ASN1.Spec.Interpreter\nopen ASN1.Pulse.Rel\nopen ASN1.Pulse.Parse\nopen ASN1.Pulse.Interpreter\nopen ASN1.Pulse.Parser\nopen ASN1.Pulse.RawRel\nopen ASN1.Pulse.JitWriter\nopen ASN1.Pulse.RawJitWriter\nopen ASN1.Pulse.TypedWriter\nopen ASN1.Syntax\nopen %s\n" spec;
-  p "module S = Pulse.Lib.Slice\nmodule U8 = FStar.UInt8\nmodule I64 = FStar.Int64\nmodule LPS = LowParse.Pulse.Base\nmodule RW = ASN1.Pulse.RawWriter\nmodule Trade = Pulse.Lib.Trade\nmodule LI = ASN1.Pulse.ListIter\nmodule LW = ASN1.Pulse.ListIterW\nmodule SI = ASN1.Pulse.SeqIter\n\n";
+  p "module S = Pulse.Lib.Slice\nmodule U8 = FStar.UInt8\nmodule I64 = FStar.Int64\nmodule LPS = LowParse.Pulse.Base\nmodule RW = ASN1.Pulse.RawWriter\nmodule Trade = Pulse.Lib.Trade\nmodule LI = ASN1.Pulse.ListIter\nmodule LW = ASN1.Pulse.ListIterW\nmodule SI = ASN1.Pulse.SeqIter\nmodule SetI = ASN1.Pulse.SetIter\n\n";
   p "(* proved in an empty context: in a large one, SMT may time out *)\ninline_for_extraction noextract\nlet half_perm : perm = 1.0R /. 2.0R\n\n";
   p "(* C types *)\n\n";
   List.iter (fun n -> gen_types ctx n; gen_kept_types ctx n) r.order;

@@ -99,6 +99,47 @@ int main(void) {
       if (strcmp(got, exp[k])) { printf("seq_iter %d: %s\n", k, got); fails++; }
     }
   }
+  /* SET { c [1] IMPLICIT OCTET STRING, a [0] IMPLICIT INTEGER OPTIONAL,
+     b BOOLEAN DEFAULT FALSE }, component by component (ASN1.Pulse.SetIter):
+     in encoding order */
+  {
+    uint8_t s1[] = {0x31, 0x0a, 0x01, 0x01, 0xff, 0x80, 0x01, 0x05, 0x81, 0x02, 0xaa, 0xbb};
+    uint8_t s2[] = {0x31, 0x04, 0x81, 0x02, 0xaa, 0xbb};
+    uint8_t s3[] = {0x31, 0x07, 0x80, 0x01, 0x05, 0x81, 0x02, 0xaa, 0xbb};
+    uint8_t *ins[3] = { s1, s2, s3 };
+    size_t lens[3] = { sizeof(s1), sizeof(s2), sizeof(s3) };
+    const char *exp[3] = { "bac", "c", "ac" };
+    for (int k = 0; k < 3; k++) {
+      char got[8] = { 0 };
+      int n = 0;
+      Pulse_Lib_Slice_slice__uint8 in = { .elt = ins[k], .len = lens[k] };
+      size_t off = 0;
+      if (!ASN1_Pulse_ParseTest_validate_setI(in, &off) || off != lens[k]) { printf("setI valid %d\n", k); fails++; continue; }
+      ASN1_Pulse_SeqIter_seq_iter it = ASN1_Pulse_ParseTest_set_iter_start(in);
+      while (!ASN1_Pulse_ParseTest_set_iter_is_empty(it) && n < 7) {
+        ASN1_Pulse_SeqIter_seq_item x = ASN1_Pulse_ParseTest_set_iter_next(&it);
+        switch (x.comp) {
+        case 0: {
+          got[n++] = 'c';
+          Pulse_Lib_Slice_slice__uint8 v = ASN1_Pulse_ParseTest_set_get_c(x);
+          if (v.len != 2 || v.elt[0] != 0xaa || v.elt[1] != 0xbb) { printf("set_get_c %d\n", k); fails++; }
+          break; }
+        case 1: {
+          got[n++] = 'a';
+          FStar_Pervasives_Native_option__asn1_int_impl v = ASN1_Pulse_ParseTest_set_get_a(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || v.val.Some.val.Small != 5) { printf("set_get_a %d\n", k); fails++; }
+          break; }
+        case 2: {
+          got[n++] = 'b';
+          FStar_Pervasives_Native_option__bool v = ASN1_Pulse_ParseTest_set_get_b(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__BOOL || !v.val.Some) { printf("set_get_b %d\n", k); fails++; }
+          break; }
+        default: printf("set_iter comp %d\n", k); fails++; n = 7;
+        }
+      }
+      if (strcmp(got, exp[k])) { printf("set_iter %d: %s\n", k, got); fails++; }
+    }
+  }
   /* SEQUENCE OF INTEGER and SET OF OCTET STRING: lazy, count + payload */
   uint8_t l1[] = {0x30, 0x09, 0x02, 0x01, 0x05, 0x02, 0x01, 0x06, 0x02, 0x01, 0x07};
   LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_asn1_int_impl li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));

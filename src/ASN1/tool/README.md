@@ -165,7 +165,7 @@ ones zero-copy. The C iterator and list types are generic instances
 (Custard warning 377): typedef them once if needed. A SET OF is iterated
 in list order; the writers sort it.
 
-### Iterators over the components of a SEQUENCE
+### Iterators over the components of a SEQUENCE or SET
 
 Instead of parsing a whole SEQUENCE `T` with `parse_T`, its components can
 be visited one at a time, each parsed only on demand. For each non-empty
@@ -188,6 +188,14 @@ encoding (a slice of the input), so a caller dispatches with
 the same value as the `c` field of `parse_T` (an OPTIONAL or DEFAULT
 component is `T_c_present`). A component whose type is itself a named
 SEQUENCE `U` can be iterated in turn with `U_seq_start(x.bytes)`.
+
+For each non-empty SET `T`, the tool generates the same functions, named
+`T_set_start`, `T_set_is_empty` and `T_set_next` (with the same item type,
+`T_c_index` and `T_c_get`). The components then come in encoding order,
+i.e. in the canonical (DER) order of their tags, which may differ from
+their declaration order; `x.comp` is still the index of the component in
+the declaration. `T_set_start` needs the bytes of a SET with its universal
+tag (`0x31`): for an IMPLICITly tagged SET, use `parse_T` instead.
 
 ### KEEP-BYTES
 

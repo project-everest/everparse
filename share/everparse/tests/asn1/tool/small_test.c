@@ -332,9 +332,41 @@ static void seq_iter_msg(const char *name, const uint8_t *der, size_t len, const
   CHECK(strcmp(got, exp) == 0, "%s: components %s, expected %s", name, got, exp);
 }
 
+/* Iterate over the components of a Pair (a SET), in encoding order */
+static void set_iter_pair(const char *name, const uint8_t *der, size_t len, const char *exp) {
+  char got[8] = { 0 };
+  int n = 0;
+  ASN1_Pulse_SeqIter_seq_iter it = Pair_set_start((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)der, .len = len });
+  while (!Pair_set_is_empty(it) && n < 7) {
+    ASN1_Pulse_SeqIter_seq_item x = Pair_set_next(&it);
+    got[n++] = (char)('0' + x.comp);
+    switch (x.comp) {
+    case Pair_left_index:
+      CHECK(Pair_left_get(x) == 7, "%s: left", name);
+      break;
+    case Pair_right_index: {
+      Pulse_Lib_Slice_slice__uint8 v = Pair_right_get(x);
+      CHECK(v.len == 2 && v.elt[0] == 'a' && v.elt[1] == 'b', "%s: right", name);
+      break; }
+    case Pair_note_index: {
+      Pair_note_opt v = Pair_note_get(x);
+      CHECK(v.tag == SMALL_IMPL_PAIR_NOTE_PRESENT && v.val.Pair_note_present, "%s: note", name);
+      break; }
+    default:
+      CHECK(0, "%s: unexpected index %u", name, (unsigned)x.comp);
+    }
+  }
+  CHECK(strcmp(got, exp) == 0, "%s: components %s, expected %s", name, got, exp);
+}
+
+static const uint8_t pair_der[] = { 0x31, 0x07, 0x80, 0x01, 0x07, 0x81, 0x02, 0x61, 0x62 };
+static const uint8_t pair_note_der[] = { 0x31, 0x0a, 0x80, 0x01, 0x07, 0x81, 0x02, 0x61, 0x62, 0x82, 0x01, 0xff };
+
 static void test_seq_iter(void) {
   seq_iter_msg("seq_iter msg1", msg1_der, sizeof msg1_der, "123456");
   seq_iter_msg("seq_iter msg2", msg2_der, sizeof msg2_der, "01467");
+  set_iter_pair("set_iter pair", pair_der, sizeof pair_der, "01");
+  set_iter_pair("set_iter pair note", pair_note_der, sizeof pair_note_der, "012");
   /* a nested SEQUENCE: from the bytes of the item */
   ASN1_Pulse_SeqIter_seq_iter it = Wrapper_seq_start((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)wrapper_der, .len = sizeof wrapper_der });
   ASN1_Pulse_SeqIter_seq_item x = Wrapper_seq_next(&it);

@@ -61,6 +61,10 @@ holding fractional permission `pm` on the input bytes it borrows.
   of a validated encoding, with `ASN1.Pulse.SeqIter`: `next` returns the
   index of the next present component and its TLV, and `get` parses it
   with `parse_dd`, into the value `parse_k` would give for that component.
+  `ASN1.Pulse.SetIter` does the same for a SET, in encoding order: `next`
+  finds the component of each element by its tag (`set_comp`), with the
+  loop invariant of `ASN1.Pulse.ParseSetAny`; items are read with
+  `ASN1.Pulse.SeqIter.get`.
   Supported
   schemas: `psupported_k`. SET components may be declared in any order
   (`ASN1.Pulse.ParseSetAny`): each element, read in encoding order, is
@@ -172,6 +176,7 @@ one byte short.
 | `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
 | `ASN1.Pulse.ListIter` | iterators over parsed SEQUENCE OF / SET OF values: `start`, `is_empty`, `length`, `next` (zero-copy, one element at a time) |
 | `ASN1.Pulse.SeqIter` | lazy iterators over the components of a SEQUENCE: `start` (from a validated encoding), `is_empty`, `next` (index and TLV of the next present component), `get` (parse one component) |
+| `ASN1.Pulse.SetIter` | the same for a SET, in encoding (DER tag) order: `start`, `is_empty`, `next` (component found by tag); items read with `SeqIter.get` |
 | `ASN1.Pulse.ListIterW`, `ASN1.Pulse.TypedShare` | iterators over SEQUENCE OF / SET OF values in writer form (`start`, `is_empty`, `next`), builders `empty`, `of_slice`, `append`; ghost `share_d`/`gather_d` for `arel false d` |
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.WriteAdb` | right-to-left writer building blocks (ANY DEFINED BY keys: `WriteAdb`) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and raw writers `raw_write_k` |
