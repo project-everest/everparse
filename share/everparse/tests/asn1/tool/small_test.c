@@ -346,6 +346,17 @@ int main(void) {
         p.pair.val.Msg_pair_present.right.elt == msg1_der + 23, "parse msg1: pair (zero-copy)");
   CHECK(p.pair.val.Msg_pair_present.note.tag == SMALL_IMPL_PAIR_NOTE_ABSENT, "parse msg1: pair.note");
   CHECK(p.extra.tag == SMALL_IMPL_MSG_EXTRA_ABSENT, "parse msg1: extra");
+  {
+    /* iterate over the parsed items (zero-copy) */
+    ASN1_Pulse_ListIter_iter it = Msg_items_iter_start(p.items);
+    CHECK(Msg_items_iter_length(it) == 2 && !Msg_items_iter_is_empty(it), "iter msg1: length");
+    Pulse_Lib_Slice_slice__uint8 e = Msg_items_iter_next(&it);
+    CHECK(e.len == 1 && e.elt[0] == 'x' && e.elt > msg1_der && e.elt < msg1_der + sizeof msg1_der, "iter msg1: items[0]");
+    CHECK(Msg_items_iter_length(it) == 1, "iter msg1: length after next");
+    e = Msg_items_iter_next(&it);
+    CHECK(e.len == 2 && e.elt[0] == 'y' && e.elt[1] == 'z', "iter msg1: items[1]");
+    CHECK(Msg_items_iter_is_empty(it), "iter msg1: end");
+  }
   /* the parsed value can be written back */
   write_ok("msg1 parsed", p, msg1_der, sizeof msg1_der);
 
@@ -355,6 +366,12 @@ int main(void) {
   CHECK(p.body.tag == SMALL_IMPL_ALT_NAME && p.body.val.Alt_name.len == 1 && p.body.val.Alt_name.elt[0] == 'n', "parse msg2: body");
   CHECK(p.extra.tag == SMALL_IMPL_MSG_EXTRA_PRESENT && p.extra.val.Msg_extra_present.a.val.Small == 300 &&
         p.extra.val.Msg_extra_present.b.len == 1, "parse msg2: extra");
+  {
+    ASN1_Pulse_ListIter_iter it = Msg_items_iter_start(p.items);
+    CHECK(Msg_items_iter_length(it) == 1, "iter msg2: length");
+    Pulse_Lib_Slice_slice__uint8 e = Msg_items_iter_next(&it);
+    CHECK(e.len == 0 && Msg_items_iter_is_empty(it), "iter msg2: items[0]");
+  }
   write_ok("msg2 parsed", p, msg2_der, sizeof msg2_der);
 
   p = parse_Msg((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)msg3_der, .len = sizeof msg3_der });

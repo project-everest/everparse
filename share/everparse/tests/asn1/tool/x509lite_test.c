@@ -84,6 +84,23 @@ static void test_cert(void) {
   CHECK(small(t->serial, 1), "cert: serial");
   CHECK(t->signature.tag == X509LITE_IMPL_ALGID_ALGORITHM_SHA256WITHRSAENCRYPTION, "cert: signature");
   CHECK(t->extensions.tag == X509LITE_IMPL_TBS_EXTENSIONS_PRESENT, "cert: extensions");
+  {
+    /* iterate over the parsed subject and extensions (zero-copy) */
+    ASN1_Pulse_ListIter_iter it = TBS_subject_iter_start(t->subject);
+    CHECK(TBS_subject_iter_length(it) == 1, "cert: subject length");
+    Pulse_Lib_Slice_slice__uint8 s = TBS_subject_iter_next(&it);
+    CHECK(s.len == 2 && s.elt == cert_der + 31 && TBS_subject_iter_is_empty(it), "cert: subject[0]");
+    it = TBS_extensions_iter_start(t->extensions.val.TBS_extensions_present);
+    CHECK(TBS_extensions_iter_length(it) == 3, "cert: extensions length");
+    Extension e = TBS_extensions_iter_next(&it);
+    CHECK(e.tag == X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_BASICCONSTRAINTS &&
+          small(e.val.Extension_extnID_id_ce_basicConstraints.extnValue.pathLenConstraint.val.BasicConstraints_pathLenConstraint_present, 3),
+          "cert: extensions[0]");
+    e = TBS_extensions_iter_next(&it);
+    CHECK(e.tag == X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_KEYUSAGE, "cert: extensions[1]");
+    e = TBS_extensions_iter_next(&it);
+    CHECK(e.tag == X509LITE_IMPL_EXTENSION_EXTNID_OTHER && TBS_extensions_iter_is_empty(it), "cert: extensions[2]");
+  }
   CHECK(c.tbs.raw.tag == X509LITE_IMPL_TBS_RAW_PRESENT &&
         c.tbs.raw.val.TBS_raw_present.elt == cert_der + TBS_OFF &&
         c.tbs.raw.val.TBS_raw_present.len == TBS_LEN, "cert: KEEP-BYTES of tbs");

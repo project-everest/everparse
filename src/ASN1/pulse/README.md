@@ -49,7 +49,11 @@ holding fractional permission `pm` on the input bytes it borrows.
 * **Parsers** (`ASN1.Pulse.Parser`, `parse_k`): from a validated input
   (`pts_to_parsed`), return `x'` with `asn1_rel k pm x' x`, where `x` is
   the value parsed by `asn1_as_parser k`; no copy, no allocation (SEQUENCE
-  OF and SET OF are returned lazily, as a count and the payload). Supported
+  OF and SET OF are returned lazily, as a count and the payload, and read
+  with the iterators of `ASN1.Pulse.ListIter`: `start` turns a parsed list
+  into a cursor `iter` (count and remaining payload), and `next` parses
+  its head with `parse_d`, returning it in `arel true` with a trade back
+  to the cursor; nested lists work the same way). Supported
   schemas: `psupported_k`. SET components may be declared in any order
   (`ASN1.Pulse.ParseSetAny`): each element, read in encoding order, is
   dispatched by its tag to the slot of its component in a tuple of
@@ -158,6 +162,7 @@ one byte short.
 | `ASN1.Pulse.Interpreter` | the interpreter `validate_k` over schemas |
 | `ASN1.Pulse.Rel`, `ASN1.Pulse.RelShare` | low-level value types and relations; generic share/gather combinators |
 | `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
+| `ASN1.Pulse.ListIter` | iterators over parsed SEQUENCE OF / SET OF values: `start`, `is_empty`, `length`, `next` (zero-copy, one element at a time) |
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.WriteAdb` | right-to-left writer building blocks (ANY DEFINED BY keys: `WriteAdb`) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and raw writers `raw_write_k` |
 | `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) |

@@ -3,7 +3,9 @@
    - `M.Pulse.fst`: a named C type for each SEQUENCE, SET, CHOICE and
      OPTIONAL/DEFAULT component, the impl descriptors (`d_T`) that map them
      to the schema, and the extraction roots `validate_T`, `parse_T`,
-     `write_T` and `write_T_typed` for each root type `T`, plus
+     `write_T` and `write_T_typed` for each root type `T`, the iterators
+     `L_iter_start`, `L_iter_is_empty`, `L_iter_length` and `L_iter_next`
+     for each SEQUENCE OF / SET OF `L` reachable from the roots, plus
      `to_writer_T` for a type `T` (root or not) with KEEP-BYTES: its C
      type `T_kept` pairs its value and the bytes it was parsed from. *)
 
@@ -531,6 +533,76 @@ let gen_root ctx ns (n: string) =
   p "[@@%s;\n  FStar.Attributes.rename_let \"write_%s_typed\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d") n;
   p "let write_%s_typed : typed_jit_writer_d_t d_%s 1.0R =\n  fun x' #v out pos #b #p -> write_typed_d d_%s ok_%s 1.0R (jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s half_perm)) x' #v out pos #b #p\n\n" n n n n n n n n
 
+(* Iterators over SEQUENCE OF / SET OF (ASN1.Pulse.ListIter), for each
+   list reachable from the roots: a named list type `T ::= SEQUENCE OF E`
+   gives `T_iter_*`, a list component `c` of `T` (or a list alternative `c`
+   of a CHOICE `T`) gives `T_c_iter_*`, and the elements of a list `L` that
+   are themselves (anonymous) lists give `L_elt_iter_*`. *)
+
+(* The definitions reachable from the roots *)
+let reachable ctx (roots: string list) : string list =
+  let seen = Hashtbl.create 17 in
+  let rec go_def n =
+    if not (Hashtbl.mem seen n) then begin
+      Hashtbl.add seen n ();
+      match def ctx n with
+      | DStruct (_, fields) -> List.iter (fun f -> go_node f.fnode) fields
+      | DChoice alts -> List.iter (function ALeaf (_, _, c) -> go_cnode c | ASub (_, r) -> go_def r) alts
+      | DNode nd -> go_node nd
+      | DAdb a -> List.iter (fun f -> go_node f.fnode) (adb_fields a)
+    end
+  and go_node = function
+    | NRef r -> go_def r
+    | NAny -> ()
+    | NILC (_, c) -> go_cnode c
+  and go_cnode = function
+    | CTerm _ -> ()
+    | CRef r -> go_def r
+    | COf (_, _, nd) | CPrefixed nd | CContaining nd -> go_node nd
+  in
+  List.iter go_def roots;
+  List.filter (Hashtbl.mem seen) ctx.r.order
+
+(* The lists of a definition: (name, element) *)
+let lists_of ctx (n: string) : (string * node) list =
+  let acc = ref [] in
+  let rec node name = function
+    | NILC (_, c) -> cnode name c
+    | NRef _ | NAny -> ()
+  and cnode name = function
+    | COf (_, _, e) -> acc := (name, e) :: !acc; node (name ^ "_elt") e
+    | CPrefixed nd -> node name nd
+    | CTerm _ | CRef _ | CContaining _ -> ()
+  in
+  (match def ctx n with
+   | DStruct (_, fields) -> List.iter (fun f -> node (sp "%s_%s" n f.fname) f.fnode) fields
+   | DChoice alts -> List.iter (function ALeaf (a, _, c) -> cnode (sp "%s_%s" n a) c | ASub _ -> ()) alts
+   | DNode nd -> node n nd
+   | DAdb a ->
+     let fields pre = List.iter (fun f -> node (sp "%s_%s" pre f.fname) f.fnode) in
+     fields n (a.prefix @ [a.key]);
+     List.iter (fun c -> fields (sp "%s_%s" n c.cname) c.cfields) a.cases;
+     Option.iter (fields (n ^ "_other")) a.fallback);
+  List.rev !acc
+
+let gen_iters ctx ns (n: string) =
+  let tac = "_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())" in
+  let attr = norm_attr ns ("`%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer; `%ml" ^
+    (if has_adb ctx then "; `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t" else "")) in
+  List.iter (fun (m, e) ->
+      let d = dexpr e and k = kexpr e in
+      p "noextract\nlet psupported_%s_elt : squash (psupported_k %s) = %s\n\n" m k tac;
+      p "(* Iterate over a parsed %s (with an ASN1.Pulse.ListIter.iter): start, then\n   next while not is_empty; next parses the elements zero-copy *)\n" m;
+      p "[@@%s;\n  FStar.Attributes.rename_let \"%s_iter_start\"]\n" attr m;
+      p "let iter_start_%s : LI.start_t %s =\n  fun x #pm #l -> LI.start %s x #pm #l\n\n" m d d;
+      p "[@@%s;\n  FStar.Attributes.rename_let \"%s_iter_is_empty\"]\n" attr m;
+      p "let iter_is_empty_%s : LI.is_empty_t %s =\n  fun it #pm #l -> LI.is_empty %s it #pm #l\n\n" m k k;
+      p "[@@%s;\n  FStar.Attributes.rename_let \"%s_iter_length\"]\n" attr m;
+      p "let iter_length_%s : LI.length_t %s =\n  fun it #pm #l -> LI.length %s it #pm #l\n\n" m k k;
+      p "[@@%s;\n  FStar.Attributes.rename_let \"%s_iter_next\"]\n" attr m;
+      p "let iter_next_%s : LI.next_t %s =\n  fun pi #it #pm #l -> LI.next %s (fun input #pm #w #v -> parse_d %s psupported_%s_elt input #pm #w #v) pi #it #pm #l\n\n" m d d d m)
+    (lists_of ctx n)
+
 (* For a KEEP-BYTES type: hand a parsed value (`arel true`, bytes kept) to
    the writers (`arel false`), and get the parser relation back later *)
 let gen_to_writer ctx (n: string) =
@@ -560,7 +632,7 @@ let gen_pulse_module (r: result) ~src ~spec ~pulse ~(roots: string list) : strin
   let ctx = { r; spec; keep = r.keep } in
   p "module %s\n#lang-pulse\n%s" pulse (header src);
   p "open Pulse.Lib.Pervasives\nopen ASN1.Base\nopen ASN1.Spec.Interpreter\nopen ASN1.Pulse.Rel\nopen ASN1.Pulse.Parse\nopen ASN1.Pulse.Interpreter\nopen ASN1.Pulse.Parser\nopen ASN1.Pulse.RawRel\nopen ASN1.Pulse.JitWriter\nopen ASN1.Pulse.RawJitWriter\nopen ASN1.Pulse.TypedWriter\nopen ASN1.Syntax\nopen %s\n" spec;
-  p "module S = Pulse.Lib.Slice\nmodule U8 = FStar.UInt8\nmodule I64 = FStar.Int64\nmodule LPS = LowParse.Pulse.Base\nmodule RW = ASN1.Pulse.RawWriter\nmodule Trade = Pulse.Lib.Trade\n\n";
+  p "module S = Pulse.Lib.Slice\nmodule U8 = FStar.UInt8\nmodule I64 = FStar.Int64\nmodule LPS = LowParse.Pulse.Base\nmodule RW = ASN1.Pulse.RawWriter\nmodule Trade = Pulse.Lib.Trade\nmodule LI = ASN1.Pulse.ListIter\n\n";
   p "(* proved in an empty context: in a large one, SMT may time out *)\ninline_for_extraction noextract\nlet half_perm : perm = 1.0R /. 2.0R\n\n";
   p "(* C types *)\n\n";
   List.iter (fun n -> gen_types ctx n; gen_kept_types ctx n) r.order;
@@ -568,5 +640,6 @@ let gen_pulse_module (r: result) ~src ~spec ~pulse ~(roots: string list) : strin
   List.iter (gen_desc ctx) r.order;
   p "(* Extraction roots *)\n\n";
   List.iter (gen_root ctx [spec; pulse]) roots;
+  List.iter (gen_iters ctx [spec; pulse]) (reachable ctx roots);
   List.iter (gen_to_writer ctx) r.order;
   Buffer.contents buf

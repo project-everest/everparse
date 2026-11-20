@@ -17,7 +17,8 @@ specification (`lib/everparse/asn1/spec`). It works like the CDDL front end of E
      C type to its schema (`ASN1.Pulse.Rel`). The roots `validate_T`,
      `parse_T`, `write_T` and `write_T_typed` instantiate the generic Pulse interpreters
      of the ASN.1 Pulse library (`lib/everparse/asn1/pulse`) with these
-     descriptors.
+     descriptors, and the `L_iter_*` roots iterate over parsed SEQUENCE OF
+     and SET OF values.
 3. Verify both modules with F\*, then extract `M.Impl` to `M.c`/`M.h` with
    Custard, F\*'s direct-to-C backend (no KaRaMeL).
 4. Compile `M.c` (`cc -c`) as a sanity check.
@@ -121,6 +122,26 @@ ASN1_Pulse_JitWriter_jit_result
   (`ASN1.Pulse.TypedWriter.parsed_encodable_d`), and writing it yields
   the parsed bytes. Without KEEP-BYTES types, `arel true` and `arel false`
   coincide.
+
+### Iterators over SEQUENCE OF / SET OF
+
+Parsed SEQUENCE OF and SET OF values are lazy: a count and the DER payload.
+For each such list `L` reachable from the roots, the tool generates
+
+```c
+ASN1_Pulse_ListIter_iter L_iter_start(<list C type> x);
+bool   L_iter_is_empty(ASN1_Pulse_ListIter_iter it);
+size_t L_iter_length(ASN1_Pulse_ListIter_iter it);
+E      L_iter_next(ASN1_Pulse_ListIter_iter *it);  /* requires !L_iter_is_empty(*it) */
+```
+
+where `L` is `T` for a named list type `T ::= SEQUENCE OF E`, `T_c` for a
+list component (or CHOICE alternative) `c` of `T`, `T_k_c` for a component
+`c` of the case `k` of an ANY DEFINED BY `T` (`T_other_c` for the other
+keys), and `L_elt` for the elements of a list `L` that are themselves
+lists. `L_iter_next` parses the next element, zero-copy, and advances the
+cursor. These functions apply to parsed values only (in F\*, `start`
+requires `arel true`), not to lists built by a caller.
 
 ### KEEP-BYTES
 
