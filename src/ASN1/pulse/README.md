@@ -53,7 +53,11 @@ holding fractional permission `pm` on the input bytes it borrows.
   with the iterators of `ASN1.Pulse.ListIter`: `start` turns a parsed list
   into a cursor `iter` (count and remaining payload), and `next` parses
   its head with `parse_d`, returning it in `arel true` with a trade back
-  to the cursor; nested lists work the same way). Supported
+  to the cursor; nested lists work the same way). Lists in writer form
+  (`arel false`: parsed, built from an array, or appended) are iterated
+  with `ASN1.Pulse.ListIterW`, over LowParse's generic mixed-list
+  iterator; its typed share/gather (`ASN1.Pulse.TypedShare`) is ghost.
+  Supported
   schemas: `psupported_k`. SET components may be declared in any order
   (`ASN1.Pulse.ParseSetAny`): each element, read in encoding order, is
   dispatched by its tag to the slot of its component in a tuple of
@@ -163,6 +167,7 @@ one byte short.
 | `ASN1.Pulse.Rel`, `ASN1.Pulse.RelShare` | low-level value types and relations; generic share/gather combinators |
 | `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
 | `ASN1.Pulse.ListIter` | iterators over parsed SEQUENCE OF / SET OF values: `start`, `is_empty`, `length`, `next` (zero-copy, one element at a time) |
+| `ASN1.Pulse.ListIterW`, `ASN1.Pulse.TypedShare` | iterators over SEQUENCE OF / SET OF values in writer form (`start`, `is_empty`, `next`), builders `empty`, `of_slice`, `append`; ghost `share_d`/`gather_d` for `arel false d` |
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.WriteAdb` | right-to-left writer building blocks (ANY DEFINED BY keys: `WriteAdb`) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and raw writers `raw_write_k` |
 | `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) |

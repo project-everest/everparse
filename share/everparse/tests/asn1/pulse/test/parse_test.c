@@ -117,6 +117,36 @@ int main(void) {
     }
     if (next != 4 || !ASN1_Pulse_ParseTest_iter_is_empty(outer)) { printf("nested end\n"); fails++; }
   }
+  /* Writer-form iterators (ASN1.Pulse.ListIterW) over parsed, array-built and appended lists */
+  {
+    typedef LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_asn1_int_impl ml_t;
+    typedef LowParse_PulseParse_Iterator_Type_iterator__uintsize_asn1_int_impl wit_t;
+    int64_t got[16]; size_t n;
+#define WCOLLECT(l) do { wit_t w = ASN1_Pulse_ParseTest_witer_start(l); n = 0; \
+      while (!ASN1_Pulse_ParseTest_witer_is_empty(w) && n < 16) { \
+        ASN1_Pulse_Rel_asn1_int_impl e = ASN1_Pulse_ParseTest_witer_next(&w); \
+        got[n++] = e.tag == ASN1_PULSE_REL_SMALL ? e.val.Small : -1000; } } while (0)
+    WCOLLECT(ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1)));
+    if (n != 3 || got[0] != 5 || got[1] != 6 || got[2] != 7) { printf("witer parsed\n"); fails++; }
+    WCOLLECT(ASN1_Pulse_ParseTest_seqOfInt_empty());
+    if (n != 0) { printf("witer empty\n"); fails++; }
+    ASN1_Pulse_Rel_asn1_int_impl arr[2];
+    arr[0].tag = ASN1_PULSE_REL_SMALL; arr[0].val.Small = 1;
+    arr[1].tag = ASN1_PULSE_REL_SMALL; arr[1].val.Small = 2;
+    ml_t la = ASN1_Pulse_ParseTest_seqOfInt_of_slice((Pulse_Lib_Slice_slice__asn1_int_impl){ .elt = arr, .len = 2 });
+    WCOLLECT(la);
+    if (n != 2 || got[0] != 1 || got[1] != 2) { printf("witer of_slice\n"); fails++; }
+    ml_t lp = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));
+    ml_t lap = ASN1_Pulse_ParseTest_seqOfInt_append(&la, &lp);
+    WCOLLECT(lap);
+    if (n != 5 || got[0] != 1 || got[1] != 2 || got[2] != 5 || got[3] != 6 || got[4] != 7) { printf("witer append\n"); fails++; }
+    ml_t le = ASN1_Pulse_ParseTest_seqOfInt_empty();
+    ml_t lea = ASN1_Pulse_ParseTest_seqOfInt_append(&le, &lap);
+    ml_t leae = ASN1_Pulse_ParseTest_seqOfInt_append(&lea, &le);
+    WCOLLECT(leae);
+    if (n != 5 || got[0] != 1 || got[4] != 7) { printf("witer append empty\n"); fails++; }
+#undef WCOLLECT
+  }
   /* SET { b BOOLEAN, a [0] IMPLICIT INTEGER OPTIONAL, c [1] IMPLICIT OCTET STRING } */
   uint8_t t1[] = {0x31, 0x0a, 0x01, 0x01, 0xff, 0x80, 0x01, 0x07, 0x81, 0x02, 0xaa, 0xbb};
   FStar_Pervasives_Native_tuple2__bool_tuple2_option_asn1_int_impl_slice_uint8 st = ASN1_Pulse_ParseTest_parse_setBAC(SL(t1));

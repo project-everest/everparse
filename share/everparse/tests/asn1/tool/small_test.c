@@ -359,6 +359,35 @@ int main(void) {
   }
   /* the parsed value can be written back */
   write_ok("msg1 parsed", p, msg1_der, sizeof msg1_der);
+  {
+    /* writer-form iteration (ListIterW) over the parsed items */
+    LowParse_PulseParse_Iterator_Type_iterator__uintsize_slice_uint8 w = Msg_items_witer_start(p.items);
+    CHECK(!Msg_items_witer_is_empty(w), "witer msg1: not empty");
+    Pulse_Lib_Slice_slice__uint8 e = Msg_items_witer_next(&w);
+    CHECK(e.len == 1 && e.elt[0] == 'x', "witer msg1: items[0]");
+    e = Msg_items_witer_next(&w);
+    CHECK(e.len == 2 && e.elt[0] == 'y' && e.elt[1] == 'z', "witer msg1: items[1]");
+    CHECK(Msg_items_witer_is_empty(w), "witer msg1: end");
+    /* items built from arrays, appended (with an empty list in between),
+       iterated, then written back */
+    uint8_t x[] = { 'x' }, yz[] = { 'y', 'z' };
+    Pulse_Lib_Slice_slice__uint8 a1[] = { { .elt = x, .len = 1 } }, a2[] = { { .elt = yz, .len = 2 } };
+    LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 l1 =
+      Msg_items_of_slice((Pulse_Lib_Slice_slice__slice_uint8){ .elt = a1, .len = 1 });
+    LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 l2 =
+      Msg_items_of_slice((Pulse_Lib_Slice_slice__slice_uint8){ .elt = a2, .len = 1 });
+    LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 le = Msg_items_empty();
+    LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 l1e = Msg_items_append(&l1, &le);
+    LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 l = Msg_items_append(&l1e, &l2);
+    w = Msg_items_witer_start(l);
+    e = Msg_items_witer_next(&w);
+    CHECK(e.elt == x && e.len == 1, "witer built: items[0]");
+    e = Msg_items_witer_next(&w);
+    CHECK(e.elt == yz && e.len == 2 && Msg_items_witer_is_empty(w), "witer built: items[1]");
+    Msg q = p;
+    q.items = l;
+    write_ok("msg1 built items", q, msg1_der, sizeof msg1_der);
+  }
 
   p = parse_Msg((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)msg2_der, .len = sizeof msg2_der });
   CHECK(p.version.tag == SMALL_IMPL_MSG_VERSION_PRESENT && p.version.val.Msg_version_present == 2, "parse msg2: version");

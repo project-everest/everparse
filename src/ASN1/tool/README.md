@@ -17,8 +17,9 @@ specification (`lib/everparse/asn1/spec`). It works like the CDDL front end of E
      C type to its schema (`ASN1.Pulse.Rel`). The roots `validate_T`,
      `parse_T`, `write_T` and `write_T_typed` instantiate the generic Pulse interpreters
      of the ASN.1 Pulse library (`lib/everparse/asn1/pulse`) with these
-     descriptors, and the `L_iter_*` roots iterate over parsed SEQUENCE OF
-     and SET OF values.
+     descriptors, the `L_iter_*` roots iterate over parsed SEQUENCE OF
+     and SET OF values, and the `L_witer_*` roots over any such list in
+     writer form (built with `L_empty`, `L_of_slice` and `L_append`).
 3. Verify both modules with F\*, then extract `M.Impl` to `M.c`/`M.h` with
    Custard, F\*'s direct-to-C backend (no KaRaMeL).
 4. Compile `M.c` (`cc -c`) as a sanity check.
@@ -142,6 +143,25 @@ keys), and `L_elt` for the elements of a list `L` that are themselves
 lists. `L_iter_next` parses the next element, zero-copy, and advances the
 cursor. These functions apply to parsed values only (in F\*, `start`
 requires `arel true`), not to lists built by a caller.
+
+To build a list, or to iterate over any list the writers accept (parsed,
+built, or a mix: `arel false`), the tool also generates
+
+```c
+<list C type> L_empty(void);
+<list C type> L_of_slice(<slice of E> a);           /* the elements of an array */
+<list C type> L_append(<list C type> *b, <list C type> *a);  /* b, then a */
+LowParse_PulseParse_Iterator_Type_iterator__uintsize_E L_witer_start(<list C type> x);
+bool L_witer_is_empty(LowParse_PulseParse_Iterator_Type_iterator__uintsize_E it);
+E    L_witer_next(LowParse_PulseParse_Iterator_Type_iterator__uintsize_E *it);  /* requires !L_witer_is_empty(*it) */
+```
+
+`L_append` points to `b` and `a`, which must outlive the result, and
+`L_of_slice` points to the array; neither copies the elements.
+`L_witer_next` returns array elements as they are, and parses serialized
+ones zero-copy. The C iterator and list types are generic instances
+(Custard warning 377): typedef them once if needed. A SET OF is iterated
+in list order; the writers sort it.
 
 ### KEEP-BYTES
 
