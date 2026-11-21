@@ -698,6 +698,7 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 module AP = Pulse.Lib.ArrayPtr
 module R = Pulse.Lib.Reference
 module AB = EverParse3d.Actions.Base
+module AS = EverParse3d.Actions.Spec
 open EverParse3d.State
 
 [@@FStar.Attributes.rename_let "EVERPARSE____PUINT8"; FStar.Attributes.custard_no_unfold]
@@ -732,11 +733,13 @@ fn field_ptr_after_unchecked
   (sl_len: len_t)
   (sl_pos: pos_t)
   (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** AB.peep_world pw
 returns res: bool
-ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (AS.peep_head pw == (if res then Some w' else None))
 {
   rewrite (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
        as (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
@@ -745,7 +748,10 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
   fold (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
   rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
        as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  B.to_bool res
+  let ok = B.to_bool res;
+  // The peep world records what the client primitive did.
+  AB.resolve_peep_world ok w;
+  ok
 }
 
 (* The client's Peep answers for the whole stream, so inside a truncated view
@@ -761,11 +767,13 @@ fn field_ptr_after_wrapped
   (sl_len: len_t)
   (sl_pos: pos_t)
   (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** AB.peep_world pw
 returns res: bool
-ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (AS.peep_head pw == (if res then Some w' else None))
 {
   if bounded sl_len {
     rewrite (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
@@ -774,27 +782,28 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
     rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
          as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
     if FStar.UInt64.lte sz (SZ.sizet_to_uint64 rem) {
-      field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+      field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
     } else {
+      AB.resolve_peep_world_none ();
       false
     }
   } else {
-    field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+    field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
   }
 }
 
 noextract
 inline_for_extraction
 let field_ptr_after_fn
-: AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8
-= fun _extra sz w sl_base sl_len (sl_pos: pos_t) w0 contents_sl v_sl ->
-    field_ptr_after_wrapped #_extra sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+: AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern
+= fun _extra sz w sl_base sl_len (sl_pos: pos_t) w0 pw contents_sl v_sl ->
+    field_ptr_after_wrapped #_extra sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
 
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
 let field_ptr_after
-: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8)
+: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern)
 = Some field_ptr_after_fn
 
 (* An opaque alias for the state-dictionary invariant. It is a plain (hence
@@ -819,18 +828,22 @@ fn field_ptr_after_with_setter_impl
   (sl_base: base_t)
   (sl_len: len_t)
   (sl_pos: pos_t)
+  (pw: Ghost.erased AS.peep_tape)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
 requires
   I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-  all_states extra_state
+  all_states extra_state **
+  AB.peep_world pw
 returns res: bool
 ensures
   I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-  all_states extra_state
+  all_states extra_state **
+  AB.peep_world (AS.peep_tail pw) **
+  pure (res == Some? (AS.peep_head pw))
 {
   let mut w = NP.null_ptr;
-  let ok = field_ptr_after_wrapped sz w sl_base sl_len sl_pos _ contents_sl v_sl;
+  let ok = field_ptr_after_wrapped sz w sl_base sl_len sl_pos _ pw contents_sl v_sl;
   if ok {
     let q = !w;
     unfold (all_states extra_state);

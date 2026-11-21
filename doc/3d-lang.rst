@@ -681,10 +681,9 @@ as a left fold (like ``fold_left``) of the element spec over the
 elements: the action state after the array is the result of running the
 element spec on each element in turn, stopping at the first failure. The
 following are currently specified as ``VUnknown`` or as
-returning an unknown result:
-
-* ``extern`` functions and output-type setters;
-* ``field_ptr_after``.
+returning an unknown result: ``extern`` functions and output-type
+setters, including the setter called by ``field_ptr_after`` with an
+output-type field (whose failure is nonetheless specified, see below).
 
 ``field_ptr`` (buffer backend) is specified as
 ``EverParse3d.PtrModel.ptr_at origin start``: the pointer ``start``
@@ -711,6 +710,25 @@ probe world can always be introduced
 is consumed by each probe-then-validate exactly once, in
 ``EverParse3d.Actions.Base.probe_then_validate``, which is not exported.
 
+``field_ptr_after`` (extern and static backends) is specified likewise
+with respect to a *peep world*: a ghost prophecy
+(``EverParse3d.Actions.Spec.peep_tape``) of the outcomes of all future
+calls to the client's ``EverParseStreamPeep`` callback, ``None`` if it
+fails and ``Some p`` if it returns pointer ``p``. It is stored in the
+action state under the reserved key ``"#world"``, so the generated state
+dictionaries of the types that use ``field_ptr_after`` include it. Each
+``field_ptr_after`` consumes one outcome: it fails if the outcome is
+``None``, and otherwise writes ``p`` to the destination pointer (or, with
+an output-type field, calls the setter, whose effect is unspecified). As
+for probes, nothing is assumed about the C callback; the trusted
+assumptions are that a fresh peep world can always be introduced
+(``EverParse3d.Actions.Base.prophesy_peep_world``) and that it is
+consumed only through the non-ghost resolvers of
+``EverParse3d.Actions.Base`` (``resolve_peep_world``,
+``resolve_peep_world_ptr``), whose arguments are the values actually
+returned by the callback, or with a constant ``None`` outcome
+(``resolve_peep_world_none``).
+
 Clients can reason about the spec in F*.
 ``EverParse3d.Actions.Spec.Test`` proves that a field
 ``UINT32 x {:act *out = x; }`` validates if, and only if, the input starts
@@ -718,7 +736,9 @@ with a 32-bit integer, and that it then stores that integer into
 ``*out``; and that for an array ``T(out) a[:byte-size 8]`` of two such
 fields, ``*out`` ends up holding the second integer; and that probing
 a pointer to a 32-bit integer fails exactly when the probe fails or the
-copied bytes do not start with a 32-bit integer.
+copied bytes do not start with a 32-bit integer; and that
+``field_ptr_after`` succeeds exactly when the head of the peep world is
+``Some p``, in which case it writes ``p``.
 
 Since ``as_vspec`` reads input bytes, the spec of the actions is also
 given in terms of the *parsed value*:

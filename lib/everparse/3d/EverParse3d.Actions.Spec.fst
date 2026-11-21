@@ -594,6 +594,49 @@ let aspec_probe_then_validate
   | VErr -> SResOnly false
   | VUnknown -> SUnknown
 
+(** field_ptr_after *)
+
+(* `field_ptr_after` relies on a client-provided primitive (`EverParseStreamPeep`)
+   about which nothing is assumed. Its outcomes are specified with respect to
+   a peep world: a ghost prophecy of the outcomes of all future calls to that
+   primitive (`None` if it failed, `Some p` if it returned pointer `p`), stored
+   in the action state under the key `world_key`. *)
+let world_key : string = "#world"
+
+let peep_tape : Type0 = nat -> Tot (option PM.ptr)
+
+let peep_head (w: peep_tape) : option PM.ptr = w 0
+
+let peep_tail (w: peep_tape) : peep_tape = fun i -> w (i + 1)
+
+(* `field_ptr_after` writing to the pointer stored under `name`. If it fails,
+   the pointer may have been modified. *)
+let aspec_field_ptr_after
+  (name: string) (wstate: PM.ptr -> Pulse.Lib.Core.slprop) (pstate: peep_tape -> Pulse.Lib.Core.slprop)
+  (sq: squash (forall x . ~ ((state_dict_singleton name wstate).state_p x /\ (state_dict_singleton world_key pstate).state_p x)))
+: action_spec (state_dict_prod (state_dict_singleton name wstate) (state_dict_singleton world_key pstate)) bool
+= fun _ st ->
+  let w : peep_tape = mk_proj_value st (state_dict_singleton world_key pstate) () world_key in
+  match peep_head w with
+  | None -> SResOnly false
+  | Some p ->
+    SOk true (mk_prod_value
+      (mk_singleton_value name wstate p)
+      (mk_singleton_value world_key pstate (peep_tail w))
+      ())
+
+(* `field_ptr_after` with an output setter: the setter is an external action,
+   hence unspecified (see `aspec_unknown`). *)
+let aspec_field_ptr_after_with_setter
+  (#d: state_dict) (pstate: peep_tape -> Pulse.Lib.Core.slprop)
+  (sq: squash (forall x . ~ (d.state_p x /\ (state_dict_singleton world_key pstate).state_p x)))
+: action_spec (state_dict_prod d (state_dict_singleton world_key pstate)) bool
+= fun _ st ->
+  let w : peep_tape = mk_proj_value st (state_dict_singleton world_key pstate) () world_key in
+  match peep_head w with
+  | None -> SResOnly false
+  | Some _ -> SUnknown
+
 (** Lemmas *)
 
 let singleton_value_eta

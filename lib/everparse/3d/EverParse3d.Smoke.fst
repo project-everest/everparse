@@ -126,8 +126,9 @@ let smoke_field_ptr_after_with_setter
   (sq: squash (Some? f))
   (sz: FStar.UInt64.t)
   (write_to: (ptr_t -> A.external_action d unit))
-: A.action #B.base_t #B.len_t #B.pos_t d bool false _
-= A.action_field_ptr_after_with_setter (Some?.v f) sz write_to
+  (sq_disj: squash (forall x . ~ (d.state_p x /\ A.peep_world_dict.state_p x)))
+: A.action #B.base_t #B.len_t #B.pos_t (state_dict_prod d A.peep_world_dict) bool false _
+= A.action_field_ptr_after_with_setter (Some?.v f) sz write_to sq_disj
 
 inline_for_extraction noextract
 let smoke_probe_then_validate

@@ -102,6 +102,9 @@ type inv =
      output types. The `Eloc_output` location carries this on its own, but a
      Pulse state_dict fuses invariant and footprint. *)
   | Inv_output : inv
+  (* --api pulse only: the prophecy of the outcomes of the client's
+     `field_ptr_after` (Peep) callbacks, see `A.peep_world`. *)
+  | Inv_world : inv
 
 noeq
 type eloc =
@@ -150,6 +153,7 @@ let rec subst_inv' subst (i:inv)
     | Inv_copy_buf x ->
       Inv_copy_buf (T.subst_expr subst x)
     | Inv_output -> i
+    | Inv_world -> i
 let subst_inv s = subst_index (subst_inv' s)
 
 let eq_tags e e' =
@@ -227,6 +231,7 @@ let rec free_vars_of_inv' (i:inv)
     | Inv_ptr x -> free_vars_of_expr x
     | Inv_copy_buf x -> free_vars_of_expr x
     | Inv_output -> []
+    | Inv_world -> []
 let free_vars_of_inv = map_index [] free_vars_of_inv'
 
 let rec free_vars_of_eloc' (e:eloc)
@@ -367,12 +372,14 @@ let rec typ_indexes_of_action (a:T.action)
         | Action_field_pos_32
         | Action_field_pos_64 -> typ_indexes_nil
         | Action_field_ptr_after _ write_to ->
-          Some (Inv_ptr (id_as_expr write_to)),
+          Some (if pulse ()
+                then Inv_conj (Inv_ptr (id_as_expr write_to)) Inv_world
+                else Inv_ptr (id_as_expr write_to)),
           Some (Eloc_ptr (id_as_expr write_to)),
           None,
           On_success false
         | Action_field_ptr_after_with_setter _ _ _ ->
-          (if pulse () then Some Inv_output else None),
+          (if pulse () then Some (Inv_conj Inv_output Inv_world) else None),
           Some Eloc_output,
           None,
           On_success false
@@ -408,6 +415,7 @@ let rec inv_copy_buf_keys (i:inv)
     | Inv_ptr _ -> []
     | Inv_copy_buf x -> [T.print_expr "" x]
     | Inv_output -> []
+    | Inv_world -> []
 
 let rec typ_indexes_of_parser (en:env) (p:T.parser)
   : ML typ_indexes
@@ -929,6 +937,8 @@ let rec pulse_state_dict_leaves (mname:string) (i:inv)
       [e, pulse_key_of e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
     | Inv_output ->
       [pulse_output_state_key, pulse_output_state_key, pulse_output_state_name]
+    | Inv_world ->
+      ["\"#world\"", "\"#world\"", "A.peep_world_dict"]
 
 let rec pulse_dedup_leaves (l:list (string & string & string))
   : ML (list (string & string & string))
@@ -1077,7 +1087,7 @@ let rec print_action (mname:string) (a:T.action)
             if not (pulse_has_field_ptr_after ())
             then A.error "The field_ptr_after action is only supported by the extern and static backends" A.dummy_range;
             Printf.sprintf
-              "(Action_field_ptr_after B.field_ptr_after () %s %s %s ())"
+              "(Action_field_ptr_after B.field_ptr_after () %s %s %s () ())"
               (pulse_key_arg_of (T.print_ident write_to))
               (T.print_expr mname sz)
               (T.print_ident write_to)
@@ -1094,7 +1104,7 @@ let rec print_action (mname:string) (a:T.action)
             if not (pulse_has_field_ptr_after ())
             then A.error "The field_ptr_after action is only supported by the extern and static backends" A.dummy_range;
             Printf.sprintf
-              "(atomic_action_call_extern (mk_field_ptr_after_with_setter (B.field_ptr_after_with_setter _) () %s (%s %s) _ ()))"
+              "(atomic_action_call_extern (mk_field_ptr_after_with_setter (B.field_ptr_after_with_setter _) () %s (%s %s) () _ ()))"
               (T.print_expr mname sz)
               (T.print_ident write_to_field)
               (T.print_expr mname write_to_obj)
@@ -1426,6 +1436,7 @@ let rec print_inv' mname (i:inv)
     | Inv_ptr x -> Printf.sprintf "(A.ptr_inv %s)" (T.print_expr mname x)
     | Inv_copy_buf x -> Printf.sprintf "(A.copy_buffer_inv %s)" (T.print_expr mname x)
     | Inv_output -> "A.true_inv"
+    | Inv_world -> "A.true_inv"
 let print_inv mname = print_index (print_inv' mname)
 
 let rec print_eloc' mname (e:eloc)

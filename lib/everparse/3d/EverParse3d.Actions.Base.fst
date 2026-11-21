@@ -2890,6 +2890,57 @@ fn action_field_pos_32
 // A backend that does not support an operation simply provides `None`.
 ////////////////////////////////////////////////////////////////////////////////
 
+assume val peep_world_ (w: S.peep_tape) : slprop
+
+let peep_world w = peep_world_ w
+
+assume val prophesy_peep_world_ (_: unit)
+: stt_ghost (Ghost.erased S.peep_tape) emp_inames emp (fun w -> peep_world w)
+
+let prophesy_peep_world () = prophesy_peep_world_ ()
+
+(* Not exported: only sound with a value that does not depend on the tape,
+   which `resolve_peep_world` enforces by being non-ghost. *)
+assume val resolve_peep_world_ (w: S.peep_tape) (o: option PM.ptr)
+: stt_ghost unit emp_inames
+    (peep_world w)
+    (fun _ -> peep_world (S.peep_tail w) ** pure (S.peep_head w == o))
+
+inline_for_extraction noextract
+fn resolve_peep_world
+  (ok: bool)
+  (r: ref PM.ptr)
+  (#v: Ghost.erased PM.ptr)
+  (#w: Ghost.erased S.peep_tape)
+requires pts_to r #1.0R v ** peep_world w
+ensures pts_to r #1.0R v ** peep_world (S.peep_tail w) **
+  pure (S.peep_head w == (if ok then Some (Ghost.reveal v) else None))
+{
+  resolve_peep_world_ w (if ok then Some (Ghost.reveal v) else None)
+}
+
+inline_for_extraction noextract
+fn resolve_peep_world_ptr
+  (ok: bool)
+  (p: PM.ptr)
+  (#w: Ghost.erased S.peep_tape)
+requires peep_world w
+ensures peep_world (S.peep_tail w) **
+  pure (S.peep_head w == (if ok then Some p else None))
+{
+  resolve_peep_world_ w (if ok then Some p else None)
+}
+
+ghost
+fn resolve_peep_world_none
+  (#w: Ghost.erased S.peep_tape)
+  (_: unit)
+requires peep_world w
+ensures peep_world (S.peep_tail w) ** pure (S.peep_head w == None)
+{
+  resolve_peep_world_ w None
+}
+
 noextract
 inline_for_extraction
 fn action_field_ptr
@@ -2919,13 +2970,16 @@ fn action_field_ptr_after
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
-      (#ptr_t: Type0)
-      (f: field_ptr_after_t base_t len_t pos_t ptr_t)
+      (f: field_ptr_after_t base_t len_t pos_t)
       (name: Ghost.erased string)
       (sz: U64.t)
-      (write_to: ref ptr_t)
+      (write_to: ref PM.ptr)
+      (sq: squash (forall x . ~ ((state_dict_singleton name (pts_to write_to #1.0R)).state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to write_to #1.0R)) bool use_error_handler (S.aspec_unknown)
+: action #base_t #len_t #pos_t
+    (state_dict_prod (state_dict_singleton name (pts_to write_to #1.0R)) peep_world_dict)
+    bool use_error_handler
+    (S.aspec_field_ptr_after name (pts_to write_to #1.0R) peep_world sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2937,10 +2991,21 @@ fn action_field_ptr_after
   (start_pos: _)
   (extra: _)
 {
-  forevery_state_dict_singleton_unfold' _ _ _;
+  forevery_state_dict_prod_unfold
+    #(state_dict_singleton name (pts_to write_to #1.0R))
+    #peep_world_dict
+    () _;
+  forevery_state_dict_singleton_unfold' name (pts_to write_to #1.0R) _;
+  forevery_state_dict_singleton_unfold' S.world_key peep_world _;
   with w . assert (pts_to write_to #1.0R w);
-  let res = f _extra sz write_to sl_base sl_len sl_pos w contents_sl v_sl;
+  with pw . assert (peep_world pw);
+  let res = f _extra sz write_to sl_base sl_len sl_pos w pw contents_sl v_sl;
   forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) _;
+  forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
+  forevery_state_dict_prod_fold
+    (state_dict_singleton name (pts_to write_to #1.0R))
+    peep_world_dict
+    ();
   res
 }
 
@@ -3624,8 +3689,10 @@ fn action_field_ptr_after_with_setter
       (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
       (sz: U64.t)
       (write_to: (ptr_t -> external_action extra_state unit))
+      (sq: squash (forall x . ~ (extra_state.state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler (S.aspec_unknown)
+: action #base_t #len_t #pos_t (state_dict_prod extra_state peep_world_dict) bool use_error_handler
+    (S.aspec_field_ptr_after_with_setter peep_world sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3637,7 +3704,14 @@ fn action_field_ptr_after_with_setter
   (start_pos: _)
   (extra: _)
 {
-  f _extra sz write_to sl_base sl_len sl_pos contents_sl v_sl
+  forevery_state_dict_prod_unfold #extra_state #peep_world_dict () _;
+  forevery_state_dict_singleton_unfold' S.world_key peep_world _;
+  with pw . assert (peep_world pw);
+  let res = f _extra sz write_to sl_base sl_len sl_pos pw contents_sl v_sl;
+  with ex . assert (forevery_state extra_state ex);
+  forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
+  forevery_state_dict_prod_fold extra_state peep_world_dict ();
+  res
 }
 
 ////////////////////////////////////////////////////////////////////////////////

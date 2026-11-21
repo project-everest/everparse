@@ -56,7 +56,7 @@ let ___PUINT8 = E.___PUINT8
 noextract
 inline_for_extraction
 let field_ptr_after
-: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_static ___PUINT8)
+: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_static)
 = E.field_ptr_after
 
 [@@Common.specialize_backend]

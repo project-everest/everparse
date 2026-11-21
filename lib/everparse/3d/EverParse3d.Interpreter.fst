@@ -666,12 +666,14 @@ let mk_field_ptr_after_with_setter
     (_: squash (Some? f))
     (sz: U64.t)
     (write_to: (ptr_t -> extern_action d' unit))
+    (sq_disj: squash (forall x . ~ (d'.state_p x /\ A.peep_world_dict.state_p x)))
     ([@@@erasable] d: state_dict)
-    (sq: squash (state_dict_weaken_prop d' d))
-  : action_binding base_t len_t pos_t inst d use_error_handler bool
-  = A.action_forget_spec (A.action_weaken #base_t #len_t #pos_t #inst
-      (A.action_field_ptr_after_with_setter #_ #_ #_ #inst (Some?.v f) sz write_to)
-      d sq)
+    (sq: squash (state_dict_weaken_prop (state_dict_prod d' A.peep_world_dict) d))
+  : A.action #base_t #len_t #pos_t #inst d bool use_error_handler
+      (S.aspec_weaken (S.aspec_field_ptr_after_with_setter A.peep_world sq_disj) d sq)
+  = A.action_weaken #base_t #len_t #pos_t #inst
+      (A.action_field_ptr_after_with_setter #_ #_ #_ #inst (Some?.v f) sz write_to sq_disj)
+      d sq
 
 noeq
 type atomic_action
@@ -703,14 +705,15 @@ type atomic_action
       atomic_action base_t len_t pos_t inst d use_error_handler true false EverParse3d.PtrModel.ptr
 
   | Action_field_ptr_after:
-      #ptr_t:Type0 ->
-      f:option (A.field_ptr_after_t base_t len_t pos_t #inst ptr_t) ->
+      f:option (A.field_ptr_after_t base_t len_t pos_t #inst) ->
       _:squash (Some? f) ->
       name:Ghost.erased string ->
       sz:U64.t ->
-      write_to:ref ptr_t ->
+      write_to:ref EverParse3d.PtrModel.ptr ->
+      sq_disj:squash (forall x . ~ ((state_dict_singleton name (pts_to write_to #1.0R)).state_p x /\
+                                    A.peep_world_dict.state_p x)) ->
       _:squash (state_dict_weaken_prop
-                  (state_dict_singleton name (pts_to write_to #1.0R)) d) ->
+                  (state_dict_prod (state_dict_singleton name (pts_to write_to #1.0R)) A.peep_world_dict) d) ->
       atomic_action base_t len_t pos_t inst d use_error_handler false false bool
 
   | Action_deref:
@@ -779,8 +782,8 @@ let atomic_action_as_spec
     | Action_field_pos_64 -> S.aspec_field_pos_64
     | Action_field_pos_32 -> S.aspec_field_pos_32
     | Action_field_ptr f sq -> S.aspec_field_ptr
-    | Action_field_ptr_after f sq name sz write_to sq' ->
-      S.aspec_weaken S.aspec_unknown d sq'
+    | Action_field_ptr_after f sq name sz write_to sq_disj sq' ->
+      S.aspec_weaken (S.aspec_field_ptr_after name (pts_to write_to #1.0R) A.peep_world sq_disj) d sq'
     | Action_deref name x sq ->
       S.aspec_weaken (S.aspec_deref name (pts_to x #1.0R)) d sq
     | Action_deref_map decode name x sq ->
@@ -814,8 +817,8 @@ let atomic_action_as_action
       A.action_field_pos_32
     | Action_field_ptr f sq ->
       A.action_field_ptr (Some?.v f)
-    | Action_field_ptr_after f sq name sz write_to sq' ->
-      A.action_weaken (A.action_field_ptr_after (Some?.v f) name sz write_to) d sq'
+    | Action_field_ptr_after f sq name sz write_to sq_disj sq' ->
+      A.action_weaken (A.action_field_ptr_after (Some?.v f) name sz write_to sq_disj) d sq'
     | Action_deref name x sq ->
       A.action_weaken (A.action_deref name x) d sq
     | Action_deref_map decode name x sq ->
@@ -1657,7 +1660,10 @@ let rec as_vspec_wf
       as_vspec_wf typename t;
       VS.wf_with_action ha1 (as_parser t) (as_vspec typename t) (as_value_spec typename t) (action_as_spec a)
 
-    | T_with_dep_action _ #_ #_ #ha1 i a ->
+    | T_with_dep_action fldname #_ #_ #ha1 i a ->
+      assert_norm (as_parser (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == dtyp_as_parser i);
+      assert_norm (as_vspec typename (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == S.vspec_with_dep_action (dtyp_as_parser i) (dtyp_as_vspec i) (fun x -> action_as_spec (a typename x)));
+      assert_norm (as_value_spec typename (T_with_dep_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname i a) == VS.vs_with_dep_action (dtyp_as_value_spec i) (fun x -> action_as_spec (a typename x)));
       dtyp_wf i;
       VS.wf_with_dep_action ha1 (dtyp_as_parser i) (dtyp_as_vspec i) (dtyp_as_value_spec i) (fun x -> action_as_spec (a typename x))
 

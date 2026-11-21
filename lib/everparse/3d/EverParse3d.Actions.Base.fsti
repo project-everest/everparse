@@ -1035,27 +1035,75 @@ let field_ptr_t
     (fun res -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
       pure (res == PM.ptr_at (I.origin #base_t #len_t #pos_t sl_base) (U64.v start_pos)))
 
+(* The peep world: a prophecy of the outcomes of all future calls to the
+   client-provided primitive behind `field_ptr_after` (see
+   `S.aspec_field_ptr_after`.) Nothing is assumed about that primitive: the
+   prophecy is resolved with what it actually did, by `resolve_peep_world`.
+
+   Introducing a fresh peep world is always sound, since the tape is
+   arbitrary. Resolving it is sound since `resolve_peep_world` is not ghost:
+   its arguments are computationally relevant, so they cannot depend on the
+   (ghost) tape; and `peep_world` is not duplicable, so each outcome is
+   resolved at most once. *)
+val peep_world (w: S.peep_tape) : slprop
+
+val prophesy_peep_world (_: unit)
+: stt_ghost (Ghost.erased S.peep_tape) emp_inames emp (fun w -> peep_world w)
+
+inline_for_extraction noextract
+val resolve_peep_world
+  (ok: bool)
+  (r: ref PM.ptr)
+  (#v: Ghost.erased PM.ptr)
+  (#w: Ghost.erased S.peep_tape)
+: stt unit
+    (pts_to r #1.0R v ** peep_world w)
+    (fun _ -> pts_to r #1.0R v ** peep_world (S.peep_tail w) **
+      pure (S.peep_head w == (if ok then Some (Ghost.reveal v) else None)))
+
+inline_for_extraction noextract
+val resolve_peep_world_ptr
+  (ok: bool)
+  (p: PM.ptr)
+  (#w: Ghost.erased S.peep_tape)
+: stt unit
+    (peep_world w)
+    (fun _ -> peep_world (S.peep_tail w) **
+      pure (S.peep_head w == (if ok then Some p else None)))
+
+(* Resolving with a constant does not depend on the tape, so it can be ghost. *)
+val resolve_peep_world_none
+  (#w: Ghost.erased S.peep_tape)
+  (_: unit)
+: stt_ghost unit emp_inames
+    (peep_world w)
+    (fun _ -> peep_world (S.peep_tail w) ** pure (S.peep_head w == None))
+
+let peep_world_dict : state_dict = state_dict_singleton S.world_key peep_world
+
 inline_for_extraction noextract
 let field_ptr_after_t
   (base_t len_t pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-  (ptr_t: Type0)
 : Type0
 = (* Explicit, not a `solve_from_ctx` implicit: this arrow is *stored* (in the
      `option (field_ptr_after_t ...)` that each backend exports), so the tactic
      would have to run where the binders are not yet in scope. *)
   (_extra: inst.extra_t) ->
   (sz: U64.t) ->
-  (write_to: ref ptr_t) ->
+  (write_to: ref PM.ptr) ->
   (sl_base: base_t) ->
   (sl_len: len_t) ->
   (sl_pos: pos_t) ->
-  (w: Ghost.erased ptr_t) ->
+  (w: Ghost.erased PM.ptr) ->
+  (pw: Ghost.erased S.peep_tape) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt bool
-    (pts_to write_to #1.0R w ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
-    (fun _ -> exists* w' . pts_to write_to #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+    (pts_to write_to #1.0R w ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** peep_world pw)
+    (fun res -> exists* w' . pts_to write_to #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      peep_world (S.peep_tail pw) **
+      pure (S.peep_head pw == (if res then Some w' else None)))
 
 noextract
 inline_for_extraction
@@ -1073,13 +1121,16 @@ val action_field_ptr_after
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
-      (#ptr_t: Type0)
-      (f: field_ptr_after_t base_t len_t pos_t ptr_t)
+      (f: field_ptr_after_t base_t len_t pos_t)
       (name: Ghost.erased string)
       (sz: U64.t)
-      (write_to: ref ptr_t)
+      (write_to: ref PM.ptr)
+      (sq: squash (forall x . ~ ((state_dict_singleton name (pts_to write_to #1.0R)).state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to write_to #1.0R)) bool use_error_handler S.aspec_unknown
+: action #base_t #len_t #pos_t
+    (state_dict_prod (state_dict_singleton name (pts_to write_to #1.0R)) peep_world_dict)
+    bool use_error_handler
+    (S.aspec_field_ptr_after name (pts_to write_to #1.0R) peep_world sq)
 
 inline_for_extraction noextract
 val validate_all_zeros
@@ -1150,13 +1201,17 @@ let field_ptr_after_setter_t
   (sl_base: base_t) ->
   (sl_len: len_t) ->
   (sl_pos: pos_t) ->
+  (pw: Ghost.erased S.peep_tape) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt bool
     (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-      (exists* extra . forevery_state extra_state extra))
-    (fun _ -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-      (exists* extra' . forevery_state extra_state extra'))
+      (exists* extra . forevery_state extra_state extra) **
+      peep_world pw)
+    (fun res -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      (exists* extra' . forevery_state extra_state extra') **
+      peep_world (S.peep_tail pw) **
+      pure (res == Some? (S.peep_head pw)))
 
 
 (* The probe world: a prophecy of the outcomes of all future probes (see
@@ -1220,8 +1275,10 @@ val action_field_ptr_after_with_setter
       (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
       (sz: U64.t)
       (write_to: (ptr_t -> external_action extra_state unit))
+      (sq: squash (forall x . ~ (extra_state.state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler S.aspec_unknown
+: action #base_t #len_t #pos_t (state_dict_prod extra_state peep_world_dict) bool use_error_handler
+    (S.aspec_field_ptr_after_with_setter peep_world sq)
 
 noextract
 inline_for_extraction
