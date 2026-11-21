@@ -1175,45 +1175,6 @@ val validate_nlist_constant_size_without_actions
       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_nlist false n n_is_const p s)
 
-inline_for_extraction noextract
-let external_action
-  (extra_state: state_dict)
-  (a: Type0)
-: Type0
-= unit ->
-  stt a
-    (exists* extra . forevery_state extra_state extra)
-    (fun _ -> exists* extra' . forevery_state extra_state extra')
-
-
-inline_for_extraction noextract
-let field_ptr_after_setter_t
-  (base_t len_t pos_t: Type0)
-  {| inst: I.input_stream_inst base_t len_t pos_t  |}
-  (extra_state: state_dict)
-  (ptr_t: Type0)
-: Type0
-= (* Explicit for the same reason as `field_ptr_after_t`: this arrow is stored,
-     so `solve_from_ctx` cannot run with the binders in scope. *)
-  (_extra: inst.extra_t) ->
-  (sz: U64.t) ->
-  (write_to: (ptr_t -> external_action extra_state unit)) ->
-  (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
-  (pw: Ghost.erased S.peep_tape) ->
-  (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
-  (v_sl: Ghost.erased (Seq.seq U8.t)) ->
-  stt bool
-    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-      (exists* extra . forevery_state extra_state extra) **
-      peep_world pw)
-    (fun res -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-      (exists* extra' . forevery_state extra_state extra') **
-      peep_world (S.peep_tail pw) **
-      pure (res == Some? (S.peep_head pw)))
-
-
 (* The probe world: a prophecy of the outcomes of all future probes (see
    `S.aspec_probe_then_validate`). It absorbs everything a probe depends on
    but that is not modeled (the contents of the probed memory, concurrent
@@ -1253,16 +1214,69 @@ let copy_buffer_state_dict
 : state_dict
 = state_dict_singleton name (copy_buffer_state #_ #base_t #len_t #pos_t c)
 
+(* An external action (written in C) with a functional specification: `spec`
+   is uninterpreted and lawless (typically an abstract `val` generated in the
+   ExternalAPI module), so this type does not constrain the C code beyond
+   footprint: `vt` and `spec` can always be realized by a prophecy of all the
+   outcomes of the C function, provided `state` is not duplicable. *)
+inline_for_extraction noextract
+let external_action_spec
+  (#vt: Type0)
+  (name: string)
+  (state: vt -> slprop)
+  (a: Type0)
+  (spec: vt -> Tot (a & vt))
+: Type0
+= unit ->
+  (#w: Ghost.erased vt) ->
+  stt a
+    (state w)
+    (fun res -> state (snd (spec w)) ** pure (res == fst (spec w)))
+
+inline_for_extraction noextract
+let field_ptr_after_setter_t
+  (base_t len_t pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#vt: Type0)
+  (name: string)
+  (state: vt -> slprop)
+  (sp: PM.ptr -> vt -> Tot (unit & vt))
+: Type0
+= (* Explicit for the same reason as `field_ptr_after_t`: this arrow is stored,
+     so `solve_from_ctx` cannot run with the binders in scope. *)
+  (_extra: inst.extra_t) ->
+  (sz: U64.t) ->
+  (write_to: (p: PM.ptr -> external_action_spec name state unit (sp p))) ->
+  (sl_base: base_t) ->
+  (sl_len: len_t) ->
+  (sl_pos: pos_t) ->
+  (pw: Ghost.erased S.peep_tape) ->
+  (w: Ghost.erased vt) ->
+  (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
+  (v_sl: Ghost.erased (Seq.seq U8.t)) ->
+  stt bool
+    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      state w **
+      peep_world pw)
+    (fun res -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      state (S.setter_peep_result sp (S.peep_head pw) w) **
+      peep_world (S.peep_tail pw) **
+      pure (res == Some? (S.peep_head pw)))
+
 noextract
 inline_for_extraction
-val mk_external_action
+val mk_external_action_spec
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#extra_state: state_dict)
+      (#vt: Type0)
+      (#name: string)
+      (#state: vt -> slprop)
       (#a: Type0)
-      (f: external_action extra_state a)
+      (#spec: vt -> Tot (a & vt))
+      (f: external_action_spec name state a spec)
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state a use_error_handler S.aspec_unknown
+: action #base_t #len_t #pos_t (state_dict_singleton name state) a use_error_handler
+    (S.aspec_extern name state spec)
 
 noextract
 inline_for_extraction
@@ -1270,15 +1284,17 @@ val action_field_ptr_after_with_setter
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
-      (#extra_state: state_dict)
-      (#ptr_t: Type0)
-      (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
+      (#vt: Type0)
+      (#name: string)
+      (#state: vt -> slprop)
+      (#sp: PM.ptr -> vt -> Tot (unit & vt))
+      (f: field_ptr_after_setter_t base_t len_t pos_t name state sp)
       (sz: U64.t)
-      (write_to: (ptr_t -> external_action extra_state unit))
-      (sq: squash (forall x . ~ (extra_state.state_p x /\ peep_world_dict.state_p x)))
+      (write_to: (p: PM.ptr -> external_action_spec name state unit (sp p)))
+      (sq: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_prod extra_state peep_world_dict) bool use_error_handler
-    (S.aspec_field_ptr_after_with_setter peep_world sq)
+: action #base_t #len_t #pos_t (state_dict_prod (state_dict_singleton name state) peep_world_dict) bool use_error_handler
+    (S.aspec_field_ptr_after_with_setter name state sp peep_world sq)
 
 noextract
 inline_for_extraction

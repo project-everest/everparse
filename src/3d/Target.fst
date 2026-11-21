@@ -2062,20 +2062,28 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (print_typ mname oe.oe_t)
           (Some?.v oe.oe_bitwidth)
       end in
+    (* The setter is specified by an uninterpreted, lawless function on the
+       abstract values of the output state (see
+       EverParse3d.Actions.Base.external_action_spec.) *)
+    let spec_name = Ast.reserved_prefix ^ "spec_" ^ fn_name in
+    let x = Ast.reserved_prefix ^ "x" in
+    let v = Ast.reserved_prefix ^ "v" in
+    let decl (c_name:string) (arg2_t:string) =
+      Printf.sprintf
+        "\n\nnoextract val %s (_:%s) (_:%s) : ___output_state_values -> Tot ___output_state_values\n\n\
+         %sval %s (%s:%s) (%s:%s) : EverParse3d.Actions.Base.external_action_spec \"#output\" ___output_state_slprop unit (EverParse3d.Actions.Spec.setter_spec (%s %s %s))\n"
+        spec_name fn_arg1_t arg2_t
+        (print_c_function_attr fn_name) c_name x fn_arg1_t v arg2_t spec_name x v
+    in
     if not (Options.uses_pulse_api ()) && is_boolean_type oe.oe_t
     then
       let raw_name = Ast.reserved_prefix ^ "raw_" ^ fn_name in
       Printf.sprintf
-        "\n\n%sval %s (_:%s) (_:EverParse3d.CAbi.Boolean.t) : EverParse3d.Actions.Base.external_action ___output_state unit\n\
+        "%s\
          inline_for_extraction noextract\n\
          let %s (x:%s) (value:bool) = %s x (EverParse3d.CAbi.Boolean.of_bool value)\n\n"
-        (print_c_function_attr fn_name) raw_name fn_arg1_t fn_name fn_arg1_t raw_name
-    else Printf.sprintf
-      "\n\n%sval %s (_:%s) (_:%s) : EverParse3d.Actions.Base.external_action ___output_state unit\n\n"
-      (print_c_function_attr fn_name)
-      fn_name
-      fn_arg1_t
-      fn_arg2_t
+        (decl raw_name "EverParse3d.CAbi.Boolean.t") fn_name fn_arg1_t raw_name
+    else decl fn_name fn_arg2_t ^ "\n"
 
 let rec base_id_of_output_expr (oe:output_expr) : A.ident =
   match oe.oe_expr with
@@ -2207,15 +2215,26 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     let binders (ty:typ -> ML string) : ML string = params |> List.map (fun (i, t) ->
       Printf.sprintf "(%s:%s)" (print_ident i) (ty t)) |> String.concat " "
     in
-    let action = if pure then "EverParse3d.ProbeActions.pure_external_action"
-                 else "EverParse3d.Actions.Base.external_action ___output_state" in
     let adapt = not (Options.uses_pulse_api ()) &&
       (is_boolean_type ret || List.existsb (fun (_, t) -> is_boolean_type t) params) in
     let name = print_ident f in
     let raw_name = if adapt then Ast.reserved_prefix ^ "raw_" ^ name else name in
-    let declaration = Printf.sprintf "\n\n%sval %s %s : %s %s\n"
-      (print_c_function_attr f.A.v.A.name) raw_name (binders physical_type)
-      action (physical_type ret)
+    let declaration =
+      if pure
+      then Printf.sprintf "\n\n%sval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
+        (print_c_function_attr f.A.v.A.name) raw_name (binders physical_type)
+        (physical_type ret)
+      else
+        (* Specified by an uninterpreted, lawless function on the abstract
+           values of the output state (see
+           EverParse3d.Actions.Base.external_action_spec.) *)
+        let spec_name = Ast.reserved_prefix ^ "spec_" ^ name in
+        let args = params |> List.map (fun (i, _) -> print_ident i) |> String.concat " " in
+        Printf.sprintf "\n\nnoextract val %s %s : ___output_state_values -> Tot (%s & ___output_state_values)\n\n\
+          %sval %s %s : EverParse3d.Actions.Base.external_action_spec \"#output\" ___output_state_slprop %s (%s %s)\n"
+          spec_name (binders physical_type) (physical_type ret)
+          (print_c_function_attr f.A.v.A.name) raw_name (binders physical_type)
+          (physical_type ret) spec_name args
     in
     if not adapt then declaration
     else
@@ -2227,7 +2246,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
                    else "(fun x -> x)" in
       declaration ^ Printf.sprintf
         "\ninline_for_extraction noextract\nlet %s %s = EverParse3d.Boolean.Actions.%s %s (%s %s)\n"
-        name (binders logical_type) (if pure then "map_pure" else "map_external") decode raw_name args
+        name (binders logical_type) (if pure then "map_pure" else "map_external_spec") decode raw_name args
   in
   let s = String.concat "" (ds |> List.map (fun d ->
     match fst d with
@@ -2283,7 +2302,8 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
      open EverParse3d.Interpreter\n\
      module B = %s\n\
      %s\n\
-     noextract val ___output_state_slprop : unit -> Pulse.Lib.Core.slprop\n\n\
+     noextract val ___output_state_values : Type0\n\n\
+     noextract val ___output_state_slprop : ___output_state_values -> Pulse.Lib.Core.slprop\n\n\
      noextract let ___output_state : EverParse3d.State.state_dict = EverParse3d.State.state_dict_singleton \"#output\" ___output_state_slprop\n\n%s"
     modul
     (Options.pulse_backend_module ())

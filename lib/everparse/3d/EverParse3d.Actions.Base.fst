@@ -3650,17 +3650,22 @@ assume val resolve_probe_world (w: S.probe_tape) (o: S.probe_outcome)
 ////////////////////////////////////////////////////////////////////////////////
 
 (* In Low*, an external action was indexed by the set of memory locations it may
-   modify. Here it is indexed by the state dictionary entries it may modify. *)
+   modify. Here it is indexed by the state dictionary entry it may modify, and
+   by its functional spec (see `external_action_spec`.) *)
 
 inline_for_extraction noextract
-fn mk_external_action
+fn mk_external_action_spec
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#[@@@erasable] extra_state: state_dict)
+      (#vt: Type0)
+      (#name: string)
+      (#state: vt -> slprop)
       (#a: Type0)
-      (f: external_action extra_state a)
+      (#spec: vt -> Tot (a & vt))
+      (f: external_action_spec name state a spec)
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_unknown)
+: action #base_t #len_t #pos_t (state_dict_singleton name state) a use_error_handler
+    (S.aspec_extern name state spec)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3672,7 +3677,11 @@ fn mk_external_action
   (start_pos: _)
   (extra: _)
 {
-  f ()
+  forevery_state_dict_singleton_unfold' name state _;
+  with w . assert (state w);
+  let res = f () #w;
+  forevery_state_dict_singleton_fold name state (snd (spec w));
+  res
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3684,15 +3693,17 @@ fn action_field_ptr_after_with_setter
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
-      (#[@@@erasable] extra_state: state_dict)
-      (#ptr_t: Type0)
-      (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
+      (#vt: Type0)
+      (#name: string)
+      (#state: vt -> slprop)
+      (#sp: PM.ptr -> vt -> Tot (unit & vt))
+      (f: field_ptr_after_setter_t base_t len_t pos_t name state sp)
       (sz: U64.t)
-      (write_to: (ptr_t -> external_action extra_state unit))
-      (sq: squash (forall x . ~ (extra_state.state_p x /\ peep_world_dict.state_p x)))
+      (write_to: (p: PM.ptr -> external_action_spec name state unit (sp p)))
+      (sq: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_prod extra_state peep_world_dict) bool use_error_handler
-    (S.aspec_field_ptr_after_with_setter peep_world sq)
+: action #base_t #len_t #pos_t (state_dict_prod (state_dict_singleton name state) peep_world_dict) bool use_error_handler
+    (S.aspec_field_ptr_after_with_setter name state sp peep_world sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3704,13 +3715,15 @@ fn action_field_ptr_after_with_setter
   (start_pos: _)
   (extra: _)
 {
-  forevery_state_dict_prod_unfold #extra_state #peep_world_dict () _;
+  forevery_state_dict_prod_unfold #(state_dict_singleton name state) #peep_world_dict () _;
   forevery_state_dict_singleton_unfold' S.world_key peep_world _;
+  forevery_state_dict_singleton_unfold' name state _;
   with pw . assert (peep_world pw);
-  let res = f _extra sz write_to sl_base sl_len sl_pos pw contents_sl v_sl;
-  with ex . assert (forevery_state extra_state ex);
+  with w . assert (state w);
+  let res = f _extra sz write_to sl_base sl_len sl_pos pw w contents_sl v_sl;
   forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
-  forevery_state_dict_prod_fold extra_state peep_world_dict ();
+  forevery_state_dict_singleton_fold name state (S.setter_peep_result sp (S.peep_head pw) w);
+  forevery_state_dict_prod_fold (state_dict_singleton name state) peep_world_dict ();
   res
 }
 

@@ -616,19 +616,6 @@ let rec probe_action_as_probe_m
    still tracks them and they discipline where an action may be placed. They
    are simply ignored by the denotation. *)
 
-[@@specialize]
-let action_binding
-      (base_t: Type0) (len_t: Type0) (pos_t: Type0)
-      (inst: I.input_stream_inst base_t len_t pos_t)
-      ([@@@erasable] d: state_dict)
-      (use_error_handler:bool)
-      (a:Type0)
-  : Type u#0
-  = A.action #base_t #len_t #pos_t #inst d a use_error_handler S.aspec_unknown
-
-[@@specialize]
-let extern_action ([@@@erasable] d: state_dict) (t: Type0) = A.external_action d t
-
 (* An external action, declared at whatever `state_dict` it actually needs,
    weakened into the ambient dictionary of the enclosing type. The weakening
    obligation `state_dict_weaken_prop` is a decidable computation over the
@@ -639,12 +626,16 @@ let mk_action_binding
     (#inst: I.input_stream_inst base_t len_t pos_t)
     (#use_error_handler:bool)
     (#t: Type0)
-    (#[@@@erasable] d': state_dict)
-    ($f: extern_action d' t)
+    (#vt: Type0)
+    (#name: string)
+    (#state: vt -> slprop)
+    (#spec: vt -> Tot (t & vt))
+    ($f: A.external_action_spec name state t spec)
     ([@@@erasable] d: state_dict)
-    (sq: squash (state_dict_weaken_prop d' d))
-  : action_binding base_t len_t pos_t inst d use_error_handler t
-  = A.action_forget_spec (A.action_weaken #base_t #len_t #pos_t #inst (A.mk_external_action f) d sq)
+    (sq: squash (state_dict_weaken_prop (state_dict_singleton name state) d))
+  : A.action #base_t #len_t #pos_t #inst d t use_error_handler
+      (S.aspec_weaken (S.aspec_extern name state spec) d sq)
+  = A.action_weaken #base_t #len_t #pos_t #inst (A.mk_external_action_spec f) d sq
 
 (* The field-pointer setter is an external action in disguise: `write_to` runs
    at the output type's own `state_dict`, not at the ambient one. Building it
@@ -660,17 +651,19 @@ let mk_field_ptr_after_with_setter
     (#inst: I.input_stream_inst base_t len_t pos_t)
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
     (#use_error_handler:bool)
-    (#ptr_t: Type0)
-    (#[@@@erasable] d': state_dict)
-    ($f: option (A.field_ptr_after_setter_t base_t len_t pos_t #inst d' ptr_t))
+    (#vt: Type0)
+    (#name: string)
+    (#state: vt -> slprop)
+    (#sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
+    ($f: option (A.field_ptr_after_setter_t base_t len_t pos_t #inst name state sp))
     (_: squash (Some? f))
     (sz: U64.t)
-    (write_to: (ptr_t -> extern_action d' unit))
-    (sq_disj: squash (forall x . ~ (d'.state_p x /\ A.peep_world_dict.state_p x)))
+    (write_to: (p: EverParse3d.PtrModel.ptr -> A.external_action_spec name state unit (sp p)))
+    (sq_disj: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ A.peep_world_dict.state_p x)))
     ([@@@erasable] d: state_dict)
-    (sq: squash (state_dict_weaken_prop (state_dict_prod d' A.peep_world_dict) d))
+    (sq: squash (state_dict_weaken_prop (state_dict_prod (state_dict_singleton name state) A.peep_world_dict) d))
   : A.action #base_t #len_t #pos_t #inst d bool use_error_handler
-      (S.aspec_weaken (S.aspec_field_ptr_after_with_setter A.peep_world sq_disj) d sq)
+      (S.aspec_weaken (S.aspec_field_ptr_after_with_setter name state sp A.peep_world sq_disj) d sq)
   = A.action_weaken #base_t #len_t #pos_t #inst
       (A.action_field_ptr_after_with_setter #_ #_ #_ #inst (Some?.v f) sz write_to sq_disj)
       d sq
@@ -745,7 +738,7 @@ type atomic_action
      (via the `t_probe_then_validate` smart constructor) go through here. This
      is what keeps `atomic_action` in universe 1: storing the callee's own
      `state_dict` in the AST would raise it. The spec of the action is stored
-     along with it (it is `S.aspec_unknown` for external actions.) *)
+     along with it (`S.aspec_extern` for external actions.) *)
   | Action_call:
       #b:bool ->
       #t:Type0 ->
@@ -1980,7 +1973,7 @@ let atomic_action_call
   = Action_call a
 
 (* Same, but at `b = false`, for calls to external actions. Unlike
-   `action_binding` in the Low* interpreter, the Pulse one is not indexed by
+   `action_binding` in the Low* interpreter, `A.action` is not indexed by
    `b`, so at those call sites `b` would otherwise be unsolvable. `false`
    is what the Low* `mk_action_binding` returns. *)
 [@@specialize]

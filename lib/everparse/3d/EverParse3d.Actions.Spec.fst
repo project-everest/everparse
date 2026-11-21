@@ -625,17 +625,50 @@ let aspec_field_ptr_after
       (mk_singleton_value world_key pstate (peep_tail w))
       ())
 
-(* `field_ptr_after` with an output setter: the setter is an external action,
-   hence unspecified (see `aspec_unknown`). *)
+(* External actions and output setters (written in C) are specified by
+   uninterpreted, lawless functions `spec` on the abstract values `vt` of their
+   state (see `EverParse3d.Actions.Base.external_action_spec`): the action
+   returns `fst (spec w)` and leaves the state at `snd (spec w)`. *)
+let aspec_extern
+  (#vt: Type0) (name: string) (state: vt -> Pulse.Lib.Core.slprop)
+  (#a: Type0) (spec: vt -> Tot (a & vt))
+: action_spec (state_dict_singleton name state) a
+= fun _ s -> SOk (fst (spec (s name))) (mk_singleton_value name state (snd (spec (s name))))
+
+let map_extern_spec
+  (#vt: Type0) (#a #b: Type0) (decode: a -> Tot b) (spec: vt -> Tot (a & vt))
+  (w: vt)
+: Tot (b & vt)
+= (decode (fst (spec w)), snd (spec w))
+
+let setter_spec
+  (#vt: Type0) (spec: vt -> Tot vt) (w: vt)
+: Tot (unit & vt)
+= ((), spec w)
+
+let setter_peep_result
+  (#vt: Type0) (sp: PM.ptr -> vt -> Tot (unit & vt)) (o: option PM.ptr) (v: vt)
+: Tot vt
+= match o with
+  | None -> v
+  | Some p -> snd (sp p v)
+
+(* `field_ptr_after` with an output setter, specified by `sp` (see
+   `aspec_extern`), whose state is stored under `name`. If the Peep callback
+   fails, the setter is not called. *)
 let aspec_field_ptr_after_with_setter
-  (#d: state_dict) (pstate: peep_tape -> Pulse.Lib.Core.slprop)
-  (sq: squash (forall x . ~ (d.state_p x /\ (state_dict_singleton world_key pstate).state_p x)))
-: action_spec (state_dict_prod d (state_dict_singleton world_key pstate)) bool
+  (#vt: Type0) (name: string) (state: vt -> Pulse.Lib.Core.slprop)
+  (sp: PM.ptr -> vt -> Tot (unit & vt))
+  (pstate: peep_tape -> Pulse.Lib.Core.slprop)
+  (sq: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ (state_dict_singleton world_key pstate).state_p x)))
+: action_spec (state_dict_prod (state_dict_singleton name state) (state_dict_singleton world_key pstate)) bool
 = fun _ st ->
   let w : peep_tape = mk_proj_value st (state_dict_singleton world_key pstate) () world_key in
-  match peep_head w with
-  | None -> SResOnly false
-  | Some _ -> SUnknown
+  let v : vt = mk_proj_value st (state_dict_singleton name state) () name in
+  SOk (Some? (peep_head w)) (mk_prod_value
+    (mk_singleton_value name state (setter_peep_result sp (peep_head w) v))
+    (mk_singleton_value world_key pstate (peep_tail w))
+    ())
 
 (** Lemmas *)
 

@@ -679,11 +679,24 @@ assignment, sequencing, ``var`` bindings and conditionals all get exact
 specs. Arrays and strings whose element types have actions are specified
 as a left fold (like ``fold_left``) of the element spec over the
 elements: the action state after the array is the result of running the
-element spec on each element in turn, stopping at the first failure. The
-following are currently specified as ``VUnknown`` or as
-returning an unknown result: ``extern`` functions and output-type
-setters, including the setter called by ``field_ptr_after`` with an
-output-type field (whose failure is nonetheless specified, see below).
+element spec on each element in turn, stopping at the first failure.
+
+``extern`` functions and output-type setters (written in C) are
+specified by uninterpreted, lawless functions on the abstract values of
+the output state. The generated ``M.ExternalAPI`` module declares an
+abstract type ``___output_state_values`` of such values, the output state
+``___output_state_slprop : ___output_state_values -> slprop``, and, for
+each extern function ``f`` (resp. setter ``set_x``), a spec
+``___spec_f`` (resp. ``___spec_set_x``) taking the same arguments and
+mapping the output state to a pair of the result and the new output
+state (resp. to the new output state). The C function is typed as
+``EverParse3d.Actions.Base.external_action_spec``: it returns
+``fst (___spec_f args w)`` and leaves the output state at
+``snd (___spec_f args w)``. Thus, the final output state is an exact
+symbolic log of the calls (e.g. ``___spec_set_y o b (___spec_set_x o a
+w0)``.) No law (e.g. that a getter returns what a setter set) is
+assumed, so these specs do not constrain the C code: they can always be
+realized by a prophecy of the outcomes of all calls.
 
 ``field_ptr`` (buffer backend) is specified as
 ``EverParse3d.PtrModel.ptr_at origin start``: the pointer ``start``
@@ -719,7 +732,7 @@ action state under the reserved key ``"#world"``, so the generated state
 dictionaries of the types that use ``field_ptr_after`` include it. Each
 ``field_ptr_after`` consumes one outcome: it fails if the outcome is
 ``None``, and otherwise writes ``p`` to the destination pointer (or, with
-an output-type field, calls the setter, whose effect is unspecified). As
+an output-type field, calls the setter, with its spec as above). As
 for probes, nothing is assumed about the C callback; the trusted
 assumptions are that a fresh peep world can always be introduced
 (``EverParse3d.Actions.Base.prophesy_peep_world``) and that it is

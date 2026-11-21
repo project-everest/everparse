@@ -113,21 +113,23 @@ module A = EverParse3d.Actions.Base
 
 inline_for_extraction noextract
 let smoke_external_action
-  (d: state_dict)
-  (f: A.external_action d unit)
-: A.action #B.base_t #B.len_t #B.pos_t d unit false _
-= A.mk_external_action f
+  (#vt: Type0) (name: string) (state: vt -> slprop)
+  (spec: vt -> Tot (unit & vt))
+  (f: A.external_action_spec name state unit spec)
+: A.action #B.base_t #B.len_t #B.pos_t (state_dict_singleton name state) unit false
+    (EverParse3d.Actions.Spec.aspec_extern name state spec)
+= A.mk_external_action_spec f
 
 inline_for_extraction noextract
 let smoke_field_ptr_after_with_setter
-  (d: state_dict)
-  (#ptr_t: Type0)
-  (f: option (A.field_ptr_after_setter_t B.base_t B.len_t B.pos_t d ptr_t))
+  (#vt: Type0) (name: string) (state: vt -> slprop)
+  (sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
+  (f: option (A.field_ptr_after_setter_t B.base_t B.len_t B.pos_t name state sp))
   (sq: squash (Some? f))
   (sz: FStar.UInt64.t)
-  (write_to: (ptr_t -> A.external_action d unit))
-  (sq_disj: squash (forall x . ~ (d.state_p x /\ A.peep_world_dict.state_p x)))
-: A.action #B.base_t #B.len_t #B.pos_t (state_dict_prod d A.peep_world_dict) bool false _
+  (write_to: (p: EverParse3d.PtrModel.ptr -> A.external_action_spec name state unit (sp p)))
+  (sq_disj: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ A.peep_world_dict.state_p x)))
+: A.action #B.base_t #B.len_t #B.pos_t (state_dict_prod (state_dict_singleton name state) A.peep_world_dict) bool false _
 = A.action_field_ptr_after_with_setter (Some?.v f) sz write_to sq_disj
 
 inline_for_extraction noextract

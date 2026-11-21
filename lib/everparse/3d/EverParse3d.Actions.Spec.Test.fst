@@ -251,16 +251,34 @@ let field_ptr_after_correct
   )
 = ()
 
-(* With an output setter, failure is still determined by the peep world. *)
+(* With an output setter `sp` (an uninterpreted, lawless function on the
+   abstract values of the output state): on success, the output state becomes
+   `snd (sp p v)`; on failure, it is unchanged. *)
 let field_ptr_after_with_setter_correct
-  (d: state_dict) (pstate: S.peep_tape -> slprop)
-  (sq: squash (forall x . ~ (d.state_p x /\ (state_dict_singleton S.world_key pstate).state_p x)))
-  (e: S.aenv) (st: forevery_values (state_dict_prod d (state_dict_singleton S.world_key pstate)))
+  (#vt: Type0) (name: string) (state: vt -> slprop)
+  (sp: PM.ptr -> vt -> Tot (unit & vt))
+  (pstate: S.peep_tape -> slprop)
+  (sq: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ (state_dict_singleton S.world_key pstate).state_p x)))
+  (e: S.aenv) (st: forevery_values (state_dict_prod (state_dict_singleton name state) (state_dict_singleton S.world_key pstate)))
 : Lemma (
     let w : S.peep_tape = mk_proj_value st (state_dict_singleton S.world_key pstate) () S.world_key in
-    match S.aspec_field_ptr_after_with_setter #d pstate sq e st with
-    | S.SResOnly false -> None? (S.peep_head w)
-    | S.SUnknown -> Some? (S.peep_head w)
+    let v : vt = mk_proj_value st (state_dict_singleton name state) () name in
+    let next v' = mk_prod_value
+      (mk_singleton_value name state v')
+      (mk_singleton_value S.world_key pstate (S.peep_tail w)) () in
+    match S.aspec_field_ptr_after_with_setter name state sp pstate sq e st, S.peep_head w with
+    | S.SOk true s', Some p -> s' == next (snd (sp p v))
+    | S.SOk false s', None -> s' == next v
     | _ -> False
   )
+= ()
+
+(* An output setter `set` (C code) is specified by its uninterpreted, lawless
+   spec `set_spec`: the final output state is exactly `set_spec x w`. *)
+let setter_correct
+  (#vt: Type0) (name: string) (state: vt -> slprop)
+  (set_spec: vt -> Tot vt)
+  (e: S.aenv) (st: forevery_values (state_dict_singleton name state))
+: Lemma (S.aspec_extern name state (S.setter_spec set_spec) e st ==
+    S.SOk () (mk_singleton_value name state (set_spec (st name))))
 = ()
