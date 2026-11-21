@@ -102,18 +102,25 @@ holding fractional permission `pm` on the input bytes it borrows.
   written bytes are the DER encoding of a value of `k`, and return
   `JIT_OK`, `JIT_NO_SPACE` (the encoding does not fit) or `JIT_INVALID`
   (it is not the DER encoding of a value of `k`), so all constraints of
-  `k` become runtime checks. Where validity is not compositional (because
-  of ANY), the check is made over the smallest enclosing content, which is
-  then written again by the raw writer and validated within its own bounds
-  (`jit_fix`, `jit_local`), so the top-level JIT writer never returns
-  `JIT_RETRY`. Proofs: `ASN1.Pulse.JitWriter.Lemmas`.
+  `k` become runtime checks. They are single-pass: every check reads the
+  input node right before writing it, and nothing is read back from the
+  output (except for sorting SET and SET OF). They are strict where
+  validity is not compositional: an ANY slice must be exactly one TLV, and
+  the key of an ADB fallback must not be one of the literals of the table
+  (otherwise `JIT_INVALID`, even if the written bytes would happen to be
+  valid). Hence `JIT_INVALID` implies that the bytes are not valid only if
+  the schema has neither ANY nor ADB fallback (`ex_k k`). The top-level
+  JIT writer never returns `JIT_RETRY`. Proofs:
+  `ASN1.Pulse.JitWriter.Lemmas`.
 
 * **JIT writers of raw values** (`ASN1.Pulse.RawJitWriter`,
   `jit_write_raw`): the same JIT writer, seen as a writer of raw values
   `y: ASN1.Spec.Raw.asn1_raw_t k` (`asn1_raw_rel k pm x' y`,
   `ASN1.Pulse.RawValueRel`): `JIT_OK` iff `check_ser k () y == Some x` and
   `Ser.asn1_enc k x` fits, which is then written; `JIT_INVALID` implies
-  `check_ser k () y == None`. It runs `jit_writer` on the raw bytes
+  `check_ser k () y == None` if `ex_k k` (with ANY or an ADB fallback, the
+  strict checks may reject; they never do on the bytes of a raw value,
+  but this is not proven). It runs `jit_writer` on the raw bytes
   `rb k y` of `y` (`ASN1.Pulse.RawBytes`), through a ghost bridge between
   the two relations (`ASN1.Pulse.RawBridge`).
   On impl descriptors (`d: adesc k t`, `ASN1.Pulse.Rel`),

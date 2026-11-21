@@ -400,3 +400,38 @@ let not_lit_of_ne (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit ke
     Classical.move_requires (lit_unique key_k kx) c0
   end
 #pop-options
+
+(* DEFAULT of any terminal (including PREFIXED): a valid TLV other than the
+   encoding of the default value is accepted as a present value *)
+
+module Co = ASN1.Pulse.Constructed
+
+#push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
+let default_of_ne (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (c: bytes)
+: Lemma
+  (requires (In.adb_key_supported k /\
+    L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (ASN1_TERMINAL k))) c /\
+    ~ (c == WA.raw_key_enc id0 k defl)))
+  (ensures (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_content k (key_of_lit k defl)))) c))
+= let pc = asn1_content_as_parser (ASN1_TERMINAL k) in
+  L.ilc_tlv id0 #(ASN1_TERMINAL k) pc c;
+  eliminate exists (c0: bytes) . c == enc_tlv id0 true c0 /\ L.acc #asn1_weak_parser_kind pc c0 /\ Seq.length c0 < 4294967296
+  with begin
+    raw_key_enc_c id0 k defl;
+    Classical.move_requires (lit_unique k defl) c0;
+    L.acc_default k (key_of_lit k defl) c0;
+    L.acc_tlv id0 #(Co.default_content k (key_of_lit k defl)) (asn1_content_as_parser (Co.default_content k (key_of_lit k defl))) c0
+  end
+
+let default_back (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (c: bytes)
+: Lemma
+  (requires (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_content k (key_of_lit k defl)))) c))
+  (ensures (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (ASN1_TERMINAL k))) c))
+= let pd = asn1_content_as_parser (Co.default_content k (key_of_lit k defl)) in
+  L.ilc_tlv id0 #(Co.default_content k (key_of_lit k defl)) pd c;
+  eliminate exists (c0: bytes) . c == enc_tlv id0 true c0 /\ L.acc #asn1_weak_parser_kind pd c0 /\ Seq.length c0 < 4294967296
+  with begin
+    L.acc_default k (key_of_lit k defl) c0;
+    L.acc_tlv id0 #(ASN1_TERMINAL k) (asn1_content_as_parser (ASN1_TERMINAL k)) c0
+  end
+#pop-options

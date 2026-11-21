@@ -7,9 +7,12 @@ module ASN1.Pulse.TypedWriter
    the relation to the value-level relation of the raw writer
    (`ASN1.Pulse.RawVConv.arel_to_raw`), runs the raw writer
    (`ASN1.Pulse.RawJitWriter.jit_write_raw_d`), and converts back. Since
-   `check_ser k () (forget k v) == Some v`, it never returns JIT_INVALID:
+   `check_ser k () (forget k v) == Some v`, it returns:
    - JIT_OK: `Ser.asn1_enc k v` was written right before the current position;
-   - JIT_NO_SPACE: `Ser.asn1_enc k v` does not fit. *)
+   - JIT_NO_SPACE: `Ser.asn1_enc k v` does not fit;
+   - JIT_INVALID only if `~ (ex_k k)`, i.e. the schema has ANY or an ADB
+     fallback and the (unproven) strictness checks of the JIT writer
+     rejected the value (see `ASN1.Pulse.RawJitWriter`.) *)
 
 open Pulse.Lib.Pervasives
 open ASN1.Base
@@ -38,7 +41,7 @@ let typed_jit_post (#s: _) (k: asn1_k s) (v: asn1_t k) (p: nat) (b: SB.bytes) (r
   Seq.slice b' p (Seq.length b) == Seq.slice b p (Seq.length b) /\
   (res == JIT_OK ==> W.r2l_post (Ser.asn1_enc k v) p b true p' b') /\
   (res == JIT_NO_SPACE ==> Seq.length (Ser.asn1_enc k v) > p) /\
-  (res == JIT_OK \/ res == JIT_NO_SPACE)
+  (res == JIT_OK \/ res == JIT_NO_SPACE \/ (res == JIT_INVALID /\ ex_k k == false))
 
 inline_for_extraction
 let typed_jit_writer_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) =

@@ -170,7 +170,7 @@ let parse_rec : aparser #rec_t #(asn1_t rec_k) (arel true rec_desc) #asn1_strong
   delta_only [`%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d];
   zeta; iota; primops]]
-let jit_rec : jwx (raw_arel rec_desc) (kacc rec_k) 1.0R =
+let jit_rec : jwr (ex_k rec_k) (raw_arel rec_desc) (kacc rec_k) 1.0R =
   fun x' #y out pos #v #p -> jit_writer_d rec_desc rec_ok 1.0R x' #y out pos #v #p
 
 [@@normalize_for_extraction [
@@ -191,6 +191,9 @@ let jit_raw_rec : raw_jit_writer_d_t rec_desc rec_ok 1.0R =
 let jit_typed_rec : typed_jit_writer_d_t rec_desc 1.0R =
   fun x' #v out pos #b #p -> write_typed_d rec_desc rec_ok 1.0R (jit_write_raw_d rec_desc rec_ok 1.0R (jit_writer_d rec_desc rec_ok (1.0R /. 2.0R))) x' #v out pos #b #p
 
+(* No ANY, no ADB fallback: the typed writer never returns JIT_INVALID *)
+let rec_ex () : Lemma (ex_k rec_k == true) = assert_norm (ex_k rec_k == true)
+
 (* Parse then write: if the output fits, the bytes written are exactly the
    parsed input. *)
 fn roundtrip_rec (input: S.slice U8.t) (#w: Ghost.erased SB.bytes) (#v: Ghost.erased (asn1_t rec_k))
@@ -205,6 +208,7 @@ ensures exists* b' p' . S.pts_to input w ** pts_to out b' ** pts_to pos p' **
   let x = parse_rec input #1.0R #w #v;
   parsed_encodable_d rec_k w v;
   ASN1.Pulse.RelKeep.to_writer rec_desc 1.0R x v;
+  rec_ex ();
   let res = jit_typed_rec x #v out pos;
   Trade.elim_trade (arel false rec_desc 1.0R x v) _;
   Trade.elim_trade _ _;
@@ -294,6 +298,9 @@ let parse_outer : aparser #outer_t #(asn1_t outer_k) (arel true outer_desc) #asn
 let jit_typed_outer : typed_jit_writer_d_t outer_desc 1.0R =
   fun x' #v out pos #b #p -> write_typed_d outer_desc outer_ok 1.0R (jit_write_raw_d outer_desc outer_ok 1.0R (jit_writer_d outer_desc outer_ok (1.0R /. 2.0R))) x' #v out pos #b #p
 
+(* No ANY, no ADB fallback: the typed writer never returns JIT_INVALID *)
+let outer_ex () : Lemma (ex_k outer_k == true) = assert_norm (ex_k outer_k == true)
+
 (* Parse then write: the parsed value, with its kept bytes, is handed to the
    writer (which only needs `arel false`) and the relation of the parser is
    restored afterwards. *)
@@ -309,6 +316,7 @@ ensures exists* b' p' . S.pts_to input w ** pts_to out b' ** pts_to pos p' **
   let x = parse_outer input #1.0R #w #v;
   parsed_encodable_d outer_k w v;
   ASN1.Pulse.RelKeep.to_writer outer_desc 1.0R x v;
+  outer_ex ();
   let res = jit_typed_outer x #v out pos;
   Trade.elim_trade (arel false outer_desc 1.0R x v) _;
   Trade.elim_trade _ _;

@@ -253,11 +253,19 @@ A byte buffer is a slice:
   On failure, the bytes of ``out`` after ``*pos`` are unchanged. The
   writer also does what DER requires of the encoder: it omits a DEFAULT
   component equal to its default value, and sorts SET components and SET
-  OF elements. ``JIT_RETRY`` is internal and never returned.
+  OF elements. It makes a single pass, never reading back what it
+  wrote (except to sort SET and SET OF), so it is stricter than DER in
+  two corner cases: an ANY value must be exactly one TLV, and an ANY
+  DEFINED BY key that selects the fallback must not be one of the keys
+  of the table; otherwise it returns ``JIT_INVALID``.
+  ``JIT_RETRY`` is internal and never returned.
 
 ``write_T_typed``
   The same C code as ``write_T``, with a stronger F\* precondition (see
-  :ref:`asn1-pulse-api`), under which it never returns ``JIT_INVALID``.
+  :ref:`asn1-pulse-api`), under which it never returns ``JIT_INVALID`` if ``T`` contains neither
+  ANY nor ANY DEFINED BY with a fallback (for those, ``JIT_INVALID`` is
+  only possible because of the strict checks above, and does not happen
+  on values obtained from the typed API in practice).
 
 Here is a round trip with ``Msg``:
 

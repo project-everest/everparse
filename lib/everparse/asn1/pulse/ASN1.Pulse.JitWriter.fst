@@ -33,39 +33,43 @@ module ASN1.Pulse.JitWriter
      INTEGERs, the range of the machine integer), restrictions, and
      disequality with the DEFAULT value; their TLV is then correct by
      construction. No scratch buffer is used;
-   - ANY values are validated on the input slice, before being copied;
+   - ANY values are validated on the input slice, before being copied:
+     each must be exactly one TLV;
    - ANY DEFINED BY: the prefix items and the payload are checked by
-     their own JIT writers, and the fallback key by the terminal checks;
+     their own JIT writers, and the fallback key by the terminal checks
+     and, on the input value, by its disequality with each literal key;
      acceptance is proven structurally (`ASN1.Pulse.JitAdb`). A literal
-     key is written as a constant; only a fallback key, once written, is
-     read back, to check its disequality with each literal;
-   - DEFAULT components of PREFIXED type are validated locally, right
-     after being written, within their own bounds.
+     key is written as a constant;
+   - DEFAULT components of PREFIXED type are compared with the DEFAULT
+     value on the input (`ASN1.Pulse.DefaultEq`), then checked as
+     terminals.
 
-   So each byte is validated at most once, while it is still in the cache.
-   `jit_writer` returns the exact result: JIT_OK, JIT_NO_SPACE (the
-   encoding does not fit) or JIT_INVALID (the value is not conforming),
-   without any second pass over the whole value.
+   So the writer makes one single pass: every check is on the input value,
+   before writing it, and the output is never read back, except by the
+   sorted insertion of SET and SET OF elements. `jit_writer` returns
+   JIT_OK, JIT_NO_SPACE (the encoding does not fit) or JIT_INVALID.
 
    Internally, a JIT writer returns JIT_OK, JIT_NO_SPACE, JIT_INVALID or
-   JIT_RETRY (it could not decide); an exact writer (`jwx`) never returns
-   JIT_RETRY. Validity is compositional, so that a failed check yields
-   JIT_INVALID (`jit_iff`), through terminals, RESTRICTED and DEFAULT
-   terminals, TLVs (a content of 2^32 bytes or more is also invalid),
-   PREFIXED types, CHOICEs, SEQUENCEs and their components (each present
-   component is one TLV with one of its own identifiers, and, by the
-   well-formedness of the tags, the rest does not start with any of them:
-   `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitWriter.SeqLemmas`), SET, SET OF,
-   SEQUENCE OF, and ANY DEFINED BY (prefix items as SEQUENCE components,
-   `ASN1.Pulse.JitAdbSeq`; literal alternatives, `ASN1.Pulse.JitAdbKey`).
+   JIT_RETRY (rejected by a check stricter than DER); a writer of exactness
+   `ex = true` (`jwg true`, `jwx`) never returns JIT_RETRY. Validity is
+   compositional, so that a failed check yields JIT_INVALID (`jit_iff`),
+   through terminals, RESTRICTED and DEFAULT terminals, TLVs (a content of
+   2^32 bytes or more is also invalid), PREFIXED types, CHOICEs, SEQUENCEs
+   and their components (each present component is one TLV with one of its
+   own identifiers, and, by the well-formedness of the tags, the rest does
+   not start with any of them: `ASN1.Pulse.JitFrame`,
+   `ASN1.Pulse.JitWriter.SeqLemmas`), SET, SET OF, SEQUENCE OF, and ANY
+   DEFINED BY (prefix items as SEQUENCE components, `ASN1.Pulse.JitAdbSeq`;
+   literal alternatives, `ASN1.Pulse.JitAdbKey`).
 
-   JIT_RETRY only arises where validity is not compositional, because of
-   ANY, whose presence cannot be told from its tag: an ANY SEQUENCE
-   component or ANY DEFINED BY prefix item, a SET component, SEQUENCE OF
-   or SET OF element of type ANY, and a fallback of ANY DEFINED BY whose
-   key turns out to be one of the literals. It is then caught locally, by
-   the smallest enclosing content (`jit_fix`), which is written again with
-   the raw writer and validated within its own bounds (`jit_local`). *)
+   The only checks stricter than DER are about raw bytes that the schema
+   cannot frame: an ANY slice must be exactly one TLV (an empty slice
+   followed by a TLV, or two TLVs in one slice, might otherwise still
+   parse), and the fallback of ANY DEFINED BY must not have the key of one
+   of the literals (its payload might otherwise still parse as that
+   literal alternative). Hence, at the top level, JIT_RETRY becomes
+   JIT_INVALID, which means that the value has no valid encoding if the
+   schema has neither ANY nor ANY DEFINED BY with a fallback (`ex_k`.) *)
 
 open Pulse.Lib.Pervasives
 open ASN1.Base
@@ -161,6 +165,15 @@ let jw (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) = jwg false r a
 inline_for_extraction
 let jwx (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) = jwg true r a pm
 
+(* Change the exactness flag *)
+inline_for_extraction
+fn jit_cast (#ex1: bool) (ex2: bool) (sq: squash (ex2 == true ==> ex1 == true)) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex1 r a pm)
+: jwg ex2 #t r a pm
+= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  w x' #x out pos
+}
+
 let frame_trans (p: nat) (v: SB.bytes) (p1: nat) (v1: SB.bytes) (v2: SB.bytes)
 : Lemma
   (requires (p1 <= p /\ p <= Seq.length v /\ Seq.length v1 == Seq.length v /\ Seq.length v2 == Seq.length v /\
@@ -208,78 +221,6 @@ fn jit_iff (#ex: bool) (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r
     JIT_OK
   } else {
     Classical.move_requires back x;
-    res
-  }
-}
-
-let local_correct (#k: parser_kind) (#t: Type) (pp: SB.parser k t) (x: SB.bytes) (v1: SB.bytes) (p1: SZ.t) (p0: nat) (off: SZ.t) (valid: bool)
-: Lemma
-  (requires (SZ.v p1 <= p0 /\ p0 <= Seq.length v1 /\ Seq.slice v1 (SZ.v p1) p0 == x /\
-    LPS.validator_postcond pp p1 (Seq.slice v1 0 p0) off valid /\ valid == true /\ SZ.v off == p0))
-  (ensures (L.acc pp x))
-= Seq.slice_slice v1 0 p0 (SZ.v p1) p0
-
-let local_complete (#k: parser_kind) (#t: Type) (pp: SB.parser k t) (x: SB.bytes) (v1: SB.bytes) (p1: SZ.t) (p0: nat) (off: SZ.t) (valid: bool)
-: Lemma
-  (requires (SZ.v p1 <= p0 /\ p0 <= Seq.length v1 /\ Seq.slice v1 (SZ.v p1) p0 == x /\
-    LPS.validator_postcond pp p1 (Seq.slice v1 0 p0) off valid))
-  (ensures (L.acc pp x ==> (valid == true /\ SZ.v off == p0)))
-= Seq.slice_slice v1 0 p0 (SZ.v p1) p0
-
-(* Write with a raw writer, then validate what was written, within its
-   bounds *)
-inline_for_extraction
-fn jit_local (#t: Type0) (r: bprel t) (pm: perm) (w: RW.rw r pm)
-  (#tp: Type0) (#k: Ghost.erased parser_kind) (#pp: SB.parser k tp) (vf: LPS.validator #tp #k pp)
-: jwx #t r (L.acc pp) pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  let p0 = !pos;
-  let ok = w x' #x out pos;
-  if ok {
-    with v1 . assert (pts_to out v1);
-    let p1 = !pos;
-    let sp = S.split out p0;
-    match sp {
-      Mktuple2 s1 s2 -> {
-        let mut off = p1;
-        let valid = vf s1 off;
-        let off1 = !off;
-        S.join s1 s2 out;
-        Seq.lemma_split v1 (SZ.v p0);
-        rewrite (pts_to out (Seq.append (Seq.slice v1 0 (SZ.v p0)) (Seq.slice v1 (SZ.v p0) (Seq.length v1))))
-          as (pts_to out v1);
-        local_complete pp x v1 p1 (SZ.v p0) off1 valid;
-        if (valid && off1 = p0) {
-          local_correct pp x v1 p1 (SZ.v p0) off1 valid;
-          JIT_OK
-        } else {
-          JIT_INVALID
-        }
-      }
-    }
-  } else {
-    JIT_NO_SPACE
-  }
-}
-
-(* Make a writer exact: if it could not tell, write again with an exact
-   one (typically `jit_local`) *)
-inline_for_extraction
-fn jit_fix (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jw r a pm) (wl: jwx r a pm)
-: jwx #t r a pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  let p0 = !pos;
-  let res = w x' #x out pos;
-  if (JIT_RETRY? res) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-    pos := p0;
-    let res2 = wl x' #x out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
-    frame_trans (SZ.v p) v (SZ.v p) v1 v2;
-    res2
-  } else {
     res
   }
 }
@@ -429,6 +370,84 @@ fn jit_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (none: sq
   }
 }
 
+(* A non-exact variant of `jit_opt_ne` without framing: what is written
+   is nonempty only if it is accepted (`ne`) *)
+inline_for_extraction
+fn jit_opt_a (#t: Type0) (r: bprel t) (a1 a2: SB.bytes -> prop)
+  (none: squash (a2 Seq.empty))
+  (imp: (x: SB.bytes) -> Lemma (requires (a1 x)) (ensures (a2 x)))
+  (#ex: bool) (pm: perm) (w: jwg ex r a1 pm)
+: jw #(option t) (raw_opt r) a2 pm
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  match x' {
+    None -> {
+      rewrite (raw_opt r pm x' x) as (pure (Ghost.reveal x == Seq.empty));
+      W.r2l_post_empty (SZ.v p) v;
+      rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt r pm x' x);
+      JIT_OK
+    }
+    Some y -> {
+      rewrite (raw_opt r pm x' x) as (r pm y x);
+      let res = w y #x out pos;
+      rewrite (r pm y x) as (raw_opt r pm x' x);
+      if (JIT_OK? res) {
+        imp x;
+        JIT_OK
+      } else {
+        ns_or_retry res
+      }
+    }
+  }
+}
+
+(* An explicit default value is omitted; any other value is written with
+   `w`, whose acceptance `a1` implies `a2` for values other than the
+   default *)
+inline_for_extraction
+fn jit_nd_ne (d: SB.bytes) (#t: Type0) (r: bprel t) (s: Ghost.erased (Set.set asn1_id_t)) (fr: JF.fr_t r s) (a1 a2: SB.bytes -> prop)
+  (none: squash (a2 Seq.empty))
+  (imp: (x: SB.bytes) -> Lemma (requires (a1 x /\ ~ (x == d))) (ensures (a2 x)))
+  (back: (x: SB.bytes) -> Lemma (requires (a2 x /\ Seq.length x > 0)) (ensures (a1 x)))
+  (pm: perm) (dec: DE.dd r d pm) (#ex: bool) (w: jwg ex r a1 pm)
+: jwg ex #(option t) (raw_opt_nd d r) a2 pm
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  match x' {
+    None -> {
+      rewrite (raw_opt_nd d r pm x' x) as (pure (Ghost.reveal x == Seq.empty));
+      W.r2l_post_empty (SZ.v p) v;
+      rewrite (pure (Ghost.reveal x == Seq.empty)) as (raw_opt_nd d r pm x' x);
+      JIT_OK
+    }
+    Some y -> {
+      rewrite (raw_opt_nd d r pm x' x) as (raw_opt_nd d r pm (Some y) x);
+      unfold (raw_opt_nd d r pm (Some y) x);
+      with c . assert (r pm y c);
+      let isd = dec y #c;
+      if isd {
+        W.r2l_post_empty (SZ.v p) v;
+        fold (raw_opt_nd d r pm (Some y) x);
+        rewrite (raw_opt_nd d r pm (Some y) x) as (raw_opt_nd d r pm x' x);
+        JIT_OK
+      } else {
+        fr pm y c;
+        L.framed_ne s c;
+        let res = w y #c out pos;
+        fold (raw_opt_nd d r pm (Some y) x);
+        rewrite (raw_opt_nd d r pm (Some y) x) as (raw_opt_nd d r pm x' x);
+        if (JIT_OK? res) {
+          imp c;
+          JIT_OK
+        } else {
+          Classical.move_requires back c;
+          res
+        }
+      }
+    }
+  }
+}
+
 (* The length of the bytes of a raw slice *)
 inline_for_extraction
 fn raw_slice_len (pm: perm) (y: S.slice U8.t) (x: Ghost.erased SB.bytes)
@@ -573,57 +592,6 @@ fn jit_nil (pm: perm)
   JIT_OK
 }
 
-(* SEQUENCE components: after writing the head `hd` before the tail `tl`,
-   check that the first identifier is that of `hd` if `hd` is present, and
-   not that of `hd` if `hd` is absent *)
-
-let ids_ok (s: Set.set asn1_id_t) (v: SB.bytes) (p2 p1 p0: nat) : prop =
-  p2 <= p1 /\ p1 <= p0 /\ p0 <= Seq.length v /\
-  (p2 < p1 ==> (match L.pid (Seq.slice v p2 (Seq.length v)) with
-      | Some (id, _) -> Set.mem id s
-      | None -> True)) /\
-  ((p2 == p1 /\ p1 < p0) ==> (match L.pid (Seq.slice v p1 (Seq.length v)) with
-      | Some (id, _) -> ~ (Set.mem id s)
-      | None -> True))
-
-inline_for_extraction
-fn check_ids (s: Ghost.erased (Set.set asn1_id_t)) (has_id: (id: asn1_id_t) -> (b: bool { b == Set.mem id s }))
-  (out: S.slice U8.t) (p2 p1 p0: SZ.t) (#v: Ghost.erased SB.bytes)
-requires pts_to out v ** pure (SZ.v p2 <= SZ.v p1 /\ SZ.v p1 <= SZ.v p0 /\ SZ.v p0 <= Seq.length v)
-returns res: bool
-ensures pts_to out v ** pure (res == true ==> ids_ok s v (SZ.v p2) (SZ.v p1) (SZ.v p0))
-{
-  if (SZ.lt p2 p1) {
-    let mut off = p2;
-    let r = I.vread_identifier out off;
-    match r {
-      None -> { false }
-      Some id -> { has_id id }
-    }
-  } else if (SZ.lt p1 p0) {
-    let mut off = p1;
-    let r = I.vread_identifier out off;
-    match r {
-      None -> { false }
-      Some id -> { not (has_id id) }
-    }
-  } else {
-    true
-  }
-}
-
-let cons_correct (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin { Cons? tl })
-  (c1 c2: SB.bytes) (p: nat) (v: SB.bytes) (p1: nat) (v1: SB.bytes) (p2: nat) (v2: SB.bytes)
-: Lemma
-  (requires (W.r2l_post c2 p v true p1 v1 /\ W.r2l_post c1 p1 v1 true p2 v2 /\
-    L.iacc [hd] c1 /\ L.iacc tl c2 /\ ids_ok (Sq.item_set hd) v2 p2 p1 p))
-  (ensures (W.r2l_post (Seq.append c1 c2) p v true p2 v2 /\ L.iacc (hd :: tl) (Seq.append c1 c2)))
-= W.r2l_post_append c1 c2 p v p1 v1 true p2 v2;
-  let n = Seq.length v in
-  Seq.slice_slice v1 p1 n 0 (p - p1);
-  Seq.slice_slice v2 p1 n 0 (p - p1);
-  L.iacc_cons hd tl v2 p2 p1 p
-
 let cons_correct_wf (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin { Cons? tl })
   (c1 c2: SB.bytes) (p: nat) (v: SB.bytes) (p1: nat) (v1: SB.bytes) (p2: nat) (v2: SB.bytes)
 : Lemma
@@ -677,123 +645,40 @@ fn jit_items_cons_x (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twi
   }
 }
 
-(* Tell, without writing, whether the bytes of a value are known to be one
-   TLV with one of the identifiers `s` (`L.framed s`) *)
-inline_for_extraction
-let probe_t (#t: Type0) (r: bprel t) (s: Set.set asn1_id_t) (pm: perm) =
-  (y: t) -> (x: Ghost.erased SB.bytes) ->
-  stt bool (r pm y x) (fun b -> r pm y x ** pure (b == true ==> L.framed s x))
+let dfa_t (hd: gen_decorated_parser_twin) =
+  (x: SB.bytes) -> Lemma (requires (L.iacc [hd] x)) (ensures (SL.dfe hd x))
 
+(* An ANY head: what it writes is one frame (or nothing, if OPTIONAL) only
+   if it is accepted (`dfa`), so JIT_INVALID cannot be reported, but nothing
+   needs to be read back *)
 inline_for_extraction
-fn probe_false (#t: Type0) (r: bprel t) (s: Set.set asn1_id_t) (pm: perm)
-: probe_t r s pm
-= (y: t) (x: Ghost.erased SB.bytes)
-{
-  false
-}
-
-inline_for_extraction
-fn probe_true (#t: Type0) (r: bprel t) (s: Set.set asn1_id_t) (fr: JF.fr_t r s) (pm: perm)
-: probe_t r s pm
-= (y: t) (x: Ghost.erased SB.bytes)
-{
-  fr pm y x;
-  true
-}
-
-inline_for_extraction
-fn probe_opt (#t: Type0) (r: bprel t) (s: Set.set asn1_id_t) (fr: JF.fr_t r s) (pm: perm)
-: probe_t (raw_opt r) s pm
-= (y: option t) (x: Ghost.erased SB.bytes)
-{
-  match y {
-    None -> {
-      false
-    }
-    Some z -> {
-      rewrite (raw_opt r pm y x) as (r pm z x);
-      fr pm z x;
-      rewrite (r pm z x) as (raw_opt r pm y x);
-      true
-    }
-  }
-}
-
-inline_for_extraction
-fn probe_opt_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (s: Set.set asn1_id_t) (fr: JF.fr_t r s) (pm: perm) (dec: DE.dd r d pm)
-: probe_t (raw_opt_nd d r) s pm
-= (y: option t) (x: Ghost.erased SB.bytes)
-{
-  match y {
-    None -> {
-      false
-    }
-    Some z -> {
-      rewrite (raw_opt_nd d r pm y x) as (raw_opt_nd d r pm (Some z) x);
-      unfold (raw_opt_nd d r pm (Some z) x);
-      with c . assert (r pm z c);
-      let isd = dec z #c;
-      fr pm z c;
-      fold (raw_opt_nd d r pm (Some z) x);
-      rewrite (raw_opt_nd d r pm (Some z) x) as (raw_opt_nd d r pm y x);
-      not isd
-    }
-  }
-}
-
-inline_for_extraction
-fn probe_ext (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r2)) (s: Set.set asn1_id_t) (pm: perm) (pr: probe_t r1 s pm)
-: probe_t r2 s pm
-= (y: t) (x: Ghost.erased SB.bytes)
-{
-  rewrite (r2 pm y x) as (r1 pm y x);
-  let b = pr y x;
-  rewrite (r1 pm y x) as (r2 pm y x);
-  b
-}
-
-(* If the head `hd` is known to be present (`probe`), then the SEQUENCE is
-   invalid as soon as the head or the tail is *)
-inline_for_extraction
-fn jit_items_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (list gen_decorated_parser_twin) { Cons? tl })
-  (has_id: (id: asn1_id_t) -> (b: bool { b == Set.mem id (Sq.item_set hd) }))
-  (shaped: squash (PSL.item_shaped hd))
+fn jit_items_cons_a (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (list gen_decorated_parser_twin) { Cons? tl })
   (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
-  (probe: probe_t r1 (Sq.item_set hd) pm)
-  (w1: jw r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jw r2 (L.iacc tl) pm)
+  (dfa: dfa_t hd)
+  (hs: Ghost.erased (Set.set asn1_id_t)) (sq: squash (Ghost.reveal hs == SL.hs hd))
+  (av: JF.av_t r2 hs)
+  (#ex1 #ex2: bool) (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jwg ex2 r2 (L.iacc tl) pm)
 : jw #(t1 & t2) (raw_cat r1 r2) (L.iacc (Ghost.reveal hd :: Ghost.reveal tl)) pm
 = (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_cat r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
-  let pr = probe (fst x') c1;
-  Classical.move_requires (L.iacc_cons_inv hd tl c1) c2;
-  let p0 = !pos;
+  av pm (snd x') c2;
+  Seq.lemma_len_append c1 c2;
   let ok = w2 (snd x') #c2 out pos;
   if (JIT_OK? ok) {
     with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-    let p1r = !pos;
     let res = w1 (fst x') #c1 out pos;
     with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
     if (JIT_OK? res) {
-      let p2r = !pos;
-      let ck = check_ids (Sq.item_set hd) has_id out p2r p1r p0;
-      if ck {
-        cons_correct hd tl c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2;
-        JIT_OK
-      } else {
-        JIT_RETRY
-      }
-    } else if (pr && JIT_INVALID? res) {
-      JIT_INVALID
+      dfa c1;
+      cons_correct_wf hd tl c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2;
+      JIT_OK
     } else {
       ns_or_retry res
     }
-  } else if (pr && JIT_INVALID? ok) {
-    fold (raw_cat r1 r2 pm x' x);
-    JIT_INVALID
   } else {
     fold (raw_cat r1 r2 pm x' x);
     ns_or_retry ok
@@ -816,14 +701,42 @@ fn jit_items_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
 let jit_post_s (its: list gen_decorated_parser_twin) (x: SB.bytes) (p: nat) (v: SB.bytes) (res: jit_result) (p': nat) (v': SB.bytes) : prop =
   jit_post x (L.sacc its x) p v res p' v' /\ (JIT_INVALID? res ==> SetL.frs (PSet.items_set its) x)
 
+let jit_post_sg (ex: bool) (its: list gen_decorated_parser_twin) (x: SB.bytes) (p: nat) (v: SB.bytes) (res: jit_result) (p': nat) (v': SB.bytes) : prop =
+  jit_post_s its x p v res p' v' /\ (ex == true ==> ~ (JIT_RETRY? res))
+
 inline_for_extraction
-let jws (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) =
+let jwsg (ex: bool) (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) =
   (x': t) -> (#x: Ghost.erased SB.bytes) ->
   (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
   stt jit_result
     (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
     (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
-      pure (jit_post_s its x (SZ.v p) v res (SZ.v p') v'))
+      pure (jit_post_sg ex its x (SZ.v p) v res (SZ.v p') v'))
+
+inline_for_extraction
+let jws (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) = jwsg false r its pm
+
+(* No component *)
+inline_for_extraction
+fn jit_s_cast (#ex1: bool) (ex2: bool) (sq: squash (ex2 == true ==> ex1 == true)) (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_parser_twin)) (pm: perm) (w: jwsg ex1 r its pm)
+: jwsg ex2 #t r its pm
+= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  w x' #x out pos
+}
+
+inline_for_extraction
+fn jit_s_nil (pm: perm)
+: jwsg true #unit (raw_pure null_enc) [] pm
+= (x': unit) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_pure null_enc pm x' x);
+  fold (raw_pure null_enc pm x' x);
+  W.r2l_post_empty (SZ.v p) v;
+  L.iacc_nil ();
+  L.sacc_nil x;
+  JIT_OK
+}
 
 (* Turn JIT_INVALID into JIT_RETRY *)
 inline_for_extraction
@@ -836,17 +749,17 @@ fn jit_s_of_w (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_pa
 }
 
 inline_for_extraction
-fn jit_w_of_s (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_parser_twin)) (pm: perm) (w: jws r its pm)
-: jw #t r (L.sacc its) pm
+fn jit_w_of_s (#ex: bool) (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_parser_twin)) (pm: perm) (w: jwsg ex r its pm)
+: jwg ex #t r (L.sacc its) pm
 = (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   w x' #x out pos
 }
 
 inline_for_extraction
-fn jit_s_ext (#t: Type0) (r1 r2: bprel t) (its1 its2: Ghost.erased (list gen_decorated_parser_twin))
-  (sq: squash (prel_equiv r1 r2 /\ Ghost.reveal its1 == Ghost.reveal its2)) (pm: perm) (w: jws r1 its1 pm)
-: jws #t r2 its2 pm
+fn jit_s_ext (#ex: bool) (#t: Type0) (r1 r2: bprel t) (its1 its2: Ghost.erased (list gen_decorated_parser_twin))
+  (sq: squash (prel_equiv r1 r2 /\ Ghost.reveal its1 == Ghost.reveal its2)) (pm: perm) (w: jwsg ex r1 its1 pm)
+: jwsg ex #t r2 its2 pm
 = (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   rewrite (r2 pm x' x) as (r1 pm x' x);
@@ -855,42 +768,21 @@ fn jit_s_ext (#t: Type0) (r1 r2: bprel t) (its1 its2: Ghost.erased (list gen_dec
   res
 }
 
-inline_for_extraction
-fn check_elt (s: Ghost.erased (Set.set asn1_id_t)) (has_id: (id: asn1_id_t) -> (b: bool { b == Set.mem id s }))
-  (out: S.slice U8.t) (p2 p1: SZ.t) (#v: Ghost.erased SB.bytes)
-requires pts_to out v ** pure (SZ.v p2 <= SZ.v p1 /\ SZ.v p1 <= Seq.length v)
-returns res: bool
-ensures pts_to out v ** pure (SZ.v p2 <= SZ.v p1 /\ SZ.v p1 <= Seq.length v /\ (res == true ==> L.elt_ok s (Seq.slice v (SZ.v p2) (SZ.v p1))))
-{
-  if (SZ.lt p2 p1) {
-    let n = SI.read_frame out p2 p1;
-    if (n = SZ.sub p1 p2) {
-      let a = SI.read_id out p2 p1;
-      match a {
-        None -> { false }
-        Some id -> { has_id id }
-      }
-    } else {
-      false
-    }
-  } else {
-    true
-  }
-}
+(* An ANY component: what it writes is either empty or one TLV only if it
+   is accepted (`dfa`, from `JF.dfe_any`), so JIT_INVALID cannot be
+   reported, but nothing needs to be read back *)
 
 inline_for_extraction
-fn jit_set_elt (hd: Ghost.erased gen_decorated_parser_twin)
-  (has_id: (id: asn1_id_t) -> (b: bool { b == Set.mem id (Sq.item_set hd) }))
-  (#t: Type0) (r: bprel t) (pm: perm) (w: jw r (L.iacc [Ghost.reveal hd]) pm)
+fn jit_set_elt_a (hd: Ghost.erased gen_decorated_parser_twin) (shaped: squash (PSL.item_shaped hd)) (dfa: dfa_t hd)
+  (#ex: bool) (#t: Type0) (r: bprel t) (pm: perm) (w: jwg ex r (L.iacc [Ghost.reveal hd]) pm)
 : jw #t r (L.sacc1 hd) pm
 = (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
-  let p0 = !pos;
   let res = w x' #x out pos;
   if (JIT_OK? res) {
-    let p2 = !pos;
-    let ck = check_elt (Sq.item_set hd) has_id out p2 p0;
-    if ck { JIT_OK } else { JIT_RETRY }
+    dfa x;
+    SetL.elt_of_iacc hd x;
+    JIT_OK
   } else {
     ns_or_retry res
   }
@@ -900,7 +792,7 @@ inline_for_extraction
 fn jit_set_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (list gen_decorated_parser_twin))
   (sq: squash (L.set_cons_ok hd tl))
   (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
-  (w1: jw r1 (L.sacc1 hd) pm) (w2: jws r2 tl pm)
+  (w1: jw r1 (L.sacc1 hd) pm) (#ex2: bool) (w2: jwsg ex2 r2 tl pm)
 : jws #(t1 & t2) (raw_ins SI.lt_tag r1 r2) (Ghost.reveal hd :: Ghost.reveal tl) pm
 = (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
@@ -941,8 +833,8 @@ fn jit_set_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (
 inline_for_extraction
 fn jit_set_single_x (hd: Ghost.erased gen_decorated_parser_twin)
   (sq: squash (L.set_cons_ok hd [] /\ PSL.item_shaped hd))
-  (#t: Type0) (r: bprel t) (pm: perm) (fe: JF.fe_t r hd) (w: jwx r (L.iacc [Ghost.reveal hd]) pm)
-: jws #t r [Ghost.reveal hd] pm
+  (#t: Type0) (r: bprel t) (pm: perm) (fe: JF.fe_t r hd) (#ex: bool) (w: jwg ex r (L.iacc [Ghost.reveal hd]) pm)
+: jwsg ex #t r [Ghost.reveal hd] pm
 = (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   fe pm x' x;
@@ -964,8 +856,8 @@ inline_for_extraction
 fn jit_set_cons_x (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (list gen_decorated_parser_twin))
   (sq: squash (L.set_cons_ok hd tl /\ PSL.item_shaped hd))
   (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
-  (fe: JF.fe_t r1 hd) (w1: jwx r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jws r2 tl pm)
-: jws #(t1 & t2) (raw_ins SI.lt_tag r1 r2) (Ghost.reveal hd :: Ghost.reveal tl) pm
+  (fe: JF.fe_t r1 hd) (#ex1: bool) (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (#ex2: bool) (w2: jwsg ex2 r2 tl pm)
+: jwsg (ex1 && ex2) #(t1 & t2) (raw_ins SI.lt_tag r1 r2) (Ghost.reveal hd :: Ghost.reveal tl) pm
 = (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_ins SI.lt_tag r1 r2 pm x' x);
@@ -996,7 +888,7 @@ fn jit_set_cons_x (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
       JIT_INVALID
     } else {
       fold (raw_ins SI.lt_tag r1 r2 pm x' x);
-      JIT_NO_SPACE
+      ns_or_retry res
     }
   } else if (JIT_INVALID? ok) {
     SetL.set_cons_invalid2 hd tl c1 c2;
@@ -1423,30 +1315,6 @@ fn jit_write_ml_sorted (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
    SEQUENCE, and so is the payload; only the key is read back from the
    output, to check that it selects the payload that was written. *)
 
-(* The acceptance of the prefix items followed by the suffix, abstracted
-   over the suffix *)
-let acons_at (aa: list gen_decorated_parser_twin -> SB.bytes -> prop) (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (v: SB.bytes) (p2 p1 p0: nat) : prop =
-  (ids_ok (Sq.item_set hd) v p2 p1 p0 /\ L.iacc [hd] (Seq.slice v p2 p1) /\ aa tl (Seq.slice v p1 p0)) ==>
-  aa (hd :: tl) (Seq.slice v p2 p0)
-
-let acons_ok (aa: list gen_decorated_parser_twin -> SB.bytes -> prop) : prop =
-  forall hd tl v p2 p1 p0 . {:pattern (acons_at aa hd tl v p2 p1 p0)} acons_at aa hd tl v p2 p1 p0
-
-let acons_correct (aa: list gen_decorated_parser_twin -> SB.bytes -> prop) (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin)
-  (c1 c2: SB.bytes) (p: nat) (v: SB.bytes) (p1: nat) (v1: SB.bytes) (p2: nat) (v2: SB.bytes)
-: Lemma
-  (requires (acons_ok aa /\ W.r2l_post c2 p v true p1 v1 /\ W.r2l_post c1 p1 v1 true p2 v2 /\
-    L.iacc [hd] c1 /\ aa tl c2 /\ ids_ok (Sq.item_set hd) v2 p2 p1 p))
-  (ensures (W.r2l_post (Seq.append c1 c2) p v true p2 v2 /\ aa (hd :: tl) (Seq.append c1 c2)))
-= W.r2l_post_append c1 c2 p v p1 v1 true p2 v2;
-  let n = Seq.length v in
-  Seq.slice_slice v1 p1 n 0 (p - p1);
-  Seq.slice_slice v2 p1 n 0 (p - p1);
-  assert (Seq.slice v2 p1 p == c2);
-  assert (Seq.slice v2 p2 p1 == c1);
-  assert (Seq.slice v2 p2 p == Seq.append c1 c2);
-  assert (acons_at aa hd tl v2 p2 p1 p)
-
 let aan (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
   (items: list gen_decorated_parser_twin) (w: SB.bytes) : prop =
   JA.aacc items (ADB.adb_sfx_none kid key_k ls) w
@@ -1454,70 +1322,6 @@ let aan (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k 
 let aas (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (items: list gen_decorated_parser_twin) (w: SB.bytes) : prop =
   JA.aacc items (ADB.adb_sfx_some kid key_k ls fb) w
-
-let aacc_acons (#st: Type) (sfx: parser_twin asn1_weak_parser_kind st) (aa: list gen_decorated_parser_twin -> SB.bytes -> prop)
-  (heq: (items: list gen_decorated_parser_twin) -> (w: SB.bytes) -> Lemma (aa items w <==> JA.aacc items sfx w))
-: Lemma (requires (JA.twin_ok sfx)) (ensures (acons_ok aa))
-= let aux (hd: gen_decorated_parser_twin) (tl: list gen_decorated_parser_twin) (v: SB.bytes) (p2 p1 p0: nat)
-  : Lemma (acons_at aa hd tl v p2 p1 p0)
-  = if p2 <= p1 && p1 <= p0 && p0 <= Seq.length v
-    then begin
-      heq tl (Seq.slice v p1 p0);
-      heq (hd :: tl) (Seq.slice v p2 p0);
-      introduce (ids_ok (Sq.item_set hd) v p2 p1 p0 /\ L.iacc [hd] (Seq.slice v p2 p1) /\ aa tl (Seq.slice v p1 p0)) ==> aa (hd :: tl) (Seq.slice v p2 p0)
-      with JA.aacc_cons hd tl sfx v p2 p1 p0
-    end
-  in
-  introduce forall hd tl v p2 p1 p0 . acons_at aa hd tl v p2 p1 p0
-  with aux hd tl v p2 p1 p0
-
-let aan_acons (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk))
-: Lemma (acons_ok (aan kid key_k ls))
-= JA.twin_ok_none kid key_k ls;
-  aacc_acons (ADB.adb_sfx_none kid key_k ls) (aan kid key_k ls) (fun _ _ -> ())
-
-let aas_acons (kid: asn1_id_t) (key_k: asn1_terminal_k) (ls: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
-: Lemma (acons_ok (aas kid key_k ls fb))
-= JA.twin_ok_some kid key_k ls fb;
-  aacc_acons (ADB.adb_sfx_some kid key_k ls fb) (aas kid key_k ls fb) (fun _ _ -> ())
-
-inline_for_extraction
-fn jit_acons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (list gen_decorated_parser_twin))
-  (has_id: (id: asn1_id_t) -> (b: bool { b == Set.mem id (Sq.item_set hd) }))
-  (aa: Ghost.erased (list gen_decorated_parser_twin -> SB.bytes -> prop)) (acons: squash (acons_ok aa))
-  (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
-  (w1: jw r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jw r2 (Ghost.reveal aa tl) pm)
-: jw #(t1 & t2) (raw_cat r1 r2) (Ghost.reveal aa (Ghost.reveal hd :: Ghost.reveal tl)) pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-{
-  unfold (raw_cat r1 r2 pm x' x);
-  with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
-  let p0 = !pos;
-  let ok = w2 (snd x') #c2 out pos;
-  if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-    let p1r = !pos;
-    let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
-    frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
-    fold (raw_cat r1 r2 pm x' x);
-    if (JIT_OK? res) {
-      let p2r = !pos;
-      let ck = check_ids (Sq.item_set hd) has_id out p2r p1r p0;
-      if ck {
-        acons_correct aa hd tl c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2;
-        JIT_OK
-      } else {
-        JIT_RETRY
-      }
-    } else {
-      ns_or_retry res
-    }
-  } else {
-    fold (raw_cat r1 r2 pm x' x);
-    ns_or_retry ok
-  }
-}
 
 (* Exact prefix items, when the head is not ANY: from the well-formedness
    of the tags of the prefix items, as in `jit_items_cons_x` *)
@@ -1579,6 +1383,42 @@ fn jit_acons_x (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twin) (t
   }
 }
 
+(* An ANY prefix item: as `jit_acons_x`, with `dfa` instead of `fe` *)
+inline_for_extraction
+fn jit_acons_a (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (list gen_decorated_parser_twin))
+  (shaped: squash (PSL.item_shaped hd))
+  (aa: Ghost.erased (list gen_decorated_parser_twin -> SB.bytes -> prop)) (acx: squash (JAS.acons_x_ok aa))
+  (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
+  (dfa: dfa_t hd)
+  (hs: Ghost.erased (Set.set asn1_id_t)) (sq: squash (Ghost.reveal hs == SL.hs hd))
+  (av: JF.av_t r2 hs)
+  (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jwg ex2 r2 (Ghost.reveal aa tl) pm)
+: jw #(t1 & t2) (raw_cat r1 r2) (Ghost.reveal aa (Ghost.reveal hd :: Ghost.reveal tl)) pm
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_cat r1 r2 pm x' x);
+  with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
+  av pm (snd x') c2;
+  let ok = w2 (snd x') #c2 out pos;
+  if (JIT_OK? ok) {
+    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    let res = w1 (fst x') #c1 out pos;
+    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
+    fold (raw_cat r1 r2 pm x' x);
+    if (JIT_OK? res) {
+      dfa c1;
+      acons_correct_x aa hd tl c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2;
+      JIT_OK
+    } else {
+      ns_or_retry res
+    }
+  } else {
+    fold (raw_cat r1 r2 pm x' x);
+    ns_or_retry ok
+  }
+}
+
 (* A literal key, then its payload: the payload is written and checked,
    then the key, as a TLV whose contents are those of the literal. The
    dispatch then selects exactly the payload of the literal, so nothing
@@ -1587,8 +1427,8 @@ inline_for_extraction
 fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k)
   (#t: Type0) (r: bprel t) (a b: SB.bytes -> prop)
   (lem: (c: SB.bytes) -> Lemma (a (Seq.append (WA.raw_key_enc kid key_k kx) c) <==> (Seq.length (JK.raw_key_c key_k kx) < 4294967296 /\ b c)))
-  (pm: perm) (w: jwx r b pm)
-: jwx #t (raw_pre (WA.raw_key_enc kid key_k kx) r) a pm
+  (pm: perm) (#ex: bool) (w: jwg ex r b pm)
+: jwg ex #t (raw_pre (WA.raw_key_enc kid key_k kx) r) a pm
 = (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_pre (WA.raw_key_enc kid key_k kx) r pm x' x);
@@ -1696,55 +1536,85 @@ let rec nl_afb (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_li
     JA.afbacc_skip kid key_k kx y tl fb w
 #pop-options
 
-inline_for_extraction
-let nl_t (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) =
-  (out: S.slice U8.t) -> (p2: SZ.t) -> (p0: SZ.t) -> (#v: Ghost.erased SB.bytes) ->
-  stt bool (pts_to out v ** pure (SZ.v p2 <= SZ.v p0 /\ SZ.v p0 <= Seq.length v))
-    (fun res -> pts_to out v ** pure (SZ.v p2 <= SZ.v p0 /\ SZ.v p0 <= Seq.length v /\ (res == true ==> nl kid key_k lsf (Seq.slice v (SZ.v p2) (SZ.v p0)))))
+(* The key of the input is none of the literals of `lsf` (checked on the
+   input, before writing) *)
+let rec nlc (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (c: SB.bytes) : Tot prop (decreases lsf) =
+  match lsf with
+  | [] -> True
+  | (kx, _) :: tl -> ~ (c == WA.raw_key_enc kid key_k kx) /\ nlc kid key_k tl c
 
-let nl_res (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (out: S.slice U8.t) (p2 p0: SZ.t) (v: Ghost.erased SB.bytes) : Type =
-  stt bool (pts_to out v ** pure (SZ.v p2 <= SZ.v p0 /\ SZ.v p0 <= Seq.length v))
-    (fun res -> pts_to out v ** pure (SZ.v p2 <= SZ.v p0 /\ SZ.v p0 <= Seq.length v /\ (res == true ==> nl kid key_k lsf (Seq.slice v (SZ.v p2) (SZ.v p0)))))
+#push-options "--fuel 1 --ifuel 1"
+let nlc_cons_eq (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_items_lk) (tl: list (asn1_key_lit key_k & asn1_gen_items_lk)) (c: SB.bytes)
+: Lemma (nlc kid key_k ((kx, y) :: tl) c <==> (~ (c == WA.raw_key_enc kid key_k kx) /\ nlc kid key_k tl c))
+= ()
+
+let rec nl_of_nlc (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (c1 c2: SB.bytes)
+: Lemma
+  (requires (In.adb_key_supported key_k /\
+    L.acc #asn1_strong_parser_kind (parse_asn1_ILC kid (asn1_content_as_parser (ASN1_TERMINAL key_k))) c1 /\
+    nlc kid key_k lsf c1))
+  (ensures (nl kid key_k lsf (Seq.append c1 c2)))
+  (decreases lsf)
+= match lsf with
+  | [] -> ()
+  | (kx, _) :: tl ->
+    JK.not_lit_of_ne kid key_k kx c1 c2;
+    nl_of_nlc kid key_k tl c1 c2
+#pop-options
 
 inline_for_extraction
-fn nl_nil (kid: asn1_id_t) (key_k: asn1_terminal_k)
-: nl_t kid key_k []
-= (out: S.slice U8.t) (p2: SZ.t) (p0: SZ.t) (#v: Ghost.erased SB.bytes)
+let nl_t (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (pm: perm) =
+  (x': asn1_terminal_impl_t key_k) -> (#c: Ghost.erased SB.bytes) ->
+  stt bool (raw_terminal_rel kid key_k pm x' c)
+    (fun res -> raw_terminal_rel kid key_k pm x' c ** pure (res == true <==> nlc kid key_k lsf c))
+
+let nl_res (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (pm: perm) (x': asn1_terminal_impl_t key_k) (c: Ghost.erased SB.bytes) : Type =
+  stt bool (raw_terminal_rel kid key_k pm x' c)
+    (fun res -> raw_terminal_rel kid key_k pm x' c ** pure (res == true <==> nlc kid key_k lsf c))
+
+inline_for_extraction
+fn nl_nil (kid: asn1_id_t) (key_k: asn1_terminal_k) (pm: perm)
+: nl_t kid key_k [] pm
+= (x': asn1_terminal_impl_t key_k) (#c: Ghost.erased SB.bytes)
 {
   true
 }
 
 inline_for_extraction
+let eq_lit_t (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (pm: perm) =
+  (x': asn1_terminal_impl_t key_k) -> (#c: Ghost.erased SB.bytes) ->
+  stt bool (raw_terminal_rel kid key_k pm x' c) (fun res -> raw_terminal_rel kid key_k pm x' c ** pure (res == true <==> Ghost.reveal c == WA.raw_key_enc kid key_k kx))
+
+inline_for_extraction
 fn nl_cons (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) (kx: asn1_key_lit key_k)
-  (y: Ghost.erased asn1_gen_items_lk) (tl: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (f: nl_t kid key_k tl)
-: nl_t kid key_k ((kx, Ghost.reveal y) :: Ghost.reveal tl)
-= (out: S.slice U8.t) (p2: SZ.t) (p0: SZ.t) (#v: Ghost.erased SB.bytes)
+  (y: Ghost.erased asn1_gen_items_lk) (tl: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (pm: perm)
+  (eq: eq_lit_t kid key_k kx pm)
+  (f: nl_t kid key_k tl pm)
+: nl_t kid key_k ((kx, Ghost.reveal y) :: Ghost.reveal tl) pm
+= (x': asn1_terminal_impl_t key_k) (#c: Ghost.erased SB.bytes)
 {
-  nl_cons_eq kid key_k kx y tl (Seq.slice v (SZ.v p2) (SZ.v p0));
-  let km = JA.key_match kid key_k u kx out p2 p0;
-  match km {
-    None -> { false }
-    Some em -> {
-      if (snd em) {
-        false
-      } else {
-        f out p2 p0
-      }
-    }
+  nlc_cons_eq kid key_k kx y tl c;
+  let e = eq x' #c;
+  if e {
+    false
+  } else {
+    f x' #c
   }
 }
 
-(* Read the key back, and compare it to every literal of the table *)
+(* Compare the key of the input to every literal of the table *)
 [@@In.asn1_pulse_attr]
 let rec not_lits (kid: asn1_id_t) ([@@@FStar.Attributes.monomorphize] key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k))
-  ([@@@FStar.Attributes.monomorphize] lsf: list (asn1_key_lit key_k & asn1_gen_items_lk))
-  (out: S.slice U8.t) (p2 p0: SZ.t) (#v: Ghost.erased SB.bytes)
-: Tot (nl_res kid key_k lsf out p2 p0 v) (decreases lsf)
-= [@inline_let] let vf : nl_t kid key_k lsf =
+  ([@@@FStar.Attributes.monomorphize] lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (pm: perm)
+  (x': asn1_terminal_impl_t key_k) (#c: Ghost.erased SB.bytes)
+: Tot (nl_res kid key_k lsf pm x' c) (decreases lsf)
+= [@inline_let] let vf : nl_t kid key_k lsf pm =
   (match lsf with
-  | [] -> nl_nil kid key_k
-  | (kx, y) :: tl -> nl_cons kid key_k () kx y tl (fun out p2 p0 #v -> not_lits kid key_k () tl out p2 p0 #v))
-  in vf out p2 p0 #v
+  | [] -> nl_nil kid key_k pm
+  | (kx, y) :: tl -> nl_cons kid key_k () kx y tl pm
+      (fun x' #c -> DE.dd_term kid key_k kx () pm x' #c)
+      (fun x' #c -> not_lits kid key_k () tl pm x' #c))
+  in vf x' #c
 
 let ns_or_retry_post (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (r: jit_result) (p': nat) (v': SB.bytes)
 : Lemma
@@ -1776,62 +1646,64 @@ let jit_ok_post (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (p': nat) (v': SB
 let jit_fb_ok (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: list (asn1_key_lit key_k & asn1_gen_items_lk)) (fb: asn1_gen_items_lk)
   (c1 c2: SB.bytes) (p: nat) (v: SB.bytes) (p2: nat) (v2: SB.bytes)
 : Lemma
-  (requires (W.r2l_post (Seq.append c1 c2) p v true p2 v2 /\
-    nl kid key_k lsf (Seq.slice v2 p2 p) /\
+  (requires (In.adb_key_supported key_k /\ W.r2l_post (Seq.append c1 c2) p v true p2 v2 /\
+    nlc kid key_k lsf c1 /\
     L.acc #asn1_strong_parser_kind (parse_asn1_ILC kid (asn1_content_as_parser (ASN1_TERMINAL key_k))) c1 /\
     L.iacc (In.twins_of (dsnd fb)) c2))
   (ensures (jit_post_g false (Seq.append c1 c2) (JA.afbacc kid key_k lsf fb (Seq.append c1 c2)) p v JIT_OK p2 v2))
 = JA.fbr_acc kid key_k fb c1 c2;
+  nl_of_nlc kid key_k lsf c1 c2;
   nl_afb kid key_k lsf fb (Seq.append c1 c2);
   jit_ok_post (Seq.append c1 c2) (JA.afbacc kid key_k lsf fb (Seq.append c1 c2)) p v p2 v2
 
-(* The fallback: the payload, then the key, both written and checked;
-   then, if the key is none of the literals of the table, the dispatch
-   selects the fallback. Otherwise, the payload would be parsed as that of
-   the literal: JIT_RETRY. *)
+(* The fallback: the key of the input is first compared to every literal
+   of the table (strict: if it is one of them, JIT_RETRY, even though the
+   payload might happen to be accepted by that literal); then the payload
+   and the key are written and checked, and the dispatch selects the
+   fallback. Nothing is read back from the output. *)
 inline_for_extraction
-fn jit_fb (kid: asn1_id_t) (key_k: asn1_terminal_k) (lsf: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (pm: perm)
-  (nlw: nl_t kid key_k lsf)
+fn jit_fb (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_supported key_k)) (lsf: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (fb: asn1_gen_items_lk) (#tfb: Type0) (dfb: idesc (dsnd fb) tfb) (pm: perm)
+  (nlw: nl_t kid key_k lsf pm)
   (w1: jwx (raw_terminal_rel kid key_k) (L.acc #asn1_strong_parser_kind (parse_asn1_ILC kid (asn1_content_as_parser (ASN1_TERMINAL key_k)))) pm)
-  (w2: jwx (raw_irel false dfb) (L.iacc (In.twins_of (dsnd fb))) pm)
+  (#ex2: bool) (w2: jwg ex2 (raw_irel false dfb) (L.iacc (In.twins_of (dsnd fb))) pm)
 : jw #(asn1_terminal_impl_t key_k & tfb) (raw_dfbr kid key_k #fb dfb) (JA.afbacc kid key_k lsf fb) pm
 = (x': (asn1_terminal_impl_t key_k & tfb)) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   rewrite (raw_dfbr kid key_k #fb dfb pm x' x) as (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
   unfold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
   with c1 c2 . assert (raw_terminal_rel kid key_k pm (fst x') c1 ** raw_irel false dfb pm (snd x') c2);
-  let p0 = !pos;
-  let ok = w2 (snd x') #c2 out pos;
-  if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-    let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
-    frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
-    fold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
-    rewrite (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x) as (raw_dfbr kid key_k #fb dfb pm x' x);
-    if (JIT_OK? res) {
-      W.r2l_post_append c1 c2 (SZ.v p) v (SZ.v p1) v1 true (SZ.v p2) v2;
-      let p2r = !pos;
-      let n = nlw out p2r p0;
-      if n {
+  let n = nlw (fst x') #c1;
+  if n {
+    let ok = w2 (snd x') #c2 out pos;
+    if (JIT_OK? ok) {
+      with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+      let res = w1 (fst x') #c1 out pos;
+      with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+      frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
+      fold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
+      rewrite (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x) as (raw_dfbr kid key_k #fb dfb pm x' x);
+      if (JIT_OK? res) {
+        W.r2l_post_append c1 c2 (SZ.v p) v (SZ.v p1) v1 true (SZ.v p2) v2;
         jit_fb_ok kid key_k lsf fb c1 c2 (SZ.v p) v (SZ.v p2) v2;
         JIT_OK
       } else {
-        jit_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v (SZ.v p2) v2;
-        JIT_RETRY
+        cat_ns c1 c2 (SZ.v p) v (SZ.v p1) v1 res;
+        ns_or_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v res (SZ.v p2) v2;
+        ns_or_retry res
       }
     } else {
-      cat_ns c1 c2 (SZ.v p) v (SZ.v p1) v1 res;
-      ns_or_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v res (SZ.v p2) v2;
-      ns_or_retry res
+      with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+      Seq.lemma_len_append c1 c2;
+      ns_or_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v ok (SZ.v p1) v1;
+      fold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
+      rewrite (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x) as (raw_dfbr kid key_k #fb dfb pm x' x);
+      ns_or_retry ok
     }
   } else {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
-    Seq.lemma_len_append c1 c2;
-    ns_or_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v ok (SZ.v p1) v1;
     fold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
     rewrite (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x) as (raw_dfbr kid key_k #fb dfb pm x' x);
-    ns_or_retry ok
+    jit_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v (SZ.v p) v;
+    JIT_RETRY
   }
 }
 
@@ -1843,11 +1715,57 @@ let jresg (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (
     (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
       pure (jit_post_g ex x (a x) (SZ.v p) v res (SZ.v p') v'))
 
-let jress (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
+let jressg (ex: bool) (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
   stt jit_result
     (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
     (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
-      pure (jit_post_s its x (SZ.v p) v res (SZ.v p') v'))
+      pure (jit_post_sg ex its x (SZ.v p) v res (SZ.v p') v'))
+
+(* Exactness: the JIT writer of a schema never returns JIT_RETRY (so that
+   JIT_INVALID means that the value has no valid encoding), unless the
+   schema contains ANY (whose raw slices are checked to be exactly one
+   TLV: with several TLVs, or none, the encoding might still be valid) or
+   ANY DEFINED BY with a fallback (whose key is checked to be none of the
+   literals: otherwise the payload might still be accepted by that
+   literal). *)
+[@@In.asn1_pulse_attr; FStar.Attributes.custard_compile_time]
+let rec ex_content (k: asn1_content_k) : Tot bool (decreases k) =
+  match k with
+  | ASN1_TERMINAL _ -> true
+  | ASN1_RESTRICTED_TERMINAL _ _ -> true
+  | ASN1_SEQUENCE gitems -> ex_items (dsnd gitems)
+  | ASN1_SEQUENCE_OF _ k' -> ex_k k'
+  | ASN1_SET_OF _ k' -> ex_k k'
+  | ASN1_SET _ items _ -> ex_items items
+  | ASN1_PREFIXED k' -> ex_k k'
+  | ASN1_ANY_DEFINED_BY _ prefix _ _ ls ofb _ _ -> ex_items prefix && ex_ls ls && None? ofb
+
+and ex_k (#s: _) (k: asn1_k s) : Tot bool (decreases k) =
+  match k with
+  | ASN1_ILC _ k' -> ex_content k'
+  | ASN1_CHOICE_ILC lc _ -> ex_lc lc
+  | ASN1_ANY_ILC -> false
+
+and ex_lc (lc: list (asn1_id_t & asn1_content_k)) : Tot bool (decreases lc) =
+  match lc with
+  | [] -> true
+  | (_, ck) :: tl -> ex_content ck && ex_lc tl
+
+and ex_ls (#t: eqtype) (ls: list (t & asn1_gen_items_lk)) : Tot bool (decreases ls) =
+  match ls with
+  | [] -> true
+  | (_, y) :: tl -> ex_items (dsnd y) && ex_ls tl
+
+and ex_items (#i: _) (ls: asn1_gen_items_l i) : Tot bool (decreases ls) =
+  match ls with
+  | ASN1_GEN_ITEMS_NIL -> true
+  | ASN1_GEN_ITEMS_CONS _ _ dk _ tl -> ex_dec dk && ex_items tl
+
+and ex_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : Tot bool (decreases dk) =
+  match dk with
+  | ASN1_PLAIN_ILC k -> ex_k k
+  | ASN1_OPTION_ILC k -> ex_k k
+  | _ -> true
 
 let jres (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
   jresg false r a pm x' x out pos v p
@@ -1927,82 +1845,6 @@ let jit_leaf_tlv (id: asn1_id_t) (k: E.leaf_k) (u: squash (In.supported_terminal
       (jit_pre (raw_leaf k) (L.tacc k) (L.acc #asn1_weak_parser_kind (asn1_terminal_as_parser k)) (fun _ -> ()) pm
         (JT.pv k () pm) (RW.raw_write_leaf k pm)))
 
-(* Present SEQUENCE components other than ANY are one TLV *)
-
-inline_for_extraction
-fn probe_eq (#t: Type0) (r: bprel t) (s1 s2: Set.set asn1_id_t) (sq: squash (s1 == s2)) (pm: perm) (pr: probe_t r s1 pm)
-: probe_t r s2 pm
-= (y: t) (x: Ghost.erased SB.bytes)
-{
-  pr y x
-}
-
-[@@In.asn1_pulse_attr]
-inline_for_extraction
-let probe_default (id0: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] defl: asn1_key_lit k) (s: Set.set asn1_id_t) (u: squash (s == Set.singleton id0)) (pm: perm)
-  (y: option (asn1_terminal_impl_t k)) (x: Ghost.erased SB.bytes)
-: stt bool (raw_default_rel id0 k defl pm y x) (fun b -> raw_default_rel id0 k defl pm y x ** pure (b == true ==> L.framed s x))
-= if In.adb_key_supported k
-  then begin
-    default_nd_equiv id0 k defl;
-    probe_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () s pm
-      (probe_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) s (JF.fr_terminal id0 k) pm
-        (fun x' #c -> DE.dd_term id0 k defl () pm x' #c)) y x
-  end else begin
-    default_opt_equiv id0 k defl;
-    probe_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () s pm (probe_opt (raw_terminal_rel id0 k) s (JF.fr_terminal id0 k) pm) y x
-  end
-
-inline_for_extraction
-fn probe_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (s: Set.set asn1_id_t) (pm: perm) (pr: probe_t r s pm)
-: probe_t #ty (raw_view r view) s pm
-= (y: ty) (x: Ghost.erased SB.bytes)
-{
-  unfold (raw_view r view pm y x);
-  let b = pr (view y) x;
-  fold (raw_view r view pm y x);
-  b
-}
-
-[@@In.asn1_pulse_attr]
-let rec probe_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] dc: _) (#[@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s dc) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: ddesc dk t) (pm: perm)
-  (y: t) (x: Ghost.erased SB.bytes)
-: Tot (stt bool (raw_drel d pm y x) (fun b -> raw_drel d pm y x ** pure (b == true ==> L.framed s x)))
-  (decreases d)
-= [@inline_let] let vf : probe_t (raw_drel d) s pm =
-  (match d with
-  | DD_PLAIN #_ #k d' ->
-    if ASN1_ANY_ILC? k
-    then probe_false (raw_drel d) s pm
-    else begin
-      dec_plain_equiv d';
-      probe_ext (raw_arel d') (raw_drel d) () s pm (probe_true (raw_arel d') s (JF.fr_arel d' ()) pm)
-    end
-  | DD_OPTION #_ #k d' ->
-    if ASN1_ANY_ILC? k
-    then probe_false (raw_drel d) s pm
-    else begin
-      dec_option_equiv d';
-      probe_ext (raw_opt (raw_arel d')) (raw_drel d) () s pm (probe_opt (raw_arel d') s (JF.fr_arel d' ()) pm)
-    end
-  | DD_DEFAULT id0 #k defl ->
-    dec_default_equiv id0 #k defl;
-    probe_ext (raw_default_rel id0 k defl) (raw_drel d) () s pm (fun y x -> probe_default id0 k defl s () pm y x)
-  | DD_DEFAULT_RESTRICTED id0 #k r defl ->
-    dec_default_restricted_equiv id0 #k r defl;
-    probe_ext (raw_default_rel id0 k defl) (raw_drel d) () s pm (fun y x -> probe_default id0 k defl s () pm y x)
-  | DD_VIEW d' ty view mk law ->
-    dec_view_equiv d' ty view mk law;
-    probe_ext (raw_view (raw_drel d') view) (raw_drel d) () s pm
-      (probe_view (raw_drel d') view s pm (fun y x -> probe_drel d' pm y x)))
-  in vf y x
-
-[@@In.asn1_pulse_attr]
-inline_for_extraction
-let probe_dd (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (pm: perm) : probe_t (raw_drel d) (Sq.item_set (In.twin_of dk)) pm =
-  L.item_set_twin dk;
-  probe_eq (raw_drel d) s (Sq.item_set (In.twin_of dk)) () pm (fun y x -> probe_drel d pm y x)
-
 [@@In.asn1_pulse_attr]
 let rec jit_write_terminal (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) (u: squash (In.supported_terminal k)) (pm: perm)
   (x': asn1_terminal_impl_t k) (#x: Ghost.erased SB.bytes)
@@ -2030,18 +1872,6 @@ let jit_restricted_tlv (id: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k) (u:
         (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (restriction_pred r)) (fun _ -> ()) pm
           (JT.pv k () pm) (JT.pr k r () pm))
         (RW.raw_write_leaf k pm)))
-
-(* DEFAULT of a PREFIXED terminal: validated locally, right after being
-   written *)
-[@@In.asn1_pulse_attr]
-inline_for_extraction
-let jit_dec_local (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (u: squash (In.supported_dec dk)) (pm: perm)
-: jwx (raw_drel d) (dacc dk) pm
-= L.twins_of_single dk;
-  jit_iff (raw_drel d) (raw_drel d) () (L.iacc (In.twins_of (PS.single dk))) (dacc dk) (fun _ -> ()) (fun _ -> ()) pm
-    (jit_local (raw_drel d) pm
-      (fun x' #x out pos #v #p -> RW.raw_write_drel d pm x' #x out pos #v #p)
-      (In.validate_seq (PS.single dk) (L.supported_single dk ()) None))
 
 (* DEFAULT components: also check that the value is not the default one *)
 
@@ -2096,14 +1926,25 @@ let jit_default_restricted (id0: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k
               (JT.pn k defl () pm))
             (RW.raw_write_leaf k pm))))))
 
-(* The local fallback of constructed contents: write, then validate *)
+(* DEFAULT of a PREFIXED terminal: the explicit default value is omitted
+   (`dec`); any other value is accepted iff the terminal is
+   (`JK.default_of_ne`, `JK.default_back`) *)
 [@@In.asn1_pulse_attr]
 inline_for_extraction
-let jit_content_local (id: asn1_id_t) (#k: asn1_content_k) (#t: Type0) (d: cdesc k t) (u: squash (In.supported_content k)) (pm: perm)
-: jwx (raw_crel id d) (cacc id k) pm
-= jit_local (raw_crel id d) pm
-    (fun x' #x out pos #v #p -> RW.raw_write_crel id d pm x' #x out pos #v #p)
-    (ILC.validate_asn1_ILC id (In.validate_content k ()))
+let jit_default_prefixed (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (u: squash (In.supported_default k)) (pm: perm)
+: jwx (raw_drel (DD_DEFAULT id0 #k defl)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) pm
+= dec_default_equiv id0 #k defl;
+  L.iacc_default_none (ASN1_DEFAULT_TERMINAL id0 #k defl);
+  default_nd_equiv id0 k defl;
+  jit_iff (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_drel (DD_DEFAULT id0 #k defl)) ()
+    (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (fun _ -> ()) (fun _ -> ()) pm
+    (jit_nd_ne (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (Set.singleton id0) (JF.fr_terminal id0 k)
+      (cacc id0 (ASN1_TERMINAL k)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) ()
+      (fun w -> JK.default_of_ne id0 k defl w; L.iacc_default id0 #k defl w)
+      (fun w -> L.iacc_default_iff id0 #k defl w; JK.default_back id0 k defl w)
+      pm
+      (fun x' #c -> DE.dd_term id0 k defl () pm x' #c)
+      (fun x' #x out pos #v #p -> jit_write_terminal id0 k () pm x' #x out pos #v #p))
 
 (* Descriptor views: write the viewed value *)
 inline_for_extraction
@@ -2130,75 +1971,60 @@ fn jit_keep (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm
   res
 }
 
-(* The whole schema, by descriptor *)
+(* The whole schema, by descriptor.
+   Single pass: every check is on the input value, before writing it;
+   the output is never read back (except by the sorted insertion of SET
+   and SET OF elements.) JIT_RETRY means that the value was rejected by a
+   check stricter than DER (see `ex_content`.) *)
 
 [@@In.asn1_pulse_attr]
 let rec jit_write_crel (id: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] k: asn1_content_k) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: cdesc k t) (u: squash (In.supported_content k /\ Conf.wf_content id k)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jresx (raw_crel id d) (cacc id k) pm x' x out pos v p)
+: Tot (jresg (ex_content k) (raw_crel id d) (cacc id k) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jwx (raw_crel id d) (cacc id k) pm =
+= [@inline_let] let vf : jwg (ex_content k) (raw_crel id d) (cacc id k) pm =
   (match d with
   | CD_PREFIXED #_ #k' d' ->
     content_prefixed_equiv id d';
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_tlv id (raw_arel d')) (raw_crel id d) ()
       (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_PREFIXED k')))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
       (jit_tlv id (raw_arel d') (asn1_content_as_parser (ASN1_PREFIXED k')) pm
         (jit_iff (raw_arel d') (raw_arel d') () (kacc k') (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_PREFIXED k'))) (L.acc_prefixed k') (L.acc_prefixed_inv k') pm
-          (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)))
+          (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p))))
   | CD_SEQUENCE gitems di ->
     content_sequence_equiv id gitems di;
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_tlv id (raw_irel false di)) (raw_crel id d) ()
       (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SEQUENCE gitems)))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
       (jit_tlv id (raw_irel false di) (asn1_content_as_parser (ASN1_SEQUENCE gitems)) pm
         (jit_iff (raw_irel false di) (raw_irel false di) ()
           (L.iacc (In.twins_of (dsnd gitems))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE gitems))) (L.acc_sequence gitems) (L.acc_sequence_inv gitems) pm
-          (fun x' #x out pos #v #p -> jit_write_irel di () pm x' #x out pos #v #p)))
+          (fun x' #x out pos #v #p -> jit_write_irel di () pm x' #x out pos #v #p))))
   | CD_SEQUENCE_OF ne #_ #k' d' ->
     content_seq_of_equiv id ne d';
     L.tlv_shaped_k k';
-    if ASN1_ANY_ILC? k'
-    then
-      jit_fix (raw_crel id d) (cacc id k) pm (
-      jit_ext (raw_tlv id (raw_ml (raw_arel d'))) (raw_crel id d) ()
-        (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')))) (cacc id k) (fun _ -> ()) pm
-        (jit_tlv id (raw_ml (raw_arel d')) (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')) pm
-          (jit_ext (raw_ml (raw_arel d')) (raw_ml (raw_arel d')) ()
-            (L.acc #asn1_weak_parser_kind (parse_sized_list ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k'))) (L.acc_seq_of ne k') pm
-            (jit_write_ml false (raw_arel d') ne (In.validate_k k' ()) () (fun _ -> false_elim ()) (fun pm -> jit_weak (raw_arel d') (kacc k') pm (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)) (share_arel d') (gather_arel d') pm))))
-        (jit_content_local id d () pm)
-    else
-      jit_iff (raw_tlv id (raw_ml (raw_arel d'))) (raw_crel id d) ()
-        (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
-        (jit_tlv id (raw_ml (raw_arel d')) (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')) pm
-          (jit_iff (raw_ml (raw_arel d')) (raw_ml (raw_arel d')) ()
-            (L.acc #asn1_weak_parser_kind (parse_sized_list ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k'))) (L.acc_seq_of ne k') (fun _ -> ()) pm
-            (jit_write_ml true (raw_arel d') ne (In.validate_k k' ()) () (fun _ -> tf_of_fr (raw_arel d') _ (JF.fr_arel d' ())) (fun pm -> (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)) (share_arel d') (gather_arel d') pm)))
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
+    jit_iff (raw_tlv id (raw_ml (raw_arel d'))) (raw_crel id d) ()
+      (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
+      (jit_tlv id (raw_ml (raw_arel d')) (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k')) pm
+        (jit_iff (raw_ml (raw_arel d')) (raw_ml (raw_arel d')) ()
+          (L.acc #asn1_weak_parser_kind (parse_sized_list ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SEQUENCE_OF ne k'))) (L.acc_seq_of ne k') (fun _ -> ()) pm
+          (jit_write_ml (ex_k k') (raw_arel d') ne (In.validate_k k' ()) () (fun _ -> tf_of_fr (raw_arel d') _ (JF.fr_arel d' ())) (fun pm -> (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)) (share_arel d') (gather_arel d') pm))))
   | CD_SET_OF ne #_ #k' d' ->
     content_set_of_equiv id ne d';
     L.tlv_shaped_k k';
-    if ASN1_ANY_ILC? k'
-    then
-      jit_fix (raw_crel id d) (cacc id k) pm (
-      jit_ext (raw_tlv id (raw_ml_sorted (raw_arel d'))) (raw_crel id d) ()
-        (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SET_OF ne k')))) (cacc id k) (fun _ -> ()) pm
-        (jit_tlv id (raw_ml_sorted (raw_arel d')) (asn1_content_as_parser (ASN1_SET_OF ne k')) pm
-          (jit_ext (raw_ml_sorted (raw_arel d')) (raw_ml_sorted (raw_arel d')) ()
-            (L.acc #asn1_weak_parser_kind (parse_sized_set ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET_OF ne k'))) (L.acc_set_of ne k') pm
-            (jit_write_ml_sorted false (raw_arel d') ne (In.validate_k k' ()) () (fun _ -> false_elim ()) (fun pm -> jit_weak (raw_arel d') (kacc k') pm (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)) (share_arel d') (gather_arel d') pm))))
-        (jit_content_local id d () pm)
-    else
-      jit_iff (raw_tlv id (raw_ml_sorted (raw_arel d'))) (raw_crel id d) ()
-        (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SET_OF ne k')))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
-        (jit_tlv id (raw_ml_sorted (raw_arel d')) (asn1_content_as_parser (ASN1_SET_OF ne k')) pm
-          (jit_iff (raw_ml_sorted (raw_arel d')) (raw_ml_sorted (raw_arel d')) ()
-            (L.acc #asn1_weak_parser_kind (parse_sized_set ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET_OF ne k'))) (L.acc_set_of ne k') (fun _ -> ()) pm
-            (jit_write_ml_sorted true (raw_arel d') ne (In.validate_k k' ()) () (fun _ -> tf_of_fr (raw_arel d') _ (JF.fr_arel d' ())) (fun pm -> (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)) (share_arel d') (gather_arel d') pm)))
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
+    jit_iff (raw_tlv id (raw_ml_sorted (raw_arel d'))) (raw_crel id d) ()
+      (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SET_OF ne k')))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
+      (jit_tlv id (raw_ml_sorted (raw_arel d')) (asn1_content_as_parser (ASN1_SET_OF ne k')) pm
+        (jit_iff (raw_ml_sorted (raw_arel d')) (raw_ml_sorted (raw_arel d')) ()
+          (L.acc #asn1_weak_parser_kind (parse_sized_set ne (asn1_as_parser k'))) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET_OF ne k'))) (L.acc_set_of ne k') (fun _ -> ()) pm
+          (jit_write_ml_sorted (ex_k k') (raw_arel d') ne (In.validate_k k' ()) () (fun _ -> tf_of_fr (raw_arel d') _ (JF.fr_arel d' ())) (fun pm -> (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)) (share_arel d') (gather_arel d') pm))))
   | CD_SET ids items pf di ->
     content_set_equiv id ids items pf di;
-    (* JIT_RETRY only if a component is ANY *)
-    jit_fix (raw_crel id d) (cacc id k) pm (
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_tlv id (raw_irel true di)) (raw_crel id d) ()
       (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser (ASN1_SET ids items pf)))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
       (jit_tlv id (raw_irel true di) (asn1_content_as_parser (ASN1_SET ids items pf)) pm
@@ -2206,24 +2032,23 @@ let rec jit_write_crel (id: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] k: a
           (L.sacc (In.twins_of items)) (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_SET ids items pf))) (L.acc_set ids items pf) (SetL.acc_set_inv ids items pf) pm
           (jit_w_of_s (raw_irel true di) (In.twins_of items) pm
             (fun x' #x out pos #v #p -> jit_write_set_irel di () pm x' #x out pos #v #p)))))
-      (jit_content_local id d () pm)
   | CD_TERMINAL k' ->
     content_terminal_equiv id k';
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_terminal_rel id k') (raw_crel id d) ()
       (cacc id (ASN1_TERMINAL k')) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
-      (fun x' #x out pos #v #p -> jit_write_terminal id k' () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> jit_write_terminal id k' () pm x' #x out pos #v #p))
   | CD_RESTRICTED k' r ->
     content_restricted_equiv id k' r;
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_terminal_rel id k') (raw_crel id d) ()
       (cacc id (ASN1_RESTRICTED_TERMINAL k' r)) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
-      (jit_restricted_tlv id k' r () pm)
+      (jit_restricted_tlv id k' r () pm))
   | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->
     content_adb_none_equiv id ipd prefix kid key_k ls pf pf' dsx dpre;
     app_nil_l ls;
-    aan_acons kid key_k ls;
     aan_acons_x kid key_k ls;
-    (* JIT_RETRY only if a prefix item is ANY *)
-    jit_fix (raw_crel id d) (cacc id k) pm (
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_tlv id (raw_iarel dpre (raw_sxrel kid dsx))) (raw_crel id d) ()
       (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser k))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
       (jit_tlv id (raw_iarel dpre (raw_sxrel kid dsx)) (asn1_content_as_parser k) pm
@@ -2233,20 +2058,15 @@ let rec jit_write_crel (id: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] k: a
           (fun w -> JAS.acc_content_none_inv ipd prefix kid key_k ls pf pf' w) pm
           (fun x' #x out pos #v #p ->
             jit_write_iarel dpre () (Set.singleton kid) () (aan kid key_k ls) () (raw_sxrel kid dsx) (JAS.av_sfx_sxrel kid dsx) pm
-              (jit_weak (raw_sxrel kid dsx) (aan kid key_k ls []) pm
               (jit_iff (raw_sxrel kid dsx) (raw_sxrel kid dsx) ()
                 (JA.adbacc kid key_k ls) (aan kid key_k ls []) (fun w -> JA.aacc_nil_none kid key_k ls w) (fun w -> JAS.aacc_nil_none_inv kid key_k ls w) pm
-                (fun x' #x out pos #v #p -> jit_write_sxrel kid dsx () [] ls () pm x' #x out pos #v #p)))
+                (fun x' #x out pos #v #p -> jit_write_sxrel kid dsx () [] ls () pm x' #x out pos #v #p))
               x' #x out pos #v #p))))
-      (jit_content_local id d () pm)
   | CD_ADB_SOME ipd prefix kid key_k ls fb pf pf' dfb dfx dpre ->
     content_adb_some_equiv id ipd prefix kid key_k ls fb pf pf' dfb dfx dpre;
     app_nil_l ls;
-    aas_acons kid key_k ls fb;
     aas_acons_x kid key_k ls fb;
-    (* JIT_RETRY only if a prefix item is ANY, or if the fallback is
-       written with a key that is one of the literals *)
-    jit_fix (raw_crel id d) (cacc id k) pm (
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)))) (raw_crel id d) ()
       (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id (asn1_content_as_parser k))) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
       (jit_tlv id (raw_iarel dpre (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb))) (asn1_content_as_parser k) pm
@@ -2259,79 +2079,90 @@ let rec jit_write_crel (id: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] k: a
               (jit_iff (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)) (raw_fxrel kid dfx (raw_dfbr kid key_k #fb dfb)) ()
                 (JA.afbacc kid key_k ls fb) (aas kid key_k ls fb []) (fun w -> JA.aacc_nil_some kid key_k ls fb w) (fun w -> JAS.aacc_nil_some_inv kid key_k ls fb w) pm
                 (fun x' #x out pos #v #p -> jit_write_fxrel kid dfx () [] ls () fb (raw_dfbr kid key_k #fb dfb) pm
-                  (jit_fb kid key_k ls fb dfb pm
-                    (fun out p2 p0 #v -> not_lits kid key_k () ls out p2 p0 #v)
+                  (jit_fb kid key_k () ls fb dfb pm
+                    (fun x' #c -> not_lits kid key_k () ls pm x' #c)
                     (fun x' #x out pos #v #p -> jit_write_terminal kid key_k () pm x' #x out pos #v #p)
                     (fun x' #x out pos #v #p -> jit_write_irel dfb () pm x' #x out pos #v #p))
                   x' #x out pos #v #p))
               x' #x out pos #v #p))))
-      (jit_content_local id d () pm)
   | CD_VIEW d' ty view mk law ->
     content_view_equiv id d' ty view mk law;
+    jit_cast (ex_content k) () (raw_crel id d) (cacc id k) pm (
     jit_iff (raw_view (raw_crel id d') view) (raw_crel id d) () (cacc id k) (cacc id k) (fun _ -> ()) (fun _ -> ()) pm
-      (jit_view (raw_crel id d') view (cacc id k) pm (fun x' #x out pos #v #p -> jit_write_crel id d' () pm x' #x out pos #v #p)))
+      (jit_view (raw_crel id d') view (cacc id k) pm (fun x' #x out pos #v #p -> jit_write_crel id d' () pm x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
-(* ANY DEFINED BY: the prefix items, then the suffix (written first).
-   Exact unless the prefix items contain ANY, whose presence cannot be told
-   from its tag; then the whole content is written again and validated
-   (`jit_fix` in `jit_write_crel`). *)
+(* ANY DEFINED BY: the prefix items, then the suffix (written first.) *)
 and jit_write_iarel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] sfx: Type0) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: iadesc ls sfx t)
   (u: squash (In.supported_items ls /\ Conf.wf_items ls))
   (ks: Ghost.erased (Set.set asn1_id_t)) (wf: squash (asn1_any_prefix_k_wf ks i))
-  (aa: Ghost.erased (list gen_decorated_parser_twin -> SB.bytes -> prop)) (acons: squash (acons_ok aa /\ JAS.acons_x_ok aa))
-  (sr: bprel sfx) (avs: JAS.av_sfx_t sr ks) (pm: perm) ([@@@FStar.Attributes.monomorphize] ws: jw sr (Ghost.reveal aa []) pm)
+  (aa: Ghost.erased (list gen_decorated_parser_twin -> SB.bytes -> prop)) (acons: squash (JAS.acons_x_ok aa))
+  (sr: bprel sfx) (avs: JAS.av_sfx_t sr ks) (pm: perm) (#exs: bool) ([@@@FStar.Attributes.monomorphize] ws: jwg exs sr (Ghost.reveal aa []) pm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jres (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm x' x out pos v p)
+: Tot (jresg (ex_items ls && exs) (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jw (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm =
+= [@inline_let] let vf : jwg (ex_items ls && exs) (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm =
   (match d with
   | IA_NIL ->
     items_any_nil_equiv sr;
-    jit_iff sr (raw_iarel d sr) () (Ghost.reveal aa []) (Ghost.reveal aa (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm ws
+    jit_cast (ex_items ls && exs) () (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm (
+    jit_iff sr (raw_iarel d sr) () (Ghost.reveal aa []) (Ghost.reveal aa (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm ws)
   | IA_SINGLE #s1 #d1 #dk dd ->
     items_any_single_equiv dd sr;
     L.twins_of_single dk;
+    L.item_set_twin dk;
+    SL.item_dec_twin dk;
     if JF.any_dec dk
     then
+      jit_cast (ex_items ls && exs) () (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm (
       jit_iff (raw_cat (raw_drel dd) sr) (raw_iarel d sr) ()
         (Ghost.reveal aa [In.twin_of dk]) (Ghost.reveal aa (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm
-        (jit_acons (In.twin_of dk) [] (In.has_id_dec dk ()) aa () (raw_drel dd) sr pm
-          (jit_weak (raw_drel dd) (dacc dk) pm (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))
-          ws)
-    else begin
-      L.item_set_twin dk;
-      SL.item_dec_twin dk;
+        (jit_acons_a (In.twin_of dk) [] (PSL.dec_shaped dk) aa () (raw_drel dd) sr pm
+          (fun x -> JF.dfe_any dk x)
+          (SL.hs (In.twin_of dk)) ()
+          (if PLAIN? d1
+           then JF.av_none sr (SL.hs (In.twin_of dk)) ()
+           else avs (SL.hs (In.twin_of dk)) ())
+          (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
+          ws))
+    else
+      jit_cast (ex_items ls && exs) () (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm (
       jit_iff (raw_cat (raw_drel dd) sr) (raw_iarel d sr) ()
         (Ghost.reveal aa [In.twin_of dk]) (Ghost.reveal aa (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm
-        (jit_acons_x #true #false (In.twin_of dk) [] (PSL.dec_shaped dk) aa () (raw_drel dd) sr pm
+        (jit_acons_x (In.twin_of dk) [] (PSL.dec_shaped dk) aa () (raw_drel dd) sr pm
           (JF.fe_drel dd ())
           (SL.hs (In.twin_of dk)) ()
           (if PLAIN? d1
            then JF.av_none sr (SL.hs (In.twin_of dk)) ()
            else avs (SL.hs (In.twin_of dk)) ())
           (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
-          ws)
-    end
+          ws))
   | IA_CONS #s1 #d1 #dk dd #s2 #d2 #dk2 #ids2 #tl2 dtl ->
     items_any_cons_equiv dd dtl sr;
     L.twins_of_cons2 dk dk2 tl2;
     JAS.any_wf_tl ks (s1, d1) ((s2, d2) :: ids2);
+    L.item_set_twin dk;
+    SL.item_dec_twin dk;
     if JF.any_dec dk
     then
+      jit_cast (ex_items ls && exs) () (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm (
       jit_iff (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel d sr) ()
         (Ghost.reveal aa (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (Ghost.reveal aa (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm
-        (jit_acons (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.has_id_dec dk ()) aa ()
+        (jit_acons_a (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (PSL.dec_shaped dk) aa ()
           (raw_drel dd) (raw_iarel dtl sr) pm
-          (jit_weak (raw_drel dd) (dacc dk) pm (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))
-          (fun x' #x out pos #v #p -> jit_write_iarel dtl () ks () aa () sr avs pm ws x' #x out pos #v #p))
-    else begin
-      L.item_set_twin dk;
-      SL.item_dec_twin dk;
+          (fun x -> JF.dfe_any dk x)
+          (SL.hs (In.twin_of dk)) ()
+          (if PLAIN? d1
+           then JF.av_none (raw_iarel dtl sr) (SL.hs (In.twin_of dk)) ()
+           else JAS.av_iarel dtl ks (SL.hs (In.twin_of dk)) () sr avs)
+          (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
+          (fun x' #x out pos #v #p -> jit_write_iarel dtl () ks () aa () sr avs pm ws x' #x out pos #v #p)))
+    else
+      jit_cast (ex_items ls && exs) () (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm (
       jit_iff (raw_cat (raw_drel dd) (raw_iarel dtl sr)) (raw_iarel d sr) ()
         (Ghost.reveal aa (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (Ghost.reveal aa (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm
-        (jit_acons_x #true #false (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (PSL.dec_shaped dk) aa ()
+        (jit_acons_x (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (PSL.dec_shaped dk) aa ()
           (raw_drel dd) (raw_iarel dtl sr) pm
           (JF.fe_drel dd ())
           (SL.hs (In.twin_of dk)) ()
@@ -2339,8 +2170,7 @@ and jit_write_iarel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attri
            then JF.av_none (raw_iarel dtl sr) (SL.hs (In.twin_of dk)) ()
            else JAS.av_iarel dtl ks (SL.hs (In.twin_of dk)) () sr avs)
           (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
-          (fun x' #x out pos #v #p -> jit_write_iarel dtl () ks () aa () sr avs pm ws x' #x out pos #v #p))
-    end)
+          (fun x' #x out pos #v #p -> jit_write_iarel dtl () ks () aa () sr avs pm ws x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
 (* The dispatch on the key, without a fallback. `ls` is the suffix of the
@@ -2352,31 +2182,35 @@ and jit_write_sxrel (kid: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] key_k:
   (u': squash (In.supported_ls ls /\ Conf.wf_ls ls /\ Ghost.reveal pre `List.Tot.append` ls == Ghost.reveal lsf /\ List.Tot.noRepeats (List.Tot.map fst (Ghost.reveal lsf)))) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jresx (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm x' x out pos v p)
+: Tot (jresg (ex_ls ls) (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jwx (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm =
+= [@inline_let] let vf : jwg (ex_ls ls) (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm =
   (match d with
   | SX_NIL _ ->
     adb_nil_equiv kid key_k;
+    jit_cast (ex_ls ls) () (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm (
     jit_iff (raw_false unit) (raw_sxrel kid d) () (JA.adbacc kid key_k lsf) (JA.adbacc kid key_k lsf) (fun _ -> ()) (fun _ -> ()) pm
-      (jit_false unit (JA.adbacc kid key_k lsf) pm)
+      (jit_false unit (JA.adbacc kid key_k lsf) pm))
   | SX_SINGLE _ kx y di ->
     adb_single_equiv kid kx y di;
+    jit_cast (ex_ls ls) () (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm (
     jit_iff (raw_dlit kid kx #y di) (raw_sxrel kid d) ()
       (JA.adbacc kid key_k lsf) (JA.adbacc kid key_k lsf) (fun _ -> ()) (fun _ -> ()) pm
       (jit_lit kid key_k kx (raw_irel false di) (JA.adbacc kid key_k lsf) (L.iacc (In.twins_of (dsnd y)))
         (fun c -> JK.lit_iff kid key_k kx y pre [] c) pm
-        (fun x' #x out pos #v #p -> jit_write_irel di () pm x' #x out pos #v #p))
+        (fun x' #x out pos #v #p -> jit_write_irel di () pm x' #x out pos #v #p)))
   | SX_CONS _ kx y di #hd2 #tl2 dtl ->
     adb_cons_equiv kid kx y di dtl;
     JK.lit_pre_tail key_k kx y pre hd2 tl2;
     jit_iff (raw_either (raw_dlit kid kx #y di) (raw_sxrel kid dtl)) (raw_sxrel kid d) ()
       (JA.adbacc kid key_k lsf) (JA.adbacc kid key_k lsf) (fun _ -> ()) (fun _ -> ()) pm
       (jit_either_same (raw_dlit kid kx #y di) (raw_sxrel kid dtl) (JA.adbacc kid key_k lsf) pm
-        (jit_lit kid key_k kx (raw_irel false di) (JA.adbacc kid key_k lsf) (L.iacc (In.twins_of (dsnd y)))
-          (fun c -> JK.lit_iff kid key_k kx y pre (hd2 :: tl2) c) pm
-          (fun x' #x out pos #v #p -> jit_write_irel di () pm x' #x out pos #v #p))
-        (fun x' #x out pos #v #p -> jit_write_sxrel kid dtl () (Ghost.hide (Ghost.reveal pre `List.Tot.append` [(kx, y)])) lsf () pm x' #x out pos #v #p)))
+        (jit_cast (ex_ls ls) () (raw_dlit kid kx #y di) (JA.adbacc kid key_k lsf) pm
+          (jit_lit kid key_k kx (raw_irel false di) (JA.adbacc kid key_k lsf) (L.iacc (In.twins_of (dsnd y)))
+            (fun c -> JK.lit_iff kid key_k kx y pre (hd2 :: tl2) c) pm
+            (fun x' #x out pos #v #p -> jit_write_irel di () pm x' #x out pos #v #p)))
+        (jit_cast (ex_ls ls) () (raw_sxrel kid dtl) (JA.adbacc kid key_k lsf) pm
+          (fun x' #x out pos #v #p -> jit_write_sxrel kid dtl () (Ghost.hide (Ghost.reveal pre `List.Tot.append` [(kx, y)])) lsf () pm x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
 (* The same, with a fallback, whose writer is `wfb` *)
@@ -2423,53 +2257,56 @@ and jit_write_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attrib
   (u: squash (In.supported_items ls /\ asn1_sequence_k_wf i /\ Conf.wf_items ls)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jresx (raw_irel false d) (L.iacc (In.twins_of ls)) pm x' x out pos v p)
+: Tot (jresg (ex_items ls) (raw_irel false d) (L.iacc (In.twins_of ls)) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jwx (raw_irel false d) (L.iacc (In.twins_of ls)) pm =
+= [@inline_let] let vf : jwg (ex_items ls) (raw_irel false d) (L.iacc (In.twins_of ls)) pm =
   (match d with
   | ID_NIL ->
     items_nil_equiv false;
+    jit_cast (ex_items ls) () (raw_irel false d) (L.iacc (In.twins_of ls)) pm (
     jit_iff (raw_pure null_enc) (raw_irel false d) ()
-      (L.iacc []) (L.iacc (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm (jit_nil pm)
+      (L.iacc []) (L.iacc (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm (jit_nil pm))
   | ID_SINGLE #_ #_ #dk dd ->
     items_single_equiv false dd;
     L.twins_of_single dk;
+    jit_cast (ex_items ls) () (raw_irel false d) (L.iacc (In.twins_of ls)) pm (
     jit_iff (raw_drel dd) (raw_irel false d) ()
       (dacc dk) (L.iacc (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm
-      (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))
   | ID_CONS #s1 #d1 #dk #t1 dd #s2 #d2 #dk2 #ids2 #tl2 #t2 dtl ->
     items_cons_equiv false dd dtl;
     join_cat_equiv false (raw_drel dd) (raw_irel false dtl);
     L.twins_of_cons2 dk dk2 tl2;
     SL.wf_tl (s1, d1) ((s2, d2) :: ids2);
+    L.item_set_twin dk;
+    SL.item_dec_twin dk;
     if JF.any_dec dk
     then
-      (* An ANY head may or may not be present: no tag to tell; fall back to
-         writing the whole SEQUENCE components, then validating them *)
-      jit_fix (raw_irel false d) (L.iacc (In.twins_of ls)) pm
-        (jit_ext
-          #_ #(t1 & t2)
-          (raw_cat (raw_drel dd) (raw_irel false dtl))
-          (raw_irel false d) ()
-          (L.iacc (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (L.iacc (In.twins_of ls)) (fun _ -> ()) pm
-          (jit_items_cons (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.has_id_dec dk ()) (PSL.dec_shaped dk)
-            (raw_drel dd) (raw_irel false dtl) pm
-            (probe_dd dd pm)
-            (jit_weak (raw_drel dd) (dacc dk) pm (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))
-            (jit_weak (raw_irel false dtl) (L.iacc (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) pm
-              (fun x' #x out pos #v #p -> jit_write_irel dtl () pm x' #x out pos #v #p))))
-        (jit_local (raw_irel false d) pm
-          (fun x' #x out pos #v #p -> RW.raw_write_irel false d pm x' #x out pos #v #p)
-          (In.validate_seq ls () None))
-    else begin
-      L.item_set_twin dk;
-      SL.item_dec_twin dk;
+      (* An ANY head is checked to be exactly one TLV (or absent), so that
+         it does not hide the next components *)
+      jit_cast (ex_items ls) () (raw_irel false d) (L.iacc (In.twins_of ls)) pm (
       jit_iff
         #_ #(t1 & t2)
         (raw_cat (raw_drel dd) (raw_irel false dtl))
         (raw_irel false d) ()
         (L.iacc (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (L.iacc (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm
-        (jit_items_cons_x #true #true (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (PSL.dec_shaped dk)
+        (jit_items_cons_a (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))
+          (raw_drel dd) (raw_irel false dtl) pm
+          (fun x -> JF.dfe_any dk x)
+          (SL.hs (In.twin_of dk)) ()
+          (if PLAIN? d1
+           then JF.av_none (raw_irel false dtl) (SL.hs (In.twin_of dk)) ()
+           else JF.av_irel dtl (SL.hs (In.twin_of dk)) ())
+          (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
+          (fun x' #x out pos #v #p -> jit_write_irel dtl () pm x' #x out pos #v #p)))
+    else
+      jit_cast (ex_items ls) () (raw_irel false d) (L.iacc (In.twins_of ls)) pm (
+      jit_iff
+        #_ #(t1 & t2)
+        (raw_cat (raw_drel dd) (raw_irel false dtl))
+        (raw_irel false d) ()
+        (L.iacc (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2))) (L.iacc (In.twins_of ls)) (fun _ -> ()) (fun _ -> ()) pm
+        (jit_items_cons_x (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (PSL.dec_shaped dk)
           (raw_drel dd) (raw_irel false dtl) pm
           (JF.fe_drel dd ())
           (SL.hs (In.twin_of dk)) ()
@@ -2477,61 +2314,62 @@ and jit_write_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attrib
            then JF.av_none (raw_irel false dtl) (SL.hs (In.twin_of dk)) ()
            else JF.av_irel dtl (SL.hs (In.twin_of dk)) ())
           (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
-          (fun x' #x out pos #v #p -> jit_write_irel dtl () pm x' #x out pos #v #p))
-    end)
+          (fun x' #x out pos #v #p -> jit_write_irel dtl () pm x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
 and jit_write_set_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: idesc ls t)
   (u: squash (In.supported_items ls /\ asn1_set_k_wf i /\ Conf.wf_items ls)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jress (raw_irel true d) (In.twins_of ls) pm x' x out pos v p)
+: Tot (jressg (ex_items ls) (raw_irel true d) (In.twins_of ls) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jws (raw_irel true d) (In.twins_of ls) pm =
+= [@inline_let] let vf : jwsg (ex_items ls) (raw_irel true d) (In.twins_of ls) pm =
   (match d with
   | ID_NIL ->
     items_nil_equiv true;
-    jit_s_of_w (raw_irel true d) (In.twins_of ls) pm
-      (jit_ext (raw_pure null_enc) (raw_irel true d) ()
-        (L.iacc []) (L.sacc (In.twins_of ls)) L.sacc_nil pm (jit_nil pm))
+    jit_s_cast (ex_items ls) () (raw_irel true d) (In.twins_of ls) pm (
+    jit_s_ext (raw_pure null_enc) (raw_irel true d) [] (In.twins_of ls) () pm (jit_s_nil pm))
   | ID_SINGLE #_ #_ #dk dd ->
     items_single_equiv true dd;
     L.twins_of_single dk;
     L.set_cons_ok_intro dk ASN1_GEN_ITEMS_NIL;
+    PSL.dec_shaped dk;
     if JF.any_dec dk
     then
+      jit_s_cast (ex_items ls) () (raw_irel true d) (In.twins_of ls) pm (
       jit_s_of_w (raw_irel true d) (In.twins_of ls) pm
         (jit_ext (raw_drel dd) (raw_irel true d) ()
           (L.sacc1 (In.twin_of dk)) (L.sacc (In.twins_of ls)) (L.sacc_single (In.twin_of dk)) pm
-          (jit_set_elt (In.twin_of dk) (In.has_id_dec dk ()) (raw_drel dd) pm
-            (jit_weak (raw_drel dd) (dacc dk) pm (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))))
-    else begin
-      PSL.dec_shaped dk;
+          (jit_set_elt_a (In.twin_of dk) () (fun x -> JF.dfe_any dk x) (raw_drel dd) pm
+            (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))))
+    else
+      jit_s_cast (ex_items ls) () (raw_irel true d) (In.twins_of ls) pm (
       jit_s_ext (raw_drel dd) (raw_irel true d) [In.twin_of dk] (In.twins_of ls) () pm
         (jit_set_single_x (In.twin_of dk) () (raw_drel dd) pm (JF.fe_drel dd ())
-          (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))
-    end
+          (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)))
   | ID_CONS #s1 #d1 #dk #t1 dd #s2 #d2 #dk2 #ids2 #tl2 #t2 dtl ->
     items_cons_equiv true dd dtl;
     join_ins_equiv true (raw_drel dd) (raw_irel true dtl);
     L.twins_of_cons2 dk dk2 tl2;
     L.set_cons_ok_intro dk (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2);
+    PSL.dec_shaped dk;
     if JF.any_dec dk
     then
+      jit_s_cast (ex_items ls) () (raw_irel true d) (In.twins_of ls) pm (
       jit_s_ext
-        #(t1 & t2)
+        #_ #(t1 & t2)
         (raw_ins SI.lt_tag (raw_drel dd) (raw_irel true dtl))
         (raw_irel true d)
         (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.twins_of ls) () pm
         (jit_set_cons (In.twin_of dk) (In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) ()
           (raw_drel dd) (raw_irel true dtl) pm
-          (jit_set_elt (In.twin_of dk) (In.has_id_dec dk ()) (raw_drel dd) pm
-            (jit_weak (raw_drel dd) (dacc dk) pm (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)))
-          (fun x' #x out pos #v #p -> jit_write_set_irel dtl () pm x' #x out pos #v #p))
-    else begin
-      PSL.dec_shaped dk;
+          (jit_set_elt_a (In.twin_of dk) () (fun x -> JF.dfe_any dk x) (raw_drel dd) pm
+            (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p))
+          (fun x' #x out pos #v #p -> jit_write_set_irel dtl () pm x' #x out pos #v #p)))
+    else
+      jit_s_cast (ex_items ls) () (raw_irel true d) (In.twins_of ls) pm (
       jit_s_ext
-        #(t1 & t2)
+        #_ #(t1 & t2)
         (raw_ins SI.lt_tag (raw_drel dd) (raw_irel true dtl))
         (raw_irel true d)
         (In.twin_of dk :: In.twins_of (ASN1_GEN_ITEMS_CONS s2 d2 dk2 ids2 tl2)) (In.twins_of ls) () pm
@@ -2539,22 +2377,22 @@ and jit_write_set_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.At
           (raw_drel dd) (raw_irel true dtl) pm
           (JF.fe_drel dd ())
           (fun x' #x out pos #v #p -> jit_write_drel dd () pm x' #x out pos #v #p)
-          (fun x' #x out pos #v #p -> jit_write_set_irel dtl () pm x' #x out pos #v #p))
-    end)
+          (fun x' #x out pos #v #p -> jit_write_set_irel dtl () pm x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
 and jit_write_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] dc: _) (#[@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s dc) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: ddesc dk t)
   (u: squash (In.supported_dec dk /\ Conf.wf_dec dk)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jresx (raw_drel d) (dacc dk) pm x' x out pos v p)
+: Tot (jresg (ex_dec dk) (raw_drel d) (dacc dk) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jwx (raw_drel d) (dacc dk) pm =
+= [@inline_let] let vf : jwg (ex_dec dk) (raw_drel d) (dacc dk) pm =
   (match d with
   | DD_PLAIN #_ #k d' ->
     dec_plain_equiv d';
+    jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (
     jit_iff (raw_arel d') (raw_drel d) () (kacc k) (dacc dk) (L.iacc_plain k) (fun w -> L.iacc_plain_iff k w) pm
-      (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p))
   | DD_OPTION #_ #k d' ->
     dec_option_equiv d';
     L.iacc_option_none k;
@@ -2562,97 +2400,144 @@ and jit_write_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
     then begin match d' with
       | D_ANY ->
         rel_any_equiv ();
+        jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (
         jit_iff (raw_opt raw_slice) (raw_drel d) () (dacc dk) (dacc dk) (fun _ -> ()) (fun _ -> ()) pm
           (jit_opt_slice (kacc k) (dacc dk) () (L.iacc_option_some k) (fun w -> L.iacc_option_iff k w) pm
             (jit_iff (raw_arel d') raw_slice () (kacc k) (kacc k) (fun _ -> ()) (fun _ -> ()) pm
-              (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)))
+              (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p))))
       | _ ->
-        (* a view of ANY: written, then validated *)
-        jit_dec_local d () pm
+        (* a view of ANY: an empty encoding would be absent *)
+        jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (
+        jit_iff (raw_opt (raw_arel d')) (raw_drel d) () (dacc dk) (dacc dk) (fun _ -> ()) (fun _ -> ()) pm
+          (jit_opt_a (raw_arel d') (kacc k) (dacc dk) () (L.iacc_option_some k) pm
+            (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)))
     end else
+      jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (
       jit_iff (raw_opt (raw_arel d')) (raw_drel d) () (dacc dk) (dacc dk) (fun _ -> ()) (fun _ -> ()) pm
         (jit_opt_ne (raw_arel d') s (JF.fr_arel d' ()) (kacc k) (dacc dk) () (L.iacc_option_some k) (fun w -> L.iacc_option_iff k w) pm
-          (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p))
+          (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)))
   | DD_DEFAULT id0 #k defl ->
     if ASN1_PREFIXED_TERMINAL? k
-    then jit_dec_local d () pm
-    else jit_default id0 k defl () pm
+    then jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (jit_default_prefixed id0 k defl () pm)
+    else jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (jit_default id0 k defl () pm)
   | DD_DEFAULT_RESTRICTED id0 #k r defl ->
-    jit_default_restricted id0 k r defl () pm
+    jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (jit_default_restricted id0 k r defl () pm)
   | DD_VIEW d' ty view mk law ->
     dec_view_equiv d' ty view mk law;
+    jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (
     jit_iff (raw_view (raw_drel d') view) (raw_drel d) () (dacc dk) (dacc dk) (fun _ -> ()) (fun _ -> ()) pm
-      (jit_view (raw_drel d') view (dacc dk) pm (fun x' #x out pos #v #p -> jit_write_drel d' () pm x' #x out pos #v #p)))
+      (jit_view (raw_drel d') view (dacc dk) pm (fun x' #x out pos #v #p -> jit_write_drel d' () pm x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
 and jit_write_arel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] k: asn1_k s) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: adesc k t)
   (u: squash (In.supported_k k /\ Conf.wf k)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jresx (raw_arel d) (kacc k) pm x' x out pos v p)
+: Tot (jresg (ex_k k) (raw_arel d) (kacc k) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jwx (raw_arel d) (kacc k) pm =
+= [@inline_let] let vf : jwg (ex_k k) (raw_arel d) (kacc k) pm =
   (match d with
   | D_ILC id #k' cd ->
     rel_ilc_equiv id cd;
+    jit_cast (ex_k k) () (raw_arel d) (kacc k) pm (
     jit_iff (raw_crel id cd) (raw_arel d) () (cacc id k') (kacc k) (L.acc_k_ilc id k') (L.acc_k_ilc_inv id k') pm
-      (fun x' #x out pos #v #p -> jit_write_crel id cd () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> jit_write_crel id cd () pm x' #x out pos #v #p))
   | D_CHOICE lc pf ld ->
     rel_choice_equiv lc pf ld;
+    jit_cast (ex_k k) () (raw_arel d) (kacc k) pm (
     jit_iff (raw_lcrel ld) (raw_arel d) () (L.lacc lc) (kacc k) (L.lacc_choice lc pf) (L.lacc_choice_inv lc pf) pm
-      (fun x' #x out pos #v #p -> jit_write_lcrel ld () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> jit_write_lcrel ld () pm x' #x out pos #v #p))
   | D_ANY ->
     rel_any_equiv ();
+    jit_cast (ex_k k) () (raw_arel d) (kacc k) pm (
     jit_iff raw_slice (raw_arel d) () (kacc k) (kacc k) (fun _ -> ()) (fun _ -> ()) pm
       (jit_pre raw_slice (kacc k) (kacc k) (fun _ -> ()) pm
         (JT.pc_slice (In.validate_k ASN1_ANY_ILC ()) JT.ptrue (kacc k) (fun _ -> ()) pm)
-        (RW.raw_write_slice pm))
+        (RW.raw_write_slice pm)))
   | D_VIEW d' ty view mk law ->
     rel_view_equiv d' ty view mk law;
+    jit_cast (ex_k k) () (raw_arel d) (kacc k) pm (
     jit_iff (raw_view (raw_arel d') view) (raw_arel d) () (kacc k) (kacc k) (fun _ -> ()) (fun _ -> ()) pm
-      (jit_view (raw_arel d') view (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p))
+      (jit_view (raw_arel d') view (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d' () pm x' #x out pos #v #p)))
   | D_KEEP d' wf ->
     rel_keep_equiv d' wf;
+    jit_cast (ex_k k) () (raw_arel d) (kacc k) pm (
     jit_iff (raw_keep (raw_arel d')) (raw_arel d) () (kacc k) (kacc k) (fun _ -> ()) (fun _ -> ()) pm
-      (jit_keep (raw_arel d') (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d' () (pm /. 2.0R) x' #x out pos #v #p)))
+      (jit_keep (raw_arel d') (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d' () (pm /. 2.0R) x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
 and jit_write_lcrel (#[@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: lcdesc lc t)
   (u: squash (lc_ok lc /\ Conf.wf_lc lc)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
-: Tot (jresx (raw_lcrel d) (L.lacc lc) pm x' x out pos v p)
+: Tot (jresg (ex_lc lc) (raw_lcrel d) (L.lacc lc) pm x' x out pos v p)
   (decreases d)
-= [@inline_let] let vf : jwx (raw_lcrel d) (L.lacc lc) pm =
+= [@inline_let] let vf : jwg (ex_lc lc) (raw_lcrel d) (L.lacc lc) pm =
   (match d with
   | LC_NIL ->
     lc_nil_equiv ();
-    jit_iff (raw_false unit) (raw_lcrel d) () (L.lacc lc) (L.lacc lc) (fun _ -> ()) (fun _ -> ()) pm (jit_false unit (L.lacc lc) pm)
+    jit_cast (ex_lc lc) () (raw_lcrel d) (L.lacc lc) pm (
+    jit_iff (raw_false unit) (raw_lcrel d) () (L.lacc lc) (L.lacc lc) (fun _ -> ()) (fun _ -> ()) pm (jit_false unit (L.lacc lc) pm))
   | LC_SINGLE id' #c cd ->
     lc_single_equiv id' cd;
     let u' = L.lc_tail_ok (id', c) [] u in
+    jit_cast (ex_lc lc) () (raw_lcrel d) (L.lacc lc) pm (
     jit_iff_fr (raw_crel id' cd) (raw_lcrel d) () (FStar.Set.singleton id') (JF.fr_crel id' cd)
       (cacc id' c) (L.lacc lc) (L.lacc_hd id' c []) (L.lacc_hd_inv id' c []) pm
-      (fun x' #x out pos #v #p -> jit_write_crel id' cd () pm x' #x out pos #v #p)
+      (fun x' #x out pos #v #p -> jit_write_crel id' cd () pm x' #x out pos #v #p))
   | LC_CONS id' #c cd #hd2 #tl2 dtl ->
     lc_cons_equiv id' cd dtl;
     let u' = L.lc_tail_ok (id', c) (hd2 :: tl2) u in
+    jit_cast (ex_lc lc) () (raw_lcrel d) (L.lacc lc) pm (
     jit_iff (raw_either (raw_crel id' cd) (raw_lcrel dtl)) (raw_lcrel d) () (L.lacc lc) (L.lacc lc) (fun _ -> ()) (fun _ -> ()) pm
       (jit_either_x (raw_crel id' cd) (raw_lcrel dtl) (cacc id' c) (L.lacc (hd2 :: tl2)) (L.lacc lc)
         (FStar.Set.singleton id') (JF.lc_set (hd2 :: tl2)) (JF.fr_crel id' cd) (JF.fr_lcrel dtl)
         (L.lacc_hd id' c (hd2 :: tl2)) (L.lacc_tl id' c (hd2 :: tl2))
         (L.lacc_hd_inv id' c (hd2 :: tl2)) (L.lacc_tl_inv id' c (hd2 :: tl2)) pm
         (fun x' #x out pos #v #p -> jit_write_crel id' cd () pm x' #x out pos #v #p)
-        (fun x' #x out pos #v #p -> jit_write_lcrel dtl () pm x' #x out pos #v #p)))
+        (fun x' #x out pos #v #p -> jit_write_lcrel dtl () pm x' #x out pos #v #p))))
   in vf x' #x out pos #v #p
 
-(* The top level *)
+(* The top level. JIT_RETRY (strict rejection) becomes JIT_INVALID: the
+   value has no valid encoding if `ex_k k`, or else it was rejected by a
+   check stricter than DER (an ANY slice that is not exactly one TLV, or
+   the fallback of ANY DEFINED BY with the key of one of the literals.) *)
+
+let jit_post_r (ex: bool) (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (res: jit_result) (p': nat) (v': SB.bytes) : prop =
+  Seq.length v' == Seq.length v /\
+  p <= Seq.length v /\
+  Seq.slice v' p (Seq.length v) == Seq.slice v p (Seq.length v) /\
+  (res == JIT_OK ==> (W.r2l_post x p v true p' v' /\ a)) /\
+  (res == JIT_NO_SPACE ==> Seq.length x > p) /\
+  (res == JIT_INVALID ==> (ex == true ==> ~ a)) /\
+  ~ (JIT_RETRY? res)
 
 inline_for_extraction
-let jit_writer_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (RW.raw_ok k)) (pm: perm) : jwx (raw_arel d) (kacc k) pm =
-  fun x' #x out pos #v #p -> jit_write_arel d () pm x' #x out pos #v #p
+let jwr (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) =
+  (x': t) -> (#x: Ghost.erased SB.bytes) ->
+  (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
+  stt jit_result
+    (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
+      pure (jit_post_r ex x (a x) (SZ.v p) v res (SZ.v p') v'))
+
+inline_for_extraction
+fn jit_root (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a pm)
+: jwr ex #t r a pm
+= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  let res = w x' #x out pos;
+  match res {
+    JIT_RETRY -> { JIT_INVALID }
+    _ -> { res }
+  }
+}
+
+inline_for_extraction
+let jit_writer_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (RW.raw_ok k)) (pm: perm) : jwr (ex_k k) (raw_arel d) (kacc k) pm =
+  jit_root (raw_arel d) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d () pm x' #x out pos #v #p)
 
 (* The legacy writer: nested pairs and `either` *)
 inline_for_extraction
-let jit_writer (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm) : jwx (raw_rel k) (kacc k) pm =
-  fun x' #x out pos #v #p -> jit_write_arel (legacy_adesc k) () pm x' #x out pos #v #p
+let jit_writer (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm) : jwr (ex_k k) (raw_rel k) (kacc k) pm =
+  jit_root (raw_rel k) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel (legacy_adesc k) () pm x' #x out pos #v #p)

@@ -5,8 +5,9 @@
    that are not DER encodings of the schema (invalid strings, non-minimal
    INTEGERs, bad BIT STRING padding, DEFAULT values, restrictions, etc.),
    and JIT_NO_SPACE on a buffer one byte too short; the writers never
-   return JIT_RETRY, any non-compositional check (because of ANY) being
-   done locally. The components of a SET and the elements of a SET OF are
+   return JIT_RETRY: they are single-pass and strict (an ANY slice must be
+   exactly one TLV, an ADB fallback key must not be one of the literals),
+   so nothing is read back from the output. The components of a SET and the elements of a SET OF are
    sorted while writing, whatever their order in the schema or in the
    input.
 
@@ -313,16 +314,22 @@ int main(void) {
     OK(adbF, adbF_int(7), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
     OK(adbF, adbF_fb(SL(k125), NONE_SL), V(0x30, 0x04, 0x06, 0x02, 0x2a, 0x05));
     OK(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_ok))), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x05, 0x01, 0x01, 0xff));
-    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback: local validation */
+    uint8_t any_null[] = { 0x05, 0x00 };
+    uint8_t any_two[] = { 0x01, 0x01, 0xff, 0x05, 0x00 };
+    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback */
+    /* strict: a known key in the fallback is rejected even if the written
+       bytes would be the valid encoding of that key (here 1.2.3 -> NULL) */
+    INVALID(adbF, adbF_fb(SL(k123), SOME_SL(SL(any_null))));
     INVALID(adbF, adbF_fb(SL(kbad), NONE_SL));          /* not a DER OID */
     INVALID(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_bad)))); /* not a TLV */
+    INVALID(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_two)))); /* two TLVs */
   }
 
   /* PREFIXED INTEGER keys: [0] 1 -> NULL, [0] -1 -> INTEGER */
   OK(adbT, adbT_null(), V(0x30, 0x07, 0xa0, 0x03, 0x02, 0x01, 0x01, 0x05, 0x00));
   OK(adbT, adbT_int(7), V(0x30, 0x08, 0xa0, 0x03, 0x02, 0x01, 0xff, 0x02, 0x01, 0x07));
   {
-    /* a non-minimal INTEGER payload, caught by the local validation */
+    /* a non-minimal INTEGER payload, caught while writing it */
     uint8_t nonmin[] = { 0x00, 0x07 };
     adbT_t x = { .tag = FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL, .val = { .Inr = BIG(SL(nonmin)) } };
     INVALID(adbT, x);

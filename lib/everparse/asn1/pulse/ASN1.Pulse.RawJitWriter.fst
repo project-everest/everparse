@@ -8,10 +8,18 @@ module ASN1.Pulse.RawJitWriter
    and otherwise reports why it does not:
    - JIT_OK: `check_ser k () y == Some x`, and `Ser.asn1_enc k x` was
      written right before the current position;
-   - JIT_INVALID: `check_ser k () y == None`;
+   - JIT_INVALID: if `ex_k k` (the schema has neither ANY nor an ADB
+     fallback, `ASN1.Pulse.JitWriter.ex_k`), then `check_ser k () y == None`;
    - JIT_NO_SPACE: if `check_ser k () y == Some x`, then `Ser.asn1_enc k x`
      does not fit.
    It never returns JIT_RETRY.
+
+   The JIT writer is single-pass and strict (see `ASN1.Pulse.JitWriter`):
+   it also rejects an ANY slice that is not exactly one TLV, and an ADB
+   fallback whose key is one of the literals of the table. Neither can
+   happen for the bytes `rb k y` of a raw value (a raw ANY is one
+   `asn1_value`, and a raw fallback is selected by a non-literal key), but
+   we do not prove it, hence the `ex_k k` guard on JIT_INVALID.
 
    It runs the JIT writer of raw bytes (`ASN1.Pulse.JitWriter.jit_writer`)
    on half of the permission, after splitting the raw value relation into
@@ -44,7 +52,7 @@ let raw_jit_post (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (y: asn1_raw_t k) 
   Seq.slice v' p (Seq.length v) == Seq.slice v p (Seq.length v) /\
   (res == JIT_OK ==> (Some? (check_ser k () y) /\ W.r2l_post (Ser.asn1_enc k (Some?.v (check_ser k () y))) p v true p' v')) /\
   (res == JIT_NO_SPACE ==> (Some? (check_ser k () y) ==> Seq.length (Ser.asn1_enc k (Some?.v (check_ser k () y))) > p)) /\
-  (res == JIT_INVALID ==> None? (check_ser k () y)) /\
+  (res == JIT_INVALID ==> (ex_k k == true ==> None? (check_ser k () y))) /\
   ~ (JIT_RETRY? res)
 
 inline_for_extraction
@@ -58,7 +66,7 @@ let raw_jit_writer_t (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (pm: perm) =
 
 let raw_jit_correct (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (y: asn1_raw_t k) (p: nat) (v: SB.bytes) (res: jit_result) (p': nat) (v': SB.bytes)
 : Lemma
-  (requires (jit_post_g true (rb k y) (kacc k (rb k y)) p v res p' v'))
+  (requires (jit_post_r (ex_k k) (rb k y) (kacc k (rb k y)) p v res p' v'))
   (ensures (raw_jit_post k u y p v res p' v'))
 = match check_ser k () y with
   | Some _ -> rb_check_ser k u y
@@ -96,7 +104,7 @@ ensures asn1_raw_rel k pm x' y
    extraction root *)
 inline_for_extraction
 fn jit_write_raw (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (pm: perm)
-  (wj: jwx (raw_rel k) (kacc k) (pm /. 2.0R))
+  (wj: jwr (ex_k k) (raw_rel k) (kacc k) (pm /. 2.0R))
 : raw_jit_writer_t k u pm
 = (x': asn1_impl_t k) (#y: Ghost.erased (asn1_raw_t k))
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
@@ -157,7 +165,7 @@ ensures VR.raw_varel d pm x' y
 
 inline_for_extraction
 fn jit_write_raw_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
-  (wj: jwx (raw_arel d) (kacc k) (pm /. 2.0R))
+  (wj: jwr (ex_k k) (raw_arel d) (kacc k) (pm /. 2.0R))
 : raw_jit_writer_d_t d u pm
 = (x': t) (#y: Ghost.erased (asn1_raw_t k))
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
@@ -186,7 +194,7 @@ let raw_jit_writer_bytes_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (
 
 inline_for_extraction
 fn jit_write_raw_bytes_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
-  (wj: jwx (raw_arel d) (kacc k) pm)
+  (wj: jwr (ex_k k) (raw_arel d) (kacc k) pm)
 : raw_jit_writer_bytes_d_t d u pm
 = (x': t) (#y: Ghost.erased (asn1_raw_t k))
   (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
