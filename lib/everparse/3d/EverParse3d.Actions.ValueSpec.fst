@@ -7,6 +7,7 @@ module S = EverParse3d.Actions.Spec
 module P = EverParse3d.Prelude
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
+module PM = EverParse3d.PtrModel
 module LPL = LowParse.Spec.List
 module LUT = LowParse.Spec.ListUpTo
 module FLD = LowParse.Spec.FLData
@@ -64,9 +65,9 @@ let intro_refines
 
 let intro_pure
   (#d: state_dict) (#t: Type0) (vs: value_spec d t)
-  (f: (pos: nat) -> (v: t) -> (x: forevery_values d) -> Lemma (pure_at vs pos v x))
+  (f: (pos: S.aenv) -> (v: t) -> (x: forevery_values d) -> Lemma (pure_at vs pos v x))
 : Lemma (value_spec_pure vs)
-= introduce forall (pos: nat) (v: t) (x: forevery_values d) . pure_at vs pos v x
+= introduce forall (pos: S.aenv) (v: t) (x: forevery_values d) . pure_at vs pos v x
   with f pos v x
 
 let elim_refines
@@ -78,7 +79,7 @@ let elim_refines
 = ()
 
 let elim_pure
-  (#d: state_dict) (#t: Type0) (vs: value_spec d t) (pos: nat) (v: t) (x: forevery_values d)
+  (#d: state_dict) (#t: Type0) (vs: value_spec d t) (pos: S.aenv) (v: t) (x: forevery_values d)
 : Lemma
   (requires (value_spec_pure vs))
   (ensures (vs pos v x == S.SOk true x))
@@ -90,6 +91,7 @@ let vpos_vadvance (i: S.vinput) (n: nat { n <= Seq.length i.S.rest })
   (ensures (
     vinput_ok (S.vadvance i n) /\
     S.vpos (S.vadvance i n) == S.vpos i + n /\
+    S.venv (S.vadvance i n) == S.aenv_adv (S.venv i) n /\
     (S.vadvance i n).S.rest == Seq.slice i.S.rest n (Seq.length i.S.rest)
   ))
 = ()
@@ -100,6 +102,7 @@ let vpos_vtruncate (i: S.vinput) (n: nat { n <= Seq.length i.S.rest })
   (ensures (
     vinput_ok (S.vtruncate i n) /\
     S.vpos (S.vtruncate i n) == S.vpos i /\
+    S.venv (S.vtruncate i n) == S.venv i /\
     (S.vtruncate i n).S.rest == Seq.slice i.S.rest 0 n
   ))
 = ()
@@ -118,7 +121,7 @@ let wf_of_parser_pure
   (ensures (vspec_wf false p (S.vspec_of_parser #d p) vs))
 = intro_refines p (S.vspec_of_parser #d p) vs (fun i x ->
     match P.parse p i.S.rest with
-    | Some (v, _) -> elim_pure vs (S.vpos i) v x
+    | Some (v, _) -> elim_pure vs (S.venv i) v x
     | None -> ())
 
 let wf_weaken_left
@@ -200,11 +203,11 @@ let wf_pair_at
   let Some (v2, _) = P.parse p2 (S.vadvance i n1).S.rest in
   if ha1 = false && ha2 = false
   then begin
-    elim_pure vs1 (S.vpos i) v1 x;
-    elim_pure vs2 (S.vpos i + n1) v2 x;
+    elim_pure vs1 (S.venv i) v1 x;
+    elim_pure vs2 (S.aenv_adv (S.venv i) n1) v2 x;
     elim_refines p2 s2 vs2 (S.vadvance i n1) x
   end else ();
-  match vs1 (S.vpos i) v1 x with
+  match vs1 (S.venv i) v1 x with
   | S.SOk true x1 -> elim_refines p2 s2 vs2 (S.vadvance i n1) x1
   | _ -> ()
 
@@ -224,7 +227,7 @@ let wf_pair
   if ha1 || ha2 then () else
   intro_pure (vs_pair p1 vs1 vs2) (fun pos v x ->
     elim_pure vs1 pos (fst v) x;
-    elim_pure vs2 (pos + vsize p1 (fst v)) (snd v) x
+    elim_pure vs2 (S.aenv_adv pos (vsize p1 (fst v))) (snd v) x
   )
 
 let wf_dep_pair_at
@@ -245,7 +248,7 @@ let wf_dep_pair_at
   vsize_eq p1 i.S.rest;
   elim_refines p1 s1 vs1 i x;
   vpos_vadvance i n1;
-  match vs1 (S.vpos i) v1 x with
+  match vs1 (S.venv i) v1 x with
   | S.SOk true x1 -> elim_refines (p2 v1) (s2 v1) (vs2 v1) (S.vadvance i n1) x1
   | _ -> ()
 
@@ -263,7 +266,7 @@ let wf_dep_pair
   if ha1 || ha2 then () else
   intro_pure (vs_dep_pair p1 vs1 vs2) (fun pos v x ->
     elim_pure vs1 pos (dfst v) x;
-    elim_pure (vs2 (dfst v)) (pos + vsize p1 (dfst v)) (dsnd v) x
+    elim_pure (vs2 (dfst v)) (S.aenv_adv pos (vsize p1 (dfst v))) (dsnd v) x
   )
 
 let wf_dep_pair_with_action_at
@@ -285,9 +288,9 @@ let wf_dep_pair_with_action_at
   vsize_eq p1 i.S.rest;
   elim_refines p1 s1 vs1 i x;
   vpos_vadvance i n1;
-  match vs1 (S.vpos i) v1 x with
+  match vs1 (S.venv i) v1 x with
   | S.SOk true x1 ->
-    begin match a v1 ({ S.a_start = S.vpos i }) x1 with
+    begin match a v1 (S.venv i) x1 with
     | S.SOk true x2 -> elim_refines (p2 v1) (s2 v1) (vs2 v1) (S.vadvance i n1) x2
     | _ -> ()
     end
@@ -343,10 +346,10 @@ let wf_dep_pair_with_refinement_at
   vsize_eq p1 i.S.rest;
   elim_refines p1 s1 vs1 i x;
   vpos_vadvance i n1;
-  if not ha1 then elim_pure vs1 (S.vpos i) v1 x else ();
-  match vs1 (S.vpos i) v1 x with
+  if not ha1 then elim_pure vs1 (S.venv i) v1 x else ();
+  match vs1 (S.venv i) v1 x with
   | S.SOk true x1 ->
-    begin match vs_action_opt a (S.vpos i) v1 x1 with
+    begin match vs_action_opt a (S.venv i) v1 x1 with
     | S.SOk true x2 -> elim_refines (p2 v1) (s2 v1) (vs2 v1) (S.vadvance i n1) x2
     | _ -> ()
     end
@@ -373,7 +376,7 @@ let wf_dep_pair_with_refinement
   if ha1 || ha2 || Some? a then () else
   intro_pure (vs_dep_pair_with_refinement p1 vs1 f a vs2) (fun pos v x ->
     elim_pure vs1 pos (dfst v) x;
-    elim_pure (vs2 (dfst v)) (pos + vsize p1 (dfst v)) (dsnd v) x
+    elim_pure (vs2 (dfst v)) (S.aenv_adv pos (vsize p1 (dfst v))) (dsnd v) x
   )
 
 let wf_ite
@@ -474,24 +477,24 @@ let wf_t_at_most
 
 let rec vs_list_pure
   (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
-  (vs: value_spec d t) (pos: nat) (l: list t) (x: forevery_values d)
+  (vs: value_spec d t) (pos: S.aenv) (l: list t) (x: forevery_values d)
 : Lemma
   (requires (value_spec_pure vs))
   (ensures (vs_list p vs pos l x == S.SOk true x))
   (decreases l)
 = match l with
   | [] -> ()
-  | v :: tl -> elim_pure vs pos v x; vs_list_pure p vs (pos + vsize p v) tl x
+  | v :: tl -> elim_pure vs pos v x; vs_list_pure p vs (S.aenv_adv pos (vsize p v)) tl x
 
 #push-options "--z3rlimit 32"
 
 let rec vspec_list_fold_eq
   (#d: state_dict) (#wk: P.weak_kind) (#k: P.parser_kind true wk) (#t: Type0) (p: P.parser k t)
-  (s: S.vspec d) (vs: value_spec d t) (contents rest: Seq.seq U8.t) (x: forevery_values d)
+  (s: S.vspec d) (vs: value_spec d t) (o: PM.ptr) (contents rest: Seq.seq U8.t) (x: forevery_values d)
 : Lemma
   (requires (vspec_refines p s vs /\ Seq.length rest <= Seq.length contents))
   (ensures (match LP.parse (LPL.parse_list p) rest with
-    | Some (l, _) -> S.vspec_list_fold p s contents rest x == vres_of_sres (vs_list p vs (Seq.length contents - Seq.length rest) l x)
+    | Some (l, _) -> S.vspec_list_fold p s o contents rest x == vres_of_sres (vs_list p vs ({ S.a_start = Seq.length contents - Seq.length rest; S.a_origin = o }) l x)
     | None -> True))
   (decreases (Seq.length rest))
 = LPL.parse_list_eq p rest;
@@ -499,14 +502,14 @@ let rec vspec_list_fold_eq
   else match LP.parse p rest with
   | None -> ()
   | Some (v, n) ->
-    let i = { S.contents = contents; S.rest = rest } in
+    let i = { S.contents = contents; S.rest = rest; S.origin = o } in
     vsize_eq p rest;
     elim_refines p s vs i x;
     if n = 0 then ()
     else begin
       let rest' = Seq.slice rest n (Seq.length rest) in
-      match vs (S.vpos i) v x with
-      | S.SOk true x1 -> vspec_list_fold_eq p s vs contents rest' x1
+      match vs (S.venv i) v x with
+      | S.SOk true x1 -> vspec_list_fold_eq p s vs o contents rest' x1
       | _ -> ()
     end
 
@@ -532,7 +535,7 @@ let wf_nlist
       parse_fldata_eq (LPL.parse_list p) (U32.v n) i.S.rest;
       vpos_vtruncate i (U32.v n);
       let i' = S.vtruncate i (U32.v n) in
-      vspec_list_fold_eq p s vs i'.S.contents i'.S.rest x)
+      vspec_list_fold_eq p s vs i'.S.origin i'.S.contents i'.S.rest x)
   else begin
     intro_pure (vs_nlist n p vs) (fun pos l x -> vs_list_pure p vs pos l x);
     wf_of_parser_pure (P.parse_nlist n n_is_const p) (vs_nlist n p vs)
@@ -566,11 +569,11 @@ let string_elem (#t: eqtype) (terminator: t) : Type0 =
 let rec vs_string_aux
   (#d: state_dict) (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
   (terminator: t) (vs: value_spec d t)
-  (pos: nat) (l: list (string_elem terminator)) (z: t) (x: forevery_values d)
+  (pos: S.aenv) (l: list (string_elem terminator)) (z: t) (x: forevery_values d)
 : GTot (S.spec_res d bool) (decreases l)
 = match l with
   | [] -> vs pos z x
-  | v :: tl -> sres_then (vs pos v x) (fun x1 -> vs_string_aux p terminator vs (pos + vsize p v) tl z x1)
+  | v :: tl -> sres_then (vs pos v x) (fun x1 -> vs_string_aux p terminator vs (S.aenv_adv pos (vsize p v)) tl z x1)
 
 let vs_string
   (#d: state_dict) (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
@@ -581,40 +584,40 @@ let vs_string
 let rec vs_string_aux_pure
   (#d: state_dict) (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
   (terminator: t) (vs: value_spec d t)
-  (pos: nat) (l: list (string_elem terminator)) (z: t) (x: forevery_values d)
+  (pos: S.aenv) (l: list (string_elem terminator)) (z: t) (x: forevery_values d)
 : Lemma
   (requires (value_spec_pure vs))
   (ensures (vs_string_aux p terminator vs pos l z x == S.SOk true x))
   (decreases l)
 = match l with
   | [] -> elim_pure vs pos z x
-  | v :: tl -> elim_pure vs pos v x; vs_string_aux_pure p terminator vs (pos + vsize p v) tl z x
+  | v :: tl -> elim_pure vs pos v x; vs_string_aux_pure p terminator vs (S.aenv_adv pos (vsize p v)) tl z x
 
 #push-options "--z3rlimit 32"
 
 let rec vspec_string_fold_eq
   (#d: state_dict) (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
-  (terminator: t) (s: S.vspec d) (vs: value_spec d t) (contents rest: Seq.seq U8.t) (x: forevery_values d)
+  (terminator: t) (s: S.vspec d) (vs: value_spec d t) (o: PM.ptr) (contents rest: Seq.seq U8.t) (x: forevery_values d)
 : Lemma
   (requires (vspec_refines p s vs /\ Seq.length rest <= Seq.length contents))
   (ensures (match LP.parse (LUT.parse_list_up_to (P.cond_string_up_to terminator) p (string_prf p terminator)) rest with
-    | Some (lz, _) -> S.vspec_string_fold p terminator s contents rest x ==
-        vres_of_sres (vs_string_aux p terminator vs (Seq.length contents - Seq.length rest) (fst lz) (snd lz) x)
+    | Some (lz, _) -> S.vspec_string_fold p terminator s o contents rest x ==
+        vres_of_sres (vs_string_aux p terminator vs ({ S.a_start = Seq.length contents - Seq.length rest; S.a_origin = o }) (fst lz) (snd lz) x)
     | None -> True))
   (decreases (Seq.length rest))
 = LUT.parse_list_up_to_eq (P.cond_string_up_to terminator) p (string_prf p terminator) rest;
   match LP.parse p rest with
   | None -> ()
   | Some (v, n) ->
-    let i = { S.contents = contents; S.rest = rest } in
+    let i = { S.contents = contents; S.rest = rest; S.origin = o } in
     vsize_eq p rest;
     elim_refines p s vs i x;
     LP.parser_kind_prop_equiv k p;
     if v = terminator then ()
     else begin
       let rest' = Seq.slice rest n (Seq.length rest) in
-      match vs (S.vpos i) v x with
-      | S.SOk true x1 -> vspec_string_fold_eq p terminator s vs contents rest' x1
+      match vs (S.venv i) v x with
+      | S.SOk true x1 -> vspec_string_fold_eq p terminator s vs o contents rest' x1
       | _ -> ()
     end
 
@@ -631,7 +634,7 @@ let wf_string
   then
     intro_refines (P.parse_string p terminator) (S.vspec_string ha p terminator s) (vs_string p terminator vs) (fun i x ->
       parse_string_eq p terminator i.S.rest;
-      vspec_string_fold_eq p terminator s vs i.S.contents i.S.rest x)
+      vspec_string_fold_eq p terminator s vs i.S.origin i.S.contents i.S.rest x)
   else begin
     intro_pure (vs_string p terminator vs) (fun pos v x -> vs_string_aux_pure p terminator vs pos (fst v) (snd v) x);
     wf_of_parser_pure (P.parse_string p terminator) (vs_string p terminator vs)
@@ -643,6 +646,6 @@ let vspec_wf_elim
 : Lemma
   (requires (vspec_wf ha p s vs /\ vinput_ok i))
   (ensures (match P.parse p i.S.rest with
-    | Some (v, _) -> s i x == vres_of_sres (vs (S.vpos i) v x)
+    | Some (v, _) -> s i x == vres_of_sres (vs (S.venv i) v x)
     | None -> True))
 = elim_refines p s vs i x

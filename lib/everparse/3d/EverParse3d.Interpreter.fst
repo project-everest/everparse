@@ -698,10 +698,9 @@ type atomic_action
       atomic_action base_t len_t pos_t inst d use_error_handler false false U32.t
 
   | Action_field_ptr:
-      #ptr_t:Type0 ->
-      f:option (A.field_ptr_t base_t len_t pos_t #inst ptr_t) ->
+      f:option (A.field_ptr_t base_t len_t pos_t #inst) ->
       _:squash (Some? f) ->
-      atomic_action base_t len_t pos_t inst d use_error_handler true false ptr_t
+      atomic_action base_t len_t pos_t inst d use_error_handler true false EverParse3d.PtrModel.ptr
 
   | Action_field_ptr_after:
       #ptr_t:Type0 ->
@@ -767,7 +766,7 @@ let atomic_action_as_spec
     | Action_abort -> S.aspec_return false
     | Action_field_pos_64 -> S.aspec_field_pos_64
     | Action_field_pos_32 -> S.aspec_field_pos_32
-    | Action_field_ptr f sq -> S.aspec_unknown
+    | Action_field_ptr f sq -> S.aspec_field_ptr
     | Action_field_ptr_after f sq name sz write_to sq' ->
       S.aspec_weaken S.aspec_unknown d sq'
     | Action_deref name x sq ->
@@ -1688,7 +1687,7 @@ let as_vspec_value_spec
   : Lemma
     (requires (VS.vinput_ok i))
     (ensures (match P.parse (as_parser t) i.S.rest with
-      | Some (v, _) -> as_vspec typename t i x == VS.vres_of_sres (as_value_spec typename t (S.vpos i) v x)
+      | Some (v, _) -> as_vspec typename t i x == VS.vres_of_sres (as_value_spec typename t (S.venv i) v x)
       | None -> True))
   = as_vspec_wf typename t;
     VS.vspec_wf_elim ha (as_parser t) (as_vspec typename t) (as_value_spec typename t) i x

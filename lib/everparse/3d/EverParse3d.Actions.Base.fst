@@ -22,20 +22,24 @@ module Comment = Pulse.Lib.Comment
 
 open EverParse3d.State
 module S = EverParse3d.Actions.Spec
+module PM = EverParse3d.PtrModel
 
 (* The spec-level inputs of actions and validators. *)
-let aenv_of_action (start_pos: U64.t) (contents_sl v_sl: Seq.seq U8.t) : GTot S.aenv = {
+let aenv_of_action (o: PM.ptr) (start_pos: U64.t) (contents_sl v_sl: Seq.seq U8.t) : GTot S.aenv = {
   S.a_start = U64.v start_pos;
+  S.a_origin = o;
 }
 
-let vinput_read (contents_sl v_sl: Seq.seq U8.t) : GTot S.vinput = {
+let vinput_read (o: PM.ptr) (contents_sl v_sl: Seq.seq U8.t) : GTot S.vinput = {
   S.contents = contents_sl;
   S.rest = v_sl;
+  S.origin = o;
 }
 
-let vinput_no_read (contents_sl v_sl: Seq.seq U8.t) (pos: nat { pos <= Seq.length v_sl }) : GTot S.vinput = {
+let vinput_no_read (o: PM.ptr) (contents_sl v_sl: Seq.seq U8.t) (pos: nat { pos <= Seq.length v_sl }) : GTot S.vinput = {
   S.contents = contents_sl;
   S.rest = Seq.slice v_sl pos (Seq.length v_sl);
+  S.origin = o;
 }
 
 (* `start_pos` is the position at which the field this action is attached to
@@ -75,7 +79,7 @@ let action
       pts_to ctxt v_ctxt' **
       I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
       forevery_state extra_state extra' **
-      pure (S.spec_res_rel (sp (aenv_of_action start_pos contents_sl v_sl) extra) res extra')
+      pure (S.spec_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t sl_base) start_pos contents_sl v_sl) extra) res extra')
     )
 
 module LP = LowParse.Spec.Base
@@ -118,7 +122,7 @@ let validate_with_action_read
       (is_validation_error res ==> None? (LP.parse p v_sl)) /\
       I.seq_is_suffix_of v_sl' v_sl /\
       (res == validator_success ==> (Some? (LP.parse p v_sl) /\ v_sl' == Seq.slice v_sl (snd (Some?.v (LP.parse p v_sl))) (Seq.length v_sl))) /\
-      S.vres_rel (s (vinput_read contents_sl v_sl) extra) res extra'
+      S.vres_rel (s (vinput_read (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl) extra) res extra'
   ))
 
 inline_for_extraction noextract
@@ -165,7 +169,7 @@ let validate_with_action_no_read
       (not has_action ==> extra' == extra) /\
       (is_validation_error res ==> None? pp) /\
       (res == validator_success ==> (Some? pp /\ inst.scan_v v_pos' == inst.scan_v v_pos + snd (Some?.v pp))) /\
-      S.vres_rel (s (vinput_no_read contents_sl v_sl (inst.scan_v v_pos)) extra) res extra'
+      S.vres_rel (s (vinput_no_read (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl (inst.scan_v v_pos)) extra) res extra'
   )))
 
 inline_for_extraction noextract
@@ -1149,49 +1153,49 @@ let parse_list_consumes_all
    with state [x]. *)
 let list_fold_reaches
   (#d: state_dict) (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
-  (s: S.vspec d) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (vcur: Seq.seq LP.byte) (x: forevery_values d)
 : Tot prop
-= S.vspec_list_fold p s contents v1 x0 == S.VUnknown \/
-  S.vspec_list_fold p s contents v1 x0 == S.vspec_list_fold p s contents vcur x
+= S.vspec_list_fold p s o contents v1 x0 == S.VUnknown \/
+  S.vspec_list_fold p s o contents v1 x0 == S.vspec_list_fold p s o contents vcur x
 
 let list_fold_step
   (ha: bool)
   (#d: state_dict) (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
-  (s: S.vspec d) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (vcur: Seq.seq LP.byte) (x: forevery_values d)
   (r: U8.t) (x': forevery_values d) (vcur': Seq.seq LP.byte)
 : Lemma
   (requires (ha ==> (
-    list_fold_reaches p s contents v1 x0 vcur x /\
+    list_fold_reaches p s o contents v1 x0 vcur x /\
     Seq.length vcur > 0 /\
-    S.vres_rel (s (vinput_read contents vcur) x) r x' /\
+    S.vres_rel (s (vinput_read o contents vcur) x) r x' /\
     (r == validator_success ==> (
       Some? (LP.parse p vcur) /\
       vcur' == Seq.slice vcur (snd (Some?.v (LP.parse p vcur))) (Seq.length vcur)))
   )))
   (ensures (ha ==> (
-    (r == validator_success ==> list_fold_reaches p s contents v1 x0 vcur' x') /\
-    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s contents v1 x0)))
+    (r == validator_success ==> list_fold_reaches p s o contents v1 x0 vcur' x') /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s o contents v1 x0)))
   )))
 = LP.parser_kind_prop_equiv k p
 
 let list_fold_done
   (ha: bool)
   (#d: state_dict) (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
-  (s: S.vspec d) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (vcur: Seq.seq LP.byte) (x: forevery_values d) (r: U8.t)
 : Lemma
   (requires (ha ==> (
-    (r == validator_success ==> (list_fold_reaches p s contents v1 x0 vcur x /\ Seq.length vcur == 0)) /\
-    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s contents v1 x0)))
+    (r == validator_success ==> (list_fold_reaches p s o contents v1 x0 vcur x /\ Seq.length vcur == 0)) /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s o contents v1 x0)))
   )))
-  (ensures (ha ==> S.vres_rel (S.vspec_list_fold p s contents v1 x0) r x))
+  (ensures (ha ==> S.vres_rel (S.vspec_list_fold p s o contents v1 x0) r x))
 = ()
 
 (* The input of the loop of `validate_nlist` is the truncated stream. *)
 let vtruncate_eq
-  (contents_sl v_sl contents1 v1 v2: Seq.seq LP.byte) (n: nat)
+  (o: PM.ptr) (contents_sl v_sl contents1 v1 v2: Seq.seq LP.byte) (n: nat)
 : Lemma
   (requires (
     v_sl `I.seq_is_suffix_of` contents_sl /\
@@ -1201,26 +1205,26 @@ let vtruncate_eq
   ))
   (ensures (
     n <= Seq.length v_sl /\
-    S.vtruncate (vinput_read contents_sl v_sl) n == vinput_read contents1 v1
+    S.vtruncate (vinput_read o contents_sl v_sl) n == vinput_read o contents1 v1
   ))
 = Seq.lemma_eq_elim v1 (Seq.slice v_sl 0 n);
   Seq.lemma_eq_elim contents1
-    (S.vtruncate (vinput_read contents_sl v_sl) n).S.contents
+    (S.vtruncate (vinput_read o contents_sl v_sl) n).S.contents
 
 let vspec_nlist_eq
   (#d: state_dict) (ha: bool)
   (n: U32.t) (n_is_const: option nat { memoizes_n_as_const n_is_const n })
   (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
-  (s: S.vspec d) (contents_sl v_sl contents1 v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (s: S.vspec d) (o: PM.ptr) (contents_sl v_sl contents1 v1: Seq.seq LP.byte) (x0: forevery_values d)
 : Lemma
   (requires (
     U32.v n <= Seq.length v_sl /\
-    S.vtruncate (vinput_read contents_sl v_sl) (U32.v n) == vinput_read contents1 v1
+    S.vtruncate (vinput_read o contents_sl v_sl) (U32.v n) == vinput_read o contents1 v1
   ))
   (ensures (
     ha ==>
-    S.vspec_nlist ha n n_is_const p s (vinput_read contents_sl v_sl) x0 ==
-    S.vspec_list_fold p s contents1 v1 x0
+    S.vspec_nlist ha n n_is_const p s (vinput_read o contents_sl v_sl) x0 ==
+    S.vspec_list_fold p s o contents1 v1 x0
   ))
 = ()
 
@@ -1276,8 +1280,8 @@ fn validate_nlist
       I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
-    vtruncate_eq contents_sl v_sl contents1 v1 v2 (U32.v n);
-    vspec_nlist_eq ha n n_is_const p s contents_sl v_sl contents1 v1 extra;
+    vtruncate_eq (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl contents1 v1 v2 (U32.v n);
+    vspec_nlist_eq ha n n_is_const p s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl contents1 v1 extra;
     parse_list_consumes_all p v1;
     seq_is_suffix_of_refl v1;
     LP.parser_kind_prop_equiv k p; // fstar2 only
@@ -1302,8 +1306,8 @@ fn validate_nlist
           (Some? (LP.parse (LPL.parse_list p) v1) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
         (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0) /\
         (ha ==> (
-          (vres == validator_success ==> list_fold_reaches p s contents1 v1 extra vcur extra') /\
-          (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s contents1 v1 extra))))) /\
+          (vres == validator_success ==> list_fold_reaches p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra') /\
+          (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra))))) /\
         Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
       )
       decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
@@ -1318,7 +1322,7 @@ fn validate_nlist
         let r = v ctxt error_handler_fn tb tl tp extra' contents1 vcur;
         with vcur'. assert (I.pts_to tb tl tp contents1 vcur');
         with extra''. assert (forevery_state extra_state extra'');
-        list_fold_step ha p s contents1 v1 extra vcur extra' r extra'' vcur';
+        list_fold_step ha p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra' r extra'' vcur';
         pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
         seq_is_suffix_of_trans vcur' vcur v1;
         if (r = validator_success) {
@@ -1332,7 +1336,7 @@ fn validate_nlist
     let fres = !res;
     with vcur. assert (I.pts_to tb tl tp contents1 vcur);
     with extra'. assert (forevery_state extra_state extra');
-    list_fold_done ha p s contents1 v1 extra vcur extra' fres;
+    list_fold_done ha p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra' fres;
     LPL.parse_list_eq p vcur;
     Seq.lemma_eq_elim v1 (Seq.slice v_sl 0 (U32.v n));
     seq_is_suffix_of_append vcur v1 v2;
@@ -2891,11 +2895,10 @@ inline_for_extraction
 fn action_field_ptr
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#ptr_t: Type0)
-      (f: field_ptr_t base_t len_t pos_t ptr_t)
+      (f: field_ptr_t base_t len_t pos_t)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state ptr_t use_error_handler (S.aspec_unknown)
+: action #base_t #len_t #pos_t extra_state PM.ptr use_error_handler S.aspec_field_ptr
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3125,30 +3128,30 @@ let list_up_to_step
    as in `list_fold_reaches`. *)
 let string_fold_reaches
   (#d: state_dict) (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
-  (terminator: t) (s: S.vspec d) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (vcur: Seq.seq LP.byte) (x: forevery_values d)
 : Tot prop
-= S.vspec_string_fold p terminator s contents v1 x0 == S.VUnknown \/
-  S.vspec_string_fold p terminator s contents v1 x0 == S.vspec_string_fold p terminator s contents vcur x
+= S.vspec_string_fold p terminator s o contents v1 x0 == S.VUnknown \/
+  S.vspec_string_fold p terminator s o contents v1 x0 == S.vspec_string_fold p terminator s o contents vcur x
 
 let string_fold_ended
   (#d: state_dict) (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
-  (terminator: t) (s: S.vspec d) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (x: forevery_values d)
 : Tot prop
-= S.vspec_string_fold p terminator s contents v1 x0 == S.VUnknown \/
-  S.vspec_string_fold p terminator s contents v1 x0 == S.VOk x
+= S.vspec_string_fold p terminator s o contents v1 x0 == S.VUnknown \/
+  S.vspec_string_fold p terminator s o contents v1 x0 == S.VOk x
 
 let string_fold_step
   (ha: bool)
   (#d: state_dict) (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
-  (terminator: t) (s: S.vspec d) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (vcur: Seq.seq LP.byte) (x: forevery_values d)
   (r: U8.t) (x': forevery_values d) (vcur': Seq.seq LP.byte) (y: t)
 : Lemma
   (requires (ha ==> (
-    string_fold_reaches p terminator s contents v1 x0 vcur x /\
-    S.vres_rel (s (vinput_no_read contents vcur 0) x) r x' /\
+    string_fold_reaches p terminator s o contents v1 x0 vcur x /\
+    S.vres_rel (s (vinput_no_read o contents vcur 0) x) r x' /\
     (r == validator_success ==> (
       match LP.parse p vcur with
       | None -> False
@@ -3157,9 +3160,9 @@ let string_fold_step
   (ensures (ha ==> (
     (r == validator_success ==> (
       if y = terminator
-      then string_fold_ended p terminator s contents v1 x0 x'
-      else string_fold_reaches p terminator s contents v1 x0 vcur' x')) /\
-    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s contents v1 x0)))
+      then string_fold_ended p terminator s o contents v1 x0 x'
+      else string_fold_reaches p terminator s o contents v1 x0 vcur' x')) /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s o contents v1 x0)))
   )))
 = LP.parser_kind_prop_equiv k p;
   Seq.lemma_eq_elim (Seq.slice vcur 0 (Seq.length vcur)) vcur
@@ -3168,15 +3171,15 @@ let string_fold_done
   (#d: state_dict) (ha: bool)
   (#nzq: bool) (#wkq: _) (#kq: parser_kind nzq wkq) (#tq: Type) (q: parser kq tq)
   (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
-  (terminator: t) (s: S.vspec d) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (x: forevery_values d) (r: U8.t)
 : Lemma
   (requires (
     ha ==> (
-    (r == validator_success ==> string_fold_ended p terminator s contents v1 x0 x) /\
-    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s contents v1 x0))))
+    (r == validator_success ==> string_fold_ended p terminator s o contents v1 x0 x) /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s o contents v1 x0))))
   ))
-  (ensures (ha ==> S.vres_rel (S.vspec_string_gen ha q p terminator s (vinput_read contents v1) x0) r x))
+  (ensures (ha ==> S.vres_rel (S.vspec_string_gen ha q p terminator s (vinput_read o contents v1) x0) r x))
 = ()
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
@@ -3239,9 +3242,9 @@ fn validate_list_up_to
          then list_up_to_done (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur
          else list_up_to_ongoing (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur)) /\
       (ha ==> (
-        (vres == validator_success /\ vstop == false ==> string_fold_reaches p terminator s contents_sl v_sl extra vcur extra') /\
-        (vres == validator_success /\ vstop == true ==> string_fold_ended p terminator s contents_sl v_sl extra extra') /\
-        (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s contents_sl v_sl extra))))) /\
+        (vres == validator_success /\ vstop == false ==> string_fold_reaches p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra') /\
+        (vres == validator_success /\ vstop == true ==> string_fold_ended p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra extra') /\
+        (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra))))) /\
       Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
     )
     decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
@@ -3255,7 +3258,7 @@ fn validate_list_up_to
     if (r0 = validator_success) {
       let x = r "ListElement" sl_base sl_len sl_pos contents_sl vcur;
       with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
-      string_fold_step ha p terminator s contents_sl v_sl extra vcur extra' r0 extra'' vcur' x;
+      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra' r0 extra'' vcur' x;
       pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
       leaf_read_is_suffix_of p v_sl vcur vcur';
       list_up_to_step (cond_string_up_to terminator) p prf v_sl vcur vcur' x;
@@ -3265,7 +3268,7 @@ fn validate_list_up_to
         ()
       }
     } else {
-      string_fold_step ha p terminator s contents_sl v_sl extra vcur extra' r0 extra'' vcur terminator;
+      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra' r0 extra'' vcur terminator;
       res := r0;
       stop := true;
     }
@@ -3273,7 +3276,7 @@ fn validate_list_up_to
   let fres = !res;
   with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
   with extra'. assert (forevery_state extra_state extra');
-  string_fold_done ha #true #WeakKindStrongPrefix #(LUT.parse_list_up_to_kind k) (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) p terminator s contents_sl v_sl extra extra' fres;
+  string_fold_done ha #true #WeakKindStrongPrefix #(LUT.parse_list_up_to_kind k) (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra extra' fres;
   Seq.lemma_eq_elim vcur (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl - Seq.length vcur) (Seq.length v_sl));
   fres
 }

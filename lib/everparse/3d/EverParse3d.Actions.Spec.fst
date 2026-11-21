@@ -27,13 +27,17 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module Seq = FStar.Seq
 open EverParse3d.ErrorCode
+module PM = EverParse3d.PtrModel
 
 (* The input of a validator: the contents of the (possibly truncated) input
-   stream, and the bytes that remain to be validated. *)
+   stream, the bytes that remain to be validated, and a ghost pointer to the
+   first byte of the contents (only meaningful for the `buffer` backend, and
+   only used by `field_ptr`). *)
 noeq
 type vinput = {
   contents: Seq.seq U8.t;
   rest: Seq.seq U8.t;
+  origin: PM.ptr;
 }
 
 (* The current position in the input stream. *)
@@ -51,6 +55,7 @@ let vtruncate (i: vinput) (n: nat { n <= Seq.length i.rest }) : GTot vinput =
   {
     contents = Seq.append (Seq.slice i.contents 0 (vpos i)) (Seq.slice i.rest 0 n);
     rest = Seq.slice i.rest 0 n;
+    origin = i.origin;
   }
 
 noeq
@@ -72,11 +77,17 @@ let vres_rel (#d: state_dict) (r: vres d) (res: U8.t) (final: forevery_values d)
   | VUnknown -> True
 
 (* The environment of an action: the position at which the field it is
-   attached to starts. *)
+   attached to starts, and the origin of the input (see `vinput`). *)
 noeq
 type aenv = {
   a_start: nat;
+  a_origin: PM.ptr;
 }
+
+let aenv_adv (e: aenv) (n: nat) : aenv = { e with a_start = e.a_start + n }
+
+(* The environment at the current position of an input. *)
+let venv (i: vinput) : GTot aenv = { a_start = vpos i; a_origin = i.origin }
 
 noeq
 type spec_res (d: state_dict) (a: Type0) =
@@ -95,6 +106,7 @@ let spec_res_rel (#d: state_dict) (#a: Type0) (r: spec_res d a) (res: a) (final:
    that consumed `n` bytes. *)
 let aenv_of (i: vinput) (n: nat { n <= Seq.length i.rest }) : GTot aenv = {
   a_start = vpos i;
+  a_origin = i.origin;
 }
 
 (** Action specs *)
@@ -126,6 +138,10 @@ let aspec_field_pos_64 (#d: state_dict) : action_spec d U64.t =
 
 let aspec_field_pos_32 (#d: state_dict) : action_spec d U32.t =
   fun e s -> SOk (U32.uint_to_t (e.a_start % pow2 32)) s
+
+(* `field_ptr` (buffer backend): the pointer to the start of the field. *)
+let aspec_field_ptr (#d: state_dict) : action_spec d PM.ptr =
+  fun e s -> SOk (PM.ptr_at e.a_origin e.a_start) s
 
 let aspec_deref
   (name: string) (#a: Type0) (state: a -> Pulse.Lib.Core.slprop)
@@ -425,16 +441,16 @@ let vspec_t_at_most
    the element. *)
 let rec vspec_list_fold
   (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type) (p: P.parser k t)
-  (s: vspec d) (contents rest: Seq.seq U8.t) (x: forevery_values d)
+  (s: vspec d) (o: PM.ptr) (contents rest: Seq.seq U8.t) (x: forevery_values d)
 : GTot (vres d) (decreases (Seq.length rest))
 = if Seq.length rest = 0
   then VOk x
-  else match s ({ contents = contents; rest = rest }) x with
+  else match s ({ contents = contents; rest = rest; origin = o }) x with
   | VOk x' ->
     begin match P.parse p rest with
     | Some (_, n) ->
       if n > 0
-      then vspec_list_fold p s contents (Seq.slice rest n (Seq.length rest)) x'
+      then vspec_list_fold p s o contents (Seq.slice rest n (Seq.length rest)) x'
       else VUnknown
     | None -> VUnknown
     end
@@ -454,7 +470,7 @@ let vspec_nlist
     then VErr
     else
       let i' = vtruncate i (U32.v n) in
-      vspec_list_fold p s i'.contents i'.rest x
+      vspec_list_fold p s i'.origin i'.contents i'.rest x
   else vspec_of_parser (P.parse_nlist n n_is_const p)
 
 (* The spec of a loop over the elements of a list up to a terminator, as done
@@ -462,16 +478,16 @@ let vspec_nlist
    terminator. *)
 let rec vspec_string_fold
   (#d: state_dict) (#k: P.parser_kind true P.WeakKindStrongPrefix) (#t: eqtype) (p: P.parser k t)
-  (terminator: t) (s: vspec d) (contents rest: Seq.seq U8.t) (x: forevery_values d)
+  (terminator: t) (s: vspec d) (o: PM.ptr) (contents rest: Seq.seq U8.t) (x: forevery_values d)
 : GTot (vres d) (decreases (Seq.length rest))
-= match s ({ contents = contents; rest = rest }) x with
+= match s ({ contents = contents; rest = rest; origin = o }) x with
   | VOk x' ->
     begin match P.parse p rest with
     | Some (y, n) ->
       if y = terminator
       then VOk x'
       else if n > 0
-      then vspec_string_fold p terminator s contents (Seq.slice rest n (Seq.length rest)) x'
+      then vspec_string_fold p terminator s o contents (Seq.slice rest n (Seq.length rest)) x'
       else VUnknown
     | None -> VUnknown
     end
@@ -484,7 +500,7 @@ let vspec_string_gen
   (terminator: t) (s: vspec d)
 : vspec d
 = if ha
-  then fun i x -> vspec_string_fold p terminator s i.contents i.rest x
+  then fun i x -> vspec_string_fold p terminator s i.origin i.contents i.rest x
   else vspec_of_parser q
 
 let vspec_string

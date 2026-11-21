@@ -4,6 +4,7 @@ open EverParse3d.ErrorCode
 open EverParse3d.Prelude
 open Pulse.Lib.Pervasives
 module I = EverParse3d.InputStream.Base
+module PM = EverParse3d.PtrModel
 module CP = EverParse3d.CopyBuffer
 module PA = EverParse3d.ProbeActions
 module Bool = EverParse3d.Boolean
@@ -1021,7 +1022,6 @@ inline_for_extraction noextract
 let field_ptr_t
   (base_t len_t pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-  (ptr_t: Type0)
 : Type0
 = (sl_base: base_t) ->
   (sl_len: len_t) ->
@@ -1029,10 +1029,11 @@ let field_ptr_t
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   (start_pos: U64.t) ->
-  stt ptr_t
+  stt PM.ptr
     (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
       pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl))
-    (fun _ -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+    (fun res -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      pure (res == PM.ptr_at (I.origin #base_t #len_t #pos_t sl_base) (U64.v start_pos)))
 
 inline_for_extraction noextract
 let field_ptr_after_t
@@ -1061,11 +1062,10 @@ inline_for_extraction
 val action_field_ptr
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#ptr_t: Type0)
-      (f: field_ptr_t base_t len_t pos_t ptr_t)
+      (f: field_ptr_t base_t len_t pos_t)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state ptr_t use_error_handler S.aspec_unknown
+: action #base_t #len_t #pos_t extra_state PM.ptr use_error_handler S.aspec_field_ptr
 
 noextract
 inline_for_extraction

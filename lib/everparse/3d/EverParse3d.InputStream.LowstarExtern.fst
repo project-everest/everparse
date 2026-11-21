@@ -244,7 +244,8 @@ ensures exists* c' v1 v2.
     Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
     Seq.length v <= Seq.length c /\
     Seq.equal c' (Seq.append (Seq.slice c 0 (Seq.length c - Seq.length v)) v1) /\
-    Ghost.reveal v == Seq.append v1 v2)
+    Ghost.reveal v == Seq.append v1 v2 /\
+    I.origin #base_t #len_t #pos_t #pts_to_inst res == I.origin #base_t #len_t #pos_t #pts_to_inst b)
 {
   unfold (stream_pts_to b len pos c v);
   with current. _;

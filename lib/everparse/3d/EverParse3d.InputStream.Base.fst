@@ -9,6 +9,7 @@ module API = LowParse.Pulse.ArrayPtr.Int
 module Util = EverParse3d.Util
 module AppCtxt = EverParse3d.AppCtxt
 module PR = Pulse.Lib.Reference
+module PM = EverParse3d.PtrModel
 
 (* Backed by the generated wrapper's
    `sizeof(size_t) <= sizeof(uint64_t)` static assertion. *)
@@ -42,6 +43,11 @@ class input_stream_pts_to (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type =
     (contents: Seq.seq U8.t) ->
     (suffix: Seq.seq U8.t) ->
     Tot slprop;
+
+  (* A ghost pointer to the first byte of the contents of the stream, used
+     only to specify `field_ptr`. Backends that do not support `field_ptr` may
+     return anything. *)
+  origin: base_t -> GTot PM.ptr;
 }
 
 (* The type of the error-handler callback.
@@ -369,7 +375,8 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
 	Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
 	Seq.length v <= Seq.length contents /\
 	Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
-	Ghost.reveal v == Seq.append v1 v2
+	Ghost.reveal v == Seq.append v1 v2 /\
+	origin #base_t #len_t #pos_t (trunc_base base len pos res) == origin #base_t #len_t #pos_t base
     )));
 
   untruncate:

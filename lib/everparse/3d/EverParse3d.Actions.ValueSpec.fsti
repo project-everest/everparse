@@ -26,6 +26,7 @@ module S = EverParse3d.Actions.Spec
 module P = EverParse3d.Prelude
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
+module PM = EverParse3d.PtrModel
 module LPL = LowParse.Spec.List
 module LUT = LowParse.Spec.ListUpTo
 module FLD = LowParse.Spec.FLData
@@ -36,7 +37,7 @@ module Seq = FStar.Seq
 (** Value specs *)
 
 let value_spec (d: state_dict) (t: Type0) : Type0 =
-  nat -> t -> forevery_values d -> GTot (S.spec_res d bool)
+  S.aenv -> t -> forevery_values d -> GTot (S.spec_res d bool)
 
 (* The validation result corresponding to the result of the actions. *)
 let vres_of_sres (#d: state_dict) (r: S.spec_res d bool) : GTot (S.vres d) =
@@ -76,7 +77,7 @@ let refines_at
   (s: S.vspec d) (vs: value_spec d t) (i: S.vinput) (x: forevery_values d)
 : prop
 = vinput_ok i ==> (match P.parse p i.S.rest with
-  | Some (v, _) -> s i x == vres_of_sres (vs (S.vpos i) v x)
+  | Some (v, _) -> s i x == vres_of_sres (vs (S.venv i) v x)
   | None -> True)
 
 (* Whenever `p` succeeds on the remaining input with a value `v`, the
@@ -88,12 +89,12 @@ let vspec_refines
 : prop
 = forall (i: S.vinput) (x: forevery_values d) . refines_at p s vs i x
 
-let pure_at (#d: state_dict) (#t: Type0) (vs: value_spec d t) (pos: nat) (v: t) (x: forevery_values d) : prop =
+let pure_at (#d: state_dict) (#t: Type0) (vs: value_spec d t) (pos: S.aenv) (v: t) (x: forevery_values d) : prop =
   vs pos v x == S.SOk true x
 
 (* A value spec without actions. *)
 let value_spec_pure (#d: state_dict) (#t: Type0) (vs: value_spec d t) : prop =
-  forall (pos: nat) (v: t) (x: forevery_values d) . pure_at vs pos v x
+  forall (pos: S.aenv) (v: t) (x: forevery_values d) . pure_at vs pos v x
 
 (* The invariant of the value spec of a type: it refines the byte-level spec,
    and it has no effect if the type has no actions. *)
@@ -169,7 +170,7 @@ let vs_pair
   (#d: state_dict) (#nz1: bool) (#k1: P.parser_kind nz1 P.WeakKindStrongPrefix) (#t1: Type0) (p1: P.parser k1 t1)
   (vs1: value_spec d t1) (#t2: Type0) (vs2: value_spec d t2)
 : value_spec d (t1 & t2)
-= fun pos v x -> sres_then (vs1 pos (fst v) x) (fun x1 -> vs2 (pos + vsize p1 (fst v)) (snd v) x1)
+= fun pos v x -> sres_then (vs1 pos (fst v) x) (fun x1 -> vs2 (S.aenv_adv pos (vsize p1 (fst v))) (snd v) x1)
 
 val wf_pair
   (#d: state_dict)
@@ -187,7 +188,7 @@ let vs_dep_pair
   (#d: state_dict) (#nz1: bool) (#k1: P.parser_kind nz1 P.WeakKindStrongPrefix) (#t1: Type0) (p1: P.parser k1 t1)
   (vs1: value_spec d t1) (#t2: t1 -> Type0) (vs2: (x: t1) -> value_spec d (t2 x))
 : value_spec d (dtuple2 t1 t2)
-= fun pos v x -> sres_then (vs1 pos (dfst v) x) (fun x1 -> vs2 (dfst v) (pos + vsize p1 (dfst v)) (dsnd v) x1)
+= fun pos v x -> sres_then (vs1 pos (dfst v) x) (fun x1 -> vs2 (dfst v) (S.aenv_adv pos (vsize p1 (dfst v))) (dsnd v) x1)
 
 val wf_dep_pair
   (#d: state_dict)
@@ -204,8 +205,8 @@ let vs_dep_pair_with_action
   (vs1: value_spec d t1) (a: t1 -> S.action_spec d bool) (#t2: t1 -> Type0) (vs2: (x: t1) -> value_spec d (t2 x))
 : value_spec d (dtuple2 t1 t2)
 = fun pos v x -> sres_then (vs1 pos (dfst v) x) (fun x1 ->
-    sres_then (a (dfst v) ({ S.a_start = pos }) x1) (fun x2 ->
-    vs2 (dfst v) (pos + vsize p1 (dfst v)) (dsnd v) x2))
+    sres_then (a (dfst v) pos x1) (fun x2 ->
+    vs2 (dfst v) (S.aenv_adv pos (vsize p1 (dfst v))) (dsnd v) x2))
 
 val wf_dep_pair_with_action
   (#d: state_dict)
@@ -221,11 +222,11 @@ val wf_dep_pair_with_action
 (* Refinements *)
 
 let vs_action_opt
-  (#d: state_dict) (#t: Type0) (a: option (t -> S.action_spec d bool)) (pos: nat) (v: t) (x: forevery_values d)
+  (#d: state_dict) (#t: Type0) (a: option (t -> S.action_spec d bool)) (pos: S.aenv) (v: t) (x: forevery_values d)
 : GTot (S.spec_res d bool)
 = match a with
   | None -> S.SOk true x
-  | Some a -> a v ({ S.a_start = pos }) x
+  | Some a -> a v pos x
 
 let vs_filter
   (#d: state_dict) (#t: Type0) (vs: value_spec d t) (f: t -> bool) (a: option (t -> S.action_spec d bool))
@@ -246,7 +247,7 @@ let vs_dep_pair_with_refinement
 : value_spec d (dtuple2 (P.refine t1 f) t2)
 = fun pos v x -> sres_then (vs1 pos (dfst v) x) (fun x1 ->
     sres_then (vs_action_opt a pos (dfst v) x1) (fun x2 ->
-    vs2 (dfst v) (pos + vsize p1 (dfst v)) (dsnd v) x2))
+    vs2 (dfst v) (S.aenv_adv pos (vsize p1 (dfst v))) (dsnd v) x2))
 
 val wf_dep_pair_with_refinement
   (#d: state_dict)
@@ -292,7 +293,7 @@ val wf_ite
 let vs_with_action
   (#d: state_dict) (#t: Type0) (vs: value_spec d t) (a: S.action_spec d bool)
 : value_spec d t
-= fun pos v x -> sres_then (vs pos v x) (fun x1 -> a ({ S.a_start = pos }) x1)
+= fun pos v x -> sres_then (vs pos v x) (fun x1 -> a pos x1)
 
 val wf_with_action
   (#d: state_dict) (ha: bool) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
@@ -304,7 +305,7 @@ val wf_with_action
 let vs_with_dep_action
   (#d: state_dict) (#t: Type0) (vs: value_spec d t) (a: t -> S.action_spec d bool)
 : value_spec d t
-= fun pos v x -> sres_then (vs pos v x) (fun x1 -> a v ({ S.a_start = pos }) x1)
+= fun pos v x -> sres_then (vs pos v x) (fun x1 -> a v pos x1)
 
 val wf_with_dep_action
   (#d: state_dict) (ha: bool) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
@@ -341,15 +342,15 @@ val wf_t_at_most
 
 let rec vs_list
   (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
-  (vs: value_spec d t) (pos: nat) (l: list t) (x: forevery_values d)
+  (vs: value_spec d t) (pos: S.aenv) (l: list t) (x: forevery_values d)
 : GTot (S.spec_res d bool) (decreases l)
 = match l with
   | [] -> S.SOk true x
-  | v :: tl -> sres_then (vs pos v x) (fun x1 -> vs_list p vs (pos + vsize p v) tl x1)
+  | v :: tl -> sres_then (vs pos v x) (fun x1 -> vs_list p vs (S.aenv_adv pos (vsize p v)) tl x1)
 
 val vs_list_pure
   (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
-  (vs: value_spec d t) (pos: nat) (l: list t) (x: forevery_values d)
+  (vs: value_spec d t) (pos: S.aenv) (l: list t) (x: forevery_values d)
 : Lemma
   (requires (value_spec_pure vs))
   (ensures (vs_list p vs pos l x == S.SOk true x))
@@ -396,5 +397,5 @@ val vspec_wf_elim
 : Lemma
   (requires (vspec_wf ha p s vs /\ vinput_ok i))
   (ensures (match P.parse p i.S.rest with
-    | Some (v, _) -> s i x == vres_of_sres (vs (S.vpos i) v x)
+    | Some (v, _) -> s i x == vres_of_sres (vs (S.venv i) v x)
     | None -> True))

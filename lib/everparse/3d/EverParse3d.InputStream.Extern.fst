@@ -604,7 +604,8 @@ ensures exists* contents' v1 v2 .
     Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
     Seq.length v <= Seq.length contents /\
     Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
-    Ghost.reveal v == Seq.append v1 v2
+    Ghost.reveal v == Seq.append v1 v2 /\
+    I.origin #base_t #len_t #pos_t #pts_to_inst (stream_trunc_base base len pos res) == I.origin #base_t #len_t #pos_t #pts_to_inst base
   )
 {
   unfold (stream_pts_to base len pos contents v);

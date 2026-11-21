@@ -114,7 +114,7 @@ let ta_spec_correct
   let S.VOk s1 = t_vspec k out i' s in
   let rest2 = Seq.slice i'.S.rest 4 8 in
   Seq.lemma_eq_elim rest2 (Seq.slice i.rest 4 8);
-  let i2 = { S.contents = i'.S.contents; S.rest = rest2 } in
+  let i2 = { S.contents = i'.S.contents; S.rest = rest2; S.origin = i'.S.origin } in
   t_vspec_correct k out i2 s1;
   assert (Seq.length (Seq.slice rest2 4 4) == 0)
 #pop-options
@@ -136,7 +136,7 @@ let t_value_spec_eq (tn: string) (k: Ghost.erased string) (out: ref U32.t)
 
 let t_value_spec_correct
   (k: Ghost.erased string) (out: ref U32.t)
-  (pos: nat) (x: U32.t) (s: forevery_values (d k out))
+  (pos: S.aenv) (x: U32.t) (s: forevery_values (d k out))
 : Lemma (match I.as_value_spec "T" (t k out) pos x s with
     | S.SOk true s' -> s' (Ghost.reveal k) == x
     | _ -> False)
@@ -161,4 +161,50 @@ let t_spec_correct_from_value
 = I.as_vspec_value_spec "T" (t k out) i s;
   match P.parse (I.as_parser (t k out)) i.rest with
   | None -> ()
-  | Some (x, _) -> t_value_spec_correct k out (S.vpos i) x s
+  | Some (x, _) -> t_value_spec_correct k out (S.venv i) x s
+
+(* `field_ptr` (buffer backend): for
+
+     typedef struct _TP (mutable PUINT8 *out) {
+       UINT32 x {:act *out = field_ptr; };
+     } TP;
+
+   the validator stores into `*out` the pointer to the start of `x`, i.e.
+   `ptr_at origin start` where `origin` points to the first byte of the input
+   (EverParse3d.PtrModel). *)
+module PM = EverParse3d.PtrModel
+
+let dp (k: Ghost.erased string) (out: ref PM.ptr) : state_dict =
+  state_dict_singleton k (pts_to out #1.0R)
+
+let tp (k: Ghost.erased string) (out: ref PM.ptr)
+: I.typ B.base_t B.len_t B.pos_t B.input_stream_buffer (dp k out) false _ true false
+= I.T_with_action "x" (I.T_denoted "x" (I.DT_IType I.UInt32))
+    (I.Action_act (I.Action_let (I.Action_field_ptr B.field_ptr ())
+      (fun p -> I.Atomic_action (I.Action_assignment k out p ()))))
+
+let tp_value_spec (k: Ghost.erased string) (out: ref PM.ptr) : VS.value_spec (dp k out) U32.t =
+  VS.vs_with_action VS.vs_true (S.aspec_seq
+    (S.aspec_bind S.aspec_field_ptr (fun p ->
+      S.aspec_weaken (S.aspec_assignment k (pts_to out #1.0R) p) (dp k out) ()))
+    (S.aspec_return true))
+
+let tp_value_spec_eq (tn: string) (k: Ghost.erased string) (out: ref PM.ptr)
+: Lemma (I.as_value_spec tn (tp k out) == tp_value_spec k out)
+= assert (I.as_value_spec tn (tp k out) == tp_value_spec k out)
+    by (T.norm [delta_only [`%tp; `%tp_value_spec; `%I.as_value_spec; `%I.dtyp_as_value_spec;
+                            `%I.action_as_spec; `%I.atomic_action_as_spec];
+                zeta; iota];
+        T.trefl ())
+
+let tp_value_spec_correct
+  (k: Ghost.erased string) (out: ref PM.ptr)
+  (pos: S.aenv) (x: U32.t) (s: forevery_values (dp k out))
+: Lemma (match I.as_value_spec "TP" (tp k out) pos x s with
+    | S.SOk true s' -> s' (Ghost.reveal k) == PM.ptr_at pos.S.a_origin pos.S.a_start
+    | _ -> False)
+= tp_value_spec_eq "TP" k out;
+  let p = PM.ptr_at pos.S.a_origin pos.S.a_start in
+  let s1 = mk_singleton_value k (pts_to out #1.0R) p in
+  S.mk_singleton_value_eq k (pts_to out #1.0R) p;
+  S.weaken_update_in (dp k out) (dp k out) () s s1 k

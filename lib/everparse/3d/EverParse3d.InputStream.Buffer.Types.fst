@@ -55,4 +55,5 @@ inline_for_extraction
 let pts_to_inst : I.input_stream_pts_to base_t len_t pos_t = {
   pts_to = stream_pts_to;
   is_prefix_of = stream_is_prefix_of;
+  origin = (fun b -> b);
 }

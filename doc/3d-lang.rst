@@ -684,8 +684,15 @@ following are currently specified as ``VUnknown`` or as
 returning an unknown result:
 
 * ``extern`` functions and output-type setters;
-* ``field_ptr`` and ``field_ptr_after``;
+* ``field_ptr_after``;
 * probes.
+
+``field_ptr`` (buffer backend) is specified as
+``EverParse3d.PtrModel.ptr_at origin start``: the pointer ``start``
+bytes after ``origin``, a ghost pointer to the first byte of the input
+buffer, where ``start`` is the position of the field. This relies on one
+trusted assumption, ``EverParse3d.PtrModel.ptr_ext``: a pointer is
+determined by its base and offset, which holds of C pointers.
 
 Clients can reason about the spec in F*.
 ``EverParse3d.Actions.Spec.Test`` proves that a field
