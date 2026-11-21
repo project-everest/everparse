@@ -1799,7 +1799,9 @@ let print_binding mname (td:type_decl)
                                     %b\n\
                                     %b\n\
                                     (A.validate_weaken_gen \"%s\" %b (with_vspec (as_vspec \"%s\" (def'_%s %s)) (coerce (_ by %s) (validate_%s %s))) ___d ___sq)\n\
-                                    (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
+                                    (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n\
+                                    (as_value_spec_weaken \"%s\" (def'_%s %s) ___d ___sq)\n\
+                                    (as_vspec_wf_weaken \"%s\" (def'_%s %s) ___d ___sq)\n"
                       root_name binders sd
                       (pulse_inst_args ())
                       (use_error_handler ())
@@ -1817,6 +1819,8 @@ let print_binding mname (td:type_decl)
                       td.allow_reading
                       root_name root_name args
                       coerce_validator worker_name args
+                      root_name root_name args
+                      root_name root_name args
     else
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\

@@ -72,12 +72,10 @@ let vres_rel (#d: state_dict) (r: vres d) (res: U8.t) (final: forevery_values d)
   | VUnknown -> True
 
 (* The environment of an action: the position at which the field it is
-   attached to starts, and the stream after that field. *)
+   attached to starts. *)
 noeq
 type aenv = {
   a_start: nat;
-  a_contents: Seq.seq U8.t;
-  a_rest: Seq.seq U8.t;
 }
 
 noeq
@@ -97,8 +95,6 @@ let spec_res_rel (#d: state_dict) (#a: Type0) (r: spec_res d a) (res: a) (final:
    that consumed `n` bytes. *)
 let aenv_of (i: vinput) (n: nat { n <= Seq.length i.rest }) : GTot aenv = {
   a_start = vpos i;
-  a_contents = i.contents;
-  a_rest = Seq.slice i.rest n (Seq.length i.rest);
 }
 
 (** Action specs *)

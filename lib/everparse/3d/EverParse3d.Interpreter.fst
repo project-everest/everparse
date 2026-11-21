@@ -70,6 +70,7 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module A = EverParse3d.Actions.Base
 module S = EverParse3d.Actions.Spec
+module VS = EverParse3d.Actions.ValueSpec
 module E = EverParse3d.ErrorCode
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
@@ -275,6 +276,9 @@ type global_binding
           (Some? p_reader)
           use_error_handler
           p_s;
+  //Its value-level spec denotation, refined by `p_s`
+  p_vs : VS.value_spec d p_t;
+  p_wf : squash (VS.vspec_wf parser_has_action p_p p_s p_vs);
 }
 
 let projector_names : list string = [
@@ -287,6 +291,8 @@ let projector_names : list string = [
   `%Mkglobal_binding?.p_reader;
   `%Mkglobal_binding?.p_s;
   `%Mkglobal_binding?.p_v;
+  `%Mkglobal_binding?.p_vs;
+  `%Mkglobal_binding?.p_wf;
 ]
 
 let nz_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.parser_kind_nz g
@@ -298,6 +304,7 @@ let parser_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (
 let leaf_reader_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_reader g
 let spec_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_s g
 let validator_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_v g
+let value_spec_of_binding #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) = Mkglobal_binding?.p_vs g
 
 let has_reader #base_t #len_t #pos_t #inst #d (#use_error_handler:bool) (g:global_binding base_t len_t pos_t inst d use_error_handler) =
   match leaf_reader_of_binding g with
@@ -380,6 +387,22 @@ let dtyp_as_vspec #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
   = match t with
     | DT_IType i -> S.vspec_of_parser (itype_as_parser i)
     | DT_App _ _ _ b _ -> spec_of_binding b
+
+let dtyp_as_value_spec #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
+                   #nz #wk (#pk:P.parser_kind nz wk) #ha #hr
+                   (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha hr)
+  : VS.value_spec d (dtyp_as_type t)
+  = match t returns VS.value_spec d (dtyp_as_type t) with
+    | DT_IType i -> VS.vs_true
+    | DT_App _ _ _ b _ -> value_spec_of_binding b
+
+let dtyp_wf #base_t #len_t #pos_t #inst #d (#use_error_handler:bool)
+                   #nz #wk (#pk:P.parser_kind nz wk) #ha #hr
+                   (t:dtyp base_t len_t pos_t inst d use_error_handler pk ha hr)
+  : Lemma (VS.vspec_wf ha (dtyp_as_parser t) (dtyp_as_vspec t) (dtyp_as_value_spec t))
+  = match t with
+    | DT_IType i -> VS.wf_of_parser #d false (itype_as_parser i)
+    | DT_App _ _ _ b _ -> let _ = b.p_wf in ()
 
 [@@specialize]
 let dtyp_as_validator #base_t #len_t #pos_t (#inst: I.input_stream_inst base_t len_t pos_t) (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t) (#[@@@erasable] d: state_dict) (#use_error_handler:bool)
@@ -1351,6 +1374,351 @@ let rec as_vspec
     | T_string _ elt_t terminator ->
       S.vspec_string ha (dtyp_as_parser elt_t) terminator (dtyp_as_vspec elt_t)
 
+(* Value-level spec denotation of `typ`: the effect of the actions of a
+   type, as a function of the parsed value (see
+   `EverParse3d.Actions.ValueSpec`). *)
+let rec as_value_spec
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (typename: string)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : Tot (VS.value_spec d (as_type t))
+        (decreases t)
+  = match t returns Tot (VS.value_spec d (as_type t)) with
+    | T_false _ ->
+      VS.vs_true
+
+    | T_denoted _ td ->
+      dtyp_as_value_spec td
+
+    | T_pair _ _ t1 _ t2 ->
+      VS.vs_pair (as_parser t1) (as_value_spec typename t1) (as_value_spec typename t2)
+
+    | T_dep_pair _ i t ->
+      VS.vs_dep_pair (dtyp_as_parser i) (dtyp_as_value_spec i) (fun x -> as_value_spec typename (t x))
+
+    | T_refine _ base f _ ->
+      VS.vs_filter (dtyp_as_value_spec base) f None
+
+    | T_refine_with_action _ base f _ a ->
+      VS.vs_filter (dtyp_as_value_spec base) f (Some (fun x -> action_as_spec (a x)))
+
+    | T_dep_pair_with_refinement _ base f _ k ->
+      VS.vs_dep_pair_with_refinement (dtyp_as_parser base) (dtyp_as_value_spec base) f None
+        (fun x -> as_value_spec typename (k x))
+
+    | T_dep_pair_with_action _ base t a ->
+      VS.vs_dep_pair_with_action (dtyp_as_parser base) (dtyp_as_value_spec base)
+        (fun x -> action_as_spec (a x))
+        (fun x -> as_value_spec typename (t x))
+
+    | T_dep_pair_with_refinement_and_action _ base f _ k a ->
+      VS.vs_dep_pair_with_refinement (dtyp_as_parser base) (dtyp_as_value_spec base) f
+        (Some (fun x -> action_as_spec (a x)))
+        (fun x -> as_value_spec typename (k x))
+
+    | T_if_else b t0 t1 ->
+      VS.vs_ite b (fun _ -> as_value_spec typename (t0 ())) (fun _ -> as_value_spec typename (t1 ()))
+
+    | T_cases b t0 t1 ->
+      VS.vs_ite b (fun _ -> as_value_spec typename t0) (fun _ -> as_value_spec typename t1)
+
+    | T_with_action _ t a ->
+      VS.vs_with_action (as_value_spec typename t) (action_as_spec a)
+
+    | T_with_dep_action _ i a ->
+      VS.vs_with_dep_action (dtyp_as_value_spec i) (fun x -> action_as_spec (a typename x))
+
+    | T_drop t ->
+      as_value_spec typename t
+
+    | T_with_comment _ t _ ->
+      as_value_spec typename t
+
+    | T_nlist _ n _ _ t ->
+      VS.vs_nlist n (as_parser t) (as_value_spec typename t)
+
+    | T_at_most _ n t ->
+      VS.vs_t_at_most n (as_value_spec typename t)
+
+    | T_exact _ n t ->
+      VS.vs_t_exact n (as_value_spec typename t)
+
+    | T_string _ elt_t terminator ->
+      VS.vs_string (dtyp_as_parser elt_t) terminator (dtyp_as_value_spec elt_t)
+
+let kind_of_typ
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : P.parser_kind nz wk
+  = pk
+
+let has_action_of_typ
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : bool
+  = ha
+
+let kind_of_typ_f
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (#a: Type)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t: a -> typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : P.parser_kind nz wk
+  = pk
+
+let has_action_of_typ_f
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (#a: Type)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t: a -> typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : bool
+  = ha
+
+(* The value-level spec denotation is refined by the spec denotation. *)
+#push-options "--z3rlimit 32"
+#restart-solver
+let rec as_vspec_wf
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (typename: string)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+  : Lemma
+    (ensures (VS.vspec_wf ha (as_parser t) (as_vspec typename t) (as_value_spec typename t)))
+    (decreases t)
+  = match t with
+    | T_false _ ->
+      VS.wf_of_parser #d false (P.parse_impos ())
+
+    | T_denoted _ td ->
+      dtyp_wf td
+
+    | T_pair _ #_ #_ #ha1 #_ #_ #_ #_ #ha2 #_ k1_const t1 k2_const t2 ->
+      as_vspec_wf typename t1;
+      as_vspec_wf typename t2;
+      VS.wf_pair (as_parser t1) k1_const ha1 (as_vspec typename t1) (as_value_spec typename t1)
+                 (as_parser t2) k2_const ha2 (as_vspec typename t2) (as_value_spec typename t2)
+
+    | T_dep_pair fldname #_ #_ #ha1 #_ #_ #_ #ha2 i t ->
+      dtyp_wf i;
+      assert_norm (as_type (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) == x:dtyp_as_type i & as_type (t x));
+      assert_norm (as_parser (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) == P.parse_dep_pair (dtyp_as_parser i) (fun (x:dtyp_as_type i) -> as_parser (t x)));
+      assert_norm (as_vspec typename (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) == S.vspec_dep_pair (dtyp_as_parser i) (dtyp_as_vspec i) (fun x -> as_vspec typename (t x)));
+      assert_norm (as_value_spec typename (T_dep_pair #base_t #len_t #pos_t #inst #d #use_error_handler fldname i t) == VS.vs_dep_pair (dtyp_as_parser i) (dtyp_as_value_spec i) (fun x -> as_value_spec typename (t x)));
+      let aux (x: dtyp_as_type i) : Lemma (VS.vspec_wf ha2 (as_parser (t x)) (as_vspec typename (t x)) (as_value_spec typename (t x))) =
+        as_vspec_wf typename (t x)
+      in
+      Classical.forall_intro aux;
+      VS.wf_dep_pair (dtyp_as_parser i) ha1 (dtyp_as_vspec i) (dtyp_as_value_spec i)
+        (fun x -> as_parser (t x)) ha2 (fun x -> as_vspec typename (t x)) (fun x -> as_value_spec typename (t x))
+
+    | T_refine fldname #_ #_ #ha1 base f err ->
+      dtyp_wf base;
+      assert_norm (as_type (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err) == P.refine (dtyp_as_type base) f);
+      assert_norm (as_parser (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err) == P.parse_filter (dtyp_as_parser base) f);
+      assert_norm (as_vspec typename (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err) == S.vspec_filter (dtyp_as_parser base) (dtyp_as_vspec base) f None);
+      assert_norm (as_value_spec typename (T_refine #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err) == VS.vs_filter (dtyp_as_value_spec base) f None);
+      VS.wf_filter ha1 (dtyp_as_parser base) (dtyp_as_vspec base) (dtyp_as_value_spec base) f None
+
+    | T_refine_with_action fldname #_ #_ #ha1 base f err a ->
+      dtyp_wf base;
+      assert_norm (as_type (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err a) == P.refine (dtyp_as_type base) f);
+      assert_norm (as_parser (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err a) == P.parse_filter (dtyp_as_parser base) f);
+      assert_norm (as_vspec typename (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err a) == S.vspec_filter (dtyp_as_parser base) (dtyp_as_vspec base) f (Some (fun x -> action_as_spec (a x))));
+      assert_norm (as_value_spec typename (T_refine_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err a) == VS.vs_filter (dtyp_as_value_spec base) f (Some (fun x -> action_as_spec (a x))));
+      VS.wf_filter ha1 (dtyp_as_parser base) (dtyp_as_vspec base) (dtyp_as_value_spec base) f
+        (Some (fun x -> action_as_spec (a x)))
+
+    | T_dep_pair_with_refinement fldname #_ #_ #ha1 #_ #_ #_ #ha2 #_ base f err k ->
+      dtyp_wf base;
+      assert_norm (as_type (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k) == x:P.refine (dtyp_as_type base) f & as_type (k x));
+      assert_norm (as_parser (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k) == P.parse_dep_pair (P.parse_filter (dtyp_as_parser base) f) (fun x -> as_parser (k x)));
+      assert_norm (as_vspec typename (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k) == S.vspec_dep_pair_with_refinement_gen (not ha1) (dtyp_as_parser base) (dtyp_as_vspec base) f None (fun x -> as_vspec typename (k x)));
+      assert_norm (as_value_spec typename (T_dep_pair_with_refinement #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k) == VS.vs_dep_pair_with_refinement (dtyp_as_parser base) (dtyp_as_value_spec base) f None (fun x -> as_value_spec typename (k x)));
+      let aux (x: P.refine (dtyp_as_type base) f) : Lemma (VS.vspec_wf ha2 (as_parser (k x)) (as_vspec typename (k x)) (as_value_spec typename (k x))) =
+        as_vspec_wf typename (k x)
+      in
+      Classical.forall_intro aux;
+      VS.wf_dep_pair_with_refinement (dtyp_as_parser base) ha1 (dtyp_as_vspec base) (dtyp_as_value_spec base) f None
+        (fun x -> as_parser (k x)) ha2 (fun x -> as_vspec typename (k x)) (fun x -> as_value_spec typename (k x))
+
+    | T_dep_pair_with_action fldname #_ #_ #ha1 #_ #_ #_ #ha2 base t a ->
+      dtyp_wf base;
+      assert_norm (as_type (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t a) == x:dtyp_as_type base & as_type (t x));
+      assert_norm (as_parser (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t a) == P.parse_dep_pair (dtyp_as_parser base) (fun (x:dtyp_as_type base) -> as_parser (t x)));
+      assert_norm (as_vspec typename (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t a) == S.vspec_dep_pair_with_action (dtyp_as_parser base) (dtyp_as_vspec base) (fun x -> action_as_spec (a x)) (fun x -> as_vspec typename (t x)));
+      assert_norm (as_value_spec typename (T_dep_pair_with_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base t a) == VS.vs_dep_pair_with_action (dtyp_as_parser base) (dtyp_as_value_spec base) (fun x -> action_as_spec (a x)) (fun x -> as_value_spec typename (t x)));
+      let aux (x: dtyp_as_type base) : Lemma (VS.vspec_wf ha2 (as_parser (t x)) (as_vspec typename (t x)) (as_value_spec typename (t x))) =
+        as_vspec_wf typename (t x)
+      in
+      Classical.forall_intro aux;
+      VS.wf_dep_pair_with_action (dtyp_as_parser base) ha1 (dtyp_as_vspec base) (dtyp_as_value_spec base)
+        (fun x -> action_as_spec (a x))
+        (fun x -> as_parser (t x)) ha2 (fun x -> as_vspec typename (t x)) (fun x -> as_value_spec typename (t x))
+
+    | T_dep_pair_with_refinement_and_action fldname #_ #_ #ha1 #_ #_ #_ #ha2 #_ base f err k a ->
+      dtyp_wf base;
+      assert_norm (as_type (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k a) == x:P.refine (dtyp_as_type base) f & as_type (k x));
+      assert_norm (as_parser (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k a) == P.parse_dep_pair (P.parse_filter (dtyp_as_parser base) f) (fun x -> as_parser (k x)));
+      assert_norm (as_vspec typename (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k a) == S.vspec_dep_pair_with_refinement_gen (not ha1) (dtyp_as_parser base) (dtyp_as_vspec base) f (Some (fun x -> action_as_spec (a x))) (fun x -> as_vspec typename (k x)));
+      assert_norm (as_value_spec typename (T_dep_pair_with_refinement_and_action #base_t #len_t #pos_t #inst #d #use_error_handler fldname base f err k a) == VS.vs_dep_pair_with_refinement (dtyp_as_parser base) (dtyp_as_value_spec base) f (Some (fun x -> action_as_spec (a x))) (fun x -> as_value_spec typename (k x)));
+      let aux (x: P.refine (dtyp_as_type base) f) : Lemma (VS.vspec_wf ha2 (as_parser (k x)) (as_vspec typename (k x)) (as_value_spec typename (k x))) =
+        as_vspec_wf typename (k x)
+      in
+      Classical.forall_intro aux;
+      VS.wf_dep_pair_with_refinement (dtyp_as_parser base) ha1 (dtyp_as_vspec base) (dtyp_as_value_spec base) f
+        (Some (fun x -> action_as_spec (a x)))
+        (fun x -> as_parser (k x)) ha2 (fun x -> as_vspec typename (k x)) (fun x -> as_value_spec typename (k x))
+
+    | T_if_else b t0 t1 ->
+      let pk1 = kind_of_typ_f t0 in
+      let pk2 = kind_of_typ_f t1 in
+      let ha1 = has_action_of_typ_f t0 in
+      let ha2 = has_action_of_typ_f t1 in
+      assert_norm (as_type (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
+      let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser (t0 ())) _ in
+      let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1 ())) _ in
+      assert_norm (as_parser (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.parse_ite b p0 p1);
+      assert_norm (as_vspec typename (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == S.vspec_ite b (fun _ -> as_vspec typename (t0 ())) (fun _ -> as_vspec typename (t1 ())));
+      assert_norm (as_value_spec typename (T_if_else #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == VS.vs_ite b (fun _ -> as_value_spec typename (t0 ())) (fun _ -> as_value_spec typename (t1 ())));
+      if b
+      then begin
+        as_vspec_wf typename (t0 ());
+        VS.wf_ha ha1 ha (as_parser (t0 ())) (as_vspec typename (t0 ())) (as_value_spec typename (t0 ()));
+        VS.wf_weaken_right ha (as_parser (t0 ())) (as_vspec typename (t0 ())) (as_value_spec typename (t0 ())) pk2
+      end else begin
+        as_vspec_wf typename (t1 ());
+        VS.wf_ha ha2 ha (as_parser (t1 ())) (as_vspec typename (t1 ())) (as_value_spec typename (t1 ()));
+        VS.wf_weaken_left ha (as_parser (t1 ())) (as_vspec typename (t1 ())) (as_value_spec typename (t1 ())) pk1
+      end;
+      VS.wf_ite ha b
+        p0 p1
+        (fun _ -> as_vspec typename (t0 ())) (fun _ -> as_vspec typename (t1 ()))
+        (fun _ -> as_value_spec typename (t0 ())) (fun _ -> as_value_spec typename (t1 ()))
+
+    | T_cases b t0 t1 ->
+      let pk1 = kind_of_typ t0 in
+      let pk2 = kind_of_typ t1 in
+      let ha1 = has_action_of_typ t0 in
+      let ha2 = has_action_of_typ t1 in
+      assert_norm (as_type (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1));
+      let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
+      let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
+      assert_norm (as_parser (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == P.parse_ite b p0 p1);
+      assert_norm (as_vspec typename (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == S.vspec_ite b (fun _ -> as_vspec typename t0) (fun _ -> as_vspec typename t1));
+      assert_norm (as_value_spec typename (T_cases #base_t #len_t #pos_t #inst #d #use_error_handler b t0 t1) == VS.vs_ite b (fun _ -> as_value_spec typename t0) (fun _ -> as_value_spec typename t1));
+      if b
+      then begin
+        as_vspec_wf typename t0;
+        VS.wf_ha ha1 ha (as_parser t0) (as_vspec typename t0) (as_value_spec typename t0);
+        VS.wf_weaken_right ha (as_parser t0) (as_vspec typename t0) (as_value_spec typename t0) pk2
+      end else begin
+        as_vspec_wf typename t1;
+        VS.wf_ha ha2 ha (as_parser t1) (as_vspec typename t1) (as_value_spec typename t1);
+        VS.wf_weaken_left ha (as_parser t1) (as_vspec typename t1) (as_value_spec typename t1) pk1
+      end;
+      VS.wf_ite ha b
+        p0 p1
+        (fun _ -> as_vspec typename t0) (fun _ -> as_vspec typename t1)
+        (fun _ -> as_value_spec typename t0) (fun _ -> as_value_spec typename t1)
+
+    | T_with_action _ #_ #_ #_ #_ #ha1 t a ->
+      as_vspec_wf typename t;
+      VS.wf_with_action ha1 (as_parser t) (as_vspec typename t) (as_value_spec typename t) (action_as_spec a)
+
+    | T_with_dep_action _ #_ #_ #ha1 i a ->
+      dtyp_wf i;
+      VS.wf_with_dep_action ha1 (dtyp_as_parser i) (dtyp_as_vspec i) (dtyp_as_value_spec i) (fun x -> action_as_spec (a typename x))
+
+    | T_drop t ->
+      as_vspec_wf typename t
+
+    | T_with_comment _ t _ ->
+      as_vspec_wf typename t
+
+    | T_nlist _ n n_is_const _ t ->
+      as_vspec_wf typename t;
+      VS.wf_nlist ha n n_is_const (as_parser t) (as_vspec typename t) (as_value_spec typename t)
+
+    | T_at_most _ n t ->
+      as_vspec_wf typename t;
+      VS.wf_t_at_most ha n (as_parser t) (as_vspec typename t) (as_value_spec typename t)
+
+    | T_exact _ n t ->
+      as_vspec_wf typename t;
+      VS.wf_t_exact ha n (as_parser t) (as_vspec typename t) (as_value_spec typename t)
+
+    | T_string _ elt_t terminator ->
+      dtyp_wf elt_t;
+      VS.wf_string ha (dtyp_as_parser elt_t) terminator (dtyp_as_vspec elt_t) (dtyp_as_value_spec elt_t)
+#pop-options
+
+(* Client-facing corollary: if the parser succeeds on the input with value
+   `v`, then the spec of the validator is determined by the value-level spec
+   of `v`. (If the parser fails, then the validator fails.) *)
+let as_vspec_value_spec
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (typename: string)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+          (i: S.vinput) (x: forevery_values d)
+  : Lemma
+    (requires (VS.vinput_ok i))
+    (ensures (match P.parse (as_parser t) i.S.rest with
+      | Some (v, _) -> as_vspec typename t i x == VS.vres_of_sres (as_value_spec typename t (S.vpos i) v x)
+      | None -> True))
+  = as_vspec_wf typename t;
+    VS.vspec_wf_elim ha (as_parser t) (as_vspec typename t) (as_value_spec typename t) i x
+
+(* Weakening, as used by the code generated by the 3D frontend for `dtyp_X`. *)
+let as_value_spec_weaken
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (typename: string)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+          (d2: state_dict) (sq: squash (state_dict_weaken_prop d d2))
+  : VS.value_spec d2 (as_type t)
+  = VS.vs_weaken (as_value_spec typename t) d2 sq
+
+let as_vspec_wf_weaken
+          (#base_t #len_t #pos_t: Type0)
+          (#inst: I.input_stream_inst base_t len_t pos_t)
+          (#d: state_dict)
+          (#use_error_handler:bool)
+          (typename: string)
+          #nz #wk (#pk:P.parser_kind nz wk) #ha #b
+          (t:typ base_t len_t pos_t inst d use_error_handler pk ha b)
+          (d2: state_dict) (sq: squash (state_dict_weaken_prop d d2))
+  : squash (VS.vspec_wf ha (as_parser t) (S.vspec_weaken (as_vspec typename t) d2 sq) (as_value_spec_weaken typename t d2 sq))
+  = as_vspec_wf typename t;
+    VS.wf_weaken ha (as_parser t) (as_vspec typename t) (as_value_spec typename t) d2 sq
+
 (* The main result: a validator denotation of `typ`, related by construction
    to the parser and type denotations. *)
 #push-options "--z3rlimit_factor 4 --z3cliopt 'smt.qi.eager_threshold=100'"
@@ -1892,6 +2260,8 @@ let mk_global_binding
       (#[@@@erasable] p_s: S.vspec d)
       (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler p_s)
       ([@@@erasable] pf:squash (b == Some? p_reader))
+      ([@@@erasable] p_vs: VS.value_spec d p_t)
+      ([@@@erasable] pf_wf: squash (VS.vspec_wf ha p_p p_s p_vs))
    : global_binding base_t len_t pos_t inst d use_error_handler
    = {
        parser_kind_nz = nz;
@@ -1902,7 +2272,9 @@ let mk_global_binding
        p_p = p_p;
        p_reader = p_reader;
        p_s = p_s;
-       p_v = p_v
+       p_v = p_v;
+       p_vs = p_vs;
+       p_wf = pf_wf
      }
 
 [@@specialize]
@@ -1936,6 +2308,8 @@ let mk_dtyp_app
       (#[@@@erasable] p_s: S.vspec d)
       (p_v : A.validate_with_action_t #base_t #len_t #pos_t #inst p_p d ha b use_error_handler p_s)
       ([@@@erasable] pf:squash (b == Some? p_reader))
+      ([@@@erasable] p_vs: VS.value_spec d p_t)
+      ([@@@erasable] pf_wf: squash (VS.vspec_wf ha p_p p_s p_vs))
    : dtyp base_t len_t pos_t inst d use_error_handler #nz #wk pk ha b
    = let gb = {
        parser_kind_nz = nz;
@@ -1946,7 +2320,9 @@ let mk_dtyp_app
        p_p = p_p;
        p_reader = p_reader;
        p_s = p_s;
-       p_v = p_v
+       p_v = p_v;
+       p_vs = p_vs;
+       p_wf = pf_wf
      } in
      DT_App pk ha b gb ()
 

@@ -694,6 +694,23 @@ with a 32-bit integer, and that it then stores that integer into
 ``*out``; and that for an array ``T(out) a[:byte-size 8]`` of two such
 fields, ``*out`` ends up holding the second integer.
 
+Since ``as_vspec`` reads input bytes, the spec of the actions is also
+given in terms of the *parsed value*:
+``EverParse3d.Interpreter.as_value_spec "T" (def'_T ...)``, of type
+``EverParse3d.Actions.ValueSpec.value_spec d t`` (where ``t`` is the
+type denotation of ``T``), takes the position at which the value starts,
+the parsed value and the action state before validation, and returns the
+result of the actions and the final action state. The positions of
+fields (for ``field_pos``) are computed from the parsed values, which is
+well defined since all 3d parsers are injective. The two levels are
+related once and for all by
+``EverParse3d.Interpreter.as_vspec_value_spec``: if the parser
+succeeds on the input with value ``v``, then the result of ``as_vspec``
+is determined by ``as_value_spec`` on ``v``; and if the parser fails,
+then the validator fails. So clients can reason about the actions of
+``T`` purely in terms of its values, without reasoning about bytes (see
+``EverParse3d.Actions.Spec.Test``).
+
 .. _sec-alignment:
 
 Alignment

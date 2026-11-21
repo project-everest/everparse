@@ -26,8 +26,6 @@ module S = EverParse3d.Actions.Spec
 (* The spec-level inputs of actions and validators. *)
 let aenv_of_action (start_pos: U64.t) (contents_sl v_sl: Seq.seq U8.t) : GTot S.aenv = {
   S.a_start = U64.v start_pos;
-  S.a_contents = contents_sl;
-  S.a_rest = v_sl;
 }
 
 let vinput_read (contents_sl v_sl: Seq.seq U8.t) : GTot S.vinput = {

@@ -16,6 +16,7 @@ module EverParse3d.Actions.Spec.Test
 open Pulse.Lib.Pervasives
 open EverParse3d.State
 module S = EverParse3d.Actions.Spec
+module VS = EverParse3d.Actions.ValueSpec
 module I = EverParse3d.Interpreter
 module P = EverParse3d.Prelude
 module B = EverParse3d.InputStream.Buffer
@@ -117,3 +118,47 @@ let ta_spec_correct
   t_vspec_correct k out i2 s1;
   assert (Seq.length (Seq.slice rest2 4 4) == 0)
 #pop-options
+
+(* Value-level semantics: the effect of the actions of `T` as a function of
+   the parsed value, with no reasoning about input bytes. *)
+let t_value_spec (k: Ghost.erased string) (out: ref U32.t) : VS.value_spec (d k out) U32.t =
+  VS.vs_with_dep_action VS.vs_true (fun x -> S.aspec_seq
+      (S.aspec_weaken (S.aspec_assignment k (pts_to out #1.0R) x) (d k out) ())
+      (S.aspec_return true))
+
+let t_value_spec_eq (tn: string) (k: Ghost.erased string) (out: ref U32.t)
+: Lemma (I.as_value_spec tn (t k out) == t_value_spec k out)
+= assert (I.as_value_spec tn (t k out) == t_value_spec k out)
+    by (T.norm [delta_only [`%t; `%t_value_spec; `%I.as_value_spec; `%I.dtyp_as_value_spec;
+                            `%I.action_as_spec; `%I.atomic_action_as_spec];
+                zeta; iota];
+        T.trefl ())
+
+let t_value_spec_correct
+  (k: Ghost.erased string) (out: ref U32.t)
+  (pos: nat) (x: U32.t) (s: forevery_values (d k out))
+: Lemma (match I.as_value_spec "T" (t k out) pos x s with
+    | S.SOk true s' -> s' (Ghost.reveal k) == x
+    | _ -> False)
+= t_value_spec_eq "T" k out;
+  let s1 = mk_singleton_value k (pts_to out #1.0R) x in
+  S.mk_singleton_value_eq k (pts_to out #1.0R) x;
+  S.weaken_update_in (d k out) (d k out) () s s1 k
+
+(* The byte-level correctness of `T`, derived from its value-level semantics
+   by the generic decomposition theorem. *)
+let t_spec_correct_from_value
+  (k: Ghost.erased string) (out: ref U32.t)
+  (i: S.vinput) (s: forevery_values (d k out))
+: Lemma
+  (requires (VS.vinput_ok i))
+  (ensures (
+    let r = I.as_vspec "T" (t k out) i s in
+    match P.parse (I.as_parser (t k out)) i.rest with
+    | None -> True
+    | Some (x, _) -> S.VOk? r /\ (S.VOk?.final r) (Ghost.reveal k) == x
+  ))
+= I.as_vspec_value_spec "T" (t k out) i s;
+  match P.parse (I.as_parser (t k out)) i.rest with
+  | None -> ()
+  | Some (x, _) -> t_value_spec_correct k out (S.vpos i) x s
