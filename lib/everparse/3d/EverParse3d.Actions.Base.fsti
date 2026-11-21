@@ -1159,6 +1159,23 @@ let field_ptr_after_setter_t
       (exists* extra' . forevery_state extra_state extra'))
 
 
+(* The probe world: a prophecy of the outcomes of all future probes (see
+   `S.aspec_probe_then_validate`). It absorbs everything a probe depends on
+   but that is not modeled (the contents of the probed memory, concurrent
+   modifications, allocation failures in the client's probe functions.)
+
+   Soundness relies on `probe_world` being non-duplicable, and on each outcome
+   being resolved (in `probe_then_validate`) at most once, with values
+   determined by the actual run of the probe, which cannot depend on the tape
+   since the tape is ghost. A fresh world can always be introduced, so
+   theorems about validators hold for every initial tape. *)
+val probe_world (w: S.probe_tape) : slprop
+
+val prophesy_probe_world (_: unit)
+: stt_ghost (Ghost.erased S.probe_tape) emp_inames emp (fun w -> probe_world w)
+
+(* The state of a copy buffer, as seen by the actions: its contents are only
+   relevant within a probe, so only its probe world is exposed. *)
 inline_for_extraction noextract
 let copy_buffer_state
   (#copy_buffer_t: Type0)
@@ -1166,9 +1183,9 @@ let copy_buffer_state
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: CP.copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (c: copy_buffer_t)
-  (cv: (Seq.seq U8.t & Seq.seq U8.t))
+  (w: S.probe_tape)
 : slprop
-= CP.pts_to #_ #base_t #len_t #pos_t c (fst cv) (snd cv)
+= (exists* contents v . CP.pts_to #_ #base_t #len_t #pos_t c contents v) ** probe_world w
 
 inline_for_extraction noextract
 let copy_buffer_state_dict
@@ -1245,7 +1262,7 @@ val probe_then_validate
     (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
     bool
     use_error_handler
-    S.aspec_unknown
+    (S.aspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
 
 inline_for_extraction noextract
 val validate_impos_no_read

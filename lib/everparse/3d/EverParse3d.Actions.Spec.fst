@@ -12,7 +12,8 @@ module EverParse3d.Actions.Spec
    Likewise, an action is indexed by an `action_spec d a`: given the position
    of the field it is attached to and the values of the action state, it
    returns the result of the action along with the final values of the action
-   state (`SOk`), or `SUnknown`.
+   state (`SOk`), only the result (`SResOnly`, when the final state is
+   unspecified), or `SUnknown`.
 
    The spec combinators below mirror the control flow of the validator
    combinators of `EverParse3d.Actions.Base` exactly, including their
@@ -92,6 +93,7 @@ let venv (i: vinput) : GTot aenv = { a_start = vpos i; a_origin = i.origin }
 noeq
 type spec_res (d: state_dict) (a: Type0) =
 | SOk: (res: a) -> (final: forevery_values d) -> spec_res d a
+| SResOnly: (res: a) -> spec_res d a (* the result is known, but not the final state *)
 | SUnknown: spec_res d a
 
 let action_spec (d: state_dict) (a: Type0) : Type0 =
@@ -100,6 +102,7 @@ let action_spec (d: state_dict) (a: Type0) : Type0 =
 let spec_res_rel (#d: state_dict) (#a: Type0) (r: spec_res d a) (res: a) (final: forevery_values d) : Tot prop =
   match r with
   | SOk res' final' -> res == res' /\ final == final'
+  | SResOnly res' -> res == res'
   | SUnknown -> True
 
 (* The environment of an action attached to a field that started at `i` and
@@ -120,11 +123,13 @@ let aspec_return (#d: state_dict) (#a: Type0) (x: a) : action_spec d a =
 let aspec_bind (#d: state_dict) (#a #b: Type0) (f: action_spec d a) (g: a -> action_spec d b) : action_spec d b =
   fun e s -> match f e s with
   | SOk x s' -> g x e s'
+  | SResOnly _ -> SUnknown
   | SUnknown -> SUnknown
 
 let aspec_seq (#d: state_dict) (#a #b: Type0) (f: action_spec d a) (g: action_spec d b) : action_spec d b =
   fun e s -> match f e s with
   | SOk _ s' -> g e s'
+  | SResOnly _ -> SUnknown
   | SUnknown -> SUnknown
 
 let aspec_ite (#d: state_dict) (#a: Type0) (guard: bool)
@@ -210,6 +215,7 @@ let aspec_weaken
 : action_spec d2 a
 = fun e s2 -> match f e (mk_proj_value s2 d1 sq) with
   | SOk x s1' -> SOk x (weaken_update d1 d2 sq s2 s1')
+  | SResOnly x -> SResOnly x
   | SUnknown -> SUnknown
 
 let aspec_call
@@ -221,6 +227,7 @@ let aspec_call
 : action_spec d a
 = fun e s -> match f e (state_dict_rename_values_call d d' rf rg s) with
   | SOk x s' -> SOk x (state_dict_rename_values_return d d' rf rg s s')
+  | SResOnly x -> SResOnly x
   | SUnknown -> SUnknown
 
 (** Validator specs *)
@@ -246,6 +253,8 @@ let vres_of_action (#d: state_dict) (r: spec_res d bool) (k: forevery_values d -
   match r with
   | SOk true s -> k s
   | SOk false _ -> VErr
+  | SResOnly true -> VUnknown
+  | SResOnly false -> VErr
   | SUnknown -> VUnknown
 
 let vspec_with_success_action
@@ -527,6 +536,63 @@ let vspec_pair
      k1.LP.parser_kind_low + k2.LP.parser_kind_low < 4294967296
   then vspec_of_parser (P.parse_pair p1 p2)
   else vspec_pair_slow p1 s1 s2
+
+(** Probes *)
+
+(* The outcome of a probe-then-validate, as prophesied by the probe world (see
+   `EverParse3d.Actions.Base.probe_world`): the value of the probed pointer,
+   whether the probe succeeded, the bytes it copied into the copy buffer, and
+   the origin of the stream over the copy buffer on which the probed type was
+   then validated. Only `p_src` is relevant if the pointer is nullable and
+   null; only `p_src` and `p_ok` if the probe failed. *)
+noeq
+type probe_outcome = {
+  p_src: U64.t;
+  p_ok: bool;
+  p_bytes: Seq.seq U8.t;
+  p_origin: PM.ptr;
+}
+
+(* A prophecy of the outcomes of all future probes into a given copy buffer. *)
+let probe_tape : Type0 = nat -> Tot probe_outcome
+
+let ptape_head (w: probe_tape) : probe_outcome = w 0
+
+let ptape_tail (w: probe_tape) : probe_tape = fun i -> w (i + 1)
+
+(* The input on which the probed type is validated. *)
+let probe_vinput (o: probe_outcome) : vinput = {
+  contents = o.p_bytes;
+  rest = o.p_bytes;
+  origin = o.p_origin;
+}
+
+(* The spec of `probe_then_validate`. The action state is that of the probed
+   type, `d`, along with the probe tape of the copy buffer, stored under
+   `name`. Each probe consumes one outcome of the tape, whatever it does
+   (including a null pointer accepted without probing.) Then, if the probe
+   succeeded, the probed type is validated on the copied bytes: this is
+   double-fetch freedom. If that validation fails, its partial effect on the
+   action state is unspecified. *)
+let aspec_probe_then_validate
+  (#d: state_dict) (s: vspec d) (nullable: bool)
+  (name: string) (state: probe_tape -> Pulse.Lib.Core.slprop)
+  (sq: squash (forall x . ~ (d.state_p x /\ (state_dict_singleton name state).state_p x)))
+: action_spec (state_dict_prod d (state_dict_singleton name state)) bool
+= fun _ st ->
+  let dc = state_dict_singleton name state in
+  let sx : forevery_values d = mk_proj_value st d () in
+  let w : probe_tape = mk_proj_value st dc () name in
+  let o = ptape_head w in
+  let w' = mk_singleton_value name state (ptape_tail w) in
+  if nullable && o.p_src = 0uL
+  then SOk true (mk_prod_value sx w' ())
+  else if not o.p_ok
+  then SOk false (mk_prod_value sx w' ())
+  else match s (probe_vinput o) sx with
+  | VOk sx' -> SOk true (mk_prod_value sx' w' ())
+  | VErr -> SResOnly false
+  | VUnknown -> SUnknown
 
 (** Lemmas *)
 

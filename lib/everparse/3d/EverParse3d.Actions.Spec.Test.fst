@@ -208,3 +208,24 @@ let tp_value_spec_correct
   let s1 = mk_singleton_value k (pts_to out #1.0R) p in
   S.mk_singleton_value_eq k (pts_to out #1.0R) p;
   S.weaken_update_in (dp k out) (dp k out) () s s1 k
+
+(* Probes: probing a pointer to a 32-bit integer into a copy buffer whose probe
+   tape is stored under `name`. Whatever the client C code does, the outcome is
+   the head of the tape: the probe fails exactly when either the probe itself
+   fails, or the copied bytes do not start with a 32-bit integer (double-fetch
+   freedom: the probed type is validated on the copied bytes.) *)
+let probe_u32_correct
+  (d0: state_dict) (name: string) (state: S.probe_tape -> slprop)
+  (sq: squash (forall x . ~ (d0.state_p x /\ (state_dict_singleton name state).state_p x)))
+  (e: S.aenv) (st: forevery_values (state_dict_prod d0 (state_dict_singleton name state)))
+: Lemma (
+    let w : S.probe_tape = mk_proj_value st (state_dict_singleton name state) () name in
+    let o = S.ptape_head w in
+    let r = S.aspec_probe_then_validate #d0 (S.vspec_of_parser P.parse____UINT32) false name state sq e st in
+    match r with
+    | S.SOk true _ -> o.S.p_ok /\ Some? (P.parse P.parse____UINT32 o.S.p_bytes)
+    | S.SOk false _ -> o.S.p_ok == false
+    | S.SResOnly false -> o.S.p_ok /\ None? (P.parse P.parse____UINT32 o.S.p_bytes)
+    | _ -> False
+  )
+= ()

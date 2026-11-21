@@ -684,8 +684,7 @@ following are currently specified as ``VUnknown`` or as
 returning an unknown result:
 
 * ``extern`` functions and output-type setters;
-* ``field_ptr_after``;
-* probes.
+* ``field_ptr_after``.
 
 ``field_ptr`` (buffer backend) is specified as
 ``EverParse3d.PtrModel.ptr_at origin start``: the pointer ``start``
@@ -694,12 +693,32 @@ buffer, where ``start`` is the position of the field. This relies on one
 trusted assumption, ``EverParse3d.PtrModel.ptr_ext``: a pointer is
 determined by its base and offset, which holds of C pointers.
 
+Probes (buffer backend) are specified with respect to a *probe world*: a
+ghost prophecy of the outcomes of all future probes into a given copy
+buffer, stored as the ghost value of that copy buffer in the action
+state. Each probe-then-validate consumes one outcome
+(``EverParse3d.Actions.Spec.probe_outcome``): the value of the probed
+pointer, whether the probe succeeded, and the bytes it copied. If the
+probe succeeds, the probed type is validated against its own spec on the
+copied bytes, so the spec reflects that the probed memory is read only
+once, even if it is concurrently modified. If that inner validation
+fails, the result is ``VErr`` but the action state is unspecified. The
+probe functions themselves (written in C) are unchanged: the outcome
+they produce is whatever the prophecy says it is, so no assumption is
+made on their behavior. This relies on a trusted assumption: a fresh
+probe world can always be introduced
+(``EverParse3d.Actions.Base.prophesy_probe_world``), and the probe world
+is consumed by each probe-then-validate exactly once, in
+``EverParse3d.Actions.Base.probe_then_validate``, which is not exported.
+
 Clients can reason about the spec in F*.
 ``EverParse3d.Actions.Spec.Test`` proves that a field
 ``UINT32 x {:act *out = x; }`` validates if, and only if, the input starts
 with a 32-bit integer, and that it then stores that integer into
 ``*out``; and that for an array ``T(out) a[:byte-size 8]`` of two such
-fields, ``*out`` ends up holding the second integer.
+fields, ``*out`` ends up holding the second integer; and that probing
+a pointer to a 32-bit integer fails exactly when the probe fails or the
+copied bytes do not start with a 32-bit integer.
 
 Since ``as_vspec`` reads input bytes, the spec of the actions is also
 given in terms of the *parsed value*:

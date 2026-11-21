@@ -741,15 +741,27 @@ type atomic_action
      Both external actions (via `mk_action_binding`) and probe-then-validate
      (via the `t_probe_then_validate` smart constructor) go through here. This
      is what keeps `atomic_action` in universe 1: storing the callee's own
-     `state_dict` in the AST would raise it. *)
+     `state_dict` in the AST would raise it. The spec of the action is stored
+     along with it (it is `S.aspec_unknown` for external actions.) *)
   | Action_call:
       #b:bool ->
       #t:Type0 ->
-      action_binding base_t len_t pos_t inst d use_error_handler t ->
+      #sp:S.action_spec d t ->
+      A.action #base_t #len_t #pos_t #inst d t use_error_handler sp ->
       atomic_action base_t len_t pos_t inst d use_error_handler b false t
 
-(* The spec denotation of atomic actions. Actions stored with `Action_call`
-   (external actions, probes) are unspecified. *)
+let action_spec_of
+   (#base_t #len_t #pos_t: Type0)
+   (#inst: I.input_stream_inst base_t len_t pos_t)
+   (#d: state_dict)
+   (#t: Type0)
+   (#use_error_handler:bool)
+   (#sp: S.action_spec d t)
+   (a: A.action #base_t #len_t #pos_t #inst d t use_error_handler sp)
+: Tot (S.action_spec d t)
+= sp
+
+(* The spec denotation of atomic actions. *)
 let atomic_action_as_spec
    (#base_t #len_t #pos_t: Type0)
    (#inst: I.input_stream_inst base_t len_t pos_t)
@@ -775,7 +787,7 @@ let atomic_action_as_spec
       S.aspec_weaken (S.aspec_deref_map decode name (pts_to x #1.0R)) d sq
     | Action_assignment name x rhs sq ->
       S.aspec_weaken (S.aspec_assignment name (pts_to x #1.0R) rhs) d sq
-    | Action_call c -> S.aspec_unknown
+    | Action_call c -> action_spec_of c
 
 [@@specialize]
 let atomic_action_as_action
@@ -1956,7 +1968,8 @@ let atomic_action_call
       (#[@@@erasable] d: state_dict)
       (#use_error_handler:bool)
       (#t:Type0)
-      (a: action_binding base_t len_t pos_t inst d use_error_handler t)
+      (#sp: S.action_spec d t)
+      (a: A.action #base_t #len_t #pos_t #inst d t use_error_handler sp)
   : atomic_action base_t len_t pos_t inst d use_error_handler true false t
   = Action_call a
 
@@ -1971,7 +1984,8 @@ let atomic_action_call_extern
       (#[@@@erasable] d: state_dict)
       (#use_error_handler:bool)
       (#t:Type0)
-      (a: action_binding base_t len_t pos_t inst d use_error_handler t)
+      (#sp: S.action_spec d t)
+      (a: A.action #base_t #len_t #pos_t #inst d t use_error_handler sp)
   : atomic_action base_t len_t pos_t inst d use_error_handler false false t
   = Action_call a
 
@@ -2139,12 +2153,12 @@ let t_probe_then_validate_gen
      (DT_IType pointer_size)
      (fun typename src ->
         Atomic_action (atomic_action_call
-          (A.action_forget_spec (A.action_weaken
+          (A.action_weaken
             (A.probe_then_validate ehm typename fldname
                (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
                src as_u64 nullable dest_name dest init_cb dest_sz probe sq)
             d
-            sq_weaken))))
+            sq_weaken)))
 
 [@@specialize]
 let t_probe_then_validate_alt_gen

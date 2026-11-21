@@ -44,6 +44,8 @@ let vres_of_sres (#d: state_dict) (r: S.spec_res d bool) : GTot (S.vres d) =
   match r with
   | S.SOk true s -> S.VOk s
   | S.SOk false _ -> S.VErr
+  | S.SResOnly true -> S.VUnknown
+  | S.SResOnly false -> S.VErr
   | S.SUnknown -> S.VUnknown
 
 (* Sequential composition: continue with `k` only if the actions so far have
@@ -148,6 +150,7 @@ let vs_weaken
 : value_spec d2 t
 = fun pos v x2 -> match vs pos v (mk_proj_value x2 d1 sq) with
   | S.SOk b x1' -> S.SOk b (S.weaken_update d1 d2 sq x2 x1')
+  | S.SResOnly b -> S.SResOnly b
   | S.SUnknown -> S.SUnknown
 
 val weaken_update_proj

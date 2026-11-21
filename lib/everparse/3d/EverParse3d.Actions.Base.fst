@@ -3561,6 +3561,25 @@ let validate_nlist_constant_size_without_actions
   else
     validate_nlist n n_is_const v
 
+(* The probe world (see the interface) *)
+
+assume val probe_world_ (w: S.probe_tape) : slprop
+
+let probe_world w = probe_world_ w
+
+assume val prophesy_probe_world_ (_: unit)
+: stt_ghost (Ghost.erased S.probe_tape) emp_inames emp (fun w -> probe_world w)
+
+let prophesy_probe_world () = prophesy_probe_world_ ()
+
+(* Resolving the next outcome of the probe world. This is deliberately not
+   exported: it is only sound if called at most once per outcome, with an
+   outcome determined by the actual run of a probe. *)
+assume val resolve_probe_world (w: S.probe_tape) (o: S.probe_outcome)
+: stt_ghost unit emp_inames
+    (probe_world w)
+    (fun _ -> probe_world (S.ptape_tail w) ** pure (S.ptape_head w == o))
+
 ////////////////////////////////////////////////////////////////////////////////
 // Generic external actions
 ////////////////////////////////////////////////////////////////////////////////
@@ -3634,8 +3653,20 @@ fn action_field_ptr_after_with_setter
 #push-options "--z3rlimit 32"
 
 noextract
-let probe_validation_frame (d: state_dict) (ctxt: app_ctxt) =
-  exists* vc extra. pts_to ctxt vc ** forevery_state d extra
+let probe_validation_pre (d: state_dict) (ctxt: app_ctxt) (extra: forevery_values d) (w: S.probe_tape) =
+  (exists* vc. pts_to ctxt vc) ** forevery_state d extra ** probe_world w
+
+noextract
+let probe_validation_post
+  (d: state_dict) (ctxt: app_ctxt) (s: S.vspec d) (extra: forevery_values d)
+  (w: S.probe_tape) (src: U64.t) (cd: Seq.seq U8.t) (res: U8.t)
+= exists* vc extra'. pts_to ctxt vc ** forevery_state d extra' ** probe_world (S.ptape_tail w) **
+    pure (
+      (S.ptape_head w).S.p_src == src /\
+      (S.ptape_head w).S.p_ok == true /\
+      (S.ptape_head w).S.p_bytes == cd /\
+      S.vres_rel (s (S.probe_vinput (S.ptape_head w)) extra) res extra'
+    )
 
 inline_for_extraction noextract
 fn probe_then_validate
@@ -3674,7 +3705,8 @@ fn probe_then_validate
 : action #base_t #len_t #pos_t
     (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
     bool
-    use_error_handler (S.aspec_unknown)
+    use_error_handler
+    (S.aspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3692,14 +3724,13 @@ fn probe_then_validate
     () _;
   forevery_state_dict_singleton_unfold' dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) _;
   with w . assert (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
-  rewrite (copy_buffer_state #_ #base_t #len_t #pos_t dest w)
-    as (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w));
+  unfold (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
   let src64 = as_u64 src ();
   if (nullable && src64 = 0uL) {
     // a null pointer is accepted without probing
-    rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w))
-      as (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
-    forevery_state_dict_singleton_fold dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) w;
+    resolve_probe_world w ({ S.p_src = src64; S.p_ok = true; S.p_bytes = Seq.empty; S.p_origin = I.origin #base_t #len_t #pos_t sl_base });
+    fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
+    forevery_state_dict_singleton_fold dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) (S.ptape_tail w);
     forevery_state_dict_prod_fold
       extra_state
       (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
@@ -3712,42 +3743,40 @@ fn probe_then_validate
     if (b <> 0uL) {
       unfold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
       rewrite (cb_inst.storage dest cd vd) as (cb_inst.storage dest cd cd);
+      with ex . assert (forevery_state extra_state ex);
       fn body (base: base_t) (len: len_t) (pos: pos_t)
-      requires I.pts_to base len pos cd cd ** probe_validation_frame extra_state ctxt
+      requires I.pts_to base len pos cd cd ** probe_validation_pre extra_state ctxt ex w
       returns res: U8.t
-      ensures exists* vd'. I.pts_to base len pos cd vd' ** probe_validation_frame extra_state ctxt
+      ensures exists* vd'. I.pts_to base len pos cd vd' ** probe_validation_post extra_state ctxt s ex w src64 cd res
       {
-        unfold (probe_validation_frame extra_state ctxt);
-        with extra. assert (forevery_state extra_state extra);
-        let res = v ctxt error_handler_fn base len pos extra cd cd;
-        fold (probe_validation_frame extra_state ctxt);
+        unfold (probe_validation_pre extra_state ctxt ex w);
+        let res = v ctxt error_handler_fn base len pos ex cd cd;
+        resolve_probe_world w ({ S.p_src = src64; S.p_ok = true; S.p_bytes = Ghost.reveal cd; S.p_origin = I.origin #base_t #len_t #pos_t base });
+        fold (probe_validation_post extra_state ctxt s ex w src64 cd res);
         res
       };
-      fold (probe_validation_frame extra_state ctxt);
+      fold (probe_validation_pre extra_state ctxt ex w);
       // Apply the class method directly so extraction eliminates the callback.
-      let res = CP.with_view U8.t dest cd (probe_validation_frame extra_state ctxt)
-        (fun _ _ -> probe_validation_frame extra_state ctxt) body;
+      let res = CP.with_view U8.t dest cd (probe_validation_pre extra_state ctxt ex w)
+        (fun res _ -> probe_validation_post extra_state ctxt s ex w src64 cd res) body;
       with vd' . assert (cb_inst.storage dest cd vd');
-      unfold (probe_validation_frame extra_state ctxt);
+      unfold (probe_validation_post extra_state ctxt s ex w src64 cd res);
       fold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd');
-      rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd')
-        as (copy_buffer_state #_ #base_t #len_t #pos_t dest
-              (Ghost.reveal cd, Ghost.reveal vd'));
+      fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
       forevery_state_dict_singleton_fold dest_name
         (copy_buffer_state #_ #base_t #len_t #pos_t dest)
-        (Ghost.reveal cd, Ghost.reveal vd');
+        (S.ptape_tail w);
       forevery_state_dict_prod_fold
         extra_state
         (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
         ();
       res = validator_success
     } else {
-      rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd)
-        as (copy_buffer_state #_ #base_t #len_t #pos_t dest
-              (Ghost.reveal cd, Ghost.reveal vd));
+      resolve_probe_world w ({ S.p_src = src64; S.p_ok = false; S.p_bytes = Ghost.reveal cd; S.p_origin = I.origin #base_t #len_t #pos_t sl_base });
+      fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
       forevery_state_dict_singleton_fold dest_name
         (copy_buffer_state #_ #base_t #len_t #pos_t dest)
-        (Ghost.reveal cd, Ghost.reveal vd);
+        (S.ptape_tail w);
       forevery_state_dict_prod_fold
         extra_state
         (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
