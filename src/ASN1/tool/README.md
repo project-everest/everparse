@@ -17,9 +17,9 @@ specification (`lib/everparse/asn1/spec`). It works like the CDDL front end of E
      C type to its schema (`ASN1.Pulse.Rel`). The roots `validate_T`,
      `parse_T`, `write_T` and `write_T_typed` instantiate the generic Pulse interpreters
      of the ASN.1 Pulse library (`lib/everparse/asn1/pulse`) with these
-     descriptors, the `L_iter_*` roots iterate over parsed SEQUENCE OF
-     and SET OF values, and the `L_witer_*` roots over any such list in
-     writer form (built with `L_empty`, `L_of_slice` and `L_append`).
+     descriptors, the `L_iter_*`, `L_length` and `L_nth` roots iterate over
+     any SEQUENCE OF or SET OF value `L`, parsed or built with `L_empty`,
+     `L_of_slice` and `L_append`.
      The `T_seq_*` and `T_c_get` roots iterate lazily over the components
      of a SEQUENCE `T`.
 3. Verify both modules with F\*, then extract `M.Impl` to `M.c`/`M.h` with
@@ -131,38 +131,45 @@ Parsed SEQUENCE OF and SET OF values are lazy: a count and the DER payload.
 For each such list `L` reachable from the roots, the tool generates
 
 ```c
-ASN1_Pulse_ListIter_iter L_iter_start(<list C type> x);
-bool   L_iter_is_empty(ASN1_Pulse_ListIter_iter it);
-size_t L_iter_length(ASN1_Pulse_ListIter_iter it);
-E      L_iter_next(ASN1_Pulse_ListIter_iter *it);  /* requires !L_iter_is_empty(*it) */
+typedef <generic iterator instance> L_iter;
+L_iter L_iter_start(<list C type> x);
+bool   L_iter_is_empty(L_iter it);
+bool   L_iter_next(L_iter *it, E *out);   /* false (and *out unchanged) at the end */
+size_t L_length(<list C type> x);         /* O(1) */
+bool   L_nth(<list C type> x, size_t i, E *out);  /* O(i); false if i >= L_length(x) */
+<list C type> L_empty(void);
+<list C type> L_of_slice(<slice of E> a);           /* the elements of an array */
+<list C type> L_append(<list C type> *b, <list C type> *a);  /* b, then a */
 ```
 
 where `L` is `T` for a named list type `T ::= SEQUENCE OF E`, `T_c` for a
 list component (or CHOICE alternative) `c` of `T`, `T_k_c` for a component
 `c` of the case `k` of an ANY DEFINED BY `T` (`T_other_c` for the other
 keys), and `L_elt` for the elements of a list `L` that are themselves
-lists. `L_iter_next` parses the next element, zero-copy, and advances the
-cursor. These functions apply to parsed values only (in F\*, `start`
-requires `arel true`), not to lists built by a caller.
+lists.
 
-To build a list, or to iterate over any list the writers accept (parsed,
-built, or a mix: `arel false`), the tool also generates
+All of them apply to any list the writers accept: parsed, built by a
+caller, or a mix (in F\*, `arel false`; a parsed list, `arel true`, is
+first turned into that form by the ghost `ASN1.Pulse.ListIterW.of_parsed`).
+A typical loop is
 
 ```c
-<list C type> L_empty(void);
-<list C type> L_of_slice(<slice of E> a);           /* the elements of an array */
-<list C type> L_append(<list C type> *b, <list C type> *a);  /* b, then a */
-LowParse_PulseParse_Iterator_Type_iterator__uintsize_E L_witer_start(<list C type> x);
-bool L_witer_is_empty(LowParse_PulseParse_Iterator_Type_iterator__uintsize_E it);
-E    L_witer_next(LowParse_PulseParse_Iterator_Type_iterator__uintsize_E *it);  /* requires !L_witer_is_empty(*it) */
+L_iter it = L_iter_start(x);
+E e;
+while (L_iter_next(&it, &e)) { ... e ... }
 ```
 
-`L_append` points to `b` and `a`, which must outlive the result, and
-`L_of_slice` points to the array; neither copies the elements.
-`L_witer_next` returns array elements as they are, and parses serialized
-ones zero-copy. The C iterator and list types are generic instances
-(Custard warning 377): typedef them once if needed. A SET OF is iterated
-in list order; the writers sort it.
+`L_iter_next` and `L_nth` return array elements as they are, and parse
+serialized ones zero-copy. `L_append` points to `b` and `a`, which must
+outlive the result, and `L_of_slice` points to the array; neither copies
+the elements. A SET OF is iterated in list order (DER order if parsed);
+the writers sort it.
+
+`L_iter` is a nominal F\* record around the generic LowParse iterator;
+since it has one field, Custard extracts it as a `typedef` of the generic
+instance, which callers should use instead of the generic name. The list
+C type itself is still the generic `mixed_list` instance (Custard warning
+377).
 
 ### Iterators over the components of a SEQUENCE or SET
 

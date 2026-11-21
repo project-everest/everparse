@@ -336,8 +336,7 @@ static void seq_iter_msg(const char *name, const uint8_t *der, size_t len, const
       CHECK(v.tag == SMALL_IMPL_MSG_PAIR_PRESENT && v.val.Msg_pair_present.left == 7, "%s: pair", name);
       break; }
     case Msg_items_index: {
-      ASN1_Pulse_ListIter_iter li = Msg_items_iter_start(Msg_items_get(x));
-      CHECK(Msg_items_iter_length(li) >= 1, "%s: items", name);
+      CHECK(Msg_items_length(Msg_items_get(x)) >= 1, "%s: items", name);
       break; }
     case Msg_extra_index: {
       Msg_extra_opt v = Msg_extra_get(x);
@@ -471,26 +470,27 @@ int main(void) {
   CHECK(p.extra.tag == SMALL_IMPL_MSG_EXTRA_ABSENT, "parse msg1: extra");
   {
     /* iterate over the parsed items (zero-copy) */
-    ASN1_Pulse_ListIter_iter it = Msg_items_iter_start(p.items);
-    CHECK(Msg_items_iter_length(it) == 2 && !Msg_items_iter_is_empty(it), "iter msg1: length");
-    Pulse_Lib_Slice_slice__uint8 e = Msg_items_iter_next(&it);
+    CHECK(Msg_items_length(p.items) == 2, "iter msg1: length");
+    Msg_items_iter it = Msg_items_iter_start(p.items);
+    CHECK(!Msg_items_iter_is_empty(it), "iter msg1: not empty");
+    Pulse_Lib_Slice_slice__uint8 e;
+    CHECK(Msg_items_iter_next(&it, &e), "iter msg1: next 0");
     CHECK(e.len == 1 && e.elt[0] == 'x' && e.elt > msg1_der && e.elt < msg1_der + sizeof msg1_der, "iter msg1: items[0]");
-    CHECK(Msg_items_iter_length(it) == 1, "iter msg1: length after next");
-    e = Msg_items_iter_next(&it);
+    CHECK(Msg_items_iter_next(&it, &e), "iter msg1: next 1");
     CHECK(e.len == 2 && e.elt[0] == 'y' && e.elt[1] == 'z', "iter msg1: items[1]");
     CHECK(Msg_items_iter_is_empty(it), "iter msg1: end");
+    e.len = 42;
+    CHECK(!Msg_items_iter_next(&it, &e) && e.len == 42 && Msg_items_iter_is_empty(it), "iter msg1: next at end");
+    /* random access */
+    CHECK(Msg_items_nth(p.items, 1, &e) && e.len == 2 && e.elt[0] == 'y', "nth msg1: items[1]");
+    CHECK(Msg_items_nth(p.items, 0, &e) && e.len == 1 && e.elt[0] == 'x', "nth msg1: items[0]");
+    CHECK(!Msg_items_nth(p.items, 2, &e) && e.elt[0] == 'x', "nth msg1: items[2] out of range");
   }
   /* the parsed value can be written back */
   write_ok("msg1 parsed", p, msg1_der, sizeof msg1_der);
   {
-    /* writer-form iteration (ListIterW) over the parsed items */
-    LowParse_PulseParse_Iterator_Type_iterator__uintsize_slice_uint8 w = Msg_items_witer_start(p.items);
-    CHECK(!Msg_items_witer_is_empty(w), "witer msg1: not empty");
-    Pulse_Lib_Slice_slice__uint8 e = Msg_items_witer_next(&w);
-    CHECK(e.len == 1 && e.elt[0] == 'x', "witer msg1: items[0]");
-    e = Msg_items_witer_next(&w);
-    CHECK(e.len == 2 && e.elt[0] == 'y' && e.elt[1] == 'z', "witer msg1: items[1]");
-    CHECK(Msg_items_witer_is_empty(w), "witer msg1: end");
+    Msg_items_iter w;
+    Pulse_Lib_Slice_slice__uint8 e;
     /* items built from arrays, appended (with an empty list in between),
        iterated, then written back */
     uint8_t x[] = { 'x' }, yz[] = { 'y', 'z' };
@@ -502,11 +502,15 @@ int main(void) {
     LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 le = Msg_items_empty();
     LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 l1e = Msg_items_append(&l1, &le);
     LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_slice_uint8 l = Msg_items_append(&l1e, &l2);
-    w = Msg_items_witer_start(l);
-    e = Msg_items_witer_next(&w);
-    CHECK(e.elt == x && e.len == 1, "witer built: items[0]");
-    e = Msg_items_witer_next(&w);
-    CHECK(e.elt == yz && e.len == 2 && Msg_items_witer_is_empty(w), "witer built: items[1]");
+    CHECK(Msg_items_length(l) == 2, "built: length");
+    w = Msg_items_iter_start(l);
+    CHECK(Msg_items_iter_next(&w, &e) && e.elt == x && e.len == 1, "iter built: items[0]");
+    CHECK(Msg_items_iter_next(&w, &e) && e.elt == yz && e.len == 2 && Msg_items_iter_is_empty(w), "iter built: items[1]");
+    CHECK(!Msg_items_iter_next(&w, &e), "iter built: end");
+    CHECK(Msg_items_nth(l, 1, &e) && e.elt == yz, "nth built: items[1]");
+    CHECK(!Msg_items_nth(le, 0, &e) && Msg_items_length(le) == 0, "nth built: empty");
+    w = Msg_items_iter_start(le);
+    CHECK(Msg_items_iter_is_empty(w) && !Msg_items_iter_next(&w, &e), "iter built: empty");
     Msg q = p;
     q.items = l;
     write_ok("msg1 built items", q, msg1_der, sizeof msg1_der);
@@ -519,10 +523,10 @@ int main(void) {
   CHECK(p.extra.tag == SMALL_IMPL_MSG_EXTRA_PRESENT && p.extra.val.Msg_extra_present.a.val.Small == 300 &&
         p.extra.val.Msg_extra_present.b.len == 1, "parse msg2: extra");
   {
-    ASN1_Pulse_ListIter_iter it = Msg_items_iter_start(p.items);
-    CHECK(Msg_items_iter_length(it) == 1, "iter msg2: length");
-    Pulse_Lib_Slice_slice__uint8 e = Msg_items_iter_next(&it);
-    CHECK(e.len == 0 && Msg_items_iter_is_empty(it), "iter msg2: items[0]");
+    CHECK(Msg_items_length(p.items) == 1, "iter msg2: length");
+    Msg_items_iter it = Msg_items_iter_start(p.items);
+    Pulse_Lib_Slice_slice__uint8 e;
+    CHECK(Msg_items_iter_next(&it, &e) && e.len == 0 && Msg_items_iter_is_empty(it), "iter msg2: items[0]");
   }
   write_ok("msg2 parsed", p, msg2_der, sizeof msg2_der);
 

@@ -220,6 +220,28 @@ For each root type ``T``:
 
    ASN1_Pulse_JitWriter_jit_result size_T_typed(T x, size_t *budget);
 
+For each SEQUENCE OF / SET OF ``L`` with elements of C type ``E``
+reachable from the roots (see ``src/ASN1/tool/README.md`` for the naming
+of ``L``):
+
+.. code-block:: c
+
+   L_iter L_iter_start(L_list x);
+   bool L_iter_is_empty(L_iter it);
+   bool L_iter_next(L_iter *it, E *out);
+   size_t L_length(L_list x);
+   bool L_nth(L_list x, size_t i, E *out);
+   L_list L_empty(void);
+   L_list L_of_slice(E_slice a);
+   L_list L_append(L_list *b, L_list *a);
+
+where ``L_list`` and ``E_slice`` stand for the generic C list and slice
+types. ``L_iter_next`` returns ``false`` at the end of the list, and
+``L_nth`` when ``i >= L_length(x)``; otherwise they store the element in
+``*out`` (parsed zero-copy if the list was parsed). These functions work
+on parsed lists, on lists built with ``L_empty``, ``L_of_slice`` and
+``L_append``, and on mixes of both.
+
 A byte buffer is a slice:
 
 .. code-block:: c
@@ -642,8 +664,9 @@ also:
 C API
 ^^^^^
 
-* No C iterator is generated for parsed SEQUENCE OF / SET OF lists: the
-  caller walks the payload, which is a sequence of validated TLVs.
+* SEQUENCE OF / SET OF values keep the generic ``mixed_list`` C type;
+  only their iterator type ``L_iter`` gets a per-list name (a typedef).
+  No lookup function is generated for SET OF.
 * ``validate_T``, ``parse_T`` and the writers are only generated for root
   types (``--root``).
 * The names of the generic C types, such as
