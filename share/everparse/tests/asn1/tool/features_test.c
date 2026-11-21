@@ -141,6 +141,10 @@ static void rec_write(const char *name, Rec x, const uint8_t *exp, size_t len) {
   Pulse_Lib_Slice_slice__uint8 s = { .elt = out, .len = len - 1 };
   CHECK(write_Rec(x, s, &pos) == ASN1_PULSE_JITWRITER_JIT_NO_SPACE,
         "%s: short buffer: expected NO_SPACE", name);
+  size_t b = 1000;
+  CHECK(size_Rec(x, &b) == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == len, "%s: size", name);
+  b = len - 1;
+  CHECK(size_Rec(x, &b) == ASN1_PULSE_JITWRITER_JIT_NO_SPACE, "%s: size: short budget", name);
 }
 
 /* validate and parse `in`, check the kept bytes, then write back */
@@ -160,6 +164,8 @@ static void rec_parse(const char *name, const uint8_t *in, size_t len, size_t ke
   ASN1_Pulse_JitWriter_jit_result r = write_Rec_typed(p, o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, in, len) == 0,
         "%s: write back", name);
+  size_t b = 1000;
+  CHECK(size_Rec_typed(p, &b) == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == len, "%s: size_Rec_typed", name);
   /* stale kept bytes are ignored by the writer */
   p.kept.raw.val.Blob_raw_present = sl("garbage");
   p.payload.raw.val.Rec_payload_raw_present = sl("junk");
@@ -175,6 +181,9 @@ static void rec_invalid(const char *name, Rec x) {
   Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
   ASN1_Pulse_JitWriter_jit_result r = write_Rec(x, o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_INVALID, "%s: expected INVALID (%d)", name, (int)r);
+  size_t b = 1000;
+  r = size_Rec(x, &b);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_INVALID, "%s: size: expected INVALID (%d)", name, (int)r);
 }
 
 static void test_rec(void) {

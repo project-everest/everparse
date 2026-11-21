@@ -3,7 +3,8 @@
    - `M.Pulse.fst`: a named C type for each SEQUENCE, SET, CHOICE and
      OPTIONAL/DEFAULT component, the impl descriptors (`d_T`) that map them
      to the schema, and the extraction roots `validate_T`, `parse_T`,
-     `write_T` and `write_T_typed` for each root type `T`, the iterators
+     `write_T`, `write_T_typed`, `size_T` and `size_T_typed` for each root
+     type `T`, the iterators
      `L_iter_start`, `L_iter_is_empty`, `L_iter_length` and `L_iter_next`
      (and, in writer form, `L_witer_start`, `L_witer_is_empty`,
      `L_witer_next`, with the builders `L_empty`, `L_of_slice`, `L_append`)
@@ -533,7 +534,13 @@ let gen_root ctx ns (n: string) =
   p "let write_%s : raw_jit_writer_d_t d_%s ok_%s 1.0R =\n  fun x' #y out pos #v #p -> jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s half_perm) x' #y out pos #v #p\n\n" n n n n n n n;
   p "(* Write a typed %s (related by `arel false d_%s`, e.g. a value returned\n   by parse_%s after ASN1.Pulse.RelKeep.to_writer) that is encodable:\n   never JIT_INVALID *)\n" n n n;
   p "[@@%s;\n  FStar.Attributes.rename_let \"write_%s_typed\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer_d") n;
-  p "let write_%s_typed : typed_jit_writer_d_t d_%s 1.0R =\n  fun x' #v out pos #b #p -> write_typed_d d_%s ok_%s 1.0R (jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s half_perm)) x' #v out pos #b #p\n\n" n n n n n n n n
+  p "let write_%s_typed : typed_jit_writer_d_t d_%s 1.0R =\n  fun x' #v out pos #b #p -> write_typed_d d_%s ok_%s 1.0R (jit_write_raw_d d_%s ok_%s 1.0R (jit_writer_d d_%s ok_%s half_perm)) x' #v out pos #b #p\n\n" n n n n n n n n;
+  p "(* Compute the size of the DER encoding of a %s, as write_%s would\n   write it (the same JIT writer, on a dry sink), and subtract it from\n   *budget: JIT_OK, or JIT_INVALID (as write_%s), or JIT_NO_SPACE if the\n   encoding is larger than *budget *)\n" n n n;
+  p "[@@%s;\n  FStar.Attributes.rename_let \"size_%s\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_size_d") n;
+  p "let size_%s : raw_size_d_t d_%s ok_%s 1.0R =\n  fun x' #y budget #b -> size_raw_d d_%s ok_%s 1.0R (jit_size_d d_%s ok_%s half_perm) x' #y budget #b\n\n" n n n n n n n;
+  p "(* The size of a typed %s, as write_%s_typed would write it *)\n" n n;
+  p "[@@%s;\n  FStar.Attributes.rename_let \"size_%s_typed\"]\n" (norm_attr ns "`%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_size_d") n;
+  p "let size_%s_typed : typed_size_d_t d_%s 1.0R =\n  fun x' #v budget #b -> size_typed_d d_%s ok_%s 1.0R (size_raw_d d_%s ok_%s 1.0R (jit_size_d d_%s ok_%s half_perm)) x' #v budget #b\n\n" n n n n n n n n
 
 (* Iterators over SEQUENCE OF / SET OF (ASN1.Pulse.ListIter), for each
    list reachable from the roots: a named list type `T ::= SEQUENCE OF E`

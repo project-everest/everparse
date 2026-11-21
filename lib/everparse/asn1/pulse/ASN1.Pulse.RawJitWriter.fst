@@ -204,3 +204,52 @@ fn jit_write_raw_bytes_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: s
   raw_jit_correct k u y (SZ.v p) v res (SZ.v p1) v1;
   res
 }
+
+(* Size computation (`ASN1.Pulse.JitWriter.jit_size_d`): the same checks as
+   the writer, but only the size of the encoding is subtracted from the
+   budget `b`:
+   - JIT_OK: `check_ser k () y == Some x` and the new budget is
+     `b - Seq.length (Ser.asn1_enc k x)`;
+   - JIT_NO_SPACE: if `check_ser k () y == Some x`, then its encoding is
+     larger than `b`;
+   - JIT_INVALID: as for the writer. *)
+
+let raw_size_post (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (y: asn1_raw_t k) (b: nat) (res: jit_result) (b': nat) : prop =
+  (res == JIT_OK ==> (Some? (check_ser k () y) /\ b' + Seq.length (Ser.asn1_enc k (Some?.v (check_ser k () y))) == b)) /\
+  (res == JIT_NO_SPACE ==> (Some? (check_ser k () y) ==> Seq.length (Ser.asn1_enc k (Some?.v (check_ser k () y))) > b)) /\
+  (res == JIT_INVALID ==> (ex_k k == true ==> None? (check_ser k () y))) /\
+  ~ (JIT_RETRY? res)
+
+let raw_size_correct (#s: _) (k: asn1_k s) (u: squash (raw_ok k)) (y: asn1_raw_t k) (b: nat) (res: jit_result) (b': nat)
+: Lemma
+  (requires (jit_size_post (ex_k k) (rb k y) (kacc k (rb k y)) b res b'))
+  (ensures (raw_size_post k u y b res b'))
+= match check_ser k () y with
+  | Some _ -> rb_check_ser k u y
+  | None -> if JIT_OK? res then rb_acc k u y else ()
+
+inline_for_extraction
+let raw_size_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm) =
+  (x': t) -> (#y: Ghost.erased (asn1_raw_t k)) ->
+  (budget: ref SZ.t) -> (#b: Ghost.erased SZ.t) ->
+  stt jit_result
+    (pts_to budget b ** VR.raw_varel d pm x' y)
+    (fun res -> exists* b' . pts_to budget b' ** VR.raw_varel d pm x' y **
+      pure (raw_size_post k u y (SZ.v b) res (SZ.v b')))
+
+(* `wj` is meant to be `jit_size_d d u (pm /. 2.0R)` *)
+inline_for_extraction
+fn size_raw_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
+  (wj: jsr (ex_k k) (raw_arel d) (kacc k) (pm /. 2.0R))
+: raw_size_d_t d u pm
+= (x': t) (#y: Ghost.erased (asn1_raw_t k))
+  (budget: ref SZ.t) (#b: Ghost.erased SZ.t)
+{
+  split_d d u pm x' y;
+  let res = wj x' #(rb k y) budget;
+  with b1 . assert (pts_to budget b1);
+  absorb_d d u (pm /. 2.0R) (pm /. 2.0R) x' y (rb k y);
+  varel_halves d pm x' y;
+  raw_size_correct k u y (SZ.v b) res (SZ.v b1);
+  res
+}

@@ -113,6 +113,19 @@ holding fractional permission `pm` on the input bytes it borrows.
   JIT writer never returns `JIT_RETRY`. Proofs:
   `ASN1.Pulse.JitWriter.Lemmas`.
 
+* **Size computation** (`ASN1.Pulse.Sink`, `jit_size`, `jit_size_d`): the
+  JIT writers are generic over their output, a *sink*: `Wet out` writes
+  into the slice `out`, `Dry` only decreases the position, which then is a
+  budget, and keeps the would-be bytes as ghost contents, so the proofs
+  are shared. `jit_wet` gives the writers, `jit_dry` the size
+  computations (`jit_size_post`: on `JIT_OK`, the budget is decreased by
+  the size of the encoding; `JIT_NO_SPACE` iff it is larger than the
+  budget; `JIT_INVALID` as for the writer). In C, the sink is known at
+  each root, so the size computation is a specialized copy of the writer
+  with no stores and no sink dispatch. On raw values
+  and typed values: `size_raw_d` (`ASN1.Pulse.RawJitWriter`),
+  `size_typed_d` (`ASN1.Pulse.TypedWriter`).
+
 * **JIT writers of raw values** (`ASN1.Pulse.RawJitWriter`,
   `jit_write_raw`): the same JIT writer, seen as a writer of raw values
   `y: ASN1.Spec.Raw.asn1_raw_t k` (`asn1_raw_rel k pm x' y`,
@@ -187,7 +200,8 @@ one byte short.
 | `ASN1.Pulse.ListIterW`, `ASN1.Pulse.TypedShare` | iterators over SEQUENCE OF / SET OF values in writer form (`start`, `is_empty`, `next`), builders `empty`, `of_slice`, `append`; ghost `share_d`/`gather_d` for `arel false d` |
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.WriteAdb` | right-to-left writer building blocks (ANY DEFINED BY keys: `WriteAdb`) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and raw writers `raw_write_k` |
-| `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) |
+| `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) and size computations `jit_size` |
+| `ASN1.Pulse.Sink` | output sinks of the JIT writers: a slice (`Wet`) or a size budget (`Dry`) |
 | `ASN1.Pulse.RawValueRel`, `ASN1.Pulse.RawBytes`, `ASN1.Pulse.RawBridge`, `ASN1.Pulse.RawJitWriter` | raw value relation `asn1_raw_rel`, and the JIT writer of raw values `jit_write_raw` |
 | `ASN1.Pulse.RawVRel`, `ASN1.Pulse.RawVBridge` | value-level relation of writers on descriptors `raw_varel`, and its bridge to bytes |
 | `ASN1.Pulse.RawVConv`, `ASN1.Pulse.TypedWriter` | from the typed relation `arel false` to `raw_varel` (`arel_to_raw`), and typed writers `write_typed_d` |

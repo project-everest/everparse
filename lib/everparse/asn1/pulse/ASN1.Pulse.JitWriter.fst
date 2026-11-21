@@ -114,6 +114,7 @@ module PA = ASN1.Pulse.ParseAdb
 module ADB = ASN1.Pulse.AnyDefinedBy
 module WA = ASN1.Pulse.WriteAdb
 module JF = ASN1.Pulse.JitFrame
+module SK = ASN1.Pulse.Sink
 module DE = ASN1.Pulse.DefaultEq
 module PSL = ASN1.Pulse.ParseSequence.Lemmas
 module SL = ASN1.Pulse.JitWriter.SeqLemmas
@@ -153,10 +154,10 @@ let jit_post_g (ex: bool) (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (res: j
 inline_for_extraction
 let jwg (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) =
   (x': t) -> (#x: Ghost.erased SB.bytes) ->
-  (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
+  (out: SK.sink) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
   stt jit_result
-    (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
-    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
+    (SK.sbuf out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . SK.sbuf out v' ** pts_to pos p' ** r pm x' x **
       pure (jit_post_g ex x (a x) (SZ.v p) v res (SZ.v p') v'))
 
 inline_for_extraction
@@ -169,7 +170,7 @@ let jwx (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) = jwg true r a
 inline_for_extraction
 fn jit_cast (#ex1: bool) (ex2: bool) (sq: squash (ex2 == true ==> ex1 == true)) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex1 r a pm)
 : jwg ex2 #t r a pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   w x' #x out pos
 }
@@ -191,7 +192,7 @@ fn jit_ext (#ex: bool) (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r
   (a1 a2: SB.bytes -> prop) (imp: (x: SB.bytes) -> Lemma (requires (a1 x)) (ensures (a2 x)))
   (pm: perm) (w: jwg ex r1 a1 pm)
 : jw #t r2 a2 pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   rewrite (r2 pm x' x) as (r1 pm x' x);
   let res = w x' #x out pos;
@@ -211,7 +212,7 @@ fn jit_iff (#ex: bool) (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r
   (back: (x: SB.bytes) -> Lemma (requires (a2 x)) (ensures (a1 x)))
   (pm: perm) (w: jwg ex r1 a1 pm)
 : jwg ex #t r2 a2 pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   rewrite (r2 pm x' x) as (r1 pm x' x);
   let res = w x' #x out pos;
@@ -229,7 +230,7 @@ fn jit_iff (#ex: bool) (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r1 r
 inline_for_extraction
 fn jit_weak (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a pm)
 : jw #t r a pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   w x' #x out pos
 }
@@ -250,27 +251,27 @@ fn jit_tlv (#ex: bool) (id: asn1_id_t) (#t: Type0) (r: bprel t)
   (#ack: asn1_content_k) (pp: asn1_weak_parser (asn1_content_t ack))
   (pm: perm) (w: jwg ex r (L.acc #asn1_weak_parser_kind pp) pm)
 : jwg ex #t (raw_tlv id r) (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id #ack pp)) pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_tlv id r pm x' x);
   with c . assert (r pm x' c);
   let p0 = !pos;
   let ok = w x' #c out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let p1r = !pos;
     let len = SZ.sub p0 p1r;
     assert_norm (pow2 32 == 4294967296);
     sz_u32_fits len;
     if (SZ.eq (SZ.uint32_to_sizet (SZ.sizet_to_uint32 len)) len) {
       fold (W.vmatch_sz len (Seq.length c));
-      let ok2 = WL.r2l_write_hdr true len #(Seq.length c) out pos;
+      let ok2 = SK.sw_hdr len #(Seq.length c) out pos;
       unfold (W.vmatch_sz len (Seq.length c));
-      with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+      with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
       frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
       if ok2 {
-        let ok3 = WL.r2l_write_id id out pos;
-        with v3 p3 . assert (pts_to out v3 ** pts_to pos p3);
+        let ok3 = SK.sw_id id out pos;
+        with v3 p3 . assert (SK.sbuf out v3 ** pts_to pos p3);
         frame_trans (SZ.v p) v (SZ.v p2) v2 v3;
         fold (raw_tlv id r pm x' x);
         if ok3 {
@@ -308,7 +309,7 @@ fn jit_opt_ne (#t: Type0) (r: bprel t) (s: Ghost.erased (Set.set asn1_id_t)) (fr
   (back: (x: SB.bytes) -> Lemma (requires (a2 x /\ Seq.length x > 0)) (ensures (a1 x)))
   (#ex: bool) (pm: perm) (w: jwg ex r a1 pm)
 : jwg ex #(option t) (raw_opt r) a2 pm
-= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     None -> {
@@ -339,7 +340,7 @@ inline_for_extraction
 fn jit_nd (d: SB.bytes) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (none: squash (a Seq.empty))
   (#ex: bool) (pm: perm) (dec: DE.dd r d pm) (w: jwg ex (raw_opt r) a pm)
 : jwg ex #(option t) (raw_opt_nd d r) a pm
-= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     None -> {
@@ -378,7 +379,7 @@ fn jit_opt_a (#t: Type0) (r: bprel t) (a1 a2: SB.bytes -> prop)
   (imp: (x: SB.bytes) -> Lemma (requires (a1 x)) (ensures (a2 x)))
   (#ex: bool) (pm: perm) (w: jwg ex r a1 pm)
 : jw #(option t) (raw_opt r) a2 pm
-= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     None -> {
@@ -411,7 +412,7 @@ fn jit_nd_ne (d: SB.bytes) (#t: Type0) (r: bprel t) (s: Ghost.erased (Set.set as
   (back: (x: SB.bytes) -> Lemma (requires (a2 x /\ Seq.length x > 0)) (ensures (a1 x)))
   (pm: perm) (dec: DE.dd r d pm) (#ex: bool) (w: jwg ex r a1 pm)
 : jwg ex #(option t) (raw_opt_nd d r) a2 pm
-= (x': option t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': option t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     None -> {
@@ -472,7 +473,7 @@ fn jit_opt_slice (a1 a2: SB.bytes -> prop)
   (back: (x: SB.bytes) -> Lemma (requires (a2 x /\ Seq.length x > 0)) (ensures (a1 x)))
   (#ex: bool) (pm: perm) (w: jwg ex raw_slice a1 pm)
 : jwg ex #(option (S.slice U8.t)) (raw_opt raw_slice) a2 pm
-= (x': option (S.slice U8.t)) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': option (S.slice U8.t)) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     None -> {
@@ -513,7 +514,7 @@ fn jit_iff_fr (#ex: bool) (#t: Type0) (r1 r2: bprel t) (sq: squash (prel_equiv r
   (back: (x: SB.bytes) -> Lemma (requires (a2 x /\ L.framed s x)) (ensures (a1 x)))
   (pm: perm) (w: jwg ex r1 a1 pm)
 : jwg ex #t r2 a2 pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   rewrite (r2 pm x' x) as (r1 pm x' x);
   fr pm x' x;
@@ -539,7 +540,7 @@ fn jit_either_x (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a1 a2 a: SB.byte
   (back2: (x: SB.bytes) -> Lemma (requires (a x /\ L.framed s2 x)) (ensures (a2 x)))
   (#ex1 #ex2: bool) (pm: perm) (w1: jwg ex1 r1 a1 pm) (w2: jwg ex2 r2 a2 pm)
 : jwg (ex1 && ex2) #(either t1 t2) (raw_either r1 r2) a pm
-= (x': either t1 t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': either t1 t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     Inl y -> {
@@ -574,7 +575,7 @@ fn jit_either_x (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a1 a2 a: SB.byte
 inline_for_extraction
 fn jit_false (t: Type0) (a: SB.bytes -> prop) (pm: perm)
 : jwx #t (raw_false t) a pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_false t pm x' x);
   unreachable ()
@@ -583,7 +584,7 @@ fn jit_false (t: Type0) (a: SB.bytes -> prop) (pm: perm)
 inline_for_extraction
 fn jit_nil (pm: perm)
 : jwx #unit (raw_pure null_enc) (L.iacc []) pm
-= (x': unit) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': unit) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_pure null_enc pm x' x);
   fold (raw_pure null_enc pm x' x);
@@ -619,7 +620,7 @@ fn jit_items_cons_x (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twi
   (av: JF.av_t r2 hs)
   (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jwg ex2 r2 (L.iacc tl) pm)
 : jwg (ex1 && ex2) #(t1 & t2) (raw_cat r1 r2) (L.iacc (Ghost.reveal hd :: Ghost.reveal tl)) pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_cat r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
@@ -628,9 +629,9 @@ fn jit_items_cons_x (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twi
   Classical.move_requires (SL.iacc_cons_inv_wf hd tl c1) c2;
   let ok = w2 (snd x') #c2 out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
     if (JIT_OK? res) {
@@ -659,7 +660,7 @@ fn jit_items_cons_a (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.eras
   (av: JF.av_t r2 hs)
   (#ex1 #ex2: bool) (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jwg ex2 r2 (L.iacc tl) pm)
 : jw #(t1 & t2) (raw_cat r1 r2) (L.iacc (Ghost.reveal hd :: Ghost.reveal tl)) pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_cat r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
@@ -667,9 +668,9 @@ fn jit_items_cons_a (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.eras
   Seq.lemma_len_append c1 c2;
   let ok = w2 (snd x') #c2 out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
     if (JIT_OK? res) {
@@ -707,10 +708,10 @@ let jit_post_sg (ex: bool) (its: list gen_decorated_parser_twin) (x: SB.bytes) (
 inline_for_extraction
 let jwsg (ex: bool) (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) =
   (x': t) -> (#x: Ghost.erased SB.bytes) ->
-  (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
+  (out: SK.sink) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
   stt jit_result
-    (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
-    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
+    (SK.sbuf out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . SK.sbuf out v' ** pts_to pos p' ** r pm x' x **
       pure (jit_post_sg ex its x (SZ.v p) v res (SZ.v p') v'))
 
 inline_for_extraction
@@ -720,7 +721,7 @@ let jws (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm
 inline_for_extraction
 fn jit_s_cast (#ex1: bool) (ex2: bool) (sq: squash (ex2 == true ==> ex1 == true)) (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_parser_twin)) (pm: perm) (w: jwsg ex1 r its pm)
 : jwsg ex2 #t r its pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   w x' #x out pos
 }
@@ -728,7 +729,7 @@ fn jit_s_cast (#ex1: bool) (ex2: bool) (sq: squash (ex2 == true ==> ex1 == true)
 inline_for_extraction
 fn jit_s_nil (pm: perm)
 : jwsg true #unit (raw_pure null_enc) [] pm
-= (x': unit) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': unit) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_pure null_enc pm x' x);
   fold (raw_pure null_enc pm x' x);
@@ -742,7 +743,7 @@ fn jit_s_nil (pm: perm)
 inline_for_extraction
 fn jit_s_of_w (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_parser_twin)) (pm: perm) (w: jw r (L.sacc its) pm)
 : jws #t r its pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   let res = w x' #x out pos;
   if (JIT_INVALID? res) { JIT_RETRY } else { res }
@@ -751,7 +752,7 @@ fn jit_s_of_w (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_pa
 inline_for_extraction
 fn jit_w_of_s (#ex: bool) (#t: Type0) (r: bprel t) (its: Ghost.erased (list gen_decorated_parser_twin)) (pm: perm) (w: jwsg ex r its pm)
 : jwg ex #t r (L.sacc its) pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   w x' #x out pos
 }
@@ -760,7 +761,7 @@ inline_for_extraction
 fn jit_s_ext (#ex: bool) (#t: Type0) (r1 r2: bprel t) (its1 its2: Ghost.erased (list gen_decorated_parser_twin))
   (sq: squash (prel_equiv r1 r2 /\ Ghost.reveal its1 == Ghost.reveal its2)) (pm: perm) (w: jwsg ex r1 its1 pm)
 : jwsg ex #t r2 its2 pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   rewrite (r2 pm x' x) as (r1 pm x' x);
   let res = w x' #x out pos;
@@ -776,7 +777,7 @@ inline_for_extraction
 fn jit_set_elt_a (hd: Ghost.erased gen_decorated_parser_twin) (shaped: squash (PSL.item_shaped hd)) (dfa: dfa_t hd)
   (#ex: bool) (#t: Type0) (r: bprel t) (pm: perm) (w: jwg ex r (L.iacc [Ghost.reveal hd]) pm)
 : jw #t r (L.sacc1 hd) pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   let res = w x' #x out pos;
   if (JIT_OK? res) {
@@ -794,22 +795,22 @@ fn jit_set_cons (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased (
   (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
   (w1: jw r1 (L.sacc1 hd) pm) (#ex2: bool) (w2: jwsg ex2 r2 tl pm)
 : jws #(t1 & t2) (raw_ins SI.lt_tag r1 r2) (Ghost.reveal hd :: Ghost.reveal tl) pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_ins SI.lt_tag r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
   let p0 = !pos;
   let ok = w2 (snd x') #c2 out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let p1r = !pos;
     let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     if (JIT_OK? res) {
       let p2r = !pos;
-      SI.r2l_insert SI.lt_tag (SI.lt_tag_impl ()) out p2r p1r p0;
-      with v3 . assert (pts_to out v3);
+      SK.sk_insert SI.lt_tag (SI.lt_tag_impl ()) out p2r p1r p0;
+      with v3 . assert (SK.sbuf out v3);
       SI.r2l_post_ins SI.lt_tag c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2 v3;
       L.sacc_cons hd tl c1 c2;
       fold (raw_ins SI.lt_tag r1 r2 pm x' x);
@@ -835,7 +836,7 @@ fn jit_set_single_x (hd: Ghost.erased gen_decorated_parser_twin)
   (sq: squash (L.set_cons_ok hd [] /\ PSL.item_shaped hd))
   (#t: Type0) (r: bprel t) (pm: perm) (fe: JF.fe_t r hd) (#ex: bool) (w: jwg ex r (L.iacc [Ghost.reveal hd]) pm)
 : jwsg ex #t r [Ghost.reveal hd] pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   fe pm x' x;
   SetL.dfe_piece hd x;
@@ -858,7 +859,7 @@ fn jit_set_cons_x (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
   (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (pm: perm)
   (fe: JF.fe_t r1 hd) (#ex1: bool) (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (#ex2: bool) (w2: jwsg ex2 r2 tl pm)
 : jwsg (ex1 && ex2) #(t1 & t2) (raw_ins SI.lt_tag r1 r2) (Ghost.reveal hd :: Ghost.reveal tl) pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_ins SI.lt_tag r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
@@ -868,16 +869,16 @@ fn jit_set_cons_x (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
   let p0 = !pos;
   let ok = w2 (snd x') #c2 out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let p1r = !pos;
     let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     if (JIT_OK? res) {
       let p2r = !pos;
       SetL.elt_of_iacc hd c1;
-      SI.r2l_insert SI.lt_tag (SI.lt_tag_impl ()) out p2r p1r p0;
-      with v3 . assert (pts_to out v3);
+      SK.sk_insert SI.lt_tag (SI.lt_tag_impl ()) out p2r p1r p0;
+      with v3 . assert (SK.sbuf out v3);
       SI.r2l_post_ins SI.lt_tag c1 c2 (SZ.v p) v (SZ.v p1) v1 (SZ.v p2) v2 v3;
       L.sacc_cons hd tl c1 c2;
       fold (raw_ins SI.lt_tag r1 r2 pm x' x);
@@ -914,9 +915,9 @@ fn jit_set_cons_x (hd: Ghost.erased gen_decorated_parser_twin) (tl: Ghost.erased
 inline_for_extraction
 fn jit_pre (#t: Type0) (r: bprel t) (a a': SB.bytes -> prop)
   (imp: (x: SB.bytes) -> Lemma (a x <==> a' x))
-  (pm: perm) (c: JT.pcg r JT.ptrue a pm) (w: RW.rw r pm)
+  (pm: perm) (c: JT.pcg r JT.ptrue a pm) (w: SK.srw r pm)
 : jwx #t r a' pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   let ok = c x' #x;
   if ok {
@@ -949,6 +950,25 @@ fn raw_write_ser (pm: perm)
   res
 }
 
+inline_for_extraction
+fn dw_ser (pm: perm)
+: SK.drw #(S.slice U8.t) ser_rel pm
+= (x': S.slice U8.t) (#x: Ghost.erased SB.bytes) (pos: ref SZ.t) (#p: Ghost.erased SZ.t)
+{
+  unfold (ser_rel pm x' x);
+  unfold (PB.pts_to_parsed p_raw x' #pm x);
+  with wb . assert (S.pts_to x' #pm wb);
+  p_raw_consumed wb x;
+  S.pts_to_len x';
+  fold (PB.pts_to_parsed p_raw x' #pm x);
+  fold (ser_rel pm x' x);
+  SK.dry_sub (S.len x') x pos
+}
+
+inline_for_extraction
+let sw_ser (pm: perm) : SK.srw ser_rel pm =
+  SK.sw_of (raw_write_ser pm) (dw_ser pm)
+
 (* Validate an already serialized element on the input slice, before
    copying it *)
 inline_for_extraction
@@ -976,7 +996,7 @@ fn jit_elt (#ex: bool) (#t: Type0) (r: bprel t)
   (w: (pm: perm) -> jwg ex r (L.acc #asn1_strong_parser_kind pp) pm)
   (pm: perm)
 : jwg ex #(WI.elt_or_serialized t) (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw) (L.acc #asn1_strong_parser_kind pp) pm
-= (x': WI.elt_or_serialized t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': WI.elt_or_serialized t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     WI.EElement e -> {
@@ -987,7 +1007,7 @@ fn jit_elt (#ex: bool) (#t: Type0) (r: bprel t)
     }
     WI.ESerialized pl -> {
       rewrite (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x) as (ser_rel pm pl x);
-      let res = jit_pre ser_rel (L.acc #asn1_strong_parser_kind pp) (L.acc #asn1_strong_parser_kind pp) (fun _ -> ()) pm (pc_ser #tp #asn1_strong_parser_kind #pp vf pm) (raw_write_ser pm) pl #x out pos;
+      let res = jit_pre ser_rel (L.acc #asn1_strong_parser_kind pp) (L.acc #asn1_strong_parser_kind pp) (fun _ -> ()) pm (pc_ser #tp #asn1_strong_parser_kind #pp vf pm) (sw_ser pm) pl #x out pos;
       rewrite (ser_rel pm pl x) as (WI.elt_or_serialized_match r ml_ops #asn1_strong_parser_kind p_raw pm x' x);
       res
     }
@@ -1064,7 +1084,7 @@ fn jit_write_ml (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
   (w: (pm: perm) -> jwg ex r (L.acc #asn1_strong_parser_kind pp) pm)
   (sh: share_t r) (g: gather_t r) (pm: perm)
 : jwg ex #(ml t) (raw_ml r) (L.acc #asn1_weak_parser_kind (parse_sized_list ne pp)) pm
-= (x': ml t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p0: Ghost.erased SZ.t)
+= (x': ml t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p0: Ghost.erased SZ.t)
 {
   unfold (raw_ml r pm x' x);
   with l . assert (WI.mixed_list_match r ml_ops #asn1_strong_parser_kind p_raw pm x' l);
@@ -1087,7 +1107,7 @@ fn jit_write_ml (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
     WI.iterator_match r ml_ops p_raw pmi it lr **
     trade (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l) **
     R.pts_to pn n ** R.pts_to pok ok **
-    pts_to out vc ** R.pts_to pos pc **
+    SK.sbuf out vc ** R.pts_to pos pc **
     pure (
       Ghost.reveal l == List.Tot.append (Ghost.reveal ld) lr /\
       ml_ops.v n == List.Tot.length lr /\
@@ -1097,7 +1117,7 @@ fn jit_write_ml (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
   decreases %[(if JIT_OK? (!pok) then 1 else 0); ml_ops.v (!pn)]
   {
     with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
-    with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+    with vc pc . assert (SK.sbuf out vc ** R.pts_to pos pc);
     let ld = !pld;
     let n = !pn;
     let pcur = !pos;
@@ -1114,13 +1134,13 @@ fn jit_write_ml (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
     WI.append_assoc_singleton #SB.bytes (Ghost.reveal ld) y tl;
     pn := ml_ops.sub n ml_ops.one;
     pld := Ghost.hide (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]);
-    with v2 p2 . assert (pts_to out v2 ** R.pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** R.pts_to pos p2);
     frame_trans (SZ.v p0) v (SZ.v pc) vc v2;
     if (JIT_OK? res) {
       let pnew = !pos;
       if (SZ.lt pnew pcur) {
-        WI.r2l_reverse_range out pnew pcur;
-        with v3 . assert (pts_to out v3);
+        SK.sk_reverse_range out pnew pcur;
+        with v3 . assert (SK.sbuf out v3);
         assert (pure (WI.r2l_ml_inv id_enc l (SZ.v p0) v (Ghost.reveal ld) true (SZ.v pc) vc));
         assert (pure (W.r2l_post (id_enc y) (SZ.v pc) vc true (SZ.v p2) v2));
         assert (pure (WI.reverse_range_post v2 (SZ.v p2) (SZ.v pc) v3));
@@ -1148,7 +1168,7 @@ fn jit_write_ml (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
     }
   };
   with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
-  with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+  with vc pc . assert (SK.sbuf out vc ** R.pts_to pos pc);
   let ld = !pld;
   Trade.elim (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
   fold (raw_ml r pm x' x);
@@ -1160,8 +1180,8 @@ fn jit_write_ml (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
       L.sized_list_empty pp (W.enc_list id_enc l);
       JIT_INVALID
     } else {
-      WI.r2l_reverse_range out pend p0r;
-      with v3 . assert (pts_to out v3);
+      SK.sk_reverse_range out pend p0r;
+      with v3 . assert (SK.sbuf out v3);
       WI.r2l_ml_inv_end id_enc l (SZ.v p0) v (SZ.v pc) vc v3;
       L.acc_sized_list ne pp l;
       JIT_OK
@@ -1186,7 +1206,7 @@ fn jit_write_ml_sorted (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
   (w: (pm: perm) -> jwg ex r (L.acc #asn1_strong_parser_kind pp) pm)
   (sh: share_t r) (g: gather_t r) (pm: perm)
 : jwg ex #(ml t) (raw_ml_sorted r) (L.acc #asn1_weak_parser_kind (parse_sized_set ne pp)) pm
-= (x': ml t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p0: Ghost.erased SZ.t)
+= (x': ml t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p0: Ghost.erased SZ.t)
 {
   unfold (raw_ml_sorted r pm x' x);
   with l . assert (WI.mixed_list_match r ml_ops #asn1_strong_parser_kind p_raw pm x' l);
@@ -1210,7 +1230,7 @@ fn jit_write_ml_sorted (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
     WI.iterator_match r ml_ops p_raw pmi it lr **
     trade (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l) **
     R.pts_to pn n ** R.pts_to pok ok **
-    pts_to out vc ** R.pts_to pos pc **
+    SK.sbuf out vc ** R.pts_to pos pc **
     pure (
       Ghost.reveal l == List.Tot.append (Ghost.reveal ld) lr /\
       ml_ops.v n == List.Tot.length lr /\
@@ -1220,7 +1240,7 @@ fn jit_write_ml_sorted (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
   decreases %[(if (JIT_OK? (!pok) || JIT_INVALID? (!pok)) then 1 else 0); ml_ops.v (!pn)]
   {
     with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
-    with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+    with vc pc . assert (SK.sbuf out vc ** R.pts_to pos pc);
     let ld = !pld;
     let n = !pn;
     let ok = !pok;
@@ -1253,7 +1273,7 @@ fn jit_write_ml_sorted (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
     pld := Ghost.hide (List.Tot.append (Ghost.reveal ld) [Ghost.reveal y]);
     all_tlvish_snoc_if ex (Ghost.reveal ld) y;
     L.has_bad_snoc pp (Ghost.reveal ld) y;
-    with v2 p2 . assert (pts_to out v2 ** R.pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** R.pts_to pos p2);
     frame_trans (SZ.v p0) v (SZ.v pc) vc v2;
     if (JIT_OK? res) {
       let pnew = !pos;
@@ -1261,8 +1281,8 @@ fn jit_write_ml_sorted (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
       assert (pure (Seq.slice v2 (SZ.v p2) (SZ.v pc) == Ghost.reveal y));
       L.acc_frame pp y;
       assert (pure (L.fresh_frame pp y));
-      SI.r2l_insert SI.lt_lex (SI.lt_lex_impl ()) out pnew pcur p0r;
-      with v3 . assert (pts_to out v3);
+      SK.sk_insert SI.lt_lex (SI.lt_lex_impl ()) out pnew pcur p0r;
+      with v3 . assert (SK.sbuf out v3);
       assert (pure (SI.r2l_mls_inv SI.lt_lex id_enc l (SZ.v p0) v (Ghost.reveal ld) true (SZ.v pc) vc));
       SI.r2l_mls_inv_step SI.lt_lex id_enc l (SZ.v p0) v (Ghost.reveal ld) y (SZ.v pc) vc (SZ.v p2) v2 v3;
       SI.sort_acc_snoc SI.lt_lex id_enc Seq.empty (Ghost.reveal ld) y;
@@ -1282,7 +1302,7 @@ fn jit_write_ml_sorted (ex: bool) (#t: Type0) (r: bprel t) (ne: bool)
     }
   };
   with it pmi lr . assert (R.pts_to pit it ** WI.iterator_match r ml_ops p_raw pmi it lr);
-  with vc pc . assert (pts_to out vc ** R.pts_to pos pc);
+  with vc pc . assert (SK.sbuf out vc ** R.pts_to pos pc);
   let ld = !pld;
   Trade.elim (WI.iterator_match r ml_ops p_raw pmi it lr) (WI.mixed_list_match r ml_ops p_raw pm x' l);
   fold (raw_ml_sorted r pm x' x);
@@ -1357,7 +1377,7 @@ fn jit_acons_x (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twin) (t
   (av: JF.av_t r2 hs)
   (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jwg ex2 r2 (Ghost.reveal aa tl) pm)
 : jwg (ex1 && ex2) #(t1 & t2) (raw_cat r1 r2) (Ghost.reveal aa (Ghost.reveal hd :: Ghost.reveal tl)) pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_cat r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
@@ -1366,9 +1386,9 @@ fn jit_acons_x (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twin) (t
   assert (pure (JAS.acons_inv_at aa hd tl c1 c2));
   let ok = w2 (snd x') #c2 out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
     if (JIT_OK? res) {
@@ -1394,16 +1414,16 @@ fn jit_acons_a (#ex1 #ex2: bool) (hd: Ghost.erased gen_decorated_parser_twin) (t
   (av: JF.av_t r2 hs)
   (w1: jwg ex1 r1 (L.iacc [Ghost.reveal hd]) pm) (w2: jwg ex2 r2 (Ghost.reveal aa tl) pm)
 : jw #(t1 & t2) (raw_cat r1 r2) (Ghost.reveal aa (Ghost.reveal hd :: Ghost.reveal tl)) pm
-= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t1 & t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_cat r1 r2 pm x' x);
   with c1 c2 . assert (r1 pm (fst x') c1 ** r2 pm (snd x') c2);
   av pm (snd x') c2;
   let ok = w2 (snd x') #c2 out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let res = w1 (fst x') #c1 out pos;
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     fold (raw_cat r1 r2 pm x' x);
     if (JIT_OK? res) {
@@ -1429,7 +1449,7 @@ fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k)
   (lem: (c: SB.bytes) -> Lemma (a (Seq.append (WA.raw_key_enc kid key_k kx) c) <==> (Seq.length (JK.raw_key_c key_k kx) < 4294967296 /\ b c)))
   (pm: perm) (#ex: bool) (w: jwg ex r b pm)
 : jwg ex #t (raw_pre (WA.raw_key_enc kid key_k kx) r) a pm
-= (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_pre (WA.raw_key_enc kid key_k kx) r pm x' x);
   with c . assert (r pm x' c);
@@ -1437,12 +1457,12 @@ fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k)
   lem c;
   let ok = w x' #c out pos;
   if (JIT_OK? ok) {
-    with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+    with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
     let p1r = !pos;
     fold (prel_emp unit unit 1.0R () ());
-    let ok2 = JK.cw_raw_key_c key_k kx () #() out pos;
+    let ok2 = SK.sc_raw_key_c key_k kx () #() out pos;
     unfold (prel_emp unit unit 1.0R () ());
-    with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+    with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
     frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
     if ok2 {
       let p2r = !pos;
@@ -1452,13 +1472,13 @@ fn jit_lit (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k)
       sz_u32_fits len;
       if (SZ.eq (SZ.uint32_to_sizet len32) len) {
         fold (W.vmatch_sz len (Seq.length (JK.raw_key_c key_k kx)));
-        let ok3 = WL.r2l_write_hdr true len #(Seq.length (JK.raw_key_c key_k kx)) out pos;
+        let ok3 = SK.sw_hdr len #(Seq.length (JK.raw_key_c key_k kx)) out pos;
         unfold (W.vmatch_sz len (Seq.length (JK.raw_key_c key_k kx)));
-        with v3 p3 . assert (pts_to out v3 ** pts_to pos p3);
+        with v3 p3 . assert (SK.sbuf out v3 ** pts_to pos p3);
         frame_trans (SZ.v p) v (SZ.v p2) v2 v3;
         if ok3 {
-          let ok4 = WL.r2l_write_id kid out pos;
-          with v4 p4 . assert (pts_to out v4 ** pts_to pos p4);
+          let ok4 = SK.sw_id kid out pos;
+          with v4 p4 . assert (SK.sbuf out v4 ** pts_to pos p4);
           frame_trans (SZ.v p) v (SZ.v p3) v3 v4;
           fold (raw_pre (WA.raw_key_enc kid key_k kx) r pm x' x);
           if ok4 {
@@ -1493,7 +1513,7 @@ inline_for_extraction
 fn jit_either_same (#ex: bool) (#t1 #t2: Type0) (r1: bprel t1) (r2: bprel t2) (a: SB.bytes -> prop)
   (pm: perm) (w1: jwg ex r1 a pm) (w2: jwg ex r2 a pm)
 : jwg ex #(either t1 t2) (raw_either r1 r2) a pm
-= (x': either t1 t2) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': either t1 t2) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   match x' {
     Inl y -> {
@@ -1667,7 +1687,7 @@ fn jit_fb (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_suppo
   (w1: jwx (raw_terminal_rel kid key_k) (L.acc #asn1_strong_parser_kind (parse_asn1_ILC kid (asn1_content_as_parser (ASN1_TERMINAL key_k)))) pm)
   (#ex2: bool) (w2: jwg ex2 (raw_irel false dfb) (L.iacc (In.twins_of (dsnd fb))) pm)
 : jw #(asn1_terminal_impl_t key_k & tfb) (raw_dfbr kid key_k #fb dfb) (JA.afbacc kid key_k lsf fb) pm
-= (x': (asn1_terminal_impl_t key_k & tfb)) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': (asn1_terminal_impl_t key_k & tfb)) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   rewrite (raw_dfbr kid key_k #fb dfb pm x' x) as (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
   unfold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
@@ -1676,9 +1696,9 @@ fn jit_fb (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_suppo
   if n {
     let ok = w2 (snd x') #c2 out pos;
     if (JIT_OK? ok) {
-      with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+      with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
       let res = w1 (fst x') #c1 out pos;
-      with v2 p2 . assert (pts_to out v2 ** pts_to pos p2);
+      with v2 p2 . assert (SK.sbuf out v2 ** pts_to pos p2);
       frame_trans (SZ.v p) v (SZ.v p1) v1 v2;
       fold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
       rewrite (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x) as (raw_dfbr kid key_k #fb dfb pm x' x);
@@ -1692,7 +1712,7 @@ fn jit_fb (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_suppo
         ns_or_retry res
       }
     } else {
-      with v1 p1 . assert (pts_to out v1 ** pts_to pos p1);
+      with v1 p1 . assert (SK.sbuf out v1 ** pts_to pos p1);
       Seq.lemma_len_append c1 c2;
       ns_or_retry_post x (JA.afbacc kid key_k lsf fb x) (SZ.v p) v ok (SZ.v p1) v1;
       fold (raw_cat (raw_terminal_rel kid key_k) (raw_irel false dfb) pm x' x);
@@ -1709,16 +1729,16 @@ fn jit_fb (kid: asn1_id_t) (key_k: asn1_terminal_k) (u: squash (In.adb_key_suppo
 
 (* The whole schema *)
 
-let jresg (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
+let jresg (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
   stt jit_result
-    (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
-    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
+    (SK.sbuf out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . SK.sbuf out v' ** pts_to pos p' ** r pm x' x **
       pure (jit_post_g ex x (a x) (SZ.v p) v res (SZ.v p') v'))
 
-let jressg (ex: bool) (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
+let jressg (ex: bool) (#t: Type0) (r: bprel t) (its: list gen_decorated_parser_twin) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
   stt jit_result
-    (pts_to out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
-    (fun res -> exists* v' p' . pts_to out v' ** pts_to pos p' ** r pm x' x **
+    (SK.sbuf out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . SK.sbuf out v' ** pts_to pos p' ** r pm x' x **
       pure (jit_post_sg ex its x (SZ.v p) v res (SZ.v p') v'))
 
 (* Exactness: the JIT writer of a schema never returns JIT_RETRY (so that
@@ -1767,10 +1787,10 @@ and ex_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : Tot bool (decreases dk) 
   | ASN1_OPTION_ILC k -> ex_k k
   | _ -> true
 
-let jres (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
+let jres (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
   jresg false r a pm x' x out pos v p
 
-let jresx (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
+let jresx (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (x': t) (x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (v: Ghost.erased SB.bytes) (p: Ghost.erased SZ.t) : Type =
   jresg true r a pm x' x out pos v p
 
 let cacc (id: asn1_id_t) (k: asn1_content_k) : SB.bytes -> prop =
@@ -1815,7 +1835,7 @@ inline_for_extraction
 fn jit_terminal_prefixed (id: asn1_id_t) (id2: asn1_id_t) (k2: asn1_terminal_k) (pm: perm)
   (w: jwx (raw_terminal_rel id2 k2) (cacc id2 (ASN1_TERMINAL k2)) pm)
 : jwx #(asn1_terminal_impl_t (ASN1_PREFIXED_TERMINAL id2 k2)) (raw_terminal_rel id (ASN1_PREFIXED_TERMINAL id2 k2)) (cacc id (ASN1_TERMINAL (ASN1_PREFIXED_TERMINAL id2 k2))) pm
-= (x': asn1_terminal_impl_t (ASN1_PREFIXED_TERMINAL id2 k2)) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': asn1_terminal_impl_t (ASN1_PREFIXED_TERMINAL id2 k2)) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   terminal_prefixed_eq id id2 k2 pm x' x;
   let x2 = prefixed_down id2 k2 x';
@@ -1843,12 +1863,12 @@ let jit_leaf_tlv (id: asn1_id_t) (k: E.leaf_k) (u: squash (In.supported_terminal
     (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id #(ASN1_TERMINAL k) (asn1_terminal_as_parser k))) (cacc id (ASN1_TERMINAL k)) (acc_terminal_tlv id k) (acc_terminal_tlv_inv id k) pm
     (jit_tlv id (raw_leaf k) #(ASN1_TERMINAL k) (asn1_terminal_as_parser k) pm
       (jit_pre (raw_leaf k) (L.tacc k) (L.acc #asn1_weak_parser_kind (asn1_terminal_as_parser k)) (fun _ -> ()) pm
-        (JT.pv k () pm) (RW.raw_write_leaf k pm)))
+        (JT.pv k () pm) (SK.sw_leaf k pm)))
 
 [@@In.asn1_pulse_attr]
 let rec jit_write_terminal (id: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) (u: squash (In.supported_terminal k)) (pm: perm)
   (x': asn1_terminal_impl_t k) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresx (raw_terminal_rel id k) (cacc id (ASN1_TERMINAL k)) pm x' x out pos v p)
   (decreases k)
 = [@inline_let] let vf : jwx (raw_terminal_rel id k) (cacc id (ASN1_TERMINAL k)) pm =
@@ -1871,7 +1891,7 @@ let jit_restricted_tlv (id: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k) (u:
         (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r))) (fun w -> L.acc_restricted k r w) pm
         (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (restriction_pred r)) (fun _ -> ()) pm
           (JT.pv k () pm) (JT.pr k r () pm))
-        (RW.raw_write_leaf k pm)))
+        (SK.sw_leaf k pm)))
 
 (* DEFAULT components: also check that the value is not the default one *)
 
@@ -1897,7 +1917,7 @@ let jit_default (id0: asn1_id_t) (k: E.leaf_k) (defl: asn1_key_lit k) (u: squash
             (L.acc #asn1_weak_parser_kind (asn1_content_as_parser (Co.default_content k defv))) (fun w -> L.acc_default k defv w) pm
             (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (defaultv_filter defv)) (fun _ -> ()) pm
               (JT.pv k () pm) (JT.pn k defl () pm))
-            (RW.raw_write_leaf k pm))))))
+            (SK.sw_leaf k pm))))))
 
 [@@In.asn1_pulse_attr]
 inline_for_extraction
@@ -1924,7 +1944,7 @@ let jit_default_restricted (id0: asn1_id_t) (k: E.leaf_k) (r: asn1_restriction k
               (JT.pc_then (raw_leaf k) JT.ptrue (L.tacc k) (L.tacc k) (L.holds k (restriction_pred r)) (fun _ -> ()) pm
                 (JT.pv k () pm) (JT.pr k r () pm))
               (JT.pn k defl () pm))
-            (RW.raw_write_leaf k pm))))))
+            (SK.sw_leaf k pm))))))
 
 (* DEFAULT of a PREFIXED terminal: the explicit default value is omitted
    (`dec`); any other value is accepted iff the terminal is
@@ -1950,7 +1970,7 @@ let jit_default_prefixed (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_l
 inline_for_extraction
 fn jit_view (#ex: bool) (#t #ty: Type0) (r: bprel t) (view: ty -> t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a pm)
 : jwg ex #ty (raw_view r view) a pm
-= (x': ty) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': ty) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_view r view pm x' x);
   let res = w (view x') #x out pos;
@@ -1963,7 +1983,7 @@ fn jit_view (#ex: bool) (#t #ty: Type0) (r: bprel t) (view: ty -> t) (a: SB.byte
 inline_for_extraction
 fn jit_keep (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a (pm /. 2.0R))
 : jwg ex #(kept t) (raw_keep r) a pm
-= (x': kept t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+= (x': kept t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
   unfold (raw_keep r pm x' x);
   let res = w x'.kval #x out pos;
@@ -1980,7 +2000,7 @@ fn jit_keep (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm
 [@@In.asn1_pulse_attr]
 let rec jit_write_crel (id: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] k: asn1_content_k) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: cdesc k t) (u: squash (In.supported_content k /\ Conf.wf_content id k)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresg (ex_content k) (raw_crel id d) (cacc id k) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwg (ex_content k) (raw_crel id d) (cacc id k) pm =
@@ -2099,7 +2119,7 @@ and jit_write_iarel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attri
   (aa: Ghost.erased (list gen_decorated_parser_twin -> SB.bytes -> prop)) (acons: squash (JAS.acons_x_ok aa))
   (sr: bprel sfx) (avs: JAS.av_sfx_t sr ks) (pm: perm) (#exs: bool) ([@@@FStar.Attributes.monomorphize] ws: jwg exs sr (Ghost.reveal aa []) pm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresg (ex_items ls && exs) (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwg (ex_items ls && exs) (raw_iarel d sr) (Ghost.reveal aa (In.twins_of ls)) pm =
@@ -2181,7 +2201,7 @@ and jit_write_sxrel (kid: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] key_k:
   (pre: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk))) (lsf: Ghost.erased (list (asn1_key_lit key_k & asn1_gen_items_lk)))
   (u': squash (In.supported_ls ls /\ Conf.wf_ls ls /\ Ghost.reveal pre `List.Tot.append` ls == Ghost.reveal lsf /\ List.Tot.noRepeats (List.Tot.map fst (Ghost.reveal lsf)))) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresg (ex_ls ls) (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwg (ex_ls ls) (raw_sxrel kid d) (JA.adbacc kid key_k lsf) pm =
@@ -2222,7 +2242,7 @@ and jit_write_fxrel (kid: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] key_k:
   ([@@@FStar.Attributes.monomorphize] fb: asn1_gen_items_lk) (fbr: bprel fbt) (pm: perm)
   ([@@@FStar.Attributes.monomorphize] wfb: jw fbr (JA.afbacc kid key_k lsf fb) pm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jres (raw_fxrel kid d fbr) (JA.afbacc kid key_k lsf fb) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jw (raw_fxrel kid d fbr) (JA.afbacc kid key_k lsf fb) pm =
@@ -2256,7 +2276,7 @@ and jit_write_fxrel (kid: asn1_id_t) (#[@@@FStar.Attributes.monomorphize] key_k:
 and jit_write_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: idesc ls t)
   (u: squash (In.supported_items ls /\ asn1_sequence_k_wf i /\ Conf.wf_items ls)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresg (ex_items ls) (raw_irel false d) (L.iacc (In.twins_of ls)) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwg (ex_items ls) (raw_irel false d) (L.iacc (In.twins_of ls)) pm =
@@ -2320,7 +2340,7 @@ and jit_write_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attrib
 and jit_write_set_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.Attributes.monomorphize] ls: asn1_gen_items_l i) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: idesc ls t)
   (u: squash (In.supported_items ls /\ asn1_set_k_wf i /\ Conf.wf_items ls)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jressg (ex_items ls) (raw_irel true d) (In.twins_of ls) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwsg (ex_items ls) (raw_irel true d) (In.twins_of ls) pm =
@@ -2383,7 +2403,7 @@ and jit_write_set_irel (#[@@@FStar.Attributes.monomorphize] i: _) (#[@@@FStar.At
 and jit_write_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] dc: _) (#[@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s dc) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: ddesc dk t)
   (u: squash (In.supported_dec dk /\ Conf.wf_dec dk)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresg (ex_dec dk) (raw_drel d) (dacc dk) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwg (ex_dec dk) (raw_drel d) (dacc dk) pm =
@@ -2432,7 +2452,7 @@ and jit_write_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
 and jit_write_arel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] k: asn1_k s) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: adesc k t)
   (u: squash (In.supported_k k /\ Conf.wf k)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresg (ex_k k) (raw_arel d) (kacc k) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwg (ex_k k) (raw_arel d) (kacc k) pm =
@@ -2453,7 +2473,7 @@ and jit_write_arel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
     jit_iff raw_slice (raw_arel d) () (kacc k) (kacc k) (fun _ -> ()) (fun _ -> ()) pm
       (jit_pre raw_slice (kacc k) (kacc k) (fun _ -> ()) pm
         (JT.pc_slice (In.validate_k ASN1_ANY_ILC ()) JT.ptrue (kacc k) (fun _ -> ()) pm)
-        (RW.raw_write_slice pm)))
+        (SK.sw_slice pm)))
   | D_VIEW d' ty view mk law ->
     rel_view_equiv d' ty view mk law;
     jit_cast (ex_k k) () (raw_arel d) (kacc k) pm (
@@ -2469,7 +2489,7 @@ and jit_write_arel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
 and jit_write_lcrel (#[@@@FStar.Attributes.monomorphize] lc: list (asn1_id_t & asn1_content_k)) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] d: lcdesc lc t)
   (u: squash (lc_ok lc /\ Conf.wf_lc lc)) (pm: perm)
   (x': t) (#x: Ghost.erased SB.bytes)
-  (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+  (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 : Tot (jresg (ex_lc lc) (raw_lcrel d) (L.lacc lc) pm x' x out pos v p)
   (decreases d)
 = [@inline_let] let vf : jwg (ex_lc lc) (raw_lcrel d) (L.lacc lc) pm =
@@ -2513,6 +2533,29 @@ let jit_post_r (ex: bool) (x: SB.bytes) (a: prop) (p: nat) (v: SB.bytes) (res: j
   ~ (JIT_RETRY? res)
 
 inline_for_extraction
+let jwrs (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) =
+  (x': t) -> (#x: Ghost.erased SB.bytes) ->
+  (out: SK.sink) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
+  stt jit_result
+    (SK.sbuf out v ** pts_to pos p ** r pm x' x ** pure (SZ.v p <= Seq.length v))
+    (fun res -> exists* v' p' . SK.sbuf out v' ** pts_to pos p' ** r pm x' x **
+      pure (jit_post_r ex x (a x) (SZ.v p) v res (SZ.v p') v'))
+
+inline_for_extraction
+fn jit_root (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a pm)
+: jwrs ex #t r a pm
+= (x': t) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  let res = w x' #x out pos;
+  match res {
+    JIT_RETRY -> { JIT_INVALID }
+    _ -> { res }
+  }
+}
+
+(* Writing to an output buffer *)
+
+inline_for_extraction
 let jwr (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) =
   (x': t) -> (#x: Ghost.erased SB.bytes) ->
   (out: S.slice U8.t) -> (pos: ref SZ.t) -> (#v: Ghost.erased SB.bytes) -> (#p: Ghost.erased SZ.t) ->
@@ -2522,22 +2565,60 @@ let jwr (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) =
       pure (jit_post_r ex x (a x) (SZ.v p) v res (SZ.v p') v'))
 
 inline_for_extraction
-fn jit_root (#ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a pm)
+fn jit_wet (#ex: bool) (#t: Type0) (#r: bprel t) (#a: SB.bytes -> prop) (#pm: perm) (w: jwrs ex r a pm)
 : jwr ex #t r a pm
 = (x': t) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
 {
-  let res = w x' #x out pos;
-  match res {
-    JIT_RETRY -> { JIT_INVALID }
-    _ -> { res }
-  }
+  SK.sbuf_wet_intro (SK.Wet out) out;
+  let res = w x' #x (SK.Wet out) pos;
+  SK.sbuf_wet_elim (SK.Wet out) out;
+  res
+}
+
+(* Computing the size of the encoding (and checking it as when writing),
+   within a budget: on success, the size is subtracted from the budget;
+   JIT_NO_SPACE if the encoding is larger than the budget *)
+
+let jit_size_post (ex: bool) (x: SB.bytes) (a: prop) (b: nat) (res: jit_result) (b': nat) : prop =
+  (res == JIT_OK ==> (a /\ b' + Seq.length x == b)) /\
+  (res == JIT_NO_SPACE ==> Seq.length x > b) /\
+  (res == JIT_INVALID ==> (ex == true ==> ~ a)) /\
+  ~ (JIT_RETRY? res)
+
+inline_for_extraction
+let jsr (ex: bool) (#t: Type0) (r: bprel t) (a: SB.bytes -> prop) (pm: perm) =
+  (x': t) -> (#x: Ghost.erased SB.bytes) ->
+  (budget: ref SZ.t) -> (#b: Ghost.erased SZ.t) ->
+  stt jit_result
+    (pts_to budget b ** r pm x' x)
+    (fun res -> exists* b' . pts_to budget b' ** r pm x' x **
+      pure (jit_size_post ex x (a x) (SZ.v b) res (SZ.v b')))
+
+inline_for_extraction
+fn jit_dry (#ex: bool) (#t: Type0) (#r: bprel t) (#a: SB.bytes -> prop) (#pm: perm) (w: jwrs ex r a pm)
+: jsr ex #t r a pm
+= (x': t) (#x: Ghost.erased SB.bytes) (budget: ref SZ.t) (#b: Ghost.erased SZ.t)
+{
+  fold (SK.sbuf SK.Dry (Seq.create (SZ.v b) 0uy));
+  let res = w x' #x SK.Dry budget #(Seq.create (SZ.v b) 0uy);
+  with v' . assert (SK.sbuf SK.Dry v');
+  unfold (SK.sbuf SK.Dry v');
+  res
 }
 
 inline_for_extraction
 let jit_writer_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (RW.raw_ok k)) (pm: perm) : jwr (ex_k k) (raw_arel d) (kacc k) pm =
-  jit_root (raw_arel d) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d () pm x' #x out pos #v #p)
+  jit_wet (jit_root (raw_arel d) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d () pm x' #x out pos #v #p))
+
+inline_for_extraction
+let jit_size_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (RW.raw_ok k)) (pm: perm) : jsr (ex_k k) (raw_arel d) (kacc k) pm =
+  jit_dry (jit_root (raw_arel d) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel d () pm x' #x out pos #v #p))
 
 (* The legacy writer: nested pairs and `either` *)
 inline_for_extraction
 let jit_writer (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm) : jwr (ex_k k) (raw_rel k) (kacc k) pm =
-  jit_root (raw_rel k) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel (legacy_adesc k) () pm x' #x out pos #v #p)
+  jit_wet (jit_root (raw_rel k) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel (legacy_adesc k) () pm x' #x out pos #v #p))
+
+inline_for_extraction
+let jit_size (#s: _) (k: asn1_k s) (u: squash (RW.raw_ok k)) (pm: perm) : jsr (ex_k k) (raw_rel k) (kacc k) pm =
+  jit_dry (jit_root (raw_rel k) (kacc k) pm (fun x' #x out pos #v #p -> jit_write_arel (legacy_adesc k) () pm x' #x out pos #v #p))

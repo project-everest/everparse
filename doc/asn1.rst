@@ -216,6 +216,10 @@ For each root type ``T``:
    ASN1_Pulse_JitWriter_jit_result
    write_T_typed(T x, Pulse_Lib_Slice_slice__uint8 out, size_t *pos);
 
+   ASN1_Pulse_JitWriter_jit_result size_T(T x, size_t *budget);
+
+   ASN1_Pulse_JitWriter_jit_result size_T_typed(T x, size_t *budget);
+
 A byte buffer is a slice:
 
 .. code-block:: c
@@ -266,6 +270,26 @@ A byte buffer is a slice:
   ANY nor ANY DEFINED BY with a fallback (for those, ``JIT_INVALID`` is
   only possible because of the strict checks above, and does not happen
   on values obtained from the typed API in practice).
+
+``size_T``
+  Computes the size of the encoding that ``write_T`` would write, with the
+  same checks and the same results: it is the same C code as ``write_T``,
+  run on a *dry* output that only counts bytes (``ASN1.Pulse.Sink``).
+  ``*budget`` plays the role of ``*pos``:
+
+  * ``ASN1_PULSE_JITWRITER_JIT_OK``: the size of the encoding was
+    subtracted from ``*budget``;
+  * ``ASN1_PULSE_JITWRITER_JIT_INVALID``: as for ``write_T``;
+  * ``ASN1_PULSE_JITWRITER_JIT_NO_SPACE``: the encoding is larger than
+    ``*budget`` (``x`` may also be invalid, as for ``write_T``).
+
+  It stops as soon as the budget is exhausted, so its time is bounded by
+  the budget even on huge lists. To get the size, start with
+  ``*budget == SIZE_MAX`` and compute ``SIZE_MAX - *budget``.
+
+``size_T_typed``
+  The same C code as ``size_T``, with the F\* precondition of
+  ``write_T_typed``.
 
 Here is a round trip with ``Msg``:
 
@@ -530,6 +554,11 @@ instantiated with it.
    * - ``write_typed_d`` (``write_T_typed``)
      - ``arel false d pm x v`` and ``encodable k v``
      - ``JIT_OK``, having written ``asn1_enc k v``, or ``JIT_NO_SPACE``
+   * - ``size_raw_d`` (``size_T``), ``size_typed_d`` (``size_T_typed``)
+     - as ``write_T``, ``write_T_typed``, with a budget ``b`` instead of
+       an output buffer
+     - the same result as the writer on a buffer of size ``b``; on
+       ``JIT_OK``, the budget is decreased by the size of ``asn1_enc k v``
    * - ``RelKeep.to_writer d pm x v`` (ghost)
      - ``arel true d pm x v``
      - ``arel false d pm x v``, and a trade back to ``arel true``

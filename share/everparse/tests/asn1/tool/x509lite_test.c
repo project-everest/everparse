@@ -65,6 +65,9 @@ static void write_cert_ok(const char *name, Cert x, const uint8_t *exp, size_t n
   ASN1_Pulse_JitWriter_jit_result r = write_Cert(x, sl(out, BUF), &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - n && memcmp(out + pos, exp, n) == 0,
         "%s: write: expected the DER bytes (result %d, %zu bytes)", name, (int)r, BUF - pos);
+  size_t b = 1000;
+  r = size_Cert(x, &b);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == n, "%s: size: expected %zu (result %d, %zu)", name, n, (int)r, 1000 - b);
 }
 
 static void write_ext_ok(const char *name, Extension x, const uint8_t *exp, size_t n) {
@@ -73,6 +76,9 @@ static void write_ext_ok(const char *name, Extension x, const uint8_t *exp, size
   ASN1_Pulse_JitWriter_jit_result r = write_Extension(x, sl(out, BUF), &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - n && memcmp(out + pos, exp, n) == 0,
         "%s: write: expected the DER bytes (result %d, %zu bytes)", name, (int)r, BUF - pos);
+  size_t b = 1000;
+  r = size_Extension(x, &b);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == n, "%s: size: expected %zu (result %d, %zu)", name, n, (int)r, 1000 - b);
 }
 
 static void test_cert(void) {

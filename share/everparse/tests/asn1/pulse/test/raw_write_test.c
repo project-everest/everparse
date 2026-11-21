@@ -14,7 +14,9 @@
    Each test is run on both `jit_<name>`, the JIT writer of raw bytes
    (ASN1.Pulse.JitWriter), and `jit_raw_<name>`, the same JIT writer seen
    as a writer of raw values (ASN1.Pulse.RawJitWriter), specified against
-   `check_ser`. */
+   `check_ser`, and on `size_<name>`, the size computation (the same JIT
+   writer on a dry sink, ASN1.Pulse.JitWriter.jit_size), which must agree
+   with the writer. */
 #include "ASN1.Pulse.RawWriteTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -74,12 +76,45 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
     }                                                                         \
   } while (0)
 
+/* Size computation `size_<name>` (the JIT writer on a dry sink): with a
+   large budget, JIT_OK and the size `n` subtracted; with a budget of
+   exactly `n`, JIT_OK and 0 left; with `n - 1`, JIT_NO_SPACE */
+#define SIZE_OK(name, x, n) do {                                              \
+    size_t b_ = 1000;                                                         \
+    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_); \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_OK || 1000 - b_ != (n)) {              \
+      printf("%s:%d: size_%s: expected OK %zu, got %s %zu\n", __FILE__, __LINE__, #name, (size_t)(n), jit_name(r_), 1000 - b_); fails++; \
+    }                                                                         \
+    b_ = (n);                                                                 \
+    r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_);                         \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_OK || b_ != 0) {                       \
+      printf("%s:%d: size_%s: exact budget: expected OK, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
+    if ((n) > 0) {                                                            \
+      b_ = (n) - 1;                                                           \
+      r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_);                       \
+      if (r_ != ASN1_PULSE_JITWRITER_JIT_NO_SPACE) {                          \
+        printf("%s:%d: size_%s: short budget: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+      }                                                                       \
+    }                                                                         \
+  } while (0)
+
+#define SIZE_INVALID(name, x) do {                                            \
+    size_t b_ = 1000;                                                         \
+    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_); \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_INVALID) {                             \
+      printf("%s:%d: size_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
+  } while (0)
+
 #define OK(name, x, ...) do {                                                 \
     OK1(jit, name, x, __VA_ARGS__); OK1(jit_raw, name, x, __VA_ARGS__);       \
+    { uint8_t e_[] = __VA_ARGS__; SIZE_OK(name, x, sizeof(e_)); }             \
   } while (0)
 
 #define INVALID(name, x) do {                                                 \
     INVALID1(jit, name, x); INVALID1(jit_raw, name, x);                       \
+    SIZE_INVALID(name, x);                                                    \
   } while (0)
 
 #define SMALL(n) ((ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = (n) } })
