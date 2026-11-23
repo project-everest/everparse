@@ -792,12 +792,46 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
   }
 }
 
+(* The client's callback may write anything to its output pointer, even when
+   it fails. So it writes to a local, copied to the destination only on
+   success: the destination is then unchanged if `field_ptr_after` fails. *)
+inline_for_extraction
+noextract
+fn field_ptr_after_via_local
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (sz: FStar.UInt64.t)
+  (w: R.ref ___PUINT8)
+  (sl_base: base_t)
+  (sl_len: len_t)
+  (sl_pos: pos_t)
+  (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
+  (contents_sl: Ghost.erased (Seq.seq U8.t))
+  (v_sl: Ghost.erased (Seq.seq U8.t))
+requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** AB.peep_world pw
+returns res: bool
+ensures R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0) ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (res == Some? (AS.peep_head pw))
+{
+  let mut tmp = NP.null_ptr;
+  let ok = field_ptr_after_wrapped sz tmp sl_base sl_len sl_pos _ pw contents_sl v_sl;
+  if ok {
+    let q = !tmp;
+    w := q;
+    rewrite (R.pts_to w #1.0R q) as (R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0));
+    true
+  } else {
+    rewrite (R.pts_to w #1.0R w0) as (R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0));
+    false
+  }
+}
+
 noextract
 inline_for_extraction
 let field_ptr_after_fn
 : AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern
 = fun _extra sz w sl_base sl_len (sl_pos: pos_t) w0 pw contents_sl v_sl ->
-    field_ptr_after_wrapped #_extra sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
+    field_ptr_after_via_local #_extra sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
 
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract

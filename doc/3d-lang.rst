@@ -730,9 +730,13 @@ calls to the client's ``EverParseStreamPeep`` callback, ``None`` if it
 fails and ``Some p`` if it returns pointer ``p``. It is stored in the
 action state under the reserved key ``"#world"``, so the generated state
 dictionaries of the types that use ``field_ptr_after`` include it. Each
-``field_ptr_after`` consumes one outcome: it fails if the outcome is
-``None``, and otherwise writes ``p`` to the destination pointer (or, with
-an output-type field, calls the setter, with its spec as above). As
+``field_ptr_after`` consumes one outcome: it returns ``false`` and leaves
+the destination unchanged if the outcome is ``None``, and otherwise
+returns ``true`` and writes ``p`` to the destination pointer (or, with an
+output-type field, calls the setter, with its spec as above). Since the
+callback may write to its output pointer even when it fails, it writes to
+a local copied to the destination only on success. Thus, the action
+state after ``field_ptr_after`` is fully specified in both cases. As
 for probes, nothing is assumed about the C callback; the trusted
 assumptions are that a fresh peep world can always be introduced
 (``EverParse3d.Actions.Base.prophesy_peep_world``) and that it is
@@ -751,7 +755,8 @@ fields, ``*out`` ends up holding the second integer; and that probing
 a pointer to a 32-bit integer fails exactly when the probe fails or the
 copied bytes do not start with a 32-bit integer; and that
 ``field_ptr_after`` succeeds exactly when the head of the peep world is
-``Some p``, in which case it writes ``p``.
+``Some p``, in which case it writes ``p``, and otherwise leaves the
+destination unchanged.
 
 Since ``as_vspec`` reads input bytes, the spec of the actions is also
 given in terms of the *parsed value*:

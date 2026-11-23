@@ -3000,7 +3000,7 @@ fn action_field_ptr_after
   with w . assert (pts_to write_to #1.0R w);
   with pw . assert (peep_world pw);
   let res = f _extra sz write_to sl_base sl_len sl_pos w pw contents_sl v_sl;
-  forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) _;
+  forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) (S.peep_result (S.peep_head pw) w);
   forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
   forevery_state_dict_prod_fold
     (state_dict_singleton name (pts_to write_to #1.0R))

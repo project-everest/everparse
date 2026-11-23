@@ -233,20 +233,21 @@ let probe_u32_correct
 (* Peep: `field_ptr_after` writing to the pointer stored under `name`. Whatever
    the client's C callback does, its outcome is the head of the peep world: the
    action succeeds exactly when the head is `Some p`, in which case `p` is
-   written and the world advances; otherwise, the action fails. *)
+   written; otherwise, the action fails and the pointer is unchanged. In both
+   cases, the world advances. *)
 let field_ptr_after_correct
   (name: string) (wstate: PM.ptr -> slprop) (pstate: S.peep_tape -> slprop)
   (sq: squash (forall x . ~ ((state_dict_singleton name wstate).state_p x /\ (state_dict_singleton S.world_key pstate).state_p x)))
   (e: S.aenv) (st: forevery_values (state_dict_prod (state_dict_singleton name wstate) (state_dict_singleton S.world_key pstate)))
 : Lemma (
     let w : S.peep_tape = mk_proj_value st (state_dict_singleton S.world_key pstate) () S.world_key in
-    match S.aspec_field_ptr_after name wstate pstate sq e st with
-    | S.SOk true s' ->
-      Some? (S.peep_head w) /\
-      s' == mk_prod_value
-        (mk_singleton_value name wstate (Some?.v (S.peep_head w)))
-        (mk_singleton_value S.world_key pstate (S.peep_tail w)) ()
-    | S.SResOnly false -> None? (S.peep_head w)
+    let v : PM.ptr = mk_proj_value st (state_dict_singleton name wstate) () name in
+    let next v' = mk_prod_value
+      (mk_singleton_value name wstate v')
+      (mk_singleton_value S.world_key pstate (S.peep_tail w)) () in
+    match S.aspec_field_ptr_after name wstate pstate sq e st, S.peep_head w with
+    | S.SOk true s', Some p -> s' == next p
+    | S.SOk false s', None -> s' == next v
     | _ -> False
   )
 = ()

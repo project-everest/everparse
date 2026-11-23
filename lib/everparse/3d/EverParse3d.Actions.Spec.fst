@@ -609,21 +609,26 @@ let peep_head (w: peep_tape) : option PM.ptr = w 0
 
 let peep_tail (w: peep_tape) : peep_tape = fun i -> w (i + 1)
 
+(* The value of the destination pointer after `field_ptr_after`: the pointer
+   returned by the Peep callback if it succeeded, unchanged otherwise. *)
+let peep_result (o: option PM.ptr) (v: PM.ptr) : Tot PM.ptr =
+  match o with
+  | None -> v
+  | Some p -> p
+
 (* `field_ptr_after` writing to the pointer stored under `name`. If it fails,
-   the pointer may have been modified. *)
+   the pointer is unchanged. *)
 let aspec_field_ptr_after
   (name: string) (wstate: PM.ptr -> Pulse.Lib.Core.slprop) (pstate: peep_tape -> Pulse.Lib.Core.slprop)
   (sq: squash (forall x . ~ ((state_dict_singleton name wstate).state_p x /\ (state_dict_singleton world_key pstate).state_p x)))
 : action_spec (state_dict_prod (state_dict_singleton name wstate) (state_dict_singleton world_key pstate)) bool
 = fun _ st ->
   let w : peep_tape = mk_proj_value st (state_dict_singleton world_key pstate) () world_key in
-  match peep_head w with
-  | None -> SResOnly false
-  | Some p ->
-    SOk true (mk_prod_value
-      (mk_singleton_value name wstate p)
-      (mk_singleton_value world_key pstate (peep_tail w))
-      ())
+  let v : PM.ptr = mk_proj_value st (state_dict_singleton name wstate) () name in
+  SOk (Some? (peep_head w)) (mk_prod_value
+    (mk_singleton_value name wstate (peep_result (peep_head w) v))
+    (mk_singleton_value world_key pstate (peep_tail w))
+    ())
 
 (* External actions and output setters (written in C) are specified by
    uninterpreted, lawless functions `spec` on the abstract values `vt` of their

@@ -393,11 +393,14 @@ fn field_ptr_after_fn
   (c v: Ghost.erased (Seq.seq U8.t))
 requires R.pts_to w w0 ** I.pts_to b len pos c v ** AB.peep_world pw
 returns res: bool
-ensures exists* w'. R.pts_to w w' ** I.pts_to b len pos c v **
+ensures R.pts_to w (AS.peep_result (AS.peep_head pw) w0) ** I.pts_to b len pos c v **
   AB.peep_world (AS.peep_tail pw) **
-  pure (AS.peep_head pw == (if res then Some w' else None))
+  pure (res == Some? (AS.peep_head pw))
 {
-  field_ptr_after_wrapped #extra sz w b len pos w0 pw c v
+  let res = field_ptr_after_wrapped #extra sz w b len pos w0 pw c v;
+  with w' . assert (R.pts_to w w');
+  rewrite (R.pts_to w w') as (R.pts_to w (AS.peep_result (AS.peep_head pw) w0));
+  res
 }
 
 [@@EverParse3d.Actions.Common.specialize_backend]

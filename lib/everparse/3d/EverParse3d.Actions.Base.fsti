@@ -1101,9 +1101,10 @@ let field_ptr_after_t
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt bool
     (pts_to write_to #1.0R w ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** peep_world pw)
-    (fun res -> exists* w' . pts_to write_to #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+    (fun res -> pts_to write_to #1.0R (S.peep_result (S.peep_head pw) w) **
+      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
       peep_world (S.peep_tail pw) **
-      pure (S.peep_head pw == (if res then Some w' else None)))
+      pure (res == Some? (S.peep_head pw)))
 
 noextract
 inline_for_extraction
