@@ -658,20 +658,18 @@ type, ``validator_of d eh "T" (def'_T ...)``, includes the ghost spec
 ``EverParse3d.Interpreter.as_vspec "T" (def'_T ...)``, of type
 ``EverParse3d.Actions.Spec.vspec d``. Given the input and the values of
 the action state (the ``mutable`` parameters) before validation, the spec
-returns one of:
+returns either:
 
 * ``VOk final``: validation succeeds, and ``final`` holds the values of
   the action state afterwards;
 
 * ``VErr``: validation fails (the data is ill-formed, or an action
   returned ``false``). The action state is then unspecified, since actions
-  may have run partially;
+  may have run partially.
 
-* ``VUnknown``: the result is not specified.
-
-So, beyond rejecting ill-formed data, the validator is now proven to
-accept well-formed data whenever the spec says the actions succeed, and to
-leave the action state as the spec says. Specs are ghost: the generated C
+The spec is exact: the validator succeeds if, and only if, the spec
+returns ``VOk``, and it then leaves the action state as the spec says. In
+particular, the spec returns ``VErr`` whenever the data is ill-formed. Specs are ghost: the generated C
 code is unchanged.
 
 The spec mirrors the validator: return, ``field_pos``, dereference,
@@ -713,8 +711,11 @@ state. Each probe-then-validate consumes one outcome
 pointer, whether the probe succeeded, and the bytes it copied. If the
 probe succeeds, the probed type is validated against its own spec on the
 copied bytes, so the spec reflects that the probed memory is read only
-once, even if it is concurrently modified. If that inner validation
-fails, the result is ``VErr`` but the action state is unspecified. The
+once, even if it is concurrently modified. If the probe or that inner
+validation fails, the result is ``VErr``. Since probe-then-validate can
+itself make validation fail, its spec is that of a *validating action*
+(``EverParse3d.Actions.Spec.vaction_spec``), which returns a validation
+result (``VOk`` or ``VErr``) rather than a boolean and a state. The
 probe functions themselves (written in C) are unchanged: the outcome
 they produce is whatever the prophecy says it is, so no assumption is
 made on their behavior. This relies on a trusted assumption: a fresh
@@ -770,8 +771,8 @@ well defined since all 3d parsers are injective. The two levels are
 related once and for all by
 ``EverParse3d.Interpreter.as_vspec_value_spec``: if the parser
 succeeds on the input with value ``v``, then the result of ``as_vspec``
-is determined by ``as_value_spec`` on ``v``; and if the parser fails,
-then the validator fails. So clients can reason about the actions of
+is that of ``as_value_spec`` on ``v``; and if the parser fails, then it
+is ``VErr``. So clients can reason about the actions of
 ``T`` purely in terms of its values, without reasoning about bytes (see
 ``EverParse3d.Actions.Spec.Test``).
 

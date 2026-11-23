@@ -42,6 +42,18 @@ val action
   (sp: S.action_spec extra_state a)
 : Type0
 
+(* A validating action: a boolean action whose failure makes validation fail
+   (e.g. a probe), so that its final action state need not be specified on
+   failure. *)
+inline_for_extraction noextract
+val vaction
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (extra_state: state_dict)
+  (use_error_handler: bool)
+  (sp: S.vaction_spec extra_state)
+: Type0
+
 inline_for_extraction noextract
 val validate_with_action_read
   (#base_t #len_t #pos_t: Type0)
@@ -489,20 +501,18 @@ val action_weaken
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
 : action #base_t #len_t #pos_t d2 a use_error_handler (S.aspec_weaken sf d2 d2_extends)
 
-(* Forget the spec of an action. Used for actions whose spec cannot be
-   expressed at the level of the interpreter's AST (external actions, probes),
-   so that they can be stored in the AST at a uniform spec. *)
 noextract
 inline_for_extraction
-val action_forget_spec
+val vaction_weaken
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#d: state_dict)
+      (#d1: state_dict)
       (#use_error_handler:bool)
-      (#a: Type)
-      (#sf: S.action_spec d a)
-      (f: action #base_t #len_t #pos_t d a use_error_handler sf)
-: action #base_t #len_t #pos_t d a use_error_handler S.aspec_unknown
+      (#sf: S.vaction_spec d1)
+      (f: vaction #base_t #len_t #pos_t d1 use_error_handler sf)
+      (d2: state_dict)
+      (d2_extends: squash (state_dict_weaken_prop d1 d2))
+: vaction #base_t #len_t #pos_t d2 use_error_handler (S.vaspec_weaken sf d2 d2_extends)
 
 noextract
 inline_for_extraction
@@ -778,6 +788,26 @@ val validate_with_dep_action
       (#sa: t -> S.action_spec extra_state bool)
       (a: (x: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
   : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_action p s sa)
+
+inline_for_extraction noextract
+val validate_with_dep_vaction
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+      (name: string)
+      (#nz:_)
+      (#k:parser_kind nz WeakKindStrongPrefix)
+      (#t:Type)
+      (#p:parser k t)
+      (#extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (#s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+      (r:leaf_reader #base_t #len_t #pos_t p)
+      (#sa: t -> S.vaction_spec extra_state)
+      (a: (x: t -> vaction #base_t #len_t #pos_t extra_state use_error_handler (sa x)))
+  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_vaction p s sa)
 
 inline_for_extraction noextract
 val validate____UINT8
@@ -1177,7 +1207,7 @@ val validate_nlist_constant_size_without_actions
 : validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_nlist false n n_is_const p s)
 
 (* The probe world: a prophecy of the outcomes of all future probes (see
-   `S.aspec_probe_then_validate`). It absorbs everything a probe depends on
+   `S.vaspec_probe_then_validate`). It absorbs everything a probe depends on
    but that is not modeled (the contents of the probed memory, concurrent
    modifications, allocation failures in the client's probe functions.)
 
@@ -1332,11 +1362,10 @@ val probe_then_validate
       (sq: squash (forall x .
         ~ (extra_state.state_p x /\
            (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest).state_p x)))
-: action #base_t #len_t #pos_t
+: vaction #base_t #len_t #pos_t
     (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
-    bool
     use_error_handler
-    (S.aspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
+    (S.vaspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
 
 inline_for_extraction noextract
 val validate_impos_no_read

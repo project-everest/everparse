@@ -82,6 +82,36 @@ let action
       pure (S.spec_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t sl_base) start_pos contents_sl v_sl) extra) res extra')
     )
 
+let vaction
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (extra_state: state_dict)
+  (use_error_handler: bool)
+  (sp: S.vaction_spec extra_state)
+=
+  ctxt: app_ctxt ->
+  error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit) ->
+  sl_base: base_t ->
+  sl_len: len_t ->
+  sl_pos: pos_t ->
+  contents_sl: Ghost.erased (Seq.seq U8.t) ->
+  v_sl: Ghost.erased (Seq.seq U8.t) ->
+  start_pos: U64.t ->
+  extra: forevery_values extra_state ->
+  stt bool
+    (exists* v_ctxt .
+      pts_to ctxt v_ctxt **
+      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      forevery_state extra_state extra **
+      pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
+    )
+    (fun res -> exists* v_ctxt' extra' .
+      pts_to ctxt v_ctxt' **
+      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      forevery_state extra_state extra' **
+      pure (S.vaction_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t sl_base) start_pos contents_sl v_sl) extra) res extra')
+    )
+
 module LP = LowParse.Spec.Base
 
 inline_for_extraction noextract
@@ -1149,15 +1179,13 @@ let parse_list_consumes_all
 
 (* The invariant of the loops of `validate_nlist` and `validate_list_up_to`
    with respect to their spec: the spec of the whole loop, started on [v1] with
-   state [x0], is either unknown or the spec of the rest of the loop, on [vcur]
-   with state [x]. *)
+   state [x0], is the spec of the rest of the loop, on [vcur] with state [x]. *)
 let list_fold_reaches
   (#d: state_dict) (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
   (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (vcur: Seq.seq LP.byte) (x: forevery_values d)
 : Tot prop
-= S.vspec_list_fold p s o contents v1 x0 == S.VUnknown \/
-  S.vspec_list_fold p s o contents v1 x0 == S.vspec_list_fold p s o contents vcur x
+= S.vspec_list_fold p s o contents v1 x0 == S.vspec_list_fold p s o contents vcur x
 
 let list_fold_step
   (ha: bool)
@@ -1603,15 +1631,16 @@ fn action_weaken
 
 noextract
 inline_for_extraction
-fn action_forget_spec
+fn vaction_weaken
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#[@@@erasable] d: state_dict)
+      (#d1: state_dict)
       (#use_error_handler:bool)
-      (#a: Type)
-      (#[@@@erasable] sf: S.action_spec d a)
-      (f: action #base_t #len_t #pos_t d a use_error_handler sf)
-: action #base_t #len_t #pos_t d a use_error_handler S.aspec_unknown
+      (#[@@@erasable] sf: S.vaction_spec d1)
+      (f:vaction #base_t #len_t #pos_t d1 use_error_handler sf)
+      (d2: state_dict)
+      (d2_extends: squash (state_dict_weaken_prop d1 d2))
+: vaction #base_t #len_t #pos_t d2 use_error_handler (S.vaspec_weaken sf d2 d2_extends)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1623,7 +1652,13 @@ fn action_forget_spec
   (start_pos: _)
   (extra: _)
 {
-  f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
+  let d3 = state_dict_weaken_sub d2 d1;
+  with extra2 . rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
+  forevery_state_dict_prod_unfold () _;
+  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
+  forevery_state_dict_prod_fold d1 d3 ();
+  with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
+  res
 }
 
 noextract
@@ -2382,6 +2417,51 @@ fn validate_with_dep_action
   }
 }
 
+inline_for_extraction noextract
+fn validate_with_dep_vaction
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+      (name: string)
+      (#nz:_)
+      (#k:parser_kind nz WeakKindStrongPrefix)
+      (#t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+      (r:leaf_reader #base_t #len_t #pos_t p)
+      (#[@@@erasable] sa: t -> S.vaction_spec extra_state)
+      (a:(x_: t -> vaction #base_t #len_t #pos_t extra_state use_error_handler (sa x_)))
+  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_vaction p s sa)
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  if (res = validator_success) {
+    let [@@@rename_let ("" ^ camel_case name)] field_value = r name sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+    if (action_result) {
+      validator_success
+    } else {
+      validator_error_action_failed
+    }
+  } else {
+    res
+  }
+}
+
 #pop-options
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3030,15 +3110,14 @@ fn validate_list
       (#[@@@erasable] t:Type)
       (#[@@@erasable] p:parser k t)
       (#[@@@erasable] extra_state: state_dict)
-      (#ha:bool)
       (#use_error_handler:bool)
       (#[@@@erasable] s: S.vspec extra_state)
-      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
+      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler s)
 : validate_with_action_read
     #base_t #len_t #pos_t #inst
     #false #WeakKindConsumesAll
     #(LPL.parse_list_kind k.LP.parser_kind_injective)
-    (LPL.parse_list p) extra_state ha use_error_handler (S.vspec_default ha #false #WeakKindConsumesAll #(LPL.parse_list_kind k.LP.parser_kind_injective) (LPL.parse_list p))
+    (LPL.parse_list p) extra_state false use_error_handler (S.vspec_of_parser #extra_state #false #WeakKindConsumesAll #(LPL.parse_list_kind k.LP.parser_kind_injective) (LPL.parse_list p))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3065,8 +3144,8 @@ fn validate_list
     forevery_state extra_state extra' **
     pure (
       vcur `I.seq_is_suffix_of` v_sl /\
-      (vres == validator_error_action_failed ==> ha) /\
-      (not ha ==> extra' == extra) /\
+      ~ (vres == validator_error_action_failed) /\
+      extra' == extra /\
       (is_validation_error vres ==> None? (LP.parse (LPL.parse_list p) v_sl)) /\
       (vres =!= validator_success ==> vstop == true) /\
       (vres == validator_success ==>
@@ -3196,16 +3275,14 @@ let string_fold_reaches
   (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (vcur: Seq.seq LP.byte) (x: forevery_values d)
 : Tot prop
-= S.vspec_string_fold p terminator s o contents v1 x0 == S.VUnknown \/
-  S.vspec_string_fold p terminator s o contents v1 x0 == S.vspec_string_fold p terminator s o contents vcur x
+= S.vspec_string_fold p terminator s o contents v1 x0 == S.vspec_string_fold p terminator s o contents vcur x
 
 let string_fold_ended
   (#d: state_dict) (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
   (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
   (x: forevery_values d)
 : Tot prop
-= S.vspec_string_fold p terminator s o contents v1 x0 == S.VUnknown \/
-  S.vspec_string_fold p terminator s o contents v1 x0 == S.VOk x
+= S.vspec_string_fold p terminator s o contents v1 x0 == S.VOk x
 
 let string_fold_step
   (ha: bool)
@@ -3789,11 +3866,10 @@ fn probe_then_validate
       ([@@@erasable] sq: squash (forall x .
         ~ (extra_state.state_p x /\
            (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest).state_p x)))
-: action #base_t #len_t #pos_t
+: vaction #base_t #len_t #pos_t
     (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
-    bool
     use_error_handler
-    (S.aspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
+    (S.vaspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
 =
   (ctxt: _)
   (error_handler_fn: _)

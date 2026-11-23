@@ -149,9 +149,9 @@ let smoke_probe_then_validate
   (probe: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst unit true false false)
   (sq: squash (forall x .
     ~ (d.state_p x /\ (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest).state_p x)))
-: A.action #B.base_t #B.len_t #B.pos_t
+: A.vaction #B.base_t #B.len_t #B.pos_t
     (state_dict_prod d (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest))
-    bool false _
+    false _
 = A.probe_then_validate B.error_handler_macro "T" "f" v src as_u64 true "smoke_cb" dest init 0uL probe sq
 
 (* The interpreter, at the `buffer` backend: build a small `typ` and run it

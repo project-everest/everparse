@@ -5,15 +5,14 @@ module EverParse3d.Actions.Spec
    A validator for a parser `p` with action state `d` (a `state_dict`) is
    indexed by a `vspec d`: a ghost function that, given the input and the
    *values* of the action state before validation, says whether validation
-   succeeds (`VOk`, along with the final values of the action state), fails
-   (`VErr`), or is left unspecified (`VUnknown`, e.g. when it depends on an
-   external action or a probe).
+   succeeds (`VOk`, along with the final values of the action state) or fails
+   (`VErr`). On failure, the final values of the action state are not
+   specified, since actions may have been partially executed.
 
    Likewise, an action is indexed by an `action_spec d a`: given the position
    of the field it is attached to and the values of the action state, it
    returns the result of the action along with the final values of the action
-   state (`SOk`), only the result (`SResOnly`, when the final state is
-   unspecified), or `SUnknown`.
+   state (`SOk`).
 
    The spec combinators below mirror the control flow of the validator
    combinators of `EverParse3d.Actions.Base` exactly, including their
@@ -63,7 +62,6 @@ noeq
 type vres (d: state_dict) =
 | VOk: (final: forevery_values d) -> vres d
 | VErr: vres d
-| VUnknown: vres d
 
 let vspec (d: state_dict) : Type0 =
   vinput -> forevery_values d -> GTot (vres d)
@@ -75,7 +73,6 @@ let vres_rel (#d: state_dict) (r: vres d) (res: U8.t) (final: forevery_values d)
   match r with
   | VOk final' -> res == validator_success /\ final == final'
   | VErr -> ~ (res == validator_success)
-  | VUnknown -> True
 
 (* The environment of an action: the position at which the field it is
    attached to starts, and the origin of the input (see `vinput`). *)
@@ -93,8 +90,6 @@ let venv (i: vinput) : GTot aenv = { a_start = vpos i; a_origin = i.origin }
 noeq
 type spec_res (d: state_dict) (a: Type0) =
 | SOk: (res: a) -> (final: forevery_values d) -> spec_res d a
-| SResOnly: (res: a) -> spec_res d a (* the result is known, but not the final state *)
-| SUnknown: spec_res d a
 
 let action_spec (d: state_dict) (a: Type0) : Type0 =
   aenv -> forevery_values d -> GTot (spec_res d a)
@@ -102,8 +97,6 @@ let action_spec (d: state_dict) (a: Type0) : Type0 =
 let spec_res_rel (#d: state_dict) (#a: Type0) (r: spec_res d a) (res: a) (final: forevery_values d) : Tot prop =
   match r with
   | SOk res' final' -> res == res' /\ final == final'
-  | SResOnly res' -> res == res'
-  | SUnknown -> True
 
 (* The environment of an action attached to a field that started at `i` and
    that consumed `n` bytes. *)
@@ -114,23 +107,16 @@ let aenv_of (i: vinput) (n: nat { n <= Seq.length i.rest }) : GTot aenv = {
 
 (** Action specs *)
 
-let aspec_unknown (#d: state_dict) (#a: Type0) : action_spec d a =
-  fun _ _ -> SUnknown
-
 let aspec_return (#d: state_dict) (#a: Type0) (x: a) : action_spec d a =
   fun _ s -> SOk x s
 
 let aspec_bind (#d: state_dict) (#a #b: Type0) (f: action_spec d a) (g: a -> action_spec d b) : action_spec d b =
   fun e s -> match f e s with
   | SOk x s' -> g x e s'
-  | SResOnly _ -> SUnknown
-  | SUnknown -> SUnknown
 
 let aspec_seq (#d: state_dict) (#a #b: Type0) (f: action_spec d a) (g: action_spec d b) : action_spec d b =
   fun e s -> match f e s with
   | SOk _ s' -> g e s'
-  | SResOnly _ -> SUnknown
-  | SUnknown -> SUnknown
 
 let aspec_ite (#d: state_dict) (#a: Type0) (guard: bool)
   (then_: squash (guard == true) -> action_spec d a)
@@ -215,8 +201,6 @@ let aspec_weaken
 : action_spec d2 a
 = fun e s2 -> match f e (mk_proj_value s2 d1 sq) with
   | SOk x s1' -> SOk x (weaken_update d1 d2 sq s2 s1')
-  | SResOnly x -> SResOnly x
-  | SUnknown -> SUnknown
 
 let aspec_call
   (#d': state_dict) (#a: Type0) (f: action_spec d' a)
@@ -227,13 +211,8 @@ let aspec_call
 : action_spec d a
 = fun e s -> match f e (state_dict_rename_values_call d d' rf rg s) with
   | SOk x s' -> SOk x (state_dict_rename_values_return d d' rf rg s s')
-  | SResOnly x -> SResOnly x
-  | SUnknown -> SUnknown
 
 (** Validator specs *)
-
-let vspec_unknown (#d: state_dict) : vspec d =
-  fun _ _ -> VUnknown
 
 (* The spec of a validator without actions: it succeeds iff the parser
    succeeds, and leaves the action state unchanged. *)
@@ -242,20 +221,12 @@ let vspec_of_parser (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parse
   | Some _ -> VOk s
   | None -> VErr
 
-(* The spec of a validator about which we know nothing but whether it has
-   actions. Only used by `validate_list`, which is never used with actions. *)
-let vspec_default (#d: state_dict) (ha: bool) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type) (p: P.parser k t) : vspec d =
-  if ha then vspec_unknown else vspec_of_parser p
-
 (* The result of running an action that returns a boolean, used as a
    validation result. *)
 let vres_of_action (#d: state_dict) (r: spec_res d bool) (k: forevery_values d -> GTot (vres d)) : GTot (vres d) =
   match r with
   | SOk true s -> k s
   | SOk false _ -> VErr
-  | SResOnly true -> VUnknown
-  | SResOnly false -> VErr
-  | SUnknown -> VUnknown
 
 let vspec_with_success_action
   (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type) (p: P.parser k t)
@@ -265,7 +236,7 @@ let vspec_with_success_action
   | VOk x1 ->
     begin match P.parse p i.rest with
     | Some (_, n) -> vres_of_action (a (aenv_of i n) x1) VOk
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -277,7 +248,7 @@ let vspec_pair_slow
   | VOk x1 ->
     begin match P.parse p1 i.rest with
     | Some (_, n) -> s2 (vadvance i n) x1
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -289,7 +260,7 @@ let vspec_dep_pair
   | VOk x1 ->
     begin match P.parse p1 i.rest with
     | Some (v, n) -> s2 v (vadvance i n) x1
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -301,7 +272,7 @@ let vspec_dep_pair_with_action
   | VOk x1 ->
     begin match P.parse p1 i.rest with
     | Some (v, n) -> vres_of_action (a v (aenv_of i n) x1) (s2 v (vadvance i n))
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -331,7 +302,7 @@ let vspec_dep_pair_with_refinement_total_zero
 : vspec d
 = fun i x -> match P.parse p1 i.rest with
   | Some (v, n) -> vspec_refine_then f a s2 i v n x
-  | None -> VUnknown
+  | None -> VErr
 
 let vspec_dep_pair_with_refinement_slow
   (#d: state_dict) (#nz1: bool) (#k1: P.parser_kind nz1 P.WeakKindStrongPrefix)
@@ -344,7 +315,7 @@ let vspec_dep_pair_with_refinement_slow
   | VOk x1 ->
     begin match P.parse p1 i.rest with
     | Some (v, n) -> vspec_refine_then f a s2 i v n x1
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -375,7 +346,7 @@ let vspec_filter
         | None -> VOk x1
         | Some a -> vres_of_action (a v (aenv_of i n) x1) VOk
       else VErr
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -387,7 +358,7 @@ let vspec_with_dep_action
   | VOk x1 ->
     begin match P.parse p i.rest with
     | Some (v, n) -> vres_of_action (a v (aenv_of i n) x1) VOk
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -404,7 +375,6 @@ let vspec_weaken
 = fun i x2 -> match s i (mk_proj_value x2 d1 sq) with
   | VOk x1' -> VOk (weaken_update d1 d2 sq x2 x1')
   | VErr -> VErr
-  | VUnknown -> VUnknown
 
 let vspec_call
   (#d': state_dict) (s: vspec d')
@@ -416,7 +386,6 @@ let vspec_call
 = fun i x -> match s i (state_dict_rename_values_call d d' rf rg x) with
   | VOk x' -> VOk (state_dict_rename_values_return d d' rf rg x x')
   | VErr -> VErr
-  | VUnknown -> VUnknown
 
 let vspec_t_exact
   (#d: state_dict) (n: U32.t) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type) (p: P.parser k t)
@@ -429,7 +398,7 @@ let vspec_t_exact
   | VOk x' ->
     begin match P.parse p (Seq.slice i.rest 0 (U32.v n)) with
     | Some (_, m) -> if (m <: nat) = U32.v n then VOk x' else VErr
-    | None -> VUnknown
+    | None -> VErr
     end
   | r -> r
 
@@ -460,8 +429,8 @@ let rec vspec_list_fold
     | Some (_, n) ->
       if n > 0
       then vspec_list_fold p s o contents (Seq.slice rest n (Seq.length rest)) x'
-      else VUnknown
-    | None -> VUnknown
+      else VErr
+    | None -> VErr
     end
   | r -> r
 
@@ -497,8 +466,8 @@ let rec vspec_string_fold
       then VOk x'
       else if n > 0
       then vspec_string_fold p terminator s o contents (Seq.slice rest n (Seq.length rest)) x'
-      else VUnknown
-    | None -> VUnknown
+      else VErr
+    | None -> VErr
     end
   | r -> r
 
@@ -567,18 +536,51 @@ let probe_vinput (o: probe_outcome) : vinput = {
   origin = o.p_origin;
 }
 
-(* The spec of `probe_then_validate`. The action state is that of the probed
-   type, `d`, along with the probe tape of the copy buffer, stored under
-   `name`. Each probe consumes one outcome of the tape, whatever it does
-   (including a null pointer accepted without probing.) Then, if the probe
-   succeeded, the probed type is validated on the copied bytes: this is
-   double-fetch freedom. If that validation fails, its partial effect on the
-   action state is unspecified. *)
-let aspec_probe_then_validate
+(* A validating action: an action whose failure makes validation fail, and
+   which is only ever run as the last step of the validation of a field (so
+   its final action state need not be specified on failure.) *)
+let vaction_spec (d: state_dict) : Type0 =
+  aenv -> forevery_values d -> GTot (vres d)
+
+(* How the result of a validating action relates to its spec. *)
+let vaction_res_rel (#d: state_dict) (r: vres d) (res: bool) (final: forevery_values d) : Tot prop =
+  match r with
+  | VOk final' -> res == true /\ final == final'
+  | VErr -> res == false
+
+let vaspec_weaken
+  (#d1: state_dict) (f: vaction_spec d1)
+  (d2: state_dict) (sq: squash (state_dict_weaken_prop d1 d2))
+: vaction_spec d2
+= fun e s2 -> match f e (mk_proj_value s2 d1 sq) with
+  | VOk s1' -> VOk (weaken_update d1 d2 sq s2 s1')
+  | VErr -> VErr
+
+(* Validation of a field followed by a validating action depending on its
+   value. *)
+let vspec_with_dep_vaction
+  (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type) (p: P.parser k t)
+  (s: vspec d) (a: t -> vaction_spec d)
+: vspec d
+= fun i x -> match s i x with
+  | VOk x1 ->
+    begin match P.parse p i.rest with
+    | Some (v, n) -> a v (aenv_of i n) x1
+    | None -> VErr
+    end
+  | r -> r
+
+(* The spec of `probe_then_validate`, a validating action. The action state is
+   that of the probed type, `d`, along with the probe tape of the copy buffer,
+   stored under `name`. Each probe consumes one outcome of the tape, whatever
+   it does (including a null pointer accepted without probing.) Then, if the
+   probe succeeded, the probed type is validated on the copied bytes: this is
+   double-fetch freedom. *)
+let vaspec_probe_then_validate
   (#d: state_dict) (s: vspec d) (nullable: bool)
   (name: string) (state: probe_tape -> Pulse.Lib.Core.slprop)
   (sq: squash (forall x . ~ (d.state_p x /\ (state_dict_singleton name state).state_p x)))
-: action_spec (state_dict_prod d (state_dict_singleton name state)) bool
+: vaction_spec (state_dict_prod d (state_dict_singleton name state))
 = fun _ st ->
   let dc = state_dict_singleton name state in
   let sx : forevery_values d = mk_proj_value st d () in
@@ -586,13 +588,12 @@ let aspec_probe_then_validate
   let o = ptape_head w in
   let w' = mk_singleton_value name state (ptape_tail w) in
   if nullable && o.p_src = 0uL
-  then SOk true (mk_prod_value sx w' ())
+  then VOk (mk_prod_value sx w' ())
   else if not o.p_ok
-  then SOk false (mk_prod_value sx w' ())
+  then VErr
   else match s (probe_vinput o) sx with
-  | VOk sx' -> SOk true (mk_prod_value sx' w' ())
-  | VErr -> SResOnly false
-  | VUnknown -> SUnknown
+  | VOk sx' -> VOk (mk_prod_value sx' w' ())
+  | VErr -> VErr
 
 (** field_ptr_after *)
 

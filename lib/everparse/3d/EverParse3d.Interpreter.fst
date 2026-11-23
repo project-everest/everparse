@@ -50,8 +50,9 @@ module EverParse3d.Interpreter
    - `Action_probe_then_validate` is not a constructor of `atomic_action`.
      Storing the (necessarily different) `state_dict` of the probed type inside
      the AST would raise its universe. Instead, probe-then-validate is built by
-     the top-level smart constructor `t_probe_then_validate` and injected with
-     `Action_call`. This is also where the copy buffer shows up as its own
+     the top-level smart constructor `t_probe_then_validate` and injected,
+     already denoted, with `T_with_dep_vaction` (since the probed validation
+     may fail, its spec is a `S.vaction_spec`). This is also where the copy buffer shows up as its own
      keyed `state_dict` entry, disjoint from the state of the probed type: that
      is exactly what forbids a nested probe from reusing the same copy buffer.
 
@@ -734,8 +735,7 @@ type atomic_action
       atomic_action base_t len_t pos_t inst d use_error_handler false false unit
 
   (* The escape hatch: an already-denoted action at the ambient dictionary.
-     Both external actions (via `mk_action_binding`) and probe-then-validate
-     (via the `t_probe_then_validate` smart constructor) go through here. This
+     External actions (via `mk_action_binding`) go through here. This
      is what keeps `atomic_action` in universe 1: storing the callee's own
      `state_dict` in the AST would raise it. The spec of the action is stored
      along with it (`S.aspec_extern` for external actions.) *)
@@ -1083,6 +1083,20 @@ type typ
            action base_t len_t pos_t inst d use_error_handler b2 rt2 bool) ->
       typ base_t len_t pos_t inst d use_error_handler pk1 true false
 
+  (* A validating action depending on a leaf value: the action itself can
+     make validation fail (as for probe-then-validate), so its spec is a
+     `S.vaction_spec`, i.e. a full validator result. The action is stored
+     already denoted (as with `Action_call`), with its spec. *)
+  | T_with_dep_vaction:
+      fieldname:string ->
+      #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
+      #ha1:_ ->
+      head:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
+      #sp:(dtyp_as_type head -> S.vaction_spec d) ->
+      act:(typename:string -> x:dtyp_as_type head ->
+           A.vaction #base_t #len_t #pos_t #inst d use_error_handler (sp x)) ->
+      typ base_t len_t pos_t inst d use_error_handler pk1 true false
+
   | T_drop:
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #b:_ -> #ha:_ ->
@@ -1181,6 +1195,9 @@ let rec as_type
     | T_with_dep_action _ i _ ->
       dtyp_as_type i
 
+    | T_with_dep_vaction _ i _ ->
+      dtyp_as_type i
+
     | T_nlist _fn n _n_is_const _plconst t ->
       P.nlist n (as_type t)
 
@@ -1253,6 +1270,9 @@ let rec as_parser
       as_parser t
 
     | T_with_dep_action _ i a ->
+      dtyp_as_parser i
+
+    | T_with_dep_vaction _ i a ->
       dtyp_as_parser i
 
     | T_drop t ->
@@ -1363,6 +1383,9 @@ let rec as_vspec
     | T_with_dep_action _ i a ->
       S.vspec_with_dep_action (dtyp_as_parser i) (dtyp_as_vspec i) (fun x -> action_as_spec (a typename x))
 
+    | T_with_dep_vaction _ i #sp _ ->
+      S.vspec_with_dep_vaction (dtyp_as_parser i) (dtyp_as_vspec i) sp
+
     | T_drop t ->
       as_vspec typename t
 
@@ -1438,6 +1461,9 @@ let rec as_value_spec
 
     | T_with_dep_action _ i a ->
       VS.vs_with_dep_action (dtyp_as_value_spec i) (fun x -> action_as_spec (a typename x))
+
+    | T_with_dep_vaction _ i #sp _ ->
+      VS.vs_with_dep_vaction (dtyp_as_value_spec i) sp
 
     | T_drop t ->
       as_value_spec typename t
@@ -1660,6 +1686,13 @@ let rec as_vspec_wf
       dtyp_wf i;
       VS.wf_with_dep_action ha1 (dtyp_as_parser i) (dtyp_as_vspec i) (dtyp_as_value_spec i) (fun x -> action_as_spec (a typename x))
 
+    | T_with_dep_vaction fldname #_ #_ #ha1 i #sp a ->
+      assert_norm (as_parser (T_with_dep_vaction #base_t #len_t #pos_t #inst #d #use_error_handler fldname i #sp a) == dtyp_as_parser i);
+      assert_norm (as_vspec typename (T_with_dep_vaction #base_t #len_t #pos_t #inst #d #use_error_handler fldname i #sp a) == S.vspec_with_dep_vaction (dtyp_as_parser i) (dtyp_as_vspec i) sp);
+      assert_norm (as_value_spec typename (T_with_dep_vaction #base_t #len_t #pos_t #inst #d #use_error_handler fldname i #sp a) == VS.vs_with_dep_vaction (dtyp_as_value_spec i) sp);
+      dtyp_wf i;
+      VS.wf_with_dep_vaction ha1 (dtyp_as_parser i) (dtyp_as_vspec i) (dtyp_as_value_spec i) sp
+
     | T_drop t ->
       as_vspec_wf typename t
 
@@ -1684,8 +1717,8 @@ let rec as_vspec_wf
 #pop-options
 
 (* Client-facing corollary: if the parser succeeds on the input with value
-   `v`, then the spec of the validator is determined by the value-level spec
-   of `v`. (If the parser fails, then the validator fails.) *)
+   `v`, then the spec of the validator is the value-level spec of `v`; if
+   the parser fails, then the validator fails. *)
 let as_vspec_value_spec
           (#base_t #len_t #pos_t: Type0)
           (#inst: I.input_stream_inst base_t len_t pos_t)
@@ -1698,8 +1731,8 @@ let as_vspec_value_spec
   : Lemma
     (requires (VS.vinput_ok i))
     (ensures (match P.parse (as_parser t) i.S.rest with
-      | Some (v, _) -> as_vspec typename t i x == VS.vres_of_sres (as_value_spec typename t (S.venv i) v x)
-      | None -> True))
+      | Some (v, _) -> as_vspec typename t i x == as_value_spec typename t (S.venv i) v x
+      | None -> as_vspec typename t i x == S.VErr))
   = as_vspec_wf typename t;
     VS.vspec_wf_elim ha (as_parser t) (as_vspec typename t) (as_value_spec typename t) i x
 
@@ -1908,6 +1941,16 @@ let rec as_validator
             (dtyp_as_leaf_reader i)
             (fun x -> action_as_action (a typename x)))
 
+    | T_with_dep_vaction fldname i #sp a ->
+      assert_norm (as_type (T_with_dep_vaction #base_t #len_t #pos_t #inst #d #use_error_handler fldname i #sp a) == dtyp_as_type i);
+      assert_norm (as_parser (T_with_dep_vaction #base_t #len_t #pos_t #inst #d #use_error_handler fldname i #sp a) == dtyp_as_parser i);
+      assert_norm (as_vspec typename (T_with_dep_vaction #base_t #len_t #pos_t #inst #d #use_error_handler fldname i #sp a) == S.vspec_with_dep_vaction (dtyp_as_parser i) (dtyp_as_vspec i) sp);
+      A.validate_with_error_handler ehm typename fldname
+        (A.validate_with_dep_vaction fldname
+            (dtyp_as_validator_no_read fldname i)
+            (dtyp_as_leaf_reader i)
+            (a typename))
+
     | T_drop t ->
       assert_norm (as_type (T_drop #base_t #len_t #pos_t #inst #d #use_error_handler t) == as_type t);
       assert_norm (as_parser (T_drop #base_t #len_t #pos_t #inst #d #use_error_handler t) == as_parser t);
@@ -2058,13 +2101,12 @@ let t_probe_then_validate
        (parser_kind_of_itype pointer_size)
        true
        false
- = T_with_dep_action fldname
+ = T_with_dep_vaction fldname
      (DT_IType pointer_size)
      (fun typename src ->
-        Atomic_action (atomic_action_call
-          (A.probe_then_validate ehm typename fldname
+          A.probe_then_validate ehm typename fldname
              (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
-             src as_u64 nullable dest_name dest init_cb dest_sz probe sq)))
+             src as_u64 nullable dest_name dest init_cb dest_sz probe sq)
 
 [@@specialize]
 let t_probe_then_validate_alt
@@ -2148,16 +2190,15 @@ let t_probe_then_validate_gen
        (parser_kind_of_itype pointer_size)
        true
        false
- = T_with_dep_action fldname
+ = T_with_dep_vaction fldname
      (DT_IType pointer_size)
      (fun typename src ->
-        Atomic_action (atomic_action_call
-          (A.action_weaken
+          A.vaction_weaken
             (A.probe_then_validate ehm typename fldname
                (A.validate_without_reading_gen has_reader (dtyp_as_validator fldname td))
                src as_u64 nullable dest_name dest init_cb dest_sz probe sq)
             d
-            sq_weaken)))
+            sq_weaken)
 
 [@@specialize]
 let t_probe_then_validate_alt_gen

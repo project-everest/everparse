@@ -138,7 +138,7 @@ let t_value_spec_correct
   (k: Ghost.erased string) (out: ref U32.t)
   (pos: S.aenv) (x: U32.t) (s: forevery_values (d k out))
 : Lemma (match I.as_value_spec "T" (t k out) pos x s with
-    | S.SOk true s' -> s' (Ghost.reveal k) == x
+    | S.VOk s' -> s' (Ghost.reveal k) == x
     | _ -> False)
 = t_value_spec_eq "T" k out;
   let s1 = mk_singleton_value k (pts_to out #1.0R) x in
@@ -155,7 +155,7 @@ let t_spec_correct_from_value
   (ensures (
     let r = I.as_vspec "T" (t k out) i s in
     match P.parse (I.as_parser (t k out)) i.rest with
-    | None -> True
+    | None -> r == S.VErr
     | Some (x, _) -> S.VOk? r /\ (S.VOk?.final r) (Ghost.reveal k) == x
   ))
 = I.as_vspec_value_spec "T" (t k out) i s;
@@ -201,7 +201,7 @@ let tp_value_spec_correct
   (k: Ghost.erased string) (out: ref PM.ptr)
   (pos: S.aenv) (x: U32.t) (s: forevery_values (dp k out))
 : Lemma (match I.as_value_spec "TP" (tp k out) pos x s with
-    | S.SOk true s' -> s' (Ghost.reveal k) == PM.ptr_at pos.S.a_origin pos.S.a_start
+    | S.VOk s' -> s' (Ghost.reveal k) == PM.ptr_at pos.S.a_origin pos.S.a_start
     | _ -> False)
 = tp_value_spec_eq "TP" k out;
   let p = PM.ptr_at pos.S.a_origin pos.S.a_start in
@@ -221,12 +221,8 @@ let probe_u32_correct
 : Lemma (
     let w : S.probe_tape = mk_proj_value st (state_dict_singleton name state) () name in
     let o = S.ptape_head w in
-    let r = S.aspec_probe_then_validate #d0 (S.vspec_of_parser P.parse____UINT32) false name state sq e st in
-    match r with
-    | S.SOk true _ -> o.S.p_ok /\ Some? (P.parse P.parse____UINT32 o.S.p_bytes)
-    | S.SOk false _ -> o.S.p_ok == false
-    | S.SResOnly false -> o.S.p_ok /\ None? (P.parse P.parse____UINT32 o.S.p_bytes)
-    | _ -> False
+    let r = S.vaspec_probe_then_validate #d0 (S.vspec_of_parser P.parse____UINT32) false name state sq e st in
+    S.VOk? r <==> (o.S.p_ok /\ Some? (P.parse P.parse____UINT32 o.S.p_bytes))
   )
 = ()
 
