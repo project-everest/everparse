@@ -48,6 +48,25 @@ int main(void) {
   REJECT(Vals, "name too long", 0x30, 0x0e, 0x0c, 0x09, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x61, 0x02, 0x01, 0x05);
   ACCEPT(Vals, "when 250101120000Z", 0x30, 0x12, 0x17, 0x0d, '2', '5', '0', '1', '0', '1', '1', '2', '0', '0', '0', '0', 'Z', 0x02, 0x01, 0x05);
   REJECT(Vals, "when 240101120000Z (the DEFAULT)", 0x30, 0x12, 0x17, 0x0d, '2', '4', '0', '1', '0', '1', '1', '2', '0', '0', '0', '0', 'Z', 0x02, 0x01, 0x05);
+  {
+    /* the parser materializes the absent DEFAULT components; the writer
+       omits them again */
+    static const uint8_t in[] = { 0x30, 0x03, 0x02, 0x01, 0x05 };
+    Vals v = parse_Vals((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)in, .len = sizeof in });
+    if (!(v.flag && v.n == 5 &&
+          v.name.len == 4 && memcmp(v.name.elt, "ab\xce\xb1", 4) == 0 &&
+          v.when_.len == 13 && memcmp(v.when_.elt, "240101120000Z", 13) == 0)) {
+      printf("Vals: parse: default values\n");
+      fails++;
+    }
+    uint8_t out[16];
+    size_t pos = sizeof out;
+    if (!(write_Vals(v, (Pulse_Lib_Slice_slice__uint8){ .elt = out, .len = sizeof out }, &pos) == ASN1_PULSE_JITWRITER_JIT_OK &&
+          pos == sizeof out - sizeof in && memcmp(out + pos, in, sizeof in) == 0)) {
+      printf("Vals: write back\n");
+      fails++;
+    }
+  }
 
   /* Base (WITH COMPONENTS { ..., b PRESENT, c ABSENT, d (0..7) }) */
   ACCEPT(Derived, "a, b", 0x30, 0x06, 0x02, 0x01, 0x01, 0x01, 0x01, 0xff);

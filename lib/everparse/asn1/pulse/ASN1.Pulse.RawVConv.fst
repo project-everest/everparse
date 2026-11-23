@@ -139,6 +139,24 @@ let tdec_default_restricted_equiv (kb: bool) (id0: asn1_id_t) (#k: asn1_terminal
 : Lemma (pequiv #(option (asn1_terminal_impl_t k)) #(default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv)) (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv)) (drel kb (DD_DEFAULT_RESTRICTED id0 #k r defv)))
 = assert_norm (pequiv #(option (asn1_terminal_impl_t k)) #(default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv)) (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) (key_of_lit k defv)) (drel kb (DD_DEFAULT_RESTRICTED id0 #k r defv)))
 
+(* Materialized DEFAULT components, with `up` coercing the (possibly
+   restricted) values to the terminal values *)
+let prel_dvg (k: asn1_terminal_k) (#u: eqtype) (up: u -> asn1_terminal_t k) (defu: u) : prel (asn1_terminal_impl_t k) (default_tv defu) =
+  fun pm x y ->
+  match y with
+  | Default -> dv_any_rel k (up defu) x
+  | Nondefault b -> asn1_terminal_rel k pm x (up b)
+
+let tdec_dv_equiv (kb: bool) (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (mat: dmat k (key_of_lit k defv))
+: Lemma (pequiv #(asn1_terminal_impl_t k) #(default_tv (key_of_lit k defv)) (prel_dvg k (fun v -> v) (key_of_lit k defv)) (drel kb (DD_DEFAULT_V id0 #k defv mat)))
+= assert_norm (pequiv #(asn1_terminal_impl_t k) #(default_tv (key_of_lit k defv)) (prel_dvg k (fun v -> v) (key_of_lit k defv)) (drel kb (DD_DEFAULT_V id0 #k defv mat)))
+
+let tdec_dv_restricted_equiv (kb: bool) (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (mat: dmat k (key_of_lit k defv))
+: Lemma (pequiv #(asn1_terminal_impl_t k) #(default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
+    (prel_dvg k #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k)) (key_of_lit k defv)) (drel kb (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat)))
+= assert_norm (pequiv #(asn1_terminal_impl_t k) #(default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
+    (prel_dvg k #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k)) (key_of_lit k defv)) (drel kb (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat)))
+
 let tdec_view_equiv (kb: bool) (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
 : Lemma (pequiv #ty #(asn1_decorated_t_core dk) (vview (drel kb d) view) (drel kb (DD_VIEW d ty view mk law)))
 = assert (pequiv #ty #(asn1_decorated_t_core dk) (vview (drel kb d) view) (drel kb (DD_VIEW d ty view mk law))) by (T.norm [delta_only [`%vview]]; solve_tequiv ())
@@ -562,6 +580,53 @@ fn conv_vkeep (b: bool) (#t #u1 #u2: Type0) (r1: prel t u1) (r2: prel t u2) (f: 
     as (cv b (vkeep r2 kr2 pm x (f y)) (vkeep r1 kr1 pm x y))
 }
 
+(* Materialized DEFAULT: `Default` is the absent raw value, any other value
+   is present, and differs from the default one *)
+ghost
+fn conv_dvg (b: bool) (k: asn1_terminal_k) (#u: eqtype) (up: u -> asn1_terminal_t k) (defu: u) (defl: asn1_key_lit k)
+  (fg: u -> asn1_raw_terminal_t k)
+  (sq: squash (up defu == key_of_lit k defl /\ (forall (y: u) . fg y == forget_terminal k (up y)) /\ (forall (y1 y2: u) . up y1 == up y2 ==> y1 == y2)))
+: conv_t b (prel_dvg k up defu) (raw_vdv k defl) (dmap #u #defu fg)
+= (pm: perm) (x: asn1_terminal_impl_t k) (y: default_tv defu)
+{
+  match y {
+    Default -> {
+      if b {
+        rewrite (cv b (prel_dvg k up defu pm x y) (raw_vdv k defl pm x (dmap #u #defu fg y))) as (dv_any_rel k (up defu) x);
+        unfold (dv_any_rel k (up defu) x);
+        with p . assert (asn1_terminal_rel k p x (up defu));
+        terminal_rel_forget k p x (up defu);
+        rewrite (asn1_terminal_rel k p x (up defu)) as (asn1_raw_terminal_rel k p x (raw_key_of_lit k defl));
+        fold (raw_vdv k defl pm x None);
+        rewrite (raw_vdv k defl pm x None) as (cv b (raw_vdv k defl pm x (dmap #u #defu fg y)) (prel_dvg k up defu pm x y))
+      } else {
+        rewrite (cv b (prel_dvg k up defu pm x y) (raw_vdv k defl pm x (dmap #u #defu fg y))) as (raw_vdv k defl pm x None);
+        unfold (raw_vdv k defl pm x None);
+        with p . assert (asn1_raw_terminal_rel k p x (raw_key_of_lit k defl));
+        terminal_rel_forget k p x (up defu);
+        rewrite (asn1_raw_terminal_rel k p x (raw_key_of_lit k defl)) as (asn1_terminal_rel k p x (up defu));
+        fold (dv_any_rel k (up defu) x);
+        rewrite (dv_any_rel k (up defu) x) as (cv b (raw_vdv k defl pm x (dmap #u #defu fg y)) (prel_dvg k up defu pm x y))
+      }
+    }
+    Nondefault w -> {
+      forget_key_ne k (up w) defl;
+      terminal_rel_forget k pm x (up w);
+      if b {
+        rewrite (cv b (prel_dvg k up defu pm x y) (raw_vdv k defl pm x (dmap #u #defu fg y))) as (asn1_terminal_rel k pm x (up w));
+        rewrite (asn1_terminal_rel k pm x (up w)) as (asn1_raw_terminal_rel k pm x (fg w));
+        fold (raw_vdv k defl pm x (Some (fg w)));
+        rewrite (raw_vdv k defl pm x (Some (fg w))) as (cv b (raw_vdv k defl pm x (dmap #u #defu fg y)) (prel_dvg k up defu pm x y))
+      } else {
+        rewrite (cv b (prel_dvg k up defu pm x y) (raw_vdv k defl pm x (dmap #u #defu fg y))) as (raw_vdv k defl pm x (Some (fg w)));
+        unfold (raw_vdv k defl pm x (Some (fg w)));
+        rewrite (asn1_raw_terminal_rel k pm x (fg w)) as (asn1_terminal_rel k pm x (up w));
+        rewrite (asn1_terminal_rel k pm x (up w)) as (cv b (raw_vdv k defl pm x (dmap #u #defu fg y)) (prel_dvg k up defu pm x y))
+      }
+    }
+  }
+}
+
 (* Conversion types, one per kind of descriptor *)
 
 let ca_t (b: bool) (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) : Type =
@@ -960,6 +1025,20 @@ and conv_d (b: bool) (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (
     conv_ext b (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k' r)) (key_of_lit k' defv)) (drel false dd) (prel_option (asn1_raw_terminal_rel k')) (raw_vdrel dd)
       (dmap #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k' r)) #(key_of_lit k' defv) (restricted_forget k' r)) (forget_dec dk) ()
       (conv_default b (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k' r)) (key_of_lit k' defv) (asn1_raw_terminal_rel k') (restricted_forget k' r) (conv_restricted b k' r))
+  | DD_DEFAULT_V id0 #k' defv mat ->
+    tdec_dv_equiv false id0 defv mat;
+    vdec_dv_equiv id0 defv mat;
+    forget_dec_default id0 defv;
+    conv_ext b (prel_dvg k' (fun v -> v) (key_of_lit k' defv)) (drel false dd) (raw_vdv k' defv) (raw_vdrel dd)
+      (dmap #(asn1_terminal_t k') #(key_of_lit k' defv) (forget_terminal k')) (forget_dec dk) ()
+      (conv_dvg b k' (fun v -> v) (key_of_lit k' defv) defv (forget_terminal k') ())
+  | DD_DEFAULT_RESTRICTED_V id0 #k' r defv mat ->
+    tdec_dv_restricted_equiv false id0 r defv mat;
+    vdec_dv_restricted_equiv id0 r defv mat;
+    forget_dec_default_restricted id0 r defv;
+    conv_ext b (prel_dvg k' #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k')) (key_of_lit k' defv)) (drel false dd) (raw_vdv k' defv) (raw_vdrel dd)
+      (dmap #(parse_filter_refine (restriction_pred r)) #(key_of_lit k' defv) (restricted_forget k' r)) (forget_dec dk) ()
+      (conv_dvg b k' #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k')) (key_of_lit k' defv) defv (restricted_forget k' r) ())
   | DD_VIEW #_ #_ #dk' d' ty view mk law ->
     tdec_view_equiv false d' ty view mk law;
     vdec_view_equiv d' ty view mk law;

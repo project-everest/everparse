@@ -31,10 +31,9 @@ static Pulse_Lib_Slice_slice__uint8 items_arr[] = { { (uint8_t *)"x", 1 }, { (ui
 static Msg msg1(void) {
   Msg m;
   memset(&m, 0, sizeof m);
-  m.version.tag = SMALL_IMPL_MSG_VERSION_ABSENT;
+  m.version = 0; /* DEFAULT v1 */
   m.id = (ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = 5 } };
-  m.critical.tag = SMALL_IMPL_MSG_CRITICAL_PRESENT;
-  m.critical.val.Msg_critical_present = true;
+  m.critical = true;
   m.color.tag = SMALL_IMPL_MSG_COLOR_PRESENT;
   m.color.val.Msg_color_present = 5;
   m.body.tag = SMALL_IMPL_ALT_INNER;
@@ -62,10 +61,9 @@ static const uint8_t msg1_der[] = {
          extra { a 300, b 'u' } } */
 static Msg msg2(void) {
   Msg m = msg1();
-  m.version.tag = SMALL_IMPL_MSG_VERSION_PRESENT;
-  m.version.val.Msg_version_present = 2;
+  m.version = 2;
   m.id.val.Small = -1;
-  m.critical.tag = SMALL_IMPL_MSG_CRITICAL_ABSENT;
+  m.critical = false; /* DEFAULT FALSE */
   m.color.tag = SMALL_IMPL_MSG_COLOR_ABSENT;
   m.body.tag = SMALL_IMPL_ALT_NAME;
   m.body.val.Alt_name = sl("n");
@@ -312,16 +310,16 @@ static void seq_iter_msg(const char *name, const uint8_t *der, size_t len, const
     got[n++] = (char)('0' + x.comp);
     switch (x.comp) {
     case Msg_version_index: {
-      Msg_version_opt v = Msg_version_get(x);
-      CHECK(v.tag == SMALL_IMPL_MSG_VERSION_PRESENT && v.val.Msg_version_present == 2, "%s: version", name);
+      int64_t v = Msg_version_get(x);
+      CHECK(v == 2, "%s: version", name);
       break; }
     case Msg_id_index: {
       ASN1_Pulse_Rel_asn1_int_impl v = Msg_id_get(x);
       CHECK(v.tag == ASN1_PULSE_REL_SMALL && (v.val.Small == 5 || v.val.Small == -1), "%s: id", name);
       break; }
     case Msg_critical_index: {
-      Msg_critical_opt v = Msg_critical_get(x);
-      CHECK(v.tag == SMALL_IMPL_MSG_CRITICAL_PRESENT && v.val.Msg_critical_present, "%s: critical", name);
+      bool v = Msg_critical_get(x);
+      CHECK(v, "%s: critical", name);
       break; }
     case Msg_color_index: {
       Msg_color_opt v = Msg_color_get(x);
@@ -413,14 +411,12 @@ int main(void) {
   test_wrapper();
   test_seq_iter();
 
-  /* a DEFAULT component present with its default value is omitted (DER) */
+  /* a DEFAULT component with its default value is omitted (DER) */
   Msg bad = msg1();
-  bad.version.tag = SMALL_IMPL_MSG_VERSION_PRESENT;
-  bad.version.val.Msg_version_present = 0;
+  bad.version = 0;
   write_ok("version = DEFAULT", bad, msg1_der, sizeof msg1_der);
   bad = msg2();
-  bad.critical.tag = SMALL_IMPL_MSG_CRITICAL_PRESENT;
-  bad.critical.val.Msg_critical_present = false;
+  bad.critical = false;
   write_ok("critical = DEFAULT", bad, msg2_der, sizeof msg2_der);
 
   /* not encodable: values outside of the constraints */
@@ -457,9 +453,9 @@ int main(void) {
   }
 
   Msg p = parse_Msg((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)msg1_der, .len = sizeof msg1_der });
-  CHECK(p.version.tag == SMALL_IMPL_MSG_VERSION_ABSENT, "parse msg1: version");
+  CHECK(p.version == 0, "parse msg1: version (DEFAULT, materialized)");
   CHECK(p.id.tag == ASN1_PULSE_REL_SMALL && p.id.val.Small == 5, "parse msg1: id");
-  CHECK(p.critical.tag == SMALL_IMPL_MSG_CRITICAL_PRESENT && p.critical.val.Msg_critical_present, "parse msg1: critical");
+  CHECK(p.critical, "parse msg1: critical");
   CHECK(p.color.tag == SMALL_IMPL_MSG_COLOR_PRESENT && p.color.val.Msg_color_present == 5, "parse msg1: color");
   CHECK(p.body.tag == SMALL_IMPL_ALT_INNER && p.body.val.Alt_inner.tag == SMALL_IMPL_INNER_FLAG &&
         p.body.val.Alt_inner.val.Inner_flag, "parse msg1: body");
@@ -517,8 +513,8 @@ int main(void) {
   }
 
   p = parse_Msg((Pulse_Lib_Slice_slice__uint8){ .elt = (uint8_t *)msg2_der, .len = sizeof msg2_der });
-  CHECK(p.version.tag == SMALL_IMPL_MSG_VERSION_PRESENT && p.version.val.Msg_version_present == 2, "parse msg2: version");
-  CHECK(p.critical.tag == SMALL_IMPL_MSG_CRITICAL_ABSENT, "parse msg2: critical");
+  CHECK(p.version == 2, "parse msg2: version");
+  CHECK(!p.critical, "parse msg2: critical (DEFAULT, materialized)");
   CHECK(p.body.tag == SMALL_IMPL_ALT_NAME && p.body.val.Alt_name.len == 1 && p.body.val.Alt_name.elt[0] == 'n', "parse msg2: body");
   CHECK(p.extra.tag == SMALL_IMPL_MSG_EXTRA_PRESENT && p.extra.val.Msg_extra_present.a.val.Small == 300 &&
         p.extra.val.Msg_extra_present.b.len == 1, "parse msg2: extra");

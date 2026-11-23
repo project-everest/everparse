@@ -85,7 +85,7 @@ static void test_cert(void) {
   CHECK(validate_cert(cert_der, sizeof cert_der), "cert: validate");
   Cert c = parse_Cert(sl(cert_der, sizeof cert_der));
   TBS *t = &c.tbs.value;
-  CHECK(t->version.tag == X509LITE_IMPL_TBS_VERSION_PRESENT && small(t->version.val.TBS_version_present, 2),
+  CHECK(small(t->version, 2),
         "cert: version v3");
   CHECK(small(t->serial, 1), "cert: serial");
   CHECK(t->signature.tag == X509LITE_IMPL_ALGID_ALGORITHM_SHA256WITHRSAENCRYPTION, "cert: signature");
@@ -125,14 +125,13 @@ static void test_cert(void) {
   /* DEFAULT under an EXPLICIT tag */
   CHECK(validate_cert(cert_v1_der, sizeof cert_v1_der), "cert v1: validate");
   Cert c1 = parse_Cert(sl(cert_v1_der, sizeof cert_v1_der));
-  CHECK(c1.tbs.value.version.tag == X509LITE_IMPL_TBS_VERSION_ABSENT, "cert v1: version absent");
+  CHECK(small(c1.tbs.value.version, 0), "cert v1: version absent, materialized as v1");
   CHECK(c1.tbs.value.extensions.tag == X509LITE_IMPL_TBS_EXTENSIONS_ABSENT, "cert v1: no extensions");
   write_cert_ok("cert v1", c1, cert_v1_der, sizeof cert_v1_der);
   CHECK(!validate_cert(cert_v1_explicit_der, sizeof cert_v1_explicit_der), "cert v1 explicit: not DER");
-  /* Writing v1 explicitly omits it */
-  c1.tbs.value.version.tag = X509LITE_IMPL_TBS_VERSION_PRESENT;
-  c1.tbs.value.version.val.TBS_version_present = (ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = 0 } };
-  write_cert_ok("cert v1 (version present)", c1, cert_v1_der, sizeof cert_v1_der);
+  /* Writing v1 omits it, also when built by hand */
+  c1.tbs.value.version = (ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = 0 } };
+  write_cert_ok("cert v1 (version built)", c1, cert_v1_der, sizeof cert_v1_der);
 
   /* AlgId table */
   CHECK(!validate_cert(cert_sha_noparam_der, sizeof cert_sha_noparam_der), "sha256 without NULL: rejected");
@@ -154,9 +153,9 @@ static void test_extensions(void) {
   Extension e = parse_Extension(sl(ext_bc_der, sizeof ext_bc_der));
   CHECK(e.tag == X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_BASICCONSTRAINTS, "basicConstraints: case");
   Extension_id_ce_basicConstraints *bc = &e.val.Extension_extnID_id_ce_basicConstraints;
-  CHECK(bc->critical.tag == X509LITE_IMPL_EXTENSION_CRITICAL_PRESENT && bc->critical.val.Extension_critical_present,
+  CHECK(bc->critical,
         "basicConstraints: critical");
-  CHECK(bc->extnValue.cA.tag == X509LITE_IMPL_BASICCONSTRAINTS_CA_PRESENT && bc->extnValue.cA.val.BasicConstraints_cA_present,
+  CHECK(bc->extnValue.cA,
         "basicConstraints: cA");
   CHECK(bc->extnValue.pathLenConstraint.tag == X509LITE_IMPL_BASICCONSTRAINTS_PATHLENCONSTRAINT_PRESENT &&
         small(bc->extnValue.pathLenConstraint.val.BasicConstraints_pathLenConstraint_present, 3),
@@ -176,7 +175,7 @@ static void test_extensions(void) {
   Extension ku;
   memset(&ku, 0, sizeof ku);
   ku.tag = X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_KEYUSAGE;
-  ku.val.Extension_extnID_id_ce_keyUsage.critical.tag = X509LITE_IMPL_EXTENSION_CRITICAL_ABSENT;
+  ku.val.Extension_extnID_id_ce_keyUsage.critical = false; /* DEFAULT FALSE */
   ku.val.Extension_extnID_id_ce_keyUsage.extnValue = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 5, .bytes = sl(bits, 1) };
   write_ext_ok("keyUsage", ku, ext_ku_der, sizeof ext_ku_der);
   CHECK(validate_ext(ext_ku_der, sizeof ext_ku_der), "keyUsage: validate");

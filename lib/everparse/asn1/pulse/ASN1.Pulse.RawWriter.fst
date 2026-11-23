@@ -474,6 +474,20 @@ let raw_write_default (id0: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: as
       x' #x out pos #v #p
   end
 
+(* Materialized DEFAULT (`DD_DEFAULT_V`): write `Some x` at its stored fraction *)
+inline_for_extraction
+fn raw_write_dv (id0: asn1_id_t) ([@@@FStar.Attributes.monomorphize] k: asn1_terminal_k) ([@@@FStar.Attributes.monomorphize] defl: asn1_key_lit k) (pm: perm)
+: rw #(asn1_terminal_impl_t k) (raw_dv id0 k defl) pm
+= (x': asn1_terminal_impl_t k) (#x: Ghost.erased SB.bytes) (out: S.slice U8.t) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_dv id0 k defl pm x' x);
+  with q . assert (raw_default_rel id0 k defl q (Some x') x);
+  let w : rw (raw_default_rel id0 k defl) q = (fun x' #x out pos #v #p -> raw_write_default id0 k defl q x' #x out pos #v #p);
+  let res = w (Some x') #x out pos #v #p;
+  fold (raw_dv id0 k defl pm x' x);
+  res
+}
+
 inline_for_extraction
 fn raw_write_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (pm: perm) (w: rw r pm)
 : rw #ty (raw_view r view) pm
@@ -698,6 +712,12 @@ and raw_write_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
     dec_default_restricted_equiv id0 r defv;
     raw_write_ext (raw_default_rel id0 k defv) (raw_drel d) () pm
       (fun x' #x out pos #v #p -> raw_write_default id0 k defv pm x' #x out pos #v #p)
+  | DD_DEFAULT_V id0 #k defv mat ->
+    dec_dv_equiv id0 defv mat;
+    raw_write_ext (raw_dv id0 k defv) (raw_drel d) () pm (raw_write_dv id0 k defv pm)
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defv mat ->
+    dec_dv_restricted_equiv id0 r defv mat;
+    raw_write_ext (raw_dv id0 k defv) (raw_drel d) () pm (raw_write_dv id0 k defv pm)
   | DD_VIEW d' ty view mk law ->
     dec_view_equiv d' ty view mk law;
     raw_write_ext (raw_view (raw_drel d') view) (raw_drel d) () pm

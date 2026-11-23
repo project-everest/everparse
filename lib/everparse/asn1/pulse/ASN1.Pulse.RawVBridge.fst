@@ -370,6 +370,98 @@ let rb_content_adb_some_g (id: asn1_id_t) (ipd: id_decs) (prefix: asn1_gen_items
 = let (| fbids, fbitems |) = fb in
   rb_content_adb_some id ipd prefix kid key_k ls fbids fbitems pf pf' y
 
+(* Materialized DEFAULT components (`DD_DEFAULT_V`): the default value is
+   held at any fraction, and written as nothing *)
+
+let f_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (y: option (asn1_raw_terminal_t k)) : GTot SB.bytes =
+  match y with
+  | None -> Seq.empty
+  | Some z -> rb_default id0 k defl z
+
+let dv_bytes (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (b: asn1_raw_terminal_t k)
+: Lemma (requires (ASN1.Spec.Conformance.wf_terminal id0 k /\ In.adb_key_supported k))
+  (ensures (WA.raw_key_enc id0 k defl == rb_term id0 k (raw_key_of_lit k defl) /\
+    ~ (rb_term id0 k b == Seq.empty) /\
+    (~ (b == raw_key_of_lit k defl) ==> (~ (rb_term id0 k b == WA.raw_key_enc id0 k defl) /\ rb_default id0 k defl b == rb_term id0 k b))))
+= raw_key_enc_rb id0 k defl;
+  rb_term_rterm id0 k b;
+  asn1_value_enc_nonempty (ASN1.Spec.Raw.Value.rterm id0 k b);
+  rb_default_eq id0 k defl b
+
+ghost
+fn split_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (sq: squash (ASN1.Spec.Conformance.wf_terminal id0 k /\ In.adb_key_supported k))
+: split_t (raw_vdv k defl) (raw_dv id0 k defl) (f_dv id0 k defl)
+= (pm: perm) (x: asn1_terminal_impl_t k) (y: option (asn1_raw_terminal_t k))
+{
+  default_rel_nd id0 k defl;
+  match y {
+    None -> {
+      unfold (raw_vdv k defl pm x None);
+      with p . assert (asn1_raw_terminal_rel k p x (raw_key_of_lit k defl));
+      (br_term id0 k).sp p x (raw_key_of_lit k defl);
+      dv_bytes id0 k defl (raw_key_of_lit k defl);
+      fold (raw_vdv k defl (pm /. 2.0R) x None);
+      fold (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (p /. 2.0R) (Some x) Seq.empty);
+      rewrite (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (p /. 2.0R) (Some x) Seq.empty)
+        as (raw_default_rel id0 k defl (p /. 2.0R) (Some x) Seq.empty);
+      fold (raw_dv id0 k defl (pm /. 2.0R) x Seq.empty);
+      rewrite (raw_dv id0 k defl (pm /. 2.0R) x Seq.empty) as (raw_dv id0 k defl (pm /. 2.0R) x (f_dv id0 k defl None))
+    }
+    Some b -> {
+      unfold (raw_vdv k defl pm x (Some b));
+      (br_term id0 k).sp pm x b;
+      dv_bytes id0 k defl b;
+      fold (raw_vdv k defl (pm /. 2.0R) x (Some b));
+      fold (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (pm /. 2.0R) (Some x) (rb_term id0 k b));
+      rewrite (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (pm /. 2.0R) (Some x) (rb_term id0 k b))
+        as (raw_default_rel id0 k defl (pm /. 2.0R) (Some x) (rb_term id0 k b));
+      fold (raw_dv id0 k defl (pm /. 2.0R) x (rb_term id0 k b));
+      rewrite (raw_dv id0 k defl (pm /. 2.0R) x (rb_term id0 k b)) as (raw_dv id0 k defl (pm /. 2.0R) x (f_dv id0 k defl (Some b)))
+    }
+  }
+}
+
+let perm_half_add (a b: perm) : Lemma (a /. 2.0R +. (a /. 2.0R +. b) == a +. b) = ()
+
+ghost
+fn absorb_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (sq: squash (ASN1.Spec.Conformance.wf_terminal id0 k /\ In.adb_key_supported k))
+: absorb_t (raw_vdv k defl) (raw_dv id0 k defl)
+= (p1: perm) (p2: perm) (x: asn1_terminal_impl_t k) (y: option (asn1_raw_terminal_t k)) (w: SB.bytes)
+{
+  default_rel_nd id0 k defl;
+  unfold (raw_dv id0 k defl p2 x w);
+  with q . assert (raw_default_rel id0 k defl q (Some x) w);
+  rewrite (raw_default_rel id0 k defl q (Some x) w)
+    as (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) q (Some x) w);
+  unfold (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) q (Some x) w);
+  with cc . assert (raw_terminal_rel id0 k q x cc);
+  match y {
+    None -> {
+      unfold (raw_vdv k defl p1 x None);
+      with p . assert (asn1_raw_terminal_rel k p x (raw_key_of_lit k defl));
+      (br_term id0 k).ab p q x (raw_key_of_lit k defl) cc;
+      fold (raw_vdv k defl (p1 +. p2) x None)
+    }
+    Some b -> {
+      unfold (raw_vdv k defl p1 x (Some b));
+      dv_bytes id0 k defl b;
+      (br_term id0 k).sp p1 x b;
+      gather_terminal id0 k x #(p1 /. 2.0R) #(rb_term id0 k b) #q #cc;
+      assert (pure (cc == rb_term id0 k b));
+      assert (pure (Ghost.reveal w == cc));
+      assert (pure (q == p2));
+      (br_term id0 k).ab (p1 /. 2.0R) (p1 /. 2.0R +. q) x b (rb_term id0 k b);
+      perm_half_add p1 q;
+      rewrite (asn1_raw_terminal_rel k (p1 /. 2.0R +. (p1 /. 2.0R +. q)) x b) as (asn1_raw_terminal_rel k (p1 +. p2) x b);
+      fold (raw_vdv k defl (p1 +. p2) x (Some b))
+    }
+  }
+}
+
+let br_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (sq: squash (ASN1.Spec.Conformance.wf_terminal id0 k /\ In.adb_key_supported k))
+: br_t (raw_vdv k defl) (raw_dv id0 k defl) (f_dv id0 k defl)
+= { sp = split_dv id0 k defl sq; ab = absorb_dv id0 k defl sq }
+
 (* The whole bridge, by mutual recursion on the descriptor *)
 
 let va_br_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) : Type = br_t (raw_varel d) (raw_arel d) (rb k)
@@ -518,6 +610,14 @@ and brd_d (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (dd: ddesc d
     if In.adb_key_supported k
     then (default_nd_equiv id0 k defv; br_ext _ _ _ _ _ _ () (br_opt_nd (WA.raw_key_enc id0 k defv) (br_term id0 k)))
     else (default_opt_equiv id0 k defv; br_ext _ _ _ _ _ _ () (br_opt (br_term id0 k)))
+  | DD_DEFAULT_V id0 #k defv mat ->
+    vdec_dv_equiv id0 defv mat;
+    dec_dv_equiv id0 defv mat;
+    br_ext _ _ _ _ _ _ () (br_dv id0 k defv ())
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defv mat ->
+    vdec_dv_restricted_equiv id0 r defv mat;
+    dec_dv_restricted_equiv id0 r defv mat;
+    br_ext _ _ _ _ _ _ () (br_dv id0 k defv ())
   | DD_VIEW d' ty view mk law ->
     vdec_view_equiv d' ty view mk law;
     dec_view_equiv d' ty view mk law;

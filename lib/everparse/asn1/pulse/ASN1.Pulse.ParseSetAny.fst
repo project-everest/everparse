@@ -349,9 +349,8 @@ fn fin_slot
       x
     }
     None -> {
-      rewrite (slot_rel dd pm o y) as emp;
       let x = abs pm y;
-      Trade.refl' (drel true dd pm x y) (slot_rel dd pm o y);
+      trade_emp_intro (drel true dd pm x y) (slot_rel dd pm o y);
       x
     }
   }

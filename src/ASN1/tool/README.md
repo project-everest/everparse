@@ -191,8 +191,9 @@ returned by `T_seq_next` is a *present* component: `x.comp` is its index
 (absent OPTIONAL and DEFAULT components are skipped) and `x.bytes` its
 encoding (a slice of the input), so a caller dispatches with
 `switch (x.comp) { case T_c_index: ... T_c_get(x) ... }`. `T_c_get` returns
-the same value as the `c` field of `parse_T` (an OPTIONAL or DEFAULT
-component is `T_c_present`). A component whose type is itself a named
+the same value as the `c` field of `parse_T` (an OPTIONAL component is
+`T_c_present`). A DEFAULT component absent from the input is skipped by
+`T_seq_next`; read it with `parse_T`, which fills in its default value. A component whose type is itself a named
 SEQUENCE `U` can be iterated in turn with `U_seq_start(x.bytes)`.
 
 For each non-empty SET `T`, the tool generates the same functions, named
@@ -244,8 +245,12 @@ Type naming:
   Anonymous nested types are named after their path, e.g. `Msg_extra`.
 * CHOICE maps to a tagged union `T`. Its tags are `M_IMPL_T_ALT`, its
   union members `T_alt`, and nested CHOICEs are not flattened.
-* An OPTIONAL or DEFAULT component `f` of `T` gets a tagged type with
+* An OPTIONAL component `f` of `T` gets a tagged type with
   tags `M_IMPL_T_F_ABSENT` / `M_IMPL_T_F_PRESENT` and member `T_f_present`.
+* A DEFAULT component has the plain type of its component type. When it is
+  absent from the input, the parser fills in the default value; slices
+  point into a constant array `<Mod>_Impl_dva_T_f` holding its content
+  bytes. The writer omits a value equal to the default (X.690 11.5).
 * An INTEGER maps to `int64_t` if its constraint fits in 64 bits.
   Otherwise it maps to `ASN1_Pulse_Rel_asn1_int_impl`: either an
   `int64_t` (`Small`) or the slice of its minimal content bytes. The same
@@ -457,7 +462,7 @@ Supported:
 * `[n]` / `[APPLICATION n]` / ... tags, IMPLICIT and EXPLICIT.
 * SEQUENCE and SET (at most 64 components) with OPTIONAL and DEFAULT
   components. DEFAULT applies to components of terminal types other than
-  RELATIVE-OID, also under one EXPLICIT tag if unconstrained (such as
+  OBJECT IDENTIFIER and RELATIVE-OID, also under one EXPLICIT tag if unconstrained (such as
   `[0] EXPLICIT Version DEFAULT v1`), and to constrained INTEGER,
   ENUMERATED, BOOLEAN, OCTET STRING and character strings.
 * CHOICE, SEQUENCE OF and SET OF (with SIZE), and ANY.

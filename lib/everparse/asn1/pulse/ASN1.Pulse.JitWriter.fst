@@ -1966,6 +1966,42 @@ let jit_default_prefixed (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_l
       (fun x' #c -> DE.dd_term id0 k defl () pm x' #c)
       (fun x' #x out pos #v #p -> jit_write_terminal id0 k () pm x' #x out pos #v #p))
 
+(* Materialized DEFAULT (`DD_DEFAULT_V`): write `Some x` at its stored
+   fraction, with the option writer *)
+inline_for_extraction
+fn jit_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (a: SB.bytes -> prop) (pm: perm)
+  (w: (q: perm) -> jwx (raw_default_rel id0 k defl) a q)
+: jwx #(asn1_terminal_impl_t k) (raw_dv id0 k defl) a pm
+= (x': asn1_terminal_impl_t k) (#x: Ghost.erased SB.bytes) (out: SK.sink) (pos: ref SZ.t) (#v: Ghost.erased SB.bytes) (#p: Ghost.erased SZ.t)
+{
+  unfold (raw_dv id0 k defl pm x' x);
+  with q . assert (raw_default_rel id0 k defl q (Some x') x);
+  let res = w q (Some x') #x out pos;
+  fold (raw_dv id0 k defl pm x' x);
+  res
+}
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let jit_default_any (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (u: squash (In.supported_default k)) (pm: perm)
+: jwx (raw_default_rel id0 k defl) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) pm
+= dec_default_equiv id0 #k defl;
+  jit_iff (raw_drel (DD_DEFAULT id0 #k defl)) (raw_default_rel id0 k defl) ()
+    (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (dacc (ASN1_DEFAULT_TERMINAL id0 #k defl)) (fun _ -> ()) (fun _ -> ()) pm
+    (if ASN1_PREFIXED_TERMINAL? k
+     then jit_default_prefixed id0 k defl () pm
+     else jit_default id0 k defl () pm)
+
+[@@In.asn1_pulse_attr]
+inline_for_extraction
+let jit_default_restricted_any (id0: asn1_id_t) (k: asn1_terminal_k) (r: asn1_restriction k) (defl: asn1_key_lit k { restriction_pred r (key_of_lit k defl) })
+  (u: squash (In.supported_default_restricted k r)) (pm: perm)
+: jwx (raw_default_rel id0 k defl) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) pm
+= dec_default_restricted_equiv id0 #k r defl;
+  jit_iff (raw_drel (DD_DEFAULT_RESTRICTED id0 #k r defl)) (raw_default_rel id0 k defl) ()
+    (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) (dacc (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defl)) (fun _ -> ()) (fun _ -> ()) pm
+    (jit_default_restricted id0 k r defl () pm)
+
 (* Descriptor views: write the viewed value *)
 inline_for_extraction
 fn jit_view (#ex: bool) (#t #ty: Type0) (r: bprel t) (view: ty -> t) (a: SB.bytes -> prop) (pm: perm) (w: jwg ex r a pm)
@@ -2442,6 +2478,16 @@ and jit_write_drel (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attrib
     else jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (jit_default id0 k defl () pm)
   | DD_DEFAULT_RESTRICTED id0 #k r defl ->
     jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (jit_default_restricted id0 k r defl () pm)
+  | DD_DEFAULT_V id0 #k defl mat ->
+    dec_dv_equiv id0 #k defl mat;
+    jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (
+    jit_iff (raw_dv id0 k defl) (raw_drel d) () (dacc dk) (dacc dk) (fun _ -> ()) (fun _ -> ()) pm
+      (jit_dv id0 k defl (dacc dk) pm (fun q -> jit_default_any id0 k defl () q)))
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defl mat ->
+    dec_dv_restricted_equiv id0 #k r defl mat;
+    jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (
+    jit_iff (raw_dv id0 k defl) (raw_drel d) () (dacc dk) (dacc dk) (fun _ -> ()) (fun _ -> ()) pm
+      (jit_dv id0 k defl (dacc dk) pm (fun q -> jit_default_restricted_any id0 k r defl () q)))
   | DD_VIEW d' ty view mk law ->
     dec_view_equiv d' ty view mk law;
     jit_cast (ex_dec dk) () (raw_drel d) (dacc dk) pm (

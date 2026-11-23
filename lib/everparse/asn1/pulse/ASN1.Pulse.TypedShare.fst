@@ -693,6 +693,90 @@ fn gather_default (#t: Type0) (#u: eqtype) (r: prel t u) (c: sg r) (defv: u)
 let sg_default (#t: Type0) (#u: eqtype) (r: prel t u) (c: sg r) (defv: u) : sg (RS.prel_default r defv) =
   { sh = share_default r c defv; ga = gather_default r c defv }
 
+(* Materialized DEFAULT: a default value may be held at any fraction *)
+
+ghost
+fn share_dv (k: asn1_terminal_k) (c: sg (asn1_terminal_rel k)) (#u: eqtype) (up: u -> asn1_terminal_t k) (defu: u)
+: RS.share_t #(asn1_terminal_impl_t k) #(default_tv defu) (prel_dvg k up defu)
+= (x: asn1_terminal_impl_t k) (#p: perm) (#y: default_tv defu)
+{
+  match y {
+    Default -> {
+      rewrite (prel_dvg k up defu p x y) as (dv_any_rel k (up defu) x);
+      unfold (dv_any_rel k (up defu) x);
+      with q . assert (asn1_terminal_rel k q x (up defu));
+      c.sh x #q #(up defu);
+      fold (dv_any_rel k (up defu) x);
+      fold (dv_any_rel k (up defu) x);
+      rewrite (dv_any_rel k (up defu) x) as (prel_dvg k up defu (p /. 2.0R) x y);
+      rewrite (dv_any_rel k (up defu) x) as (prel_dvg k up defu (p /. 2.0R) x y)
+    }
+    Nondefault b -> {
+      rewrite (prel_dvg k up defu p x y) as (asn1_terminal_rel k p x (up b));
+      c.sh x #p #(up b);
+      rewrite (asn1_terminal_rel k (p /. 2.0R) x (up b)) as (prel_dvg k up defu (p /. 2.0R) x y);
+      rewrite (asn1_terminal_rel k (p /. 2.0R) x (up b)) as (prel_dvg k up defu (p /. 2.0R) x y)
+    }
+  }
+}
+
+let held_rel (k: asn1_terminal_k) (q: perm) (x: asn1_terminal_impl_t k) (v: asn1_terminal_t k) : slprop =
+  asn1_terminal_rel k q x v
+
+ghost
+fn gather_dv (k: asn1_terminal_k) (c: sg (asn1_terminal_rel k)) (#u: eqtype) (up: u -> asn1_terminal_t k) (defu: u)
+  (inj: squash (forall (y1 y2: u) . up y1 == up y2 ==> y1 == y2))
+: RS.gather_t #(asn1_terminal_impl_t k) #(default_tv defu) (prel_dvg k up defu)
+= (x: asn1_terminal_impl_t k) (#p: perm) (#y: default_tv defu) (#p': perm) (#y': default_tv defu)
+{
+  match y {
+    Default -> {
+      rewrite (prel_dvg k up defu p x y) as (dv_any_rel k (up defu) x);
+      unfold (dv_any_rel k (up defu) x);
+      with q . assert (asn1_terminal_rel k q x (up defu));
+      match y' {
+        Default -> {
+          fold (held_rel k q x (up defu));
+          rewrite (prel_dvg k up defu p' x y') as (dv_any_rel k (up defu) x);
+          unfold (dv_any_rel k (up defu) x);
+          with q' . assert (asn1_terminal_rel k q' x (up defu));
+          unfold (held_rel k q x (up defu));
+          c.ga x #q #(up defu) #q' #(up defu);
+          fold (dv_any_rel k (up defu) x);
+          rewrite (dv_any_rel k (up defu) x) as (prel_dvg k up defu (p +. p') x y)
+        }
+        Nondefault b' -> {
+          rewrite (prel_dvg k up defu p' x y') as (asn1_terminal_rel k p' x (up b'));
+          c.ga x #q #(up defu) #p' #(up b');
+          unreachable ()
+        }
+      }
+    }
+    Nondefault b -> {
+      rewrite (prel_dvg k up defu p x y) as (asn1_terminal_rel k p x (up b));
+      match y' {
+        Default -> {
+          rewrite (prel_dvg k up defu p' x y') as (dv_any_rel k (up defu) x);
+          unfold (dv_any_rel k (up defu) x);
+          with q' . assert (asn1_terminal_rel k q' x (up defu));
+          c.ga x #p #(up b) #q' #(up defu);
+          unreachable ()
+        }
+        Nondefault b' -> {
+          rewrite (prel_dvg k up defu p' x y') as (asn1_terminal_rel k p' x (up b'));
+          c.ga x #p #(up b) #p' #(up b');
+          rewrite (asn1_terminal_rel k (p +. p') x (up b)) as (prel_dvg k up defu (p +. p') x y)
+        }
+      }
+    }
+  }
+}
+
+let sg_dv (k: asn1_terminal_k) (c: sg (asn1_terminal_rel k)) (#u: eqtype) (up: u -> asn1_terminal_t k) (defu: u)
+  (inj: squash (forall (y1 y2: u) . up y1 == up y2 ==> y1 == y2))
+: sg (prel_dvg k up defu) =
+  { sh = share_dv k c up defu; ga = gather_dv k c up defu inj }
+
 (* SEQUENCE OF / SET OF *)
 
 ghost
@@ -1053,6 +1137,14 @@ and sg_d (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (dd: ddesc dk
     tdec_default_restricted_equiv false id0 r defv;
     sg_ext (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k' r)) (key_of_lit k' defv)) (drel false dd) ()
       (sg_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k' r)) (sg_restricted k' r) (key_of_lit k' defv))
+  | DD_DEFAULT_V id0 #k' defv mat ->
+    tdec_dv_equiv false id0 defv mat;
+    sg_ext (prel_dvg k' (fun v -> v) (key_of_lit k' defv)) (drel false dd) ()
+      (sg_dv k' (sg_terminal k') (fun v -> v) (key_of_lit k' defv) ())
+  | DD_DEFAULT_RESTRICTED_V id0 #k' r defv mat ->
+    tdec_dv_restricted_equiv false id0 r defv mat;
+    sg_ext (prel_dvg k' #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k')) (key_of_lit k' defv)) (drel false dd) ()
+      (sg_dv k' (sg_terminal k') #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k')) (key_of_lit k' defv) ())
   | DD_VIEW d' ty view mk law ->
     tdec_view_equiv false d' ty view mk law;
     sg_ext (vview (drel false d') view) (drel false dd) () (sg_view (drel false d') (sg_d d') view)

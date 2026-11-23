@@ -43,6 +43,14 @@ let keep_v (#s: _) (k: asn1_k s) (pm: perm) (r: option (S.slice U8.t)) (y: asn1_
 let vkeep (#t #u: Type0) (r: prel t u) (kr: perm -> option (S.slice U8.t) -> u -> slprop) (pm: perm) (x: kept t) (y: u) : slprop =
   r (pm /. 2.0R) x.kval y ** kr (pm /. 2.0R) x.kraw y
 
+(* DEFAULT with a materialized default (`DD_DEFAULT_V`): `None` (the default)
+   is related to the default value, held at any fraction; an explicit value
+   (`Some`) differs from the default *)
+let raw_vdv (k: asn1_terminal_k) (defl: asn1_key_lit k) (pm: perm) (x: asn1_terminal_impl_t k) (y: option (asn1_raw_terminal_t k)) : slprop =
+  match y with
+  | None -> exists* (p: perm) . asn1_raw_terminal_rel k p x (raw_key_of_lit k defl)
+  | Some b -> asn1_raw_terminal_rel k pm x b ** pure (~ (b == raw_key_of_lit k defl))
+
 let rec raw_varel (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) (x: t) (y: asn1_raw_t k) : Tot slprop (decreases d) =
   match d with
   | D_ILC _ cd -> raw_vcrel cd pm x y
@@ -156,6 +164,14 @@ and raw_vdrel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddes
     | Some a, Some b -> asn1_raw_terminal_rel k' pm a b
     | _ -> pure False
     end
+  | DD_DEFAULT_V _ #k' defl _ ->
+    let x' : asn1_terminal_impl_t k' = x in
+    let y' : option (asn1_raw_terminal_t k') = y in
+    raw_vdv k' defl pm x' y'
+  | DD_DEFAULT_RESTRICTED_V _ #k' _ defl _ ->
+    let x' : asn1_terminal_impl_t k' = x in
+    let y' : option (asn1_raw_terminal_t k') = y in
+    raw_vdv k' defl pm x' y'
   | DD_VIEW d' _ view _ _ -> raw_vdrel d' pm (view x) y
 
 and raw_virel (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (d: idesc ls t) (pm: perm) (x: t) (y: raw_items_t ls) : Tot slprop (decreases d) =
@@ -289,6 +305,14 @@ let vdec_default_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_li
 let vdec_default_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) })
 : Lemma (pequiv #(option (asn1_terminal_impl_t k)) #(option (asn1_raw_terminal_t k)) (prel_option (asn1_raw_terminal_rel k)) (raw_vdrel (DD_DEFAULT_RESTRICTED id0 #k r defv)))
 = assert (pequiv #(option (asn1_terminal_impl_t k)) #(option (asn1_raw_terminal_t k)) (prel_option (asn1_raw_terminal_rel k)) (raw_vdrel (DD_DEFAULT_RESTRICTED id0 #k r defv))) by (solve_vequiv ())
+
+let vdec_dv_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (mat: dmat k (key_of_lit k defv))
+: Lemma (pequiv #(asn1_terminal_impl_t k) #(option (asn1_raw_terminal_t k)) (raw_vdv k defv) (raw_vdrel (DD_DEFAULT_V id0 #k defv mat)))
+= assert (pequiv #(asn1_terminal_impl_t k) #(option (asn1_raw_terminal_t k)) (raw_vdv k defv) (raw_vdrel (DD_DEFAULT_V id0 #k defv mat))) by (solve_vequiv ())
+
+let vdec_dv_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (mat: dmat k (key_of_lit k defv))
+: Lemma (pequiv #(asn1_terminal_impl_t k) #(option (asn1_raw_terminal_t k)) (raw_vdv k defv) (raw_vdrel (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat)))
+= assert (pequiv #(asn1_terminal_impl_t k) #(option (asn1_raw_terminal_t k)) (raw_vdv k defv) (raw_vdrel (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat))) by (solve_vequiv ())
 
 let vdec_view_equiv (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
 : Lemma (pequiv #ty #(raw_dec_t dk) (vview (raw_vdrel d) view) (raw_vdrel (DD_VIEW d ty view mk law)))

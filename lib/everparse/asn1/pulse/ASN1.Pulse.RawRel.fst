@@ -221,6 +221,13 @@ let default_rel_opt (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
   (ensures (raw_default_rel id0 k defl == raw_opt (raw_terminal_rel id0 k)))
 = ()
 
+(* DEFAULT components with a materialized default (`DD_DEFAULT_V`): the value
+   is always there, as `Some`; when its bytes are omitted (the default value),
+   it may be held at any fraction (e.g. a parsed default, materialized from a
+   static array), otherwise at exactly `pm` *)
+let raw_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (pm: perm) (x: asn1_terminal_impl_t k) (w: SB.bytes) : slprop =
+  exists* (p: perm) . raw_default_rel id0 k defl p (Some x) w ** pure (~ (w == Seq.empty) ==> p == pm)
+
 (* The whole schema, along an impl descriptor (`ASN1.Pulse.Rel.adesc`): a
    VIEW node relates a value through its view *)
 
@@ -286,6 +293,8 @@ and raw_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc
   | DD_OPTION d' -> raw_opt (raw_arel d') pm x w
   | DD_DEFAULT id0 #k defl -> raw_default_rel id0 k defl pm x w
   | DD_DEFAULT_RESTRICTED id0 #k _ defl -> raw_default_rel id0 k defl pm x w
+  | DD_DEFAULT_V id0 #k defl _ -> raw_dv id0 k defl pm x w
+  | DD_DEFAULT_RESTRICTED_V id0 #k _ defl _ -> raw_dv id0 k defl pm x w
   | DD_VIEW d' _ view _ _ -> raw_drel d' pm (view x) w
 
 and raw_irel (srt: bool) (#ids: _) (#items: asn1_gen_items_l ids) (#t: Type0) (d: idesc items t) (pm: perm) (x: t) (w: SB.bytes) : Tot slprop (decreases d) =
@@ -954,6 +963,14 @@ let dec_default_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1
 : Lemma (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_drel (DD_DEFAULT_RESTRICTED id0 #k r defv)))
 = assert (prel_equiv #(option (asn1_terminal_impl_t k)) (raw_default_rel id0 k defv) (raw_drel (DD_DEFAULT_RESTRICTED id0 #k r defv))) by (solve_equiv ())
 
+let dec_dv_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (mat: dmat k (key_of_lit k defv))
+: Lemma (prel_equiv #(asn1_terminal_impl_t k) (raw_dv id0 k defv) (raw_drel (DD_DEFAULT_V id0 #k defv mat)))
+= assert (prel_equiv #(asn1_terminal_impl_t k) (raw_dv id0 k defv) (raw_drel (DD_DEFAULT_V id0 #k defv mat))) by (solve_equiv ())
+
+let dec_dv_restricted_equiv (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (mat: dmat k (key_of_lit k defv))
+: Lemma (prel_equiv #(asn1_terminal_impl_t k) (raw_dv id0 k defv) (raw_drel (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat)))
+= assert (prel_equiv #(asn1_terminal_impl_t k) (raw_dv id0 k defv) (raw_drel (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat))) by (solve_equiv ())
+
 let dec_view_equiv (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (ty: Type0) (view: ty -> t) (mk: t -> ty) (law: squash (view_law view mk))
 : Lemma (prel_equiv #ty (raw_view (raw_drel d) view) (raw_drel (DD_VIEW d ty view mk law)))
 = assert (prel_equiv #ty (raw_view (raw_drel d) view) (raw_drel (DD_VIEW d ty view mk law))) by (solve_equiv ())
@@ -1062,6 +1079,31 @@ let gather_default (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) 
   if In.adb_key_supported k
   then (default_nd_equiv id0 k defl; gather_ext (raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (gather_raw_opt_nd (WA.raw_key_enc id0 k defl) (raw_terminal_rel id0 k) (gather_terminal id0 k)))
   else (default_opt_equiv id0 k defl; gather_ext (raw_opt (raw_terminal_rel id0 k)) (raw_default_rel id0 k defl) () (gather_raw_opt (raw_terminal_rel id0 k) (gather_terminal id0 k)))
+
+ghost
+fn share_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
+: share_t #(asn1_terminal_impl_t k) (raw_dv id0 k defl)
+= (x: asn1_terminal_impl_t k) (#p: perm) (#y: SB.bytes)
+{
+  unfold (raw_dv id0 k defl p x y);
+  with q . assert (raw_default_rel id0 k defl q (Some x) y);
+  share_default id0 k defl (Some x) #q #y;
+  fold (raw_dv id0 k defl (p /. 2.0R) x y);
+  fold (raw_dv id0 k defl (p /. 2.0R) x y)
+}
+
+ghost
+fn gather_dv (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k)
+: gather_t #(asn1_terminal_impl_t k) (raw_dv id0 k defl)
+= (x: asn1_terminal_impl_t k) (#p: perm) (#y: SB.bytes) (#p': perm) (#y': SB.bytes)
+{
+  unfold (raw_dv id0 k defl p x y);
+  with q . assert (raw_default_rel id0 k defl q (Some x) y);
+  unfold (raw_dv id0 k defl p' x y');
+  with q' . assert (raw_default_rel id0 k defl q' (Some x) y');
+  gather_default id0 k defl (Some x) #q #y #q' #y';
+  fold (raw_dv id0 k defl (p +. p') x y)
+}
 
 ghost
 fn share_raw_view (#t #ty: Type0) (r: bprel t) (view: ty -> t) (sh: share_t r)
@@ -1233,6 +1275,12 @@ and share_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: dde
   | DD_DEFAULT_RESTRICTED id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
     share_ext (raw_default_rel id0 k defv) (raw_drel d) () (share_default id0 k defv)
+  | DD_DEFAULT_V id0 #k defv mat ->
+    dec_dv_equiv id0 defv mat;
+    share_ext (raw_dv id0 k defv) (raw_drel d) () (share_dv id0 k defv)
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defv mat ->
+    dec_dv_restricted_equiv id0 r defv mat;
+    share_ext (raw_dv id0 k defv) (raw_drel d) () (share_dv id0 k defv)
   | DD_VIEW d' ty view mk law ->
     dec_view_equiv d' ty view mk law;
     share_ext (raw_view (raw_drel d') view) (raw_drel d) () (share_raw_view (raw_drel d') view (share_drel d'))
@@ -1381,6 +1429,12 @@ and gather_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: dd
   | DD_DEFAULT_RESTRICTED id0 #k r defv ->
     dec_default_restricted_equiv id0 r defv;
     gather_ext (raw_default_rel id0 k defv) (raw_drel d) () (gather_default id0 k defv)
+  | DD_DEFAULT_V id0 #k defv mat ->
+    dec_dv_equiv id0 defv mat;
+    gather_ext (raw_dv id0 k defv) (raw_drel d) () (gather_dv id0 k defv)
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defv mat ->
+    dec_dv_restricted_equiv id0 r defv mat;
+    gather_ext (raw_dv id0 k defv) (raw_drel d) () (gather_dv id0 k defv)
   | DD_VIEW d' ty view mk law ->
     dec_view_equiv d' ty view mk law;
     gather_ext (raw_view (raw_drel d') view) (raw_drel d) () (gather_raw_view (raw_drel d') view (gather_drel d'))

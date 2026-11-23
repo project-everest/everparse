@@ -192,7 +192,7 @@ let dabsent (#s: _) (#d: _) (#dk: asn1_decorated_k s d) (#t: Type0) (dd: ddesc d
   (v: Ghost.erased (asn1_decorated_t_core dk)) ->
   stt t
     (pure (absent_core dk v))
-    (fun res -> drel true dd pm res v ** pure (drel true dd pm res v == emp))
+    (fun res -> drel true dd pm res v)
 
 (* PLAIN *)
 
@@ -380,6 +380,80 @@ fn dec_default_restricted_absent
   res
 }
 
+(* DEFAULT, with a materialized default value *)
+
+let dec_rel_dv_some (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (mat: dmat k (key_of_lit k defv)) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv (key_of_lit k defv))
+: Lemma (requires Nondefault? y) (ensures drel true (DD_DEFAULT_V id0 #k defv mat) pm a y == asn1_terminal_rel k pm a (nondefault_v y))
+= let Nondefault b = y in
+  assert_norm (drel true (DD_DEFAULT_V id0 #k defv mat) pm a (Nondefault b) == asn1_terminal_rel k pm a b)
+
+inline_for_extraction
+fn dec_dv_present
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k)) (mat: dmat k (key_of_lit k defv))
+  (pt: aparser #(asn1_terminal_impl_t k) #(asn1_terminal_t k) (asn1_terminal_rel k) #asn1_weak_parser_kind (asn1_terminal_as_parser k))
+: dpresent (DD_DEFAULT_V (Ghost.reveal id0) #(Ghost.reveal k) defv mat)
+= (input: _) (#pm: _) (#w: _) (#v: _)
+{
+  dec_default_lemma id0 #k defv w v;
+  let gv : Ghost.erased (default_tv #(asn1_terminal_t k) (key_of_lit k defv)) = v;
+  let res = parse_ilc id0 #(ASN1_TERMINAL k) #_ #_ #(asn1_terminal_as_parser k) pt input #pm #w #(nondefault_v (Ghost.reveal gv));
+  dec_rel_dv_some id0 #k defv mat pm res v;
+  rel_rewrite (drel true (DD_DEFAULT_V (Ghost.reveal id0) #(Ghost.reveal k) defv mat) pm res v);
+  res
+}
+
+let dec_rel_dv_none (id0: asn1_id_t) (#k: asn1_terminal_k) (defv: asn1_key_lit k) (mat: dmat k (key_of_lit k defv)) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv (key_of_lit k defv))
+: Lemma (requires absent_core (ASN1_DEFAULT_TERMINAL id0 #k defv) y) (ensures drel true (DD_DEFAULT_V id0 #k defv mat) pm a y == dv_any_rel k (key_of_lit k defv) a)
+= assert_norm (drel true (DD_DEFAULT_V id0 #k defv mat) pm a (Default #_ #(key_of_lit k defv)) == dv_any_rel k (key_of_lit k defv) a)
+
+inline_for_extraction
+fn dec_dv_absent
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (defv: Ghost.erased (asn1_key_lit k)) (mat: dmat k (key_of_lit k defv))
+: dabsent (DD_DEFAULT_V (Ghost.reveal id0) #(Ghost.reveal k) defv mat)
+= (pm: _) (v: _)
+{
+  let res = mat ();
+  dec_rel_dv_none id0 #k defv mat pm res v;
+  rewrite (dv_any_rel k (key_of_lit k defv) res) as (drel true (DD_DEFAULT_V (Ghost.reveal id0) #(Ghost.reveal k) defv mat) pm res v);
+  res
+}
+
+let dec_rel_dv_restricted_some (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (mat: dmat k (key_of_lit k defv)) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
+: Lemma (requires Nondefault? y) (ensures drel true (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat) pm a y == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a (nondefault_r r y))
+= let Nondefault b = y in
+  assert_norm (drel true (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat) pm a (Nondefault b) == asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r) pm a b)
+
+inline_for_extraction
+fn dec_dv_restricted_present
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) })) (mat: dmat k (key_of_lit k defv))
+  (pc: aparser #(asn1_content_impl_t (ASN1_RESTRICTED_TERMINAL k r)) #(asn1_content_t (ASN1_RESTRICTED_TERMINAL k r)) (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k r)) #asn1_weak_parser_kind (asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)))
+: dpresent (DD_DEFAULT_RESTRICTED_V (Ghost.reveal id0) #(Ghost.reveal k) r defv mat)
+= (input: _) (#pm: _) (#w: _) (#v: _)
+{
+  dec_default_restricted_lemma id0 #k r defv w v;
+  let gv : Ghost.erased (default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv)) = v;
+  let res = parse_ilc id0 #(ASN1_RESTRICTED_TERMINAL k r) #_ #_ #(asn1_content_as_parser (ASN1_RESTRICTED_TERMINAL k r)) pc input #pm #w #(nondefault_r r (Ghost.reveal gv));
+  dec_rel_dv_restricted_some id0 #k r defv mat pm res v;
+  rel_rewrite (drel true (DD_DEFAULT_RESTRICTED_V (Ghost.reveal id0) #(Ghost.reveal k) r defv mat) pm res v);
+  res
+}
+
+let dec_rel_dv_restricted_none (id0: asn1_id_t) (#k: asn1_terminal_k) (r: asn1_restriction k) (defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) }) (mat: dmat k (key_of_lit k defv)) (pm: perm) (a: asn1_terminal_impl_t k) (y: default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k defv))
+: Lemma (requires absent_core (ASN1_DEFAULT_RESTRICTED_TERMINAL id0 #k r defv) y) (ensures drel true (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat) pm a y == dv_any_rel k (key_of_lit k defv) a)
+= assert_norm (drel true (DD_DEFAULT_RESTRICTED_V id0 #k r defv mat) pm a (Default #(parse_filter_refine (restriction_pred r)) #(key_of_lit k defv)) == dv_any_rel k (key_of_lit k defv) a)
+
+inline_for_extraction
+fn dec_dv_restricted_absent
+  (id0: Ghost.erased asn1_id_t) (#k: Ghost.erased asn1_terminal_k) (r: Ghost.erased (asn1_restriction k)) (defv: Ghost.erased (d: asn1_key_lit k { restriction_pred r (key_of_lit k d) })) (mat: dmat k (key_of_lit k defv))
+: dabsent (DD_DEFAULT_RESTRICTED_V (Ghost.reveal id0) #(Ghost.reveal k) r defv mat)
+= (pm: _) (v: _)
+{
+  let res = mat ();
+  dec_rel_dv_restricted_none id0 #k r defv mat pm res v;
+  rewrite (dv_any_rel k (key_of_lit k defv) res) as (drel true (DD_DEFAULT_RESTRICTED_V (Ghost.reveal id0) #(Ghost.reveal k) r defv mat) pm res v);
+  res
+}
+
 #pop-options
 
 (* VIEW *)
@@ -440,21 +514,21 @@ let sres (#i: _) (#ls: asn1_gen_items_l i) (#t: Type0) (di: idesc ls t) (input: 
 
 ghost
 fn trade_emp_intro (p r: slprop)
-  requires r ** pure (p == emp)
+  requires r
   ensures Trade.trade p r
 {
   intro (Trade.trade p r) #r fn _ {
-    rewrite p as emp;
+    drop_ p;
   };
 }
 
 ghost
 fn trade_emp_l (p q r: slprop)
-  requires Trade.trade q r ** pure (p == emp)
+  requires Trade.trade q r
   ensures Trade.trade (p ** q) r
 {
   intro (Trade.trade (p ** q) r) #(Trade.trade q r) fn _ {
-    rewrite p as emp;
+    drop_ p;
     Trade.elim q r;
   };
 }

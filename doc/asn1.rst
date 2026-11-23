@@ -352,10 +352,13 @@ C types
    * - CHOICE
      - tagged union ``T``: tags ``M_IMPL_T_ALT``, union members
        ``T_alt``. Nested CHOICEs are not flattened.
-   * - OPTIONAL or DEFAULT component ``f`` of ``T``
+   * - OPTIONAL component ``f`` of ``T``
      - tagged type ``T_f_opt``: tags ``M_IMPL_T_F_ABSENT`` /
-       ``M_IMPL_T_F_PRESENT``, member ``T_f_present``. A parsed DEFAULT
-       component equal to its default is ``ABSENT``.
+       ``M_IMPL_T_F_PRESENT``, member ``T_f_present``.
+   * - DEFAULT component ``f`` of ``T``
+     - the plain type of the component. The parser fills in the default
+       value when the component is absent (slices point into a constant
+       array); the writer omits a value equal to the default.
    * - INTEGER, ENUMERATED
      - ``int64_t`` if the constraint fits in 64 bits. Otherwise
        ``ASN1_Pulse_Rel_asn1_int_impl``: either ``Small`` (``int64_t``)
@@ -526,7 +529,8 @@ Modules, values, parameters and classes
   Quadruple and Tuple notations, ``'..'H`` / ``'..'B``, named bits,
   times, IRIs), used in DEFAULT values, constraint bounds and table keys.
   Values of constructed types are parsed and ignored.
-* DEFAULT on terminal types other than RELATIVE-OID, also under one
+* DEFAULT on terminal types other than OBJECT IDENTIFIER and
+  RELATIVE-OID, also under one
   EXPLICIT tag (``[0] EXPLICIT Version DEFAULT v1``) when unconstrained.
   F\* proves by normalization that each default value is valid.
 * Parameterized types (X.683) with type, value, object set and class
@@ -631,7 +635,7 @@ Specification and library
   and ``PATTERN`` constraints are not supported; value sets and single
   values are only supported on INTEGER, ENUMERATED and BOOLEAN.
 * DEFAULT is only supported on terminal types (not on SEQUENCE, SET,
-  CHOICE, SEQUENCE OF or SET OF), and not on EXPLICIT-tagged constrained
+  CHOICE, SEQUENCE OF or SET OF, OBJECT IDENTIFIER or RELATIVE-OID), and not on EXPLICIT-tagged constrained
   INTEGER or ENUMERATED.
 * ANY cannot be a CHOICE alternative.
 

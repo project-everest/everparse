@@ -79,9 +79,9 @@ let adb_fields (a: adb) : field list =
       if Hashtbl.mem seen k then false else (Hashtbl.add seen k (); true)) rest
 
 let gen_dv n (f: field) = match f.fdeco with
-  | FDefault (_, t, None, lit) ->
+  | FDefault (_, t, None, lit, _) ->
     p "noextract\nlet %s : asn1_key_lit %s = %s\n\n" (dv_name n f) t.tk lit
-  | FDefault (_, t, Some r, lit) ->
+  | FDefault (_, t, Some r, lit, _) ->
     (* ASN1.Lit.restriction_lit also decides the SIZE of the strings that are byte sequences *)
     let pred, lem =
       if t.ibound <> None || t.tk = "ASN1_OCTETSTRING" then "restriction_pred_lit", "restriction_pred_lit_correct"
@@ -94,8 +94,8 @@ let gen_dv n (f: field) = match f.fdeco with
 let dkexpr n (f: field) = match f.fdeco with
   | FPlain -> sp "(ASN1_PLAIN_ILC %s)" (kexpr f.fnode)
   | FOptional -> sp "(ASN1_OPTION_ILC %s)" (kexpr f.fnode)
-  | FDefault (id, t, None, _) -> sp "(ASN1_DEFAULT_TERMINAL %s #%s %s)" (idexpr id) t.tk (dv_name n f)
-  | FDefault (id, t, Some r, _) -> sp "(ASN1_DEFAULT_RESTRICTED_TERMINAL %s #%s %s %s)" (idexpr id) t.tk r (dv_name n f)
+  | FDefault (id, t, None, _, _) -> sp "(ASN1_DEFAULT_TERMINAL %s #%s %s)" (idexpr id) t.tk (dv_name n f)
+  | FDefault (id, t, Some r, _, _) -> sp "(ASN1_DEFAULT_RESTRICTED_TERMINAL %s #%s %s %s)" (idexpr id) t.tk r (dv_name n f)
 
 let items_expr n fields =
   List.fold_right (fun f acc -> sp "(ASN1_GEN_ITEMS_CONS _ _ %s _\n    %s)" (dkexpr n f) acc) fields "ASN1_GEN_ITEMS_NIL"
@@ -194,13 +194,16 @@ and base_cty ctx (r: string) = match def ctx r with
 let opt_payload ctx (f: field) = match f.fdeco with
   | FPlain -> cty ctx f.fnode
   | FOptional -> cty ctx f.fnode
-  | FDefault (_, t, _, _) -> t.cty
+  | FDefault (_, t, _, _, _) -> t.cty
 
 let opt_name _ (f: field) = sp "%s_%s" f.fowner f.fname
 
+(* DEFAULT components always hold a value: the parser materializes the
+   default value when the component is absent *)
 let field_cty ctx n (f: field) = match f.fdeco with
   | FPlain -> cty ctx f.fnode
-  | _ -> "t_" ^ opt_name n f ^ "_opt"
+  | FDefault (_, t, _, _, _) -> t.cty
+  | FOptional -> "t_" ^ opt_name n f ^ "_opt"
 
 (* Right-nested pairs, the last component unpaired *)
 let rec tuple_ty = function
@@ -227,14 +230,53 @@ and cdexpr (c: cnode) = match c with
   | COf (set, ne, n) -> sp "(%s %b %s)" (if set then "CD_SET_OF" else "CD_SEQUENCE_OF") ne (dexpr n)
   | CPrefixed n | CContaining n -> sp "(CD_PREFIXED %s)" (dexpr n)
 
+(* The materializers of the DEFAULT values (ASN1.Pulse.DefaultMat): the
+   DER content bytes of the value, padded with one byte (C has no empty
+   arrays), in a static array *)
+let dm_name _ (f: field) = sp "%s_%s" f.fowner f.fname
+
+let dm_lit n (f: field) = match f.fdeco with
+  | FDefault (_, _, _, _, { dm_pre = Some (iid, it); _ }) -> sp "(prefixed_lit %s %s %s)" iid it.tk (dv_name n f)
+  | _ -> dv_name n f
+
+let dmat_expr n (f: field) = "dm_" ^ dm_name n f
+
+let dmat_def n (f: field) = match f.fdeco with
+  | FDefault (_, t, _, _, dm) ->
+    let x = dm_name n f in
+    let leaf tk = sp "(DM.mat_leaf %s %s dml_%s dva_%s %dsz (dmok_%s (); ()))" tk (dm_lit n f) x x (List.length dm.dm_bytes) x in
+    begin match dm.dm_pre with
+      | None -> leaf t.tk
+      | Some (iid, it) -> sp "(DM.mat_prefixed %s %s %s %s)" iid it.tk (dv_name n f) (leaf it.tk)
+    end
+  | _ -> assert false
+
+let gen_dmat n (f: field) = match f.fdeco with
+  | FDefault (_, t, _, _, dm) ->
+    let x = dm_name n f in
+    let tk = match dm.dm_pre with Some (_, it) -> it.tk | None -> t.tk in
+    let l = bytes_lit (dm.dm_bytes @ [0]) in
+    p "noextract\nlet dml_%s : list U8.t = %s\n\n" x l;
+    (* proved by normalization: SMT may time out (e.g. on lists of characters) *)
+    p "noextract\nlet dmok_%s () : Lemma (DM.mat_leaf_ok %s %s dml_%s %dsz) =\n  assert (DM.mat_leaf_ok %s %s dml_%s %dsz) by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.smt ())\n\n"
+      x tk (dm_lit n f) x (List.length dm.dm_bytes) tk (dm_lit n f) x (List.length dm.dm_bytes);
+    p "(* not unfolded at extraction: a `static const` array *)\nirreducible\nlet dva_%s : (a: G.static_array U8.t { G.static_array_elems a == Seq.seq_of_list dml_%s }) =\n  G.mk_static_array dml_%s\n\n" x x x;
+    p "inline_for_extraction noextract\nlet dm_%s : dmat %s (key_of_lit %s %s) =\n  %s\n\n" x t.tk t.tk (dv_name n f) (dmat_def n f)
+  | _ -> ()
+
+let gen_dmats ctx n = match def ctx n with
+  | DStruct (_, fields) -> List.iter (gen_dmat n) fields
+  | DAdb a -> List.iter (gen_dmat n) (adb_fields a)
+  | _ -> ()
+
 let ddexpr n (f: field) =
   let o = opt_name n f in
   let view d = sp "(DD_VIEW %s t_%s_opt oview_%s omk_%s ())" d o o o in
   match f.fdeco with
   | FPlain -> sp "(DD_PLAIN %s)" (dexpr f.fnode)
   | FOptional -> view (sp "(DD_OPTION %s)" (dexpr f.fnode))
-  | FDefault (id, t, None, _) -> view (sp "(DD_DEFAULT %s #%s %s)" (idexpr id) t.tk (dv_name n f))
-  | FDefault (id, t, Some r, _) -> view (sp "(DD_DEFAULT_RESTRICTED %s #%s %s %s)" (idexpr id) t.tk r (dv_name n f))
+  | FDefault (id, t, None, _, _) -> sp "(DD_DEFAULT_V %s #%s %s %s)" (idexpr id) t.tk (dv_name n f) (dmat_expr n f)
+  | FDefault (id, t, Some r, _, _) -> sp "(DD_DEFAULT_RESTRICTED_V %s #%s %s %s %s)" (idexpr id) t.tk r (dv_name n f) (dmat_expr n f)
 
 let rec idesc_expr n = function
   | [] -> "ID_NIL"
@@ -293,7 +335,7 @@ let comment_name ctx n =
   | None -> sp "(* %s (anonymous) *)\n" n
 
 let gen_opt_types ctx n fields =
-    List.iter (fun f -> if f.fdeco <> FPlain then begin
+    List.iter (fun f -> if f.fdeco = FOptional then begin
         let o = opt_name n f in
         let pl = opt_payload ctx f in
         p "[@@FStar.Attributes.rename_let \"%s_opt\"]\nnoeq\ntype t_%s_opt =\n| %s_absent : t_%s_opt\n| %s_present : v: %s -> t_%s_opt\n\n" o o o o o pl o;
@@ -695,10 +737,12 @@ let gen_pulse_module (r: result) ~src ~spec ~pulse ~(roots: string list) : strin
   let ctx = { r; spec; keep = r.keep } in
   p "module %s\n#lang-pulse\n%s" pulse (header src);
   p "open Pulse.Lib.Pervasives\nopen ASN1.Base\nopen ASN1.Spec.Interpreter\nopen ASN1.Pulse.Rel\nopen ASN1.Pulse.Parse\nopen ASN1.Pulse.Interpreter\nopen ASN1.Pulse.Parser\nopen ASN1.Pulse.RawRel\nopen ASN1.Pulse.JitWriter\nopen ASN1.Pulse.RawJitWriter\nopen ASN1.Pulse.TypedWriter\nopen ASN1.Syntax\nopen %s\n" spec;
-  p "module S = Pulse.Lib.Slice\nmodule U8 = FStar.UInt8\nmodule I64 = FStar.Int64\nmodule LPS = LowParse.Pulse.Base\nmodule RW = ASN1.Pulse.RawWriter\nmodule Trade = Pulse.Lib.Trade\nmodule ItT = LowParse.PulseParse.Iterator.Type\nmodule LW = ASN1.Pulse.ListIterW\nmodule SI = ASN1.Pulse.SeqIter\nmodule SetI = ASN1.Pulse.SetIter\n\n";
+  p "module S = Pulse.Lib.Slice\nmodule U8 = FStar.UInt8\nmodule I64 = FStar.Int64\nmodule LPS = LowParse.Pulse.Base\nmodule RW = ASN1.Pulse.RawWriter\nmodule Trade = Pulse.Lib.Trade\nmodule ItT = LowParse.PulseParse.Iterator.Type\nmodule LW = ASN1.Pulse.ListIterW\nmodule SI = ASN1.Pulse.SeqIter\nmodule SetI = ASN1.Pulse.SetIter\nmodule G = Pulse.Lib.GlobalArray\nmodule DM = ASN1.Pulse.DefaultMat\n\n";
   p "(* proved in an empty context: in a large one, SMT may time out *)\ninline_for_extraction noextract\nlet half_perm : perm = 1.0R /. 2.0R\n\n";
   p "(* C types *)\n\n";
   List.iter (fun n -> gen_types ctx n; gen_kept_types ctx n) r.order;
+  p "(* DEFAULT values *)\n\n";
+  List.iter (gen_dmats ctx) r.order;
   p "(* Descriptors *)\n\n";
   List.iter (gen_desc ctx) r.order;
   p "(* Extraction roots *)\n\n";
