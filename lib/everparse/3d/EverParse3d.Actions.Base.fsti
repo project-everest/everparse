@@ -119,7 +119,7 @@ val validate_eta
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
@@ -131,7 +131,7 @@ val act_with_comment
       (extra_state: state_dict)
       (#use_error_handler:bool)
       (#res:Type)
-      (#sp: S.action_spec extra_state res)
+      (#[@@@erasable] sp: S.action_spec extra_state res)
       (a: action #base_t #len_t #pos_t extra_state res use_error_handler sp)
 : action #base_t #len_t #pos_t extra_state res use_error_handler sp
 
@@ -159,9 +159,9 @@ val validate_with_success_action
       (#extra: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s1: S.vspec extra)
+      (#[@@@erasable] s1: S.vspec extra)
       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra has_action use_error_handler s1)
-      (#sa: S.action_spec extra bool)
+      (#[@@@erasable] sa: S.action_spec extra bool)
       (a:action #base_t #len_t #pos_t extra bool use_error_handler sa)
   : validate_with_action_read #base_t #len_t #pos_t p1 extra true use_error_handler (S.vspec_with_success_action p1 s1 sa)
 
@@ -180,7 +180,7 @@ val validate_with_error_handler
       (#extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s)
   : validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s
 
@@ -207,12 +207,12 @@ val validate_dep_pair_with_refinement_and_action
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (#s1: S.vspec extra_state)
+      (#[@@@erasable] s1: S.vspec extra_state)
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
-      (#sa: t1 -> S.action_spec extra_state bool)
+      (#[@@@erasable] sa: t1 -> S.action_spec extra_state bool)
       (a:(x: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
       (#nz2:_)
       (#wk2: _)
@@ -220,7 +220,7 @@ val validate_dep_pair_with_refinement_and_action
       (#t2:refine _ f -> Type)
       (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (#s2: refine _ f -> S.vspec extra_state)
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
       (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
@@ -242,7 +242,7 @@ val validate_filter
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (#s: S.vspec extra_state)
+       (#[@@@erasable] s: S.vspec extra_state)
        (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
@@ -264,14 +264,14 @@ val validate_filter_with_action
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (#s: S.vspec extra_state)
+       (#[@@@erasable] s: S.vspec extra_state)
        (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
        (err: t -> constraint_error_code)
        (cr:string)
        (cf:string)
-       (#sa: t -> S.action_spec extra_state bool)
+       (#[@@@erasable] sa: t -> S.action_spec extra_state bool)
        (a: (x: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
@@ -293,7 +293,7 @@ val validate_weaken_left
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (#s: S.vspec extra_state)
+       (#[@@@erasable] s: S.vspec extra_state)
        (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (#nz':_)
        (#wk': _)
@@ -312,7 +312,7 @@ val validate_weaken_right
        (#extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (#s: S.vspec extra_state)
+       (#[@@@erasable] s: S.vspec extra_state)
        (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (#nz':_)
        (#wk': _)
@@ -333,7 +333,7 @@ val validate_weaken
        (#d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (#s: S.vspec d1)
+       (#[@@@erasable] s: S.vspec d1)
        (v:validate_with_action_read #base_t #len_t #pos_t p d1 has_action use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
@@ -353,7 +353,7 @@ val validate_call
        (#d': state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (#s: S.vspec d')
+       (#[@@@erasable] s: S.vspec d')
        (v:validate_with_action_read #base_t #len_t #pos_t p d' has_action use_error_handler s)
       (d: state_dict)
       (#f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
@@ -384,8 +384,8 @@ val validate_ite
        (#ha1:_)
        (#ha2:_)
        (#use_error_handler:bool)
-       (#s1: squash e -> S.vspec extra_state)
-       (#s2: squash (not e) -> S.vspec extra_state)
+       (#[@@@erasable] s1: squash e -> S.vspec extra_state)
+       (#[@@@erasable] s2: squash (not e) -> S.vspec extra_state)
        (p1:squash e -> parser k (a()))
        (v1:(x_: squash e -> validate_with_action_read #base_t #len_t #pos_t (p1()) extra_state ha1 use_error_handler (s1 x_)))
        (p2:squash (not e) -> parser k (b()))
@@ -412,7 +412,7 @@ val validate_nlist
        (#extra_state: _)
        (#ha:bool)
        (#use_error_handler:bool)
-       (#s: S.vspec extra_state)
+       (#[@@@erasable] s: S.vspec extra_state)
        (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler (S.vspec_nlist ha n n_is_const p s)
 
@@ -430,7 +430,7 @@ val validate_t_at_most
        (#extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (#s: S.vspec extra_state)
+       (#[@@@erasable] s: S.vspec extra_state)
        (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
   : validate_with_action_read #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler (S.vspec_t_at_most n s)
 
@@ -448,7 +448,7 @@ val validate_t_exact
        (#extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (#s: S.vspec extra_state)
+       (#[@@@erasable] s: S.vspec extra_state)
        (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
   : validate_with_action_read #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler (S.vspec_t_exact n p s)
 
@@ -480,10 +480,10 @@ val action_bind
       (#extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (#sf: S.action_spec extra_state a)
+      (#[@@@erasable] sf: S.action_spec extra_state a)
       (f: action #base_t #len_t #pos_t extra_state a use_error_handler sf)
       (#b:Type)
-      (#sg: a -> S.action_spec extra_state b)
+      (#[@@@erasable] sg: a -> S.action_spec extra_state b)
       (g: (x: a -> action #base_t #len_t #pos_t extra_state b use_error_handler (sg x)))
 : action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_bind sf sg)
 
@@ -495,7 +495,7 @@ val action_weaken
       (#d1: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (#sf: S.action_spec d1 a)
+      (#[@@@erasable] sf: S.action_spec d1 a)
       (f: action #base_t #len_t #pos_t d1 a use_error_handler sf)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
@@ -508,7 +508,7 @@ val vaction_weaken
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#d1: state_dict)
       (#use_error_handler:bool)
-      (#sf: S.vaction_spec d1)
+      (#[@@@erasable] sf: S.vaction_spec d1)
       (f: vaction #base_t #len_t #pos_t d1 use_error_handler sf)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
@@ -522,7 +522,7 @@ val action_call
       (#d': state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (#sf: S.action_spec d' a)
+      (#[@@@erasable] sf: S.action_spec d' a)
       (act: action #base_t #len_t #pos_t d' a use_error_handler sf)
       (d: state_dict)
       (#f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
@@ -597,10 +597,10 @@ val action_seq
       (#extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (#sf: S.action_spec extra_state a)
+      (#[@@@erasable] sf: S.action_spec extra_state a)
       (f: action #base_t #len_t #pos_t extra_state a use_error_handler sf)
       (#b: Type)
-      (#sg: S.action_spec extra_state b)
+      (#[@@@erasable] sg: S.action_spec extra_state b)
       (g: action #base_t #len_t #pos_t extra_state b use_error_handler sg)
 : action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_seq sf sg)
 
@@ -613,9 +613,9 @@ val action_ite
       (#use_error_handler:bool)
       (#a: Type)
       (guard: bool)
-      (#st: squash (guard == true) -> S.action_spec extra_state a)
+      (#[@@@erasable] st: squash (guard == true) -> S.action_spec extra_state a)
       (then_: (sq: squash (guard == true) -> action #base_t #len_t #pos_t extra_state a use_error_handler (st sq)))
-      (#se: squash (guard == false) -> S.action_spec extra_state a)
+      (#[@@@erasable] se: squash (guard == false) -> S.action_spec extra_state a)
       (else_: (sq: squash (guard == false) -> action #base_t #len_t #pos_t extra_state a use_error_handler (se sq)))
 : action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_ite guard st se)
 
@@ -632,7 +632,7 @@ val validate_with_comment_no_read
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
 : validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
@@ -649,7 +649,7 @@ val validate_with_comment
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
@@ -683,7 +683,7 @@ val validate_dep_pair
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (#s1: S.vspec extra_state)
+      (#[@@@erasable] s1: S.vspec extra_state)
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (#nz2:_)
@@ -692,7 +692,7 @@ val validate_dep_pair
       (#t2:t1 -> Type)
       (#p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (#s2: t1 -> S.vspec extra_state)
+      (#[@@@erasable] s2: t1 -> S.vspec extra_state)
       (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
@@ -714,10 +714,10 @@ val validate_dep_pair_with_action
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (#s1: S.vspec extra_state)
+      (#[@@@erasable] s1: S.vspec extra_state)
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
-      (#sa: t1 -> S.action_spec extra_state bool)
+      (#[@@@erasable] sa: t1 -> S.action_spec extra_state bool)
       (a:(x: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
       (#nz2:_)
       (#wk2: _)
@@ -725,7 +725,7 @@ val validate_dep_pair_with_action
       (#t2:t1 -> Type)
       (#p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (#s2: t1 -> S.vspec extra_state)
+      (#[@@@erasable] s2: t1 -> S.vspec extra_state)
       (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
@@ -748,7 +748,7 @@ val validate_dep_pair_with_refinement
       (#extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (#s1: S.vspec extra_state)
+      (#[@@@erasable] s1: S.vspec extra_state)
       (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
@@ -759,7 +759,7 @@ val validate_dep_pair_with_refinement
       (#t2:refine _ f -> Type)
       (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (#s2: refine _ f -> S.vspec extra_state)
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
       (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
@@ -782,10 +782,10 @@ val validate_with_dep_action
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
       (r:leaf_reader #base_t #len_t #pos_t p)
-      (#sa: t -> S.action_spec extra_state bool)
+      (#[@@@erasable] sa: t -> S.action_spec extra_state bool)
       (a: (x: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x)))
   : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_action p s sa)
 
@@ -802,10 +802,10 @@ val validate_with_dep_vaction
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
       (r:leaf_reader #base_t #len_t #pos_t p)
-      (#sa: t -> S.vaction_spec extra_state)
+      (#[@@@erasable] sa: t -> S.vaction_spec extra_state)
       (a: (x: t -> vaction #base_t #len_t #pos_t extra_state use_error_handler (sa x)))
   : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_vaction p s sa)
 
@@ -973,7 +973,7 @@ val validate_drop
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
@@ -993,7 +993,7 @@ val validate_pair
        (#extra_state: state_dict)
        (#has_action1:bool)
        (#use_error_handler:bool)
-       (#s1: S.vspec extra_state)
+       (#[@@@erasable] s1: S.vspec extra_state)
        (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
        (#nz2:_)
        (#wk2: _)
@@ -1002,7 +1002,7 @@ val validate_pair
        (#p2:parser k2 t2)
        (k2_const: bool)
        (#has_action2:bool)
-       (#s2: S.vspec extra_state)
+       (#[@@@erasable] s2: S.vspec extra_state)
        (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler s2)
   : validate_with_action_read
       #base_t #len_t #pos_t
@@ -1025,7 +1025,7 @@ val validate_without_reading
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
@@ -1182,7 +1182,7 @@ val validate_string
       (#extra_state: state_dict)
       (#ha:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
@@ -1202,7 +1202,7 @@ val validate_nlist_constant_size_without_actions
       (#p:parser k t)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_nlist false n n_is_const p s)
 
@@ -1347,7 +1347,7 @@ val probe_then_validate
       (#extra_state: state_dict)
       (#ha: bool)
       (#use_error_handler: bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (#ptr_t: Type0)
       (src: ptr_t)
@@ -1388,7 +1388,7 @@ val validate_eta_no_read
       (#extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
 : validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 
@@ -1407,7 +1407,7 @@ val validate_with_error_handler_no_read
       (#extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v1: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s)
 : validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s
 
@@ -1428,7 +1428,7 @@ let validate_eta_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s)
 : validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s
 = match allow_reading
@@ -1451,7 +1451,7 @@ let validate_with_comment_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s)
 : validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s
 = match allow_reading
@@ -1476,7 +1476,7 @@ let validate_with_error_handler_gen
       (#has_action: _)
       (allow_reading: bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v1: validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler s)
 : validate_with_action_t #base_t #len_t #pos_t p1 extra_state has_action allow_reading use_error_handler s
 = match allow_reading
@@ -1499,7 +1499,7 @@ let validate_without_reading_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec extra_state)
+      (#[@@@erasable] s: S.vspec extra_state)
       (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action allow_reading use_error_handler s)
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s
 = match allow_reading
@@ -1530,7 +1530,7 @@ val validate_weaken_no_read
        (#d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (#s: S.vspec d1)
+       (#[@@@erasable] s: S.vspec d1)
        (v:validate_with_action_no_read #base_t #len_t #pos_t p d1 has_action use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
@@ -1550,7 +1550,7 @@ let validate_weaken_gen
       (#has_action:bool)
       (allow_reading:bool)
       (#use_error_handler:bool)
-      (#s: S.vspec d1)
+      (#[@@@erasable] s: S.vspec d1)
       (v: validate_with_action_t #base_t #len_t #pos_t p d1 has_action allow_reading use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))

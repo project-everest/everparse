@@ -742,7 +742,7 @@ type atomic_action
   | Action_call:
       #b:bool ->
       #t:Type0 ->
-      #sp:S.action_spec d t ->
+      #[@@@erasable] sp:S.action_spec d t ->
       A.action #base_t #len_t #pos_t #inst d t use_error_handler sp ->
       atomic_action base_t len_t pos_t inst d use_error_handler b false t
 
@@ -1092,7 +1092,7 @@ type typ
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #ha1:_ ->
       head:dtyp base_t len_t pos_t inst d use_error_handler pk1 ha1 true ->
-      #sp:(dtyp_as_type head -> S.vaction_spec d) ->
+      #[@@@erasable] sp:(dtyp_as_type head -> S.vaction_spec d) ->
       act:(typename:string -> x:dtyp_as_type head ->
            A.vaction #base_t #len_t #pos_t #inst d use_error_handler (sp x)) ->
       typ base_t len_t pos_t inst d use_error_handler pk1 true false
