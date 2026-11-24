@@ -280,6 +280,15 @@ type kept (t: Type0) = {
 let view_law (#t #ty: Type0) (view: ty -> t) (mk: t -> ty) : prop =
   forall (x: t) . view (mk x) == x
 
+(* A value held at some fraction (e.g. a materialized DEFAULT value) *)
+let dv_any_rel (k: asn1_terminal_k) (v: asn1_terminal_t k) (x: asn1_terminal_impl_t k) : slprop =
+  exists* (p: perm) . asn1_terminal_rel k p x v
+
+(* A materializer of a DEFAULT value *)
+inline_for_extraction
+let dmat (k: asn1_terminal_k) (v: asn1_terminal_t k) : Type0 =
+  unit -> stt (asn1_terminal_impl_t k) emp (fun x -> dv_any_rel k v x)
+
 noeq
 type adesc : (#s: Set.set asn1_id_t) -> asn1_k s -> Type0 -> Type u#1 =
 | D_ILC : id: asn1_id_t -> #k: asn1_content_k -> #t: Type0 -> cdesc k t -> adesc (ASN1_ILC id k) t
@@ -316,6 +325,11 @@ and ddesc : (#s: Set.set asn1_id_t) -> (#d: asn1_decorator) -> asn1_decorated_k 
 | DD_OPTION : #s: Set.set asn1_id_t -> #k: asn1_k s -> #t: Type0 -> adesc k t -> ddesc (ASN1_OPTION_ILC k) (option t)
 | DD_DEFAULT : id: asn1_id_t -> #k: asn1_terminal_k -> defv: asn1_key_lit k -> ddesc (ASN1_DEFAULT_TERMINAL id #k defv) (option (asn1_terminal_impl_t k))
 | DD_DEFAULT_RESTRICTED : id: asn1_id_t -> #k: asn1_terminal_k -> r: asn1_restriction k -> defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) = true } -> ddesc (ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv) (option (asn1_terminal_impl_t k))
+(* DEFAULT with a materialized default: the value is always present; when
+   absent from the encoding, the parser builds the default value with `mat`
+   (e.g. from a static array), at some unknown fraction *)
+| DD_DEFAULT_V : id: asn1_id_t -> #k: asn1_terminal_k -> defv: asn1_key_lit k -> mat: dmat k (key_of_lit k defv) -> ddesc (ASN1_DEFAULT_TERMINAL id #k defv) (asn1_terminal_impl_t k)
+| DD_DEFAULT_RESTRICTED_V : id: asn1_id_t -> #k: asn1_terminal_k -> r: asn1_restriction k -> defv: asn1_key_lit k { restriction_pred r (key_of_lit k defv) = true } -> mat: dmat k (key_of_lit k defv) -> ddesc (ASN1_DEFAULT_RESTRICTED_TERMINAL id #k r defv) (asn1_terminal_impl_t k)
 | DD_VIEW : #s: Set.set asn1_id_t -> #d: asn1_decorator -> #dk: asn1_decorated_k s d -> #t: Type0 -> ddesc dk t -> ty: Type0 -> view: (ty -> t) -> mk: (t -> ty) -> squash (view_law view mk) -> ddesc dk ty
 
 and idesc : (#ids: id_decs) -> asn1_gen_items_l ids -> Type0 -> Type u#1 =
@@ -506,6 +520,20 @@ and drel (kb: bool) (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d
     | None, Default -> emp
     | Some a, Nondefault b -> asn1_terminal_rel k' pm a b
     | _ -> pure False
+    end
+  | DD_DEFAULT_V _ #k' defv _ ->
+    let x' : asn1_terminal_impl_t k' = x in
+    let y' : default_tv (key_of_lit k' defv) = y in
+    begin match y' with
+    | Default -> dv_any_rel k' (key_of_lit k' defv) x'
+    | Nondefault b -> asn1_terminal_rel k' pm x' b
+    end
+  | DD_DEFAULT_RESTRICTED_V _ #k' r defv _ ->
+    let x' : asn1_terminal_impl_t k' = x in
+    let y' : default_tv #(parse_filter_refine (restriction_pred r)) (key_of_lit k' defv) = y in
+    begin match y' with
+    | Default -> dv_any_rel k' (key_of_lit k' defv) x'
+    | Nondefault b -> asn1_terminal_rel k' pm x' b
     end
   | DD_VIEW d' _ view _ _ -> drel kb d' pm (view x) y
 

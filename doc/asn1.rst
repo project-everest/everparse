@@ -206,8 +206,6 @@ For each root type ``T``:
 
 .. code-block:: c
 
-   void custard_init_globals(void);  /* call once, before anything else */
-
    bool validate_T(Pulse_Lib_Slice_slice__uint8 input, size_t *offset);
 
    T parse_T(Pulse_Lib_Slice_slice__uint8 validated_input);
@@ -217,6 +215,32 @@ For each root type ``T``:
 
    ASN1_Pulse_JitWriter_jit_result
    write_T_typed(T x, Pulse_Lib_Slice_slice__uint8 out, size_t *pos);
+
+   ASN1_Pulse_JitWriter_jit_result size_T(T x, size_t *budget);
+
+   ASN1_Pulse_JitWriter_jit_result size_T_typed(T x, size_t *budget);
+
+For each SEQUENCE OF / SET OF ``L`` with elements of C type ``E``
+reachable from the roots (see ``src/ASN1/tool/README.md`` for the naming
+of ``L``):
+
+.. code-block:: c
+
+   L_iter L_iter_start(L_list x);
+   bool L_iter_is_empty(L_iter it);
+   bool L_iter_next(L_iter *it, E *out);
+   size_t L_length(L_list x);
+   bool L_nth(L_list x, size_t i, E *out);
+   L_list L_empty(void);
+   L_list L_of_slice(E_slice a);
+   L_list L_append(L_list *b, L_list *a);
+
+where ``L_list`` and ``E_slice`` stand for the generic C list and slice
+types. ``L_iter_next`` returns ``false`` at the end of the list, and
+``L_nth`` when ``i >= L_length(x)``; otherwise they store the element in
+``*out`` (parsed zero-copy if the list was parsed). These functions work
+on parsed lists, on lists built with ``L_empty``, ``L_of_slice`` and
+``L_append``, and on mixes of both.
 
 A byte buffer is a slice:
 
@@ -255,11 +279,39 @@ A byte buffer is a slice:
   On failure, the bytes of ``out`` after ``*pos`` are unchanged. The
   writer also does what DER requires of the encoder: it omits a DEFAULT
   component equal to its default value, and sorts SET components and SET
-  OF elements. ``JIT_RETRY`` is internal and never returned.
+  OF elements. It makes a single pass, never reading back what it
+  wrote (except to sort SET and SET OF), so it is stricter than DER in
+  two corner cases: an ANY value must be exactly one TLV, and an ANY
+  DEFINED BY key that selects the fallback must not be one of the keys
+  of the table; otherwise it returns ``JIT_INVALID``.
+  ``JIT_RETRY`` is internal and never returned.
 
 ``write_T_typed``
   The same C code as ``write_T``, with a stronger F\* precondition (see
-  :ref:`asn1-pulse-api`), under which it never returns ``JIT_INVALID``.
+  :ref:`asn1-pulse-api`), under which it never returns ``JIT_INVALID`` if ``T`` contains neither
+  ANY nor ANY DEFINED BY with a fallback (for those, ``JIT_INVALID`` is
+  only possible because of the strict checks above, and does not happen
+  on values obtained from the typed API in practice).
+
+``size_T``
+  Computes the size of the encoding that ``write_T`` would write, with the
+  same checks and the same results: it is the same C code as ``write_T``,
+  run on a *dry* output that only counts bytes (``ASN1.Pulse.Sink``).
+  ``*budget`` plays the role of ``*pos``:
+
+  * ``ASN1_PULSE_JITWRITER_JIT_OK``: the size of the encoding was
+    subtracted from ``*budget``;
+  * ``ASN1_PULSE_JITWRITER_JIT_INVALID``: as for ``write_T``;
+  * ``ASN1_PULSE_JITWRITER_JIT_NO_SPACE``: the encoding is larger than
+    ``*budget`` (``x`` may also be invalid, as for ``write_T``).
+
+  It stops as soon as the budget is exhausted, so its time is bounded by
+  the budget even on huge lists. To get the size, start with
+  ``*budget == SIZE_MAX`` and compute ``SIZE_MAX - *budget``.
+
+``size_T_typed``
+  The same C code as ``size_T``, with the F\* precondition of
+  ``write_T_typed``.
 
 Here is a round trip with ``Msg``:
 
@@ -268,7 +320,6 @@ Here is a round trip with ``Msg``:
    #include "Small.h"
 
    int roundtrip(uint8_t *in, size_t len, uint8_t *buf, size_t buf_len) {
-     custard_init_globals();
      Pulse_Lib_Slice_slice__uint8 s = { .elt = in, .len = len };
      size_t off = 0;
      if (!validate_Msg(s, &off) || off != len)
@@ -301,10 +352,13 @@ C types
    * - CHOICE
      - tagged union ``T``: tags ``M_IMPL_T_ALT``, union members
        ``T_alt``. Nested CHOICEs are not flattened.
-   * - OPTIONAL or DEFAULT component ``f`` of ``T``
+   * - OPTIONAL component ``f`` of ``T``
      - tagged type ``T_f_opt``: tags ``M_IMPL_T_F_ABSENT`` /
-       ``M_IMPL_T_F_PRESENT``, member ``T_f_present``. A parsed DEFAULT
-       component equal to its default is ``ABSENT``.
+       ``M_IMPL_T_F_PRESENT``, member ``T_f_present``.
+   * - DEFAULT component ``f`` of ``T``
+     - the plain type of the component. The parser fills in the default
+       value when the component is absent (slices point into a constant
+       array); the writer omits a value equal to the default.
    * - INTEGER, ENUMERATED
      - ``int64_t`` if the constraint fits in 64 bits. Otherwise
        ``ASN1_Pulse_Rel_asn1_int_impl``: either ``Small`` (``int64_t``)
@@ -475,7 +529,8 @@ Modules, values, parameters and classes
   Quadruple and Tuple notations, ``'..'H`` / ``'..'B``, named bits,
   times, IRIs), used in DEFAULT values, constraint bounds and table keys.
   Values of constructed types are parsed and ignored.
-* DEFAULT on terminal types other than RELATIVE-OID, also under one
+* DEFAULT on terminal types other than OBJECT IDENTIFIER and
+  RELATIVE-OID, also under one
   EXPLICIT tag (``[0] EXPLICIT Version DEFAULT v1``) when unconstrained.
   F\* proves by normalization that each default value is valid.
 * Parameterized types (X.683) with type, value, object set and class
@@ -525,6 +580,11 @@ instantiated with it.
    * - ``write_typed_d`` (``write_T_typed``)
      - ``arel false d pm x v`` and ``encodable k v``
      - ``JIT_OK``, having written ``asn1_enc k v``, or ``JIT_NO_SPACE``
+   * - ``size_raw_d`` (``size_T``), ``size_typed_d`` (``size_T_typed``)
+     - as ``write_T``, ``write_T_typed``, with a budget ``b`` instead of
+       an output buffer
+     - the same result as the writer on a buffer of size ``b``; on
+       ``JIT_OK``, the budget is decreased by the size of ``asn1_enc k v``
    * - ``RelKeep.to_writer d pm x v`` (ghost)
      - ``arel true d pm x v``
      - ``arel false d pm x v``, and a trade back to ``arel true``
@@ -575,7 +635,7 @@ Specification and library
   and ``PATTERN`` constraints are not supported; value sets and single
   values are only supported on INTEGER, ENUMERATED and BOOLEAN.
 * DEFAULT is only supported on terminal types (not on SEQUENCE, SET,
-  CHOICE, SEQUENCE OF or SET OF), and not on EXPLICIT-tagged constrained
+  CHOICE, SEQUENCE OF or SET OF, OBJECT IDENTIFIER or RELATIVE-OID), and not on EXPLICIT-tagged constrained
   INTEGER or ENUMERATED.
 * ANY cannot be a CHOICE alternative.
 
@@ -608,8 +668,9 @@ also:
 C API
 ^^^^^
 
-* No C iterator is generated for parsed SEQUENCE OF / SET OF lists: the
-  caller walks the payload, which is a sequence of validated TLVs.
+* SEQUENCE OF / SET OF values keep the generic ``mixed_list`` C type;
+  only their iterator type ``L_iter`` gets a per-list name (a typedef).
+  No lookup function is generated for SET OF.
 * ``validate_T``, ``parse_T`` and the writers are only generated for root
   types (``--root``).
 * The names of the generic C types, such as

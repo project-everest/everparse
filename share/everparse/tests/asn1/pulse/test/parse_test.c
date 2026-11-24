@@ -1,3 +1,4 @@
+#include <string.h>
 /* Sanity test of the extracted zero-copy parsers (ASN1.Pulse.ParseTest) */
 #include "ASN1.Pulse.ParseTest.h"
 #include <stdio.h>
@@ -63,6 +64,82 @@ int main(void) {
   if (q._1.val.Small != 5 || q._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__BOOL
       || q._2._2._1.tag != FSTAR_PERVASIVES_NATIVE_NONE__SLICE_UINT8
       || q._2._2._2.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || q._2._2._2.val.Some.val.Small != 7) { printf("seq ad\n"); fails++; }
+  /* the same SEQUENCE, component by component (ASN1.Pulse.SeqIter) */
+  {
+    uint8_t *ins[3] = { q3, q4, q5 };
+    size_t lens[3] = { sizeof(q3), sizeof(q4), sizeof(q5) };
+    const char *exp[3] = { "a", "abcd", "ad" };
+    for (int k = 0; k < 3; k++) {
+      char got[8] = { 0 };
+      int n = 0;
+      ASN1_Pulse_SeqIter_seq_iter it = ASN1_Pulse_ParseTest_seq_iter_start((Pulse_Lib_Slice_slice__uint8){ .elt = ins[k], .len = lens[k] });
+      while (!ASN1_Pulse_ParseTest_seq_iter_is_empty(it) && n < 7) {
+        ASN1_Pulse_SeqIter_seq_item x = ASN1_Pulse_ParseTest_seq_iter_next(&it);
+        got[n++] = (char)('a' + x.comp);
+        switch (x.comp) {
+        case 0: {
+          ASN1_Pulse_Rel_asn1_int_impl v = ASN1_Pulse_ParseTest_seq_get_a(x);
+          if (v.tag != ASN1_PULSE_REL_SMALL || v.val.Small != 5) { printf("seq_get_a %d\n", k); fails++; }
+          break; }
+        case 1: {
+          FStar_Pervasives_Native_option__bool v = ASN1_Pulse_ParseTest_seq_get_b(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__BOOL || !v.val.Some) { printf("seq_get_b %d\n", k); fails++; }
+          break; }
+        case 2: {
+          FStar_Pervasives_Native_option__slice_uint8 v = ASN1_Pulse_ParseTest_seq_get_c(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__SLICE_UINT8 || v.val.Some.len != 2 || v.val.Some.elt != q4 + 10) { printf("seq_get_c %d\n", k); fails++; }
+          break; }
+        case 3: {
+          FStar_Pervasives_Native_option__asn1_int_impl v = ASN1_Pulse_ParseTest_seq_get_d(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || v.val.Some.val.Small != 7) { printf("seq_get_d %d\n", k); fails++; }
+          break; }
+        default: printf("seq_iter comp %d\n", k); fails++;
+        }
+      }
+      if (strcmp(got, exp[k])) { printf("seq_iter %d: %s\n", k, got); fails++; }
+    }
+  }
+  /* SET { c [1] IMPLICIT OCTET STRING, a [0] IMPLICIT INTEGER OPTIONAL,
+     b BOOLEAN DEFAULT FALSE }, component by component (ASN1.Pulse.SetIter):
+     in encoding order */
+  {
+    uint8_t s1[] = {0x31, 0x0a, 0x01, 0x01, 0xff, 0x80, 0x01, 0x05, 0x81, 0x02, 0xaa, 0xbb};
+    uint8_t s2[] = {0x31, 0x04, 0x81, 0x02, 0xaa, 0xbb};
+    uint8_t s3[] = {0x31, 0x07, 0x80, 0x01, 0x05, 0x81, 0x02, 0xaa, 0xbb};
+    uint8_t *ins[3] = { s1, s2, s3 };
+    size_t lens[3] = { sizeof(s1), sizeof(s2), sizeof(s3) };
+    const char *exp[3] = { "bac", "c", "ac" };
+    for (int k = 0; k < 3; k++) {
+      char got[8] = { 0 };
+      int n = 0;
+      Pulse_Lib_Slice_slice__uint8 in = { .elt = ins[k], .len = lens[k] };
+      size_t off = 0;
+      if (!ASN1_Pulse_ParseTest_validate_setI(in, &off) || off != lens[k]) { printf("setI valid %d\n", k); fails++; continue; }
+      ASN1_Pulse_SeqIter_seq_iter it = ASN1_Pulse_ParseTest_set_iter_start(in);
+      while (!ASN1_Pulse_ParseTest_set_iter_is_empty(it) && n < 7) {
+        ASN1_Pulse_SeqIter_seq_item x = ASN1_Pulse_ParseTest_set_iter_next(&it);
+        switch (x.comp) {
+        case 0: {
+          got[n++] = 'c';
+          Pulse_Lib_Slice_slice__uint8 v = ASN1_Pulse_ParseTest_set_get_c(x);
+          if (v.len != 2 || v.elt[0] != 0xaa || v.elt[1] != 0xbb) { printf("set_get_c %d\n", k); fails++; }
+          break; }
+        case 1: {
+          got[n++] = 'a';
+          FStar_Pervasives_Native_option__asn1_int_impl v = ASN1_Pulse_ParseTest_set_get_a(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__ASN1_INT_IMPL || v.val.Some.val.Small != 5) { printf("set_get_a %d\n", k); fails++; }
+          break; }
+        case 2: {
+          got[n++] = 'b';
+          FStar_Pervasives_Native_option__bool v = ASN1_Pulse_ParseTest_set_get_b(x);
+          if (v.tag != FSTAR_PERVASIVES_NATIVE_SOME__BOOL || !v.val.Some) { printf("set_get_b %d\n", k); fails++; }
+          break; }
+        default: printf("set_iter comp %d\n", k); fails++; n = 7;
+        }
+      }
+      if (strcmp(got, exp[k])) { printf("set_iter %d: %s\n", k, got); fails++; }
+    }
+  }
   /* SEQUENCE OF INTEGER and SET OF OCTET STRING: lazy, count + payload */
   uint8_t l1[] = {0x30, 0x09, 0x02, 0x01, 0x05, 0x02, 0x01, 0x06, 0x02, 0x01, 0x07};
   LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_asn1_int_impl li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));
@@ -79,6 +156,74 @@ int main(void) {
       || lo.val.Base.tag != LOWPARSE_PULSEPARSE_ITERATOR_TYPE_SERIALIZED__UINTSIZE_SLICE_UINT8
       || lo.val.Base.val.Serialized.count != 2 || lo.val.Base.val.Serialized.payload.elt != l3 + 2
       || lo.val.Base.val.Serialized.payload.len != 7) { printf("setOfOctets\n"); fails++; }
+  /* Iterators (ASN1.Pulse.ListIter) */
+  {
+    li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));
+    ASN1_Pulse_ListIter_iter it = ASN1_Pulse_ParseTest_seqOfInt_iter_start(li);
+    if (ASN1_Pulse_ParseTest_iter_length(it) != 3) { printf("seqOfInt iter length\n"); fails++; }
+    int64_t expect = 5;
+    while (!ASN1_Pulse_ParseTest_iter_is_empty(it)) {
+      ASN1_Pulse_Rel_asn1_int_impl e = ASN1_Pulse_ParseTest_seqOfInt_iter_next(&it);
+      if (e.tag != ASN1_PULSE_REL_SMALL || e.val.Small != expect) { printf("seqOfInt iter %lld\n", (long long)expect); fails++; }
+      expect++;
+    }
+    if (expect != 8) { printf("seqOfInt iter count\n"); fails++; }
+    li = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l2));
+    it = ASN1_Pulse_ParseTest_seqOfInt_iter_start(li);
+    if (!ASN1_Pulse_ParseTest_iter_is_empty(it) || ASN1_Pulse_ParseTest_iter_length(it) != 0) { printf("seqOfInt iter empty\n"); fails++; }
+    lo = ASN1_Pulse_ParseTest_parse_setOfOctets(SL(l3));
+    it = ASN1_Pulse_ParseTest_setOfOctets_iter_start(lo);
+    Pulse_Lib_Slice_slice__uint8 e1 = ASN1_Pulse_ParseTest_setOfOctets_iter_next(&it);
+    Pulse_Lib_Slice_slice__uint8 e2 = ASN1_Pulse_ParseTest_setOfOctets_iter_next(&it);
+    if (e1.len != 1 || e1.elt != l3 + 4 || e2.len != 2 || e2.elt != l3 + 7
+        || !ASN1_Pulse_ParseTest_iter_is_empty(it)) { printf("setOfOctets iter\n"); fails++; }
+    /* { { 1, 2 }, {}, { 3 } } */
+    uint8_t n1[] = {0x30, 0x0d, 0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02, 0x30, 0x00, 0x30, 0x03, 0x02, 0x01, 0x03};
+    ASN1_Pulse_ListIter_iter outer = ASN1_Pulse_ParseTest_seqOfSeqOfInt_iter_start(ASN1_Pulse_ParseTest_parse_seqOfSeqOfInt(SL(n1)));
+    size_t lens[3] = {2, 0, 1};
+    int64_t next = 1;
+    for (size_t i = 0; i < 3; i++) {
+      if (ASN1_Pulse_ParseTest_iter_is_empty(outer)) { printf("nested outer %zu\n", i); fails++; break; }
+      ASN1_Pulse_ListIter_iter inner = ASN1_Pulse_ParseTest_seqOfInt_iter_start(ASN1_Pulse_ParseTest_seqOfSeqOfInt_iter_next(&outer));
+      if (ASN1_Pulse_ParseTest_iter_length(inner) != lens[i]) { printf("nested length %zu\n", i); fails++; }
+      while (!ASN1_Pulse_ParseTest_iter_is_empty(inner)) {
+        ASN1_Pulse_Rel_asn1_int_impl e = ASN1_Pulse_ParseTest_seqOfInt_iter_next(&inner);
+        if (e.val.Small != next) { printf("nested %lld\n", (long long)next); fails++; }
+        next++;
+      }
+    }
+    if (next != 4 || !ASN1_Pulse_ParseTest_iter_is_empty(outer)) { printf("nested end\n"); fails++; }
+  }
+  /* Writer-form iterators (ASN1.Pulse.ListIterW) over parsed, array-built and appended lists */
+  {
+    typedef LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_asn1_int_impl ml_t;
+    typedef LowParse_PulseParse_Iterator_Type_iterator__uintsize_asn1_int_impl wit_t;
+    int64_t got[16]; size_t n;
+#define WCOLLECT(l) do { wit_t w = ASN1_Pulse_ParseTest_witer_start(l); n = 0; \
+      while (!ASN1_Pulse_ParseTest_witer_is_empty(w) && n < 16) { \
+        ASN1_Pulse_Rel_asn1_int_impl e = ASN1_Pulse_ParseTest_witer_next(&w); \
+        got[n++] = e.tag == ASN1_PULSE_REL_SMALL ? e.val.Small : -1000; } } while (0)
+    WCOLLECT(ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1)));
+    if (n != 3 || got[0] != 5 || got[1] != 6 || got[2] != 7) { printf("witer parsed\n"); fails++; }
+    WCOLLECT(ASN1_Pulse_ParseTest_seqOfInt_empty());
+    if (n != 0) { printf("witer empty\n"); fails++; }
+    ASN1_Pulse_Rel_asn1_int_impl arr[2];
+    arr[0].tag = ASN1_PULSE_REL_SMALL; arr[0].val.Small = 1;
+    arr[1].tag = ASN1_PULSE_REL_SMALL; arr[1].val.Small = 2;
+    ml_t la = ASN1_Pulse_ParseTest_seqOfInt_of_slice((Pulse_Lib_Slice_slice__asn1_int_impl){ .elt = arr, .len = 2 });
+    WCOLLECT(la);
+    if (n != 2 || got[0] != 1 || got[1] != 2) { printf("witer of_slice\n"); fails++; }
+    ml_t lp = ASN1_Pulse_ParseTest_parse_seqOfInt(SL(l1));
+    ml_t lap = ASN1_Pulse_ParseTest_seqOfInt_append(&la, &lp);
+    WCOLLECT(lap);
+    if (n != 5 || got[0] != 1 || got[1] != 2 || got[2] != 5 || got[3] != 6 || got[4] != 7) { printf("witer append\n"); fails++; }
+    ml_t le = ASN1_Pulse_ParseTest_seqOfInt_empty();
+    ml_t lea = ASN1_Pulse_ParseTest_seqOfInt_append(&le, &lap);
+    ml_t leae = ASN1_Pulse_ParseTest_seqOfInt_append(&lea, &le);
+    WCOLLECT(leae);
+    if (n != 5 || got[0] != 1 || got[4] != 7) { printf("witer append empty\n"); fails++; }
+#undef WCOLLECT
+  }
   /* SET { b BOOLEAN, a [0] IMPLICIT INTEGER OPTIONAL, c [1] IMPLICIT OCTET STRING } */
   uint8_t t1[] = {0x31, 0x0a, 0x01, 0x01, 0xff, 0x80, 0x01, 0x07, 0x81, 0x02, 0xaa, 0xbb};
   FStar_Pervasives_Native_tuple2__bool_tuple2_option_asn1_int_impl_slice_uint8 st = ASN1_Pulse_ParseTest_parse_setBAC(SL(t1));

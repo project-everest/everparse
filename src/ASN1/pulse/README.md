@@ -49,7 +49,23 @@ holding fractional permission `pm` on the input bytes it borrows.
 * **Parsers** (`ASN1.Pulse.Parser`, `parse_k`): from a validated input
   (`pts_to_parsed`), return `x'` with `asn1_rel k pm x' x`, where `x` is
   the value parsed by `asn1_as_parser k`; no copy, no allocation (SEQUENCE
-  OF and SET OF are returned lazily, as a count and the payload). Supported
+  OF and SET OF are returned lazily, as a count and the payload, and read
+  with the iterators of `ASN1.Pulse.ListIter`: `start` turns a parsed list
+  into a cursor `iter` (count and remaining payload), and `next` parses
+  its head with `parse_d`, returning it in `arel true` with a trade back
+  to the cursor; nested lists work the same way). Lists in writer form
+  (`arel false`: parsed, built from an array, or appended) are iterated
+  with `ASN1.Pulse.ListIterW`, over LowParse's generic mixed-list
+  iterator; its typed share/gather (`ASN1.Pulse.TypedShare`) is ghost.
+  The components of a SEQUENCE can also be visited lazily, from the bytes
+  of a validated encoding, with `ASN1.Pulse.SeqIter`: `next` returns the
+  index of the next present component and its TLV, and `get` parses it
+  with `parse_dd`, into the value `parse_k` would give for that component.
+  `ASN1.Pulse.SetIter` does the same for a SET, in encoding order: `next`
+  finds the component of each element by its tag (`set_comp`), with the
+  loop invariant of `ASN1.Pulse.ParseSetAny`; items are read with
+  `ASN1.Pulse.SeqIter.get`.
+  Supported
   schemas: `psupported_k`. SET components may be declared in any order
   (`ASN1.Pulse.ParseSetAny`): each element, read in encoding order, is
   dispatched by its tag to the slot of its component in a tuple of
@@ -86,18 +102,38 @@ holding fractional permission `pm` on the input bytes it borrows.
   written bytes are the DER encoding of a value of `k`, and return
   `JIT_OK`, `JIT_NO_SPACE` (the encoding does not fit) or `JIT_INVALID`
   (it is not the DER encoding of a value of `k`), so all constraints of
-  `k` become runtime checks. Where validity is not compositional (because
-  of ANY), the check is made over the smallest enclosing content, which is
-  then written again by the raw writer and validated within its own bounds
-  (`jit_fix`, `jit_local`), so the top-level JIT writer never returns
-  `JIT_RETRY`. Proofs: `ASN1.Pulse.JitWriter.Lemmas`.
+  `k` become runtime checks. They are single-pass: every check reads the
+  input node right before writing it, and nothing is read back from the
+  output (except for sorting SET and SET OF). They are strict where
+  validity is not compositional: an ANY slice must be exactly one TLV, and
+  the key of an ADB fallback must not be one of the literals of the table
+  (otherwise `JIT_INVALID`, even if the written bytes would happen to be
+  valid). Hence `JIT_INVALID` implies that the bytes are not valid only if
+  the schema has neither ANY nor ADB fallback (`ex_k k`). The top-level
+  JIT writer never returns `JIT_RETRY`. Proofs:
+  `ASN1.Pulse.JitWriter.Lemmas`.
+
+* **Size computation** (`ASN1.Pulse.Sink`, `jit_size`, `jit_size_d`): the
+  JIT writers are generic over their output, a *sink*: `Wet out` writes
+  into the slice `out`, `Dry` only decreases the position, which then is a
+  budget, and keeps the would-be bytes as ghost contents, so the proofs
+  are shared. `jit_wet` gives the writers, `jit_dry` the size
+  computations (`jit_size_post`: on `JIT_OK`, the budget is decreased by
+  the size of the encoding; `JIT_NO_SPACE` iff it is larger than the
+  budget; `JIT_INVALID` as for the writer). In C, the sink is known at
+  each root, so the size computation is a specialized copy of the writer
+  with no stores and no sink dispatch. On raw values
+  and typed values: `size_raw_d` (`ASN1.Pulse.RawJitWriter`),
+  `size_typed_d` (`ASN1.Pulse.TypedWriter`).
 
 * **JIT writers of raw values** (`ASN1.Pulse.RawJitWriter`,
   `jit_write_raw`): the same JIT writer, seen as a writer of raw values
   `y: ASN1.Spec.Raw.asn1_raw_t k` (`asn1_raw_rel k pm x' y`,
   `ASN1.Pulse.RawValueRel`): `JIT_OK` iff `check_ser k () y == Some x` and
   `Ser.asn1_enc k x` fits, which is then written; `JIT_INVALID` implies
-  `check_ser k () y == None`. It runs `jit_writer` on the raw bytes
+  `check_ser k () y == None` if `ex_k k` (with ANY or an ADB fallback, the
+  strict checks may reject; they never do on the bytes of a raw value,
+  but this is not proven). It runs `jit_writer` on the raw bytes
   `rb k y` of `y` (`ASN1.Pulse.RawBytes`), through a ghost bridge between
   the two relations (`ASN1.Pulse.RawBridge`).
   On impl descriptors (`d: adesc k t`, `ASN1.Pulse.Rel`),
@@ -158,9 +194,14 @@ one byte short.
 | `ASN1.Pulse.Interpreter` | the interpreter `validate_k` over schemas |
 | `ASN1.Pulse.Rel`, `ASN1.Pulse.RelShare` | low-level value types and relations; generic share/gather combinators |
 | `ASN1.Pulse.Parse*`, `ASN1.Pulse.Parser` | zero-copy parser combinators and the interpreter `parse_k` |
+| `ASN1.Pulse.ListIter` | iterators over parsed SEQUENCE OF / SET OF values: `start`, `is_empty`, `length`, `next` (zero-copy, one element at a time) |
+| `ASN1.Pulse.SeqIter` | lazy iterators over the components of a SEQUENCE: `start` (from a validated encoding), `is_empty`, `next` (index and TLV of the next present component), `get` (parse one component) |
+| `ASN1.Pulse.SetIter` | the same for a SET, in encoding (DER tag) order: `start`, `is_empty`, `next` (component found by tag); items read with `SeqIter.get` |
+| `ASN1.Pulse.ListIterW`, `ASN1.Pulse.TypedShare` | iterators over SEQUENCE OF / SET OF values in writer form (`start`, `is_empty`, `next`), builders `empty`, `of_slice`, `append`; ghost `share_d`/`gather_d` for `arel false d` |
 | `ASN1.Pulse.WriteLeaf`, `ASN1.Pulse.WriteComb`, `ASN1.Pulse.WriteAdb` | right-to-left writer building blocks (ANY DEFINED BY keys: `WriteAdb`) |
 | `ASN1.Pulse.RawRel`, `ASN1.Pulse.RawWriter` | raw relations, and raw writers `raw_write_k` |
-| `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) |
+| `ASN1.Pulse.JitWriter.*`, `ASN1.Pulse.JitTerminal`, `ASN1.Pulse.JitFrame`, `ASN1.Pulse.JitAdb*` | just-in-time writers `jit_writer` (check while writing) and size computations `jit_size` |
+| `ASN1.Pulse.Sink` | output sinks of the JIT writers: a slice (`Wet`) or a size budget (`Dry`) |
 | `ASN1.Pulse.RawValueRel`, `ASN1.Pulse.RawBytes`, `ASN1.Pulse.RawBridge`, `ASN1.Pulse.RawJitWriter` | raw value relation `asn1_raw_rel`, and the JIT writer of raw values `jit_write_raw` |
 | `ASN1.Pulse.RawVRel`, `ASN1.Pulse.RawVBridge` | value-level relation of writers on descriptors `raw_varel`, and its bridge to bytes |
 | `ASN1.Pulse.RawVConv`, `ASN1.Pulse.TypedWriter` | from the typed relation `arel false` to `raw_varel` (`arel_to_raw`), and typed writers `write_typed_d` |

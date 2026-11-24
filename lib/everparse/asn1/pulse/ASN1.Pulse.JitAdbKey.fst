@@ -339,3 +339,99 @@ let lit_pre_tail (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (y: asn1_gen_
   (ensures (lit_pre key_k (fst hd2) (snd hd2) (pre `List.Tot.append` [(kx, y)]) tl2 /\
     (pre `List.Tot.append` [(kx, y)]) `List.Tot.append` (hd2 :: tl2) == pre `List.Tot.append` ((kx, y) :: hd2 :: tl2)))
 = List.Tot.append_assoc pre [(kx, y)] (hd2 :: tl2)
+
+(* A key whose contents parse to the value of a literal is that literal
+   (DER encodings are unique) *)
+
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 64"
+let rec lit_unique (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (c0: bytes)
+: Lemma
+  (requires (In.adb_key_supported key_k /\ parse (asn1_terminal_as_parser key_k) c0 == Some (key_of_lit key_k kx, Seq.length c0)))
+  (ensures (c0 == raw_key_c key_k kx))
+  (decreases key_k)
+= match key_k with
+  | ASN1_PREFIXED_TERMINAL id2 k2 ->
+    let x2 = In.prefixed_lit id2 k2 kx in
+    In.key_of_lit_prefixed id2 k2 kx;
+    let p2 = asn1_terminal_as_parser k2 in
+    assert (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id2 #(ASN1_TERMINAL k2) p2) c0);
+    L.ilc_tlv id2 #(ASN1_TERMINAL k2) p2 c0;
+    eliminate exists (c: bytes) . c0 == enc_tlv id2 true c /\ L.acc #asn1_weak_parser_kind p2 c /\ Seq.length c < 4294967296
+    with begin
+      parse_tlv id2 #(ASN1_TERMINAL k2) p2 c;
+      lit_unique k2 x2 c;
+      raw_key_enc_c id2 k2 x2
+    end
+  | ASN1_OID ->
+    let x' : asn1_oid_t = kx in
+    WA.oid_arcs_enc x';
+    CE.leaf_enc_consumed key_k c0;
+    assert (Seq.equal (Seq.slice c0 0 (Seq.length c0)) c0)
+  | _ ->
+    raw_key_list_eq key_k kx;
+    In.key_enc_list_correct key_k kx;
+    CE.leaf_enc_consumed key_k c0;
+    assert (Seq.equal (Seq.slice c0 0 (Seq.length c0)) c0)
+#pop-options
+
+(* A valid key TLV that differs from a literal does not select its
+   payload *)
+
+#push-options "--z3rlimit 64 --fuel 0 --ifuel 1"
+let not_lit_of_ne (kid: asn1_id_t) (key_k: asn1_terminal_k) (kx: asn1_key_lit key_k) (c1 c2: bytes)
+: Lemma
+  (requires (In.adb_key_supported key_k /\
+    L.acc #asn1_strong_parser_kind (parse_asn1_ILC kid (asn1_content_as_parser (ASN1_TERMINAL key_k))) c1 /\
+    ~ (c1 == WA.raw_key_enc kid key_k kx)))
+  (ensures (JA.not_lit kid key_k (key_of_lit key_k kx) (Seq.append c1 c2)))
+= let p = asn1_terminal_as_parser key_k in
+  let pc = asn1_content_as_parser (ASN1_TERMINAL key_k) in
+  let x0 = key_of_lit key_k kx in
+  L.ilc_tlv kid #(ASN1_TERMINAL key_k) pc c1;
+  eliminate exists (c0: bytes) . c1 == enc_tlv kid true c0 /\ L.acc #asn1_weak_parser_kind pc c0 /\ Seq.length c0 < 4294967296
+  with begin
+    hdr_tlv kid c0 c2;
+    raw_key_enc_c kid key_k kx;
+    let w = Seq.append c1 c2 in
+    let b = Seq.append c0 c2 in
+    ADB.fldata_eq #(SCo.parse_filter_kind asn1_weak_parser_kind) (SCo.parse_filter #asn1_weak_parser_kind p (ADB.key_eq x0)) (Seq.length c0) b;
+    Seq.append_slices c0 c2;
+    SCo.parse_filter_eq #asn1_weak_parser_kind p (ADB.key_eq x0) c0;
+    Classical.move_requires (lit_unique key_k kx) c0
+  end
+#pop-options
+
+(* DEFAULT of any terminal (including PREFIXED): a valid TLV other than the
+   encoding of the default value is accepted as a present value *)
+
+module Co = ASN1.Pulse.Constructed
+
+#push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
+let default_of_ne (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (c: bytes)
+: Lemma
+  (requires (In.adb_key_supported k /\
+    L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (ASN1_TERMINAL k))) c /\
+    ~ (c == WA.raw_key_enc id0 k defl)))
+  (ensures (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_content k (key_of_lit k defl)))) c))
+= let pc = asn1_content_as_parser (ASN1_TERMINAL k) in
+  L.ilc_tlv id0 #(ASN1_TERMINAL k) pc c;
+  eliminate exists (c0: bytes) . c == enc_tlv id0 true c0 /\ L.acc #asn1_weak_parser_kind pc c0 /\ Seq.length c0 < 4294967296
+  with begin
+    raw_key_enc_c id0 k defl;
+    Classical.move_requires (lit_unique k defl) c0;
+    L.acc_default k (key_of_lit k defl) c0;
+    L.acc_tlv id0 #(Co.default_content k (key_of_lit k defl)) (asn1_content_as_parser (Co.default_content k (key_of_lit k defl))) c0
+  end
+
+let default_back (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (c: bytes)
+: Lemma
+  (requires (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (Co.default_content k (key_of_lit k defl)))) c))
+  (ensures (L.acc #asn1_strong_parser_kind (parse_asn1_ILC id0 (asn1_content_as_parser (ASN1_TERMINAL k))) c))
+= let pd = asn1_content_as_parser (Co.default_content k (key_of_lit k defl)) in
+  L.ilc_tlv id0 #(Co.default_content k (key_of_lit k defl)) pd c;
+  eliminate exists (c0: bytes) . c == enc_tlv id0 true c0 /\ L.acc #asn1_weak_parser_kind pd c0 /\ Seq.length c0 < 4294967296
+  with begin
+    L.acc_default k (key_of_lit k defl) c0;
+    L.acc_tlv id0 #(ASN1_TERMINAL k) (asn1_content_as_parser (ASN1_TERMINAL k)) c0
+  end
+#pop-options

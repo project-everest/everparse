@@ -17,7 +17,11 @@ specification (`lib/everparse/asn1/spec`). It works like the CDDL front end of E
      C type to its schema (`ASN1.Pulse.Rel`). The roots `validate_T`,
      `parse_T`, `write_T` and `write_T_typed` instantiate the generic Pulse interpreters
      of the ASN.1 Pulse library (`lib/everparse/asn1/pulse`) with these
-     descriptors.
+     descriptors, the `L_iter_*`, `L_length` and `L_nth` roots iterate over
+     any SEQUENCE OF or SET OF value `L`, parsed or built with `L_empty`,
+     `L_of_slice` and `L_append`.
+     The `T_seq_*` and `T_c_get` roots iterate lazily over the components
+     of a SEQUENCE `T`.
 3. Verify both modules with F\*, then extract `M.Impl` to `M.c`/`M.h` with
    Custard, F\*'s direct-to-C backend (no KaRaMeL).
 4. Compile `M.c` (`cc -c`) as a sanity check.
@@ -79,7 +83,6 @@ Extraction can take several minutes per schema.
 For each root type `T` of a module `M`:
 
 ```c
-void custard_init_globals(void);  /* call once before anything else */
 bool validate_T(Pulse_Lib_Slice_slice__uint8 input, size_t *offset);
 T    parse_T(Pulse_Lib_Slice_slice__uint8 validated_input);
 ASN1_Pulse_JitWriter_jit_result
@@ -122,6 +125,85 @@ ASN1_Pulse_JitWriter_jit_result
   the parsed bytes. Without KEEP-BYTES types, `arel true` and `arel false`
   coincide.
 
+### Iterators over SEQUENCE OF / SET OF
+
+Parsed SEQUENCE OF and SET OF values are lazy: a count and the DER payload.
+For each such list `L` reachable from the roots, the tool generates
+
+```c
+typedef <generic iterator instance> L_iter;
+L_iter L_iter_start(<list C type> x);
+bool   L_iter_is_empty(L_iter it);
+bool   L_iter_next(L_iter *it, E *out);   /* false (and *out unchanged) at the end */
+size_t L_length(<list C type> x);         /* O(1) */
+bool   L_nth(<list C type> x, size_t i, E *out);  /* O(i); false if i >= L_length(x) */
+<list C type> L_empty(void);
+<list C type> L_of_slice(<slice of E> a);           /* the elements of an array */
+<list C type> L_append(<list C type> *b, <list C type> *a);  /* b, then a */
+```
+
+where `L` is `T` for a named list type `T ::= SEQUENCE OF E`, `T_c` for a
+list component (or CHOICE alternative) `c` of `T`, `T_k_c` for a component
+`c` of the case `k` of an ANY DEFINED BY `T` (`T_other_c` for the other
+keys), and `L_elt` for the elements of a list `L` that are themselves
+lists.
+
+All of them apply to any list the writers accept: parsed, built by a
+caller, or a mix (in F\*, `arel false`; a parsed list, `arel true`, is
+first turned into that form by the ghost `ASN1.Pulse.ListIterW.of_parsed`).
+A typical loop is
+
+```c
+L_iter it = L_iter_start(x);
+E e;
+while (L_iter_next(&it, &e)) { ... e ... }
+```
+
+`L_iter_next` and `L_nth` return array elements as they are, and parse
+serialized ones zero-copy. `L_append` points to `b` and `a`, which must
+outlive the result, and `L_of_slice` points to the array; neither copies
+the elements. A SET OF is iterated in list order (DER order if parsed);
+the writers sort it.
+
+`L_iter` is a nominal F\* record around the generic LowParse iterator;
+since it has one field, Custard extracts it as a `typedef` of the generic
+instance, which callers should use instead of the generic name. The list
+C type itself is still the generic `mixed_list` instance (Custard warning
+377).
+
+### Iterators over the components of a SEQUENCE or SET
+
+Instead of parsing a whole SEQUENCE `T` with `parse_T`, its components can
+be visited one at a time, each parsed only on demand. For each non-empty
+SEQUENCE `T` reachable from the roots (named, or anonymous `T_c`), the tool
+generates
+
+```c
+ASN1_Pulse_SeqIter_seq_iter T_seq_start(Pulse_Lib_Slice_slice__uint8 input);
+bool T_seq_is_empty(ASN1_Pulse_SeqIter_seq_iter it);
+ASN1_Pulse_SeqIter_seq_item T_seq_next(ASN1_Pulse_SeqIter_seq_iter *it);  /* requires !T_seq_is_empty(*it) */
+#define T_c_index (<i>U)                       /* for each component c, the i-th */
+<C type of c> T_c_get(ASN1_Pulse_SeqIter_seq_item x);  /* requires x.comp == T_c_index */
+```
+
+`T_seq_start` takes the bytes of a validated `T` (`validate_T`). Each item
+returned by `T_seq_next` is a *present* component: `x.comp` is its index
+(absent OPTIONAL and DEFAULT components are skipped) and `x.bytes` its
+encoding (a slice of the input), so a caller dispatches with
+`switch (x.comp) { case T_c_index: ... T_c_get(x) ... }`. `T_c_get` returns
+the same value as the `c` field of `parse_T` (an OPTIONAL component is
+`T_c_present`). A DEFAULT component absent from the input is skipped by
+`T_seq_next`; read it with `parse_T`, which fills in its default value. A component whose type is itself a named
+SEQUENCE `U` can be iterated in turn with `U_seq_start(x.bytes)`.
+
+For each non-empty SET `T`, the tool generates the same functions, named
+`T_set_start`, `T_set_is_empty` and `T_set_next` (with the same item type,
+`T_c_index` and `T_c_get`). The components then come in encoding order,
+i.e. in the canonical (DER) order of their tags, which may differ from
+their declaration order; `x.comp` is still the index of the component in
+the declaration. `T_set_start` needs the bytes of a SET with its universal
+tag (`0x31`): for an IMPLICITly tagged SET, use `parse_T` instead.
+
 ### KEEP-BYTES
 
 `--#KEEP-BYTES T` (or `--keep_bytes T`) makes every use of `T`, as well as
@@ -163,8 +245,12 @@ Type naming:
   Anonymous nested types are named after their path, e.g. `Msg_extra`.
 * CHOICE maps to a tagged union `T`. Its tags are `M_IMPL_T_ALT`, its
   union members `T_alt`, and nested CHOICEs are not flattened.
-* An OPTIONAL or DEFAULT component `f` of `T` gets a tagged type with
+* An OPTIONAL component `f` of `T` gets a tagged type with
   tags `M_IMPL_T_F_ABSENT` / `M_IMPL_T_F_PRESENT` and member `T_f_present`.
+* A DEFAULT component has the plain type of its component type. When it is
+  absent from the input, the parser fills in the default value; slices
+  point into a constant array `<Mod>_Impl_dva_T_f` holding its content
+  bytes. The writer omits a value equal to the default (X.690 11.5).
 * An INTEGER maps to `int64_t` if its constraint fits in 64 bits.
   Otherwise it maps to `ASN1_Pulse_Rel_asn1_int_impl`: either an
   `int64_t` (`Small`) or the slice of its minimal content bytes. The same
@@ -376,7 +462,7 @@ Supported:
 * `[n]` / `[APPLICATION n]` / ... tags, IMPLICIT and EXPLICIT.
 * SEQUENCE and SET (at most 64 components) with OPTIONAL and DEFAULT
   components. DEFAULT applies to components of terminal types other than
-  RELATIVE-OID, also under one EXPLICIT tag if unconstrained (such as
+  OBJECT IDENTIFIER and RELATIVE-OID, also under one EXPLICIT tag if unconstrained (such as
   `[0] EXPLICIT Version DEFAULT v1`), and to constrained INTEGER,
   ENUMERATED, BOOLEAN, OCTET STRING and character strings.
 * CHOICE, SEQUENCE OF and SET OF (with SIZE), and ANY.

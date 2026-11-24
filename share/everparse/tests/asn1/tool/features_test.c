@@ -27,18 +27,25 @@ static int same(Pulse_Lib_Slice_slice__uint8 s, const uint8_t *exp, size_t len) 
   return s.len == len && memcmp(s.elt, exp, len) == 0;
 }
 
-/* Rec { n 5, m -1, kept { a 1, b 'AA'H }, payload { x 7 } },
-   all DEFAULT and OPTIONAL components absent */
+static const uint8_t cafe[] = { 0xca, 0xfe };
+static const uint8_t beef[] = { 0xbe, 0xef };
+static const uint8_t x40[] = { 0x40 };
+static const uint8_t x80[] = { 0x80 };
+static const uint8_t xa0[] = { 0xa0 };
+static const uint8_t xc0[] = { 0xc0 };
+
+/* Rec { n 5, m -1, kept { a 1, b 'AA'H }, payload { x 7 } }: all DEFAULT
+   components with their default values, all OPTIONAL components absent */
 static Rec rec1(void) {
   Rec r;
   memset(&r, 0, sizeof r);
   r.n = 5;
   r.m = -1;
-  r.data.tag = FEATURES_IMPL_REC_DATA_ABSENT;
-  r.label_.tag = FEATURES_IMPL_REC_LABEL_ABSENT;
-  r.pr.tag = FEATURES_IMPL_REC_PR_ABSENT;
-  r.flags.tag = FEATURES_IMPL_REC_FLAGS_ABSENT;
-  r.bits.tag = FEATURES_IMPL_REC_BITS_ABSENT;
+  r.data = bsl(cafe, 2);
+  r.label_ = sl("h\xc3\xa9");
+  r.pr = sl("A B");
+  r.flags = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 6, .bytes = bsl(x40, 1) };
+  r.bits = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 5, .bytes = bsl(xa0, 1) };
   r.kept.value.a = small(1);
   r.kept.value.b = bsl((const uint8_t *)"\xaa", 1);
   r.kept.raw.tag = FEATURES_IMPL_BLOB_RAW_ABSENT;
@@ -56,26 +63,20 @@ static const uint8_t rec1_der[] = {
   0x30, 0x03, 0x02, 0x01, 0x07,                         /* payload */
 };
 
-static const uint8_t cafe[] = { 0xca, 0xfe };
-static const uint8_t beef[] = { 0xbe, 0xef };
-static const uint8_t x40[] = { 0x40 };
-static const uint8_t x80[] = { 0x80 };
-static const uint8_t xa0[] = { 0xa0 };
-static const uint8_t xc0[] = { 0xc0 };
 
-/* rec1 with each DEFAULT component present with its default value */
+/* rec1 with the default values in other buffers: compared by value */
 static Rec rec1_defaults(void) {
+  static const uint8_t data[] = { 0xca, 0xfe };
+  static const uint8_t label[] = { 'h', 0xc3, 0xa9 };
+  static const uint8_t pr[] = { 'A', ' ', 'B' };
+  static const uint8_t flags[] = { 0x40 };
+  static const uint8_t bits[] = { 0xa0 };
   Rec r = rec1();
-  r.data.tag = FEATURES_IMPL_REC_DATA_PRESENT;
-  r.data.val.Rec_data_present = bsl(cafe, 2);
-  r.label_.tag = FEATURES_IMPL_REC_LABEL_PRESENT;
-  r.label_.val.Rec_label_present = sl("h\xc3\xa9");
-  r.pr.tag = FEATURES_IMPL_REC_PR_PRESENT;
-  r.pr.val.Rec_pr_present = sl("A B");
-  r.flags.tag = FEATURES_IMPL_REC_FLAGS_PRESENT;
-  r.flags.val.Rec_flags_present = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 6, .bytes = bsl(x40, 1) };
-  r.bits.tag = FEATURES_IMPL_REC_BITS_PRESENT;
-  r.bits.val.Rec_bits_present = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 5, .bytes = bsl(xa0, 1) };
+  r.data = bsl(data, 2);
+  r.label_ = bsl(label, 3);
+  r.pr = bsl(pr, 3);
+  r.flags.bytes = bsl(flags, 1);
+  r.bits.bytes = bsl(bits, 1);
   return r;
 }
 
@@ -88,16 +89,11 @@ static Rec rec2(void) {
   Rec r = rec1();
   r.n = 9;
   r.m = 5;
-  r.data.tag = FEATURES_IMPL_REC_DATA_PRESENT;
-  r.data.val.Rec_data_present = bsl(beef, 2);
-  r.label_.tag = FEATURES_IMPL_REC_LABEL_PRESENT;
-  r.label_.val.Rec_label_present = sl("x");
-  r.pr.tag = FEATURES_IMPL_REC_PR_PRESENT;
-  r.pr.val.Rec_pr_present = sl("Z");
-  r.flags.tag = FEATURES_IMPL_REC_FLAGS_PRESENT;
-  r.flags.val.Rec_flags_present = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 7, .bytes = bsl(x80, 1) };
-  r.bits.tag = FEATURES_IMPL_REC_BITS_PRESENT;
-  r.bits.val.Rec_bits_present = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 6, .bytes = bsl(xc0, 1) };
+  r.data = bsl(beef, 2);
+  r.label_ = sl("x");
+  r.pr = sl("Z");
+  r.flags = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 7, .bytes = bsl(x80, 1) };
+  r.bits = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 6, .bytes = bsl(xc0, 1) };
   r.ext.tag = FEATURES_IMPL_REC_EXT_PRESENT;
   EXTERNAL_body e;
   memset(&e, 0, sizeof e);
@@ -141,6 +137,10 @@ static void rec_write(const char *name, Rec x, const uint8_t *exp, size_t len) {
   Pulse_Lib_Slice_slice__uint8 s = { .elt = out, .len = len - 1 };
   CHECK(write_Rec(x, s, &pos) == ASN1_PULSE_JITWRITER_JIT_NO_SPACE,
         "%s: short buffer: expected NO_SPACE", name);
+  size_t b = 1000;
+  CHECK(size_Rec(x, &b) == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == len, "%s: size", name);
+  b = len - 1;
+  CHECK(size_Rec(x, &b) == ASN1_PULSE_JITWRITER_JIT_NO_SPACE, "%s: size: short budget", name);
 }
 
 /* validate and parse `in`, check the kept bytes, then write back */
@@ -160,6 +160,8 @@ static void rec_parse(const char *name, const uint8_t *in, size_t len, size_t ke
   ASN1_Pulse_JitWriter_jit_result r = write_Rec_typed(p, o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - len && memcmp(out + pos, in, len) == 0,
         "%s: write back", name);
+  size_t b = 1000;
+  CHECK(size_Rec_typed(p, &b) == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == len, "%s: size_Rec_typed", name);
   /* stale kept bytes are ignored by the writer */
   p.kept.raw.val.Blob_raw_present = sl("garbage");
   p.payload.raw.val.Rec_payload_raw_present = sl("junk");
@@ -175,6 +177,9 @@ static void rec_invalid(const char *name, Rec x) {
   Pulse_Lib_Slice_slice__uint8 o = { .elt = out, .len = BUF };
   ASN1_Pulse_JitWriter_jit_result r = write_Rec(x, o, &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_INVALID, "%s: expected INVALID (%d)", name, (int)r);
+  size_t b = 1000;
+  r = size_Rec(x, &b);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_INVALID, "%s: size: expected INVALID (%d)", name, (int)r);
 }
 
 static void test_rec(void) {
@@ -184,15 +189,20 @@ static void test_rec(void) {
   rec_parse("rec1", rec1_der, sizeof rec1_der, 8, 16);
   rec_parse("rec2", rec2_der, sizeof rec2_der, 26, 34);
   Rec p = parse_Rec(bsl(rec2_der, sizeof rec2_der));
-  CHECK(p.n == 9 && p.m == 5 && p.data.tag == FEATURES_IMPL_REC_DATA_PRESENT &&
-        same(p.data.val.Rec_data_present, beef, 2) &&
-        p.label_.tag == FEATURES_IMPL_REC_LABEL_PRESENT &&
-        same(p.label_.val.Rec_label_present, (const uint8_t *)"x", 1) &&
-        p.flags.tag == FEATURES_IMPL_REC_FLAGS_PRESENT && p.flags.val.Rec_flags_present.unused == 7 &&
-        p.bits.tag == FEATURES_IMPL_REC_BITS_PRESENT && p.bits.val.Rec_bits_present.unused == 6 &&
+  CHECK(p.n == 9 && p.m == 5 && same(p.data, beef, 2) &&
+        same(p.label_, (const uint8_t *)"x", 1) && same(p.pr, (const uint8_t *)"Z", 1) &&
+        p.flags.unused == 7 && same(p.flags.bytes, x80, 1) &&
+        p.bits.unused == 6 && same(p.bits.bytes, xc0, 1) &&
         p.ext.tag == FEATURES_IMPL_REC_EXT_PRESENT &&
         p.ext.val.Rec_ext_present.encoding.tag == FEATURES_IMPL_EXTERNAL_BODY_ENCODING_OCTET_ALIGNED,
         "rec2: parse: values");
+  /* the absent DEFAULT components hold their default values */
+  p = parse_Rec(bsl(rec1_der, sizeof rec1_der));
+  CHECK(same(p.data, cafe, 2) && same(p.label_, (const uint8_t *)"h\xc3\xa9", 3) &&
+        same(p.pr, (const uint8_t *)"A B", 3) &&
+        p.flags.unused == 6 && same(p.flags.bytes, x40, 1) &&
+        p.bits.unused == 5 && same(p.bits.bytes, xa0, 1),
+        "rec1: parse: default values");
 
   /* n: INTEGER (0<..<10 | 20 | 30..32) */
   static const int64_t n_ok[] = { 1, 9, 20, 30, 32 };
@@ -246,11 +256,11 @@ static void test_rec(void) {
   /* data: OCTET STRING (SIZE (1<..4 | 5)) */
   static const uint8_t six[] = { 1, 2, 3, 4, 5, 6 };
   Rec r = rec2();
-  r.data.val.Rec_data_present = bsl(six, 1);
+  r.data = bsl(six, 1);
   rec_invalid("data: 1 byte", r);
-  r.data.val.Rec_data_present = bsl(six, 6);
+  r.data = bsl(six, 6);
   rec_invalid("data: 6 bytes", r);
-  r.data.val.Rec_data_present = bsl(six, 5);
+  r.data = bsl(six, 5);
   {
     uint8_t out[BUF];
     size_t pos = BUF;
@@ -259,18 +269,18 @@ static void test_rec(void) {
   }
   /* pr: PrintableString */
   r = rec2();
-  r.pr.val.Rec_pr_present = sl("a*");
+  r.pr = sl("a*");
   rec_invalid("pr: not printable", r);
   /* label: UTF8String */
   r = rec2();
-  r.label_.val.Rec_label_present = sl("\xc3");
+  r.label_ = sl("\xc3");
   rec_invalid("label: not UTF-8", r);
   /* flags: the unused bits must be zero */
   static const uint8_t x81[] = { 0x81 };
   r = rec2();
-  r.flags.val.Rec_flags_present.bytes = bsl(x81, 1);
+  r.flags.bytes = bsl(x81, 1);
   rec_invalid("flags: unused bit set", r);
-  r.flags.val.Rec_flags_present.unused = 8;
+  r.flags.unused = 8;
   rec_invalid("flags: 8 unused bits", r);
 
   /* DEFAULT values present in the input are rejected */

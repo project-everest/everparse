@@ -223,6 +223,26 @@ let any_dec (#s: _) (#d: _) (dk: asn1_decorated_k s d) : bool =
   | ASN1_OPTION_ILC k -> ASN1_ANY_ILC? k
   | _ -> false
 
+(* An accepted ANY component is empty (if OPTIONAL) or exactly one TLV *)
+let dfe_any (#s: _) (#d: _) (dk: asn1_decorated_k s d) (x: SB.bytes)
+: Lemma (requires (any_dec dk /\ L.iacc [In.twin_of dk] x))
+  (ensures (SL.dfe (In.twin_of dk) x))
+= match dk with
+  | ASN1_PLAIN_ILC k ->
+    L.iacc_plain_iff k x;
+    L.acc_any_framed x;
+    SL.dfe_framed dk x
+  | ASN1_OPTION_ILC k ->
+    if Seq.length x = 0
+    then begin
+      assert (Seq.equal x Seq.empty);
+      SL.dfe_empty dk
+    end else begin
+      L.iacc_option_iff k x;
+      L.acc_any_framed x;
+      SL.dfe_framed dk x
+    end
+
 let fe_t (#t: Type0) (r: bprel t) (hd: gen_decorated_parser_twin) =
   (pm: perm) -> (y: t) -> (x: Ghost.erased SB.bytes) ->
   stt_ghost unit emp_inames (r pm y x) (fun _ -> r pm y x ** pure (SL.dfe hd x))
@@ -325,6 +345,18 @@ ensures raw_view r view pm y x ** pure (SL.dfe hd x)
   fold (raw_view r view pm y x);
 }
 
+ghost
+fn fe_dv (dk: gen_decorated_parser_twin) (id0: asn1_id_t) (k: asn1_terminal_k) (defl: asn1_key_lit k) (f: fe_t (raw_default_rel id0 k defl) dk)
+  (pm: perm) (y: asn1_terminal_impl_t k) (x: Ghost.erased SB.bytes)
+requires raw_dv id0 k defl pm y x
+ensures raw_dv id0 k defl pm y x ** pure (SL.dfe dk x)
+{
+  unfold (raw_dv id0 k defl pm y x);
+  with q . assert (raw_default_rel id0 k defl q (Some y) x);
+  f q (Some y) x;
+  fold (raw_dv id0 k defl pm y x);
+}
+
 let rec fe_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc dk t) (u: squash (any_dec dk == false))
 : Tot (fe_t (raw_drel d) (In.twin_of dk)) (decreases d)
 = match d with
@@ -340,6 +372,12 @@ let rec fe_drel (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: dd
   | DD_DEFAULT_RESTRICTED id0 #k r defl ->
     dec_default_restricted_equiv id0 #k r defl;
     fe_ext (raw_default_rel id0 k defl) (raw_drel d) () (In.twin_of dk) (fe_default dk id0 k defl ())
+  | DD_DEFAULT_V id0 #k defl mat ->
+    dec_dv_equiv id0 #k defl mat;
+    fe_ext (raw_dv id0 k defl) (raw_drel d) () (In.twin_of dk) (fun pm y x -> fe_dv (In.twin_of dk) id0 k defl (fe_default dk id0 k defl ()) pm y x)
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defl mat ->
+    dec_dv_restricted_equiv id0 #k r defl mat;
+    fe_ext (raw_dv id0 k defl) (raw_drel d) () (In.twin_of dk) (fun pm y x -> fe_dv (In.twin_of dk) id0 k defl (fe_default dk id0 k defl ()) pm y x)
   | DD_VIEW d' ty view mk law ->
     dec_view_equiv d' ty view mk law;
     fe_ext (raw_view (raw_drel d') view) (raw_drel d) () (In.twin_of dk)

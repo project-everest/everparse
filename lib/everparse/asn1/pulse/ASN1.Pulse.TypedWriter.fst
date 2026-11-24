@@ -7,9 +7,12 @@ module ASN1.Pulse.TypedWriter
    the relation to the value-level relation of the raw writer
    (`ASN1.Pulse.RawVConv.arel_to_raw`), runs the raw writer
    (`ASN1.Pulse.RawJitWriter.jit_write_raw_d`), and converts back. Since
-   `check_ser k () (forget k v) == Some v`, it never returns JIT_INVALID:
+   `check_ser k () (forget k v) == Some v`, it returns:
    - JIT_OK: `Ser.asn1_enc k v` was written right before the current position;
-   - JIT_NO_SPACE: `Ser.asn1_enc k v` does not fit. *)
+   - JIT_NO_SPACE: `Ser.asn1_enc k v` does not fit;
+   - JIT_INVALID only if `~ (ex_k k)`, i.e. the schema has ANY or an ADB
+     fallback and the (unproven) strictness checks of the JIT writer
+     rejected the value (see `ASN1.Pulse.RawJitWriter`.) *)
 
 open Pulse.Lib.Pervasives
 open ASN1.Base
@@ -38,7 +41,7 @@ let typed_jit_post (#s: _) (k: asn1_k s) (v: asn1_t k) (p: nat) (b: SB.bytes) (r
   Seq.slice b' p (Seq.length b) == Seq.slice b p (Seq.length b) /\
   (res == JIT_OK ==> W.r2l_post (Ser.asn1_enc k v) p b true p' b') /\
   (res == JIT_NO_SPACE ==> Seq.length (Ser.asn1_enc k v) > p) /\
-  (res == JIT_OK \/ res == JIT_NO_SPACE)
+  (res == JIT_OK \/ res == JIT_NO_SPACE \/ (res == JIT_INVALID /\ ex_k k == false))
 
 inline_for_extraction
 let typed_jit_writer_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) =
@@ -80,3 +83,37 @@ let parsed_encodable_d (#s: _) (k: asn1_k s) (w: SB.bytes) (v: asn1_t k)
 = Ser.parsed_encodable k w;
   Ser.asn1_as_parser_consumed k w;
   assert (Seq.equal (Seq.slice w 0 (Seq.length w)) w)
+
+(* Size computation: on JIT_OK, the size of `Ser.asn1_enc k v` was
+   subtracted from the budget `b`; JIT_NO_SPACE if it is larger than `b`;
+   JIT_INVALID as for the writer. *)
+
+let typed_size_post (#s: _) (k: asn1_k s) (v: asn1_t k) (b: nat) (res: jit_result) (b': nat) : prop =
+  (res == JIT_OK ==> b' + Seq.length (Ser.asn1_enc k v) == b) /\
+  (res == JIT_NO_SPACE ==> Seq.length (Ser.asn1_enc k v) > b) /\
+  (res == JIT_OK \/ res == JIT_NO_SPACE \/ (res == JIT_INVALID /\ ex_k k == false))
+
+inline_for_extraction
+let typed_size_d_t (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (pm: perm) =
+  (x': t) -> (#v: Ghost.erased (asn1_t k)) ->
+  (budget: ref SZ.t) -> (#b: Ghost.erased SZ.t) ->
+  stt jit_result
+    (pts_to budget b ** arel false d pm x' v ** pure (Ser.encodable k v))
+    (fun res -> exists* b' . pts_to budget b' ** arel false d pm x' v **
+      pure (typed_size_post k v (SZ.v b) res (SZ.v b')))
+
+(* `wr` is meant to be `size_raw_d d u pm (jit_size_d d u (pm /. 2.0R))` *)
+inline_for_extraction
+fn size_typed_d (#s: _) (#k: asn1_k s) (#t: Type0) (d: adesc k t) (u: squash (raw_ok k)) (pm: perm)
+  (wr: raw_size_d_t d u pm)
+: typed_size_d_t d pm
+= (x': t) (#v: Ghost.erased (asn1_t k))
+  (budget: ref SZ.t) (#b: Ghost.erased SZ.t)
+{
+  VC.arel_to_raw d pm x' v;
+  let res = wr x' #(forget k v) budget;
+  with b1 . assert (pts_to budget b1);
+  Trade.elim_trade _ _;
+  Can.check_ser_forget_encodable k () v;
+  res
+}
