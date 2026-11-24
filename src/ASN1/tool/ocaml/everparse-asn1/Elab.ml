@@ -25,7 +25,14 @@ and cnode =                     (* an `asn1_content_k` *)
 type fdeco =
   | FPlain
   | FOptional
-  | FDefault of id * term * string option * string   (* id, terminal, restriction, F* literal *)
+  | FDefault of id * term * string option * string * dmat
+    (* id, terminal, restriction, F* literal, materializer data *)
+
+(* The data of the materializer of a DEFAULT value (ASN1.Pulse.DefaultMat):
+   the DER content bytes of the value, and, for an EXPLICIT-tagged
+   terminal, the identifier (F* expression) of its tag and its inner
+   terminal *)
+and dmat = { dm_bytes: int list; dm_pre: (string * term) option }
 
 (* `fowner`: the name of the definition that owns the names generated for
    the component (its OPTIONAL/DEFAULT type, its DEFAULT value) *)
@@ -1092,6 +1099,23 @@ and literal env (where: string) (src: typ) (tm: term) (v: value) : string =
       end
   with Error s -> error "%s: %s" where s
 
+(* The DER content bytes of a value of a terminal: those of its literal
+   (ASN1.Pulse.Interpreter.key_enc_list) *)
+and lit_bytes env (where: string) (src: typ) (tm: term) (v: value) : int list =
+  try
+    match tm.tk, tm.ibound with
+    | "ASN1_BOOLEAN", _ -> [if bool_value env v then 0xff else 0x00]
+    | "ASN1_NULL", _ -> []
+    | ("ASN1_OID" | "ASN1_RELATIVE_OID"), _ -> error "values of this type are not supported"
+    | "ASN1_BITSTRING", _ ->
+      let unused, bytes = bytes_of_bits (bits_value env src v) in
+      unused :: bytes
+    | ("ASN1_UTCTIME" | "ASN1_GENERALIZEDTIME" | "ASN1_DATE" | "ASN1_TIME_OF_DAY"
+      | "ASN1_DATE_TIME" | "ASN1_OID_IRI" | "ASN1_RELATIVE_OID_IRI" as tk), _ -> time_bytes env tk v
+    | _, Some _ -> int_bytes (int_value env src v)
+    | tk, None -> string_bytes env tk v
+  with Error s -> error "%s: %s" where s
+
 and elab_field ?(keep_ok = true) env owner ((n, src, d, t): string * typ * deco * typ) : field =
   let fname = mangle n in
   let fnode = node env (owner ^ "_" ^ fname) t in
@@ -1117,7 +1141,17 @@ and elab_field ?(keep_ok = true) env owner ((n, src, d, t): string * typ * deco 
       | Some (id, tm, r, ltm) ->
         let lit = literal env where src ltm v in
         (match r with Some r -> check_restricted env where ltm r v | None -> ());
-        FDefault (id, tm, r, lit)
+        let dm_bytes = lit_bytes env where src ltm v in
+        let dm_pre =
+          if tm.tk = ltm.tk then None
+          else match resolve_struct env fnode with
+            | Some (_, CPrefixed inner) ->
+              (match resolve_struct env inner with
+               | Some (iid, _) -> Some (idexpr iid, ltm)
+               | None -> assert false)
+            | _ -> assert false
+        in
+        FDefault (id, tm, r, lit, { dm_bytes; dm_pre })
       | None -> error "%s: supported on simple types only (possibly EXPLICIT-tagged, unconstrained)" where
       end
   in

@@ -5,15 +5,18 @@
    that are not DER encodings of the schema (invalid strings, non-minimal
    INTEGERs, bad BIT STRING padding, DEFAULT values, restrictions, etc.),
    and JIT_NO_SPACE on a buffer one byte too short; the writers never
-   return JIT_RETRY, any non-compositional check (because of ANY) being
-   done locally. The components of a SET and the elements of a SET OF are
+   return JIT_RETRY: they are single-pass and strict (an ANY slice must be
+   exactly one TLV, an ADB fallback key must not be one of the literals),
+   so nothing is read back from the output. The components of a SET and the elements of a SET OF are
    sorted while writing, whatever their order in the schema or in the
    input.
 
    Each test is run on both `jit_<name>`, the JIT writer of raw bytes
    (ASN1.Pulse.JitWriter), and `jit_raw_<name>`, the same JIT writer seen
    as a writer of raw values (ASN1.Pulse.RawJitWriter), specified against
-   `check_ser`. */
+   `check_ser`, and on `size_<name>`, the size computation (the same JIT
+   writer on a dry sink, ASN1.Pulse.JitWriter.jit_size), which must agree
+   with the writer. */
 #include "ASN1.Pulse.RawWriteTest.h"
 #include <stdio.h>
 #include <string.h>
@@ -73,12 +76,45 @@ static const char *jit_name(ASN1_Pulse_JitWriter_jit_result r) {
     }                                                                         \
   } while (0)
 
+/* Size computation `size_<name>` (the JIT writer on a dry sink): with a
+   large budget, JIT_OK and the size `n` subtracted; with a budget of
+   exactly `n`, JIT_OK and 0 left; with `n - 1`, JIT_NO_SPACE */
+#define SIZE_OK(name, x, n) do {                                              \
+    size_t b_ = 1000;                                                         \
+    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_); \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_OK || 1000 - b_ != (n)) {              \
+      printf("%s:%d: size_%s: expected OK %zu, got %s %zu\n", __FILE__, __LINE__, #name, (size_t)(n), jit_name(r_), 1000 - b_); fails++; \
+    }                                                                         \
+    b_ = (n);                                                                 \
+    r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_);                         \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_OK || b_ != 0) {                       \
+      printf("%s:%d: size_%s: exact budget: expected OK, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
+    if ((n) > 0) {                                                            \
+      b_ = (n) - 1;                                                           \
+      r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_);                       \
+      if (r_ != ASN1_PULSE_JITWRITER_JIT_NO_SPACE) {                          \
+        printf("%s:%d: size_%s: short budget: expected NO_SPACE, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+      }                                                                       \
+    }                                                                         \
+  } while (0)
+
+#define SIZE_INVALID(name, x) do {                                            \
+    size_t b_ = 1000;                                                         \
+    ASN1_Pulse_JitWriter_jit_result r_ = ASN1_Pulse_RawWriteTest_size_##name(x, &b_); \
+    if (r_ != ASN1_PULSE_JITWRITER_JIT_INVALID) {                             \
+      printf("%s:%d: size_%s: expected INVALID, got %s\n", __FILE__, __LINE__, #name, jit_name(r_)); fails++; \
+    }                                                                         \
+  } while (0)
+
 #define OK(name, x, ...) do {                                                 \
     OK1(jit, name, x, __VA_ARGS__); OK1(jit_raw, name, x, __VA_ARGS__);       \
+    { uint8_t e_[] = __VA_ARGS__; SIZE_OK(name, x, sizeof(e_)); }             \
   } while (0)
 
 #define INVALID(name, x) do {                                                 \
     INVALID1(jit, name, x); INVALID1(jit_raw, name, x);                       \
+    SIZE_INVALID(name, x);                                                    \
   } while (0)
 
 #define SMALL(n) ((ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = (n) } })
@@ -313,16 +349,22 @@ int main(void) {
     OK(adbF, adbF_int(7), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x04, 0x02, 0x01, 0x07));
     OK(adbF, adbF_fb(SL(k125), NONE_SL), V(0x30, 0x04, 0x06, 0x02, 0x2a, 0x05));
     OK(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_ok))), V(0x30, 0x07, 0x06, 0x02, 0x2a, 0x05, 0x01, 0x01, 0xff));
-    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback: local validation */
+    uint8_t any_null[] = { 0x05, 0x00 };
+    uint8_t any_two[] = { 0x01, 0x01, 0xff, 0x05, 0x00 };
+    INVALID(adbF, adbF_fb(SL(k123), NONE_SL));          /* a known key in the fallback */
+    /* strict: a known key in the fallback is rejected even if the written
+       bytes would be the valid encoding of that key (here 1.2.3 -> NULL) */
+    INVALID(adbF, adbF_fb(SL(k123), SOME_SL(SL(any_null))));
     INVALID(adbF, adbF_fb(SL(kbad), NONE_SL));          /* not a DER OID */
     INVALID(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_bad)))); /* not a TLV */
+    INVALID(adbF, adbF_fb(SL(k125), SOME_SL(SL(any_two)))); /* two TLVs */
   }
 
   /* PREFIXED INTEGER keys: [0] 1 -> NULL, [0] -1 -> INTEGER */
   OK(adbT, adbT_null(), V(0x30, 0x07, 0xa0, 0x03, 0x02, 0x01, 0x01, 0x05, 0x00));
   OK(adbT, adbT_int(7), V(0x30, 0x08, 0xa0, 0x03, 0x02, 0x01, 0xff, 0x02, 0x01, 0x07));
   {
-    /* a non-minimal INTEGER payload, caught by the local validation */
+    /* a non-minimal INTEGER payload, caught while writing it */
     uint8_t nonmin[] = { 0x00, 0x07 };
     adbT_t x = { .tag = FSTAR_PERVASIVES_INR__UNIT_ASN1_INT_IMPL, .val = { .Inr = BIG(SL(nonmin)) } };
     INVALID(adbT, x);

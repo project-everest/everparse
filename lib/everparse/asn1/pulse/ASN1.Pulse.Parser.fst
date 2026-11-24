@@ -279,7 +279,7 @@ fn parse_keep
 [@@asn1_pulse_attr]
 let rec dd_absent (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.monomorphize] d: _) (#[@@@FStar.Attributes.monomorphize] dk: asn1_decorated_k s d) (#[@@@FStar.Attributes.monomorphize] t: Type0) ([@@@FStar.Attributes.monomorphize] dd: ddesc dk t)
   (pm: perm) (v: Ghost.erased (asn1_decorated_t_core dk))
-: Tot (stt t (pure (absent_core dk v)) (fun res -> drel true dd pm res v ** pure (drel true dd pm res v == emp)))
+: Tot (stt t (pure (absent_core dk v)) (fun res -> drel true dd pm res v))
   (decreases dd)
 = [@inline_let] let vf : dabsent dd =
   (match dd with
@@ -287,6 +287,8 @@ let rec dd_absent (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attribu
   | DD_OPTION da -> dec_option_absent da
   | DD_DEFAULT id0 #k defv -> dec_default_absent id0 #k defv
   | DD_DEFAULT_RESTRICTED id0 #k r defv -> dec_default_restricted_absent id0 #k r defv
+  | DD_DEFAULT_V id0 #k defv mat -> dec_dv_absent id0 #k defv mat
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defv mat -> dec_dv_restricted_absent id0 #k r defv mat
   | DD_VIEW dd' ty view mk law -> dec_view_absent dd' ty view mk law (fun pm v -> dd_absent dd' pm v))
   in vf pm v
 
@@ -325,7 +327,7 @@ let rec parse_cd (#[@@@FStar.Attributes.monomorphize] k: asn1_content_k) (#[@@@F
   | CD_SEQUENCE_OF ne d' -> seq_of_parser ne d'
   | CD_SET_OF ne d' -> set_of_parser ne d'
   | CD_SET _ items pf di ->
-    set_any_parser items pf di (dnone di)
+    set_any_parser items pf di (dnone_inl di)
       (fun id e #pm #we st #v -> parse_sdisp di () id e #pm #we st #v)
       (fun st #pm #v -> parse_sfin di st #pm #v)
   | CD_ADB_NONE ipd prefix kid key_k ls pf pf' dsx dpre ->
@@ -444,6 +446,8 @@ and parse_dd (#[@@@FStar.Attributes.monomorphize] s: _) (#[@@@FStar.Attributes.m
   | DD_OPTION da -> dec_option_present da (fun input #pm #w #v -> parse_d da () input #pm #w #v)
   | DD_DEFAULT id0 #k defv -> dec_default_present id0 #k defv (fun input #pm #w #v -> parse_terminal k input #pm #w #v)
   | DD_DEFAULT_RESTRICTED id0 #k r defv -> dec_default_restricted_present id0 #k r defv (parse_restricted k r)
+  | DD_DEFAULT_V id0 #k defv mat -> dec_dv_present id0 #k defv mat (fun input #pm #w #v -> parse_terminal k input #pm #w #v)
+  | DD_DEFAULT_RESTRICTED_V id0 #k r defv mat -> dec_dv_restricted_present id0 #k r defv mat (parse_restricted k r)
   | DD_VIEW dd' ty view mk law -> dec_view_present dd' ty view mk law (fun input #pm #w #v -> parse_dd dd' () input #pm #w #v))
   in vf input #pm #w #v
 

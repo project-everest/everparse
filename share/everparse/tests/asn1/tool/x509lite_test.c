@@ -65,6 +65,9 @@ static void write_cert_ok(const char *name, Cert x, const uint8_t *exp, size_t n
   ASN1_Pulse_JitWriter_jit_result r = write_Cert(x, sl(out, BUF), &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - n && memcmp(out + pos, exp, n) == 0,
         "%s: write: expected the DER bytes (result %d, %zu bytes)", name, (int)r, BUF - pos);
+  size_t b = 1000;
+  r = size_Cert(x, &b);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == n, "%s: size: expected %zu (result %d, %zu)", name, n, (int)r, 1000 - b);
 }
 
 static void write_ext_ok(const char *name, Extension x, const uint8_t *exp, size_t n) {
@@ -73,17 +76,42 @@ static void write_ext_ok(const char *name, Extension x, const uint8_t *exp, size
   ASN1_Pulse_JitWriter_jit_result r = write_Extension(x, sl(out, BUF), &pos);
   CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && pos == BUF - n && memcmp(out + pos, exp, n) == 0,
         "%s: write: expected the DER bytes (result %d, %zu bytes)", name, (int)r, BUF - pos);
+  size_t b = 1000;
+  r = size_Extension(x, &b);
+  CHECK(r == ASN1_PULSE_JITWRITER_JIT_OK && 1000 - b == n, "%s: size: expected %zu (result %d, %zu)", name, n, (int)r, 1000 - b);
 }
 
 static void test_cert(void) {
   CHECK(validate_cert(cert_der, sizeof cert_der), "cert: validate");
   Cert c = parse_Cert(sl(cert_der, sizeof cert_der));
   TBS *t = &c.tbs.value;
-  CHECK(t->version.tag == X509LITE_IMPL_TBS_VERSION_PRESENT && small(t->version.val.TBS_version_present, 2),
+  CHECK(small(t->version, 2),
         "cert: version v3");
   CHECK(small(t->serial, 1), "cert: serial");
   CHECK(t->signature.tag == X509LITE_IMPL_ALGID_ALGORITHM_SHA256WITHRSAENCRYPTION, "cert: signature");
   CHECK(t->extensions.tag == X509LITE_IMPL_TBS_EXTENSIONS_PRESENT, "cert: extensions");
+  {
+    /* iterate over the parsed subject and extensions (zero-copy) */
+    CHECK(TBS_subject_length(t->subject) == 1, "cert: subject length");
+    TBS_subject_iter it = TBS_subject_iter_start(t->subject);
+    Pulse_Lib_Slice_slice__uint8 s;
+    CHECK(TBS_subject_iter_next(&it, &s), "cert: subject next");
+    CHECK(s.len == 2 && s.elt == cert_der + 31 && TBS_subject_iter_is_empty(it), "cert: subject[0]");
+    LowParse_PulseParse_Iterator_Type_mixed_list__uintsize_t_Extension exts = t->extensions.val.TBS_extensions_present;
+    CHECK(TBS_extensions_length(exts) == 3, "cert: extensions length");
+    TBS_extensions_iter ei = TBS_extensions_iter_start(exts);
+    Extension e;
+    CHECK(TBS_extensions_iter_next(&ei, &e), "cert: extensions next 0");
+    CHECK(e.tag == X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_BASICCONSTRAINTS &&
+          small(e.val.Extension_extnID_id_ce_basicConstraints.extnValue.pathLenConstraint.val.BasicConstraints_pathLenConstraint_present, 3),
+          "cert: extensions[0]");
+    CHECK(TBS_extensions_iter_next(&ei, &e) && e.tag == X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_KEYUSAGE, "cert: extensions[1]");
+    CHECK(TBS_extensions_iter_next(&ei, &e) && e.tag == X509LITE_IMPL_EXTENSION_EXTNID_OTHER && TBS_extensions_iter_is_empty(ei), "cert: extensions[2]");
+    CHECK(!TBS_extensions_iter_next(&ei, &e), "cert: extensions end");
+    CHECK(TBS_extensions_nth(exts, 2, &e) && e.tag == X509LITE_IMPL_EXTENSION_EXTNID_OTHER, "cert: nth extensions[2]");
+    CHECK(TBS_extensions_nth(exts, 1, &e) && e.tag == X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_KEYUSAGE, "cert: nth extensions[1]");
+    CHECK(!TBS_extensions_nth(exts, 3, &e), "cert: nth extensions[3]");
+  }
   CHECK(c.tbs.raw.tag == X509LITE_IMPL_TBS_RAW_PRESENT &&
         c.tbs.raw.val.TBS_raw_present.elt == cert_der + TBS_OFF &&
         c.tbs.raw.val.TBS_raw_present.len == TBS_LEN, "cert: KEEP-BYTES of tbs");
@@ -97,14 +125,13 @@ static void test_cert(void) {
   /* DEFAULT under an EXPLICIT tag */
   CHECK(validate_cert(cert_v1_der, sizeof cert_v1_der), "cert v1: validate");
   Cert c1 = parse_Cert(sl(cert_v1_der, sizeof cert_v1_der));
-  CHECK(c1.tbs.value.version.tag == X509LITE_IMPL_TBS_VERSION_ABSENT, "cert v1: version absent");
+  CHECK(small(c1.tbs.value.version, 0), "cert v1: version absent, materialized as v1");
   CHECK(c1.tbs.value.extensions.tag == X509LITE_IMPL_TBS_EXTENSIONS_ABSENT, "cert v1: no extensions");
   write_cert_ok("cert v1", c1, cert_v1_der, sizeof cert_v1_der);
   CHECK(!validate_cert(cert_v1_explicit_der, sizeof cert_v1_explicit_der), "cert v1 explicit: not DER");
-  /* Writing v1 explicitly omits it */
-  c1.tbs.value.version.tag = X509LITE_IMPL_TBS_VERSION_PRESENT;
-  c1.tbs.value.version.val.TBS_version_present = (ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = 0 } };
-  write_cert_ok("cert v1 (version present)", c1, cert_v1_der, sizeof cert_v1_der);
+  /* Writing v1 omits it, also when built by hand */
+  c1.tbs.value.version = (ASN1_Pulse_Rel_asn1_int_impl){ .tag = ASN1_PULSE_REL_SMALL, .val = { .Small = 0 } };
+  write_cert_ok("cert v1 (version built)", c1, cert_v1_der, sizeof cert_v1_der);
 
   /* AlgId table */
   CHECK(!validate_cert(cert_sha_noparam_der, sizeof cert_sha_noparam_der), "sha256 without NULL: rejected");
@@ -126,9 +153,9 @@ static void test_extensions(void) {
   Extension e = parse_Extension(sl(ext_bc_der, sizeof ext_bc_der));
   CHECK(e.tag == X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_BASICCONSTRAINTS, "basicConstraints: case");
   Extension_id_ce_basicConstraints *bc = &e.val.Extension_extnID_id_ce_basicConstraints;
-  CHECK(bc->critical.tag == X509LITE_IMPL_EXTENSION_CRITICAL_PRESENT && bc->critical.val.Extension_critical_present,
+  CHECK(bc->critical,
         "basicConstraints: critical");
-  CHECK(bc->extnValue.cA.tag == X509LITE_IMPL_BASICCONSTRAINTS_CA_PRESENT && bc->extnValue.cA.val.BasicConstraints_cA_present,
+  CHECK(bc->extnValue.cA,
         "basicConstraints: cA");
   CHECK(bc->extnValue.pathLenConstraint.tag == X509LITE_IMPL_BASICCONSTRAINTS_PATHLENCONSTRAINT_PRESENT &&
         small(bc->extnValue.pathLenConstraint.val.BasicConstraints_pathLenConstraint_present, 3),
@@ -148,7 +175,7 @@ static void test_extensions(void) {
   Extension ku;
   memset(&ku, 0, sizeof ku);
   ku.tag = X509LITE_IMPL_EXTENSION_EXTNID_ID_CE_KEYUSAGE;
-  ku.val.Extension_extnID_id_ce_keyUsage.critical.tag = X509LITE_IMPL_EXTENSION_CRITICAL_ABSENT;
+  ku.val.Extension_extnID_id_ce_keyUsage.critical = false; /* DEFAULT FALSE */
   ku.val.Extension_extnID_id_ce_keyUsage.extnValue = (ASN1_Pulse_Rel_asn1_bitstring_impl){ .unused = 5, .bytes = sl(bits, 1) };
   write_ext_ok("keyUsage", ku, ext_ku_der, sizeof ext_ku_der);
   CHECK(validate_ext(ext_ku_der, sizeof ext_ku_der), "keyUsage: validate");

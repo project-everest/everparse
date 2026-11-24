@@ -45,8 +45,18 @@ let defL_ok : squash (raw_ok defL) = _ by (FStar.Tactics.norm [delta; zeta; iota
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_defL : jwx (raw_rel defL) (kacc defL) 1.0R =
+let jit_defL : jwr (ex_k defL) (raw_rel defL) (kacc defL) 1.0R =
   fun x' #y out pos #v #p -> jit_writer defL defL_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_defL : jsr (ex_k defL) (raw_rel defL) (kacc defL) 1.0R =
+  fun x' #y budget #b -> jit_size defL defL_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -76,8 +86,18 @@ let tagS_ok : squash (raw_ok tagS) = _ by (FStar.Tactics.norm [delta; zeta; iota
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_tagS : jwx (raw_rel tagS) (kacc tagS) 1.0R =
+let jit_tagS : jwr (ex_k tagS) (raw_rel tagS) (kacc tagS) 1.0R =
   fun x' #y out pos #v #p -> jit_writer tagS tagS_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_tagS : jsr (ex_k tagS) (raw_rel tagS) (kacc tagS) 1.0R =
+  fun x' #y budget #b -> jit_size tagS tagS_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -103,8 +123,18 @@ let neSeqOfInt_ok : squash (raw_ok neSeqOfInt) = _ by (FStar.Tactics.norm [delta
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_neSeqOfInt : jwx (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
+let jit_neSeqOfInt : jwr (ex_k neSeqOfInt) (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
   fun x' #y out pos #v #p -> jit_writer neSeqOfInt neSeqOfInt_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_neSeqOfInt : jsr (ex_k neSeqOfInt) (raw_rel neSeqOfInt) (kacc neSeqOfInt) 1.0R =
+  fun x' #y budget #b -> jit_size neSeqOfInt neSeqOfInt_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -130,8 +160,18 @@ let setOfOctets_ok : squash (raw_ok setOfOctets) = _ by (FStar.Tactics.norm [del
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_setOfOctets : jwx (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
+let jit_setOfOctets : jwr (ex_k setOfOctets) (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
   fun x' #y out pos #v #p -> jit_writer setOfOctets setOfOctets_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_setOfOctets : jsr (ex_k setOfOctets) (raw_rel setOfOctets) (kacc setOfOctets) 1.0R =
+  fun x' #y budget #b -> jit_size setOfOctets setOfOctets_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -169,8 +209,18 @@ let mix_ok : squash (raw_ok mix) = _ by (FStar.Tactics.norm [delta; zeta; iota; 
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_mix : jwx (raw_rel mix) (kacc mix) 1.0R =
+let jit_mix : jwr (ex_k mix) (raw_rel mix) (kacc mix) 1.0R =
   fun x' #y out pos #v #p -> jit_writer mix mix_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_mix : jsr (ex_k mix) (raw_rel mix) (kacc mix) 1.0R =
+  fun x' #y budget #b -> jit_size mix mix_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -202,8 +252,18 @@ let setCAB_ok : squash (raw_ok setCAB) = _ by (FStar.Tactics.norm [delta; zeta; 
     `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_setCAB : jwx (raw_rel setCAB) (kacc setCAB) 1.0R =
+let jit_setCAB : jwr (ex_k setCAB) (raw_rel setCAB) (kacc setCAB) 1.0R =
   fun x' #y out pos #v #p -> jit_writer setCAB setCAB_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_setCAB : jsr (ex_k setCAB) (raw_rel setCAB) (kacc setCAB) 1.0R =
+  fun x' #y budget #b -> jit_size setCAB setCAB_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -215,7 +275,8 @@ let jit_setCAB : jwx (raw_rel setCAB) (kacc setCAB) 1.0R =
 let jit_raw_setCAB : raw_jit_writer_t setCAB setCAB_ok 1.0R =
   fun x' #y out pos #v #p -> jit_write_raw setCAB setCAB_ok 1.0R (jit_writer setCAB setCAB_ok half_perm) x' #y out pos #v #p
 
-(* ANY DEFINED BY: written raw, then its content validated locally *)
+(* ANY DEFINED BY: the payload is checked while written; a fallback key
+   is compared to the literals on the input (strict) *)
 
 noextract
 let oid123 = ASN1.Syntax.mk_oid [1; 2; 3]
@@ -249,8 +310,19 @@ let adbP_ok : squash (raw_ok adbP) = _ by (FStar.Tactics.norm [delta; zeta; iota
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_adbP : jwx (raw_rel adbP) (kacc adbP) 1.0R =
+let jit_adbP : jwr (ex_k adbP) (raw_rel adbP) (kacc adbP) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbP adbP_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_adbP : jsr (ex_k adbP) (raw_rel adbP) (kacc adbP) 1.0R =
+  fun x' #y budget #b -> jit_size adbP adbP_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -284,8 +356,19 @@ let adbF_ok : squash (raw_ok adbF) = _ by (FStar.Tactics.norm [delta; zeta; iota
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_adbF : jwx (raw_rel adbF) (kacc adbF) 1.0R =
+let jit_adbF : jwr (ex_k adbF) (raw_rel adbF) (kacc adbF) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbF adbF_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_adbF : jsr (ex_k adbF) (raw_rel adbF) (kacc adbF) 1.0R =
+  fun x' #y budget #b -> jit_size adbF adbF_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
@@ -317,8 +400,19 @@ let adbT_ok : squash (raw_ok adbT) = _ by (FStar.Tactics.norm [delta; zeta; iota
     `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
     `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer];
   zeta; iota; primops]]
-let jit_adbT : jwx (raw_rel adbT) (kacc adbT) 1.0R =
+let jit_adbT : jwr (ex_k adbT) (raw_rel adbT) (kacc adbT) 1.0R =
   fun x' #y out pos #v #p -> jit_writer adbT adbT_ok 1.0R x' #y out pos #v #p
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.RawWriteTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t;
+    `%ASN1.Pulse.Interpreter.all_defaultable; `%FStar.Pervasives.coerce_eq; `%ASN1.Base.asn1_any_integer_bound; `%jit_writer; `%jit_size];
+  zeta; iota; primops]]
+let size_adbT : jsr (ex_k adbT) (raw_rel adbT) (kacc adbT) 1.0R =
+  fun x' #y budget #b -> jit_size adbT adbT_ok 1.0R x' #y budget #b
 
 [@@normalize_for_extraction [
   delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];

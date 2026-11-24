@@ -5,7 +5,8 @@
 
    Write `Rec` structs with the JIT writers (`jit_rec`, `jit_raw_rec`,
    `jit_typed_rec`), check the DER bytes and JIT_NO_SPACE on a buffer one
-   byte too short, then validate and parse the bytes back into a `Rec`
+   byte too short, check the encoded size (`size_raw_rec`,
+   `size_typed_rec`), then validate and parse the bytes back into a `Rec`
    (zero-copy), and parse then write them back (`roundtrip_rec`).
 
    KEEP-BYTES: `Outer ::= SEQUENCE { x INTEGER (small), r Rec }` with `r`
@@ -37,6 +38,20 @@ static void write_ok(const char *name, writer w, Rec x, const uint8_t *exp, size
   Pulse_Lib_Slice_slice__uint8 s = { .elt = out + 1, .len = len - 1 };
   if (w(x, s, &pos) != ASN1_PULSE_JITWRITER_JIT_NO_SPACE || out[0] != 0xcc) {
     printf("%s: short buffer: expected NO_SPACE\n", name); fails++;
+  }
+}
+
+typedef ASN1_Pulse_JitWriter_jit_result (*sizer)(Rec, size_t *);
+
+/* The encoded size: `len` subtracted from the budget; NO_SPACE with `len - 1` */
+static void size_ok(const char *name, sizer f, Rec x, size_t len) {
+  size_t b = 1000;
+  if (f(x, &b) != ASN1_PULSE_JITWRITER_JIT_OK || 1000 - b != len) {
+    printf("%s: expected size %zu, got %zu\n", name, len, 1000 - b); fails++;
+  }
+  b = len - 1;
+  if (f(x, &b) != ASN1_PULSE_JITWRITER_JIT_NO_SPACE) {
+    printf("%s: short budget: expected NO_SPACE\n", name); fails++;
   }
 }
 
@@ -78,6 +93,8 @@ int main(void) {
   write_ok("jit r1", ASN1_Pulse_NamedTest_jit_rec, r1, e1, sizeof(e1));
   write_ok("jit_raw r1", ASN1_Pulse_NamedTest_jit_raw_rec, r1, e1, sizeof(e1));
   write_ok("jit_typed r1", ASN1_Pulse_NamedTest_jit_typed_rec, r1, e1, sizeof(e1));
+  size_ok("size_raw r1", ASN1_Pulse_NamedTest_size_raw_rec, r1, sizeof(e1));
+  size_ok("size_typed r1", ASN1_Pulse_NamedTest_size_typed_rec, r1, sizeof(e1));
   Rec p1 = parse_ok("r1", e1, sizeof(e1));
   if (p1.a != 5 || p1.b.tag != ASN1_PULSE_NAMEDTEST_REC_B_ABSENT
       || p1.c.tag != ASN1_PULSE_NAMEDTEST_CH_I || p1.c.val.Ch_i != 7) {
@@ -95,6 +112,8 @@ int main(void) {
   write_ok("jit r2", ASN1_Pulse_NamedTest_jit_rec, r2, e2, sizeof(e2));
   write_ok("jit_raw r2", ASN1_Pulse_NamedTest_jit_raw_rec, r2, e2, sizeof(e2));
   write_ok("jit_typed r2", ASN1_Pulse_NamedTest_jit_typed_rec, r2, e2, sizeof(e2));
+  size_ok("size_raw r2", ASN1_Pulse_NamedTest_size_raw_rec, r2, sizeof(e2));
+  size_ok("size_typed r2", ASN1_Pulse_NamedTest_size_typed_rec, r2, sizeof(e2));
   Rec p2 = parse_ok("r2", e2, sizeof(e2));
   if (p2.a != -129 || p2.b.tag != ASN1_PULSE_NAMEDTEST_REC_B_PRESENT || !p2.b.val.Rec_b_present
       || p2.c.tag != ASN1_PULSE_NAMEDTEST_CH_O || p2.c.val.Ch_o.len != 2 || p2.c.val.Ch_o.elt != e2 + 11) {

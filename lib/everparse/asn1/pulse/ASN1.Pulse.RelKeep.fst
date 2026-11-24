@@ -144,6 +144,8 @@ and kept_d (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (d: ddesc d
     end
   | DD_DEFAULT _ _ -> True
   | DD_DEFAULT_RESTRICTED _ _ _ -> True
+  | DD_DEFAULT_V _ _ _ -> True
+  | DD_DEFAULT_RESTRICTED_V _ _ _ _ -> True
   | DD_VIEW d' _ view _ _ -> kept_d d' (view x)
 
 and kept_i (#ids: _) (#ls: asn1_gen_items_l ids) (#t: Type0) (d: idesc ls t) (x: t) : Tot prop (decreases d) =
@@ -785,6 +787,18 @@ and kc_d (b: bool) (#s: _) (#dc: _) (#dk: asn1_decorated_k s dc) (#t: Type0) (dd
     kc_ext b (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k' r)) (key_of_lit k' defv)) (drel true dd)
       (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k' r)) (key_of_lit k' defv)) (drel false dd)
       (ktrue _) (kept_d dd) () (fun _ -> ()) (kc_refl b (RS.prel_default (asn1_content_rel (ASN1_RESTRICTED_TERMINAL k' r)) (key_of_lit k' defv)))
+  | DD_DEFAULT_V id0 #k' defv mat ->
+    tdec_dv_equiv true id0 defv mat;
+    tdec_dv_equiv false id0 defv mat;
+    kc_ext b (prel_dvg k' (fun v -> v) (key_of_lit k' defv)) (drel true dd) (prel_dvg k' (fun v -> v) (key_of_lit k' defv)) (drel false dd)
+      (ktrue _) (kept_d dd) () (fun _ -> ()) (kc_refl b (prel_dvg k' (fun v -> v) (key_of_lit k' defv)))
+  | DD_DEFAULT_RESTRICTED_V id0 #k' r defv mat ->
+    tdec_dv_restricted_equiv true id0 r defv mat;
+    tdec_dv_restricted_equiv false id0 r defv mat;
+    kc_ext b (prel_dvg k' #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k')) (key_of_lit k' defv)) (drel true dd)
+      (prel_dvg k' #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k')) (key_of_lit k' defv)) (drel false dd)
+      (ktrue _) (kept_d dd) () (fun _ -> ())
+      (kc_refl b (prel_dvg k' #(parse_filter_refine (restriction_pred r)) (fun v -> (v <: asn1_terminal_t k')) (key_of_lit k' defv)))
   | DD_VIEW d' ty view mk law ->
     tdec_view_equiv true d' ty view mk law;
     tdec_view_equiv false d' ty view mk law;
