@@ -50,6 +50,22 @@ let vsize_eq
     assert (LP.injective_precond #t p b' b)
   | None -> ()
 
+
+let vsize_serialize
+  (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
+  (s: LP.serializer #k #t p) (x: t)
+: Lemma (vsize p x == Seq.length (LP.serialize s x))
+= vsize_eq p (LP.serialize s x)
+
+let vsize_UINT8 x = vsize_serialize P.parse____UINT8 LowParse.Spec.Int.serialize_u8 x; LP.serialize_length LowParse.Spec.Int.serialize_u8 x
+let vsize_UINT8BE x = vsize_serialize P.parse____UINT8BE LowParse.Spec.Int.serialize_u8 x; LP.serialize_length LowParse.Spec.Int.serialize_u8 x
+let vsize_UINT16 x = vsize_serialize P.parse____UINT16 LowParse.Spec.BoundedInt.serialize_u16_le x; LP.serialize_length LowParse.Spec.BoundedInt.serialize_u16_le x
+let vsize_UINT16BE x = vsize_serialize P.parse____UINT16BE LowParse.Spec.Int.serialize_u16 x; LP.serialize_length LowParse.Spec.Int.serialize_u16 x
+let vsize_UINT32 x = vsize_serialize P.parse____UINT32 LowParse.Spec.BoundedInt.serialize_u32_le x; LP.serialize_length LowParse.Spec.BoundedInt.serialize_u32_le x
+let vsize_UINT32BE x = vsize_serialize P.parse____UINT32BE LowParse.Spec.Int.serialize_u32 x; LP.serialize_length LowParse.Spec.Int.serialize_u32 x
+let vsize_UINT64 x = vsize_serialize P.parse____UINT64 LowParse.Spec.Int.serialize_u64_le x; LP.serialize_length LowParse.Spec.Int.serialize_u64_le x
+let vsize_UINT64BE x = vsize_serialize P.parse____UINT64BE LowParse.Spec.Int.serialize_u64 x; LP.serialize_length LowParse.Spec.Int.serialize_u64 x
+
 let intro_refines
   (#d: state_dict) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
   (s: S.vspec d) (vs: value_spec d t)
@@ -538,6 +554,10 @@ let vs_nlist
   (vs: value_spec d t)
 : value_spec d (P.nlist n t)
 = fun pos l x -> vs_list p vs pos l x
+
+let nlist_as_list l = l
+
+let vs_nlist_eq n p vs pos l x = ()
 
 let wf_nlist
   (#d: state_dict) (ha: bool)

@@ -66,6 +66,16 @@ val vsize_eq
    | Some (v, n) -> vsize p v == n
    | None -> True)
 
+(* The size of a fixed-size integer does not depend on its value. *)
+val vsize_UINT8 (x: P.___UINT8) : Lemma (vsize P.parse____UINT8 x == 1)
+val vsize_UINT8BE (x: P.___UINT8BE) : Lemma (vsize P.parse____UINT8BE x == 1)
+val vsize_UINT16 (x: P.___UINT16) : Lemma (vsize P.parse____UINT16 x == 2)
+val vsize_UINT16BE (x: P.___UINT16BE) : Lemma (vsize P.parse____UINT16BE x == 2)
+val vsize_UINT32 (x: P.___UINT32) : Lemma (vsize P.parse____UINT32 x == 4)
+val vsize_UINT32BE (x: P.___UINT32BE) : Lemma (vsize P.parse____UINT32BE x == 4)
+val vsize_UINT64 (x: P.___UINT64) : Lemma (vsize P.parse____UINT64 x == 8)
+val vsize_UINT64BE (x: P.___UINT64BE) : Lemma (vsize P.parse____UINT64BE x == 8)
+
 (** Refinement *)
 
 let vinput_ok (i: S.vinput) : prop =
@@ -372,6 +382,15 @@ val vs_nlist
   (#d: state_dict) (n: U32.t) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
   (vs: value_spec d t)
 : value_spec d (P.nlist n t)
+
+(* The elements of an array, in order. *)
+val nlist_as_list (#n: U32.t) (#t: Type0) (l: P.nlist n t) : Tot (list t)
+
+(* The actions of the elements of an array run in order. *)
+val vs_nlist_eq
+  (#d: state_dict) (n: U32.t) (#nz: bool) (#wk: P.weak_kind) (#k: P.parser_kind nz wk) (#t: Type0) (p: P.parser k t)
+  (vs: value_spec d t) (pos: S.aenv) (l: P.nlist n t) (x: forevery_values d)
+: Lemma (vs_nlist n p vs pos l x == vs_list p vs pos (nlist_as_list l) x)
 
 val wf_nlist
   (#d: state_dict) (ha: bool)

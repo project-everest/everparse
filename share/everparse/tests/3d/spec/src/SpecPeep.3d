@@ -1,0 +1,15 @@
+// A format whose action semantics are pinned down by the F* lemmas in
+// SpecPeep.Lemmas.fst. field_ptr_after needs an extern or static input
+// stream, so this file is processed separately from SpecTest.3d.
+
+// field_ptr_after: whatever the client's Peep callback does, its outcome is
+// the head of the peep world.
+entrypoint
+typedef struct _Peep(mutable PUINT8 *out)
+{
+  UINT32 x {:on-success
+    var ok = *out = field_ptr_after(4uL);
+    return ok;
+  };
+  UINT32 y;
+} Peep;

@@ -19,5 +19,6 @@ test-cpp.pulse.exe
 
 # Build directories of the subdirectory tests.
 obj/
+obj-peep/
 output/
 batch_obj/

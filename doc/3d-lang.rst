@@ -776,6 +776,20 @@ is ``VErr``. So clients can reason about the actions of
 ``T`` purely in terms of its values, without reasoning about bytes (see
 ``EverParse3d.Actions.Spec.Test``).
 
+Such client theorems can also be stated about the code generated from a
+``.3d`` file. The generated interface keeps ``def'_T`` abstract, so the
+theorems go in a hand-written module that is a ``friend`` of the
+generated one (F* requires that module to have an interface, possibly
+empty). ``share/everparse/tests/3d/spec`` contains examples covering
+``field_pos_32``, ``field_ptr``, failing ``:check`` actions, arrays,
+extern actions (the final output state is the sequence of their
+uninterpreted specs), output setters, probes and ``field_ptr_after``.
+Each comes with an ``expect_failure`` test showing that a wrong claim
+is rejected. ``EverParse3d.Actions.ValueSpec`` provides helper lemmas
+for such proofs: ``vsize_UINT8`` ... ``vsize_UINT64BE`` give the sizes
+of integer fields, and ``vs_nlist_eq`` unfolds arrays to lists
+(``nlist_as_list``).
+
 .. _sec-alignment:
 
 Alignment
