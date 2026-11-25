@@ -1053,17 +1053,17 @@ let field_ptr_t
   (base_t len_t pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
 : Type0
-= (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
+= (slBase: base_t) ->
+  (slLen: len_t) ->
+  (slPos: pos_t) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   (start_pos: U64.t) ->
   stt PM.ptr
-    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+    (I.pts_to slBase slLen slPos contents_sl v_sl **
       pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl))
-    (fun res -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-      pure (res == PM.ptr_at (I.origin #base_t #len_t #pos_t sl_base) (U64.v start_pos)))
+    (fun res -> I.pts_to slBase slLen slPos contents_sl v_sl **
+      pure (res == PM.ptr_at (I.origin #base_t #len_t #pos_t slBase) (U64.v start_pos)))
 
 (* The peep world: a prophecy of the outcomes of all future calls to the
    client-provided primitive behind `field_ptr_after` (see
@@ -1122,17 +1122,17 @@ let field_ptr_after_t
   (_extra: inst.extra_t) ->
   (sz: U64.t) ->
   (write_to: ref PM.ptr) ->
-  (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
+  (slBase: base_t) ->
+  (slLen: len_t) ->
+  (slPos: pos_t) ->
   (w: Ghost.erased PM.ptr) ->
   (pw: Ghost.erased S.peep_tape) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt bool
-    (pts_to write_to #1.0R w ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** peep_world pw)
+    (pts_to write_to #1.0R w ** I.pts_to slBase slLen slPos contents_sl v_sl ** peep_world pw)
     (fun res -> pts_to write_to #1.0R (S.peep_result (S.peep_head pw) w) **
-      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      I.pts_to slBase slLen slPos contents_sl v_sl **
       peep_world (S.peep_tail pw) **
       pure (res == Some? (S.peep_head pw)))
 
@@ -1278,18 +1278,18 @@ let field_ptr_after_setter_t
   (_extra: inst.extra_t) ->
   (sz: U64.t) ->
   (write_to: (p: PM.ptr -> external_action_spec name state unit (sp p))) ->
-  (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
+  (slBase: base_t) ->
+  (slLen: len_t) ->
+  (slPos: pos_t) ->
   (pw: Ghost.erased S.peep_tape) ->
   (w: Ghost.erased vt) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt bool
-    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+    (I.pts_to slBase slLen slPos contents_sl v_sl **
       state w **
       peep_world pw)
-    (fun res -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+    (fun res -> I.pts_to slBase slLen slPos contents_sl v_sl **
       state (S.setter_peep_result sp (S.peep_head pw) w) **
       peep_world (S.peep_tail pw) **
       pure (res == Some? (S.peep_head pw)))

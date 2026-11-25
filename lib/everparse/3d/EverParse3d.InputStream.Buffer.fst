@@ -443,8 +443,8 @@ ensures stream_pts_to b len pos contents v **
 {
   unfold (stream_pts_to b len pos contents v);
   SZ.fits_lte (U64.v start_pos) (SZ.v len);
-  let start_pos_sz = SZ.uint64_to_sizet start_pos;
-  let s' = AP.split b start_pos_sz;
+  let startPosSz = SZ.uint64_to_sizet start_pos;
+  let s' = AP.split b startPosSz;
   EverParse3d.PtrModel.ptr_at_adjacent b (U64.v start_pos) s';
   AP.join b s';
   Seq.lemma_split contents (U64.v start_pos);

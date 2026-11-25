@@ -18,7 +18,9 @@ let specialize_backend = ()
    `resultAfterBitfield0`, ... This follows the conventions of KaRaMeL's
    former `-fmicrosoft` option (`GlobalNames.pascal_case`): underscores are
    dropped and start a new word, and when the name has underscores, letters
-   following an upper-case letter or a digit are lower-cased.
+   following an upper-case letter or a digit are lower-cased. Dots also start
+   a new word, so that the field names 3D derives for sub-parsers (`x.refinement`,
+   `x.element`) yield `xRefinement`, `bytesOfXRefinement`, ...
 
    These functions are evaluated by the normalizer when the combinators are
    inlined, so they must only use primitive string operations: in particular,
@@ -30,7 +32,7 @@ let rec pascal_case_aux (has_underscore: bool) (what_next: nat) (l: list FStar.S
 = match l with
   | [] -> ""
   | c :: cs ->
-    if c = '_'
+    if c = '_' || c = '.'
     then pascal_case_aux has_underscore 1 cs
     else
       let s = FStar.String.string_of_list [c] in

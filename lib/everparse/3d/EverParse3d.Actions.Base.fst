@@ -60,10 +60,10 @@ let action
   (sp: S.action_spec extra_state a)
 =
   ctxt: app_ctxt ->
-  error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit) ->
-  sl_base: base_t ->
-  sl_len: len_t ->
-  sl_pos: pos_t ->
+  errorHandlerFn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit) ->
+  slBase: base_t ->
+  slLen: len_t ->
+  slPos: pos_t ->
   contents_sl: Ghost.erased (Seq.seq U8.t) ->
   v_sl: Ghost.erased (Seq.seq U8.t) ->
   start_pos: U64.t ->
@@ -71,15 +71,15 @@ let action
   stt a
     (exists* v_ctxt .
       pts_to ctxt v_ctxt **
-      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      I.pts_to slBase slLen slPos contents_sl v_sl **
       forevery_state extra_state extra **
       pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
     )
     (fun res -> exists* v_ctxt' extra' .
       pts_to ctxt v_ctxt' **
-      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      I.pts_to slBase slLen slPos contents_sl v_sl **
       forevery_state extra_state extra' **
-      pure (S.spec_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t sl_base) start_pos contents_sl v_sl) extra) res extra')
+      pure (S.spec_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t slBase) start_pos contents_sl v_sl) extra) res extra')
     )
 
 let vaction
@@ -90,10 +90,10 @@ let vaction
   (sp: S.vaction_spec extra_state)
 =
   ctxt: app_ctxt ->
-  error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit) ->
-  sl_base: base_t ->
-  sl_len: len_t ->
-  sl_pos: pos_t ->
+  errorHandlerFn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit) ->
+  slBase: base_t ->
+  slLen: len_t ->
+  slPos: pos_t ->
   contents_sl: Ghost.erased (Seq.seq U8.t) ->
   v_sl: Ghost.erased (Seq.seq U8.t) ->
   start_pos: U64.t ->
@@ -101,15 +101,15 @@ let vaction
   stt bool
     (exists* v_ctxt .
       pts_to ctxt v_ctxt **
-      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      I.pts_to slBase slLen slPos contents_sl v_sl **
       forevery_state extra_state extra **
       pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
     )
     (fun res -> exists* v_ctxt' extra' .
       pts_to ctxt v_ctxt' **
-      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      I.pts_to slBase slLen slPos contents_sl v_sl **
       forevery_state extra_state extra' **
-      pure (S.vaction_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t sl_base) start_pos contents_sl v_sl) extra) res extra')
+      pure (S.vaction_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t slBase) start_pos contents_sl v_sl) extra) res extra')
     )
 
 module LP = LowParse.Spec.Base
@@ -129,22 +129,22 @@ let validate_with_action_read
      (s: S.vspec extra_state)
 : Type0
 = (ctxt: app_ctxt) ->
-  (error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
-  (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
+  (errorHandlerFn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
+  (slBase: base_t) ->
+  (slLen: len_t) ->
+  (slPos: pos_t) ->
   (extra: forevery_values extra_state) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt U8.t
   (requires exists* v_ctxt .
     pts_to ctxt v_ctxt **
-    I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+    I.pts_to slBase slLen slPos contents_sl v_sl **
     forevery_state extra_state extra
   )
   (ensures fun res -> exists* v_ctxt' v_sl' extra' .
     pts_to ctxt v_ctxt' **
-    I.pts_to sl_base sl_len sl_pos contents_sl v_sl' **
+    I.pts_to slBase slLen slPos contents_sl v_sl' **
     forevery_state extra_state extra' **
     pure (
       (res == validator_error_action_failed ==> has_action) /\
@@ -152,7 +152,7 @@ let validate_with_action_read
       (is_validation_error res ==> None? (LP.parse p v_sl)) /\
       I.seq_is_suffix_of v_sl' v_sl /\
       (res == validator_success ==> (Some? (LP.parse p v_sl) /\ v_sl' == Seq.slice v_sl (snd (Some?.v (LP.parse p v_sl))) (Seq.length v_sl))) /\
-      S.vres_rel (s (vinput_read (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl) extra) res extra'
+      S.vres_rel (s (vinput_read (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl) extra) res extra'
   ))
 
 inline_for_extraction noextract
@@ -170,10 +170,10 @@ let validate_with_action_no_read
      (s: S.vspec extra_state)
 : Type0
 = (ctxt: app_ctxt) ->
-  (error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
-  (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
+  (errorHandlerFn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
+  (slBase: base_t) ->
+  (slLen: len_t) ->
+  (slPos: pos_t) ->
   (pos: ref inst.scan_t) ->
   (extra: forevery_values extra_state) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
@@ -182,14 +182,14 @@ let validate_with_action_no_read
   stt U8.t
   (requires exists* v_ctxt .
     pts_to ctxt v_ctxt **
-    I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** // necessary for actions and the error handler
+    I.pts_to slBase slLen slPos contents_sl v_sl ** // necessary for actions and the error handler
     pts_to pos v_pos **
     forevery_state extra_state extra **
     pure (inst.scan_v v_pos <= Seq.length v_sl)
   )
   (ensures fun res -> exists* v_ctxt' extra' v_pos' .
     pts_to ctxt v_ctxt' **
-    I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+    I.pts_to slBase slLen slPos contents_sl v_sl **
     pts_to pos v_pos' **
     forevery_state extra_state extra' **
     pure (
@@ -199,7 +199,7 @@ let validate_with_action_no_read
       (not has_action ==> extra' == extra) /\
       (is_validation_error res ==> None? pp) /\
       (res == validator_success ==> (Some? pp /\ inst.scan_v v_pos' == inst.scan_v v_pos + snd (Some?.v pp))) /\
-      S.vres_rel (s (vinput_no_read (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl (inst.scan_v v_pos)) extra) res extra'
+      S.vres_rel (s (vinput_no_read (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl (inst.scan_v v_pos)) extra) res extra'
   )))
 
 inline_for_extraction noextract
@@ -219,15 +219,15 @@ fn validate_eta
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  v ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
+  v ctxt errorHandlerFn slBase slLen slPos extra contents_sl v_sl
 }
 
 (* Change the spec index of a validator to a pointwise-equal spec *)
@@ -250,15 +250,15 @@ fn validate_with_action_read_ext
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s2
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  v ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
+  v ctxt errorHandlerFn slBase slLen slPos extra contents_sl v_sl
 }
 
 inline_for_extraction noextract
@@ -280,17 +280,17 @@ fn validate_with_action_no_read_ext
 : validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s2
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
   (v_pos: _)
 {
-  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+  v ctxt errorHandlerFn slBase slLen slPos pos extra contents_sl v_sl v_pos
 }
 
 inline_for_extraction noextract
@@ -306,17 +306,17 @@ fn act_with_comment
 : action #base_t #len_t #pos_t extra_state res use_error_handler (sa)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
   (extra: _)
 {
   Comment.comment s;
-  a ctxt error_handler_fn sl_base sl_len sl_pos contents_sl v_sl start_pos _
+  a ctxt errorHandlerFn slBase slLen slPos contents_sl v_sl start_pos _
 }
 
 inline_for_extraction
@@ -332,18 +332,18 @@ let leaf_reader
   (* The 3D field being read, only used to name C locals; see
      [EverParse3d.InputStream.Base.input_stream_inst]. *)
   (name: string) ->
-  (sl_base: base_t) ->
-  (sl_len: len_t) ->
-  (sl_pos: pos_t) ->
+  (slBase: base_t) ->
+  (slLen: len_t) ->
+  (slPos: pos_t) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt t
   (requires (
-    I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+    I.pts_to slBase slLen slPos contents_sl v_sl **
     pure (Some? (LP.parse p v_sl))
   ))
   (ensures (fun res -> exists* v_sl' .
-    I.pts_to sl_base sl_len sl_pos contents_sl v_sl' **
+    I.pts_to slBase slLen slPos contents_sl v_sl' **
     pure
     begin match LP.parse p v_sl with
     | None -> False
@@ -355,7 +355,7 @@ let leaf_reader
 
 (* Several combinators below tag their local bindings with `rename_let`, so that
    the extracted C names the temporaries after the 3D field they come from
-   rather than `res_key`, `val_key`, ... Following the KaRaMeL `-fmicrosoft`
+   rather than `resKey`, `valKey`, ... Following the KaRaMeL `-fmicrosoft`
    conventions of the Low* backend, locals are camelCase and the field name is
    recased with [camel_case] or [pascal_case] (EverParse3d.Actions.Common), so
    that for a field `<field>` (`<Field>` once PascalCased) the names used are:
@@ -372,7 +372,7 @@ let leaf_reader
    locals after the field they are given (`offsetBefore<Field>`,
    `positionOf<Field>`, `bytesOf<Field>`, ...).
 
-   Pulse validators keep the current position in the `sl_pos` reference and
+   Pulse validators keep the current position in the `slPos` reference and
    return an error code rather than the position they stopped at, hence
    `resultAfter` rather than `positionAfter`.
 
@@ -401,18 +401,18 @@ fn validate_with_success_action
   : validate_with_action_read #base_t #len_t #pos_t p1 extra true use_error_handler (S.vspec_with_success_action p1 s1 sa)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_validate = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position slBase slLen slPos contents_sl v_sl;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_validate = v1 ctxt errorHandlerFn slBase slLen slPos extra contents_sl v_sl;
   if (res_validate = validator_success) {
-    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a ctxt errorHandlerFn slBase slLen slPos _ _ field_start _;
     if (res_action) {
       validator_success
     } else {
@@ -443,26 +443,26 @@ fn validate_with_error_handler
   : validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler (s1)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   // Sample the position *before* running the field's validator: that is the
   // start of the field, which is what the error handler must report (see
-  // doc/3d-lang.rst's `StartPosition`). By the time the handler runs, sl_pos
+  // doc/3d-lang.rst's `StartPosition`). By the time the handler runs, slPos
   // has already advanced past whatever the field consumed.
   let [@@@rename_let ("fieldStart" ^ pascal_case typename)] field_start =
-    I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+    I.get_position slBase slLen slPos contents_sl v_sl;
   let [@@@rename_let ("startPosition" ^ pascal_case typename)] start_pos = field_start;
-  let [@@@rename_let ("resultAfter" ^ pascal_case typename)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
+  let [@@@rename_let ("resultAfter" ^ pascal_case typename)] res = v1 ctxt errorHandlerFn slBase slLen slPos extra contents_sl v_sl;
   if (res = validator_success) { // TODO: turn this `if ... else` into a non-terminal `if (res <> validator_success)` with an `ensures` clause
     res
   } else {
-    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos start_pos;
+    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then errorHandlerFn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt slBase slLen slPos start_pos;
     res
   };
 }
@@ -476,10 +476,10 @@ fn validate_ret
   : validate_with_action_read #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler (S.vspec_of_parser (parse_ret ()))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -525,18 +525,18 @@ fn validate_pair_slow
       use_error_handler (S.vspec_pair_slow p1 s1 s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   LowParse.Spec.Combinators.nondep_then_eq p1 p2 v_sl;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res1 = v1 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res1 = v1 ctxt errorHandlerFn slBase slLen slPos _ _ _;
   if (res1 = validator_success) {
-    v2 ctxt error_handler_fn sl_base sl_len sl_pos _ _ _
+    v2 ctxt errorHandlerFn slBase slLen slPos _ _ _
   } else {
     res1
   }
@@ -581,34 +581,34 @@ fn validate_dep_pair_with_refinement_and_action'
       use_error_handler (S.vspec_dep_pair_with_refinement_slow p1 s1 f (Some sa) s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
-  let [@@@rename_let ("fieldStart" ^ pascal_case name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name1)] field_start = I.get_position slBase slLen slPos contents_sl v_sl;
   let mut [@@@rename_let ("offsetIn" ^ pascal_case name1)] pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
-  if (res_key = validator_success) {
-    let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
-    let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] resKey = v1 ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
+  if (resKey = validator_success) {
+    let [@@@rename_let ("" ^ camel_case name1)] valKey = r1 name1 slBase slLen slPos _ _;
+    let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f valKey;
     if (ok) {
-      let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+      let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a valKey ctxt errorHandlerFn slBase slLen slPos _ _ field_start _;
       if (res_action) {
-      	 v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+      	 v2 valKey ctxt errorHandlerFn slBase slLen slPos _ _ _;
       } else {
         validator_error_action_failed
       }
     } else {
-      err val_key
+      err valKey
     }
   } else {
-    res_key
+    resKey
   }
 }
 
@@ -651,10 +651,10 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
       use_error_handler (S.vspec_dep_pair_with_refinement_total_zero p1 f (Some sa) s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -662,19 +662,19 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
-  let [@@@rename_let ("fieldStart" ^ pascal_case name1)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name1)] field_start = I.get_position slBase slLen slPos contents_sl v_sl;
   Comment.comment (normalize_term ("Validating field " ^ name1));
-  let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
-  let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
+  let [@@@rename_let ("" ^ camel_case name1)] valKey = r1 name1 slBase slLen slPos _ _;
+  let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f valKey;
   if (ok) {
-    let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a valKey ctxt errorHandlerFn slBase slLen slPos _ _ field_start _;
     if (res_action) {
-      v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+      v2 valKey ctxt errorHandlerFn slBase slLen slPos _ _ _;
     } else {
       validator_error_action_failed
     }
   } else {
-    err val_key
+    err valKey
   }
 }
 
@@ -746,30 +746,30 @@ fn validate_filter
   : validate_with_action_read #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler (S.vspec_filter p s f None)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
   let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
-  if (res_key = validator_success) {
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] resKey = v ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
+  if (resKey = validator_success) {
     Comment.comment cr;
-    let [@@@rename_let ("" ^ camel_case name)] val_key = r name sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("" ^ camel_case name)] valKey = r name slBase slLen slPos _ _;
     Comment.comment (normalize_term ("start: " ^ cf));
-    let [@@@rename_let (camel_case name ^ "ConstraintIsOk")] ok = f val_key;
+    let [@@@rename_let (camel_case name ^ "ConstraintIsOk")] ok = f valKey;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
       validator_success
     } else {
-      err val_key
+      err valKey
     }
   } else {
-    res_key
+    resKey
   }
 }
 
@@ -803,36 +803,36 @@ fn validate_filter_with_action
       use_error_handler (S.vspec_filter p s f (Some sa))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
-  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position slBase slLen slPos contents_sl v_sl;
   let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_key = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
-  if (res_key = validator_success) {
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] resKey = v ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
+  if (resKey = validator_success) {
     Comment.comment cr;
-    let [@@@rename_let ("" ^ camel_case name)] val_key = r name sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("" ^ camel_case name)] valKey = r name slBase slLen slPos _ _;
     Comment.comment (normalize_term ("start: " ^ cf));
-    let [@@@rename_let (camel_case name ^ "ConstraintIsOk")] ok = f val_key;
+    let [@@@rename_let (camel_case name ^ "ConstraintIsOk")] ok = f valKey;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
-      let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+      let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a valKey ctxt errorHandlerFn slBase slLen slPos _ _ field_start _;
       if (res_action) {
       	validator_success
       } else {
         validator_error_action_failed
       }
     } else {
-      err val_key
+      err valKey
     }
   } else {
-    res_key
+    resKey
   }
 }
 
@@ -856,15 +856,15 @@ fn validate_weaken_left
   : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_left p k') extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  v ctxt error_handler_fn sl_base sl_len sl_pos _ _ _
+  v ctxt errorHandlerFn slBase slLen slPos _ _ _
 }
 
 inline_for_extraction noextract
@@ -887,15 +887,15 @@ fn validate_weaken_right
   : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_right p k') extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  v ctxt error_handler_fn sl_base sl_len sl_pos _ _ _
+  v ctxt errorHandlerFn slBase slLen slPos _ _ _
 }
 
 #push-options "--z3rlimit 32"
@@ -921,10 +921,10 @@ fn validate_weaken
 : validate_with_action_read #base_t #len_t #pos_t p d2 has_action use_error_handler (S.vspec_weaken s d2 d2_extends)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -936,7 +936,7 @@ fn validate_weaken
   with extra1 . assert (forevery_state d1 extra1);
   with extra3 . assert (forevery_state d3 extra3);
   forevery_values_ext d2 extra2 (mk_prod_value extra1 extra3 ());
-  let res = v ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  let res = v ctxt errorHandlerFn slBase slLen slPos _ _ _;
   forevery_state_dict_prod_fold d1 d3 ();
   with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
   res
@@ -967,17 +967,17 @@ fn validate_call
 : validate_with_action_read #base_t #len_t #pos_t p d has_action use_error_handler (S.vspec_call s d f g sq)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   state_dict_rename_call d d' f g sq extra;
   state_dict_rename_values_return_call d d' f g extra;
-  let res = v ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  let res = v ctxt errorHandlerFn slBase slLen slPos _ _ _;
   state_dict_rename_return d d' f g sq extra _;
   res
 }
@@ -992,10 +992,10 @@ fn validate_impos
   : validate_with_action_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler (S.vspec_of_parser (parse_impos ()))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -1031,18 +1031,18 @@ fn validate_ite
       use_error_handler (S.vspec_ite e s1 s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   if (e) {
-    v1 () ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+    v1 () ctxt errorHandlerFn slBase slLen slPos _ _ _;
   } else {
-    v2 () ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+    v2 () ctxt errorHandlerFn slBase slLen slPos _ _ _;
   }
 }
 
@@ -1277,39 +1277,39 @@ fn validate_nlist
 : validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler (S.vspec_nlist ha n n_is_const p s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   parse_nlist_eq n n_is_const p v_sl;
   parse_fldata_eq (LPL.parse_list p) (U32.v n) v_sl;
-  let n_sz = SZ.uint32_to_sizet n;
-  let hasBytes = I.has "" sl_base sl_len sl_pos n_sz contents_sl v_sl;
-  I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
+  let nSz = SZ.uint32_to_sizet n;
+  let hasBytes = I.has "" slBase slLen slPos nSz contents_sl v_sl;
+  I.pts_to_is_suffix_of slBase slLen slPos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
   } else {
-    let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    let tr = I.truncate slBase slLen slPos nSz contents_sl v_sl;
     (* [truncate] returns only the component the backend actually changes;
        recover the other two from the original stream. The rewrites give the
        short names to Pulse's (syntactic) frame inference. *)
-    let tb = inst.trunc_base sl_base sl_len sl_pos tr;
-    let tl = inst.trunc_len sl_base sl_len sl_pos tr;
-    let tp = inst.trunc_pos sl_base sl_len sl_pos tr;
-    rewrite each (inst.trunc_base sl_base sl_len sl_pos tr) as tb;
-    rewrite each (inst.trunc_len sl_base sl_len sl_pos tr) as tl;
-    rewrite each (inst.trunc_pos sl_base sl_len sl_pos tr) as tp;
+    let tb = inst.trunc_base slBase slLen slPos tr;
+    let tl = inst.trunc_len slBase slLen slPos tr;
+    let tp = inst.trunc_pos slBase slLen slPos tr;
+    rewrite each (inst.trunc_base slBase slLen slPos tr) as tb;
+    rewrite each (inst.trunc_len slBase slLen slPos tr) as tl;
+    rewrite each (inst.trunc_pos slBase slLen slPos tr) as tp;
     with contents1 v1 v2. assert (
       I.pts_to tb tl tp contents1 v1 **
-      I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
+      I.is_prefix_of tb tl tp slBase slLen slPos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
-    vtruncate_eq (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl contents1 v1 v2 (U32.v n);
-    vspec_nlist_eq ha n n_is_const p s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl contents1 v1 extra;
+    vtruncate_eq (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl contents1 v1 v2 (U32.v n);
+    vspec_nlist_eq ha n n_is_const p s (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl contents1 v1 extra;
     parse_list_consumes_all p v1;
     seq_is_suffix_of_refl v1;
     LP.parser_kind_prop_equiv k p; // fstar2 only
@@ -1334,8 +1334,8 @@ fn validate_nlist
           (Some? (LP.parse (LPL.parse_list p) v1) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
         (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0) /\
         (ha ==> (
-          (vres == validator_success ==> list_fold_reaches p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra') /\
-          (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra))))) /\
+          (vres == validator_success ==> list_fold_reaches p s (I.origin #base_t #len_t #pos_t slBase) contents1 v1 extra vcur extra') /\
+          (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s (I.origin #base_t #len_t #pos_t slBase) contents1 v1 extra))))) /\
         Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
       )
       decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
@@ -1347,10 +1347,10 @@ fn validate_nlist
         stop := true;
       } else {
         LPL.parse_list_eq' p vcur;
-        let r = v ctxt error_handler_fn tb tl tp extra' contents1 vcur;
+        let r = v ctxt errorHandlerFn tb tl tp extra' contents1 vcur;
         with vcur'. assert (I.pts_to tb tl tp contents1 vcur');
         with extra''. assert (forevery_state extra_state extra'');
-        list_fold_step ha p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra' r extra'' vcur';
+        list_fold_step ha p s (I.origin #base_t #len_t #pos_t slBase) contents1 v1 extra vcur extra' r extra'' vcur';
         pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
         seq_is_suffix_of_trans vcur' vcur v1;
         if (r = validator_success) {
@@ -1364,11 +1364,11 @@ fn validate_nlist
     let fres = !res;
     with vcur. assert (I.pts_to tb tl tp contents1 vcur);
     with extra'. assert (forevery_state extra_state extra');
-    list_fold_done ha p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra' fres;
+    list_fold_done ha p s (I.origin #base_t #len_t #pos_t slBase) contents1 v1 extra vcur extra' fres;
     LPL.parse_list_eq p vcur;
     Seq.lemma_eq_elim v1 (Seq.slice v_sl 0 (U32.v n));
     seq_is_suffix_of_append vcur v1 v2;
-    I.untruncate tb tl tp sl_base sl_len sl_pos contents1 vcur contents_sl v2;
+    I.untruncate tb tl tp slBase slLen slPos contents1 vcur contents_sl v2;
     if (fres = validator_success) {
       seq_append_nil_slice v_sl v1 v2 vcur (U32.v n);
       fres
@@ -1397,51 +1397,51 @@ fn validate_t_at_most
   : validate_with_action_read #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler (S.vspec_t_at_most n s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   parse_t_at_most_eq n p v_sl;
   parse_fldata_eq (LowParse.Spec.Combinators.nondep_then p parse_all_bytes) (U32.v n) v_sl;
-  let n_sz = SZ.uint32_to_sizet n;
-  let hasBytes = I.has "" sl_base sl_len sl_pos n_sz contents_sl v_sl;
-  I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
+  let nSz = SZ.uint32_to_sizet n;
+  let hasBytes = I.has "" slBase slLen slPos nSz contents_sl v_sl;
+  I.pts_to_is_suffix_of slBase slLen slPos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
   } else {
     LowParse.Spec.Combinators.nondep_then_eq p parse_all_bytes (Seq.slice v_sl 0 (U32.v n));
-    let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    let tr = I.truncate slBase slLen slPos nSz contents_sl v_sl;
     (* [truncate] returns only the component the backend actually changes;
        recover the other two from the original stream. The rewrites give the
        short names to Pulse's (syntactic) frame inference. *)
-    let tb = inst.trunc_base sl_base sl_len sl_pos tr;
-    let tl = inst.trunc_len sl_base sl_len sl_pos tr;
-    let tp = inst.trunc_pos sl_base sl_len sl_pos tr;
-    rewrite each (inst.trunc_base sl_base sl_len sl_pos tr) as tb;
-    rewrite each (inst.trunc_len sl_base sl_len sl_pos tr) as tl;
-    rewrite each (inst.trunc_pos sl_base sl_len sl_pos tr) as tp;
+    let tb = inst.trunc_base slBase slLen slPos tr;
+    let tl = inst.trunc_len slBase slLen slPos tr;
+    let tp = inst.trunc_pos slBase slLen slPos tr;
+    rewrite each (inst.trunc_base slBase slLen slPos tr) as tb;
+    rewrite each (inst.trunc_len slBase slLen slPos tr) as tl;
+    rewrite each (inst.trunc_pos slBase slLen slPos tr) as tp;
     with contents1 v1 v2. assert (
       I.pts_to tb tl tp contents1 v1 **
-      I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
+      I.is_prefix_of tb tl tp slBase slLen slPos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
-    let res = v ctxt error_handler_fn tb tl tp extra _ _;
+    let res = v ctxt errorHandlerFn tb tl tp extra _ _;
     if (res = validator_success) {
       with v1'. assert (I.pts_to tb tl tp contents1 v1');
       I.empty tb tl tp contents1 v1';
       seq_empty_is_suffix_of v1;
       seq_is_suffix_of_append (Seq.empty #LP.byte) v1 v2;
-      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 (Seq.empty #LP.byte) contents_sl v2;
+      I.untruncate tb tl tp slBase slLen slPos contents1 (Seq.empty #LP.byte) contents_sl v2;
       seq_append_empty_slice v_sl v1 v2 (U32.v n);
       validator_success
     } else {
       with v1'. assert (I.pts_to tb tl tp contents1 v1');
       seq_is_suffix_of_append v1' v1 v2;
-      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      I.untruncate tb tl tp slBase slLen slPos contents1 v1' contents_sl v2;
       res
     }
   }
@@ -1466,43 +1466,43 @@ fn validate_t_exact
   : validate_with_action_read #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler (S.vspec_t_exact n p s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   parse_t_exact_eq n p v_sl;
   parse_fldata_eq p (U32.v n) v_sl;
-  let n_sz = SZ.uint32_to_sizet n;
-  let hasBytes = I.has "" sl_base sl_len sl_pos n_sz contents_sl v_sl;
-  I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
+  let nSz = SZ.uint32_to_sizet n;
+  let hasBytes = I.has "" slBase slLen slPos nSz contents_sl v_sl;
+  I.pts_to_is_suffix_of slBase slLen slPos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
   } else {
-    let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    let tr = I.truncate slBase slLen slPos nSz contents_sl v_sl;
     (* [truncate] returns only the component the backend actually changes;
        recover the other two from the original stream. The rewrites give the
        short names to Pulse's (syntactic) frame inference. *)
-    let tb = inst.trunc_base sl_base sl_len sl_pos tr;
-    let tl = inst.trunc_len sl_base sl_len sl_pos tr;
-    let tp = inst.trunc_pos sl_base sl_len sl_pos tr;
-    rewrite each (inst.trunc_base sl_base sl_len sl_pos tr) as tb;
-    rewrite each (inst.trunc_len sl_base sl_len sl_pos tr) as tl;
-    rewrite each (inst.trunc_pos sl_base sl_len sl_pos tr) as tp;
+    let tb = inst.trunc_base slBase slLen slPos tr;
+    let tl = inst.trunc_len slBase slLen slPos tr;
+    let tp = inst.trunc_pos slBase slLen slPos tr;
+    rewrite each (inst.trunc_base slBase slLen slPos tr) as tb;
+    rewrite each (inst.trunc_len slBase slLen slPos tr) as tl;
+    rewrite each (inst.trunc_pos slBase slLen slPos tr) as tp;
     with contents1 v1 v2. assert (
       I.pts_to tb tl tp contents1 v1 **
-      I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
+      I.is_prefix_of tb tl tp slBase slLen slPos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
-    let res = v ctxt error_handler_fn tb tl tp extra _ _;
+    let res = v ctxt errorHandlerFn tb tl tp extra _ _;
     if (res = validator_success) {
       with v1'. assert (I.pts_to tb tl tp contents1 v1');
       let stillHasBytes = I.has "TrailingBytes" tb tl tp 1sz contents1 v1';
       seq_is_suffix_of_append v1' v1 v2;
-      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      I.untruncate tb tl tp slBase slLen slPos contents1 v1' contents_sl v2;
       if (stillHasBytes) {
         validator_error_unexpected_padding
       } else {
@@ -1512,7 +1512,7 @@ fn validate_t_exact
     } else {
       with v1'. assert (I.pts_to tb tl tp contents1 v1');
       seq_is_suffix_of_append v1' v1 v2;
-      I.untruncate tb tl tp sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      I.untruncate tb tl tp slBase slLen slPos contents1 v1' contents_sl v2;
       res
     }
   }
@@ -1533,14 +1533,14 @@ fn read_filter
     : leaf_reader #base_t #len_t #pos_t (parse_filter p f)
 =
   (name: string)
-  (sl_base: base_t)
-  (sl_len: len_t)
-  (sl_pos: pos_t)
+  (slBase: base_t)
+  (slLen: len_t)
+  (slPos: pos_t)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
 {
   LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
-  let res = p32 name sl_base sl_len sl_pos _ _;
+  let res = p32 name slBase slLen slPos _ _;
   assert pure (f res == true);
   res
 }
@@ -1553,9 +1553,9 @@ fn read_impos
     : leaf_reader #base_t #len_t #pos_t (parse_impos())
 =
   (name: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
 {
@@ -1583,17 +1583,17 @@ fn action_bind
 : action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_bind sf sg)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
   (extra: _)
 {
-  let [@@@rename_let ("" ^ camel_case name)] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
-  g resf ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
+  let [@@@rename_let ("" ^ camel_case name)] resf = f ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _;
+  g resf ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _
 }
 
 noextract
@@ -1611,10 +1611,10 @@ fn action_weaken
 : action #base_t #len_t #pos_t d2 a use_error_handler (S.aspec_weaken sf d2 d2_extends)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1623,7 +1623,7 @@ fn action_weaken
   let d3 = state_dict_weaken_sub d2 d1;
   with extra2 . rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
   forevery_state_dict_prod_unfold () _;
-  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
+  let res = f ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _;
   forevery_state_dict_prod_fold d1 d3 ();
   with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
   res
@@ -1643,10 +1643,10 @@ fn vaction_weaken
 : vaction #base_t #len_t #pos_t d2 use_error_handler (S.vaspec_weaken sf d2 d2_extends)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1655,7 +1655,7 @@ fn vaction_weaken
   let d3 = state_dict_weaken_sub d2 d1;
   with extra2 . rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
   forevery_state_dict_prod_unfold () _;
-  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
+  let res = f ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _;
   forevery_state_dict_prod_fold d1 d3 ();
   with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
   res
@@ -1678,17 +1678,17 @@ fn action_call
 : action #base_t #len_t #pos_t d a use_error_handler (S.aspec_call sf d f g sq)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
   (extra: _)
 {
   state_dict_rename_call d d' f g sq _;
-  let res = act ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
+  let res = act ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _;
   state_dict_rename_return d d' f g sq _ _;
   res
 }
@@ -1703,10 +1703,10 @@ fn action_deref
 : action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler (S.aspec_deref name (pts_to x #1.0R))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1729,10 +1729,10 @@ fn action_assignment
 : action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler (S.aspec_assignment name (pts_to x #1.0R) w)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1757,10 +1757,10 @@ fn action_deref_map
 : action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) b use_error_handler (S.aspec_deref_map decode name (pts_to x #1.0R))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1821,7 +1821,7 @@ let probe_then_validate
            false
            bool
            use_error_handler
-  = fun ctxt error_handler_fn input input_length pos posf ->
+  = fun ctxt errorHandlerFn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
       let src64 = as_u64 src () in
@@ -1831,18 +1831,18 @@ let probe_then_validate
         true
       )
       else (
-        let b = PA.run_probe_m (PA.init_and_probe (typename ^ "." ^ fieldname) init probe) typename fieldname "probe" ctxt error_handler_fn src64 prep_dest_sz dest in
+        let b = PA.run_probe_m (PA.init_and_probe (typename ^ "." ^ fieldname) init probe) typename fieldname "probe" ctxt errorHandlerFn src64 prep_dest_sz dest in
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
         if b <> 0uL
         then (
-          let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
+          let result = v ctxt errorHandlerFn (CP.stream_of dest) (CP.stream_len dest) 0uL in
           not (LPE.is_error result)
         )
         else (
           (if use_error_handler
            then begin
-             [@inline_let] let eh2 : error_handler = error_handler_fn in
+             [@inline_let] let eh2 : error_handler = errorHandlerFn in
              eh2 typename fieldname
                LPE.(error_reason_of_result validator_error_probe_failed)
                LPE.(get_validator_error_kind validator_error_probe_failed)
@@ -1875,10 +1875,10 @@ fn action_return
 : action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_return x)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1897,10 +1897,10 @@ fn action_return_true
 : action #base_t #len_t #pos_t extra_state bool use_error_handler (S.aspec_return true)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1919,10 +1919,10 @@ fn action_abort
 : action #base_t #len_t #pos_t extra_state bool use_error_handler (S.aspec_return false)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -1947,17 +1947,17 @@ fn action_seq
 : action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_seq sf sg)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
   (extra: _)
 {
-  let ignored = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
-  g ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
+  let ignored = f ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _;
+  g ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _
 }
 
 noextract
@@ -1976,19 +1976,19 @@ fn action_ite
 : action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_ite guard st se)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
   (extra: _)
 {
   if (guard) {
-    then_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
+    then_ () ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _
   } else {
-    else_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
+    else_ () ctxt errorHandlerFn slBase slLen slPos _ _ start_pos _
   }
 }
 
@@ -2014,10 +2014,10 @@ fn validate_with_comment_no_read
 : validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -2025,7 +2025,7 @@ fn validate_with_comment_no_read
   (v_pos: _)
 {
   Comment.comment c;
-  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+  v ctxt errorHandlerFn slBase slLen slPos pos extra contents_sl v_sl v_pos
 }
 
 inline_for_extraction noextract
@@ -2046,16 +2046,16 @@ fn validate_with_comment
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   Comment.comment c;
-  v ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
+  v ctxt errorHandlerFn slBase slLen slPos extra contents_sl v_sl
 }
 
 inline_for_extraction noextract
@@ -2067,10 +2067,10 @@ fn validate_unit
 : validate_with_action_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler (S.vspec_of_parser parse_unit)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -2089,10 +2089,10 @@ fn validate_unit_refinement
 : validate_with_action_read #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler (S.vspec_of_parser (parse_filter parse_unit f))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -2139,22 +2139,22 @@ fn validate_dep_pair
       use_error_handler (S.vspec_dep_pair p1 s1 s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
   let mut [@@@rename_let ("offsetIn" ^ pascal_case name1)] pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
-  if (res_key = validator_success) {
-    let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
-    v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] resKey = v1 ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
+  if (resKey = validator_success) {
+    let [@@@rename_let ("" ^ camel_case name1)] valKey = r1 name1 slBase slLen slPos _ _;
+    v2 valKey ctxt errorHandlerFn slBase slLen slPos _ _ _;
   } else {
-    res_key
+    resKey
   }
 }
 
@@ -2191,28 +2191,28 @@ fn validate_dep_pair_with_action
       use_error_handler (S.vspec_dep_pair_with_action p1 s1 sa s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
-  let field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let field_start = I.get_position slBase slLen slPos contents_sl v_sl;
   let mut [@@@rename_let "scanOffset"] pos = inst.scan_zero;
-  let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
-  if (res_key = validator_success) {
-    let val_key = r1 "" sl_base sl_len sl_pos _ _;
-    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+  let resKey = v1 ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
+  if (resKey = validator_success) {
+    let valKey = r1 "" slBase slLen slPos _ _;
+    let res_action = a valKey ctxt errorHandlerFn slBase slLen slPos _ _ field_start _;
     if (res_action) {
-      v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+      v2 valKey ctxt errorHandlerFn slBase slLen slPos _ _ _;
     } else {
       validator_error_action_failed
     }
   } else {
-    res_key
+    resKey
   }
 }
 
@@ -2249,10 +2249,10 @@ fn validate_dep_pair_with_refinement'
       use_error_handler (S.vspec_dep_pair_with_refinement_slow p1 s1 f None s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -2260,17 +2260,17 @@ fn validate_dep_pair_with_refinement'
   LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   let mut [@@@rename_let ("offsetIn" ^ pascal_case name1)] pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
-  if (res_key = validator_success) {
-    let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
-    let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name1)] resKey = v1 ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
+  if (resKey = validator_success) {
+    let [@@@rename_let ("" ^ camel_case name1)] valKey = r1 name1 slBase slLen slPos _ _;
+    let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f valKey;
     if (ok) {
-      v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+      v2 valKey ctxt errorHandlerFn slBase slLen slPos _ _ _;
     } else {
-      err val_key
+      err valKey
     }
   } else {
-    res_key
+    resKey
   }
 }
 
@@ -2310,10 +2310,10 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
       use_error_handler (S.vspec_dep_pair_with_refinement_total_zero p1 f None s2)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -2322,12 +2322,12 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
   LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
   LP.parser_kind_prop_equiv k1 p1;
   Comment.comment (normalize_term ("Validating field " ^ name1));
-  let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
-  let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
+  let [@@@rename_let ("" ^ camel_case name1)] valKey = r1 name1 slBase slLen slPos _ _;
+  let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f valKey;
   if (ok) {
-    v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+    v2 valKey ctxt errorHandlerFn slBase slLen slPos _ _ _;
   } else {
-    err val_key
+    err valKey
   }
 }
 
@@ -2393,20 +2393,20 @@ fn validate_with_dep_action
   : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_action p s sa)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position slBase slLen slPos contents_sl v_sl;
   let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
   if (res = validator_success) {
-    let [@@@rename_let ("" ^ camel_case name)] field_value = r name sl_base sl_len sl_pos _ _;
-    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+    let [@@@rename_let ("" ^ camel_case name)] field_value = r name slBase slLen slPos _ _;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt errorHandlerFn slBase slLen slPos _ _ field_start _;
     if (action_result) {
       validator_success
     } else {
@@ -2438,20 +2438,20 @@ fn validate_with_dep_vaction
   : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_vaction p s sa)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position slBase slLen slPos contents_sl v_sl;
   let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
-  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
   if (res = validator_success) {
-    let [@@@rename_let ("" ^ camel_case name)] field_value = r name sl_base sl_len sl_pos _ _;
-    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+    let [@@@rename_let ("" ^ camel_case name)] field_value = r name slBase slLen slPos _ _;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt errorHandlerFn slBase slLen slPos _ _ field_start _;
     if (action_result) {
       validator_success
     } else {
@@ -2492,10 +2492,10 @@ fn validate_total_constant_size_no_read
 : validate_with_action_no_read #base_t #len_t #pos_t p extra_state false use_error_handler (S.vspec_of_parser p)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -2504,7 +2504,7 @@ fn validate_total_constant_size_no_read
 {
   LP.parser_kind_prop_equiv k p;
   let [@@@rename_let ("offsetBefore" ^ pascal_case name)] p0 = !pos;
-  let [@@@rename_let ("hasBytesFor" ^ pascal_case name)] hasBytes = I.has_at name sl_base sl_len sl_pos p0 sz contents_sl v_sl;
+  let [@@@rename_let ("hasBytesFor" ^ pascal_case name)] hasBytes = I.has_at name slBase slLen slPos p0 sz contents_sl v_sl;
   if (hasBytes) {
     pos := inst.scan_add p0 sz;
     validator_success
@@ -2531,14 +2531,14 @@ fn lift_reader
 : leaf_reader #base_t #len_t #pos_t p
 =
   (name: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
 {
   LP.parser_kind_prop_equiv k p;
-  I.read name t k p r sl_base sl_len sl_pos sz contents_sl v_sl
+  I.read name t k p r slBase slLen slPos sz contents_sl v_sl
 }
 
 inline_for_extraction noextract
@@ -2716,9 +2716,9 @@ fn read_unit
 : leaf_reader #base_t #len_t #pos_t (parse_ret ())
 =
   (name: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
 {
@@ -2736,15 +2736,15 @@ fn validate_all_bytes
 : validate_with_action_read #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler (S.vspec_of_parser parse_all_bytes)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
-  I.empty sl_base sl_len sl_pos contents_sl v_sl;
+  I.empty slBase slLen slPos contents_sl v_sl;
   seq_empty_is_suffix_of v_sl;
   Seq.lemma_eq_elim (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl) (Seq.length v_sl)) (Seq.empty #LP.byte);
   validator_success
@@ -2781,19 +2781,19 @@ fn validate_drop
 : validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   let mut [@@@rename_let "scanOffset"] pos = inst.scan_zero;
-  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl inst.scan_zero;
+  let res = v ctxt errorHandlerFn slBase slLen slPos pos extra contents_sl v_sl inst.scan_zero;
   if (res = validator_success) {
     let bytesConsumed = !pos;
-    I.skip sl_base sl_len sl_pos bytesConsumed contents_sl v_sl;
+    I.skip slBase slLen slPos bytesConsumed contents_sl v_sl;
     seq_slice_is_suffix_of v_sl (inst.scan_v bytesConsumed);
     validator_success
   } else {
@@ -2924,10 +2924,10 @@ fn action_field_pos_64
 : action #base_t #len_t #pos_t extra_state U64.t use_error_handler (S.aspec_field_pos_64)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -2947,10 +2947,10 @@ fn action_field_pos_32
 : action #base_t #len_t #pos_t extra_state U32.t use_error_handler (S.aspec_field_pos_32)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -3032,16 +3032,16 @@ fn action_field_ptr
 : action #base_t #len_t #pos_t extra_state PM.ptr use_error_handler S.aspec_field_ptr
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
   (extra: _)
 {
-  f sl_base sl_len sl_pos contents_sl v_sl start_pos
+  f slBase slLen slPos contents_sl v_sl start_pos
 }
 
 noextract
@@ -3062,10 +3062,10 @@ fn action_field_ptr_after
     (S.aspec_field_ptr_after name (pts_to write_to #1.0R) peep_world sq)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -3079,7 +3079,7 @@ fn action_field_ptr_after
   forevery_state_dict_singleton_unfold' S.world_key peep_world _;
   with w . assert (pts_to write_to #1.0R w);
   with pw . assert (peep_world pw);
-  let res = f _extra sz write_to sl_base sl_len sl_pos w pw contents_sl v_sl;
+  let res = f _extra sz write_to slBase slLen slPos w pw contents_sl v_sl;
   forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) (S.peep_result (S.peep_head pw) w);
   forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
   forevery_state_dict_prod_fold
@@ -3120,10 +3120,10 @@ fn validate_list
     (LPL.parse_list p) extra_state false use_error_handler (S.vspec_of_parser #extra_state #false #WeakKindConsumesAll #(LPL.parse_list_kind k.LP.parser_kind_injective) (LPL.parse_list p))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -3140,7 +3140,7 @@ fn validate_list
     pts_to stop vstop **
     pts_to pmeasure vmeasure **
     pts_to ctxt v_ctxt' **
-    I.pts_to sl_base sl_len sl_pos contents_sl vcur **
+    I.pts_to slBase slLen slPos contents_sl vcur **
     forevery_state extra_state extra' **
     pure (
       vcur `I.seq_is_suffix_of` v_sl /\
@@ -3155,15 +3155,15 @@ fn validate_list
     )
     decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
   {
-    with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+    with vcur. assert (I.pts_to slBase slLen slPos contents_sl vcur);
     with extra'. assert (forevery_state extra_state extra');
-    let hasMore = I.has "ListElement" sl_base sl_len sl_pos 1sz contents_sl vcur;
+    let hasMore = I.has "ListElement" slBase slLen slPos 1sz contents_sl vcur;
     if (not hasMore) {
       stop := true;
     } else {
       LPL.parse_list_eq' p vcur;
-      let r = v ctxt error_handler_fn sl_base sl_len sl_pos extra' contents_sl vcur;
-      with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
+      let r = v ctxt errorHandlerFn slBase slLen slPos extra' contents_sl vcur;
+      with vcur'. assert (I.pts_to slBase slLen slPos contents_sl vcur');
       pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
       seq_is_suffix_of_trans vcur' vcur v_sl;
       if (r = validator_success) {
@@ -3175,7 +3175,7 @@ fn validate_list
     }
   };
   let fres = !res;
-  with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+  with vcur. assert (I.pts_to slBase slLen slPos contents_sl vcur);
   LPL.parse_list_eq p vcur;
   seq_empty_eq_slice_end (Ghost.reveal v_sl) vcur;
   fres
@@ -3349,10 +3349,10 @@ fn validate_list_up_to
     extra_state ha use_error_handler (S.vspec_string_gen ha #true #WeakKindStrongPrefix #(LUT.parse_list_up_to_kind k) (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) p terminator s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
@@ -3370,7 +3370,7 @@ fn validate_list_up_to
     pts_to pmeasure vmeasure **
     pts_to pos vpos **
     pts_to ctxt v_ctxt' **
-    I.pts_to sl_base sl_len sl_pos contents_sl vcur **
+    I.pts_to slBase slLen slPos contents_sl vcur **
     forevery_state extra_state extra' **
     pure (
       vcur `I.seq_is_suffix_of` v_sl /\
@@ -3384,23 +3384,23 @@ fn validate_list_up_to
          then list_up_to_done (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur
          else list_up_to_ongoing (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur)) /\
       (ha ==> (
-        (vres == validator_success /\ vstop == false ==> string_fold_reaches p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra') /\
-        (vres == validator_success /\ vstop == true ==> string_fold_ended p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra extra') /\
-        (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra))))) /\
+        (vres == validator_success /\ vstop == false ==> string_fold_reaches p terminator s (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl extra vcur extra') /\
+        (vres == validator_success /\ vstop == true ==> string_fold_ended p terminator s (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl extra extra') /\
+        (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl extra))))) /\
       Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
     )
     decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
   {
-    with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+    with vcur. assert (I.pts_to slBase slLen slPos contents_sl vcur);
     with extra'. assert (forevery_state extra_state extra');
     LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf vcur;
     pos := inst.scan_zero;
-    let r0 = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra' contents_sl vcur inst.scan_zero;
+    let r0 = v ctxt errorHandlerFn slBase slLen slPos pos extra' contents_sl vcur inst.scan_zero;
     with extra''. assert (forevery_state extra_state extra'');
     if (r0 = validator_success) {
-      let x = r "ListElement" sl_base sl_len sl_pos contents_sl vcur;
-      with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
-      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra' r0 extra'' vcur' x;
+      let x = r "ListElement" slBase slLen slPos contents_sl vcur;
+      with vcur'. assert (I.pts_to slBase slLen slPos contents_sl vcur');
+      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl extra vcur extra' r0 extra'' vcur' x;
       pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
       leaf_read_is_suffix_of p v_sl vcur vcur';
       list_up_to_step (cond_string_up_to terminator) p prf v_sl vcur vcur' x;
@@ -3410,15 +3410,15 @@ fn validate_list_up_to
         ()
       }
     } else {
-      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra' r0 extra'' vcur terminator;
+      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl extra vcur extra' r0 extra'' vcur terminator;
       res := r0;
       stop := true;
     }
   };
   let fres = !res;
-  with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+  with vcur. assert (I.pts_to slBase slLen slPos contents_sl vcur);
   with extra'. assert (forevery_state extra_state extra');
-  string_fold_done ha #true #WeakKindStrongPrefix #(LUT.parse_list_up_to_kind k) (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra extra' fres;
+  string_fold_done ha #true #WeakKindStrongPrefix #(LUT.parse_list_up_to_kind k) (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) p terminator s (I.origin #base_t #len_t #pos_t slBase) contents_sl v_sl extra extra' fres;
   Seq.lemma_eq_elim vcur (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl - Seq.length vcur) (Seq.length v_sl));
   fres
 }
@@ -3464,17 +3464,17 @@ fn validate_string
 : validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler (S.vspec_string ha p terminator s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
 {
   parse_string_eq p terminator v_sl;
   let v2 = validate_list_up_to v r terminator (string_prf p terminator);
-  v2 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
+  v2 ctxt errorHandlerFn slBase slLen slPos extra contents_sl v_sl
 }
 
 (* When the payload has a total constant size, the whole list has a total
@@ -3574,10 +3574,10 @@ fn validate_nlist_constant_size_mod_ko
 : validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_of_parser (parse_nlist n n_is_const p))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -3613,10 +3613,10 @@ fn validate_nlist_total_constant_size'
 : validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_of_parser (parse_nlist n n_is_const p))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -3625,10 +3625,10 @@ fn validate_nlist_total_constant_size'
 {
   if (n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul) {
     validate_nlist_total_constant_size_mod_ok n n_is_const p ()
-      ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+      ctxt errorHandlerFn slBase slLen slPos pos extra contents_sl v_sl v_pos
   } else {
     validate_nlist_constant_size_mod_ko n n_is_const p ()
-      ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+      ctxt errorHandlerFn slBase slLen slPos pos extra contents_sl v_sl v_pos
   }
 }
 
@@ -3745,10 +3745,10 @@ fn mk_external_action_spec
     (S.aspec_extern name state spec)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -3783,10 +3783,10 @@ fn action_field_ptr_after_with_setter
     (S.aspec_field_ptr_after_with_setter name state sp peep_world sq)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -3797,7 +3797,7 @@ fn action_field_ptr_after_with_setter
   forevery_state_dict_singleton_unfold' name state _;
   with pw . assert (peep_world pw);
   with w . assert (state w);
-  let res = f _extra sz write_to sl_base sl_len sl_pos pw w contents_sl v_sl;
+  let res = f _extra sz write_to slBase slLen slPos pw w contents_sl v_sl;
   forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
   forevery_state_dict_singleton_fold name state (S.setter_peep_result sp (S.peep_head pw) w);
   forevery_state_dict_prod_fold (state_dict_singleton name state) peep_world_dict ();
@@ -3872,10 +3872,10 @@ fn probe_then_validate
     (S.vaspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
@@ -3891,7 +3891,7 @@ fn probe_then_validate
   let src64 = as_u64 src ();
   if (nullable && src64 = 0uL) {
     // a null pointer is accepted without probing
-    resolve_probe_world w ({ S.p_src = src64; S.p_ok = true; S.p_bytes = Seq.empty; S.p_origin = I.origin #base_t #len_t #pos_t sl_base });
+    resolve_probe_world w ({ S.p_src = src64; S.p_ok = true; S.p_bytes = Seq.empty; S.p_origin = I.origin #base_t #len_t #pos_t slBase });
     fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
     forevery_state_dict_singleton_fold dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) (S.ptape_tail w);
     forevery_state_dict_prod_fold
@@ -3901,7 +3901,7 @@ fn probe_then_validate
     true
   } else {
     let m = PA.init_and_probe (typename ^ "." ^ fieldname) init probe;
-    let b = PA.run_probe_m error_handler_macro m typename fieldname "probe" ctxt error_handler_fn src64 prep_dest_sz dest;
+    let b = PA.run_probe_m error_handler_macro m typename fieldname "probe" ctxt errorHandlerFn src64 prep_dest_sz dest;
     with cd vd . assert (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
     if (b <> 0uL) {
       unfold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
@@ -3913,7 +3913,7 @@ fn probe_then_validate
       ensures exists* vd'. I.pts_to base len pos cd vd' ** probe_validation_post extra_state ctxt s ex w src64 cd res
       {
         unfold (probe_validation_pre extra_state ctxt ex w);
-        let res = v ctxt error_handler_fn base len pos ex cd cd;
+        let res = v ctxt errorHandlerFn base len pos ex cd cd;
         resolve_probe_world w ({ S.p_src = src64; S.p_ok = true; S.p_bytes = Ghost.reveal cd; S.p_origin = I.origin #base_t #len_t #pos_t base });
         fold (probe_validation_post extra_state ctxt s ex w src64 cd res);
         res
@@ -3935,7 +3935,7 @@ fn probe_then_validate
         ();
       res = validator_success
     } else {
-      resolve_probe_world w ({ S.p_src = src64; S.p_ok = false; S.p_bytes = Ghost.reveal cd; S.p_origin = I.origin #base_t #len_t #pos_t sl_base });
+      resolve_probe_world w ({ S.p_src = src64; S.p_ok = false; S.p_bytes = Ghost.reveal cd; S.p_origin = I.origin #base_t #len_t #pos_t slBase });
       fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
       forevery_state_dict_singleton_fold dest_name
         (copy_buffer_state #_ #base_t #len_t #pos_t dest)
@@ -3944,11 +3944,11 @@ fn probe_then_validate
         extra_state
         (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
         ();
-      (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst))
+      (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then errorHandlerFn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst))
         typename fieldname
         (error_reason_of_result validator_error_probe_failed)
         validator_error_probe_failed
-        ctxt sl_base sl_len sl_pos start_pos;
+        ctxt slBase slLen slPos start_pos;
       false
     }
   }
@@ -3971,10 +3971,10 @@ fn validate_impos_no_read
 : validate_with_action_no_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler (S.vspec_of_parser (parse_impos ()))
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -4001,17 +4001,17 @@ fn validate_eta_no_read
 : validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
   (v_sl: _)
   (v_pos: _)
 {
-  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+  v ctxt errorHandlerFn slBase slLen slPos pos extra contents_sl v_sl v_pos
 }
 
 inline_for_extraction noextract
@@ -4034,10 +4034,10 @@ fn validate_with_error_handler_no_read
 : validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler (s1)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -4045,18 +4045,18 @@ fn validate_with_error_handler_no_read
   (v_pos: _)
 {
   // As in [validate_with_error_handler], sample the start of the field before
-  // running its validator. Here the stream position [sl_pos] is not advanced
+  // running its validator. Here the stream position [slPos] is not advanced
   // at all -- the non-consuming validators track their offset in the separate
   // [pos] reference, relative to the current stream position -- so the field
   // starts at [get_position sl + !pos].
-  let [@@@rename_let ("streamPositionAt" ^ pascal_case fieldname)] view_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let [@@@rename_let ("streamPositionAt" ^ pascal_case fieldname)] view_start = I.get_position slBase slLen slPos contents_sl v_sl;
   let [@@@rename_let ("offsetOf" ^ pascal_case fieldname)] field_off = !pos;
   let [@@@rename_let ("startPositionOf" ^ pascal_case fieldname)] start_pos = U64.add_mod view_start (inst.scan_to_u64 field_off);
-  let [@@@rename_let ("resultOf" ^ pascal_case fieldname)] res = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos;
+  let [@@@rename_let ("resultOf" ^ pascal_case fieldname)] res = v1 ctxt errorHandlerFn slBase slLen slPos pos extra contents_sl v_sl v_pos;
   if (res = validator_success) {
     res
   } else {
-    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt sl_base sl_len sl_pos start_pos;
+    (error_handler_arrow_of #base_t #len_t #pos_t #inst ((if use_error_handler then errorHandlerFn else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)) typename fieldname (error_reason_of_result res) res ctxt slBase slLen slPos start_pos;
     res
   };
 }
@@ -4070,10 +4070,10 @@ fn validate_unit_no_read
 : validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler (S.vspec_of_parser parse_unit)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -4106,10 +4106,10 @@ fn validate_weaken_no_read
 : validate_with_action_no_read #base_t #len_t #pos_t p d2 has_action use_error_handler (S.vspec_weaken s d2 d2_extends)
 =
   (ctxt: _)
-  (error_handler_fn: _)
-  (sl_base: _)
-  (sl_len: _)
-  (sl_pos: _)
+  (errorHandlerFn: _)
+  (slBase: _)
+  (slLen: _)
+  (slPos: _)
   (pos: _)
   (extra: _)
   (contents_sl: _)
@@ -4123,7 +4123,7 @@ fn validate_weaken_no_read
   with extra1 . assert (forevery_state d1 extra1);
   with extra3 . assert (forevery_state d3 extra3);
   forevery_values_ext d2 extra2 (mk_prod_value extra1 extra3 ());
-  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  let res = v ctxt errorHandlerFn slBase slLen slPos pos _ _ _ _;
   forevery_state_dict_prod_fold d1 d3 ();
   with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
   res

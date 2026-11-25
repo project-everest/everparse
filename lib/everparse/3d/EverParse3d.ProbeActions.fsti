@@ -361,7 +361,7 @@ val run_probe_m
   (#use_error_handler:bool) (#any:bool)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
   (m:probe_m #_ #_ #_ #_ #inst #cb_inst #boolean_t #boolean_inst unit false any use_error_handler)
-  (tn fn_ det:string)
+  (tn fieldName det:string)
   (ctxt:app_ctxt)
   (err:(if use_error_handler then error_handler #base_t #len_t #pos_t #inst else unit))
   (src:U64.t)

@@ -70,17 +70,17 @@ let error_handler_arrow
     error_reason:string ->
     error_code:U8.t ->
     ctxt: AppCtxt.app_ctxt ->
-    sl_base: base_t ->
-    sl_len: len_t ->
-    sl_pos: pos_t ->
+    slBase: base_t ->
+    slLen: len_t ->
+    slPos: pos_t ->
     (* The offset at which the failing field *started*, sampled before the
        field's validator ran. This is what doc/3d-lang.rst calls
        `StartPosition`, and it is what the Low* backend reports; it is
        measured the same way as the [start_pos] of an [action], i.e. relative
        to the origin of the current validation.
 
-       It has to be passed separately rather than recovered from [sl_pos]:
-       [sl_pos] is the live position (a reference, on the buffer backend) and
+       It has to be passed separately rather than recovered from [slPos]:
+       [slPos] is the live position (a reference, on the buffer backend) and
        has already moved past the bytes the field consumed by the time the
        handler runs, and on the extern backend [pos_t] is the truncation
        origin rather than a position at all.
