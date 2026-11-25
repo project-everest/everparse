@@ -1107,6 +1107,13 @@ let print_c_entry
      | None -> ""
    in
    let use_error_handler_macro = Options.get_use_error_handler_macro () in
+   (* --wrapper_error_code (--api pulse only): every wrapper takes a trailing
+      `uint8_t *errorCode' out-parameter and stores there the error code
+      returned by the validator, 0 on success. *)
+   let wrapper_error_code = Options.get_wrapper_error_code () in
+   let error_code_param = if wrapper_error_code then ", uint8_t *errorCode" else "" in
+   let error_code_arg = if wrapper_error_code then ", errorCode" else "" in
+   let error_code_store = if wrapper_error_code then "*errorCode = epStatus;\n\t" else "" in
    let is_input_stream_buffer =
      HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
    in
@@ -1270,7 +1277,7 @@ let print_c_entry
      let tail =
        if goto_return then
          Printf.sprintf
-           "if (epStatus != 0U)\n\t\
+           "%sif (epStatus != 0U)\n\t\
             {\n\t\t\
               if (frame.filled)\n\t\t\
               {\n\t\t\t\
@@ -1281,11 +1288,12 @@ let print_c_entry
             %sresult = TRUE;\n\n\
             exit:\n\t\
             return result;"
+           error_code_store
            modul
            complete_check
        else
          Printf.sprintf
-           "if (epStatus != 0U)\n\t\
+           "%sif (epStatus != 0U)\n\t\
             {\n\t\t\
               if (frame.filled)\n\t\t\
               {\n\t\t\t\
@@ -1294,6 +1302,7 @@ let print_c_entry
               return FALSE;\n\t\
             }\n\t\
             %sreturn TRUE;"
+           error_code_store
            modul
            complete_check
      in
@@ -1421,7 +1430,7 @@ let print_c_entry
      let tail =
        if goto_return then
          Printf.sprintf
-           "if (!%s(%s base, %s))\n\t\
+           "if (!%s(%s base, %s%s))\n\t\
             {\n\t\t\
               result = EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\t\
               goto exit;\n\t\
@@ -1432,9 +1441,10 @@ let print_c_entry
            wrappedName
            params
            len
+           error_code_arg
        else
          Printf.sprintf
-           "if (!%s(%s base, %s))\n\t\
+           "if (!%s(%s base, %s%s))\n\t\
             {\n\t\t\
               return EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\
             }\n\t\
@@ -1442,10 +1452,15 @@ let print_c_entry
            wrappedName
            params
            len
+           error_code_arg
      in
+     (* Under --wrapper_error_code, the code stays 0 when a probe failure
+        prevents the validator from running. *)
+     let error_code_init = if wrapper_error_code then "*errorCode = 0U;\n\t" else "" in
      if hoist then
        (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\t" else "")
        ^ Printf.sprintf "uint8_t *base%s;\n\n\t" scalar_zero
+       ^ error_code_init
        ^ probe_prefix probe wrappedName ^ "\n\t"
        ^ (if goto_return then
             Printf.sprintf
@@ -1474,6 +1489,7 @@ let print_c_entry
               tail)
      else
        (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\n\t" else "")
+       ^ error_code_init
        ^ (if goto_return then
             Printf.sprintf 
               "%s\n\t\
@@ -1518,6 +1534,7 @@ let print_c_entry
       explicit start position of 0 each time. *)
    let wrapped_call_stream_pulse name params =
      let tail =
+       error_code_store ^
        "if (epStatus != 0U)\n\t\
         {\n\t\t\
             EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
@@ -1707,13 +1724,15 @@ let print_c_entry
     let mk_main_signature (name: string) =
       if is_input_stream_buffer 
       then Printf.sprintf
-            "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+            "BOOLEAN %s(%suint8_t *base, uint32_t len%s)"
              name
              pparams
+             error_code_param
       else Printf.sprintf
-            "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
+            "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base%s)"
              name
              pparams
+             error_code_param
     in
     let signature = mk_main_signature wrapper_name in
     let complete_signature = mk_main_signature wrapper_complete_name in
@@ -1750,10 +1769,11 @@ let print_c_entry
           else probe_wrapper_name modul probe_fn type_name
       in
       Printf.sprintf
-            "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize)"
+            "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize%s)"
              return_type
              public_name
              pparams
+             error_code_param
     in
     (* Collecting everything together *)
     let has_probes = Cons? d.decl_name.td_entrypoint_probes in

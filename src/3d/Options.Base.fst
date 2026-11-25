@@ -53,6 +53,7 @@ let _no_copy_everparse_h : ref bool = alloc false
 let hoist_locals : ref bool = alloc false
 let goto_for_early_return : ref bool = alloc false
 let complete_wrappers : ref bool = alloc false
+let wrapper_error_code : ref bool = alloc false
 let blank_lines : ref bool = alloc false
 let line_comments : ref bool = alloc false
 let valid_init_locals : string -> Tot bool = function
@@ -407,6 +408,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "cleanup" (OptBool _cleanup) "Remove generated F* sources, checked caches and CUI files (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name _config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "complete_wrappers" (OptBool complete_wrappers) "In addition to the usual entrypoint wrappers, generate `Complete' wrappers that also check that the validator consumed the whole input buffer (--input_stream buffer only)" [];
+    CmdOption "wrapper_error_code" (OptBool wrapper_error_code) "Add a trailing `uint8_t *errorCode' out-parameter to every entrypoint wrapper, receiving the error code returned by the validator (0 on success) (--api pulse only)" [];
     CmdOption "emit_output_types_defs" (OptBool _emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool _emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
@@ -473,7 +475,13 @@ let parse_cmd_line () : ML (list string) =
      | (_, name)::_ ->
        FStar.IO.print_string ("--" ^ name ^ ": not implemented yet for Custard direct-to-C extraction\n");
        exit 1
-     | [] -> !_input_file)
+     | [] ->
+       if !wrapper_error_code && not (ApiPulse? (get_api ()))
+       then begin
+         FStar.IO.print_string "--wrapper_error_code: only supported with --api pulse\n";
+         exit 1
+       end
+       else !_input_file)
   | Help -> display_usage(); exit 0
   | Error s -> FStar.IO.print_string s; exit 1
   | _ -> exit 2

@@ -1,0 +1,28 @@
+// Test for --wrapper_error_code (--api pulse only): every entrypoint
+// wrapper gets a trailing `uint8_t *errorCode' out-parameter receiving the
+// error code returned by the validator.
+
+extern probe ProbeInPlace
+extern probe (INIT) ProbeInit
+
+#define BAD_KIND 201
+
+// A plain entrypoint with a parameter, a custom error code, a #define'd
+// custom error code, and a constraint with the default error code
+entrypoint
+typedef struct _Header(mutable UINT8 *outKind)
+{
+  UINT8 version { version == 1 } {:error-code 200};
+  UINT8 kind { kind <= 3 } {:error-code BAD_KIND}
+    {:on-success *outKind = kind; return true; };
+  UINT8 flags { flags == 0 };
+} Header;
+
+// A probe-only entrypoint: its plain wrapper is internal, and the probe
+// wrapper forwards the out-parameter to it
+entrypoint probe ProbeInPlace (length = 4)
+typedef struct _Probed
+{
+  UINT16 x { x != 0 } {:error-code 210};
+  UINT16 y { y >= x };
+} Probed;
