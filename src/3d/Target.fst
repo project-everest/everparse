@@ -1040,6 +1040,15 @@ let validator_name
     fn
   |> pascal_case
 
+let probe_function_name
+  (modul: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_%s"
+    modul
+    fn
+  |> pascal_case
+
 let define_ident_to_c
   (i: A.ident)
 : Tot string
@@ -1145,28 +1154,28 @@ let print_c_entry
        Printf.sprintf
           "%sstatic\n\
            void DefaultErrorHandler(\n\t\
-                               const char *typename_s,\n\t\
+                               const char *typeName,\n\t\
                                const char *fieldname,\n\t\
                                const char *reason,\n\t\
-                               uint8_t error_code,\n\t\
+                               uint8_t errorCode,\n\t\
                                uint8_t *context,\n\t\
                                EVERPARSE_INPUT_STREAM_BASE base,\n\t\
                                uint64_t len,\n\t\
                                uint64_t origin,\n\t\
-                               uint64_t start_pos)\n\
+                               uint64_t startPos)\n\
            {\n\t\
              %s\n\t\
              (void) len;\n\t\
              (void) base;\n\t\
              (void) origin;\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
-               typename_s,\n\t\t\
+               typeName,\n\t\t\
                fieldname,\n\t\t\
                reason,\n\t\t\
-               (uint64_t)error_code,\n\t\t\
+               (uint64_t)errorCode,\n\t\t\
                frame,\n\t\t\
                NULL,\n\t\t\
-               start_pos\n\t\
+               startPos\n\t\
              );\n\
            }"
           stream_pos_decl
@@ -1177,31 +1186,31 @@ let print_c_entry
           EVERPARSE_INPUT_BUFFER, plus the start position of the failing field.
           `pos` is the *live* position and has already moved past the field by
           the time we are called, so the reported offset comes from
-          `start_pos`, matching the Low* backend and doc/3d-lang.rst. *)
+          `startPos`, matching the Low* backend and doc/3d-lang.rst. *)
        Printf.sprintf
           "static\n\
            void DefaultErrorHandler(\n\t\
-                               const char *typename_s,\n\t\
+                               const char *typeName,\n\t\
                                const char *fieldname,\n\t\
                                const char *reason,\n\t\
-                               uint8_t error_code,\n\t\
+                               uint8_t errorCode,\n\t\
                                uint8_t *context,\n\t\
                                uint8_t *base,\n\t\
                                size_t len,\n\t\
                                size_t *pos,\n\t\
-                               uint64_t start_pos)\n\
+                               uint64_t startPos)\n\
            {\n\t\
              %s\n\t\
              (void) len;\n\t\
              (void) pos;\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
-               typename_s,\n\t\t\
+               typeName,\n\t\t\
                fieldname,\n\t\t\
                reason,\n\t\t\
-               (uint64_t)error_code,\n\t\t\
+               (uint64_t)errorCode,\n\t\t\
                frame,\n\t\t\
                base,\n\t\t\
-               start_pos\n\t\
+               startPos\n\t\
              );\n\
            }"
           frame_decl
@@ -1209,23 +1218,23 @@ let print_c_entry
      Printf.sprintf
           "static\n\
            void DefaultErrorHandler(\n\t\
-                               const char *typename_s,\n\t\
+                               const char *typeName,\n\t\
                                const char *fieldname,\n\t\
                                const char *reason,\n\t\
-                               uint64_t error_code,\n\t\
+                               uint64_t errorCode,\n\t\
                                uint8_t *context,\n\t\
                                EVERPARSE_INPUT_BUFFER input,\n\t\
-                               uint64_t start_pos)\n\
+                               uint64_t startPos)\n\
            {\n\t\
              %s\n\t\
              EverParseDefaultErrorHandler(\n\t\t\
-               typename_s,\n\t\t\
+               typeName,\n\t\t\
                fieldname,\n\t\t\
                reason,\n\t\t\
-               error_code,\n\t\t\
+               errorCode,\n\t\t\
                frame,\n\t\t\
                input,\n\t\t\
-               start_pos\n\t\
+               startPos\n\t\
              );\n\
            }"
           frame_decl
@@ -1249,7 +1258,7 @@ let print_c_entry
      let complete_check =
        if not check_complete then "" else
        Printf.sprintf
-         "if (everparse_pos != (size_t)len)\n\t\
+         "if (everParsePos != (size_t)len)\n\t\
           {\n\t\t\
             %sEverParseError(\"%s\", \"\", \"unexpected trailing bytes\");\n\t\t\
             %s\n\t\
@@ -1261,7 +1270,7 @@ let print_c_entry
      let tail =
        if goto_return then
          Printf.sprintf
-           "if (ep_status != 0U)\n\t\
+           "if (epStatus != 0U)\n\t\
             {\n\t\t\
               if (frame.filled)\n\t\t\
               {\n\t\t\t\
@@ -1276,7 +1285,7 @@ let print_c_entry
            complete_check
        else
          Printf.sprintf
-           "if (ep_status != 0U)\n\t\
+           "if (epStatus != 0U)\n\t\
             {\n\t\t\
               if (frame.filled)\n\t\t\
               {\n\t\t\t\
@@ -1290,11 +1299,11 @@ let print_c_entry
      in
      (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
      ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
-     ^ Printf.sprintf "size_t everparse_pos%s;\n\t" scalar_zero
-     ^ Printf.sprintf "uint8_t ep_status%s;\n\n\t" scalar_zero
+     ^ Printf.sprintf "size_t everParsePos%s;\n\t" scalar_zero
+     ^ Printf.sprintf "uint8_t epStatus%s;\n\n\t" scalar_zero
      ^ "frame.filled = FALSE;\n\t\
-        everparse_pos = (size_t)0U;\n\t"
-     ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (size_t)len, &everparse_pos);\n\n\t" name params error_handler_arg
+        everParsePos = (size_t)0U;\n\t"
+     ^ Printf.sprintf "epStatus = %s(%s (uint8_t*)&frame,%s base, (size_t)len, &everParsePos);\n\n\t" name params error_handler_arg
      ^ tail
    in
    let wrapped_call_buffer (check_complete: bool) (typename: string) name params =
@@ -1304,7 +1313,7 @@ let print_c_entry
      let complete_check =
        if not check_complete then "" else
        Printf.sprintf
-         "if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)\n\t\
+         "if (EverParseGetValidatorErrorPos(epStatus) != (uint64_t)len)\n\t\
           {\n\t\t\
             %sEverParseError(\"%s\", \"\", \"unexpected trailing bytes\");\n\t\t\
             %s\n\t\
@@ -1316,7 +1325,7 @@ let print_c_entry
      let tail =
        if goto_return then
          Printf.sprintf
-           "if (EverParseIsError(ep_status))\n\t\
+           "if (EverParseIsError(epStatus))\n\t\
             {\n\t\t\
               if (frame.filled)\n\t\t\
               {\n\t\t\t\
@@ -1331,7 +1340,7 @@ let print_c_entry
            complete_check
        else
          Printf.sprintf
-           "if (EverParseIsError(ep_status))\n\t\
+           "if (EverParseIsError(epStatus))\n\t\
             {\n\t\t\
               if (frame.filled)\n\t\t\
               {\n\t\t\t\
@@ -1348,11 +1357,11 @@ let print_c_entry
        ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ (if is_input_stream_buffer then ""
           else Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero)
-       ^ Printf.sprintf "uint64_t ep_status%s;\n\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t epStatus%s;\n\n\t" scalar_zero
        ^ "frame.filled = FALSE;\n\t"
        ^ (if is_input_stream_buffer then ""
           else "input = EverParseMakeInputBuffer(base);\n\t")
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t" name params error_handler_arg
+       ^ Printf.sprintf "epStatus = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t" name params error_handler_arg
        ^ tail
      else
        (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
@@ -1360,7 +1369,7 @@ let print_c_entry
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
         frame.filled = FALSE;\n\t\
         %s\
-        uint64_t ep_status = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t\
+        uint64_t epStatus = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t\
         %s"
         struct_zero
         (if is_input_stream_buffer then ""
@@ -1509,7 +1518,7 @@ let print_c_entry
       explicit start position of 0 each time. *)
    let wrapped_call_stream_pulse name params =
      let tail =
-       "if (ep_status != 0U)\n\t\
+       "if (epStatus != 0U)\n\t\
         {\n\t\t\
             EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
         }\n\t\
@@ -1525,12 +1534,12 @@ let print_c_entry
      in
      (if hoist then
        Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
-       ^ Printf.sprintf "uint8_t ep_status%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint8_t epStatus%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t parsedSize%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t startPosition%s;\n\n\t" scalar_zero
        ^ frame_init
        ^ "startPosition = EverParseStreamGetPosition(base);\n\t"
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t" name params error_handler_arg
+       ^ Printf.sprintf "epStatus = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t" name params error_handler_arg
        ^ "parsedSize = EverParseStreamGetPosition(base) - startPosition;\n\n\t"
        ^ tail
      else
@@ -1538,7 +1547,7 @@ let print_c_entry
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
          %s\
          uint64_t startPosition = EverParseStreamGetPosition(base);\n\t\
-         uint8_t ep_status = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t\
+         uint8_t epStatus = %s(%s (uint8_t*)&frame,%s base, (uint64_t)0U, startPosition);\n\t\
          uint64_t parsedSize = EverParseStreamGetPosition(base) - startPosition;\n\n\t\
          %s"
         struct_zero
@@ -1550,7 +1559,7 @@ let print_c_entry
    in
    let wrapped_call_stream name params =
      let tail =
-       "if (EverParseIsError(ep_status))\n\t\
+       "if (EverParseIsError(epStatus))\n\t\
         {\n\t\t\
             EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
         }\n\t\
@@ -1560,7 +1569,7 @@ let print_c_entry
      if hoist then
        Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero
-       ^ Printf.sprintf "uint64_t ep_status%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t epStatus%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t parsedSize%s;\n\n\t" scalar_zero
        ^ "frame.filled = FALSE;\n\t\
           frame.typename_s = \"UNKNOWN\";\n\t\
@@ -1568,8 +1577,8 @@ let print_c_entry
           frame.reason = \"UNKNOWN\";\n\t\
           frame.error_code = 0uL;\n\t"
        ^ "input = EverParseMakeInputBuffer(base);\n\t"
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s input, 0);\n\t" name params error_handler_arg
-       ^ "parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t"
+       ^ Printf.sprintf "epStatus = %s(%s (uint8_t*)&frame,%s input, 0);\n\t" name params error_handler_arg
+       ^ "parsedSize = EverParseGetValidatorErrorPos(epStatus);\n\n\t"
        ^ tail
      else
        Printf.sprintf
@@ -1581,8 +1590,8 @@ let print_c_entry
                 .error_code = 0uL\n\
               };\n\
         EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
-        uint64_t ep_status = %s(%s (uint8_t*)&frame,%s input, 0);\n\t\
-        uint64_t parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t\
+        uint64_t epStatus = %s(%s (uint8_t*)&frame,%s input, 0);\n\t\
+        uint64_t parsedSize = EverParseGetValidatorErrorPos(epStatus);\n\n\t\
         %s"
         name
         params

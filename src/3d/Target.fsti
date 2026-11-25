@@ -433,6 +433,9 @@ val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML strin
 val wrapper_name (modul: string) (fn: string) : ML string
 val wrapper_complete_name (modul: string) (fn: string) : ML string
 val validator_name (modul: string) (fn: string) : ML string
+
+(* The C name of a probe function: `<Module><Name>` in PascalCase. *)
+val probe_function_name (modul: string) (fn: string) : ML string
 type produce_everparse_error = | ProduceEverParseError
 type opt_produce_everparse_error = option produce_everparse_error
 val print_c_entry (_: opt_produce_everparse_error) (modul: string) (env: global_env) (ds:list decl)
