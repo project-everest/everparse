@@ -1,5 +1,5 @@
 # Tests for the C output style options of 3D: --hoist_locals,
-# --init_locals c23|c99|c89 and --line_comments.
+# --init_locals c23|c99|c89, --line_comments and --goto_for_early_return.
 #
 # Locals.3d is extracted with --batch once per option set (a "variant"), each
 # into its own output directory. Every variant is compiled with
@@ -21,7 +21,7 @@ OUTPUT_DIR = output
 CC ?= cc
 
 variants := default hoist_locals init_locals_c23 init_locals_c99 \
-  init_locals_c89 line_comments all
+  init_locals_c89 line_comments goto_for_early_return all
 
 options_default :=
 options_hoist_locals := --hoist_locals
@@ -29,7 +29,9 @@ options_init_locals_c23 := --init_locals c23
 options_init_locals_c99 := --init_locals c99
 options_init_locals_c89 := --init_locals c89
 options_line_comments := --line_comments
-options_all := --hoist_locals --init_locals c89 --line_comments
+options_goto_for_early_return := --goto_for_early_return
+options_all := --hoist_locals --init_locals c89 --line_comments \
+  --goto_for_early_return
 
 # The C standard each variant is compiled with. `--init_locals c23' emits
 # empty initializers `= { }', which are C23-only.
@@ -39,6 +41,7 @@ std_init_locals_c23 := c2x
 std_init_locals_c99 := c11
 std_init_locals_c89 := c11
 std_line_comments := c11
+std_goto_for_early_return := c11
 std_all := c11
 
 TEST_CFLAGS = -Wall -Wextra -Werror -pedantic
@@ -84,10 +87,11 @@ check-hoist_locals: $(addprefix $(OUTPUT_DIR)/,$(addsuffix /.extracted,default $
 	$(foreach v,$(hoisted_variants),$(call decl_after_stmt,$v) &&) true
 
 # --init_locals: no local variable declared without an initializer, in the
-# generated validators and wrappers.
+# generated validators and wrappers. `return x;' and `goto exit;' have the
+# same shape as a declaration, so they are excluded.
 initialized_variants := init_locals_c23 init_locals_c99 init_locals_c89 all
 uninitialized_locals = grep -E '^[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]*]+[A-Za-z_][A-Za-z0-9_]*;$$' \
-  $(OUTPUT_DIR)/$1/Locals.c $(OUTPUT_DIR)/$1/LocalsWrapper.c | grep -v -E ':[[:space:]]*return '
+  $(OUTPUT_DIR)/$1/Locals.c $(OUTPUT_DIR)/$1/LocalsWrapper.c | grep -v -E ':[[:space:]]*(return|goto) '
 
 .PHONY: check-init_locals
 check-init_locals: $(addprefix $(OUTPUT_DIR)/,$(addsuffix /.extracted,default $(initialized_variants)))
@@ -107,7 +111,24 @@ check-line_comments: $(addprefix $(OUTPUT_DIR)/,$(addsuffix /.extracted,default 
 	$(call block_comments,default)
 	$(foreach v,$(line_comments_variants),! $(call block_comments,$v) && grep -q -F '//' $(OUTPUT_DIR)/$v/Locals.c &&) true
 
-test: check-hoist_locals check-init_locals check-line_comments
+# --goto_for_early_return: every early return of the generated validators and
+# wrappers becomes a jump to the single exit label of its function, so that no
+# function has more than one return statement. A function starts at a line
+# that begins with neither a blank, a `}', a `#' nor a `/' and that ends with
+# `{', or at a line that is just `{', and ends at a line that begins with `}'.
+goto_variants := goto_for_early_return all
+multi_return_functions = awk '/^[^ \t}\#/].*\{$$/ || /^\{$$/ { n = 0 } \
+    /(^|[^A-Za-z0-9_])return([^A-Za-z0-9_]|$$)/ { n++ } \
+    /^\}/ { if (n > 1) m++ } END { print m + 0 }' $(OUTPUT_DIR)/$1/$2
+
+.PHONY: check-goto_for_early_return
+check-goto_for_early_return: $(addprefix $(OUTPUT_DIR)/,$(addsuffix /.extracted,default $(goto_variants)))
+	test $$($(call multi_return_functions,default,Locals.c)) -gt 0
+	! grep -q -F 'goto exit;' $(OUTPUT_DIR)/default/Locals.c $(OUTPUT_DIR)/default/LocalsWrapper.c
+	$(foreach v,$(goto_variants),$(foreach f,Locals.c LocalsWrapper.c,test $$($(call multi_return_functions,$v,$f)) -eq 0 && grep -q -F 'goto exit;' $(OUTPUT_DIR)/$v/$f &&)) true
+
+test: check-hoist_locals check-init_locals check-line_comments \
+  check-goto_for_early_return
 
 clean:
 	rm -rf $(OUTPUT_DIR)
