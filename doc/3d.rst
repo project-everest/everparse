@@ -750,9 +750,14 @@ EverParse supports the following command-line options relevant to this
 mode:
 
 * ``--makefile gmake``: produce a Makefile for use with GNU Make.
+  Each EverParse run that produces several files has a grouped-target
+  rule (``&:``), which requires GNU Make 4.3 or later and makes
+  parallel builds (``make -j``) run it only once.
 
 * ``--makefile nmake``: produce a Makefile for use with Microsoft
-  NMAKE.
+  NMAKE. Each EverParse run that produces several files has a rule for
+  one of them, and the others depend on it with no recipe. So this
+  Makefile also supports parallel builds with GNU Make.
 
 * ``--makefile_name my_file_name``: the name of the produced Makefile
   shall be ``my_file_name`` instead of the default
