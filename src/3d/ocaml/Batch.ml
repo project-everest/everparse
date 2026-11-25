@@ -220,7 +220,8 @@ let produce_unit
   let args =
     ["--smt"; Z3Executable.resolve fstar_exe;
      "--codegen"; "C"; "--custard_unit"; modul;
-     "--custard_monomorphize_types"; "true"] @
+     "--custard_monomorphize_types"; "true";
+     "--custard_no_banner"] @
     (* Custard refuses to jump to the exit label past an initialized
        declaration (C++ forbids it), so hoisting is required with goto. *)
     (if Options.get_hoist_locals () || Options.get_goto_for_early_return ()

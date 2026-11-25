@@ -101,10 +101,9 @@ check-init_locals: $(addprefix $(OUTPUT_DIR)/,$(addsuffix /.extracted,default $(
 	! $(CC) -std=c11 -pedantic-errors -I $(OUTPUT_DIR)/init_locals_c23 -c -o $(OUTPUT_DIR)/init_locals_c23/Locals.c11.o $(OUTPUT_DIR)/init_locals_c23/Locals.c 2>/dev/null
 	$(foreach v,init_locals_c99 init_locals_c89,! grep -q -E '= *\{ *\}' $(OUTPUT_DIR)/$v/Locals.c $(OUTPUT_DIR)/$v/LocalsWrapper.c &&) true
 
-# --line_comments: no block comments in the generated validators, except for
-# the banner that the C extraction puts on the first line of each file.
+# --line_comments: no block comments in the generated validators.
 line_comments_variants := line_comments all
-block_comments = tail -n +2 $(OUTPUT_DIR)/$1/Locals.c | grep -q -F '/*'
+block_comments = grep -q -F '/*' $(OUTPUT_DIR)/$1/Locals.c
 
 .PHONY: check-line_comments
 check-line_comments: $(addprefix $(OUTPUT_DIR)/,$(addsuffix /.extracted,default $(line_comments_variants)))
