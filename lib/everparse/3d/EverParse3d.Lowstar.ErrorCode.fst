@@ -10,7 +10,7 @@ let position_limit = 1152921504606846976
 // Not inline_for_extraction: extracted once into the Low* runtime EverParse.h
 // as a static inline function, rather than inlined into every error handler
 // call as an if/else on a temporary.
-[@@FStar.Attributes.CInline]
+[@@FStar.Attributes.CInline; FStar.Attributes.rename_let "EverParse3dLegacyKind"]
 let legacy_kind (status: U8.t)
   : Tot (r: U64.t {
       U64.v r < 16 /\
