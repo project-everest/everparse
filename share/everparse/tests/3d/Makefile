@@ -134,10 +134,16 @@ boolean-abi-test:
 # validators report how far they got through a `size_t *pos' out-parameter
 # rather than in their result code, so the generated trailing-bytes check is
 # not the Low* one, and only running it pins that it agrees.
+#
+# spec is proof-only: it verifies hand-written F* client theorems about the
+# actions of generated validators (field_pos, field_ptr, :check, arrays,
+# extern actions, output setters, probes, field_ptr_after) against the
+# functional specification of actions, and checks with expect_failure that
+# wrong claims are rejected.
 pulse_subdirs := extern static modules output_types exttype save_hashes \
   use_error_handler_macro funptr ifdefs iter tcpip goto_return \
   probe field_ptr output_state_name field_pos_32_backend copy_buffer_backend \
-  check_complete error_code c_style_options
+  check_complete error_code c_style_options spec
 
 # Mirrors the guard in share/everparse/tests/3d/lowstar/Makefile. The specialize_* tests do not
 # build on Windows because of a UlongToPtr conflict, and

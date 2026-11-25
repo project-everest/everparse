@@ -97,5 +97,5 @@ instance copy_buffer_buffer : CB.copy_buffer copy_buffer_t base_t len_t pos_t = 
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract inline_for_extraction
 let field_ptr
-  : option (EverParse3d.Actions.Base.field_ptr_t base_t len_t pos_t #input_stream_buffer (AP.ptr U8.t))
+  : option (EverParse3d.Actions.Base.field_ptr_t base_t len_t pos_t #input_stream_buffer)
   = Some B.field_ptr_impl

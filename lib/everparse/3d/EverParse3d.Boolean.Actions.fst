@@ -7,15 +7,18 @@ module A = EverParse3d.Actions.Base
 module P = EverParse3d.ProbeActions
 
 inline_for_extraction noextract
-fn map_external
+fn map_external_spec
   (#a #b: Type0)
-  (#d: state_dict)
+  (#vt: Type0)
+  (#name: string)
+  (#state: vt -> slprop)
+  (#spec: vt -> Tot (a & vt))
   (decode: a -> Tot b)
-  (action: A.external_action d a)
-: A.external_action d b
-= (_: unit)
+  (action: A.external_action_spec name state a spec)
+: A.external_action_spec name state b (EverParse3d.Actions.Spec.map_extern_spec decode spec)
+= (_: unit) (#w: _)
 {
-  let value = action ();
+  let value = action () #w;
   decode value
 }
 

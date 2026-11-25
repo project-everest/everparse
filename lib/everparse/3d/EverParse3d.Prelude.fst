@@ -30,6 +30,8 @@ module U64 = FStar.UInt64
 
 let parser k t = LP.parser k t
 
+let parse p b = LP.parse p b
+
 let is_weaker_than #nz1 #wk1 (k:parser_kind nz1 wk1)
                    #nz2 #wk2 (k':parser_kind nz2 wk2) = k `LP.is_weaker_than` k'
 

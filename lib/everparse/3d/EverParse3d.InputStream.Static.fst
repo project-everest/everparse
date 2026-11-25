@@ -56,15 +56,17 @@ let ___PUINT8 = E.___PUINT8
 noextract
 inline_for_extraction
 let field_ptr_after
-: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_static ___PUINT8)
+: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_static)
 = E.field_ptr_after
 
 [@@Common.specialize_backend]
 noextract
 inline_for_extraction
-let field_ptr_after_with_setter (extra_state: state_dict)
-: option (AB.field_ptr_after_setter_t base_t len_t pos_t #input_stream_static extra_state ___PUINT8)
-= E.field_ptr_after_with_setter extra_state
+let field_ptr_after_with_setter
+  (vt: Type0) (name: string) (state: vt -> slprop)
+  (sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
+: option (AB.field_ptr_after_setter_t base_t len_t pos_t #input_stream_static name state sp)
+= E.field_ptr_after_with_setter vt name state sp
 
 (* No `copy_buffer` instance: probing is unavailable for the `static` backend,
    as in Low*. *)
