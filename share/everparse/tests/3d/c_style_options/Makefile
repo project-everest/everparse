@@ -113,10 +113,11 @@ check-line_comments: $(addprefix $(OUTPUT_DIR)/,$(addsuffix /.extracted,default 
 # --goto_for_early_return: every early return of the generated validators and
 # wrappers becomes a jump to the single exit label of its function, so that no
 # function has more than one return statement. A function starts at a line
-# that begins with neither a blank, a `}', a `#' nor a `/' and that ends with
-# `{', or at a line that is just `{', and ends at a line that begins with `}'.
+# that begins with an identifier character and ends with `{', or at a line
+# that is just `{', and ends at a line that begins with `}'. (No `/' in a
+# bracket expression: BSD awk ends the regex there.)
 goto_variants := goto_for_early_return all
-multi_return_functions = awk '/^[^ \t}\#/].*\{$$/ || /^\{$$/ { n = 0 } \
+multi_return_functions = awk '/^[A-Za-z_].*\{$$/ || /^\{$$/ { n = 0 } \
     /(^|[^A-Za-z0-9_])return([^A-Za-z0-9_]|$$)/ { n++ } \
     /^\}/ { if (n > 1) m++ } END { print m + 0 }' $(OUTPUT_DIR)/$1/$2
 
