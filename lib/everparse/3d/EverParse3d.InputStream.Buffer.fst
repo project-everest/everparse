@@ -187,7 +187,8 @@ ensures exists* contents' v1 v2 .
     Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
     Seq.length v <= Seq.length contents /\
     Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
-    Ghost.reveal v == Seq.append v1 v2
+    Ghost.reveal v == Seq.append v1 v2 /\
+    I.origin #base_t #len_t #pos_t #pts_to_inst (stream_trunc_base b len pos res) == I.origin #base_t #len_t #pos_t #pts_to_inst b
   )
 {
   unfold (stream_pts_to b len pos contents v);
@@ -437,12 +438,14 @@ fn field_ptr_impl
 requires stream_pts_to b len pos contents v **
   pure (U64.v start_pos + Seq.length v <= Seq.length contents)
 returns res: AP.ptr U8.t
-ensures stream_pts_to b len pos contents v
+ensures stream_pts_to b len pos contents v **
+  pure (res == EverParse3d.PtrModel.ptr_at b (U64.v start_pos))
 {
   unfold (stream_pts_to b len pos contents v);
   SZ.fits_lte (U64.v start_pos) (SZ.v len);
   let start_pos_sz = SZ.uint64_to_sizet start_pos;
   let s' = AP.split b start_pos_sz;
+  EverParse3d.PtrModel.ptr_at_adjacent b (U64.v start_pos) s';
   AP.join b s';
   Seq.lemma_split contents (U64.v start_pos);
   Seq.lemma_eq_elim
@@ -456,5 +459,5 @@ ensures stream_pts_to b len pos contents v
 noextract
 inline_for_extraction
 let field_ptr
-: option (AB.field_ptr_t base_t len_t pos_t #input_stream_buffer (AP.ptr U8.t))
+: option (AB.field_ptr_t base_t len_t pos_t #input_stream_buffer)
 = Some field_ptr_impl

@@ -7,6 +7,7 @@ open Pulse.Lib.Pervasives
 open EverParse3d.Prelude
 open EverParse3d.State
 module A = EverParse3d.Actions.Base
+module S = EverParse3d.Actions.Spec
 module B = EverParse3d.InputStream.Buffer
 
 inline_for_extraction noextract
@@ -17,6 +18,7 @@ let smoke_v
     state_dict_empty
     false
     false
+    _
 = A.validate_pair B.error_handler_macro "smoke" "fst" true (A.validate_without_reading (A.validate____UINT8 "fst")) true (A.validate_without_reading (A.validate____UINT16 "snd"))
 
 inline_for_extraction noextract
@@ -39,6 +41,7 @@ let smoke_extern
     state_dict_empty
     false
     false
+    _
 = A.validate_pair #_ #_ #_ #E.input_stream_extern E.error_handler_macro "smoke" "fst" true
     (A.validate_without_reading (A.validate____UINT8 "fst")) true
     (A.validate_without_reading (A.validate____UINT16 "snd"))
@@ -55,6 +58,7 @@ let smoke_static
     state_dict_empty
     false
     false
+    _
 = A.validate_without_reading #_ #_ #_ #St.input_stream_static (A.validate____UINT32 "value")
 
 (* Probe combinators, at the `buffer` backend. As above, this is here to make
@@ -109,21 +113,24 @@ module A = EverParse3d.Actions.Base
 
 inline_for_extraction noextract
 let smoke_external_action
-  (d: state_dict)
-  (f: A.external_action d unit)
-: A.action #B.base_t #B.len_t #B.pos_t d unit false
-= A.mk_external_action f
+  (#vt: Type0) (name: string) (state: vt -> slprop)
+  (spec: vt -> Tot (unit & vt))
+  (f: A.external_action_spec name state unit spec)
+: A.action #B.base_t #B.len_t #B.pos_t (state_dict_singleton name state) unit false
+    (EverParse3d.Actions.Spec.aspec_extern name state spec)
+= A.mk_external_action_spec f
 
 inline_for_extraction noextract
 let smoke_field_ptr_after_with_setter
-  (d: state_dict)
-  (#ptr_t: Type0)
-  (f: option (A.field_ptr_after_setter_t B.base_t B.len_t B.pos_t d ptr_t))
+  (#vt: Type0) (name: string) (state: vt -> slprop)
+  (sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
+  (f: option (A.field_ptr_after_setter_t B.base_t B.len_t B.pos_t name state sp))
   (sq: squash (Some? f))
   (sz: FStar.UInt64.t)
-  (write_to: (ptr_t -> A.external_action d unit))
-: A.action #B.base_t #B.len_t #B.pos_t d bool false
-= A.action_field_ptr_after_with_setter (Some?.v f) sz write_to
+  (write_to: (p: EverParse3d.PtrModel.ptr -> A.external_action_spec name state unit (sp p)))
+  (sq_disj: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ A.peep_world_dict.state_p x)))
+: A.action #B.base_t #B.len_t #B.pos_t (state_dict_prod (state_dict_singleton name state) A.peep_world_dict) bool false _
+= A.action_field_ptr_after_with_setter (Some?.v f) sz write_to sq_disj
 
 inline_for_extraction noextract
 let smoke_probe_then_validate
@@ -132,7 +139,8 @@ let smoke_probe_then_validate
   (#nz: bool) (#wk: _) (#k: EverParse3d.Kinds.parser_kind nz wk)
   (#t: Type0) (#p: EverParse3d.Prelude.parser k t)
   (d: state_dict)
-  (v: A.validate_with_action_read #B.base_t #B.len_t #B.pos_t p d false false)
+  (#s: S.vspec d)
+  (v: A.validate_with_action_read #B.base_t #B.len_t #B.pos_t p d false false s)
   (#ptr_t: Type0)
   (src: ptr_t)
   (as_u64: (ptr_t -> P.pure_external_action FStar.UInt64.t))
@@ -141,9 +149,9 @@ let smoke_probe_then_validate
   (probe: P.probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #boolean_t #boolean_inst unit true false false)
   (sq: squash (forall x .
     ~ (d.state_p x /\ (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest).state_p x)))
-: A.action #B.base_t #B.len_t #B.pos_t
+: A.vaction #B.base_t #B.len_t #B.pos_t
     (state_dict_prod d (A.copy_buffer_state_dict #_ #B.base_t #B.len_t #B.pos_t "smoke_cb" dest))
-    bool false
+    false _
 = A.probe_then_validate B.error_handler_macro "T" "f" v src as_u64 true "smoke_cb" dest init 0uL probe sq
 
 (* The interpreter, at the `buffer` backend: build a small `typ` and run it
@@ -164,5 +172,5 @@ let smoke_typ (d: state_dict)
 inline_for_extraction noextract
 let smoke_as_validator (d: state_dict)
 : A.validate_with_action_read #B.base_t #B.len_t #B.pos_t
-    (It.as_parser (smoke_typ d)) d false false
+    (It.as_parser (smoke_typ d)) d false false (It.as_vspec "SmokeTyp" (smoke_typ d))
 = It.as_validator B.error_handler_macro "SmokeTyp" (smoke_typ d)

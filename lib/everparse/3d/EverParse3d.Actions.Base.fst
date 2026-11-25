@@ -21,6 +21,26 @@ module SZ = FStar.SizeT
 module Comment = Pulse.Lib.Comment
 
 open EverParse3d.State
+module S = EverParse3d.Actions.Spec
+module PM = EverParse3d.PtrModel
+
+(* The spec-level inputs of actions and validators. *)
+let aenv_of_action (o: PM.ptr) (start_pos: U64.t) (contents_sl v_sl: Seq.seq U8.t) : GTot S.aenv = {
+  S.a_start = U64.v start_pos;
+  S.a_origin = o;
+}
+
+let vinput_read (o: PM.ptr) (contents_sl v_sl: Seq.seq U8.t) : GTot S.vinput = {
+  S.contents = contents_sl;
+  S.rest = v_sl;
+  S.origin = o;
+}
+
+let vinput_no_read (o: PM.ptr) (contents_sl v_sl: Seq.seq U8.t) (pos: nat { pos <= Seq.length v_sl }) : GTot S.vinput = {
+  S.contents = contents_sl;
+  S.rest = Seq.slice v_sl pos (Seq.length v_sl);
+  S.origin = o;
+}
 
 (* `start_pos` is the position at which the field this action is attached to
    begins, which is where `field_pos` and `field_ptr` must report. It cannot be
@@ -37,6 +57,7 @@ let action
   (extra_state: state_dict)
   (a: Type0)
   (use_error_handler: bool)
+  (sp: S.action_spec extra_state a)
 =
   ctxt: app_ctxt ->
   error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit) ->
@@ -46,17 +67,49 @@ let action
   contents_sl: Ghost.erased (Seq.seq U8.t) ->
   v_sl: Ghost.erased (Seq.seq U8.t) ->
   start_pos: U64.t ->
+  extra: forevery_values extra_state ->
   stt a
-    (exists* v_ctxt extra .
+    (exists* v_ctxt .
       pts_to ctxt v_ctxt **
       I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
       forevery_state extra_state extra **
       pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
     )
-    (fun _ -> exists* v_ctxt' extra' .
+    (fun res -> exists* v_ctxt' extra' .
       pts_to ctxt v_ctxt' **
       I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-      forevery_state extra_state extra'
+      forevery_state extra_state extra' **
+      pure (S.spec_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t sl_base) start_pos contents_sl v_sl) extra) res extra')
+    )
+
+let vaction
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (extra_state: state_dict)
+  (use_error_handler: bool)
+  (sp: S.vaction_spec extra_state)
+=
+  ctxt: app_ctxt ->
+  error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit) ->
+  sl_base: base_t ->
+  sl_len: len_t ->
+  sl_pos: pos_t ->
+  contents_sl: Ghost.erased (Seq.seq U8.t) ->
+  v_sl: Ghost.erased (Seq.seq U8.t) ->
+  start_pos: U64.t ->
+  extra: forevery_values extra_state ->
+  stt bool
+    (exists* v_ctxt .
+      pts_to ctxt v_ctxt **
+      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      forevery_state extra_state extra **
+      pure (U64.v start_pos + Seq.length v_sl <= Seq.length contents_sl)
+    )
+    (fun res -> exists* v_ctxt' extra' .
+      pts_to ctxt v_ctxt' **
+      I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+      forevery_state extra_state extra' **
+      pure (S.vaction_res_rel (sp (aenv_of_action (I.origin #base_t #len_t #pos_t sl_base) start_pos contents_sl v_sl) extra) res extra')
     )
 
 module LP = LowParse.Spec.Base
@@ -73,6 +126,7 @@ let validate_with_action_read
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
+     (s: S.vspec extra_state)
 : Type0
 = (ctxt: app_ctxt) ->
   (error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
@@ -97,7 +151,8 @@ let validate_with_action_read
       (not has_action ==> extra' == extra) /\
       (is_validation_error res ==> None? (LP.parse p v_sl)) /\
       I.seq_is_suffix_of v_sl' v_sl /\
-      (res == validator_success ==> (Some? (LP.parse p v_sl) /\ v_sl' == Seq.slice v_sl (snd (Some?.v (LP.parse p v_sl))) (Seq.length v_sl)))
+      (res == validator_success ==> (Some? (LP.parse p v_sl) /\ v_sl' == Seq.slice v_sl (snd (Some?.v (LP.parse p v_sl))) (Seq.length v_sl))) /\
+      S.vres_rel (s (vinput_read (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl) extra) res extra'
   ))
 
 inline_for_extraction noextract
@@ -112,6 +167,7 @@ let validate_with_action_no_read
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
+     (s: S.vspec extra_state)
 : Type0
 = (ctxt: app_ctxt) ->
   (error_handler_fn : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit)) ->
@@ -142,7 +198,8 @@ let validate_with_action_no_read
       (res == validator_error_action_failed ==> has_action) /\
       (not has_action ==> extra' == extra) /\
       (is_validation_error res ==> None? pp) /\
-      (res == validator_success ==> (Some? pp /\ inst.scan_v v_pos' == inst.scan_v v_pos + snd (Some?.v pp)))
+      (res == validator_success ==> (Some? pp /\ inst.scan_v v_pos' == inst.scan_v v_pos + snd (Some?.v pp))) /\
+      S.vres_rel (s (vinput_no_read (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl (inst.scan_v v_pos)) extra) res extra'
   )))
 
 inline_for_extraction noextract
@@ -157,8 +214,40 @@ fn validate_eta
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  v ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
+}
+
+(* Change the spec index of a validator to a pointwise-equal spec *)
+inline_for_extraction noextract
+fn validate_with_action_read_ext
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      ([@@@erasable] s2: S.vspec extra_state)
+      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s1)
+      ([@@@erasable] prf: squash (forall (i: S.vinput) (x: forevery_values extra_state) . s1 i x == s2 i x))
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s2
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -173,6 +262,38 @@ fn validate_eta
 }
 
 inline_for_extraction noextract
+fn validate_with_action_no_read_ext
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      ([@@@erasable] s2: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s1)
+      ([@@@erasable] prf: squash (forall (i: S.vinput) (x: forevery_values extra_state) . s1 i x == s2 i x))
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s2
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl v_pos
+}
+
+inline_for_extraction noextract
 fn act_with_comment
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
@@ -180,8 +301,9 @@ fn act_with_comment
       (extra_state: state_dict)
       (#use_error_handler:bool)
       (#res:Type)
-      (a: action #base_t #len_t #pos_t extra_state res use_error_handler)
-: action #base_t #len_t #pos_t extra_state res use_error_handler
+      (#[@@@erasable] sa: S.action_spec extra_state res)
+      (a:action #base_t #len_t #pos_t extra_state res use_error_handler sa)
+: action #base_t #len_t #pos_t extra_state res use_error_handler (sa)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -191,9 +313,10 @@ fn act_with_comment
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   Comment.comment s;
-  a ctxt error_handler_fn sl_base sl_len sl_pos contents_sl v_sl start_pos
+  a ctxt error_handler_fn sl_base sl_len sl_pos contents_sl v_sl start_pos _
 }
 
 inline_for_extraction
@@ -271,9 +394,11 @@ fn validate_with_success_action
       (#[@@@erasable] extra: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra has_action use_error_handler)
-      (a:action #base_t #len_t #pos_t extra bool use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t p1 extra true use_error_handler
+      (#[@@@erasable] s1: S.vspec extra)
+      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra has_action use_error_handler s1)
+      (#[@@@erasable] sa: S.action_spec extra bool)
+      (a:action #base_t #len_t #pos_t extra bool use_error_handler sa)
+  : validate_with_action_read #base_t #len_t #pos_t p1 extra true use_error_handler (S.vspec_with_success_action p1 s1 sa)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -287,7 +412,7 @@ fn validate_with_success_action
   let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
   let [@@@rename_let ("resultAfter" ^ pascal_case name)] res_validate = v1 ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl;
   if (res_validate = validator_success) {
-    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
     if (res_action) {
       validator_success
     } else {
@@ -313,8 +438,9 @@ fn validate_with_error_handler
       (#[@@@erasable] extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s1)
+  : validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler (s1)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -347,7 +473,7 @@ fn validate_ret
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_ret ()) extra_state false use_error_handler (S.vspec_of_parser (parse_ret ()))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -380,7 +506,8 @@ fn validate_pair_slow
        (#[@@@erasable] extra_state: state_dict)
        (#has_action1:bool)
        (#use_error_handler:bool)
-       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+       (#[@@@erasable] s1: S.vspec extra_state)
+       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
        (#nz2:_)
        (#wk2: _)
        (#k2:parser_kind nz2 wk2)
@@ -388,13 +515,14 @@ fn validate_pair_slow
        (#[@@@erasable] p2:parser k2 t2)
        (k2_const: bool)
        (#has_action2:bool)
-       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
+       (#[@@@erasable] s2: S.vspec extra_state)
+       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler s2)
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_pair` p2)
       extra_state
       (has_action1 || has_action2)
-      use_error_handler
+      use_error_handler (S.vspec_pair_slow p1 s1 s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -430,24 +558,27 @@ fn validate_dep_pair_with_refinement_and_action'
       (#[@@@erasable] extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
-      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#[@@@erasable] sa: t1 -> S.action_spec extra_state bool)
+      (a:(x_: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x_)))
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
+      (v2:(x: refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       true
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair_with_refinement_slow p1 s1 f (Some sa) s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -467,7 +598,7 @@ fn validate_dep_pair_with_refinement_and_action'
     let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
     let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
     if (ok) {
-      let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+      let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
       if (res_action) {
       	 v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
       } else {
@@ -502,20 +633,22 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
       ))
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
-      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#[@@@erasable] sa: t1 -> S.action_spec extra_state bool)
+      (a:(x_: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x_)))
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
+      (v2:(x: refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       true
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair_with_refinement_total_zero p1 f (Some sa) s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -534,7 +667,7 @@ fn validate_dep_pair_with_refinement_and_action_total_zero_parser'
   let [@@@rename_let ("" ^ camel_case name1)] val_key = r1 name1 sl_base sl_len sl_pos _ _;
   let [@@@rename_let (camel_case name1 ^ "ConstraintIsOk")] ok = f val_key;
   if (ok) {
-    let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name1)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
     if (res_action) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
@@ -559,24 +692,27 @@ let validate_dep_pair_with_refinement_and_action
       (#[@@@erasable] extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
-      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#[@@@erasable] sa: t1 -> S.action_spec extra_state bool)
+      (a:(x_: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x_)))
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
+      (v2:(x: refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       true
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair_with_refinement_gen p1_is_constant_size_without_actions p1 s1 f (Some sa) s2)
 = if
     (p1_is_constant_size_without_actions &&
      (k1.LP.parser_kind_high = Some 0) &&
@@ -600,13 +736,14 @@ fn validate_filter
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#[@@@erasable] s: S.vspec extra_state)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
        (err: t -> constraint_error_code)
        (cr:string)
        (cf:string)
-  : validate_with_action_read #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (p `parse_filter` f) extra_state has_action use_error_handler (S.vspec_filter p s f None)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -649,19 +786,21 @@ fn validate_filter_with_action
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#[@@@erasable] s: S.vspec extra_state)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (r:leaf_reader #base_t #len_t #pos_t p)
        (f:t -> bool)
        (err: t -> constraint_error_code)
        (cr:string)
        (cf:string)
-       (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+       (#[@@@erasable] sa: t -> S.action_spec extra_state bool)
+       (a:(x_: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x_)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p `parse_filter` f)
       extra_state
       true
-      use_error_handler
+      use_error_handler (S.vspec_filter p s f (Some sa))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -683,7 +822,7 @@ fn validate_filter_with_action
     let [@@@rename_let (camel_case name ^ "ConstraintIsOk")] ok = f val_key;
     Comment.comment (normalize_term ("end: " ^ cf));
     if (ok) {
-      let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+      let [@@@rename_let ("actionSuccess" ^ pascal_case name)] res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
       if (res_action) {
       	validator_success
       } else {
@@ -709,11 +848,12 @@ fn validate_weaken_left
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#[@@@erasable] s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_left p k') extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_left p k') extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -739,11 +879,12 @@ fn validate_weaken_right
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+       (#[@@@erasable] s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_right p k') extra_state has_action use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_weaken_right p k') extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -773,10 +914,11 @@ fn validate_weaken
        (#[@@@erasable] d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p d1 has_action use_error_handler)
+       (#[@@@erasable] s: S.vspec d1)
+       (v:validate_with_action_read #base_t #len_t #pos_t p d1 has_action use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: validate_with_action_read #base_t #len_t #pos_t p d2 has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p d2 has_action use_error_handler (S.vspec_weaken s d2 d2_extends)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -816,12 +958,13 @@ fn validate_call
        (#[@@@erasable] d': state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p d' has_action use_error_handler)
+       (#[@@@erasable] s: S.vspec d')
+       (v:validate_with_action_read #base_t #len_t #pos_t p d' has_action use_error_handler s)
       (d: state_dict)
       (#[@@@erasable] f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
       (#[@@@erasable] g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
       ([@@@erasable] sq: squash (state_dict_rename_prop d d' f g))
-: validate_with_action_read #base_t #len_t #pos_t p d has_action use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t p d has_action use_error_handler (S.vspec_call s d f g sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -846,7 +989,7 @@ fn validate_impos
        (#extra_state: _)
        (#use_error_handler:bool)
        (_:unit)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler
+  : validate_with_action_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler (S.vspec_of_parser (parse_impos ()))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -874,16 +1017,18 @@ fn validate_ite
        (#ha1:_)
        (#ha2:_)
        (#use_error_handler:bool)
+       (#[@@@erasable] s1: squash e -> S.vspec extra_state)
+       (#[@@@erasable] s2: squash (not e) -> S.vspec extra_state)
        ([@@@erasable] p1:squash e -> parser k (a()))
-       (v1:(squash e -> validate_with_action_read #base_t #len_t #pos_t (p1()) extra_state ha1 use_error_handler))
+       (v1:(x_: squash e -> validate_with_action_read #base_t #len_t #pos_t (p1()) extra_state ha1 use_error_handler (s1 x_)))
        ([@@@erasable] p2:squash (not e) -> parser k (b()))
-       (v2:(squash (not e) -> validate_with_action_read #base_t #len_t #pos_t (p2()) extra_state ha2 use_error_handler))
+       (v2:(x_: squash (not e) -> validate_with_action_read #base_t #len_t #pos_t (p2()) extra_state ha2 use_error_handler (s2 x_)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (parse_ite e p1 p2)
       extra_state
       (ha1 || ha2)
-      use_error_handler
+      use_error_handler (S.vspec_ite e s1 s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1032,6 +1177,85 @@ let parse_list_consumes_all
    | _ -> True)
 = LP.parser_kind_prop_equiv (LPL.parse_list_kind k.LP.parser_kind_injective) (LPL.parse_list p)
 
+(* The invariant of the loops of `validate_nlist` and `validate_list_up_to`
+   with respect to their spec: the spec of the whole loop, started on [v1] with
+   state [x0], is the spec of the rest of the loop, on [vcur] with state [x]. *)
+let list_fold_reaches
+  (#d: state_dict) (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
+  (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (vcur: Seq.seq LP.byte) (x: forevery_values d)
+: Tot prop
+= S.vspec_list_fold p s o contents v1 x0 == S.vspec_list_fold p s o contents vcur x
+
+let list_fold_step
+  (ha: bool)
+  (#d: state_dict) (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
+  (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (vcur: Seq.seq LP.byte) (x: forevery_values d)
+  (r: U8.t) (x': forevery_values d) (vcur': Seq.seq LP.byte)
+: Lemma
+  (requires (ha ==> (
+    list_fold_reaches p s o contents v1 x0 vcur x /\
+    Seq.length vcur > 0 /\
+    S.vres_rel (s (vinput_read o contents vcur) x) r x' /\
+    (r == validator_success ==> (
+      Some? (LP.parse p vcur) /\
+      vcur' == Seq.slice vcur (snd (Some?.v (LP.parse p vcur))) (Seq.length vcur)))
+  )))
+  (ensures (ha ==> (
+    (r == validator_success ==> list_fold_reaches p s o contents v1 x0 vcur' x') /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s o contents v1 x0)))
+  )))
+= LP.parser_kind_prop_equiv k p
+
+let list_fold_done
+  (ha: bool)
+  (#d: state_dict) (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
+  (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (vcur: Seq.seq LP.byte) (x: forevery_values d) (r: U8.t)
+: Lemma
+  (requires (ha ==> (
+    (r == validator_success ==> (list_fold_reaches p s o contents v1 x0 vcur x /\ Seq.length vcur == 0)) /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s o contents v1 x0)))
+  )))
+  (ensures (ha ==> S.vres_rel (S.vspec_list_fold p s o contents v1 x0) r x))
+= ()
+
+(* The input of the loop of `validate_nlist` is the truncated stream. *)
+let vtruncate_eq
+  (o: PM.ptr) (contents_sl v_sl contents1 v1 v2: Seq.seq LP.byte) (n: nat)
+: Lemma
+  (requires (
+    v_sl `I.seq_is_suffix_of` contents_sl /\
+    Seq.equal contents1 (Seq.append (Seq.slice contents_sl 0 (Seq.length contents_sl - Seq.length v_sl)) v1) /\
+    v_sl == Seq.append v1 v2 /\
+    Seq.length v1 == n
+  ))
+  (ensures (
+    n <= Seq.length v_sl /\
+    S.vtruncate (vinput_read o contents_sl v_sl) n == vinput_read o contents1 v1
+  ))
+= Seq.lemma_eq_elim v1 (Seq.slice v_sl 0 n);
+  Seq.lemma_eq_elim contents1
+    (S.vtruncate (vinput_read o contents_sl v_sl) n).S.contents
+
+let vspec_nlist_eq
+  (#d: state_dict) (ha: bool)
+  (n: U32.t) (n_is_const: option nat { memoizes_n_as_const n_is_const n })
+  (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t)
+  (s: S.vspec d) (o: PM.ptr) (contents_sl v_sl contents1 v1: Seq.seq LP.byte) (x0: forevery_values d)
+: Lemma
+  (requires (
+    U32.v n <= Seq.length v_sl /\
+    S.vtruncate (vinput_read o contents_sl v_sl) (U32.v n) == vinput_read o contents1 v1
+  ))
+  (ensures (
+    ha ==>
+    S.vspec_nlist ha n n_is_const p s (vinput_read o contents_sl v_sl) x0 ==
+    S.vspec_list_fold p s o contents1 v1 x0
+  ))
+= ()
+
 #push-options "--z3rlimit 32"
 
 noextract inline_for_extraction
@@ -1048,8 +1272,9 @@ fn validate_nlist
        (#[@@@erasable] extra_state: _)
        (#ha:bool)
        (#use_error_handler:bool)
-       (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler
+       (#[@@@erasable] s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state ha use_error_handler (S.vspec_nlist ha n n_is_const p s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1083,6 +1308,8 @@ fn validate_nlist
       I.is_prefix_of tb tl tp sl_base sl_len sl_pos contents_sl v2
     );
     seq_truncate_append contents_sl v_sl v1 v2 contents1;
+    vtruncate_eq (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl contents1 v1 v2 (U32.v n);
+    vspec_nlist_eq ha n n_is_const p s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl contents1 v1 extra;
     parse_list_consumes_all p v1;
     seq_is_suffix_of_refl v1;
     LP.parser_kind_prop_equiv k p; // fstar2 only
@@ -1106,6 +1333,9 @@ fn validate_nlist
         (vres == validator_success ==>
           (Some? (LP.parse (LPL.parse_list p) v1) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
         (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0) /\
+        (ha ==> (
+          (vres == validator_success ==> list_fold_reaches p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra') /\
+          (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_list_fold p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra))))) /\
         Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
       )
       decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
@@ -1119,6 +1349,8 @@ fn validate_nlist
         LPL.parse_list_eq' p vcur;
         let r = v ctxt error_handler_fn tb tl tp extra' contents1 vcur;
         with vcur'. assert (I.pts_to tb tl tp contents1 vcur');
+        with extra''. assert (forevery_state extra_state extra'');
+        list_fold_step ha p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra' r extra'' vcur';
         pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
         seq_is_suffix_of_trans vcur' vcur v1;
         if (r = validator_success) {
@@ -1131,6 +1363,8 @@ fn validate_nlist
     };
     let fres = !res;
     with vcur. assert (I.pts_to tb tl tp contents1 vcur);
+    with extra'. assert (forevery_state extra_state extra');
+    list_fold_done ha p s (I.origin #base_t #len_t #pos_t sl_base) contents1 v1 extra vcur extra' fres;
     LPL.parse_list_eq p vcur;
     Seq.lemma_eq_elim v1 (Seq.slice v_sl 0 (U32.v n));
     seq_is_suffix_of_append vcur v1 v2;
@@ -1158,8 +1392,9 @@ fn validate_t_at_most
        (#[@@@erasable] extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler
+       (#[@@@erasable] s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
+  : validate_with_action_read #base_t #len_t #pos_t (parse_t_at_most n p) extra_state ha use_error_handler (S.vspec_t_at_most n s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1226,8 +1461,9 @@ fn validate_t_exact
        (#[@@@erasable] extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler
+       (#[@@@erasable] s: S.vspec extra_state)
+       (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
+  : validate_with_action_read #base_t #len_t #pos_t (parse_t_exact n p) extra_state ha use_error_handler (S.vspec_t_exact n p s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1339,9 +1575,12 @@ fn action_bind
       (#extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action #base_t #len_t #pos_t extra_state a use_error_handler)
-      (#b:Type) (g: (a -> action #base_t #len_t #pos_t extra_state b use_error_handler))
-: action #base_t #len_t #pos_t extra_state b use_error_handler
+      (#[@@@erasable] sf: S.action_spec extra_state a)
+      (f:action #base_t #len_t #pos_t extra_state a use_error_handler sf)
+      (#b:Type)
+      (#[@@@erasable] sg: a -> S.action_spec extra_state b)
+      (g: (x: a -> action #base_t #len_t #pos_t extra_state b use_error_handler (sg x)))
+: action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_bind sf sg)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1351,9 +1590,10 @@ fn action_bind
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
-  let [@@@rename_let ("" ^ camel_case name)] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
-  g resf ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
+  let [@@@rename_let ("" ^ camel_case name)] resf = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
+  g resf ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
 }
 
 noextract
@@ -1364,10 +1604,11 @@ fn action_weaken
       (#d1: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action #base_t #len_t #pos_t d1 a use_error_handler)
+      (#[@@@erasable] sf: S.action_spec d1 a)
+      (f:action #base_t #len_t #pos_t d1 a use_error_handler sf)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: action #base_t #len_t #pos_t d2 a use_error_handler
+: action #base_t #len_t #pos_t d2 a use_error_handler (S.aspec_weaken sf d2 d2_extends)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1377,11 +1618,44 @@ fn action_weaken
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   let d3 = state_dict_weaken_sub d2 d1;
   with extra2 . rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
   forevery_state_dict_prod_unfold () _;
-  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
+  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
+  forevery_state_dict_prod_fold d1 d3 ();
+  with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
+  res
+}
+
+noextract
+inline_for_extraction
+fn vaction_weaken
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#d1: state_dict)
+      (#use_error_handler:bool)
+      (#[@@@erasable] sf: S.vaction_spec d1)
+      (f:vaction #base_t #len_t #pos_t d1 use_error_handler sf)
+      (d2: state_dict)
+      (d2_extends: squash (state_dict_weaken_prop d1 d2))
+: vaction #base_t #len_t #pos_t d2 use_error_handler (S.vaspec_weaken sf d2 d2_extends)
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (start_pos: _)
+  (extra: _)
+{
+  let d3 = state_dict_weaken_sub d2 d1;
+  with extra2 . rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
+  forevery_state_dict_prod_unfold () _;
+  let res = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
   forevery_state_dict_prod_fold d1 d3 ();
   with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
   res
@@ -1395,12 +1669,13 @@ fn action_call
       (#d': state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (act: action #base_t #len_t #pos_t d' a use_error_handler)
+      (#[@@@erasable] sf: S.action_spec d' a)
+      (act:action #base_t #len_t #pos_t d' a use_error_handler sf)
       (d: state_dict)
       (#[@@@erasable] f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
       (#[@@@erasable] g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
       ([@@@erasable] sq: squash (state_dict_rename_prop d d' f g))
-: action #base_t #len_t #pos_t d a use_error_handler
+: action #base_t #len_t #pos_t d a use_error_handler (S.aspec_call sf d f g sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1410,9 +1685,10 @@ fn action_call
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   state_dict_rename_call d d' f g sq _;
-  let res = act ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
+  let res = act ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
   state_dict_rename_return d d' f g sq _ _;
   res
 }
@@ -1424,7 +1700,7 @@ fn action_deref
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (name: Ghost.erased string)
       (#a:Type0) (x:ref a) (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler (S.aspec_deref name (pts_to x #1.0R))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1434,10 +1710,12 @@ fn action_deref
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   let res = !x;
   forevery_state_dict_singleton_fold name (pts_to x #1.0R) _;
+  S.singleton_value_eta name (pts_to x #1.0R) extra;
   res
 }
 
@@ -1448,7 +1726,7 @@ fn action_assignment
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (name: Ghost.erased string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) unit use_error_handler (S.aspec_assignment name (pts_to x #1.0R) w)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1458,6 +1736,7 @@ fn action_assignment
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   x := w;
@@ -1475,7 +1754,7 @@ fn action_deref_map
   (name: Ghost.erased string)
   (x: ref a)
   (#use_error_handler: bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) b use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to x #1.0R)) b use_error_handler (S.aspec_deref_map decode name (pts_to x #1.0R))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1485,10 +1764,12 @@ fn action_deref_map
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   forevery_state_dict_singleton_unfold' _ _ _;
   let value = !x;
   forevery_state_dict_singleton_fold name (pts_to x #1.0R) _;
+  S.singleton_value_eta name (pts_to x #1.0R) extra;
   decode value
 }
 
@@ -1591,7 +1872,7 @@ fn action_return
       (#use_error_handler:bool)
       (#a: Type)
       (x: a)
-: action #base_t #len_t #pos_t extra_state a use_error_handler
+: action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_return x)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1601,6 +1882,7 @@ fn action_return
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   x
 }
@@ -1612,7 +1894,7 @@ fn action_return_true
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler
+: action #base_t #len_t #pos_t extra_state bool use_error_handler (S.aspec_return true)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1622,6 +1904,7 @@ fn action_return_true
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   true
 }
@@ -1633,7 +1916,7 @@ fn action_abort
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler
+: action #base_t #len_t #pos_t extra_state bool use_error_handler (S.aspec_return false)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1643,6 +1926,7 @@ fn action_abort
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   false
 }
@@ -1655,10 +1939,12 @@ fn action_seq
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action #base_t #len_t #pos_t extra_state a use_error_handler)
+      (#[@@@erasable] sf: S.action_spec extra_state a)
+      (f:action #base_t #len_t #pos_t extra_state a use_error_handler sf)
       (#b: Type)
-      (g: action #base_t #len_t #pos_t extra_state b use_error_handler)
-: action #base_t #len_t #pos_t extra_state b use_error_handler
+      (#[@@@erasable] sg: S.action_spec extra_state b)
+      (g:action #base_t #len_t #pos_t extra_state b use_error_handler sg)
+: action #base_t #len_t #pos_t extra_state b use_error_handler (S.aspec_seq sf sg)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1668,9 +1954,10 @@ fn action_seq
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
-  let ignored = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos;
-  g ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
+  let ignored = f ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _;
+  g ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
 }
 
 noextract
@@ -1682,9 +1969,11 @@ fn action_ite
       (#use_error_handler:bool)
       (#a: Type)
       (guard: bool)
-      (then_: (squash (guard == true) -> action #base_t #len_t #pos_t extra_state a use_error_handler))
-      (else_: (squash (guard == false) -> action #base_t #len_t #pos_t extra_state a use_error_handler))
-: action #base_t #len_t #pos_t extra_state a use_error_handler
+      (#[@@@erasable] st: squash (guard == true) -> S.action_spec extra_state a)
+      (then_:(x_: squash (guard == true) -> action #base_t #len_t #pos_t extra_state a use_error_handler (st x_)))
+      (#[@@@erasable] se: squash (guard == false) -> S.action_spec extra_state a)
+      (else_:(x_: squash (guard == false) -> action #base_t #len_t #pos_t extra_state a use_error_handler (se x_)))
+: action #base_t #len_t #pos_t extra_state a use_error_handler (S.aspec_ite guard st se)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1694,11 +1983,12 @@ fn action_ite
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   if (guard) {
-    then_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
+    then_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
   } else {
-    else_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos
+    else_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _ start_pos _
   }
 }
 
@@ -1719,8 +2009,9 @@ fn validate_with_comment_no_read
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1750,8 +2041,9 @@ fn validate_with_comment
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1772,7 +2064,7 @@ fn validate_unit
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler (S.vspec_of_parser parse_unit)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1794,7 +2086,7 @@ fn validate_unit_refinement
       (cf: string)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler (S.vspec_of_parser (parse_filter parse_unit f))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1828,7 +2120,8 @@ fn validate_dep_pair
       (#[@@@erasable] extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (#nz2:_)
       (#wk2: _)
@@ -1836,13 +2129,14 @@ fn validate_dep_pair
       (#[@@@erasable] t2:t1 -> Type)
       (#[@@@erasable] p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: t1 -> S.vspec extra_state)
+      (v2:(x: t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_dep_pair` p2)
       extra_state
       (has_action1 || has_action2)
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair p1 s1 s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1876,22 +2170,25 @@ fn validate_dep_pair_with_action
       (#[@@@erasable] extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
-      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#[@@@erasable] sa: t1 -> S.action_spec extra_state bool)
+      (a:(x_: t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x_)))
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
       (#[@@@erasable] t2:t1 -> Type)
       (#[@@@erasable] p2:(x:t1 -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: t1 -> S.vspec extra_state)
+      (v2:(x: t1 -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_dep_pair` p2)
       extra_state
       true
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair_with_action p1 s1 sa s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -1908,7 +2205,7 @@ fn validate_dep_pair_with_action
   let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res_key = validator_success) {
     let val_key = r1 "" sl_base sl_len sl_pos _ _;
-    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
     if (res_action) {
       v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
     } else {
@@ -1931,7 +2228,8 @@ fn validate_dep_pair_with_refinement'
       (#[@@@erasable] extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
@@ -1941,13 +2239,14 @@ fn validate_dep_pair_with_refinement'
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
+      (v2:(x: refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       (has_action1 || has_action2)
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair_with_refinement_slow p1 s1 f None s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2001,13 +2300,14 @@ fn validate_dep_pair_with_refinement_total_zero_parser'
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
       (has_action1: bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
+      (v2:(x: refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       (has_action1 || has_action2)
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair_with_refinement_total_zero p1 f None s2)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2044,7 +2344,8 @@ let validate_dep_pair_with_refinement
       (#[@@@erasable] extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
       (r1: leaf_reader #base_t #len_t #pos_t p1)
       (f: t1 -> bool)
       (err: t1 -> constraint_error_code)
@@ -2054,13 +2355,14 @@ let validate_dep_pair_with_refinement
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+      (#[@@@erasable] s2: refine _ f -> S.vspec extra_state)
+      (v2:(x: refine _ f -> validate_with_action_read #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler (s2 x)))
   : validate_with_action_read
       #base_t #len_t #pos_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       (has_action1 || has_action2)
-      use_error_handler
+      use_error_handler (S.vspec_dep_pair_with_refinement_gen p1_is_constant_size_without_actions p1 s1 f None s2)
 = if
     (p1_is_constant_size_without_actions &&
      (k1.LP.parser_kind_high = Some 0) &&
@@ -2083,10 +2385,12 @@ fn validate_with_dep_action
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
       (r:leaf_reader #base_t #len_t #pos_t p)
-      (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
-  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler
+      (#[@@@erasable] sa: t -> S.action_spec extra_state bool)
+      (a:(x_: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler (sa x_)))
+  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_action p s sa)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2102,7 +2406,52 @@ fn validate_with_dep_action
   let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
   if (res = validator_success) {
     let [@@@rename_let ("" ^ camel_case name)] field_value = r name sl_base sl_len sl_pos _ _;
-    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
+    if (action_result) {
+      validator_success
+    } else {
+      validator_error_action_failed
+    }
+  } else {
+    res
+  }
+}
+
+inline_for_extraction noextract
+fn validate_with_dep_vaction
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
+      (name: string)
+      (#nz:_)
+      (#k:parser_kind nz WeakKindStrongPrefix)
+      (#t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+      (r:leaf_reader #base_t #len_t #pos_t p)
+      (#[@@@erasable] sa: t -> S.vaction_spec extra_state)
+      (a:(x_: t -> vaction #base_t #len_t #pos_t extra_state use_error_handler (sa x_)))
+  : validate_with_action_read #base_t #len_t #pos_t p extra_state true use_error_handler (S.vspec_with_dep_vaction p s sa)
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let [@@@rename_let ("fieldStart" ^ pascal_case name)] field_start = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  let mut [@@@rename_let ("offsetIn" ^ pascal_case name)] pos = inst.scan_zero;
+  let [@@@rename_let ("resultAfter" ^ pascal_case name)] res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  if (res = validator_success) {
+    let [@@@rename_let ("" ^ camel_case name)] field_value = r name sl_base sl_len sl_pos _ _;
+    let [@@@rename_let ("actionSuccess" ^ pascal_case name)] action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _ field_start _;
     if (action_result) {
       validator_success
     } else {
@@ -2140,7 +2489,7 @@ fn validate_total_constant_size_no_read
       ))
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t p extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state false use_error_handler (S.vspec_of_parser p)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2200,7 +2549,7 @@ let validate____UINT8
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler (S.vspec_of_parser parse____UINT8)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT8, i.e., 1 byte"
     (validate_total_constant_size_no_read name parse____UINT8 1sz ())
@@ -2221,7 +2570,7 @@ let validate____UINT8BE
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT8BE)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT8BE, i.e., 1 byte"
     (validate_total_constant_size_no_read name parse____UINT8BE 1sz ())
@@ -2242,7 +2591,7 @@ let validate____UINT16BE
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT16BE)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT16BE, i.e., 2 bytes"
     (validate_total_constant_size_no_read name parse____UINT16BE 2sz ())
@@ -2263,7 +2612,7 @@ let validate____UINT32BE
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT32BE)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT32BE, i.e., 4 bytes"
     (validate_total_constant_size_no_read name parse____UINT32BE 4sz ())
@@ -2284,7 +2633,7 @@ let validate____UINT64BE
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler (S.vspec_of_parser parse____UINT64BE)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT64BE, i.e., 8 bytes"
     (validate_total_constant_size_no_read name parse____UINT64BE 8sz ())
@@ -2305,7 +2654,7 @@ let validate____UINT16
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler (S.vspec_of_parser parse____UINT16)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT16, i.e., 2 bytes"
     (validate_total_constant_size_no_read name parse____UINT16 2sz ())
@@ -2326,7 +2675,7 @@ let validate____UINT32
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler (S.vspec_of_parser parse____UINT32)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT32, i.e., 4 bytes"
     (validate_total_constant_size_no_read name parse____UINT32 4sz ())
@@ -2347,7 +2696,7 @@ let validate____UINT64
   (name: string)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler (S.vspec_of_parser parse____UINT64)
 = validate_with_comment_no_read
     "Checking that we have enough space for a UINT64, i.e., 8 bytes"
     (validate_total_constant_size_no_read name parse____UINT64 8sz ())
@@ -2384,7 +2733,7 @@ fn validate_all_bytes
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler (S.vspec_of_parser parse_all_bytes)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2427,8 +2776,9 @@ fn validate_drop
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2486,7 +2836,7 @@ let validate_pair_total_constant_size
        (#[@@@erasable] extra_state: state_dict)
        (#use_error_handler:bool)
 : validate_with_action_no_read #base_t #len_t #pos_t
-    (p1 `parse_pair` p2) extra_state false use_error_handler
+    (p1 `parse_pair` p2) extra_state false use_error_handler (S.vspec_of_parser (p1 `parse_pair` p2))
 = validate_total_constant_size_no_read
     #base_t #len_t #pos_t
     name
@@ -2512,7 +2862,8 @@ let validate_pair
        (#[@@@erasable] extra_state: state_dict)
        (#has_action1:bool)
        (#use_error_handler:bool)
-       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+       (#[@@@erasable] s1: S.vspec extra_state)
+       (v1:validate_with_action_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler s1)
        (#nz2:_)
        (#wk2: _)
        (#k2:parser_kind nz2 wk2)
@@ -2520,13 +2871,14 @@ let validate_pair
        (#[@@@erasable] p2:parser k2 t2)
        (k2_const: bool)
        (#has_action2:bool)
-       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler)
+       (#[@@@erasable] s2: S.vspec extra_state)
+       (v2:validate_with_action_read #base_t #len_t #pos_t p2 extra_state has_action2 use_error_handler s2)
   : validate_with_action_read
       #base_t #len_t #pos_t
       (p1 `parse_pair` p2)
       extra_state
       (has_action1 || has_action2)
-      use_error_handler
+      use_error_handler (S.vspec_pair p1 k1_const has_action1 s1 p2 k2_const has_action2 s2)
 = if k1_const && k2_const &&
      (not has_action1) && (not has_action2) && // IMPORTANT: do not erase actions from v1, v2
      k1.LP.parser_kind_high = Some k1.LP.parser_kind_low &&
@@ -2553,8 +2905,9 @@ let validate_without_reading
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 = validate_drop v
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2568,7 +2921,7 @@ fn action_field_pos_64
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state U64.t use_error_handler
+: action #base_t #len_t #pos_t extra_state U64.t use_error_handler (S.aspec_field_pos_64)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2578,6 +2931,7 @@ fn action_field_pos_64
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   start_pos
 }
@@ -2590,7 +2944,7 @@ fn action_field_pos_32
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state U32.t use_error_handler
+: action #base_t #len_t #pos_t extra_state U32.t use_error_handler (S.aspec_field_pos_32)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2600,6 +2954,7 @@ fn action_field_pos_32
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   FStar.Int.Cast.uint64_to_uint32 start_pos
 }
@@ -2615,16 +2970,66 @@ fn action_field_pos_32
 // A backend that does not support an operation simply provides `None`.
 ////////////////////////////////////////////////////////////////////////////////
 
+assume val peep_world_ (w: S.peep_tape) : slprop
+
+let peep_world w = peep_world_ w
+
+assume val prophesy_peep_world_ (_: unit)
+: stt_ghost (Ghost.erased S.peep_tape) emp_inames emp (fun w -> peep_world w)
+
+let prophesy_peep_world () = prophesy_peep_world_ ()
+
+(* Not exported: only sound with a value that does not depend on the tape,
+   which `resolve_peep_world` enforces by being non-ghost. *)
+assume val resolve_peep_world_ (w: S.peep_tape) (o: option PM.ptr)
+: stt_ghost unit emp_inames
+    (peep_world w)
+    (fun _ -> peep_world (S.peep_tail w) ** pure (S.peep_head w == o))
+
+inline_for_extraction noextract
+fn resolve_peep_world
+  (ok: bool)
+  (r: ref PM.ptr)
+  (#v: Ghost.erased PM.ptr)
+  (#w: Ghost.erased S.peep_tape)
+requires pts_to r #1.0R v ** peep_world w
+ensures pts_to r #1.0R v ** peep_world (S.peep_tail w) **
+  pure (S.peep_head w == (if ok then Some (Ghost.reveal v) else None))
+{
+  resolve_peep_world_ w (if ok then Some (Ghost.reveal v) else None)
+}
+
+inline_for_extraction noextract
+fn resolve_peep_world_ptr
+  (ok: bool)
+  (p: PM.ptr)
+  (#w: Ghost.erased S.peep_tape)
+requires peep_world w
+ensures peep_world (S.peep_tail w) **
+  pure (S.peep_head w == (if ok then Some p else None))
+{
+  resolve_peep_world_ w (if ok then Some p else None)
+}
+
+ghost
+fn resolve_peep_world_none
+  (#w: Ghost.erased S.peep_tape)
+  (_: unit)
+requires peep_world w
+ensures peep_world (S.peep_tail w) ** pure (S.peep_head w == None)
+{
+  resolve_peep_world_ w None
+}
+
 noextract
 inline_for_extraction
 fn action_field_ptr
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#ptr_t: Type0)
-      (f: field_ptr_t base_t len_t pos_t ptr_t)
+      (f: field_ptr_t base_t len_t pos_t)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t extra_state ptr_t use_error_handler
+: action #base_t #len_t #pos_t extra_state PM.ptr use_error_handler S.aspec_field_ptr
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2634,6 +3039,7 @@ fn action_field_ptr
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   f sl_base sl_len sl_pos contents_sl v_sl start_pos
 }
@@ -2644,13 +3050,16 @@ fn action_field_ptr_after
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
-      (#ptr_t: Type0)
-      (f: field_ptr_after_t base_t len_t pos_t ptr_t)
+      (f: field_ptr_after_t base_t len_t pos_t)
       (name: Ghost.erased string)
       (sz: U64.t)
-      (write_to: ref ptr_t)
+      (write_to: ref PM.ptr)
+      (sq: squash (forall x . ~ ((state_dict_singleton name (pts_to write_to #1.0R)).state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler:bool)
-: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to write_to #1.0R)) bool use_error_handler
+: action #base_t #len_t #pos_t
+    (state_dict_prod (state_dict_singleton name (pts_to write_to #1.0R)) peep_world_dict)
+    bool use_error_handler
+    (S.aspec_field_ptr_after name (pts_to write_to #1.0R) peep_world sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2660,11 +3069,23 @@ fn action_field_ptr_after
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
-  forevery_state_dict_singleton_unfold' _ _ _;
+  forevery_state_dict_prod_unfold
+    #(state_dict_singleton name (pts_to write_to #1.0R))
+    #peep_world_dict
+    () _;
+  forevery_state_dict_singleton_unfold' name (pts_to write_to #1.0R) _;
+  forevery_state_dict_singleton_unfold' S.world_key peep_world _;
   with w . assert (pts_to write_to #1.0R w);
-  let res = f _extra sz write_to sl_base sl_len sl_pos w contents_sl v_sl;
-  forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) _;
+  with pw . assert (peep_world pw);
+  let res = f _extra sz write_to sl_base sl_len sl_pos w pw contents_sl v_sl;
+  forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) (S.peep_result (S.peep_head pw) w);
+  forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
+  forevery_state_dict_prod_fold
+    (state_dict_singleton name (pts_to write_to #1.0R))
+    peep_world_dict
+    ();
   res
 }
 
@@ -2689,14 +3110,14 @@ fn validate_list
       (#[@@@erasable] t:Type)
       (#[@@@erasable] p:parser k t)
       (#[@@@erasable] extra_state: state_dict)
-      (#ha:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler s)
 : validate_with_action_read
     #base_t #len_t #pos_t #inst
     #false #WeakKindConsumesAll
     #(LPL.parse_list_kind k.LP.parser_kind_injective)
-    (LPL.parse_list p) extra_state ha use_error_handler
+    (LPL.parse_list p) extra_state false use_error_handler (S.vspec_of_parser #extra_state #false #WeakKindConsumesAll #(LPL.parse_list_kind k.LP.parser_kind_injective) (LPL.parse_list p))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2723,8 +3144,8 @@ fn validate_list
     forevery_state extra_state extra' **
     pure (
       vcur `I.seq_is_suffix_of` v_sl /\
-      (vres == validator_error_action_failed ==> ha) /\
-      (not ha ==> extra' == extra) /\
+      ~ (vres == validator_error_action_failed) /\
+      extra' == extra /\
       (is_validation_error vres ==> None? (LP.parse (LPL.parse_list p) v_sl)) /\
       (vres =!= validator_success ==> vstop == true) /\
       (vres == validator_success ==>
@@ -2767,7 +3188,7 @@ let validate_all_zeros
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
   (#[@@@erasable] extra_state: state_dict)
   (#use_error_handler:bool)
-: validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler (S.vspec_of_parser parse_all_zeros)
 = validate_list
     (validate_filter "parse_zeros" (validate____UINT8 "") read____UINT8 is_zero (fun _ -> validator_error_constraint_failed) "check if zero" "")
 
@@ -2847,6 +3268,62 @@ let list_up_to_step
   | Some ((y, z), consumed') ->
     assert (LP.parse q vcur == Some ((x :: y, z), len + consumed'))
 
+(* The invariant of the loop of `validate_list_up_to` with respect to its spec,
+   as in `list_fold_reaches`. *)
+let string_fold_reaches
+  (#d: state_dict) (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (vcur: Seq.seq LP.byte) (x: forevery_values d)
+: Tot prop
+= S.vspec_string_fold p terminator s o contents v1 x0 == S.vspec_string_fold p terminator s o contents vcur x
+
+let string_fold_ended
+  (#d: state_dict) (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (x: forevery_values d)
+: Tot prop
+= S.vspec_string_fold p terminator s o contents v1 x0 == S.VOk x
+
+let string_fold_step
+  (ha: bool)
+  (#d: state_dict) (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (vcur: Seq.seq LP.byte) (x: forevery_values d)
+  (r: U8.t) (x': forevery_values d) (vcur': Seq.seq LP.byte) (y: t)
+: Lemma
+  (requires (ha ==> (
+    string_fold_reaches p terminator s o contents v1 x0 vcur x /\
+    S.vres_rel (s (vinput_no_read o contents vcur 0) x) r x' /\
+    (r == validator_success ==> (
+      match LP.parse p vcur with
+      | None -> False
+      | Some (z, len) -> y == z /\ vcur' == Seq.slice vcur len (Seq.length vcur)))
+  )))
+  (ensures (ha ==> (
+    (r == validator_success ==> (
+      if y = terminator
+      then string_fold_ended p terminator s o contents v1 x0 x'
+      else string_fold_reaches p terminator s o contents v1 x0 vcur' x')) /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s o contents v1 x0)))
+  )))
+= LP.parser_kind_prop_equiv k p;
+  Seq.lemma_eq_elim (Seq.slice vcur 0 (Seq.length vcur)) vcur
+
+let string_fold_done
+  (#d: state_dict) (ha: bool)
+  (#nzq: bool) (#wkq: _) (#kq: parser_kind nzq wkq) (#tq: Type) (q: parser kq tq)
+  (#k: parser_kind true WeakKindStrongPrefix) (#t: eqtype) (p: parser k t)
+  (terminator: t) (s: S.vspec d) (o: PM.ptr) (contents v1: Seq.seq LP.byte) (x0: forevery_values d)
+  (x: forevery_values d) (r: U8.t)
+: Lemma
+  (requires (
+    ha ==> (
+    (r == validator_success ==> string_fold_ended p terminator s o contents v1 x0 x) /\
+    (~ (r == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s o contents v1 x0))))
+  ))
+  (ensures (ha ==> S.vres_rel (S.vspec_string_gen ha q p terminator s (vinput_read o contents v1) x0) r x))
+= ()
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction noextract
@@ -2859,7 +3336,8 @@ fn validate_list_up_to
       (#[@@@erasable] extra_state: state_dict)
       (#ha:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
       ([@@@erasable] prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
@@ -2868,7 +3346,7 @@ fn validate_list_up_to
     #true #WeakKindStrongPrefix
     #(LUT.parse_list_up_to_kind k)
     (LUT.parse_list_up_to (cond_string_up_to terminator) p prf)
-    extra_state ha use_error_handler
+    extra_state ha use_error_handler (S.vspec_string_gen ha #true #WeakKindStrongPrefix #(LUT.parse_list_up_to_kind k) (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) p terminator s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -2905,6 +3383,10 @@ fn validate_list_up_to
         (if vstop
          then list_up_to_done (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur
          else list_up_to_ongoing (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur)) /\
+      (ha ==> (
+        (vres == validator_success /\ vstop == false ==> string_fold_reaches p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra') /\
+        (vres == validator_success /\ vstop == true ==> string_fold_ended p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra extra') /\
+        (~ (vres == validator_success) ==> ~ (S.VOk? (S.vspec_string_fold p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra))))) /\
       Ghost.reveal vmeasure == Seq.length vcur // fstar2 only
     )
     decreases %[(if !stop then 0 else 1); (Ghost.reveal (!pmeasure))] // fstar2 only
@@ -2914,9 +3396,11 @@ fn validate_list_up_to
     LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf vcur;
     pos := inst.scan_zero;
     let r0 = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra' contents_sl vcur inst.scan_zero;
+    with extra''. assert (forevery_state extra_state extra'');
     if (r0 = validator_success) {
       let x = r "ListElement" sl_base sl_len sl_pos contents_sl vcur;
       with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
+      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra' r0 extra'' vcur' x;
       pmeasure := Ghost.hide (Seq.length vcur'); // fstar2 only
       leaf_read_is_suffix_of p v_sl vcur vcur';
       list_up_to_step (cond_string_up_to terminator) p prf v_sl vcur vcur' x;
@@ -2926,12 +3410,15 @@ fn validate_list_up_to
         ()
       }
     } else {
+      string_fold_step ha p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra vcur extra' r0 extra'' vcur terminator;
       res := r0;
       stop := true;
     }
   };
   let fres = !res;
   with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+  with extra'. assert (forevery_state extra_state extra');
+  string_fold_done ha #true #WeakKindStrongPrefix #(LUT.parse_list_up_to_kind k) (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) p terminator s (I.origin #base_t #len_t #pos_t sl_base) contents_sl v_sl extra extra' fres;
   Seq.lemma_eq_elim vcur (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl - Seq.length vcur) (Seq.length v_sl));
   fres
 }
@@ -2970,10 +3457,11 @@ fn validate_string
       (#[@@@erasable] extra_state: state_dict)
       (#ha:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (r: leaf_reader #base_t #len_t #pos_t p)
       (terminator: t)
-: validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler
+: validate_with_action_read #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler (S.vspec_string ha p terminator s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3013,7 +3501,7 @@ let validate_nlist_total_constant_size_mod_ok
       ))
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_of_parser (parse_nlist n n_is_const p))
 = [@inline_let] let _ = parse_nlist_total_fixed_size_kind_correct n n_is_const p in
   [@inline_let]
   let k' : parser_kind false WeakKindStrongPrefix =
@@ -3023,14 +3511,17 @@ let validate_nlist_total_constant_size_mod_ok
   let p' : parser k' (nlist n t) =
     LP.strengthen k' (parse_nlist n n_is_const p)
   in
-  validate_total_constant_size_no_read
+  validate_with_action_no_read_ext
+    (S.vspec_of_parser (parse_nlist n n_is_const p))
+    (validate_total_constant_size_no_read
     #base_t #len_t #pos_t
     ""
     p'
     (SZ.uint32_to_sizet n)
     ()
     #extra_state
-    #use_error_handler
+    #use_error_handler)
+    ()
 
 (* If [n] is not a multiple of the (constant) size of the payload, then no
    list of payloads can span exactly [n] bytes, so the parser always fails. *)
@@ -3080,7 +3571,7 @@ fn validate_nlist_constant_size_mod_ko
       ))
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_of_parser (parse_nlist n n_is_const p))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3119,7 +3610,7 @@ fn validate_nlist_total_constant_size'
       ))
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_of_parser (parse_nlist n n_is_const p))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3162,7 +3653,7 @@ let validate_nlist_total_constant_size
       ))
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_of_parser (parse_nlist n n_is_const p))
 = if
     (if k.LP.parser_kind_low = 1
      then true
@@ -3194,8 +3685,9 @@ let validate_nlist_constant_size_without_actions
       (#[@@@erasable] p:parser k t)
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler)
-: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state false use_error_handler s)
+: validate_with_action_read #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler (S.vspec_nlist false n n_is_const p s)
 = if payload_is_constant_size
   then begin
     if
@@ -3211,22 +3703,46 @@ let validate_nlist_constant_size_without_actions
   else
     validate_nlist n n_is_const v
 
+(* The probe world (see the interface) *)
+
+assume val probe_world_ (w: S.probe_tape) : slprop
+
+let probe_world w = probe_world_ w
+
+assume val prophesy_probe_world_ (_: unit)
+: stt_ghost (Ghost.erased S.probe_tape) emp_inames emp (fun w -> probe_world w)
+
+let prophesy_probe_world () = prophesy_probe_world_ ()
+
+(* Resolving the next outcome of the probe world. This is deliberately not
+   exported: it is only sound if called at most once per outcome, with an
+   outcome determined by the actual run of a probe. *)
+assume val resolve_probe_world (w: S.probe_tape) (o: S.probe_outcome)
+: stt_ghost unit emp_inames
+    (probe_world w)
+    (fun _ -> probe_world (S.ptape_tail w) ** pure (S.ptape_head w == o))
+
 ////////////////////////////////////////////////////////////////////////////////
 // Generic external actions
 ////////////////////////////////////////////////////////////////////////////////
 
 (* In Low*, an external action was indexed by the set of memory locations it may
-   modify. Here it is indexed by the state dictionary entries it may modify. *)
+   modify. Here it is indexed by the state dictionary entry it may modify, and
+   by its functional spec (see `external_action_spec`.) *)
 
 inline_for_extraction noextract
-fn mk_external_action
+fn mk_external_action_spec
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
-      (#[@@@erasable] extra_state: state_dict)
+      (#vt: Type0)
+      (#name: string)
+      (#state: vt -> slprop)
       (#a: Type0)
-      (f: external_action extra_state a)
+      (#spec: vt -> Tot (a & vt))
+      (f: external_action_spec name state a spec)
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state a use_error_handler
+: action #base_t #len_t #pos_t (state_dict_singleton name state) a use_error_handler
+    (S.aspec_extern name state spec)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3236,8 +3752,13 @@ fn mk_external_action
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
-  f ()
+  forevery_state_dict_singleton_unfold' name state _;
+  with w . assert (state w);
+  let res = f () #w;
+  forevery_state_dict_singleton_fold name state (snd (spec w));
+  res
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3249,13 +3770,17 @@ fn action_field_ptr_after_with_setter
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   (#[EverParse3d.Util.solve_from_ctx ()] _extra: inst.extra_t)
-      (#[@@@erasable] extra_state: state_dict)
-      (#ptr_t: Type0)
-      (f: field_ptr_after_setter_t base_t len_t pos_t extra_state ptr_t)
+      (#vt: Type0)
+      (#name: string)
+      (#state: vt -> slprop)
+      (#sp: PM.ptr -> vt -> Tot (unit & vt))
+      (f: field_ptr_after_setter_t base_t len_t pos_t name state sp)
       (sz: U64.t)
-      (write_to: (ptr_t -> external_action extra_state unit))
+      (write_to: (p: PM.ptr -> external_action_spec name state unit (sp p)))
+      (sq: squash (forall x . ~ ((state_dict_singleton name state).state_p x /\ peep_world_dict.state_p x)))
       (#use_error_handler: bool)
-: action #base_t #len_t #pos_t extra_state bool use_error_handler
+: action #base_t #len_t #pos_t (state_dict_prod (state_dict_singleton name state) peep_world_dict) bool use_error_handler
+    (S.aspec_field_ptr_after_with_setter name state sp peep_world sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3265,8 +3790,18 @@ fn action_field_ptr_after_with_setter
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
-  f _extra sz write_to sl_base sl_len sl_pos contents_sl v_sl
+  forevery_state_dict_prod_unfold #(state_dict_singleton name state) #peep_world_dict () _;
+  forevery_state_dict_singleton_unfold' S.world_key peep_world _;
+  forevery_state_dict_singleton_unfold' name state _;
+  with pw . assert (peep_world pw);
+  with w . assert (state w);
+  let res = f _extra sz write_to sl_base sl_len sl_pos pw w contents_sl v_sl;
+  forevery_state_dict_singleton_fold S.world_key peep_world (S.peep_tail pw);
+  forevery_state_dict_singleton_fold name state (S.setter_peep_result sp (S.peep_head pw) w);
+  forevery_state_dict_prod_fold (state_dict_singleton name state) peep_world_dict ();
+  res
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3282,8 +3817,20 @@ fn action_field_ptr_after_with_setter
 #push-options "--z3rlimit 32"
 
 noextract
-let probe_validation_frame (d: state_dict) (ctxt: app_ctxt) =
-  exists* vc extra. pts_to ctxt vc ** forevery_state d extra
+let probe_validation_pre (d: state_dict) (ctxt: app_ctxt) (extra: forevery_values d) (w: S.probe_tape) =
+  (exists* vc. pts_to ctxt vc) ** forevery_state d extra ** probe_world w
+
+noextract
+let probe_validation_post
+  (d: state_dict) (ctxt: app_ctxt) (s: S.vspec d) (extra: forevery_values d)
+  (w: S.probe_tape) (src: U64.t) (cd: Seq.seq U8.t) (res: U8.t)
+= exists* vc extra'. pts_to ctxt vc ** forevery_state d extra' ** probe_world (S.ptape_tail w) **
+    pure (
+      (S.ptape_head w).S.p_src == src /\
+      (S.ptape_head w).S.p_ok == true /\
+      (S.ptape_head w).S.p_bytes == cd /\
+      S.vres_rel (s (S.probe_vinput (S.ptape_head w)) extra) res extra'
+    )
 
 inline_for_extraction noextract
 fn probe_then_validate
@@ -3304,7 +3851,8 @@ fn probe_then_validate
       (#[@@@erasable] extra_state: state_dict)
       (#ha: bool)
       (#use_error_handler: bool)
-      (v: validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_read #base_t #len_t #pos_t p extra_state ha use_error_handler s)
       (#ptr_t: Type0)
       (src: ptr_t)
       (as_u64: (ptr_t -> PA.pure_external_action U64.t))
@@ -3318,10 +3866,10 @@ fn probe_then_validate
       ([@@@erasable] sq: squash (forall x .
         ~ (extra_state.state_p x /\
            (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest).state_p x)))
-: action #base_t #len_t #pos_t
+: vaction #base_t #len_t #pos_t
     (state_dict_prod extra_state (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest))
-    bool
     use_error_handler
+    (S.vaspec_probe_then_validate s nullable dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) sq)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3331,6 +3879,7 @@ fn probe_then_validate
   (contents_sl: _)
   (v_sl: _)
   (start_pos: _)
+  (extra: _)
 {
   forevery_state_dict_prod_unfold
     #extra_state
@@ -3338,14 +3887,13 @@ fn probe_then_validate
     () _;
   forevery_state_dict_singleton_unfold' dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) _;
   with w . assert (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
-  rewrite (copy_buffer_state #_ #base_t #len_t #pos_t dest w)
-    as (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w));
+  unfold (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
   let src64 = as_u64 src ();
   if (nullable && src64 = 0uL) {
     // a null pointer is accepted without probing
-    rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest (fst w) (snd w))
-      as (copy_buffer_state #_ #base_t #len_t #pos_t dest w);
-    forevery_state_dict_singleton_fold dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) w;
+    resolve_probe_world w ({ S.p_src = src64; S.p_ok = true; S.p_bytes = Seq.empty; S.p_origin = I.origin #base_t #len_t #pos_t sl_base });
+    fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
+    forevery_state_dict_singleton_fold dest_name (copy_buffer_state #_ #base_t #len_t #pos_t dest) (S.ptape_tail w);
     forevery_state_dict_prod_fold
       extra_state
       (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
@@ -3358,42 +3906,40 @@ fn probe_then_validate
     if (b <> 0uL) {
       unfold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd);
       rewrite (cb_inst.storage dest cd vd) as (cb_inst.storage dest cd cd);
+      with ex . assert (forevery_state extra_state ex);
       fn body (base: base_t) (len: len_t) (pos: pos_t)
-      requires I.pts_to base len pos cd cd ** probe_validation_frame extra_state ctxt
+      requires I.pts_to base len pos cd cd ** probe_validation_pre extra_state ctxt ex w
       returns res: U8.t
-      ensures exists* vd'. I.pts_to base len pos cd vd' ** probe_validation_frame extra_state ctxt
+      ensures exists* vd'. I.pts_to base len pos cd vd' ** probe_validation_post extra_state ctxt s ex w src64 cd res
       {
-        unfold (probe_validation_frame extra_state ctxt);
-        with extra. assert (forevery_state extra_state extra);
-        let res = v ctxt error_handler_fn base len pos extra cd cd;
-        fold (probe_validation_frame extra_state ctxt);
+        unfold (probe_validation_pre extra_state ctxt ex w);
+        let res = v ctxt error_handler_fn base len pos ex cd cd;
+        resolve_probe_world w ({ S.p_src = src64; S.p_ok = true; S.p_bytes = Ghost.reveal cd; S.p_origin = I.origin #base_t #len_t #pos_t base });
+        fold (probe_validation_post extra_state ctxt s ex w src64 cd res);
         res
       };
-      fold (probe_validation_frame extra_state ctxt);
+      fold (probe_validation_pre extra_state ctxt ex w);
       // Apply the class method directly so extraction eliminates the callback.
-      let res = CP.with_view U8.t dest cd (probe_validation_frame extra_state ctxt)
-        (fun _ _ -> probe_validation_frame extra_state ctxt) body;
+      let res = CP.with_view U8.t dest cd (probe_validation_pre extra_state ctxt ex w)
+        (fun res _ -> probe_validation_post extra_state ctxt s ex w src64 cd res) body;
       with vd' . assert (cb_inst.storage dest cd vd');
-      unfold (probe_validation_frame extra_state ctxt);
+      unfold (probe_validation_post extra_state ctxt s ex w src64 cd res);
       fold (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd');
-      rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd')
-        as (copy_buffer_state #_ #base_t #len_t #pos_t dest
-              (Ghost.reveal cd, Ghost.reveal vd'));
+      fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
       forevery_state_dict_singleton_fold dest_name
         (copy_buffer_state #_ #base_t #len_t #pos_t dest)
-        (Ghost.reveal cd, Ghost.reveal vd');
+        (S.ptape_tail w);
       forevery_state_dict_prod_fold
         extra_state
         (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
         ();
       res = validator_success
     } else {
-      rewrite (CP.pts_to #_ #base_t #len_t #pos_t dest cd vd)
-        as (copy_buffer_state #_ #base_t #len_t #pos_t dest
-              (Ghost.reveal cd, Ghost.reveal vd));
+      resolve_probe_world w ({ S.p_src = src64; S.p_ok = false; S.p_bytes = Ghost.reveal cd; S.p_origin = I.origin #base_t #len_t #pos_t sl_base });
+      fold (copy_buffer_state #_ #base_t #len_t #pos_t dest (S.ptape_tail w));
       forevery_state_dict_singleton_fold dest_name
         (copy_buffer_state #_ #base_t #len_t #pos_t dest)
-        (Ghost.reveal cd, Ghost.reveal vd);
+        (S.ptape_tail w);
       forevery_state_dict_prod_fold
         extra_state
         (copy_buffer_state_dict #_ #base_t #len_t #pos_t dest_name dest)
@@ -3422,7 +3968,7 @@ fn validate_impos_no_read
        (#[@@@erasable] extra_state: _)
        (#use_error_handler:bool)
        (_:unit)
-: validate_with_action_no_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t (parse_impos ()) extra_state false use_error_handler (S.vspec_of_parser (parse_impos ()))
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3450,8 +3996,9 @@ fn validate_eta_no_read
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler
+      (#[@@@erasable] s: S.vspec extra_state)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler s)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler (s)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3482,8 +4029,9 @@ fn validate_with_error_handler_no_read
       (#[@@@erasable] extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (v1: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler)
-: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler
+      (#[@@@erasable] s1: S.vspec extra_state)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler s1)
+: validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action use_error_handler (s1)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3519,7 +4067,7 @@ fn validate_unit_no_read
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
       (#[@@@erasable] extra_state: state_dict)
       (#use_error_handler:bool)
-: validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t parse_unit extra_state false use_error_handler (S.vspec_of_parser parse_unit)
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -3551,10 +4099,11 @@ fn validate_weaken_no_read
        (#[@@@erasable] d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read #base_t #len_t #pos_t p d1 has_action use_error_handler)
+       (#[@@@erasable] s: S.vspec d1)
+       (v:validate_with_action_no_read #base_t #len_t #pos_t p d1 has_action use_error_handler s)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: validate_with_action_no_read #base_t #len_t #pos_t p d2 has_action use_error_handler
+: validate_with_action_no_read #base_t #len_t #pos_t p d2 has_action use_error_handler (S.vspec_weaken s d2 d2_extends)
 =
   (ctxt: _)
   (error_handler_fn: _)

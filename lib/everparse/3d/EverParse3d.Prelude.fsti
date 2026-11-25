@@ -57,6 +57,11 @@ inline_for_extraction
 noextract
 val parser (#nz:bool) (#wk: weak_kind) (k:parser_kind nz wk) (t:Type u#r) : Type u#r
 
+(* The specification of a parser, as a ghost function on bytes. *)
+val parse (#nz:bool) (#wk: weak_kind) (#k:parser_kind nz wk) (#t:Type u#r) (p:parser k t)
+  (b: FStar.Seq.seq FStar.UInt8.t)
+  : GTot (option (t & (n: nat { n <= FStar.Seq.length b })))
+
 inline_for_extraction noextract
 val parse_ret (#t:Type) (v:t)
   : Tot (parser ret_kind t)

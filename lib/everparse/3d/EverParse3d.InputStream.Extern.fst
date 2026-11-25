@@ -604,7 +604,8 @@ ensures exists* contents' v1 v2 .
     Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
     Seq.length v <= Seq.length contents /\
     Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
-    Ghost.reveal v == Seq.append v1 v2
+    Ghost.reveal v == Seq.append v1 v2 /\
+    I.origin #base_t #len_t #pos_t #pts_to_inst (stream_trunc_base base len pos res) == I.origin #base_t #len_t #pos_t #pts_to_inst base
   )
 {
   unfold (stream_pts_to base len pos contents v);
@@ -697,6 +698,7 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 module AP = Pulse.Lib.ArrayPtr
 module R = Pulse.Lib.Reference
 module AB = EverParse3d.Actions.Base
+module AS = EverParse3d.Actions.Spec
 open EverParse3d.State
 
 [@@FStar.Attributes.rename_let "EVERPARSE____PUINT8"; FStar.Attributes.custard_no_unfold]
@@ -731,11 +733,13 @@ fn field_ptr_after_unchecked
   (sl_len: len_t)
   (sl_pos: pos_t)
   (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** AB.peep_world pw
 returns res: bool
-ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (AS.peep_head pw == (if res then Some w' else None))
 {
   rewrite (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
        as (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
@@ -744,7 +748,10 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
   fold (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
   rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
        as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  B.to_bool res
+  let ok = B.to_bool res;
+  // The peep world records what the client primitive did.
+  AB.resolve_peep_world ok w;
+  ok
 }
 
 (* The client's Peep answers for the whole stream, so inside a truncated view
@@ -760,11 +767,13 @@ fn field_ptr_after_wrapped
   (sl_len: len_t)
   (sl_pos: pos_t)
   (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** AB.peep_world pw
 returns res: bool
-ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (AS.peep_head pw == (if res then Some w' else None))
 {
   if bounded sl_len {
     rewrite (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
@@ -773,36 +782,63 @@ ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos conte
     rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
          as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
     if FStar.UInt64.lte sz (SZ.sizet_to_uint64 rem) {
-      field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+      field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
     } else {
+      AB.resolve_peep_world_none ();
       false
     }
   } else {
-    field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+    field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
+  }
+}
+
+(* The client's callback may write anything to its output pointer, even when
+   it fails. So it writes to a local, copied to the destination only on
+   success: the destination is then unchanged if `field_ptr_after` fails. *)
+inline_for_extraction
+noextract
+fn field_ptr_after_via_local
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (sz: FStar.UInt64.t)
+  (w: R.ref ___PUINT8)
+  (sl_base: base_t)
+  (sl_len: len_t)
+  (sl_pos: pos_t)
+  (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
+  (contents_sl: Ghost.erased (Seq.seq U8.t))
+  (v_sl: Ghost.erased (Seq.seq U8.t))
+requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl ** AB.peep_world pw
+returns res: bool
+ensures R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0) ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (res == Some? (AS.peep_head pw))
+{
+  let mut tmp = NP.null_ptr;
+  let ok = field_ptr_after_wrapped sz tmp sl_base sl_len sl_pos _ pw contents_sl v_sl;
+  if ok {
+    let q = !tmp;
+    w := q;
+    rewrite (R.pts_to w #1.0R q) as (R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0));
+    true
+  } else {
+    rewrite (R.pts_to w #1.0R w0) as (R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0));
+    false
   }
 }
 
 noextract
 inline_for_extraction
 let field_ptr_after_fn
-: AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8
-= fun _extra sz w sl_base sl_len (sl_pos: pos_t) w0 contents_sl v_sl ->
-    field_ptr_after_wrapped #_extra sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+: AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern
+= fun _extra sz w sl_base sl_len (sl_pos: pos_t) w0 pw contents_sl v_sl ->
+    field_ptr_after_via_local #_extra sz w sl_base sl_len sl_pos w0 pw contents_sl v_sl
 
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
 let field_ptr_after
-: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8)
+: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern)
 = Some field_ptr_after_fn
-
-(* An opaque alias for the state-dictionary invariant. It is a plain (hence
-   delta-reducible) definition, so that it is convertible with the `exists*`
-   that `field_ptr_after_setter_t` expects, while being opaque enough that
-   Pulse does not lift the existential into an implicit binder of the `fn`
-   below. *)
-let all_states (d: state_dict) : slprop =
-  exists* (extra: forevery_values d) . forevery_state d extra
 
 (* `noextract` as well as `inline_for_extraction`: its only caller,
    `field_ptr_after_with_setter` below, is itself noextract and inlined into
@@ -811,32 +847,40 @@ let all_states (d: state_dict) : slprop =
 noextract
 inline_for_extraction
 fn field_ptr_after_with_setter_impl
-  (#extra_state: state_dict)
+  (#vt: Type0)
+  (#name: string)
+  (#state: vt -> slprop)
+  (#sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
   (_extra: extra_t)
   (sz: FStar.UInt64.t)
-  (write_to: (___PUINT8 -> AB.external_action extra_state unit))
+  (write_to: (p: EverParse3d.PtrModel.ptr -> AB.external_action_spec name state unit (sp p)))
   (sl_base: base_t)
   (sl_len: len_t)
   (sl_pos: pos_t)
+  (pw: Ghost.erased AS.peep_tape)
+  (ws: Ghost.erased vt)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
 requires
   I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-  all_states extra_state
+  state ws **
+  AB.peep_world pw
 returns res: bool
 ensures
   I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-  all_states extra_state
+  state (AS.setter_peep_result sp (AS.peep_head pw) ws) **
+  AB.peep_world (AS.peep_tail pw) **
+  pure (res == Some? (AS.peep_head pw))
 {
   let mut w = NP.null_ptr;
-  let ok = field_ptr_after_wrapped sz w sl_base sl_len sl_pos _ contents_sl v_sl;
+  let ok = field_ptr_after_wrapped sz w sl_base sl_len sl_pos _ pw contents_sl v_sl;
   if ok {
     let q = !w;
-    unfold (all_states extra_state);
-    write_to q ();
-    fold (all_states extra_state);
+    write_to q () #ws;
+    rewrite (state (snd (sp q ws))) as (state (AS.setter_peep_result sp (AS.peep_head pw) ws));
     true
   } else {
+    rewrite (state ws) as (state (AS.setter_peep_result sp (AS.peep_head pw) ws));
     false
   }
 }
@@ -844,6 +888,8 @@ ensures
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
-let field_ptr_after_with_setter (extra_state: state_dict)
-: option (AB.field_ptr_after_setter_t base_t len_t pos_t #input_stream_extern extra_state ___PUINT8)
-= Some (field_ptr_after_with_setter_impl #extra_state)
+let field_ptr_after_with_setter
+  (vt: Type0) (name: string) (state: vt -> slprop)
+  (sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
+: option (AB.field_ptr_after_setter_t base_t len_t pos_t #input_stream_extern name state sp)
+= Some (field_ptr_after_with_setter_impl #vt #name #state #sp)
