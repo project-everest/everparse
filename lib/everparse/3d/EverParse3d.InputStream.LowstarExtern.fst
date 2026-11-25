@@ -105,7 +105,7 @@ ensures stream_pts_to b len pos c v ** pure (
   let count = I.native_scan_to_u64 n;
   // Check overflow even for out-of-range speculative offsets. No wrapping
   // arithmetic or truncated SizeT count is passed to EverParseHas.
-  if U64.lte off (U64.sub 18446744073709551615UL count) {
+  if U64.lte off (U64.sub EverParse3d.CAbi.StdInt.uint64_max count) {
     stream_has_u64 b len pos (U64.add off count) c v
   } else {
     stream_pts_to_is_suffix_of b len pos c v;

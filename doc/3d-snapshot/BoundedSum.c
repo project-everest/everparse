@@ -105,7 +105,7 @@ uint64_t BoundedSumValidateBoundedSum(uint32_t bound, uint8_t *ctxt, EVERPARSE_E
   size_t cursor = initial;
   uint8_t status = BoundedSumValidateBoundedSumCore(bound, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t BoundedSumValidateMySumCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -170,7 +170,7 @@ uint64_t BoundedSumValidateMySum(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler,
   size_t cursor = initial;
   uint8_t status = BoundedSumValidateMySumCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 

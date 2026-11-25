@@ -113,7 +113,7 @@ uint64_t ReadPairValidatePair(uint32_t *x, uint32_t *y, uint8_t *ctxt, EVERPARSE
   size_t cursor = initial;
   uint8_t status = ReadPairValidatePairCore(x, y, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 

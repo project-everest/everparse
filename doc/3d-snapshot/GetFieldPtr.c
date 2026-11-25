@@ -123,7 +123,7 @@ uint64_t GetFieldPtrValidateT(uint8_t **out, uint8_t *ctxt, EVERPARSE_ERROR_HAND
   size_t cursor = initial;
   uint8_t status = GetFieldPtrValidateTCore(out, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t GetFieldPtrValidateTactCore(uint8_t **out, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -246,7 +246,7 @@ uint64_t GetFieldPtrValidateTact(uint8_t **out, uint8_t *ctxt, EVERPARSE_ERROR_H
   size_t cursor = initial;
   uint8_t status = GetFieldPtrValidateTactCore(out, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 

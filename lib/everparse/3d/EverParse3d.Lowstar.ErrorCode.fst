@@ -4,6 +4,7 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module C = FStar.Int.Cast.Full
 module E = EverParse3d.ErrorCode
+module P = EverParse3d.Lowstar.Public
 
 let position_limit = 1152921504606846976
 
@@ -27,4 +28,4 @@ let pack (status: U8.t) (position: U64.t { U64.v position < position_limit })
   : Tot (r: U64.t {
       U64.v r == U64.v (legacy_kind status) * position_limit + U64.v position
     })
-  = U64.add (U64.mul (legacy_kind status) 1152921504606846976UL) position
+  = U64.add (U64.mul (legacy_kind status) P.validator_error_generic) position

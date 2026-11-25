@@ -559,7 +559,7 @@ inline_for_extraction
 let check_overflow_add (x:U64.t) (y:U64.t)
 : bool
 = let open U64 in
-  x <=^ (0xffffffffffffffffuL -^ y)
+  x <=^ (EverParse3d.CAbi.StdInt.uint64_max -^ y)
 
 inline_for_extraction
 noextract

@@ -50,7 +50,7 @@ uint64_t Triangle2ValidateTriangle(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handle
   size_t cursor = initial;
   uint8_t status = Triangle2ValidateTriangleCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 

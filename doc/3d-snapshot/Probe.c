@@ -254,7 +254,7 @@ uint64_t ProbeValidateS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVERPARSE_E
   size_t cursor = initial;
   uint8_t status = ProbeValidateSCore(dest, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateUCore(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -401,7 +401,7 @@ uint64_t ProbeValidateU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T d
   size_t cursor = initial;
   uint8_t status = ProbeValidateUCore(destS, destT, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateVCore(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -728,7 +728,7 @@ uint64_t ProbeValidateV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T d
   size_t cursor = initial;
   uint8_t status = ProbeValidateVCore(destS, destT, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateIndirectCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -778,7 +778,7 @@ uint64_t ProbeValidateIndirect(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, u
   size_t cursor = initial;
   uint8_t status = ProbeValidateIndirectCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static inline uint8_t ProbeValidateTtCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -918,7 +918,7 @@ uint64_t ProbeValidateI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVERPARSE_E
   size_t cursor = initial;
   uint8_t status = ProbeValidateICore(dest, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateMultiProbeCore(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1254,7 +1254,7 @@ uint64_t ProbeValidateMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_
   size_t cursor = initial;
   uint8_t status = ProbeValidateMultiProbeCore(destT1, destT2, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateMaybeTCore(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1400,7 +1400,7 @@ uint64_t ProbeValidateMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVERPA
   size_t cursor = initial;
   uint8_t status = ProbeValidateMaybeTCore(dest, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateCoercePtrCore(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1542,7 +1542,7 @@ uint64_t ProbeValidateCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *ctxt, EVE
   size_t cursor = initial;
   uint8_t status = ProbeValidateCoercePtrCore(dest, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateProbeOnlyCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1592,7 +1592,7 @@ uint64_t ProbeValidateProbeOnly(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, 
   size_t cursor = initial;
   uint8_t status = ProbeValidateProbeOnlyCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateBothEntrypointsCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1642,7 +1642,7 @@ uint64_t ProbeValidateBothEntrypoints(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER han
   size_t cursor = initial;
   uint8_t status = ProbeValidateBothEntrypointsCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateNamedPlainEpCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1692,7 +1692,7 @@ uint64_t ProbeValidateNamedPlainEp(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handle
   size_t cursor = initial;
   uint8_t status = ProbeValidateNamedPlainEpCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateNamedProbeEpCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1742,7 +1742,7 @@ uint64_t ProbeValidateNamedProbeEp(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handle
   size_t cursor = initial;
   uint8_t status = ProbeValidateNamedProbeEpCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static uint8_t ProbeValidateNamedBothEpCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
@@ -1792,7 +1792,7 @@ uint64_t ProbeValidateNamedBothEp(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler
   size_t cursor = initial;
   uint8_t status = ProbeValidateNamedBothEpCore(ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 

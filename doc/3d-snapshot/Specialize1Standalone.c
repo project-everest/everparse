@@ -43,7 +43,7 @@ static void Specialize1standaloneSkipBytesWrite(uint64_t numbytes, const char * 
   (void)sz;
   (void)dest;
   uint64_t wr = writeOffset[0];
-  if (wr <= (0xffffffffffffffffULL - numbytes)) {
+  if (wr <= ((UINT64_MAX) - numbytes)) {
     writeOffset[0] = (wr + numbytes);
   }
   else {
@@ -824,7 +824,7 @@ uint64_t Specialize1standaloneValidateR(BOOLEAN requestor32, EVERPARSE_COPY_BUFF
   size_t cursor = initial;
   uint8_t status = Specialize1standaloneValidateRCore((requestor32 != 0), destS, destT, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 

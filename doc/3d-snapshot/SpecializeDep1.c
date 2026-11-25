@@ -711,7 +711,7 @@ uint64_t SpecializeDep1ValidateEntry(BOOLEAN ___Requestor32, uint16_t ___Len, EV
   size_t cursor = initial;
   uint8_t status = SpecializeDep1ValidateEntryCore((___Requestor32 != 0), ___Len, ___Output, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 

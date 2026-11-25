@@ -50,7 +50,7 @@ static void Specialize1SkipBytesWrite(uint64_t numbytes, const char * tn, const 
   (void)sz;
   (void)dest;
   uint64_t wr = writeOffset[0];
-  if (wr <= (0xffffffffffffffffULL - numbytes)) {
+  if (wr <= ((UINT64_MAX) - numbytes)) {
     writeOffset[0] = (wr + numbytes);
   }
   else {
@@ -831,7 +831,7 @@ uint64_t Specialize1ValidateR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS
   size_t cursor = initial;
   uint8_t status = Specialize1ValidateRCore((requestor32 != 0), destS, destT, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 static void Specialize1R32AttemptProbePtrSS32attempt(uint32_t ____arg0, const char * tn, const char * fieldName, const char * fd, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER err, uint64_t *readOffset, uint64_t *writeOffset, BOOLEAN *failed, uint64_t src, uint64_t sz, EVERPARSE_COPY_BUFFER_T dest) {
@@ -1255,7 +1255,7 @@ uint64_t Specialize1ValidateRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T de
   size_t cursor = initial;
   uint8_t status = Specialize1ValidateRmuxCore((requestor32 != 0), destS, destT, ctxt, handler, input, len, &cursor);
   uint64_t position = (uint64_t)cursor;
-  return ((EverParse3dLegacyKind(status) * 1152921504606846976ULL) + position);
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
 
