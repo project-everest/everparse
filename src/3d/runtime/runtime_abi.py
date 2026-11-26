@@ -237,7 +237,10 @@ def compare_abi(expected, actual):
         for name in sorted(extras):
             if category == "types" and name == "BOOLEAN":
                 continue
-            if name.startswith(("EverParse3d_", "custard_")):
+            # Implementation helpers: private `EverParse3d*` names (whether
+            # Custard's default `EverParse3d_Module_name` or a camel-case
+            # `EverParse3dName` given by `rename_let`), and Custard's own.
+            if name.startswith(("EverParse3d", "custard_")):
                 if category == "functions" and not actual[category][name]["linkage"].startswith("static"):
                     errors.append("Nonstatic implementation helper: " + name)
                 continue

@@ -1569,6 +1569,17 @@ let pulse_validator_attributes (cname:option string) (is_entrypoint exported com
   in
   Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s%s]" cinline private_attr name_attr
 
+(* The C names that `print_decls` assigns with `rename_let` to the public
+   validators and probe functions of the current module. Any PascalCase name
+   chosen for a private helper (e.g. `<Mod>Validate<T>Core` for the Low* API
+   worker) could also be the C name of another declaration (here, a type
+   named `T_core`), which Custard rejects (Error 374). In that case the
+   helper keeps Custard's default name instead. *)
+let module_cnames : ref (list string) = alloc []
+
+let cname_is_unique (name: string) : ML bool =
+  List.length (List.filter (fun n -> n = name) !module_cnames) <= 1
+
 let print_public_adapter_binding compatible cname root_name binders allow_reading worker_name args : ML string =
   if compatible
   then Printf.sprintf "[@@FStar.Attributes.rename_let \"%s\"; normalize_for_extraction specialization_steps]\n\
@@ -1593,6 +1604,10 @@ let print_binding mname (td:type_decl)
   let compatible = lowstar_api () in
   let worker_name = pulse_worker_name root_name in
   let cname = T.validator_name mname tdn.td_name.A.v.A.name in
+  (* With --api lowstar, the Pulse worker is a static function next to the
+     public adapter `cname`; name it in the same PascalCase style rather than
+     after its F* name `validate____core_X`. *)
+  let worker_cname = T.validator_name mname (tdn.td_name.A.v.A.name ^ "_core") in
   let print_binders = print_binders mname in
   let print_args = print_binders_as_args mname in
   (* Record the parameters in scope before printing anything that mentions a
@@ -1748,7 +1763,10 @@ let print_binding mname (td:type_decl)
         args
   in
   let validate_binding =
-    let attribs = pulse_validator_attributes (if compatible then None else Some cname)
+    let worker_cname =
+      if List.mem worker_cname !module_cnames then None else Some worker_cname
+    in
+    let attribs = pulse_validator_attributes (if compatible then worker_cname else Some cname)
       td.name.td_entrypoint td.attrs.is_exported compatible in
     if pulse ()
     then
@@ -1936,10 +1954,17 @@ let print_decl mname (d:decl)
       //the error-handler callback (dynamic) or drops it in favor of the
       //EVERPARSE_ERROR_HANDLER_MACRO C macro, consistently with the
       //validators that consume it.
+      let cname = T.probe_function_name mname id.A.v.A.name in
+      let name_attr =
+        if cname_is_unique cname
+        then Printf.sprintf "; FStar.Attributes.rename_let \"%s\"" cname
+        else ""
+      in
       let impl =
         if pulse ()
         then
-          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer%s #%b %s <| %s\n\n"
+          Printf.sprintf "[@@ normalize_for_extraction specialization_steps%s]\nlet %s %s = probe_action_as_probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer%s #%b %s <| %s\n\n"
+            name_attr
             (T.print_ident id)
             (T.print_params mname params)
             (T.print_boolean_inst_args ())
@@ -1967,6 +1992,14 @@ let rec unzip (x: list ('a & 'b))
       x::xs, y::ys
 
 let print_decls en mname tds =
+  module_cnames :=
+    List.collect
+      (fun (d: decl) ->
+        match d with
+        | Inl (T.Probe_function id _ _, _) -> [T.probe_function_name mname id.A.v.A.name]
+        | Inr td -> [T.validator_name mname td.name.td_name.A.v.A.name]
+        | _ -> [])
+      tds;
   let impl, iface =
     let impls, ifaces =
       List.map (print_decl mname) tds |>

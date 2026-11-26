@@ -53,7 +53,7 @@ class ApiTests(unittest.TestCase):
             directory = Path(tmp)
             header = directory / "Example.h"
             for api, result, body in (
-                    ("lowstar", "uint64_t", "uint8_t Example_validate____core__T(void);"),
+                    ("lowstar", "uint64_t", "uint8_t ExampleValidateTCore(void);"),
                     ("pulse", "uint8_t", "")):
                 header.write_text(f"{result}\nExampleValidateT(void);\n")
                 (directory / "Example.c").write_text(body)
@@ -76,9 +76,9 @@ class ApiTests(unittest.TestCase):
             header = directory / "Example.h"
             header.write_text("uint64_t ExampleValidateT(void);")
             (directory / "Example.c").write_text(
-                "static uint8_t Example_validate____core__T(void) { return 0; }\n"
+                "static uint8_t ExampleValidateTCore(void) { return 0; }\n"
                 "uint64_t ExampleValidateT(void) { "
-                "return Example_validate____core__T(); }\n")
+                "return ExampleValidateTCore(); }\n")
             check_api("lowstar", directory)
             header.write_text("uint8_t ExampleValidateT(void);")
             with self.assertRaisesRegex(ValueError, "not generated with --api pulse"):
@@ -93,7 +93,7 @@ class ApiTests(unittest.TestCase):
             header.write_text(
                 "uint8_t\nExampleValidateCoreT(void);\n"
                 "uint64_t\nExampleValidateT(void);\n")
-            (directory / "Example.c").write_text("uint8_t Example_validate____core__T(void);")
+            (directory / "Example.c").write_text("uint8_t ExampleValidateTCore(void);")
             check_api("lowstar", directory)
             header.write_text(
                 "uint8_t\nExampleValidateCoreT(void);\n"
@@ -117,12 +117,12 @@ class ApiTests(unittest.TestCase):
             directory = Path(tmp)
             for name in ("Example", "Other"):
                 (directory / f"{name}.h").write_text(f"uint64_t {name}ValidateT(void);")
-            (directory / "Example.c").write_text("uint8_t Example_validate____core__T(void);")
+            (directory / "Example.c").write_text("uint8_t ExampleValidateTCore(void);")
             other = directory / "Other.c"
             other.write_text("EVERPARSE_VALIDATOR_ERROR_GENERIC")
             with self.assertRaisesRegex(ValueError, "Other.h: not generated"):
                 check_api("lowstar", directory)
-            other.write_text('#include "EverParsePulseInternal.h"\nuint8_t Example_validate____core__T(void);')
+            other.write_text('#include "EverParsePulseInternal.h"\nuint8_t ExampleValidateTCore(void);')
             with self.assertRaisesRegex(ValueError, "obsolete separate"):
                 check_api("lowstar", directory)
 

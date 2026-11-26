@@ -10,7 +10,9 @@ module B = EverParse3d.CAbi.Boolean
 [@@CMacro; FStar.Attributes.rename_let "EVERPARSE_VALIDATOR_MAX_LENGTH"; FStar.Attributes.CInline]
 let validator_max_length = 1152921504606846975UL
 
+[@@FStar.Attributes.rename_let "EverParse3dIsError"]
 let is_error (positionOrError: U64.t) = U64.gt positionOrError validator_max_length
+[@@FStar.Attributes.rename_let "EverParse3dIsSuccess"]
 let is_success (positionOrError: U64.t) = U64.lte positionOrError validator_max_length
 
 [@@FStar.Attributes.rename_let "EverParseSetValidatorErrorPos"; FStar.Attributes.CInline]
@@ -61,10 +63,12 @@ let error_reason_of_result (code: U64.t) : string =
   | 8UL -> "probe failed"
   | _ -> "unspecified"
 
+[@@FStar.Attributes.rename_let "EverParse3dCheckConstraintOk"]
 let check_constraint_ok (ok: bool)
   (position: U64.t { U64.v position < pow2 60 }) : U64.t =
   if ok then position
   else set_validator_error_pos validator_error_constraint_failed position
 
+[@@FStar.Attributes.rename_let "EverParse3dLowstarIsRangeOkay"]
 let is_range_okay (size offset access_size: U32.t) : bool =
   U32.gte size access_size && U32.gte (U32.sub size access_size) offset

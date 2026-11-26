@@ -6,32 +6,32 @@ void Specialize1StandaloneEverParseError(const char *StructName, const char *Fie
 
 static
 void DefaultErrorHandler(
-	const char *typename_s,
+	const char *typeName,
 	const char *fieldname,
 	const char *reason,
-	uint64_t error_code,
+	uint64_t errorCode,
 	uint8_t *context,
 	EVERPARSE_INPUT_BUFFER input,
-	uint64_t start_pos)
+	uint64_t startPos)
 {
 	EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;
 	EverParseDefaultErrorHandler(
-		typename_s,
+		typeName,
 		fieldname,
 		reason,
-		error_code,
+		errorCode,
 		frame,
 		input,
-		start_pos
+		startPos
 	);
 }
 
 BOOLEAN Specialize1standaloneCheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
-	uint64_t ep_status = Specialize1standaloneValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t epStatus = Specialize1standaloneValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
-	if (EverParseIsError(ep_status))
+	if (EverParseIsError(epStatus))
 	{
 		if (frame.filled)
 		{
@@ -45,9 +45,9 @@ BOOLEAN Specialize1standaloneCheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T
 BOOLEAN Specialize1standaloneCheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
-	uint64_t ep_status = Specialize1standaloneValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t epStatus = Specialize1standaloneValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 
-	if (EverParseIsError(ep_status))
+	if (EverParseIsError(epStatus))
 	{
 		if (frame.filled)
 		{
@@ -55,7 +55,7 @@ BOOLEAN Specialize1standaloneCheckCompleteR(BOOLEAN requestor32, EVERPARSE_COPY_
 		}
 		return FALSE;
 	}
-	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	if (EverParseGetValidatorErrorPos(epStatus) != (uint64_t)len)
 	{
 		Specialize1StandaloneEverParseError("R", "", "unexpected trailing bytes");
 		return FALSE;

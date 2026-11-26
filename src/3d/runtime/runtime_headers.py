@@ -227,7 +227,7 @@ def extract(args):
     command = [args.fstar] + flags
     subprocess.run(command + [native_path(root)], check=True)
     extraction = ["--codegen", "C", "--custard_unit", "EverParse",
-                  "--custard_static_header",
+                  "--custard_static_header", "--custard_no_banner",
                   "--custard_monomorphize_types", "true"]
     for module, declarations in names.items():
         for name in declarations:

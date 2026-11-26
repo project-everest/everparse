@@ -11,41 +11,41 @@ void GotoReturnEverParseError(const char *StructName, const char *FieldName, con
 
 static
 void DefaultErrorHandler(
-	const char *typename_s,
+	const char *typeName,
 	const char *fieldname,
 	const char *reason,
-	uint8_t error_code,
+	uint8_t errorCode,
 	uint8_t *context,
 	uint8_t *base,
 	size_t len,
 	size_t *pos,
-	uint64_t start_pos)
+	uint64_t startPos)
 {
 	EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;
 	(void) len;
 	(void) pos;
 	EverParseDefaultErrorHandler(
-		typename_s,
+		typeName,
 		fieldname,
 		reason,
-		(uint64_t)error_code,
+		(uint64_t)errorCode,
 		frame,
 		base,
-		start_pos
+		startPos
 	);
 }
 
 BOOLEAN GotoReturnCheckPoint(uint8_t *base, uint32_t len) {
 	BOOLEAN result = FALSE;
 	EVERPARSE_ERROR_FRAME frame;
-	size_t everparse_pos;
-	uint8_t ep_status;
+	size_t everParsePos;
+	uint8_t epStatus;
 
 	frame.filled = FALSE;
-	everparse_pos = (size_t)0U;
-	ep_status = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
+	everParsePos = (size_t)0U;
+	epStatus = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everParsePos);
 
-	if (ep_status != 0U)
+	if (epStatus != 0U)
 	{
 		if (frame.filled)
 		{
@@ -62,14 +62,14 @@ exit:
 BOOLEAN GotoReturnCheckCompletePoint(uint8_t *base, uint32_t len) {
 	BOOLEAN result = FALSE;
 	EVERPARSE_ERROR_FRAME frame;
-	size_t everparse_pos;
-	uint8_t ep_status;
+	size_t everParsePos;
+	uint8_t epStatus;
 
 	frame.filled = FALSE;
-	everparse_pos = (size_t)0U;
-	ep_status = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
+	everParsePos = (size_t)0U;
+	epStatus = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everParsePos);
 
-	if (ep_status != 0U)
+	if (epStatus != 0U)
 	{
 		if (frame.filled)
 		{
@@ -77,7 +77,7 @@ BOOLEAN GotoReturnCheckCompletePoint(uint8_t *base, uint32_t len) {
 		}
 		goto exit;
 	}
-	if (everparse_pos != (size_t)len)
+	if (everParsePos != (size_t)len)
 	{
 		GotoReturnEverParseError("_point", "", "unexpected trailing bytes");
 		goto exit;
@@ -91,14 +91,14 @@ exit:
 static BOOLEAN GotoReturnCheckTagged(uint64_t bound, uint8_t *base, uint32_t len) {
 	BOOLEAN result = FALSE;
 	EVERPARSE_ERROR_FRAME frame;
-	size_t everparse_pos;
-	uint8_t ep_status;
+	size_t everParsePos;
+	uint8_t epStatus;
 
 	frame.filled = FALSE;
-	everparse_pos = (size_t)0U;
-	ep_status = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
+	everParsePos = (size_t)0U;
+	epStatus = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everParsePos);
 
-	if (ep_status != 0U)
+	if (epStatus != 0U)
 	{
 		if (frame.filled)
 		{
@@ -160,14 +160,14 @@ exit:
 static BOOLEAN GotoReturnCheckCompleteTagged(uint64_t bound, uint8_t *base, uint32_t len) {
 	BOOLEAN result = FALSE;
 	EVERPARSE_ERROR_FRAME frame;
-	size_t everparse_pos;
-	uint8_t ep_status;
+	size_t everParsePos;
+	uint8_t epStatus;
 
 	frame.filled = FALSE;
-	everparse_pos = (size_t)0U;
-	ep_status = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everparse_pos);
+	everParsePos = (size_t)0U;
+	epStatus = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, (size_t)len, &everParsePos);
 
-	if (ep_status != 0U)
+	if (epStatus != 0U)
 	{
 		if (frame.filled)
 		{
@@ -175,7 +175,7 @@ static BOOLEAN GotoReturnCheckCompleteTagged(uint64_t bound, uint8_t *base, uint
 		}
 		goto exit;
 	}
-	if (everparse_pos != (size_t)len)
+	if (everParsePos != (size_t)len)
 	{
 		GotoReturnEverParseError("_tagged", "", "unexpected trailing bytes");
 		goto exit;

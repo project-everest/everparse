@@ -32,7 +32,7 @@ def main():
     assert "legacy_lowstar" not in help_text
     assert "--pulse" not in help_text
     for api in ["pulse", "lowstar"]:
-        for option in ["goto_for_early_return", "blank_lines"]:
+        for option in ["blank_lines"]:
             message = run("--api", api, f"--{option}", succeeds=False)
             assert f"--{option}: not implemented yet" in message
     # The legacy Low* backend is gone: lowstar is the default, and

@@ -43,7 +43,7 @@ let is_validation_error (code:U8.t) : bool =
 
 // Not inline_for_extraction: extracted once into the runtime EverParse.h as a
 // static inline function, rather than duplicated at every validator call site.
-[@@FStar.Attributes.CInline]
+[@@FStar.Attributes.CInline; FStar.Attributes.rename_let "EverParse3dErrorReasonOfResult"]
 let error_reason_of_result (code:U8.t) : string =
   match code with
   | 0uy -> "success"
@@ -60,6 +60,7 @@ let error_reason_of_result (code:U8.t) : string =
 
 module U32 = FStar.UInt32
 
+[@@FStar.Attributes.rename_let "EverParse3dIsRangeOkay"]
 let is_range_okay (size offset access_size: U32.t)
   : bool
   = let open U32 in

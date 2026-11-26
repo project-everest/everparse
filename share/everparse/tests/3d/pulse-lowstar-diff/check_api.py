@@ -16,7 +16,10 @@ PULSE_INTERNAL = re.compile(r"EverParsePulseInternal")
 # Runtime constants may normalize to literals, so their names alone cannot
 # distinguish a native Lowstar implementation from a legacy one.
 LOWSTAR_WORKER = re.compile(r"Validate_*Core")
-LOWSTAR_NATIVE_WORKER = re.compile(r"\buint8_t\s+\w+_validate_+core_+\w+\s*\(")
+# 3D names it `<Module>Validate<Type>Core`; Custard's default name for it was
+# `<Module>_validate____core__<Type>`.
+LOWSTAR_NATIVE_WORKER = re.compile(
+    r"\buint8_t\s+(?:\w+_validate_+core_+\w+|\w*Validate\w*Core)\s*\(")
 
 
 def check_api(api, directory):

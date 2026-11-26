@@ -197,6 +197,7 @@ let ___Bool = bool
 /// UINT8
 let ___UINT8 : eqtype = FStar.UInt8.t
 val parse____UINT8 : parser kind____UINT8 ___UINT8
+[@@FStar.Attributes.rename_let "EverParse3dReadUint8"]
 val read____UINT8 : reader parse____UINT8
 
 // Big-endian (or "network order")
@@ -204,21 +205,25 @@ val read____UINT8 : reader parse____UINT8
 /// UINT8BE
 let ___UINT8BE : eqtype = FStar.UInt8.t
 val parse____UINT8BE : parser kind____UINT8BE ___UINT8BE
+[@@FStar.Attributes.rename_let "EverParse3dReadUint8Be"]
 val read____UINT8BE : reader parse____UINT8BE
 
 /// UInt16BE
 let ___UINT16BE : eqtype = U16.t
 val parse____UINT16BE : parser kind____UINT16BE ___UINT16BE
+[@@FStar.Attributes.rename_let "EverParse3dReadUint16Be"]
 val read____UINT16BE : reader parse____UINT16BE
 
 /// UInt32BE
 let ___UINT32BE : eqtype = U32.t
 val parse____UINT32BE : parser kind____UINT32BE ___UINT32BE
+[@@FStar.Attributes.rename_let "EverParse3dReadUint32Be"]
 val read____UINT32BE : reader parse____UINT32BE
 
 /// UInt64BE
 let ___UINT64BE : eqtype = U64.t
 val parse____UINT64BE : parser kind____UINT64BE ___UINT64BE
+[@@FStar.Attributes.rename_let "EverParse3dReadUint64Be"]
 val read____UINT64BE : reader parse____UINT64BE
 
 // Little-endian
@@ -226,16 +231,19 @@ val read____UINT64BE : reader parse____UINT64BE
 /// UInt16
 let ___UINT16 : eqtype = U16.t
 val parse____UINT16 : parser kind____UINT16 ___UINT16
+[@@FStar.Attributes.rename_let "EverParse3dReadUint16"]
 val read____UINT16 : reader parse____UINT16
 
 /// UInt32
 let ___UINT32 : eqtype = U32.t
 val parse____UINT32 : parser kind____UINT32 ___UINT32
+[@@FStar.Attributes.rename_let "EverParse3dReadUint32"]
 val read____UINT32 : reader parse____UINT32
 
 /// UInt64
 let ___UINT64 : eqtype = U64.t
 val parse____UINT64 : parser kind____UINT64 ___UINT64
+[@@FStar.Attributes.rename_let "EverParse3dReadUint64"]
 val read____UINT64 : reader parse____UINT64
 
 let parse_unit
