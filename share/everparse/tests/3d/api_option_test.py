@@ -126,10 +126,23 @@ def main():
             run(*options, "--odir", output, "--makefile", "nmake", source)
             nmake = (output / "EverParse.Makefile").read_text()
             assert " &: " not in nmake and ".krml" not in nmake
-            unit_rule = next(line for line in nmake.splitlines()
-                             if "ApiChoice.cui" in line and " : " in line)
-            assert "ApiChoice.c " in unit_rule and "ApiChoice.h " in unit_rule
-            assert "__produce_c_from_existing_checked" in nmake
+            # NMake has no grouped targets: a rule with several targets would
+            # run its recipe once per target under a parallel make. So each
+            # recipe has a single target, and the other outputs of the same
+            # 3D run depend on it with no recipe.
+            nmake_lines = nmake.splitlines()
+            for index, line in enumerate(nmake_lines):
+                if line.startswith("\t"):
+                    targets = nmake_lines[index - 1].split(" : ")[0].split()
+                    assert len(targets) == 1, nmake_lines[index - 1]
+            c_target = "$(EVERPARSE_OUTPUT_DIR)/ApiChoice.c"
+            unit_rule = nmake_lines.index(next(
+                line for line in nmake_lines if line.startswith(c_target + " : ")))
+            assert "__produce_c_from_existing_checked" in nmake_lines[unit_rule + 1]
+            for other in ["ApiChoice.h", "ApiChoice.cui"]:
+                rule = f"$(EVERPARSE_OUTPUT_DIR)/{other} : {c_target}"
+                index = nmake_lines.index(rule)
+                assert not nmake_lines[index + 1].startswith("\t")
 
         home = pathlib.Path(executable).parent.parent
         for backend in ["buffer", "extern", "static"]:
