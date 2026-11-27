@@ -1107,13 +1107,18 @@ let print_c_entry
      | None -> ""
    in
    let use_error_handler_macro = Options.get_use_error_handler_macro () in
-   (* --wrapper_error_code (--api pulse only): every wrapper takes a trailing
-      `uint8_t *errorCode' out-parameter and stores there the error code
-      returned by the validator, 0 on success. *)
-   let wrapper_error_code = Options.get_wrapper_error_code () in
-   let error_code_param = if wrapper_error_code then ", uint8_t *errorCode" else "" in
-   let error_code_arg = if wrapper_error_code then ", errorCode" else "" in
-   let error_code_store = if wrapper_error_code then "*errorCode = epStatus;\n\t" else "" in
+   (* --wrapper_error_code (--api pulse only):
+      - `out': every wrapper takes a trailing `uint8_t *errorCode'
+        out-parameter and stores there the error code returned by the
+        validator, 0 on success;
+      - `return' (buffer input stream only): the main wrappers return that
+        error code (uint8_t) instead of a BOOLEAN, and the probe wrappers
+        return it instead of EVERPARSE_PROBE_FAILURE_VALIDATION. *)
+   let wrapper_error_code_out = Options.get_wrapper_error_code () = Some "out" in
+   let wrapper_error_code_return = Options.get_wrapper_error_code () = Some "return" in
+   let error_code_param = if wrapper_error_code_out then ", uint8_t *errorCode" else "" in
+   let error_code_arg = if wrapper_error_code_out then ", errorCode" else "" in
+   let error_code_store = if wrapper_error_code_out then "*errorCode = epStatus;\n\t" else "" in
    let is_input_stream_buffer =
      HashingOptions.InputStreamBuffer? (Options.get_input_stream_binding ())
    in
@@ -1272,7 +1277,11 @@ let print_c_entry
           }\n\t"
          modul
          typename
-         (if goto_return then "goto exit;" else "return FALSE;")
+         (match goto_return, wrapper_error_code_return with
+          | true, true -> "result = (uint8_t)EVERPARSE_ERROR_UNEXPECTED_PADDING;\n\t\tgoto exit;"
+          | true, false -> "goto exit;"
+          | false, true -> "return (uint8_t)EVERPARSE_ERROR_UNEXPECTED_PADDING;"
+          | false, false -> "return FALSE;")
      in
      let tail =
        if goto_return then
@@ -1283,14 +1292,16 @@ let print_c_entry
               {\n\t\t\t\
                 %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
               }\n\t\t\
-              goto exit;\n\t\
+              %sgoto exit;\n\t\
             }\n\t\
-            %sresult = TRUE;\n\n\
+            %sresult = %s;\n\n\
             exit:\n\t\
             return result;"
            error_code_store
            modul
+           (if wrapper_error_code_return then "result = epStatus;\n\t\t" else "")
            complete_check
+           (if wrapper_error_code_return then "0U" else "TRUE")
        else
          Printf.sprintf
            "%sif (epStatus != 0U)\n\t\
@@ -1299,14 +1310,18 @@ let print_c_entry
               {\n\t\t\t\
                 %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
               }\n\t\t\
-              return FALSE;\n\t\
+              return %s;\n\t\
             }\n\t\
-            %sreturn TRUE;"
+            %sreturn %s;"
            error_code_store
            modul
+           (if wrapper_error_code_return then "epStatus" else "FALSE")
            complete_check
+           (if wrapper_error_code_return then "0U" else "TRUE")
      in
-     (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
+     (if goto_return
+      then (if wrapper_error_code_return then "uint8_t result = 0U;\n\t" else "BOOLEAN result = FALSE;\n\t")
+      else "")
      ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
      ^ Printf.sprintf "size_t everParsePos%s;\n\t" scalar_zero
      ^ Printf.sprintf "uint8_t epStatus%s;\n\n\t" scalar_zero
@@ -1428,7 +1443,28 @@ let print_c_entry
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
      let tail =
-       if goto_return then
+       if wrapper_error_code_return then
+         (* The main wrapper returns the validator's error code (1-255 on
+            failure), which cannot collide with the probe failure codes
+            (256-258); it replaces EVERPARSE_PROBE_FAILURE_VALIDATION. *)
+         Printf.sprintf
+           "%sepStatus = %s(%s base, %s);\n\t\
+            if (epStatus != 0U)\n\t\
+            {\n\t\t\
+              %s\n\t\
+            }\n\t\
+            %s"
+           (if hoist then "" else "uint8_t ")
+           wrappedName
+           params
+           len
+           (if goto_return then "result = (uint32_t)epStatus;\n\t\tgoto exit;" else "return (uint32_t)epStatus;")
+           (if goto_return
+            then "result = EVERPARSE_SUCCESS;\n\n\
+                  exit:\n\t\
+                  return result;"
+            else "return EVERPARSE_SUCCESS;")
+       else if goto_return then
          Printf.sprintf
            "if (!%s(%s base, %s%s))\n\t\
             {\n\t\t\
@@ -1456,10 +1492,12 @@ let print_c_entry
      in
      (* Under --wrapper_error_code, the code stays 0 when a probe failure
         prevents the validator from running. *)
-     let error_code_init = if wrapper_error_code then "*errorCode = 0U;\n\t" else "" in
+     let error_code_init = if wrapper_error_code_out then "*errorCode = 0U;\n\t" else "" in
      if hoist then
        (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\t" else "")
-       ^ Printf.sprintf "uint8_t *base%s;\n\n\t" scalar_zero
+       ^ Printf.sprintf "uint8_t *base%s;" scalar_zero
+       ^ (if wrapper_error_code_return then Printf.sprintf "\n\tuint8_t epStatus%s;" scalar_zero else "")
+       ^ "\n\n\t"
        ^ error_code_init
        ^ probe_prefix probe wrappedName ^ "\n\t"
        ^ (if goto_return then
@@ -1724,7 +1762,8 @@ let print_c_entry
     let mk_main_signature (name: string) =
       if is_input_stream_buffer 
       then Printf.sprintf
-            "BOOLEAN %s(%suint8_t *base, uint32_t len%s)"
+            "%s %s(%suint8_t *base, uint32_t len%s)"
+             (if wrapper_error_code_return then "uint8_t" else "BOOLEAN")
              name
              pparams
              error_code_param

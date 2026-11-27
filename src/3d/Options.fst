@@ -47,8 +47,10 @@ let get_goto_for_early_return () =
 let get_complete_wrappers () =
   !complete_wrappers
 
-let get_wrapper_error_code () =
-  !wrapper_error_code
+let get_wrapper_error_code () : ML (option string) =
+  match !wrapper_error_code with
+  | Some s -> Some (s <: string)
+  | None -> None
 
 let get_blank_lines () =
   !blank_lines

@@ -1,5 +1,6 @@
 /* Test driver for --wrapper_error_code. The same driver is linked against
-   every variant of the generated code. */
+   every variant of the generated code; WRAPPER_ERROR_CODE_RETURN is defined
+   for the `return' variants, and the `out' variants are tested otherwise. */
 
 #include "WrapperErrorCodeWrapper.h"
 
@@ -42,9 +43,16 @@ static void header(const char *name, uint8_t version, uint8_t kind,
   uint8_t code = UNSET;
   BOOLEAN ok;
   last_reason = NULL;
+#ifdef WRAPPER_ERROR_CODE_RETURN
+  code = complete
+    ? WrapperErrorCodeCheckCompleteHeader(&outKind, buf, len)
+    : WrapperErrorCodeCheckHeader(&outKind, buf, len);
+  ok = code == EVERPARSE_SUCCESS;
+#else
   ok = complete
     ? WrapperErrorCodeCheckCompleteHeader(&outKind, buf, len, &code)
     : WrapperErrorCodeCheckHeader(&outKind, buf, len, &code);
+#endif
   expect(name, ok ? 1 : 0, expected_ok, code, expected_code);
   if (ok && outKind != kind) {
     fprintf(stderr, "FAIL %s: action did not run\n", name);
@@ -100,6 +108,18 @@ static void probed(const char *name, uint16_t x, uint16_t y,
     (uint8_t) x, (uint8_t) (x >> 8), (uint8_t) y, (uint8_t) (y >> 8)
   };
   copy_buffer_t dest = { NULL, 0, 0 };
+#ifdef WRAPPER_ERROR_CODE_RETURN
+  /* The validator's error code replaces EVERPARSE_PROBE_FAILURE_VALIDATION */
+  uint8_t code = expected_code;
+  uint32_t result =
+    WrapperErrorCodeProbeInPlaceCheckProbed(
+      (EVERPARSE_COPY_BUFFER_T) &dest,
+      null_src ? 0 : (uint64_t) (uintptr_t) bytes,
+      providedSize);
+  if (expected_result == EVERPARSE_PROBE_FAILURE_VALIDATION) {
+    expected_result = expected_code;
+  }
+#else
   uint8_t code = UNSET;
   uint32_t result =
     WrapperErrorCodeProbeInPlaceCheckProbed(
@@ -107,6 +127,7 @@ static void probed(const char *name, uint16_t x, uint16_t y,
       null_src ? 0 : (uint64_t) (uintptr_t) bytes,
       providedSize,
       &code);
+#endif
   if (result != expected_result || code != expected_code) {
     fprintf(stderr, "FAIL %s: expected result %u with code %u, got %u with code %u\n",
             name, (unsigned) expected_result, (unsigned) expected_code,
@@ -124,10 +145,16 @@ int main(void) {
   header("Header flags (default)", 1, 0, 1, 3, 0, 0, EVERPARSE_ERROR_CONSTRAINT_FAILED);
   header("Header truncated", 1, 0, 0, 2, 0, 0, EVERPARSE_ERROR_NOT_ENOUGH_DATA);
   /* Trailing bytes: the plain wrapper accepts them, the Complete wrapper
-     rejects them although the validator succeeded */
+     rejects them although the validator succeeded: the `out' variants
+     then store the validator's code (0), while the `return' variants
+     return EVERPARSE_ERROR_UNEXPECTED_PADDING */
   header("Header trailing", 1, 0, 0, 4, 0, 1, EVERPARSE_SUCCESS);
   header("Header complete ok", 1, 0, 0, 3, 1, 1, EVERPARSE_SUCCESS);
+#ifdef WRAPPER_ERROR_CODE_RETURN
+  header("Header complete trailing", 1, 0, 0, 4, 1, 0, EVERPARSE_ERROR_UNEXPECTED_PADDING);
+#else
   header("Header complete trailing", 1, 0, 0, 4, 1, 0, EVERPARSE_SUCCESS);
+#endif
   if (last_reason == NULL || strcmp(last_reason, "unexpected trailing bytes") != 0) {
     fprintf(stderr, "FAIL Header complete trailing: unexpected reason\n");
     rc = 1;
@@ -138,7 +165,7 @@ int main(void) {
   probed("Probed x", 0, 2, 4, 0, EVERPARSE_PROBE_FAILURE_VALIDATION, 210);
   probed("Probed y (default)", 2, 1, 4, 0, EVERPARSE_PROBE_FAILURE_VALIDATION,
          EVERPARSE_ERROR_CONSTRAINT_FAILED);
-  /* Failures before validation leave the code at 0 */
+  /* Failures before validation leave the code at 0 (`out' variants) */
   probed("Probed size", 1, 2, 3, 0, EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE, 0);
   probed("Probed probe", 1, 2, 4, 1, EVERPARSE_PROBE_FAILURE_PROBE, 0);
   init_ok = false;

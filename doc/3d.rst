@@ -406,30 +406,50 @@ Options are treated from left to right:
 
   Generate only the plain entrypoint wrappers. This is toggled by default.
 
-* ``--wrapper_error_code``
+* ``--wrapper_error_code out|return``
 
   .. _wrapper_error_code_option:
 
-  Under ``--api pulse`` only (3d rejects it otherwise), add a trailing
-  ``uint8_t *errorCode`` out-parameter to every entrypoint wrapper,
-  including the ``Complete`` and probe wrappers. Each wrapper stores there
-  the error code returned by the ``<Mod>Validate<Typ>`` validator: 0 on
-  success, an ``EVERPARSE_ERROR_*`` code otherwise, or a :ref:`custom error
-  code <sec-custom-error-codes>`. So, for the ``point`` entrypoint above:
+  Under ``--api pulse`` only (3d rejects it otherwise), convey the error
+  code returned by the ``<Mod>Validate<Typ>`` validator to the caller of
+  every entrypoint wrapper, including the ``Complete`` and probe wrappers.
+  That code is 0 on success, an ``EVERPARSE_ERROR_*`` code otherwise, or a
+  :ref:`custom error code <sec-custom-error-codes>`.
 
-  .. code-block:: c
+  + With ``out``, every wrapper takes a trailing ``uint8_t *errorCode``
+    out-parameter, where it stores that code. So, for the ``point``
+    entrypoint above:
 
-     BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len, uint8_t *errorCode);
+    .. code-block:: c
 
-  ``errorCode`` must point to writable memory. The code is the
-  validator's own result, so it stays 0 in two cases where the wrapper
-  still fails:
+       BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len, uint8_t *errorCode);
 
-  - a ``Complete`` wrapper rejects unexpected trailing bytes;
-  - a probe wrapper fails before validation and returns
-    ``EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE``, ``_INIT`` or ``_PROBE``.
+    ``errorCode`` must point to writable memory. The code is the
+    validator's own result, so it stays 0 in two cases where the wrapper
+    still fails:
 
-  ``--no_wrapper_error_code`` restores the default, without the parameter.
+    - a ``Complete`` wrapper rejects unexpected trailing bytes;
+    - a probe wrapper fails before validation and returns
+      ``EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE``, ``_INIT`` or ``_PROBE``.
+
+  + With ``return`` (only with ``--input_stream buffer``, the default),
+    the wrappers return the code itself, instead of a ``BOOLEAN``:
+
+    .. code-block:: c
+
+       uint8_t HelloWorldCheckPoint(uint8_t *base, uint32_t len);
+
+    So the wrapper succeeds if, and only if, it returns 0
+    (``EVERPARSE_SUCCESS``). A ``Complete`` wrapper that rejects
+    unexpected trailing bytes returns
+    ``EVERPARSE_ERROR_UNEXPECTED_PADDING``. A probe wrapper still returns a
+    ``uint32_t``, and returns the validator's nonzero code (between 1 and
+    255) instead of ``EVERPARSE_PROBE_FAILURE_VALIDATION``, which cannot
+    be confused with the other ``EVERPARSE_PROBE_FAILURE_*`` codes (256 and
+    above).
+
+  ``--no_wrapper_error_code`` restores the default, where the wrappers
+  return a ``BOOLEAN`` and do not convey the code.
 
 * ``--input_stream buffer|extern|static``
 
