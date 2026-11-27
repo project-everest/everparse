@@ -1,6 +1,7 @@
-// Test for --wrapper_error_code (--api pulse only): every entrypoint
-// wrapper gets a trailing `uint8_t *errorCode' out-parameter receiving the
-// error code returned by the validator.
+// Test for --wrapper_error_code (--api pulse only): with `out', every
+// entrypoint wrapper gets a trailing `uint8_t *errorCode' out-parameter
+// receiving the error code returned by the validator; with `return', the
+// wrappers return that code.
 
 extern probe ProbeInPlace
 extern probe (INIT) ProbeInit
@@ -19,7 +20,7 @@ typedef struct _Header(mutable UINT8 *outKind)
 } Header;
 
 // A probe-only entrypoint: its plain wrapper is internal, and the probe
-// wrapper forwards the out-parameter to it
+// wrapper forwards the out-parameter to it, or returns its error code
 entrypoint probe ProbeInPlace (length = 4)
 typedef struct _Probed
 {

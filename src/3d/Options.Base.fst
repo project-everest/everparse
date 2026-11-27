@@ -53,7 +53,6 @@ let _no_copy_everparse_h : ref bool = alloc false
 let hoist_locals : ref bool = alloc false
 let goto_for_early_return : ref bool = alloc false
 let complete_wrappers : ref bool = alloc false
-let wrapper_error_code : ref bool = alloc false
 let blank_lines : ref bool = alloc false
 let line_comments : ref bool = alloc false
 let valid_init_locals : string -> Tot bool = function
@@ -63,6 +62,12 @@ let valid_init_locals : string -> Tot bool = function
   -> true
 | _ -> false
 let init_locals : ref (option (valid_string valid_init_locals)) = alloc None
+let valid_wrapper_error_code : string -> Tot bool = function
+| "out"
+| "return"
+  -> true
+| _ -> false
+let wrapper_error_code : ref (option (valid_string valid_wrapper_error_code)) = alloc None
 let no_produce_testcases_c : ref bool = alloc false
 let _output_dir : ref (option vstring) = alloc None
 let _save_hashes : ref bool = alloc false
@@ -408,7 +413,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "cleanup" (OptBool _cleanup) "Remove generated F* sources, checked caches and CUI files (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name _config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "complete_wrappers" (OptBool complete_wrappers) "In addition to the usual entrypoint wrappers, generate `Complete' wrappers that also check that the validator consumed the whole input buffer (--input_stream buffer only)" [];
-    CmdOption "wrapper_error_code" (OptBool wrapper_error_code) "Add a trailing `uint8_t *errorCode' out-parameter to every entrypoint wrapper, receiving the error code returned by the validator (0 on success) (--api pulse only)" [];
+    CmdOption "wrapper_error_code" (OptStringOption "out|return" valid_wrapper_error_code wrapper_error_code) "Convey the error code returned by the validator (0 on success) to the caller of every entrypoint wrapper: `out' adds a trailing `uint8_t *errorCode' out-parameter, `return' makes the wrapper return the code instead of a Boolean (--api pulse only; `return' requires --input_stream buffer)" [];
     CmdOption "emit_output_types_defs" (OptBool _emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool _emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
@@ -476,9 +481,15 @@ let parse_cmd_line () : ML (list string) =
        FStar.IO.print_string ("--" ^ name ^ ": not implemented yet for Custard direct-to-C extraction\n");
        exit 1
      | [] ->
-       if !wrapper_error_code && not (ApiPulse? (get_api ()))
+       if Some? !wrapper_error_code && not (ApiPulse? (get_api ()))
        then begin
          FStar.IO.print_string "--wrapper_error_code: only supported with --api pulse\n";
+         exit 1
+       end
+       else if (match !wrapper_error_code with Some m -> (m <: string) = "return" | None -> false)
+            && (match !_input_stream_binding with Some b -> (b <: string) <> "buffer" | None -> false)
+       then begin
+         FStar.IO.print_string "--wrapper_error_code return: only supported with --input_stream buffer\n";
          exit 1
        end
        else !_input_file)

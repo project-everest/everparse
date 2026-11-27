@@ -27,7 +27,7 @@ val get_goto_for_early_return : unit -> ML bool
 
 val get_complete_wrappers : unit -> ML bool
 
-val get_wrapper_error_code : unit -> ML bool
+val get_wrapper_error_code : unit -> ML (option string)
 
 val get_blank_lines : unit -> ML bool
 
