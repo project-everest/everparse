@@ -406,6 +406,31 @@ Options are treated from left to right:
 
   Generate only the plain entrypoint wrappers. This is toggled by default.
 
+* ``--wrapper_error_code``
+
+  .. _wrapper_error_code_option:
+
+  Under ``--api pulse`` only (3d rejects it otherwise), add a trailing
+  ``uint8_t *errorCode`` out-parameter to every entrypoint wrapper,
+  including the ``Complete`` and probe wrappers. Each wrapper stores there
+  the error code returned by the ``<Mod>Validate<Typ>`` validator: 0 on
+  success, an ``EVERPARSE_ERROR_*`` code otherwise, or a :ref:`custom error
+  code <sec-custom-error-codes>`. So, for the ``point`` entrypoint above:
+
+  .. code-block:: c
+
+     BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len, uint8_t *errorCode);
+
+  ``errorCode`` must point to writable memory. The code is the
+  validator's own result, so it stays 0 in two cases where the wrapper
+  still fails:
+
+  - a ``Complete`` wrapper rejects unexpected trailing bytes;
+  - a probe wrapper fails before validation and returns
+    ``EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE``, ``_INIT`` or ``_PROBE``.
+
+  ``--no_wrapper_error_code`` restores the default, without the parameter.
+
 * ``--input_stream buffer|extern|static``
 
   Specifies the format of validator input buffers:
@@ -725,9 +750,14 @@ EverParse supports the following command-line options relevant to this
 mode:
 
 * ``--makefile gmake``: produce a Makefile for use with GNU Make.
+  Each EverParse run that produces several files has a grouped-target
+  rule (``&:``), which requires GNU Make 4.3 or later and makes
+  parallel builds (``make -j``) run it only once.
 
 * ``--makefile nmake``: produce a Makefile for use with Microsoft
-  NMAKE.
+  NMAKE. Each EverParse run that produces several files has a rule for
+  one of them, and the others depend on it with no recipe. So this
+  Makefile also supports parallel builds with GNU Make.
 
 * ``--makefile_name my_file_name``: the name of the produced Makefile
   shall be ``my_file_name`` instead of the default

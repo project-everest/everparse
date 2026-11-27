@@ -53,10 +53,25 @@ let print_make_rule
          | _ -> [])
     | _ -> r.from
   in
-  let outputs = r.to :: (match r.ty with EverParseGroup others -> others | _ -> []) in
+  (* A rule with several targets separated with `:` is one rule per target,
+     so a parallel make could run its recipe several times at once, with
+     each run overwriting the files that another run is reading. So GNU Make
+     gets a grouped target (`&:`), and NMake, which has none, gets a rule for
+     the first target only, plus a recipe-less rule making each other target
+     depend on it (also correct if the NMake-style Makefile is run with
+     GNU Make). *)
+  let others = match r.ty with EverParseGroup others -> others | _ -> [] in
+  let outputs, nop_others = match mtype with
+    | HashingOptions.MakefileGMake -> r.to :: others, []
+    | HashingOptions.MakefileNMake -> [r.to], others
+  in
   let separator = match mtype, r.ty with
     | HashingOptions.MakefileGMake, EverParseGroup _ -> "&:"
     | _ -> ":"
+  in
+  let nop_rules = String.concat "" (List.Tot.map (fun other ->
+    Printf.sprintf "%s : %s\n\n" (mk_rule_operand mtype other) (mk_rule_operand mtype r.to))
+    nop_others)
   in
   let rule = Printf.sprintf "%s %s %s\n"
     (String.concat " " (List.Tot.map (mk_rule_operand mtype) outputs))
@@ -102,7 +117,7 @@ let print_make_rule
         in
         Printf.sprintf "$(CC) $(CFLAGS) %s %s %s %s %s %s" iopt input_dir iopt output_dir inc copt
     in
-    let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
+    let rule = Printf.sprintf "%s\t%s %s\n\n%s" rule cmd r.args nop_rules in
     rule
 
 let mk_input_filename
