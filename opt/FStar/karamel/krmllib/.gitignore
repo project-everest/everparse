@@ -1,0 +1,8 @@
+*.checked
+*.source
+.depend
+*.a
+*.o
+*.so
+*.d
+.extract

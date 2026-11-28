@@ -1,0 +1,75 @@
+{
+  fstar,
+  ocamlPackages,
+  removeReferencesTo,
+  stdenv,
+  symlinks,
+  time,
+  version,
+  which,
+  z3,
+}: let
+  pname = "karamel";
+  propagatedBuildInputs = with ocamlPackages; [
+    batteries
+    stdint
+    ppx_deriving_yojson
+    zarith
+    pprint
+    menhirLib
+    sedlex
+    process
+    fix
+    wasm
+    ctypes
+    visitors
+    uucp
+  ];
+  nativeBuildInputs = [fstar removeReferencesTo symlinks time which z3] ++ (with ocamlPackages; [ocaml dune_3 findlib menhir]);
+in
+  stdenv.mkDerivation {
+    inherit version pname propagatedBuildInputs nativeBuildInputs;
+
+    src = ./..;
+
+    outputs = ["out" "home"];
+
+    GIT_REV = version;
+
+    configurePhase = "export KRML_HOME=$(pwd)";
+
+    enableParallelBuilding = true;
+
+    preBuild = "mkdir -p krmllib/hints";
+
+    preInstall = "export PREFIX=$out";
+    postInstall = ''
+      # OCaml leaves its full store path in produced binaries
+      # Thus we remove every reference to it
+      for binary in $out/bin/*
+      do
+        remove-references-to -t '${ocamlPackages.ocaml}' $binary
+      done
+
+      symlinks -c $KRML_HOME
+      cp -r ./. $home
+    '';
+
+    passthru = {
+      lib = ocamlPackages.buildDunePackage {
+        GIT_REV = version;
+        inherit version propagatedBuildInputs;
+        nativeBuildInputs = with ocamlPackages; [menhir];
+        pname = "krml";
+        preBuild = ''
+          # the library is named `krml` rather than `karamel`
+          mv karamel.opam krml.opam
+          sed -i '/name krml/a (public_name krml)' lib/dune
+          make lib/Version.ml
+        '';
+        src = ../.;
+      };
+    };
+
+    dontFixup = true;
+  }

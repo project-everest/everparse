@@ -1,0 +1,74 @@
+# A basic Makefile that KaRaMeL copies in the output directory; this is not
+# guaranteed to work and will only work well for very simple projects. This
+# Makefile uses:
+# - the custom C files passed to your krml invocation
+# - the custom C flags passed to your krml invocation
+# - the -o option passed to your krml invocation
+
+include Makefile.include
+
+# This makefile either needs
+# a) KRML_INCLUDEDIR set to the include/ directory in karamel repo root,
+#    *and* KRML_LIBDIR set to krmllib/ in the root.
+# b) Or, a working karamel install, either as krml in the PATH or passed via KRML_EXE
+#
+# The (b) case just calls karamel to find the relevant include directories
+
+ifeq ($(KRML_INCLUDEDIR),)
+ KRML_EXE ?= krml
+ KRML_INCLUDEDIR != $(KRML_EXE) -locate-include
+ ifeq ($(KRML_INCLUDEDIR),)
+  $(error "Could not find a proper include directory for karamel. Either set KRML_INCLUDEDIR to it, or add krml to the PATH, or set KRML_EXE.")
+ endif
+endif
+ifeq ($(KRML_LIBDIR),)
+ KRML_EXE ?= krml
+ KRML_LIBDIR != $(KRML_EXE) -locate-krmllib
+ ifeq ($(KRML_LIBDIR),)
+  $(error "Could not find a proper library directory for karamel. Either set KRML_LIBDIR to it, or add krml to the PATH, or set KRML_EXE.")
+ endif
+endif
+
+CFLAGS 	+= -I. -I $(KRML_INCLUDEDIR) -I $(KRML_LIBDIR)/dist/minimal
+CFLAGS 	+= -Wall -Wextra -Werror -std=c11 \
+  -Wno-unknown-warning-option \
+  -Wno-infinite-recursion \
+  -g -fwrapv -D_BSD_SOURCE -D_DEFAULT_SOURCE
+ifeq ($(OS),Windows_NT)
+CFLAGS 	+= -D__USE_MINGW_ANSI_STDIO
+else
+CFLAGS 	+= -fPIC
+endif
+CFLAGS 	+= $(USER_CFLAGS)
+
+SOURCES += $(ALL_C_FILES) $(USER_C_FILES)
+ifneq (,$(BLACKLIST))
+  SOURCES := $(filter-out $(BLACKLIST),$(SOURCES))
+endif
+OBJS 	+= $(patsubst %.c,%.o,$(SOURCES))
+
+all: $(USER_TARGET)
+
+$(USER_TARGET): $(OBJS)
+
+AR ?= ar
+
+%.a:
+	$(AR) cr $@ $^
+
+%.exe:
+	$(CC) $(CFLAGS) -o $@ $^ $(KRML_LIBDIR)/dist/generic/libkrmllib.a
+
+%.so:
+	$(CC) $(CFLAGS) -shared -o $@ $^
+
+%.d: %.c
+	@set -e; rm -f $@; \
+	  $(CC) -MM -MG $(CFLAGS) $< > $@.$$$$; \
+	  sed 's,\($(notdir $*)\)\.o[ :]*,$(dir $@)\1.o $@ : ,g' < $@.$$$$ > $@; \
+	  rm -f $@.$$$$
+
+include $(patsubst %.c,%.d,$(SOURCES))
+
+clean:
+	rm -rf *.o *.d $(USER_TARGET)
