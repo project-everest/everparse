@@ -1,0 +1,33 @@
+(include_subdirs unqualified)
+(library
+ (name fstarcompiler)
+ (public_name fstar.compiler)
+ (wrapped false)
+ (libraries
+    batteries
+    zarith
+    stdint
+    yojson
+    ppxlib
+    dynlink
+    pprint
+    process
+    mtime.clock
+ )
+ (modes native)
+ (preprocess (pps ppx_deriving.show ppx_deriving_yojson))
+)
+
+(rule
+  (target FStarC_Version.ml)
+  (deps (:script make_fstar_version.sh)
+        (:version ../../version.txt))
+  (action
+    (progn
+      (copy %{version} version.txt)
+      (with-stdout-to
+        FStarC_Version.ml
+        ; Custard mangles a leading underscore to `u__' (doc/ref/custard.md,
+        ; section 5.2), so the assignments the script writes have to be
+        ; renamed to the names the extraction gave the option references.
+        (system "bash %{script} | sed s/FStarC_Options[.]_/FStarC_Options.u__/")))))

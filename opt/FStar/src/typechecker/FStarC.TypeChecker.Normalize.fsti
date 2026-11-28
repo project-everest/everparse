@@ -1,0 +1,117 @@
+(*
+   Copyright 2008-2014 Nikhil Swamy and Microsoft Research
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*)
+
+module FStarC.TypeChecker.Normalize
+open FStarC
+open FStarC.Effect
+
+open FStarC.TypeChecker
+open FStarC.Syntax.Syntax
+open FStarC.TypeChecker.Common
+open FStarC.TypeChecker.Env
+open FStarC.TypeChecker.Cfg
+
+(* Raised by [with_budget] below; declared here so that the reduction
+   machine's internals, which are defined earlier than [with_budget] is, can
+   raise it. *)
+exception Budget_exceeded
+
+(* Rebuild the definition of a declaration-only projector or discriminator
+   (see FStarC.TypeChecker.TcInductive.mk_discriminator_and_indexed_projectors):
+   an abstraction over the inductive's parameters, indices and the scrutinee
+   whose body matches on the scrutinee.  Extraction needs this, since it must
+   emit real code for these names.  [q] must be a Projector or Discriminator
+   qualifier, and [us, t] the declared type scheme. *)
+val disc_proj_lb (tcenv:Env.env) (lid:Ident.lident) (us:univ_names) (t:typ) (q:qualifier)
+  : ML (option letbinding)
+
+val unembed_binder_knot : ref (option (FStarC.Syntax.Embeddings.embedding binder))
+
+(* A step budget for normalization.
+
+   Normalization is not guaranteed to terminate: with [zeta] on (which is the
+   default -- see [Cfg.default_steps], so leaving [Zeta] out of a step list
+   does not disable it) a recursive definition may be unfolded without bound,
+   and a caller reducing terms it did not write has no way to rule that out in
+   advance.  Without a budget such a caller does not get a bad answer, it
+   hangs, with no indication of which term was responsible.
+
+   [with_budget n f] runs [f] with a limit of [n] reduction steps, raising
+   [Budget_exceeded] if it is reached.  The budget is a *step count* rather
+   than a time limit deliberately: a compiler that fails should fail the same
+   way on every machine and every run.
+
+   Budgets nest by saving and restoring, and a budget of a negative number
+   means unbounded, which is the default and what every existing caller
+   continues to get. *)
+val with_budget : int -> (unit -> ML 'a) -> ML 'a
+
+val reflection_env_hook : ref (option Env.env)
+
+val normalize_with_primitive_steps : list Primops.primitive_step -> steps -> Env.env -> term -> ML term
+val normalize:            steps -> Env.env -> term -> ML term
+val normalize_comp:       steps -> Env.env -> comp -> ML comp
+val normalize_universe:   Env.env -> universe -> ML universe
+val non_info_norm: Env.env -> term -> ML bool
+
+(*
+ * The maybe versions of ghost_to_pure only promote
+ *   when the type of the computation is non-informative
+ * else the input comp is returned as is
+ *)
+val maybe_ghost_to_pure:        Env.env -> comp -> ML comp
+
+(*
+ * The two input computations are to be composed or related by subcomp
+ * These functions first call the maybe versions of ghost_to_pure, and then
+ *   if one of them is erasable, and the other is GHOST,
+ *   the GHOST one is promoted to PURE, see their implementation for more details
+ *)
+val ghost_to_pure2 : Env.env -> (comp & comp) -> ML (comp & comp)
+
+val term_to_doc:     Env.env -> term -> ML Pprint.document
+val term_to_string:  Env.env -> term -> ML string
+val comp_to_string:  Env.env -> comp -> ML string
+val comp_to_doc:     Env.env -> comp -> ML Pprint.document
+val normalize_refinement: steps -> Env.env -> typ -> ML typ
+val whnf_steps: list step
+val unfold_whnf':         steps -> Env.env -> term -> ML term
+val unfold_whnf:          Env.env -> term -> ML term
+val reduce_uvar_solutions:Env.env -> term -> ML term
+
+(* Note: This will default any unresolved universe variables to U_zero. *)
+val remove_uvar_solutions: Env.env -> term -> ML term
+
+val eta_expand_with_type : Env.env -> term -> typ -> ML term
+val eta_expand:            Env.env -> term -> ML term
+val elim_uvars: Env.env -> sigelt -> ML sigelt
+val erase_universes: Env.env -> term -> ML term
+val unfold_head_once: Env.env -> term -> ML (option term)
+
+(* Destructs the term as an arrow type and returns its binders and
+computation type. Only grabs up to [n] binders, and normalizes only as
+needed to discover the shape of the arrow. The binders are opened. *)
+val get_n_binders : Env.env -> int -> term -> ML (list binder & comp)
+
+(* Same, but it does not look for binders underneath a refinement of an arrow
+   type: [get_n_binders] does, and in doing so it silently drops the
+   refinement's predicate. Callers that intend to rebuild the type from the
+   result must use this one. If [n] binders cannot be found this way, it falls
+   back to [get_n_binders], so it never reports fewer binders than that does. *)
+val get_n_binders_no_unrefine : Env.env -> int -> term -> ML (list binder & comp)
+
+val maybe_unfold_head : Env.env -> term -> ML (option term)
+
