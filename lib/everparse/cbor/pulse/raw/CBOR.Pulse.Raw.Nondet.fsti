@@ -37,6 +37,27 @@ val cbor_nondet_parse_map_length_bounded (_: unit) : cbor_nondet_parse_map_lengt
 
 val cbor_nondet_parse_bounded (_: unit) : cbor_nondet_parse_bounded_t #cbor_nondet_t cbor_nondet_match
 
+val cbor_nondet_bounded_sort_scratch_ok_impl
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+: Tot (res: bool { res == cbor_nondet_bounded_sort_scratch_ok map_depth_bound map_length_bound scratch_len })
+
+val cbor_nondet_validate_bounded_sort (_: unit) : cbor_nondet_validate_bounded_sort_t
+
+val cbor_nondet_parse_bounded_sort (_: unit) : cbor_nondet_parse_bounded_sort_t #cbor_nondet_t cbor_nondet_match
+
+val cbor_nondet_bounded_hash_scratch_ok_impl
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (scratch_len: SZ.t)
+  (hash_scratch_len: SZ.t)
+: Tot (res: bool { res == cbor_nondet_bounded_hash_scratch_ok map_depth_bound map_length_bound scratch_len hash_scratch_len })
+
+val cbor_nondet_validate_bounded_hash (_: unit) : cbor_nondet_validate_bounded_hash_t
+
+val cbor_nondet_parse_bounded_hash (_: unit) : cbor_nondet_parse_bounded_hash_t #cbor_nondet_t cbor_nondet_match
+
 val cbor_nondet_match_with_size
   (size: nat)
   (p: perm)

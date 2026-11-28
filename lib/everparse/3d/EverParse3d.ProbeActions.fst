@@ -9,6 +9,7 @@ module EverParse3d.ProbeActions
    already is with the Low* backend, whose prelude declares the abbreviation in
    every file that uses it. *)
 module AppCtxt = EverParse3d.AppCtxt
+module Bool = EverParse3d.Boolean
 module I = EverParse3d.InputStream.Base
 module U8 = FStar.UInt8
 module U16 = FStar.UInt16
@@ -26,24 +27,26 @@ let probe_fn_incremental
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
 = 
   bytes_to_read:U64.t ->
-  read_offset:U64.t ->
-  write_offset:U64.t ->
+  readOffset:U64.t ->
+  writeOffset:U64.t ->
   src:U64.t ->
   dest:copy_buffer_t ->
   contents_dest: Ghost.erased (Seq.seq U8.t) ->
   v_dest: Ghost.erased (Seq.seq U8.t) ->
-  stt bool
+  stt boolean_t
     (CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest **
       pure (Ghost.reveal contents_dest == Ghost.reveal v_dest))
     (fun b -> exists* contents_dest' v_dest' .
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest' v_dest' **
       pure
       (contents_dest' == v_dest' /\
-       (b ==> (
-        UInt.fits (U64.v read_offset + U64.v bytes_to_read) 64 /\
-        UInt.fits (U64.v write_offset + U64.v bytes_to_read) 64
+       (boolean_inst.to_bool b ==> (
+        UInt.fits (U64.v readOffset + U64.v bytes_to_read) 64 /\
+        UInt.fits (U64.v writeOffset + U64.v bytes_to_read) 64
        ))))
 
 inline_for_extraction
@@ -53,11 +56,13 @@ let init_probe_dest_t
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
 =
   struct_name:string ->
   sz:U64.t ->
   dest:copy_buffer_t ->
-  stt bool
+  stt boolean_t
     (exists* contents_dest v_dest .
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
     )
@@ -71,20 +76,22 @@ let write_at_offset_t
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
 (t:Type0) (n:U64.t) =
   v:t ->
-  write_offset:U64.t ->
+  writeOffset:U64.t ->
   dest:copy_buffer_t ->
   contents_dest: Ghost.erased (Seq.seq U8.t) ->
   v_dest: Ghost.erased (Seq.seq U8.t) ->
-  stt bool
+  stt boolean_t
     (CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest **
       pure (Ghost.reveal contents_dest == Ghost.reveal v_dest))
     (fun b -> exists* contents_dest' v_dest' .
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest' v_dest' **
       pure
       (contents_dest' == v_dest' /\
-       (b ==> UInt.fits (U64.v write_offset + U64.v n) 64)))
+       (boolean_inst.to_bool b ==> UInt.fits (U64.v writeOffset + U64.v n) 64)))
 
 inline_for_extraction
 let coerce_value_t (t0 t1:Type0) = t0 -> t1
@@ -96,23 +103,27 @@ let probe_and_read_at_offset_t
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (t:Type0) (size_t:U64.t) =
-  failed:ref bool ->
-  read_offset:U64.t ->
+  failed:ref boolean_t ->
+  readOffset:U64.t ->
   src:U64.t ->
   dest:copy_buffer_t ->
   contents_dest: Ghost.erased (Seq.seq U8.t) ->
   v_dest: Ghost.erased (Seq.seq U8.t) ->
   stt t
-    (pts_to failed false **
+    (exists* v_failed .
+      pts_to failed v_failed **
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest **
-      pure (Ghost.reveal contents_dest == Ghost.reveal v_dest))
-    (fun _ -> exists* has_failed contents_dest' v_dest' .
-      pts_to failed has_failed **
+      pure (not (boolean_inst.to_bool v_failed) /\
+        Ghost.reveal contents_dest == Ghost.reveal v_dest))
+    (fun _ -> exists* hasFailed contents_dest' v_dest' .
+      pts_to failed hasFailed **
       CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest' v_dest' **
       pure (
         contents_dest' == v_dest' /\
-        (not has_failed ==> U64.fits (U64.v read_offset + U64.v size_t))
+        (not (boolean_inst.to_bool hasFailed) ==> U64.fits (U64.v readOffset + U64.v size_t))
       ))
 
 inline_for_extraction
@@ -120,15 +131,17 @@ type probe_m_result a = a
 
 unfold
 let probe_m_pre
+    (#boolean_t: Type0)
+    {| boolean_inst: Bool.boolean_repr boolean_t |}
     (requires_unread_dest:bool)
     (expect_zero_offsets:bool)
     (v_read_offset: U64.t)
     (v_write_offset: U64.t)
-    (v_failed: bool)
+    (v_failed: boolean_t)
     (contents_dest v_dest: Seq.seq U8.t)
 : prop
 =
-  (v_failed == false) /\
+  (boolean_inst.to_bool v_failed == false) /\
   (expect_zero_offsets ==>
     v_read_offset == 0uL /\
     v_write_offset == 0uL) /\
@@ -153,15 +166,17 @@ let probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   a (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_handler:bool) =
   typename:string ->
   fieldname:string ->
   fielddetail:string ->
   ctxt: app_ctxt ->
-  error_handler_fn : (if use_error_handler then error_handler #_ #_ #_ #inst else unit) ->
-  read_offset:ref U64.t ->
-  write_offset:ref U64.t ->
-  failed:ref bool ->
+  errorHandlerFn : (if use_error_handler then error_handler #_ #_ #_ #inst else unit) ->
+  readOffset:ref U64.t ->
+  writeOffset:ref U64.t ->
+  failed:ref boolean_t ->
   src:U64.t ->
   init_probe_sz:U64.t ->
   dest:copy_buffer_t ->
@@ -171,18 +186,18 @@ let probe_m
     (exists* v_ctxt v_failed contents_dest v_dest .
       pts_to ctxt v_ctxt **
       pts_to failed v_failed **
-      pts_to read_offset v_read_offset **
-      pts_to write_offset v_write_offset **
+      pts_to readOffset v_read_offset **
+      pts_to writeOffset v_write_offset **
       CB.pts_to #_ #base_t #len_t #pos_t #_ #cb_inst dest contents_dest v_dest **
       pure
-    (probe_m_pre
+    (probe_m_pre #boolean_t #boolean_inst
       requires_unread_dest expect_zero_offsets v_read_offset v_write_offset v_failed contents_dest v_dest)
     )
     (fun _ -> exists* v_ctxt' v_read_offset' v_write_offset' v_failed' contents_dest' v_dest' .
       pts_to ctxt v_ctxt' **
       pts_to failed v_failed' **
-      pts_to read_offset v_read_offset' **
-      pts_to write_offset v_write_offset' **
+      pts_to readOffset v_read_offset' **
+      pts_to writeOffset v_write_offset' **
       CB.pts_to #_ #base_t #len_t #pos_t #_ #cb_inst dest contents_dest' v_dest' **
       pure
     (probe_m_post
@@ -195,7 +210,7 @@ let probe_m
    otherwise).  This is the probe-monad counterpart of the branch used
    by `EverParse3d.Actions.Base.validate_with_error_handler`, and is
    what lets the probe combinators drop the function-pointer argument
-   (it becomes `unit`, erased by KaRaMeL) under
+   (it becomes `unit`, erased during extraction) under
    `--use_error_handler_macro`.
 
    As in the validators, the macro is passed in as an argument rather
@@ -213,7 +228,7 @@ fn handle_probe_error
       (report_error:bool)
       (error_handler_macro: error_handler #base_t #len_t #pos_t)
       (err : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit))
-      (tn fn_ det:string)
+      (tn fieldName det:string)
       (ctxt:app_ctxt)
       (dest:copy_buffer_t)
       (contents_dest v_dest: Ghost.erased (Seq.seq U8.t))
@@ -229,7 +244,7 @@ ensures exists* v_ctxt' .
     let report = cb_inst.report_error;
     report
       ((if use_error_handler then err else error_handler_macro) <: error_handler #base_t #len_t #pos_t #inst)
-      tn fn_ det ctxt dest contents_dest v_dest;
+      tn fieldName det ctxt dest contents_dest v_dest;
     fold (CB.pts_to #_ #base_t #len_t #pos_t #inst #cb_inst dest contents_dest v_dest);
   }
 }
@@ -241,31 +256,33 @@ fn probe_fn_incremental_as_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-  (#use_error_handler:bool) (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t) (bytes_to_read:U64.t)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+  (#use_error_handler:bool) (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst) (bytes_to_read:U64.t)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
-  (_sz: _)
+  (sz: _)
   (dest: _)
   (v_read_offset: _)
   (v_write_offset: _)
 {
-    let rd = !read_offset;
-    let wr = !write_offset;
+    let rd = !readOffset;
+    let wr = !writeOffset;
     let ok = f bytes_to_read rd wr src dest _ _;
-    if (ok) {
-      read_offset := U64.(rd +^ bytes_to_read);
-      write_offset := U64.(wr +^ bytes_to_read)
+    if (boolean_inst.to_bool ok) {
+      readOffset := U64.(rd +^ bytes_to_read);
+      writeOffset := U64.(wr +^ bytes_to_read)
     } else {
-      failed := true
+      failed := boolean_inst.of_bool true
     }
 }
 
@@ -276,16 +293,18 @@ fn init_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
-  (#use_error_handler:bool) (struct_name:string) (f:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit false false use_error_handler
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
+  (#use_error_handler:bool) (struct_name:string) (f:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit false false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -294,10 +313,10 @@ fn init_probe_m
   (v_write_offset: _)
 {
   let ok = f struct_name sz dest;
-  if (ok) {
+  if (boolean_inst.to_bool ok) {
     ()
   } else {
-    failed := true
+    failed := boolean_inst.of_bool true
   }
 }
 
@@ -308,16 +327,18 @@ fn init_probe_size
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t U64.t true false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst U64.t true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -335,17 +356,19 @@ fn write_at_offset_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL })
-  (f:write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t w) (v:t)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+  (f:write_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst t w) (v:t)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -353,12 +376,12 @@ fn write_at_offset_m
   (v_read_offset: _)
   (v_write_offset: _)
 {
-  let wr = !write_offset;
+  let wr = !writeOffset;
   let ok = f v wr dest _ _;
-  if (ok) {
-    write_offset := U64.(wr +^ w)
+  if (boolean_inst.to_bool ok) {
+    writeOffset := U64.(wr +^ w)
   } else {
-    failed := true
+    failed := boolean_inst.of_bool true
   }
 }
 
@@ -369,18 +392,20 @@ fn probe_and_read_at_offset_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL })
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (reader:probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t t s)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t t true false use_error_handler
+  (reader:probe_and_read_at_offset_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst t s)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst t true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -388,14 +413,14 @@ fn probe_and_read_at_offset_m
   (v_read_offset: _)
   (v_write_offset: _)
 {
-  let rd = !read_offset;
+  let rd = !readOffset;
   let v = reader failed rd src dest _ _;
-  let has_failed = !failed;
-  if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ fd ctxt dest _ _;
+  let hasFailed = !failed;
+  if (boolean_inst.to_bool hasFailed) {
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fieldName fd ctxt dest _ _;
     v
   } else {
-    read_offset := U64.(rd +^ s);
+    readOffset := U64.(rd +^ s);
     v
   }
 }
@@ -407,20 +432,22 @@ fn seq_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a:Type0)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
   (detail:string) (dflt:a)
-  (m1:probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler)
-  (m2:probe_m #copy_buffer_t #base_t #len_t #pos_t a true false use_error_handler)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t a true false use_error_handler
+  (m1:probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler)
+  (m2:probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst a true false use_error_handler)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst a true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -428,13 +455,13 @@ fn seq_probe_m
   (v_read_offset: _)
   (v_write_offset: _)
 {
-  m1 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _;
-  let has_failed = !failed;
-  if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ detail ctxt dest _ _;
+  m1 tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _;
+  let hasFailed = !failed;
+  if (boolean_inst.to_bool hasFailed) {
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fieldName detail ctxt dest _ _;
     dflt
   } else {
-    m2 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _
+    m2 tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _
   }
 }
 
@@ -445,20 +472,22 @@ fn bind_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a #b:Type0)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
   (detail:string) (dflt:b)
-  (m1:probe_m #copy_buffer_t #base_t #len_t #pos_t a true false use_error_handler)
-  (m2:a -> probe_m #copy_buffer_t #base_t #len_t #pos_t b true false use_error_handler)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t b true false use_error_handler
+  (m1:probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst a true false use_error_handler)
+  (m2:a -> probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst b true false use_error_handler)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst b true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -466,14 +495,14 @@ fn bind_probe_m
   (v_read_offset: _)
   (v_write_offset: _)
 {
-  let res1 = m1 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _;
-  let has_failed = !failed;
-  if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ detail ctxt dest _ _;
+  let res1 = m1 tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _;
+  let hasFailed = !failed;
+  if (boolean_inst.to_bool hasFailed) {
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fieldName detail ctxt dest _ _;
     dflt
   } else {
     let m2' = m2 res1;
-    m2' tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _
+    m2' tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _
   }
 }
 
@@ -484,10 +513,12 @@ let probe_and_copy_init_sz
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+  (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 = bind_probe_m #copy_buffer_t #base_t #len_t #pos_t
    error_handler_macro
    "probe_and_copy_init_sz"
@@ -502,16 +533,18 @@ fn return_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a:Type0) (v:a)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t a true false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst a true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -526,7 +559,7 @@ inline_for_extraction
 let check_overflow_add (x:U64.t) (y:U64.t)
 : bool
 = let open U64 in
-  x <=^ (0xffffffffffffffffuL -^ y)
+  x <=^ (EverParse3d.CAbi.StdInt.uint64_max -^ y)
 
 inline_for_extraction
 noextract
@@ -535,16 +568,18 @@ fn skip_read
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (bytes_to_skip:U64.t)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -552,11 +587,11 @@ fn skip_read
   (v_read_offset: _)
   (v_write_offset: _)
 {
-  let rd = !read_offset;
+  let rd = !readOffset;
   if (check_overflow_add rd bytes_to_skip) {
-    read_offset := U64.(rd +^ bytes_to_skip)
+    readOffset := U64.(rd +^ bytes_to_skip)
   } else {
-    failed := true
+    failed := boolean_inst.of_bool true
   }
 }
 
@@ -567,16 +602,18 @@ fn skip_write
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (bytes_to_skip:U64.t)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -584,11 +621,11 @@ fn skip_write
   (v_read_offset: _)
   (v_write_offset: _)
 {
-  let wr = !write_offset;
+  let wr = !writeOffset;
   if (check_overflow_add wr bytes_to_skip) {
-    write_offset := U64.(wr +^ bytes_to_skip)
+    writeOffset := U64.(wr +^ bytes_to_skip)
   } else {
-    failed := true
+    failed := boolean_inst.of_bool true
   }
 }
 
@@ -599,16 +636,18 @@ fn fail
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -616,7 +655,7 @@ fn fail
   (v_read_offset: _)
   (v_write_offset: _)
 {
-  failed := true
+  failed := boolean_inst.of_bool true
 }
 
 inline_for_extraction
@@ -626,17 +665,19 @@ fn if_then_else
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (b:bool)
-  (m0 m1:probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+  (m0 m1:probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -645,9 +686,9 @@ fn if_then_else
   (v_write_offset: _)
 {
   if (b) {
-    m0 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _
+    m0 tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _
   } else {
-    m1 tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _
+    m1 tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _
   }
 }
 
@@ -660,19 +701,21 @@ fn probe_array
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
   (byte_len:U64.t)
-  (probe_elem:probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
+  (probe_elem:probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -688,8 +731,8 @@ fn probe_array
     pts_to stop vstop **
     pts_to ctxt v_ctxt' **
     pts_to failed v_failed' **
-    pts_to read_offset v_ro' **
-    pts_to write_offset v_wo' **
+    pts_to readOffset v_ro' **
+    pts_to writeOffset v_wo' **
     CB.pts_to #_ #base_t #len_t #pos_t #_ #cb_inst dest contents_dest' v_dest' **
     pure (
       contents_dest' == v_dest' /\
@@ -700,33 +743,33 @@ fn probe_array
   {
     let c0 = !ctr;
     let hf0 = !failed;
-    if (hf0) {
+    if (boolean_inst.to_bool hf0) {
       stop := true
     } else {
       if (c0 = 0uL) {
         stop := true
       } else {
-        let r0 = !read_offset;
-        probe_elem tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _;
+        let r0 = !readOffset;
+        probe_elem tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _;
         let hf1 = !failed;
-        let r1 = !read_offset;
-        if (hf1) {
+        let r1 = !readOffset;
+        if (boolean_inst.to_bool hf1) {
           handle_probe_error #_ #base_t #len_t #pos_t
-            cb_inst.report_failed_array_element error_handler_macro err tn fn_ fd ctxt dest _ _;
+            cb_inst.report_failed_array_element error_handler_macro err tn fieldName fd ctxt dest _ _;
           stop := true
         } else {
           if (r1 = r0) {
-            handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ fd ctxt dest _ _;
-            failed := true;
+            handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fieldName fd ctxt dest _ _;
+            failed := boolean_inst.of_bool true;
             stop := true
           } else {
-            let bytes_read = U64.(r1 -^ r0);
-            if (U64.lt c0 bytes_read) {
-              handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ fd ctxt dest _ _;
-              failed := true;
+            let bytesRead = U64.(r1 -^ r0);
+            if (U64.lt c0 bytesRead) {
+              handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fieldName fd ctxt dest _ _;
+              failed := boolean_inst.of_bool true;
               stop := true
             } else {
-              ctr := U64.(c0 -^ bytes_read)
+              ctr := U64.(c0 -^ bytesRead)
             }
           }
         }
@@ -745,16 +788,18 @@ fn lift_pure_external_action
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#a:Type0) (f:pure_external_action a)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t a true false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst a true false use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -772,20 +817,22 @@ fn init_and_probe
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
       (#use_error_handler:bool)
       (#mz:bool)
       (struct_name:string)
-      (init:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t)
-      (probe:probe_m #copy_buffer_t #base_t #len_t #pos_t unit true mz use_error_handler)
-: probe_m #copy_buffer_t #base_t #len_t #pos_t unit false mz use_error_handler
+      (init:init_probe_dest_t #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst)
+      (probe:probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit true mz use_error_handler)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit false mz use_error_handler
 =
   (tn: _)
-  (fn_: _)
+  (fieldName: _)
   (fd: _)
   (ctxt: _)
   (err: _)
-  (read_offset: _)
-  (write_offset: _)
+  (readOffset: _)
+  (writeOffset: _)
   (failed: _)
   (src: _)
   (sz: _)
@@ -794,10 +841,10 @@ fn init_and_probe
   (v_write_offset: _)
 {
   let ok = init struct_name sz dest;
-  if (ok) {
-    probe tn fn_ fd ctxt err read_offset write_offset failed src sz dest _ _
+  if (boolean_inst.to_bool ok) {
+    probe tn fieldName fd ctxt err readOffset writeOffset failed src sz dest _ _
   } else {
-    failed := true
+    failed := boolean_inst.of_bool true
   }
 }
 
@@ -810,10 +857,12 @@ fn run_probe_m
   (#base_t #len_t #pos_t: Type0)
   {| inst: I.input_stream_inst base_t len_t pos_t  |}
   {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#boolean_t: Type0)
+  {| boolean_inst: Bool.boolean_repr boolean_t |}
   (#use_error_handler:bool) (#any:bool)
   (error_handler_macro: error_handler #base_t #len_t #pos_t)
-  (m:probe_m #copy_buffer_t #base_t #len_t #pos_t unit false any use_error_handler)
-  (tn fn_ det:string)
+  (m:probe_m #copy_buffer_t #base_t #len_t #pos_t #inst #cb_inst #boolean_t #boolean_inst unit false any use_error_handler)
+  (tn fieldName det:string)
   (ctxt:app_ctxt)
   (err:(if use_error_handler then error_handler #base_t #len_t #pos_t #inst else unit))
   (src:U64.t)
@@ -832,14 +881,15 @@ ensures
       pure (b <> 0uL ==> contents_dest' == v_dest')
     )
 {
-  let mut read_offset = 0uL;
-  let mut write_offset = 0uL;
-  let mut failed = false;
-  m tn fn_ det ctxt err read_offset write_offset failed src sz dest _ _;
-  let wr = !write_offset;
-  let has_failed = !failed;
-  if (has_failed) {
-    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fn_ det ctxt dest _ _;
+  let mut readOffset = 0uL;
+  let mut writeOffset = 0uL;
+  boolean_inst.of_bool_inverse false;
+  let mut failed = boolean_inst.of_bool false;
+  m tn fieldName det ctxt err readOffset writeOffset failed src sz dest _ _;
+  let wr = !writeOffset;
+  let hasFailed = !failed;
+  if (boolean_inst.to_bool hasFailed) {
+    handle_probe_error #_ #base_t #len_t #pos_t true error_handler_macro err tn fieldName det ctxt dest _ _;
     0uL
   } else {
     wr

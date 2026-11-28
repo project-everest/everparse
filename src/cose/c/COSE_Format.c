@@ -4,14 +4,14 @@
 
 #include "CBORDetAPI.h"
 
-#define CDDL_SIMPLE_VALUE_FALSE (20U)
+#define CDDL_SIMPLE_VALUE_FALSE ((uint8_t)20U)
 
-#define CDDL_SIMPLE_VALUE_TRUE (21U)
+#define CDDL_SIMPLE_VALUE_TRUE ((uint8_t)21U)
 
 static bool sizet_lte_u64(size_t b, uint64_t a)
 {
   return
-    !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
+    b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U < (size_t)16U &&
       (uint64_t)b <= a;
 }
 
@@ -30,15 +30,15 @@ static bool sizet_fits_u64(size_t b)
 static bool sizet_eq_u64(size_t b, uint64_t a)
 {
   return
-    !(b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U) &&
+    b / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U < (size_t)16U &&
       (uint64_t)b == a;
 }
 
 typedef enum { MGOK, MGFail, MGCutFail } impl_map_group_result;
 
-#define SIMPLE_VALUE_TRUE (21U)
+#define SIMPLE_VALUE_TRUE ((uint8_t)21U)
 
-#define SIMPLE_VALUE_FALSE (20U)
+#define SIMPLE_VALUE_FALSE ((uint8_t)20U)
 
 bool COSE_Format_validate_bool(cbor_det_t c)
 {
@@ -86,6 +86,7 @@ Serializer for evercddl_bool
 size_t COSE_Format_serialize_bool(bool c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   if (c)
+  {
     if
     (
       SIMPLE_VALUE_TRUE <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO ||
@@ -120,6 +121,7 @@ size_t COSE_Format_serialize_bool(bool c, Pulse_Lib_Slice_slice__uint8_t out)
     }
     else
       return (size_t)0U;
+  }
   else if
   (
     SIMPLE_VALUE_FALSE <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO ||
@@ -1976,10 +1978,12 @@ COSE_Format_validate_and_parse_int(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_cborany(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (55799ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2087,10 +2091,12 @@ COSE_Format_validate_and_parse_cborany(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_mimemessage(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (36ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2202,10 +2208,12 @@ COSE_Format_validate_and_parse_mimemessage(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_regexp(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (35ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2317,10 +2325,12 @@ COSE_Format_validate_and_parse_regexp(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_b64legacy(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (34ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2432,10 +2442,12 @@ COSE_Format_validate_and_parse_b64legacy(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_b64url(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (33ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2547,10 +2559,12 @@ COSE_Format_validate_and_parse_b64url(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_uri(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (32ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2659,10 +2673,12 @@ COSE_Format_validate_and_parse_uri(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_encodedcbor(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (24ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_bstr(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2774,10 +2790,12 @@ COSE_Format_validate_and_parse_encodedcbor(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_eb16(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (23ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2885,10 +2903,12 @@ COSE_Format_validate_and_parse_eb16(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_eb64legacy(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (22ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -2996,10 +3016,12 @@ COSE_Format_validate_and_parse_eb64legacy(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_eb64url(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (21ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -3200,10 +3222,12 @@ COSE_Format_validate_and_parse_number(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_tdate(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (0ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -3942,6 +3966,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
           if (scrut.tag == FStar_Pervasives_Native_None)
             ite = MGFail;
           else if (scrut.tag == FStar_Pervasives_Native_Some)
+          {
             if (COSE_Format_validate_bstr(scrut.v))
             {
               remaining--;
@@ -3949,6 +3974,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
             }
             else
               ite = MGFail;
+          }
           else
             ite =
               KRML_EABORT(impl_map_group_result,
@@ -4234,6 +4260,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
           if (scrut.tag == FStar_Pervasives_Native_None)
             ite = MGFail;
           else if (scrut.tag == FStar_Pervasives_Native_Some)
+          {
             if (COSE_Format_validate_bstr(scrut.v))
             {
               remaining--;
@@ -4241,6 +4268,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
             }
             else
               ite = MGFail;
+          }
           else
             ite =
               KRML_EABORT(impl_map_group_result,
@@ -4443,7 +4471,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
             }
             else
               ite1 = false;
-            if (!!ite1)
+            if (ite1)
               remaining--;
           }
           sw = MGOK;
@@ -4636,10 +4664,12 @@ COSE_Format_cose_key_generic COSE_Format_parse_cose_key_generic(cbor_det_t c)
   if (scrut1.tag == FStar_Pervasives_Native_None)
     ite0 = MGFail;
   else if (scrut1.tag == FStar_Pervasives_Native_Some)
+  {
     if (COSE_Format_validate_bstr(scrut1.v))
       ite0 = MGOK;
     else
       ite0 = MGFail;
+  }
   else
     ite0 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
   bool sw0;
@@ -4964,10 +4994,12 @@ COSE_Format_cose_key_generic COSE_Format_parse_cose_key_generic(cbor_det_t c)
   if (scrut4.tag == FStar_Pervasives_Native_None)
     ite6 = MGFail;
   else if (scrut4.tag == FStar_Pervasives_Native_Some)
+  {
     if (COSE_Format_validate_bstr(scrut4.v))
       ite6 = MGOK;
     else
       ite6 = MGFail;
+  }
   else
     ite6 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
   bool sw;
@@ -5202,6 +5234,7 @@ COSE_Format_serialize_cose_key_generic(
     ite0 = false;
   bool ite1;
   if (ite0)
+  {
     if (c24.tag == FStar_Pervasives_Native_Some)
     {
       Pulse_Lib_Slice_slice__uint8_t c15 = c24.v;
@@ -5269,10 +5302,12 @@ COSE_Format_serialize_cose_key_generic(
       ite1 = true;
     else
       ite1 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite1 = false;
   bool ite2;
   if (ite1)
+  {
     if (c230.tag == FStar_Pervasives_Native_Some)
     {
       FStar_Pervasives_either__Pulse_Lib_Slice_slice__uint8_t_COSE_Format_evercddl_int c14 = c230.v;
@@ -5347,10 +5382,12 @@ COSE_Format_serialize_cose_key_generic(
       ite2 = true;
     else
       ite2 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite2 = false;
   bool ite3;
   if (ite2)
+  {
     if (c22.tag == FStar_Pervasives_Native_Some)
     {
       FStar_Pervasives_either__Pulse_Lib_Slice_slice__COSE_Format_aux_env29_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1
@@ -5399,18 +5436,21 @@ COSE_Format_serialize_cose_key_generic(
               bool pres = true;
               size_t pi = (size_t)0U;
               size_t slen1 = len__COSE_Format_aux_env29_type_1(c14);
-              while (pres && pi < slen1)
+              while (true)
               {
                 size_t i = pi;
+                if (!(pres && i < slen1))
+                  break;
+                size_t i0 = pi;
                 if
                 (
                   COSE_Format_aux_env29_serialize_1(op_Array_Access__COSE_Format_aux_env29_type_1(c14,
-                      i),
+                      i0),
                     out2,
                     &pcount1,
                     &psize1)
                 )
-                  pi = i + (size_t)1U;
+                  pi = i0 + (size_t)1U;
                 else
                   pres = false;
               }
@@ -5428,10 +5468,11 @@ COSE_Format_serialize_cose_key_generic(
               CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1
               pc = c23;
               bool pres = true;
-              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-              bool cond = pres && !em1;
-              while (cond)
+              while (true)
               {
+                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+                if (!(pres && !em1))
+                  break;
                 CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1
                 i = pc;
                 uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -5456,8 +5497,6 @@ COSE_Format_serialize_cose_key_generic(
                     &psize1)
                 )
                   pres = false;
-                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-                cond = pres && !em1;
               }
               bool ret = pres;
               ite = ret ? ret : ret;
@@ -5512,10 +5551,12 @@ COSE_Format_serialize_cose_key_generic(
       ite3 = true;
     else
       ite3 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite3 = false;
   bool ite4;
   if (ite3)
+  {
     if (c210.tag == FStar_Pervasives_Native_Some)
     {
       Pulse_Lib_Slice_slice__uint8_t c12 = c210.v;
@@ -5583,10 +5624,12 @@ COSE_Format_serialize_cose_key_generic(
       ite4 = true;
     else
       ite4 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite4 = false;
   bool ite;
   if (ite4)
+  {
     if (c2.tag == FStar_Pervasives_Inl)
     {
       Pulse_Lib_Slice_slice__FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
@@ -5601,8 +5644,11 @@ COSE_Format_serialize_cose_key_generic(
       pem =
         len__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(c11)
         == (size_t)0U;
-      while (pres && !pem)
+      while (true)
       {
+        bool __anf0 = pem;
+        if (!(pres && !__anf0))
+          break;
         uint64_t count = pcount;
         if (count == 18446744073709551615ULL)
           pres = false;
@@ -5757,6 +5803,7 @@ COSE_Format_serialize_cose_key_generic(
                     KRML_EABORT(FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice__uint8_t,
                       "unreachable (pattern matches are exhaustive in F*)");
                 if (scrut.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_aux_env29_map_constraint_2(cbor_det_mk_map_entry(ck, scrut.v._1)))
                     pres = false;
                   else
@@ -5782,6 +5829,7 @@ COSE_Format_serialize_cose_key_generic(
                     else
                       pres = false;
                   }
+                }
                 else
                 {
                   KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -5814,20 +5862,22 @@ COSE_Format_serialize_cose_key_generic(
       pc = c21;
       cbor_det_map_iterator_t pj = c21.cddl_map_iterator_contents;
       bool pres1 = true;
-      bool test0 = cbor_det_map_iterator_is_empty(pj);
-      bool cond = pres1 && !test0;
-      while (cond)
+      while (true)
       {
+        bool test = cbor_det_map_iterator_is_empty(pj);
+        if (!(pres1 && !test))
+          break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-        if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+        if (c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-        bool test = cbor_det_map_iterator_is_empty(pj);
-        cond = pres1 && !test;
       }
       bool pem = pres1;
-      while (pres && !pem)
+      while (true)
       {
+        bool __anf0 = pem;
+        if (!(pres && !__anf0))
+          break;
         uint64_t count = pcount;
         if (count == 18446744073709551615ULL)
           pres = false;
@@ -5841,14 +5891,16 @@ COSE_Format_serialize_cose_key_generic(
           cbor_det_map_entry_t phd = hd0;
           bool tk0 = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd0));
           bool tv0 = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd0));
-          bool pcont = !tk0 || !tv0 || i.cddl_map_iterator_impl_validate_ex(hd0);
+          bool te0 = i.cddl_map_iterator_impl_validate_ex(hd0);
+          bool pcont = !tk0 || !tv0 || te0;
           while (pcont)
           {
             cbor_det_map_entry_t hd = cbor_det_map_iterator_next(&pj1);
             phd = hd;
             bool tk = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd));
             bool tv = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd));
-            pcont = !tk || !tv || i.cddl_map_iterator_impl_validate_ex(hd);
+            bool te = i.cddl_map_iterator_impl_validate_ex(hd);
+            pcont = !tk || !tv || te;
           }
           cbor_det_map_entry_t hd = phd;
           COSE_Format_evercddl_label
@@ -6002,6 +6054,7 @@ COSE_Format_serialize_cose_key_generic(
                     KRML_EABORT(FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice__uint8_t,
                       "unreachable (pattern matches are exhaustive in F*)");
                 if (scrut.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_aux_env29_map_constraint_2(cbor_det_mk_map_entry(ck, scrut.v._1)))
                     pres = false;
                   else
@@ -6022,17 +6075,16 @@ COSE_Format_serialize_cose_key_generic(
                       __anf0 = pc;
                       cbor_det_map_iterator_t pj2 = __anf0.cddl_map_iterator_contents;
                       bool pres2 = true;
-                      bool test = cbor_det_map_iterator_is_empty(pj2);
-                      bool cond = pres2 && !test;
-                      while (cond)
+                      while (true)
                       {
+                        bool test = cbor_det_map_iterator_is_empty(pj2);
+                        if (!(pres2 && !test))
+                          break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
-                        if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+                        if (__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-                        bool test = cbor_det_map_iterator_is_empty(pj2);
-                        cond = pres2 && !test;
                       }
                       pem = pres2;
                       psize = size2_;
@@ -6041,6 +6093,7 @@ COSE_Format_serialize_cose_key_generic(
                     else
                       pres = false;
                   }
+                }
                 else
                 {
                   KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -6066,6 +6119,7 @@ COSE_Format_serialize_cose_key_generic(
     }
     else
       ite = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite = false;
   if (ite)
@@ -6197,16 +6251,15 @@ COSE_Format_is_empty_iterate_map_evercddl_label_and_values(
 {
   cbor_det_map_iterator_t pj = i.cddl_map_iterator_contents;
   bool pres = true;
-  bool test = cbor_det_map_iterator_is_empty(pj);
-  bool cond = pres && !test;
-  while (cond)
+  while (true)
   {
+    bool test = cbor_det_map_iterator_is_empty(pj);
+    if (!(pres && !test))
+      break;
     cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-    if (!!i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+    if (i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
       if (!i.cddl_map_iterator_impl_validate_ex(elt))
         pres = !i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-    bool test = cbor_det_map_iterator_is_empty(pj);
-    cond = pres && !test;
   }
   return pres;
 }
@@ -6224,14 +6277,16 @@ COSE_Format_next_iterate_map_evercddl_label_and_values(
   cbor_det_map_entry_t phd = hd0;
   bool tk0 = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd0));
   bool tv0 = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd0));
-  bool pcont = !tk0 || !tv0 || i.cddl_map_iterator_impl_validate_ex(hd0);
+  bool te0 = i.cddl_map_iterator_impl_validate_ex(hd0);
+  bool pcont = !tk0 || !tv0 || te0;
   while (pcont)
   {
     cbor_det_map_entry_t hd = cbor_det_map_iterator_next(&pj);
     phd = hd;
     bool tk = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd));
     bool tv = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd));
-    pcont = !tk || !tv || i.cddl_map_iterator_impl_validate_ex(hd);
+    bool te = i.cddl_map_iterator_impl_validate_ex(hd);
+    pcont = !tk || !tv || te;
   }
   cbor_det_map_entry_t hd = phd;
   COSE_Format_evercddl_label
@@ -6477,17 +6532,20 @@ COSE_Format_serialize_cose_keyset(
       bool pres = true;
       size_t pi = (size_t)0U;
       size_t slen = len__COSE_Format_cose_key_generic(c1);
-      while (pres && pi < slen)
+      while (true)
       {
         size_t i = pi;
+        if (!(pres && i < slen))
+          break;
+        size_t i0 = pi;
         if
         (
-          COSE_Format_aux_env30_serialize_1(op_Array_Access__COSE_Format_cose_key_generic(c1, i),
+          COSE_Format_aux_env30_serialize_1(op_Array_Access__COSE_Format_cose_key_generic(c1, i0),
             out,
             &pcount,
             &psize)
         )
-          pi = i + (size_t)1U;
+          pi = i0 + (size_t)1U;
         else
           pres = false;
       }
@@ -6505,10 +6563,11 @@ COSE_Format_serialize_cose_keyset(
       CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_key_generic
       pc = c2;
       bool pres = true;
-      bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-      bool cond = pres && !em1;
-      while (cond)
+      while (true)
       {
+        bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+        if (!(pres && !em1))
+          break;
         CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_key_generic
         i = pc;
         uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -6533,8 +6592,6 @@ COSE_Format_serialize_cose_keyset(
             &psize)
         )
           pres = false;
-        bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-        cond = pres && !em1;
       }
       bool ret = pres;
       ite = ret ? ret : ret;
@@ -6861,6 +6918,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
           if (scrut.tag == FStar_Pervasives_Native_None)
             ite = MGFail;
           else if (scrut.tag == FStar_Pervasives_Native_Some)
+          {
             if (COSE_Format_validate_bstr(scrut.v))
             {
               remaining--;
@@ -6868,6 +6926,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
             }
             else
               ite = MGCutFail;
+          }
           else
             ite =
               KRML_EABORT(impl_map_group_result,
@@ -6938,6 +6997,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
           if (scrut.tag == FStar_Pervasives_Native_None)
             ite = MGFail;
           else if (scrut.tag == FStar_Pervasives_Native_Some)
+          {
             if (COSE_Format_validate_bstr(scrut.v))
             {
               remaining--;
@@ -6945,6 +7005,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
             }
             else
               ite = MGCutFail;
+          }
           else
             ite =
               KRML_EABORT(impl_map_group_result,
@@ -7083,7 +7144,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
             }
             else
               ite1 = false;
-            if (!!ite1)
+            if (ite1)
               remaining--;
           }
           sw = MGOK;
@@ -7251,10 +7312,12 @@ COSE_Format_cose_key_okp COSE_Format_parse_cose_key_okp(cbor_det_t c)
   if (scrut1.tag == FStar_Pervasives_Native_None)
     ite0 = MGFail;
   else if (scrut1.tag == FStar_Pervasives_Native_Some)
+  {
     if (COSE_Format_validate_bstr(scrut1.v))
       ite0 = MGOK;
     else
       ite0 = MGCutFail;
+  }
   else
     ite0 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
   bool sw0;
@@ -7329,10 +7392,12 @@ COSE_Format_cose_key_okp COSE_Format_parse_cose_key_okp(cbor_det_t c)
   if (scrut2.tag == FStar_Pervasives_Native_None)
     ite2 = MGFail;
   else if (scrut2.tag == FStar_Pervasives_Native_Some)
+  {
     if (COSE_Format_validate_bstr(scrut2.v))
       ite2 = MGOK;
     else
       ite2 = MGCutFail;
+  }
   else
     ite2 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
   bool sw;
@@ -7585,6 +7650,7 @@ COSE_Format_serialize_cose_key_okp(
     ite1 = false;
   bool ite2;
   if (ite1)
+  {
     if (c22.tag == FStar_Pervasives_Native_Some)
     {
       Pulse_Lib_Slice_slice__uint8_t c13 = c22.v;
@@ -7652,10 +7718,12 @@ COSE_Format_serialize_cose_key_okp(
       ite2 = true;
     else
       ite2 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite2 = false;
   bool ite3;
   if (ite2)
+  {
     if (c210.tag == FStar_Pervasives_Native_Some)
     {
       Pulse_Lib_Slice_slice__uint8_t c12 = c210.v;
@@ -7723,10 +7791,12 @@ COSE_Format_serialize_cose_key_okp(
       ite3 = true;
     else
       ite3 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite3 = false;
   bool ite;
   if (ite3)
+  {
     if (c2.tag == FStar_Pervasives_Inl)
     {
       Pulse_Lib_Slice_slice__FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
@@ -7741,8 +7811,11 @@ COSE_Format_serialize_cose_key_okp(
       pem =
         len__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(c11)
         == (size_t)0U;
-      while (pres && !pem)
+      while (true)
       {
+        bool __anf0 = pem;
+        if (!(pres && !__anf0))
+          break;
         uint64_t count = pcount;
         if (count == 18446744073709551615ULL)
           pres = false;
@@ -7897,6 +7970,7 @@ COSE_Format_serialize_cose_key_okp(
                     KRML_EABORT(FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice__uint8_t,
                       "unreachable (pattern matches are exhaustive in F*)");
                 if (scrut.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_aux_env31_map_constraint_1(cbor_det_mk_map_entry(ck, scrut.v._1)))
                     pres = false;
                   else
@@ -7922,6 +7996,7 @@ COSE_Format_serialize_cose_key_okp(
                     else
                       pres = false;
                   }
+                }
                 else
                 {
                   KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -7954,20 +8029,22 @@ COSE_Format_serialize_cose_key_okp(
       pc = c21;
       cbor_det_map_iterator_t pj = c21.cddl_map_iterator_contents;
       bool pres1 = true;
-      bool test0 = cbor_det_map_iterator_is_empty(pj);
-      bool cond = pres1 && !test0;
-      while (cond)
+      while (true)
       {
+        bool test = cbor_det_map_iterator_is_empty(pj);
+        if (!(pres1 && !test))
+          break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-        if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+        if (c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-        bool test = cbor_det_map_iterator_is_empty(pj);
-        cond = pres1 && !test;
       }
       bool pem = pres1;
-      while (pres && !pem)
+      while (true)
       {
+        bool __anf0 = pem;
+        if (!(pres && !__anf0))
+          break;
         uint64_t count = pcount;
         if (count == 18446744073709551615ULL)
           pres = false;
@@ -7981,14 +8058,16 @@ COSE_Format_serialize_cose_key_okp(
           cbor_det_map_entry_t phd = hd0;
           bool tk0 = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd0));
           bool tv0 = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd0));
-          bool pcont = !tk0 || !tv0 || i.cddl_map_iterator_impl_validate_ex(hd0);
+          bool te0 = i.cddl_map_iterator_impl_validate_ex(hd0);
+          bool pcont = !tk0 || !tv0 || te0;
           while (pcont)
           {
             cbor_det_map_entry_t hd = cbor_det_map_iterator_next(&pj1);
             phd = hd;
             bool tk = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd));
             bool tv = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd));
-            pcont = !tk || !tv || i.cddl_map_iterator_impl_validate_ex(hd);
+            bool te = i.cddl_map_iterator_impl_validate_ex(hd);
+            pcont = !tk || !tv || te;
           }
           cbor_det_map_entry_t hd = phd;
           COSE_Format_evercddl_label
@@ -8142,6 +8221,7 @@ COSE_Format_serialize_cose_key_okp(
                     KRML_EABORT(FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice__uint8_t,
                       "unreachable (pattern matches are exhaustive in F*)");
                 if (scrut.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_aux_env31_map_constraint_1(cbor_det_mk_map_entry(ck, scrut.v._1)))
                     pres = false;
                   else
@@ -8162,17 +8242,16 @@ COSE_Format_serialize_cose_key_okp(
                       __anf0 = pc;
                       cbor_det_map_iterator_t pj2 = __anf0.cddl_map_iterator_contents;
                       bool pres2 = true;
-                      bool test = cbor_det_map_iterator_is_empty(pj2);
-                      bool cond = pres2 && !test;
-                      while (cond)
+                      while (true)
                       {
+                        bool test = cbor_det_map_iterator_is_empty(pj2);
+                        if (!(pres2 && !test))
+                          break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
-                        if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+                        if (__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-                        bool test = cbor_det_map_iterator_is_empty(pj2);
-                        cond = pres2 && !test;
                       }
                       pem = pres2;
                       psize = size2_;
@@ -8181,6 +8260,7 @@ COSE_Format_serialize_cose_key_okp(
                     else
                       pres = false;
                   }
+                }
                 else
                 {
                   KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -8206,6 +8286,7 @@ COSE_Format_serialize_cose_key_okp(
     }
     else
       ite = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite = false;
   if (ite)
@@ -8878,6 +8959,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
           if (scrut.tag == FStar_Pervasives_Native_None)
             ite = MGFail;
           else if (scrut.tag == FStar_Pervasives_Native_Some)
+          {
             if (COSE_Format_validate_bstr(scrut.v))
             {
               remaining--;
@@ -8885,6 +8967,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
             }
             else
               ite = MGFail;
+          }
           else
             ite =
               KRML_EABORT(impl_map_group_result,
@@ -8955,6 +9038,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
           if (scrut0.tag == FStar_Pervasives_Native_None)
             ite0 = MGFail;
           else if (scrut0.tag == FStar_Pervasives_Native_Some)
+          {
             if (COSE_Format_validate_bstr(scrut0.v))
             {
               remaining--;
@@ -8962,6 +9046,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
             }
             else
               ite0 = MGFail;
+          }
           else
             ite0 =
               KRML_EABORT(impl_map_group_result,
@@ -8994,6 +9079,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                 if (scrut.tag == FStar_Pervasives_Native_None)
                   ite = MGFail;
                 else if (scrut.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_validate_everparsenomatch(scrut.v))
                   {
                     remaining--;
@@ -9001,6 +9087,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                   }
                   else
                     ite = MGCutFail;
+                }
                 else
                   ite =
                     KRML_EABORT(impl_map_group_result,
@@ -9080,6 +9167,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                 if (scrut0.tag == FStar_Pervasives_Native_None)
                   ite0 = MGFail;
                 else if (scrut0.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_validate_bstr(scrut0.v))
                   {
                     remaining--;
@@ -9087,6 +9175,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                   }
                   else
                     ite0 = MGFail;
+                }
                 else
                   ite0 =
                     KRML_EABORT(impl_map_group_result,
@@ -9119,6 +9208,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       if (scrut.tag == FStar_Pervasives_Native_None)
                         ite = MGFail;
                       else if (scrut.tag == FStar_Pervasives_Native_Some)
+                      {
                         if (COSE_Format_validate_everparsenomatch(scrut.v))
                         {
                           remaining--;
@@ -9126,6 +9216,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         }
                         else
                           ite = MGCutFail;
+                      }
                       else
                         ite =
                           KRML_EABORT(impl_map_group_result,
@@ -9207,6 +9298,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       if (scrut0.tag == FStar_Pervasives_Native_None)
                         ite0 = MGFail;
                       else if (scrut0.tag == FStar_Pervasives_Native_Some)
+                      {
                         if (COSE_Format_validate_everparsenomatch(scrut0.v))
                         {
                           remaining--;
@@ -9214,6 +9306,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         }
                         else
                           ite0 = MGCutFail;
+                      }
                       else
                         ite0 =
                           KRML_EABORT(impl_map_group_result,
@@ -9272,6 +9365,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             if (scrut.tag == FStar_Pervasives_Native_None)
                               ite = MGFail;
                             else if (scrut.tag == FStar_Pervasives_Native_Some)
+                            {
                               if (COSE_Format_validate_everparsenomatch(scrut.v))
                               {
                                 remaining--;
@@ -9279,6 +9373,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               }
                               else
                                 ite = MGCutFail;
+                            }
                             else
                               ite =
                                 KRML_EABORT(impl_map_group_result,
@@ -9543,7 +9638,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
             }
             else
               ite1 = false;
-            if (!!ite1)
+            if (ite1)
               remaining--;
           }
           sw = MGOK;
@@ -10041,10 +10136,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
   if (scrut3.tag == FStar_Pervasives_Native_None)
     ite5 = MGFail;
   else if (scrut3.tag == FStar_Pervasives_Native_Some)
+  {
     if (COSE_Format_validate_bstr(scrut3.v))
       ite5 = MGOK;
     else
       ite5 = MGFail;
+  }
   else
     ite5 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
   bool sw3;
@@ -10118,10 +10215,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
   if (scrut4.tag == FStar_Pervasives_Native_None)
     ite7 = MGFail;
   else if (scrut4.tag == FStar_Pervasives_Native_Some)
+  {
     if (COSE_Format_validate_bstr(scrut4.v))
       ite7 = MGOK;
     else
       ite7 = MGFail;
+  }
   else
     ite7 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
   impl_map_group_result sw4;
@@ -10148,10 +10247,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
         if (scrut.tag == FStar_Pervasives_Native_None)
           ite = MGFail;
         else if (scrut.tag == FStar_Pervasives_Native_Some)
+        {
           if (COSE_Format_validate_everparsenomatch(scrut.v))
             ite = MGOK;
           else
             ite = MGCutFail;
+        }
         else
           ite =
             KRML_EABORT(impl_map_group_result,
@@ -10254,10 +10355,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
     if (scrut1.tag == FStar_Pervasives_Native_None)
       ite0 = MGFail;
     else if (scrut1.tag == FStar_Pervasives_Native_Some)
+    {
       if (COSE_Format_validate_everparsenomatch(scrut1.v))
         ite0 = MGOK;
       else
         ite0 = MGCutFail;
+    }
     else
       ite0 =
         KRML_EABORT(impl_map_group_result,
@@ -10334,10 +10437,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
     if (scrut0.tag == FStar_Pervasives_Native_None)
       ite0 = MGFail;
     else if (scrut0.tag == FStar_Pervasives_Native_Some)
+    {
       if (COSE_Format_validate_bstr(scrut0.v))
         ite0 = MGOK;
       else
         ite0 = MGFail;
+    }
     else
       ite0 =
         KRML_EABORT(impl_map_group_result,
@@ -10366,10 +10471,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
           if (scrut.tag == FStar_Pervasives_Native_None)
             ite = MGFail;
           else if (scrut.tag == FStar_Pervasives_Native_Some)
+          {
             if (COSE_Format_validate_everparsenomatch(scrut.v))
               ite = MGOK;
             else
               ite = MGCutFail;
+          }
           else
             ite =
               KRML_EABORT(impl_map_group_result,
@@ -10474,10 +10581,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
       if (scrut1.tag == FStar_Pervasives_Native_None)
         ite0 = MGFail;
       else if (scrut1.tag == FStar_Pervasives_Native_Some)
+      {
         if (COSE_Format_validate_everparsenomatch(scrut1.v))
           ite0 = MGOK;
         else
           ite0 = MGCutFail;
+      }
       else
         ite0 =
           KRML_EABORT(impl_map_group_result,
@@ -10556,10 +10665,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
       if (scrut0.tag == FStar_Pervasives_Native_None)
         ite0 = MGFail;
       else if (scrut0.tag == FStar_Pervasives_Native_Some)
+      {
         if (COSE_Format_validate_everparsenomatch(scrut0.v))
           ite0 = MGOK;
         else
           ite0 = MGCutFail;
+      }
       else
         ite0 =
           KRML_EABORT(impl_map_group_result,
@@ -10628,10 +10739,12 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
       if (scrut1.tag == FStar_Pervasives_Native_None)
         ite2 = MGFail;
       else if (scrut1.tag == FStar_Pervasives_Native_Some)
+      {
         if (COSE_Format_validate_everparsenomatch(scrut1.v))
           ite2 = MGOK;
         else
           ite2 = MGCutFail;
+      }
       else
         ite2 =
           KRML_EABORT(impl_map_group_result,
@@ -10840,6 +10953,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
     ite0 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
   bool ite1;
   if (ite0)
+  {
     if (c240.tag == FStar_Pervasives_Native_Some)
     {
       FStar_Pervasives_either__Pulse_Lib_Slice_slice__COSE_Format_evercddl_label_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label
@@ -10888,18 +11002,21 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
               bool pres = true;
               size_t pi = (size_t)0U;
               size_t slen1 = len__COSE_Format_evercddl_label(c16);
-              while (pres && pi < slen1)
+              while (true)
               {
                 size_t i = pi;
+                if (!(pres && i < slen1))
+                  break;
+                size_t i0 = pi;
                 if
                 (
                   COSE_Format_aux_env34_serialize_1(op_Array_Access__COSE_Format_evercddl_label(c16,
-                      i),
+                      i0),
                     out2,
                     &pcount1,
                     &psize1)
                 )
-                  pi = i + (size_t)1U;
+                  pi = i0 + (size_t)1U;
                 else
                   pres = false;
               }
@@ -10917,10 +11034,11 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
               CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label
               pc = c25;
               bool pres = true;
-              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-              bool cond = pres && !em1;
-              while (cond)
+              while (true)
               {
+                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+                if (!(pres && !em1))
+                  break;
                 CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label
                 i = pc;
                 uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -10945,8 +11063,6 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                     &psize1)
                 )
                   pres = false;
-                bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-                cond = pres && !em1;
               }
               bool ret = pres;
               ite = ret ? ret : ret;
@@ -11001,10 +11117,12 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
       ite1 = true;
     else
       ite1 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite1 = false;
   bool ite2;
   if (ite1)
+  {
     if (c230.tag == FStar_Pervasives_Native_Some)
     {
       FStar_Pervasives_either__Pulse_Lib_Slice_slice__uint8_t_COSE_Format_evercddl_int c14 = c230.v;
@@ -11079,10 +11197,12 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
       ite2 = true;
     else
       ite2 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite2 = false;
   bool ite3;
   if (ite2)
+  {
     if (c220.tag == FStar_Pervasives_Native_Some)
     {
       Pulse_Lib_Slice_slice__uint8_t c13 = c220.v;
@@ -11150,10 +11270,12 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
       ite3 = true;
     else
       ite3 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite3 = false;
   bool ite4;
   if (ite3)
+  {
     if (c210.tag == FStar_Pervasives_Inl)
     {
       FStar_Pervasives_Native_tuple2__Pulse_Lib_Slice_slice__uint8_t_FStar_Pervasives_Native_option____
@@ -11625,10 +11747,12 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
     }
     else
       ite4 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite4 = false;
   bool ite;
   if (ite4)
+  {
     if (c2.tag == FStar_Pervasives_Inl)
     {
       Pulse_Lib_Slice_slice__FStar_Pervasives_Native_tuple2__COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t
@@ -11643,8 +11767,11 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
       pem =
         len__FStar_Pervasives_Native_tuple2_COSE_Format_evercddl_label_CBOR_Pulse_API_Det_Type_cbor_det_t(c11)
         == (size_t)0U;
-      while (pres && !pem)
+      while (true)
       {
+        bool __anf0 = pem;
+        if (!(pres && !__anf0))
+          break;
         uint64_t count = pcount;
         if (count == 18446744073709551615ULL)
           pres = false;
@@ -11799,6 +11926,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                     KRML_EABORT(FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice__uint8_t,
                       "unreachable (pattern matches are exhaustive in F*)");
                 if (scrut.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_aux_env34_map_constraint_2(cbor_det_mk_map_entry(ck, scrut.v._1)))
                     pres = false;
                   else
@@ -11824,6 +11952,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                     else
                       pres = false;
                   }
+                }
                 else
                 {
                   KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -11856,20 +11985,22 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
       pc = c21;
       cbor_det_map_iterator_t pj = c21.cddl_map_iterator_contents;
       bool pres1 = true;
-      bool test0 = cbor_det_map_iterator_is_empty(pj);
-      bool cond = pres1 && !test0;
-      while (cond)
+      while (true)
       {
+        bool test = cbor_det_map_iterator_is_empty(pj);
+        if (!(pres1 && !test))
+          break;
         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
-        if (!!c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+        if (c21.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
           if (!c21.cddl_map_iterator_impl_validate_ex(elt))
             pres1 = !c21.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-        bool test = cbor_det_map_iterator_is_empty(pj);
-        cond = pres1 && !test;
       }
       bool pem = pres1;
-      while (pres && !pem)
+      while (true)
       {
+        bool __anf0 = pem;
+        if (!(pres && !__anf0))
+          break;
         uint64_t count = pcount;
         if (count == 18446744073709551615ULL)
           pres = false;
@@ -11883,14 +12014,16 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
           cbor_det_map_entry_t phd = hd0;
           bool tk0 = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd0));
           bool tv0 = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd0));
-          bool pcont = !tk0 || !tv0 || i.cddl_map_iterator_impl_validate_ex(hd0);
+          bool te0 = i.cddl_map_iterator_impl_validate_ex(hd0);
+          bool pcont = !tk0 || !tv0 || te0;
           while (pcont)
           {
             cbor_det_map_entry_t hd = cbor_det_map_iterator_next(&pj1);
             phd = hd;
             bool tk = i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd));
             bool tv = i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd));
-            pcont = !tk || !tv || i.cddl_map_iterator_impl_validate_ex(hd);
+            bool te = i.cddl_map_iterator_impl_validate_ex(hd);
+            pcont = !tk || !tv || te;
           }
           cbor_det_map_entry_t hd = phd;
           COSE_Format_evercddl_label
@@ -12044,6 +12177,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                     KRML_EABORT(FStar_Pervasives_Native_option__FStar_Pervasives_Native_tuple2__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice__uint8_t,
                       "unreachable (pattern matches are exhaustive in F*)");
                 if (scrut.tag == FStar_Pervasives_Native_Some)
+                {
                   if (COSE_Format_aux_env34_map_constraint_2(cbor_det_mk_map_entry(ck, scrut.v._1)))
                     pres = false;
                   else
@@ -12064,17 +12198,16 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                       __anf0 = pc;
                       cbor_det_map_iterator_t pj2 = __anf0.cddl_map_iterator_contents;
                       bool pres2 = true;
-                      bool test = cbor_det_map_iterator_is_empty(pj2);
-                      bool cond = pres2 && !test;
-                      while (cond)
+                      while (true)
                       {
+                        bool test = cbor_det_map_iterator_is_empty(pj2);
+                        if (!(pres2 && !test))
+                          break;
                         cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj2);
-                        if (!!__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+                        if (__anf0.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
                           if (!__anf0.cddl_map_iterator_impl_validate_ex(elt))
                             pres2 =
                               !__anf0.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
-                        bool test = cbor_det_map_iterator_is_empty(pj2);
-                        cond = pres2 && !test;
                       }
                       pem = pres2;
                       psize = size2_;
@@ -12083,6 +12216,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
                     else
                       pres = false;
                   }
+                }
                 else
                 {
                   KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -12108,6 +12242,7 @@ COSE_Format_serialize_header_map(COSE_Format_header_map c, Pulse_Lib_Slice_slice
     }
     else
       ite = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+  }
   else
     ite = false;
   if (ite)
@@ -12295,7 +12430,8 @@ bool COSE_Format_validate_empty_or_serialized_map(cbor_det_t c)
       Pulse_Lib_Slice_len__uint8_t(arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c),
           (size_t)len));
     bool lo_ok = u64_lte_sizet(0ULL, len1);
-    return lo_ok && sizet_lte_u64(len1, 0ULL);
+    bool hi_ok = sizet_lte_u64(len1, 0ULL);
+    return lo_ok && hi_ok;
   }
   else
     return false;
@@ -12505,7 +12641,8 @@ COSE_Format_serialize_empty_or_serialized_map(
   if (scrut0.tag == FStar_Pervasives_Inl)
   {
     size_t sz = COSE_Format_serialize_header_map(scrut0.case_Inl, out);
-    if (sz == (size_t)0U || !sizet_fits_u64(sz))
+    bool fits = sizet_fits_u64(sz);
+    if (sz == (size_t)0U || !fits)
       return (size_t)0U;
     else
     {
@@ -12522,8 +12659,11 @@ COSE_Format_serialize_empty_or_serialized_map(
     Pulse_Lib_Slice_slice__uint8_t c2 = scrut0.case_Inr;
     size_t len = Pulse_Lib_Slice_len__uint8_t(c2);
     bool lo_ok = u64_lte_sizet(0ULL, len);
-    if (lo_ok && sizet_lte_u64(len, 0ULL))
+    bool hi_ok = sizet_lte_u64(len, 0ULL);
+    if (lo_ok && hi_ok)
+    {
       if (2U == CBOR_MAJOR_TYPE_BYTE_STRING)
+      {
         if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(c2), 18446744073709551615ULL))
         {
           uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c2);
@@ -12561,6 +12701,7 @@ COSE_Format_serialize_empty_or_serialized_map(
         }
         else
           return (size_t)0U;
+      }
       else if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(c2), 18446744073709551615ULL))
       {
         size_t alen = Pulse_Lib_Slice_len__uint8_t(c2);
@@ -12617,6 +12758,7 @@ COSE_Format_serialize_empty_or_serialized_map(
       }
       else
         return (size_t)0U;
+    }
     else
       return (size_t)0U;
   }
@@ -12726,9 +12868,13 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
         if (!sizet_eq_u64(Pulse_Lib_Slice_len__uint8_t(s), 9ULL))
           ite = false;
         else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+        {
           if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+          {
             if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+            {
               if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+              {
                 if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
                 {
                   size_t i_4 = (size_t)6U;
@@ -12739,10 +12885,12 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
                     {
                       size_t i_6 = i_5 + (size_t)1U;
                       if (op_Array_Access__uint8_t(s, i_5) == 114U)
+                      {
                         if (op_Array_Access__uint8_t(s, i_6) == 101U)
                           ite = true;
                         else
                           ite = false;
+                      }
                       else
                         ite = false;
                     }
@@ -12754,12 +12902,16 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
                 }
                 else
                   ite = false;
+              }
               else
                 ite = false;
+            }
             else
               ite = false;
+          }
           else
             ite = false;
+        }
         else
           ite = false;
       }
@@ -12775,9 +12927,13 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
         if (!sizet_eq_u64(Pulse_Lib_Slice_len__uint8_t(s), 10ULL))
           ite0 = false;
         else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+        {
           if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+          {
             if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+            {
               if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+              {
                 if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
                 {
                   size_t i_4 = (size_t)6U;
@@ -12791,10 +12947,12 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
                       {
                         size_t i_7 = i_6 + (size_t)1U;
                         if (op_Array_Access__uint8_t(s, i_6) == 101U)
+                        {
                           if (op_Array_Access__uint8_t(s, i_7) == 49U)
                             ite0 = true;
                           else
                             ite0 = false;
+                        }
                         else
                           ite0 = false;
                       }
@@ -12809,12 +12967,16 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
                 }
                 else
                   ite0 = false;
+              }
               else
                 ite0 = false;
+            }
             else
               ite0 = false;
+          }
           else
             ite0 = false;
+        }
         else
           ite0 = false;
       }
@@ -12846,10 +13008,12 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
           else
             ite = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pi));
           if (ite)
+          {
             if (cbor_det_array_iterator_is_empty(pi))
               ite2 = false;
             else
               ite2 = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pi));
+          }
           else
             ite2 = false;
         }
@@ -12866,10 +13030,12 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
           else
             ite = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pi));
           if (ite)
+          {
             if (cbor_det_array_iterator_is_empty(pi))
               ite1 = false;
             else
               ite1 = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pi));
+          }
           else
             ite1 = false;
         }
@@ -12951,9 +13117,13 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
       if (!sizet_eq_u64(Pulse_Lib_Slice_len__uint8_t(s), 9ULL))
         ite = false;
       else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+      {
         if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+        {
           if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+          {
             if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+            {
               if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
               {
                 size_t i_4 = (size_t)6U;
@@ -12964,10 +13134,12 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
                   {
                     size_t i_6 = i_5 + (size_t)1U;
                     if (op_Array_Access__uint8_t(s, i_5) == 114U)
+                    {
                       if (op_Array_Access__uint8_t(s, i_6) == 101U)
                         ite = true;
                       else
                         ite = false;
+                    }
                     else
                       ite = false;
                   }
@@ -12979,12 +13151,16 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
               }
               else
                 ite = false;
+            }
             else
               ite = false;
+          }
           else
             ite = false;
+        }
         else
           ite = false;
+      }
       else
         ite = false;
     }
@@ -13000,9 +13176,13 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
       if (!sizet_eq_u64(Pulse_Lib_Slice_len__uint8_t(s), 10ULL))
         ite0 = false;
       else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+      {
         if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+        {
           if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+          {
             if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+            {
               if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
               {
                 size_t i_4 = (size_t)6U;
@@ -13016,10 +13196,12 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
                     {
                       size_t i_7 = i_6 + (size_t)1U;
                       if (op_Array_Access__uint8_t(s, i_6) == 101U)
+                      {
                         if (op_Array_Access__uint8_t(s, i_7) == 49U)
                           ite0 = true;
                         else
                           ite0 = false;
+                      }
                       else
                         ite0 = false;
                     }
@@ -13034,12 +13216,16 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
               }
               else
                 ite0 = false;
+            }
             else
               ite0 = false;
+          }
           else
             ite0 = false;
+        }
         else
           ite0 = false;
+      }
       else
         ite0 = false;
     }
@@ -13060,9 +13246,13 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
     if (!sizet_eq_u64(Pulse_Lib_Slice_len__uint8_t(s), 9ULL))
       ite1 = false;
     else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+    {
       if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+      {
         if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+        {
           if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+          {
             if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
             {
               size_t i_4 = (size_t)6U;
@@ -13073,10 +13263,12 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
                 {
                   size_t i_6 = i_5 + (size_t)1U;
                   if (op_Array_Access__uint8_t(s, i_5) == 114U)
+                  {
                     if (op_Array_Access__uint8_t(s, i_6) == 101U)
                       ite1 = true;
                     else
                       ite1 = false;
+                  }
                   else
                     ite1 = false;
                 }
@@ -13088,12 +13280,16 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
             }
             else
               ite1 = false;
+          }
           else
             ite1 = false;
+        }
         else
           ite1 = false;
+      }
       else
         ite1 = false;
+    }
     else
       ite1 = false;
   }
@@ -13132,10 +13328,12 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
     else
       ite = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pc4));
     if (ite)
+    {
       if (cbor_det_array_iterator_is_empty(pc4))
         ite4 = false;
       else
         ite4 = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pc4));
+    }
     else
       ite4 = false;
   }
@@ -13409,6 +13607,7 @@ COSE_Format_serialize_sig_structure(
     else
       ite0 = false;
     if (ite0)
+    {
       if (c21.tag == FStar_Pervasives_Inl)
       {
         FStar_Pervasives_Native_tuple2__COSE_Format_empty_or_serialized_map_FStar_Pervasives_Native_tuple2__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
@@ -13527,6 +13726,7 @@ COSE_Format_serialize_sig_structure(
       }
       else
         ite1 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+    }
     else
       ite1 = false;
   }
@@ -13630,10 +13830,12 @@ bool COSE_Format_validate_cose_sign1(cbor_det_t c)
       ite0 = COSE_Format_validate_empty_or_serialized_map(cbor_det_array_iterator_next(&pi));
     bool ite1;
     if (ite0)
+    {
       if (cbor_det_array_iterator_is_empty(pi))
         ite1 = false;
       else
         ite1 = COSE_Format_validate_header_map(cbor_det_array_iterator_next(&pi));
+    }
     else
       ite1 = false;
     bool ite2;
@@ -13651,10 +13853,12 @@ bool COSE_Format_validate_cose_sign1(cbor_det_t c)
           ite = COSE_Format_validate_nil(c1);
       }
       if (ite)
+      {
         if (cbor_det_array_iterator_is_empty(pi))
           ite2 = false;
         else
           ite2 = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pi));
+      }
       else
         ite2 = false;
     }
@@ -13737,10 +13941,12 @@ COSE_Format_cose_sign1 COSE_Format_parse_cose_sign1(cbor_det_t c)
     ite0 = COSE_Format_validate_empty_or_serialized_map(cbor_det_array_iterator_next(&pc));
   bool ite1;
   if (ite0)
+  {
     if (cbor_det_array_iterator_is_empty(pc))
       ite1 = false;
     else
       ite1 = COSE_Format_validate_header_map(cbor_det_array_iterator_next(&pc));
+  }
   else
     ite1 = false;
   KRML_MAYBE_UNUSED_VAR(ite1);
@@ -14003,10 +14209,12 @@ COSE_Format_validate_and_parse_cose_sign1(Pulse_Lib_Slice_slice__uint8_t s)
 bool COSE_Format_validate_cose_sign1_tagged(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (18ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_cose_sign1(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }
@@ -14127,18 +14335,22 @@ bool COSE_Format_validate_cose_signature(cbor_det_t c)
       ite0 = COSE_Format_validate_empty_or_serialized_map(cbor_det_array_iterator_next(&pi));
     bool ite1;
     if (ite0)
+    {
       if (cbor_det_array_iterator_is_empty(pi))
         ite1 = false;
       else
         ite1 = COSE_Format_validate_header_map(cbor_det_array_iterator_next(&pi));
+    }
     else
       ite1 = false;
     bool ite;
     if (ite1)
+    {
       if (cbor_det_array_iterator_is_empty(pi))
         ite = false;
       else
         ite = COSE_Format_validate_bstr(cbor_det_array_iterator_next(&pi));
+    }
     else
       ite = false;
     if (ite)
@@ -14201,10 +14413,12 @@ COSE_Format_cose_signature COSE_Format_parse_cose_signature(cbor_det_t c)
     ite0 = COSE_Format_validate_empty_or_serialized_map(cbor_det_array_iterator_next(&pc));
   bool ite1;
   if (ite0)
+  {
     if (cbor_det_array_iterator_is_empty(pc))
       ite1 = false;
     else
       ite1 = COSE_Format_validate_header_map(cbor_det_array_iterator_next(&pc));
+  }
   else
     ite1 = false;
   KRML_MAYBE_UNUSED_VAR(ite1);
@@ -14460,10 +14674,12 @@ bool COSE_Format_validate_cose_sign(cbor_det_t c)
       ite0 = COSE_Format_validate_empty_or_serialized_map(cbor_det_array_iterator_next(&pi));
     bool ite1;
     if (ite0)
+    {
       if (cbor_det_array_iterator_is_empty(pi))
         ite1 = false;
       else
         ite1 = COSE_Format_validate_header_map(cbor_det_array_iterator_next(&pi));
+    }
     else
       ite1 = false;
     bool ite2;
@@ -14481,6 +14697,7 @@ bool COSE_Format_validate_cose_sign(cbor_det_t c)
           ite0 = COSE_Format_validate_nil(c1);
       }
       if (ite0)
+      {
         if (cbor_det_array_iterator_is_empty(pi))
           ite2 = false;
         else
@@ -14524,6 +14741,7 @@ bool COSE_Format_validate_cose_sign(cbor_det_t c)
           else
             ite2 = false;
         }
+      }
       else
         ite2 = false;
     }
@@ -14600,10 +14818,12 @@ COSE_Format_cose_sign COSE_Format_parse_cose_sign(cbor_det_t c)
     ite0 = COSE_Format_validate_empty_or_serialized_map(cbor_det_array_iterator_next(&pc));
   bool ite1;
   if (ite0)
+  {
     if (cbor_det_array_iterator_is_empty(pc))
       ite1 = false;
     else
       ite1 = COSE_Format_validate_header_map(cbor_det_array_iterator_next(&pc));
+  }
   else
     ite1 = false;
   KRML_MAYBE_UNUSED_VAR(ite1);
@@ -14801,18 +15021,21 @@ COSE_Format_serialize_cose_sign(COSE_Format_cose_sign c, Pulse_Lib_Slice_slice__
             bool pres = true;
             size_t pi = (size_t)0U;
             size_t slen = len__COSE_Format_cose_signature(c12);
-            while (pres && pi < slen)
+            while (true)
             {
               size_t i = pi;
+              if (!(pres && i < slen))
+                break;
+              size_t i0 = pi;
               if
               (
                 COSE_Format_aux_env41_serialize_1(op_Array_Access__COSE_Format_cose_signature(c12,
-                    i),
+                    i0),
                   out1,
                   &pcount1,
                   &psize1)
               )
-                pi = i + (size_t)1U;
+                pi = i0 + (size_t)1U;
               else
                 pres = false;
             }
@@ -14830,10 +15053,11 @@ COSE_Format_serialize_cose_sign(COSE_Format_cose_sign c, Pulse_Lib_Slice_slice__
             CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_signature
             pc = c22;
             bool pres = true;
-            bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-            bool cond = pres && !em1;
-            while (cond)
+            while (true)
             {
+              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
+              if (!(pres && !em1))
+                break;
               CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_cose_signature
               i = pc;
               uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
@@ -14858,8 +15082,6 @@ COSE_Format_serialize_cose_sign(COSE_Format_cose_sign c, Pulse_Lib_Slice_slice__
                   &psize1)
               )
                 pres = false;
-              bool em1 = cbor_det_array_iterator_is_empty(pc.cddl_array_iterator_contents);
-              cond = pres && !em1;
             }
             bool ret = pres;
             ite = ret ? ret : ret;
@@ -15022,10 +15244,12 @@ COSE_Format_next_iterate_array_aux_env41_type_1(
 bool COSE_Format_validate_cose_sign_tagged(cbor_det_t c)
 {
   if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  {
     if (98ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_cose_sign(cbor_det_get_tagged_payload(c));
     else
       return false;
+  }
   else
     return false;
 }

@@ -1593,6 +1593,35 @@ let check_probe_call (env:env) (ft:typ) (p:probe_call)
   | Some probe_dest_sz ->
    { probe_dest; probe_block; probe_ptr_as_u64; probe_dest_sz; probe_init=check_probe_init p.probe_init }
 
+(* Checks and normalizes the {:error-code ...} annotation of a field.
+   The user writes an integer literal or a #define'd constant in [128, 255].
+   After constraint merging (BitFields, InlineSingletonRecords), the code may
+   also be `if c then k1 else k2` with `c` a boolean constraint on the field,
+   and the leaves may be the default constraint-failure code 6. *)
+let rec check_error_code (env:env) (sf:atomic_field') (allow_default:bool) (e:expr) : ML expr =
+  let check_int (n:int) : ML expr =
+    if (128 <= n && n <= 255) || (allow_default && n = 6)
+    then with_range (Constant (Int UInt8 n)) e.range
+    else error (Printf.sprintf "Error code %d is out of range: user-defined error codes must be between 128 and 255" n) e.range
+  in
+  match e.v with
+  | Constant (Int _ n) -> check_int n
+  | Identifier i ->
+    begin match lookup_macro_definition env i with
+    | Some { v = Constant (Int _ n) } -> check_int n
+    | _ -> error (Printf.sprintf "Error code %s must be an integer literal or a #define'd integer constant" (ident_to_string i)) e.range
+    end
+  | App IfThenElse [c; e1; e2] ->
+    add_local env sf.field_ident sf.field_type;
+    let c, t = check_expr env c in
+    remove_local env sf.field_ident;
+    if not (eq_typ env t tbool)
+    then error "Expected a boolean condition in an error code" c.range;
+    let e1 = check_error_code env sf true e1 in
+    let e2 = check_error_code env sf true e2 in
+    with_range (App IfThenElse [c; e1; e2]) e.range
+  | _ -> error (Printf.sprintf "Error code %s must be an integer literal or a #define'd integer constant" (print_expr e)) e.range
+
 #push-options "--z3rlimit_factor 4"
 let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
   : ML atomic_field
@@ -1635,6 +1664,16 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         a, dependent)
     in
     let f_probe = map_opt (check_probe_call env sf.field_type) sf.field_probe in
+    let f_error_code =
+      match sf.field_error_code with
+      | None -> None
+      | Some e ->
+        if not (Options.uses_pulse_api ())
+        then error "{:error-code ...} annotations are only supported with --api pulse" e.range;
+        if None? sf.field_constraint
+        then error "An {:error-code ...} annotation requires a refinement constraint on the field" e.range;
+        Some (check_error_code env sf false e)
+    in
     if extend_scope then add_local env sf.field_ident sf.field_type;
     let sf = {
         sf with
@@ -1643,6 +1682,7 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         field_constraint = fc;
         field_action = f_act;
         field_probe = f_probe;
+        field_error_code = f_error_code;
     } in
     let _ = 
       match sf.field_type.v, sf.field_array_opt,
@@ -2191,7 +2231,8 @@ let elaborate_record_decl (e:global_env)
             field_constraint = w;
             field_bitwidth = None;
             field_action = None;
-            field_probe = None
+            field_probe = None;
+            field_error_code = None
           }
         in
         let af = with_range (AtomicField (with_range field e.range)) e.range in

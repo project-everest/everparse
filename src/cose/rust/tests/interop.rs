@@ -74,7 +74,6 @@ fn verify() {
 }
 
 #[test]
-#[ignore] // rust-cose can't parse our signed message?!?
 fn sign() {
     let key = generate_key();
     let payload = b"payload";

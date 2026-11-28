@@ -1,0 +1,14 @@
+{
+  "vectors": [
+    {"id": "set/accept/c-a", "type": "DiffSet.Set", "hex": "31070402abcd800105", "expect": "accept", "clause": "X.690 10.3, 8.11", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL"]},
+    {"id": "set/accept/c-a-b", "type": "DiffSet.Set", "hex": "310a0402abcd8001058101ff", "expect": "accept", "clause": "X.690 10.3, 8.11", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL", "BOOLEAN"]},
+    {"id": "set/reject/a-c", "type": "DiffSet.Set", "hex": "31078001050402abcd", "expect": "reject", "clause": "X.690 10.3", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL"], "mutation": "reorder"},
+    {"id": "set/reject/c-b-a", "type": "DiffSet.Set", "hex": "310a0402abcd8101ff800105", "expect": "reject", "clause": "X.690 10.3", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL", "BOOLEAN"], "mutation": "reorder"},
+    {"id": "set/reject/a-b-c", "type": "DiffSet.Set", "hex": "310a8001058101ff0402abcd", "expect": "reject", "clause": "X.690 10.3", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL", "BOOLEAN"], "mutation": "reorder"},
+    {"id": "set/reject/missing-a", "type": "DiffSet.Set", "hex": "31040402abcd", "expect": "reject", "clause": "X.680 27", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL"], "mutation": "missing-field"},
+    {"id": "set/reject/duplicate-a", "type": "DiffSet.Set", "hex": "310a0402abcd800105800105", "expect": "reject", "clause": "X.680 27", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL"], "mutation": "duplicate-field"},
+    {"id": "set/reject/sequence-tag", "type": "DiffSet.Set", "hex": "30070402abcd800105", "expect": "reject", "clause": "X.690 8.11.1", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL"], "mutation": "wrong-tag"},
+    {"id": "set/reject/unknown", "type": "DiffSet.Set", "hex": "310a0402abcd800105820100", "expect": "reject", "clause": "X.680 27 (no extension marker)", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL"], "mutation": "extra-field"},
+    {"id": "set/reject/b-not-ff", "type": "DiffSet.Set", "hex": "310a0402abcd800105810101", "expect": "reject", "clause": "X.690 11.1", "features": ["SET", "IMPLICIT", "INTEGER", "OCTET STRING", "id.class.context", "OPTIONAL", "BOOLEAN"], "mutation": "boolean-not-ff"}
+  ]
+}

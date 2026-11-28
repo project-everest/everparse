@@ -14,8 +14,7 @@ let hash f opt_c =
   let h = hash_init () in
   hash_string h Version.everparse_version;
   hash_string h Version.fstar_commit;
-  hash_string h Version.karamel_commit;
-  // Keep legacy hashes stable, but never accept them for the Pulse API.
+  // Hashes are specific to the selected API.
   begin match Options.Base.get_api () with
   | ApiPulse -> hash_string h "--api pulse"
   | ApiLowstar -> hash_string h "--api lowstar"

@@ -53,11 +53,6 @@ Then, EverParse/3d produces:
   helpers for the implementation of verified validators, common to
   ``MyFile1.3d`` and ``MyFile2.3d``
 
-* ``EverParsePulse.h``, ``EverParsePulseEndianness.h``: two further headers
-  playing the same role for the Pulse backend. They are written under
-  ``--api pulse``; ``--api lowstar``, which is the default, does not emit
-  them, as its ``EverParse.h`` is self-contained
-
 3. Insert ``#include "MyFile1Wrapper.h"`` into any of your C
    compilation units that need to call a validator from
    ``MyFile1.3d``, and similarly for ``MyFile2.3d``.
@@ -309,7 +304,7 @@ Options are treated from left to right:
 
   Specifies the KaRaMeL executable used for C extraction and locating its
   support libraries. By default, EverParse uses
-  ``opt/karamel/out/bin/krml`` in the source tree or ``bin/krml`` in a binary
+  ``opt/FStar/karamel/out/bin/krml`` in the source tree or ``bin/krml`` in a binary
   package (``krml.exe`` on Windows). The ``KRML_EXE`` environment variable
   is not used by the 3d executable.
 
@@ -329,7 +324,7 @@ Options are treated from left to right:
   C clients need no signature changes. Private workers still use byte-sized
   statuses and mutable cursors; they are not part of the public API.
   Its self-contained ``EverParse.h`` is generated from the Pulse library in
-  ``lib/everparse/3d/krml/lowstar/<backend>/``. It includes both the public
+  ``lib/everparse/3d/runtime/lowstar/<backend>/``. It includes both the public
   packed-result helpers and separately named internal byte-status helpers;
   no separate ``EverParsePulseInternal.h`` is needed. During
   per-parser extraction, KaRaMeL uses the shipped runtime without emitting
@@ -410,6 +405,51 @@ Options are treated from left to right:
 * ``--no_complete_wrappers``
 
   Generate only the plain entrypoint wrappers. This is toggled by default.
+
+* ``--wrapper_error_code out|return``
+
+  .. _wrapper_error_code_option:
+
+  Under ``--api pulse`` only (3d rejects it otherwise), convey the error
+  code returned by the ``<Mod>Validate<Typ>`` validator to the caller of
+  every entrypoint wrapper, including the ``Complete`` and probe wrappers.
+  That code is 0 on success, an ``EVERPARSE_ERROR_*`` code otherwise, or a
+  :ref:`custom error code <sec-custom-error-codes>`.
+
+  + With ``out``, every wrapper takes a trailing ``uint8_t *errorCode``
+    out-parameter, where it stores that code. So, for the ``point``
+    entrypoint above:
+
+    .. code-block:: c
+
+       BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len, uint8_t *errorCode);
+
+    ``errorCode`` must point to writable memory. The code is the
+    validator's own result, so it stays 0 in two cases where the wrapper
+    still fails:
+
+    - a ``Complete`` wrapper rejects unexpected trailing bytes;
+    - a probe wrapper fails before validation and returns
+      ``EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE``, ``_INIT`` or ``_PROBE``.
+
+  + With ``return`` (only with ``--input_stream buffer``, the default),
+    the wrappers return the code itself, instead of a ``BOOLEAN``:
+
+    .. code-block:: c
+
+       uint8_t HelloWorldCheckPoint(uint8_t *base, uint32_t len);
+
+    So the wrapper succeeds if, and only if, it returns 0
+    (``EVERPARSE_SUCCESS``). A ``Complete`` wrapper that rejects
+    unexpected trailing bytes returns
+    ``EVERPARSE_ERROR_UNEXPECTED_PADDING``. A probe wrapper still returns a
+    ``uint32_t``, and returns the validator's nonzero code (between 1 and
+    255) instead of ``EVERPARSE_PROBE_FAILURE_VALIDATION``, which cannot
+    be confused with the other ``EVERPARSE_PROBE_FAILURE_*`` codes (256 and
+    above).
+
+  ``--no_wrapper_error_code`` restores the default, where the wrappers
+  return a ``BOOLEAN`` and do not convey the code.
 
 * ``--input_stream buffer|extern|static``
 
@@ -641,12 +681,11 @@ Options are treated from left to right:
   C include path. With ``--no_copy_everparse_h``, instead use the runtime
   directory matching both ``--api`` and ``--input_stream``:
 
-  * ``lowstar``: ``lib/everparse/3d/krml/lowstar/<input_stream_format>``
-  * ``pulse``: ``lib/everparse/3d/krml/<input_stream_format>``
+  * ``lowstar``: ``lib/everparse/3d/runtime/lowstar/<input_stream_format>``
+  * ``pulse``: ``lib/everparse/3d/runtime/<input_stream_format>``
 
   These paths are relative to the EverParse package or repository. Also
-  include ``lib/everparse/3d`` for ``EverParseEndianness.h`` and, under
-  ``--api pulse``, ``EverParsePulse{,Endianness}.h``.
+  include ``lib/everparse/3d`` for ``EverParseEndianness.h``.
   Despite preserving the
   Low\* public C API, ``--api lowstar`` needs its own runtime header, not
   the Pulse one.
@@ -731,9 +770,14 @@ EverParse supports the following command-line options relevant to this
 mode:
 
 * ``--makefile gmake``: produce a Makefile for use with GNU Make.
+  Each EverParse run that produces several files has a grouped-target
+  rule (``&:``), which requires GNU Make 4.3 or later and makes
+  parallel builds (``make -j``) run it only once.
 
 * ``--makefile nmake``: produce a Makefile for use with Microsoft
-  NMAKE.
+  NMAKE. Each EverParse run that produces several files has a rule for
+  one of them, and the others depend on it with no recipe. So this
+  Makefile also supports parallel builds with GNU Make.
 
 * ``--makefile_name my_file_name``: the name of the produced Makefile
   shall be ``my_file_name`` instead of the default

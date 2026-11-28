@@ -3,93 +3,60 @@ module LowParse.Spec.Recursive
 open LowParse.Spec.Combinators
 open LowParse.Spec.VCList
 open LowParse.WellFounded
-open LowParse.Spec.Fuel
+open LowParse.Spec.RecursiveGen
 
 module Seq = FStar.Seq
 
-let parse_recursive_aux_ext
+let parse_recursive_payload_ext
   (p: parse_recursive_param)
   (ih1 ih2: tot_parser (parse_recursive_kind p.parse_header_kind) p.t)
+  (h: p.header)
   (b: bytes)
-  (prf: (
-    (b': bytes { Seq.length b' < Seq.length b }) -> // IMPORTANT: lt, not leq, to make induction work
-    Lemma
-    (parse ih1 b' == parse ih2 b')
-  ))
 : Lemma
-  (parse (parse_recursive_aux p ih1) b == parse (parse_recursive_aux p ih2) b)
-= p.synth_inj;
-  tot_parse_synth_eq (parse_recursive_alt p ih1) p.synth_ b;
-  tot_parse_synth_eq (parse_recursive_alt p ih2) p.synth_ b;
-  match parse p.parse_header b with
-  | None -> ()
-  | Some (h, consumed) ->
-    parser_kind_prop_equiv p.parse_header_kind p.parse_header;
-    let b' = Seq.slice b consumed (Seq.length b) in
-    tot_parse_nlist_parse_nlist (p.count h) ih1 b';
-    tot_parse_nlist_parse_nlist (p.count h) ih2 b';
-    parse_nlist_ext
-      (p.count h)
-      #(parse_recursive_kind p.parse_header_kind)
-      ih1
-      #(parse_recursive_kind p.parse_header_kind)
-      ih2
-      b'
-      (fun b'' -> prf b'')
+  (requires (parse_rec_gen_ih_agree ih1 ih2 b))
+  (ensures (parse (parse_recursive_payload p ih1 h) b == parse (parse_recursive_payload p ih2 h) b))
+= tot_parse_nlist_parse_nlist (p.count h) ih1 b;
+  tot_parse_nlist_parse_nlist (p.count h) ih2 b;
+  parse_nlist_ext
+    (p.count h)
+    #(parse_recursive_kind p.parse_header_kind)
+    ih1
+    #(parse_recursive_kind p.parse_header_kind)
+    ih2
+    b
+    (fun _ -> ())
 
-let rec parse_recursive_step
+(* The count-based recursive parser is an instance of the generic one. *)
+let parse_recursive_gen_param
   (p: parse_recursive_param)
-  (n: nat)
-: Tot (tot_parser (parse_recursive_kind p.parse_header_kind) p.t)
-= if n = 0
-  then tot_fail_parser _ _
-  else parse_recursive_aux p (parse_recursive_step p (n - 1))
-
-let closure
-  (b: bytes)
-: Tot (n: nat { Seq.length b < n })
-= Seq.length b + 1
-
-let rec parse_recursive_step_ext_gen
-  (p: parse_recursive_param)
-  (fuel: nat)
-  (fuel': nat { fuel <= fuel' })
-  (input: bytes { Seq.length input < fuel })
-: Lemma
-  (ensures (parse (parse_recursive_step p fuel) input == parse (parse_recursive_step p fuel') input))
-  (decreases fuel)
-= parse_recursive_aux_ext
-    p
-    (parse_recursive_step p (fuel - 1))
-    (parse_recursive_step p (fuel' - 1))
-    input
-    (fun input' ->
-      parse_recursive_step_ext_gen p (fuel - 1) (fuel' - 1) input'
-    )
-
-let parse_recursive_step_ext
-  (p: parse_recursive_param)
-  (fuel: nat)
-  (input: bytes { Seq.length input < fuel })
-: Lemma
-  (ensures (parse (parse_recursive_step p fuel) input == parse (parse_recursive_step p (closure input)) input))
-= parse_recursive_step_ext_gen p (closure input) fuel input
+: Tot parse_rec_gen_param
+= {
+    t = p.t;
+    header = p.header;
+    header_kind = p.parse_header_kind;
+    parse_header = p.parse_header;
+    payload_t = parse_recursive_payload_t p.t p.header p.count;
+    payload_kind = parse_recursive_payload_kind p.parse_header_kind.parser_kind_injective;
+    payload = parse_recursive_payload p;
+    payload_ext = parse_recursive_payload_ext p;
+    synth_ = p.synth_;
+    synth_inj = p.synth_inj;
+  }
 
 let parse_recursive
   p
-= (tot_close_by_fuel (parse_recursive_step p) closure (parse_recursive_step_ext p))
+= parse_rec_gen (parse_recursive_gen_param p)
 
 let parse_recursive_eq
   (p: parse_recursive_param)
   (b: bytes)
 : Lemma
   (parse (parse_recursive p) b == parse (parse_recursive_aux p (parse_recursive p)) b)
-= let c = closure b in
-  let q = parse_recursive_step p (c - 1) in
-  assert (parse (parse_recursive p) b == parse (parse_recursive_aux p q) b);
-  parse_recursive_aux_ext p q (parse_recursive p) b (fun input' -> // here hypothesis Seq.length input' < Seq.length input is used
-    parse_recursive_step_ext p (c - 1) input'
-  )
+= let q = parse_recursive_gen_param p in
+  parse_rec_gen_eq q b;
+  p.synth_inj;
+  tot_parse_synth_eq (parse_rec_gen_alt q (parse_rec_gen q)) q.synth_ b;
+  tot_parse_synth_eq (parse_recursive_alt p (parse_recursive p)) p.synth_ b
 
 #push-options "--z3rlimit 64"
 

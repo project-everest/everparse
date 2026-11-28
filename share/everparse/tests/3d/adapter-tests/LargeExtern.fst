@@ -15,6 +15,7 @@ module FL = LowParse.Spec.FLData
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module EC = EverParse3d.ErrorCode
+module S = EverParse3d.Actions.Spec
 
 noextract let count = 4294967304
 noextract let kind : P.parser_kind true P.WeakKindStrongPrefix =
@@ -32,6 +33,7 @@ inline_for_extraction noextract
 fn scan_worker (extra: B.extra_t)
   : A.validate_with_action_no_read #B.base_t #B.len_t #B.pos_t
       #B.input_stream_extern parser state_dict_empty false false
+      (S.vspec_of_parser parser)
   = (ctxt: _) (handler: _) (base: _) (len: _) (cursor: _)
     (lookahead: _) (state: _) (contents: _) (remaining: _) (old: _)
 {
@@ -48,7 +50,7 @@ fn scan_worker (extra: B.extra_t)
   parser_result (Seq.slice remaining (U64.v old) (Seq.length remaining));
   let prefix = B.stream_has_u64 #extra base len cursor high contents remaining;
   if prefix {
-    let enough = B.stream_has_at #extra base len cursor high 8sz contents remaining;
+    let enough = B.stream_has_at #extra "" base len cursor high 8sz contents remaining;
     if enough {
       assert (pure (U64.fits (U64.v high + 8)));
       let next = B.scan_add high 8sz;
@@ -74,15 +76,18 @@ fn scan_worker (extra: B.extra_t)
   }
 }
 
+[@@FStar.Attributes.rename_let "LargeExternNoRead"]
 let no_read (extra: B.extra_t) =
   AD.adapt_no_read #_ #_ #_ #_ #parser #state_dict_empty #false #false
     (scan_worker extra)
 
+[@@FStar.Attributes.rename_let "LargeExternSkip"]
 let skip (extra: B.extra_t) =
   AD.adapt_read #_ #_ #_ #_ #parser #state_dict_empty #false #false
     (A.validate_drop #B.base_t #B.len_t #B.pos_t #B.input_stream_extern #extra
       (scan_worker extra))
 
+[@@FStar.Attributes.rename_let "LargeExternDrain"]
 let drain (extra: B.extra_t) =
   AD.adapt_read #_ #_ #_ #_ #P.parse_all_bytes #state_dict_empty #false #false
     (A.validate_all_bytes #B.base_t #B.len_t #B.pos_t #B.input_stream_extern #extra)

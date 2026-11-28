@@ -13,11 +13,16 @@ fi
 root_opam="--root=$OPAMROOT"
 opam env "$root_opam" --set-root --shell=sh |
     if [[ "$1" = --shell ]] ; then
-        $SED 's!^PATH=\(.*\); export PATH;$!PATH=\1:"$PATH"; export PATH;!'
+        cat
     else
 	$SED 's!^\([^=]*\)='"'"'\(.*\)'"'"'; export [^;]*;$!export \1 := \2!' |
-	$SED 's!^export PATH := \(.*\)$!export PATH := \1:$(PATH)!'
+	$SED '/^export PATH := /d'
     fi
+if [[ "$1" != --shell ]] ; then
+    # Recompute from the caller's PATH instead of duplicating a cached snapshot
+    # on every make restart. cmd.exe drops PATH entirely above 8191 characters.
+    echo 'export PATH := $(shell eval "$$("$(EVERPARSE_OPT_PATH)/opam-env.sh" --shell)" && printf "%s" "$$PATH")'
+fi
 if [[ "$1" = --shell ]] ; then
     equal="="
     if [[ "$OS" = Windows_NT ]] ; then

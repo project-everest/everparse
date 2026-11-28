@@ -1,0 +1,49 @@
+// Custom error codes for failing field constraints (--api pulse only)
+
+#define BAD_KIND 201
+
+// A constraint with a literal error code, and one with a #define'd code;
+// the third constraint uses the default constraint-failure code
+entrypoint
+typedef struct _Header
+{
+  UINT8 version { version == 1 } {:error-code 200};
+  UINT8 kind { kind <= 3 } {:error-code BAD_KIND};
+  UINT8 flags { flags == 0 };
+} Header;
+
+// Bit fields are coalesced into a single refined field: each one still
+// reports its own code, and the one with no code reports the default
+entrypoint
+typedef struct _Bits
+{
+  UINT8 a : 2 { a != 0 } {:error-code 128};
+  UINT8 b : 3 { b <= 4 };
+  UINT8 c : 3 { c != 7 } {:error-code 255};
+} Bits;
+
+// The rest of the struct depends on the refined field (dependent pair
+// with refinement), and the refined field has an action
+entrypoint
+typedef struct _Dep(mutable UINT32 *out)
+{
+  UINT32 len { len >= 1 && len <= 4 } {:error-code 202};
+  UINT8 payload[:byte-size len];
+  UINT32 tag { tag == 42 } {:error-code 203}
+    {:on-success *out = tag; return true; };
+} Dep;
+
+// An enum field is inlined with its membership constraint, which is merged
+// with the constraint at the use site: a non-member reports the default
+// code, a member failing the use-site constraint reports 211
+UINT8 enum Color {
+  Red = 1,
+  Green = 2,
+  Blue = 3
+};
+
+entrypoint
+typedef struct _Paint
+{
+  Color color { color != Blue } {:error-code 211};
+} Paint;

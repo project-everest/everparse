@@ -52,7 +52,7 @@
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
 %token          LBRACK_CONSUME_ALL
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
-%token          MUTABLE LBRACE_ONSUCCESS LBRACE_ACT LBRACE_CHECK FIELD_POS_64 FIELD_POS_32 FIELD_PTR FIELD_PTR_AFTER VAR ABORT RETURN
+%token          MUTABLE LBRACE_ONSUCCESS LBRACE_ACT LBRACE_CHECK LBRACE_ERROR_CODE FIELD_POS_64 FIELD_POS_32 FIELD_PTR FIELD_PTR_AFTER VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
@@ -334,6 +334,7 @@ atomic_field:
       bopt=option_of(bitwidth)
       aopt=array_annot
       c=option_of(refinement)
+      ec=option_of(error_code)
       a=option_of(field_action)
       p=option_of(with_probe)
     {
@@ -345,9 +346,13 @@ atomic_field:
          field_constraint=c;
          field_bitwidth=bopt;
          field_action=a;
-         field_probe=p
+         field_probe=p;
+         field_error_code=ec
         }
     }
+
+error_code:
+  | LBRACE_ERROR_CODE e=expr RBRACE { e }
 
 anonymous_struct_field:
   | STRUCT LBRACE fields=fields RBRACE fn=IDENT

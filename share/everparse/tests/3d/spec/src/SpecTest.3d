@@ -1,0 +1,84 @@
+// Formats whose action semantics are pinned down by the F* lemmas in
+// SpecTest.Lemmas.fst, against the functional specification of 3d actions.
+
+extern typedef struct _Vec Vec
+
+extern void Push(mutable Vec *vec, UINT32 x)
+
+extern probe ProbeInPlace
+extern probe (INIT) ProbeInit
+
+// The parsed value is stored.
+entrypoint
+typedef struct _Store(mutable UINT32 *out)
+{
+  UINT32 x {:act *out = x; };
+} Store;
+
+// field_pos_32 is the position where the annotated field starts.
+entrypoint
+typedef struct _Pos(mutable UINT32 *out)
+{
+  UINT16 pad;
+  UINT32 x {:act var i = field_pos_32; *out = i; };
+} Pos;
+
+// A :check that fails after writing: the validator fails.
+entrypoint
+typedef struct _Check(mutable UINT32 *out)
+{
+  UINT32 x {:check *out = x; return (x != 0); };
+  UINT32 y;
+} Check;
+
+// The element actions of an array run in order.
+entrypoint
+typedef struct _Arr(mutable UINT32 *out)
+{
+  Store(out) a[:byte-size 8];
+} Arr;
+
+// field_ptr points to the start of the annotated field.
+entrypoint
+typedef struct _Ptr(mutable PUINT8 *out)
+{
+  UINT16 pad;
+  UINT32 x {:act var p = field_ptr; *out = p; };
+} Ptr;
+
+// An extern action is specified by its uninterpreted spec `___spec_Push`:
+// the final state of `vec` is that of the sequence of calls.
+
+entrypoint
+typedef struct _Log(mutable Vec *vec)
+{
+  UINT32 x {:on-success Push(vec, x); return true; };
+  UINT32 y {:on-success Push(vec, y); return true; };
+} Log;
+
+// An output setter is specified by its uninterpreted spec.
+output
+typedef struct _OPAIR {
+  UINT32 fst;
+  UINT32 snd;
+} OPAIR;
+
+entrypoint
+typedef struct _Set(mutable OPAIR *out)
+{
+  UINT32 x {:act out->fst = x; };
+} Set;
+
+// A probe: the outcome is the head of the probe tape, and the probed bytes
+// are validated after the copy (double-fetch freedom).
+entrypoint
+typedef struct _Inner {
+  UINT16 x;
+  UINT16 y { y >= x };
+} Inner;
+
+entrypoint
+typedef struct _Probed(EVERPARSE_COPY_BUFFER_T dest)
+{
+  Inner *payload probe ProbeInPlace (length = 4, destination = dest);
+} Probed;

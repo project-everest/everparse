@@ -413,7 +413,8 @@ and resolve_atomic_field (env:qenv) (f:atomic_field) : ML (atomic_field & qenv) 
           field_constraint = map_opt (resolve_expr env) sf.field_constraint;
           field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
           field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action;
-          field_probe = map_opt (resolve_probe_call env) sf.field_probe }
+          field_probe = map_opt (resolve_probe_call env) sf.field_probe;
+          field_error_code = map_opt (resolve_expr env) sf.field_error_code }
     )
   in
   let env = push_name env f.v.field_ident.v.name in

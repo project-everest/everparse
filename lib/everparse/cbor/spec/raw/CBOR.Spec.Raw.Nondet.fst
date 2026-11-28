@@ -34,7 +34,7 @@ let rec check_equiv_list // this function is tail-recursive, and is meant to be 
         else Some false
       | String ty1 _ s1, String ty2 _ s2 ->
         if ty1 = ty2 &&
-          s1 = s2
+          (s1 <: Seq.seq FStar.UInt8.t) = s2
         then check_tail
         else Some false
       | Tagged tag1 b1, Tagged tag2 b2 ->

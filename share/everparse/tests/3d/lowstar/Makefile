@@ -10,8 +10,8 @@ include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar
-3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+EVERPARSE_C_RUNTIME = $(EVERPARSE_HOME)/lib/everparse/3d/runtime/lowstar
+3D=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 
 INCLUDES=$(EVERPARSE_HOME)/lib/everparse/3d $(EVERPARSE_HOME)/lib/everparse/lowparse
 
@@ -34,9 +34,9 @@ clean_out_files=\
 	$(modules_auto_static_assertions) \
 	$(addsuffix .h,$(modules_or_wrappers)) \
 	$(module_extern_apis)
-# Custard preserves KrmlPrivate: ELFTestGen calls a private ELF validator
-# across translation units, so KaRaMeL exposes it in an internal header.
-clean_out_files += internal internal/ELF.h $(EXTRA_CLEAN_OUT_FILES)
+clean_out_files += $(EXTRA_CLEAN_OUT_FILES)
+# Custard extraction produces no internal/ header directory.
+# This is the same set as the --api pulse corpus in ../Makefile.
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
@@ -54,6 +54,7 @@ subdirs-test: modules tcpip extern output-types static funptr ifdefs \
 	 probe iter z3-testgen-test exttype z3-testgen-probe-test \
 	 use_error_handler_macro \
 	 check_complete \
+	 c_style_options \
 	 save_hashes
 
 ifneq ($(OS),Windows_NT)
@@ -123,6 +124,10 @@ use_error_handler_macro:
 check_complete:
 	+$(MAKE) -C $@
 
+.PHONY: c_style_options
+c_style_options:
+	+$(MAKE) -C $@
+
 .PHONY: specialize_test_error_handler_macro
 specialize_test_error_handler_macro:
 	+$(MAKE) -C $@
@@ -176,15 +181,15 @@ echo-clean-out-files:
 	echo "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 echo-out-files:
-	echo "$$(cd out.cleanup && find . ! -name . | sed 's|^\./||' | sort)"
+	echo "$$(ls out.cleanup | sort)"
 
 test-cleanup:
-	test "$$(cd out.cleanup && find . ! -name . | sed 's|^\./||' | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
-	env EVERPARSE_FSTAR_OPTIONS='--admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
-	test "$$(cd out.cleanup && find . ! -name . | sed 's|^\./||' | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+	env EVERPARSE_FSTAR_OPTIONS='$(EVERPARSE_FSTAR_OPTIONS) --admit_smt_queries true' $(3D) --odir out.cleanup --batch --cleanup --skip_c_makefiles --no_copy_everparse_h $(positive_tests)
+	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
@@ -205,6 +210,6 @@ clean-files:
 clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean specialize_tagged_union_array.clean save_hashes.clean
 
 clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean
-clean: check_complete.clean
+clean: check_complete.clean c_style_options.clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret static funptr ifdefs

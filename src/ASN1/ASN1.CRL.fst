@@ -19,9 +19,9 @@ let crlExtension
     (_ by (seq_tac ()))
     (_ by (choice_tac ()))
 
-let crlExtensions = asn1_sequence_of crlExtension
+let crlExtensions = asn1_nonempty_sequence_of crlExtension
 
-let version = mk_restricted_field asn1_integer (fun x -> x = 1)
+let version = mk_restriction_field asn1_integer (RESTRICT_INT_IN [1])
 
 let revokedCertificate
 = asn1_sequence [
@@ -30,13 +30,14 @@ let revokedCertificate
     "crlEntryExtensions" *^ (OPTION ^: crlExtensions)]
     (_ by (seq_tac ()))
 
-let revokedCertificates = asn1_sequence_of revokedCertificate
+(* RFC 5280 §5.1.2.6: when empty, revokedCertificates MUST be absent. *)
+let revokedCertificates = asn1_nonempty_sequence_of revokedCertificate
 
 let tBSCertList 
 = asn1_sequence [
     "version" *^ (OPTION ^: version);
     "signature" *^ (PLAIN ^: X509.algorithmIdentifier);
-    "issuer" *^ (PLAIN ^: X509.name);
+    "issuer" *^ (PLAIN ^: X509.issuerName);
     "thisUpdate" *^ (PLAIN ^: X509.time);
     "nextUpdate" *^ (OPTION ^: X509.time);
     "revokedCertificates" *^ (OPTION ^: revokedCertificates);
@@ -49,6 +50,8 @@ let cRLCertificateList
     "signatureAlgorithm" *^ (PLAIN ^: X509.algorithmIdentifier);
     "signatureValue" *^ (PLAIN ^: asn1_bitstring)]
     (_ by (seq_tac ()))
+
+let _ : squash (asn1_k_wf cRLCertificateList) = _ by (wf_tac ())
 
 open ASN1.Spec.Interpreter
 

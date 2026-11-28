@@ -1085,22 +1085,189 @@ let raw_data_item_bounded_prf
 
 #pop-options
 
+(* Map key depth bound *)
+
+let bounded_key_depth_le
+  (kb: option SZ.t)
+  (x: raw_data_item)
+: Tot bool
+= match kb with
+  | None -> true
+  | Some k -> map_depth x <= SZ.v k
+
+let bounded_key_key_depth_le
+  (kb: option SZ.t)
+  (x: raw_data_item)
+: Tot bool
+= match kb with
+  | None -> true
+  | Some k -> map_key_depth x <= SZ.v k
+
+let rec bounded_key_pairs
+  (kb: option SZ.t)
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (ensures (list_for_all_alt (bounded_key_depth_le kb) (bounded_key_key_depth_le kb) (CBOR.Spec.Util.list_of_pair_list l) == (
+    match kb with
+    | None -> true
+    | Some k -> CBOR.Spec.Util.list_max map_key_depth_pair l <= SZ.v k
+  )))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> bounded_key_pairs kb q
+
+let rec bounded_key_list
+  (kb: option SZ.t)
+  (l: list raw_data_item)
+: Lemma
+  (ensures (List.Tot.for_all (bounded_key_key_depth_le kb) l == (
+    match kb with
+    | None -> true
+    | Some k -> CBOR.Spec.Util.list_max map_key_depth l <= SZ.v k
+  )))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> bounded_key_list kb q
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+let bounded_key_key_depth_le_eq_recursive
+  (kb: option SZ.t)
+  (x: raw_data_item)
+: Lemma
+  (bounded_key_key_depth_le kb x == (
+    let c = get_children serialize_raw_data_item_param x in
+    if Map? x
+    then list_for_all_alt (bounded_key_depth_le kb) (bounded_key_key_depth_le kb) c
+    else List.Tot.for_all (bounded_key_key_depth_le kb) c
+  ))
+= map_key_depth_eq x;
+  match x with
+  | Map _ l -> bounded_key_pairs kb l
+  | Array _ l -> bounded_key_list kb l
+  | _ -> ()
+
+#pop-options
+
+let rec list_for_all_and
+  (#t: Type)
+  (f f1 f2: (t -> bool))
+  (l: list t)
+: Lemma
+  (requires (forall y . f y == (f1 y && f2 y)))
+  (ensures (List.Tot.for_all f l == (List.Tot.for_all f1 l && List.Tot.for_all f2 l)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_and f f1 f2 q
+
+let rec list_for_all_alt_and
+  (#t: Type)
+  (f f1 f2 g g1 g2: (t -> bool))
+  (l: list t)
+: Lemma
+  (requires (
+    (forall y . f y == (f1 y && f2 y)) /\
+    (forall y . g y == (g1 y && g2 y))
+  ))
+  (ensures (list_for_all_alt f g l == (list_for_all_alt f1 g1 l && list_for_all_alt f2 g2 l)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_alt_and g g1 g2 f f1 f2 q
+
+let raw_data_item_bounded_key_depth
+  (kb: option SZ.t)
+  (d: nat)
+: Tot (r: nat { d > 0 ==> r < d })
+= if d = 0
+  then 0
+  else match kb with
+  | None -> d - 1
+  | Some k -> if SZ.v k < d - 1 then SZ.v k else d - 1
+
+#push-options "--z3rlimit 64"
+
+#restart-solver
+let raw_data_item_bounded_key_prf
+  (n: nat)
+  (kb: option SZ.t)
+  (d: nat)
+  (l: leaf)
+  (c: L.nlist (remaining_data_items l) raw_data_item)
+: Lemma
+  (raw_data_item_bounded_key d n kb (synth_raw_data_item_from_alt (| l, c |)) == (
+    map_length_bounded_header n l && (
+      if raw_data_item_bounded_incr l
+      then d > 0 && list_for_all_alt (raw_data_item_bounded_key (raw_data_item_bounded_key_depth kb d) n kb) (raw_data_item_bounded_key (d - 1) n kb) c
+      else List.Tot.for_all (raw_data_item_bounded_key d n kb) c
+  )))
+= let x = synth_raw_data_item_from_alt (| l, c |) in
+  let _ = LowParse.Spec.Combinators.synth_injective_synth_inverse_synth_inverse_recip synth_raw_data_item_from_alt synth_raw_data_item_from_alt_recip () in
+  assert (synth_raw_data_item_from_alt_recip x == (| l, c |));
+  assert (get_children serialize_raw_data_item_param x == c);
+  raw_data_item_bounded_prf n d l c;
+  bounded_key_key_depth_le_eq_recursive kb x;
+  assert (Map? x == raw_data_item_bounded_incr l);
+  assert (raw_data_item_bounded_key d n kb x == (raw_data_item_bounded d n x && bounded_key_key_depth_le kb x));
+  if raw_data_item_bounded_incr l
+  then begin
+    if d > 0
+    then begin
+      let kd = raw_data_item_bounded_key_depth kb d in
+      Classical.forall_intro map_key_depth_le_map_depth;
+      list_for_all_alt_and
+        (raw_data_item_bounded_key kd n kb)
+        (raw_data_item_bounded (d - 1) n)
+        (bounded_key_depth_le kb)
+        (raw_data_item_bounded_key (d - 1) n kb)
+        (raw_data_item_bounded (d - 1) n)
+        (bounded_key_key_depth_le kb)
+        c;
+      list_for_all_alt_same (raw_data_item_bounded (d - 1) n) c
+    end
+  end
+  else
+    list_for_all_and
+      (raw_data_item_bounded_key d n kb)
+      (raw_data_item_bounded d n)
+      (bounded_key_key_depth_le kb)
+      c
+
+#pop-options
+
 let raw_data_item_bounded_pred
   (n: nat)
+  (kb: option SZ.t)
 : Tot (pred_depth_recursive_t parse_raw_data_item_param)
 = {
     incr = raw_data_item_bounded_incr;
     base = map_length_bounded_header n;
-    pred = (fun d -> raw_data_item_bounded d n);
-    prf = raw_data_item_bounded_prf n;
+    pred = (fun d -> raw_data_item_bounded_key d n kb);
+    key_depth = raw_data_item_bounded_key_depth kb;
+    prf = raw_data_item_bounded_key_prf n kb;
   }
+
+inline_for_extraction
+let impl_raw_data_item_bounded_key_depth
+  (kb: option SZ.t)
+  (d: SZ.t)
+: Tot (r: SZ.t { SZ.v r == raw_data_item_bounded_key_depth kb (SZ.v d) })
+= if d = 0sz
+  then 0sz
+  else match kb with
+  | None -> SZ.sub d 1sz
+  | Some k -> if SZ.lt k (SZ.sub d 1sz) then k else SZ.sub d 1sz
 
 #push-options "--z3rlimit 32"
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-fn impl_raw_data_item_bounded_step (map_length_bound: SZ.t) :
-  validate_depth_step_t #parse_raw_data_item_param serialize_raw_data_item_param (raw_data_item_bounded_pred (SZ.v map_length_bound))
+fn impl_raw_data_item_bounded_step (map_length_bound: SZ.t) (map_key_bound: option SZ.t) :
+  validate_depth_step_t #parse_raw_data_item_param serialize_raw_data_item_param (raw_data_item_bounded_pred (SZ.v map_length_bound) map_key_bound)
 =
     (#va: Ghost.erased leaf)
     (#pm: perm)
@@ -1166,21 +1333,24 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let validate_raw_data_item_nlist_bounded_body
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (d: SZ.t)
-  (self: (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_nlist_depth_t (raw_data_item_bounded_pred (SZ.v map_length_bound)) d')
+  (self: (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_nlist_depth_t (raw_data_item_bounded_pred (SZ.v map_length_bound) map_key_bound) d')
   (n: SZ.t)
-: validator (parse_tot_nlist_depth (raw_data_item_bounded_pred (SZ.v map_length_bound)) (SZ.v d) (SZ.v n))
+: validator (parse_tot_nlist_depth (raw_data_item_bounded_pred (SZ.v map_length_bound) map_key_bound) (SZ.v d) (SZ.v n))
 = validate_nlist_depth_body
     serialize_raw_data_item_param
     (validate_leaf ())
-    (raw_data_item_bounded_pred (SZ.v map_length_bound))
-    (impl_raw_data_item_bounded_step map_length_bound)
+    (raw_data_item_bounded_pred (SZ.v map_length_bound) map_key_bound)
+    (impl_raw_data_item_bounded_step map_length_bound map_key_bound)
     d
+    (impl_raw_data_item_bounded_key_depth map_key_bound d)
     self
     n
 
 fn rec validate_raw_data_item_nlist_bounded
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (d: SZ.t)
   (n: SZ.t)
   (input: S.slice byte)
@@ -1193,19 +1363,20 @@ requires
 returns res: bool
 ensures
   pts_to input #pm v ** (exists* off . R.pts_to poffset off ** pure (
-    validator_postcond (parse_tot_nlist_depth (raw_data_item_bounded_pred (SZ.v map_length_bound)) (SZ.v d) (SZ.v n)) offset v off res
+    validator_postcond (parse_tot_nlist_depth (raw_data_item_bounded_pred (SZ.v map_length_bound) map_key_bound) (SZ.v d) (SZ.v n)) offset v off res
   ))
 decreases (SZ.v d)
 {
   validate_raw_data_item_nlist_bounded_body
     map_length_bound
+    map_key_bound
     d
-    (fun (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_raw_data_item_nlist_bounded map_length_bound d')
+    (fun (d': SZ.t { SZ.v d' < SZ.v d }) -> validate_raw_data_item_nlist_bounded map_length_bound map_key_bound d')
     n
     input poffset #offset #pm #v
 }
 
-fn validate_raw_data_item_bounded (map_depth_bound: SZ.t) (map_length_bound: SZ.t) : validator #(parse_filter_refine (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))) #(parse_filter_kind parse_raw_data_item_kind) (parse_filter parse_raw_data_item (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))) =
+fn validate_raw_data_item_bounded (map_depth_bound: SZ.t) (map_length_bound: SZ.t) (map_key_bound: option SZ.t) : validator #(parse_filter_refine (raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)) #(parse_filter_kind parse_raw_data_item_kind) (parse_filter parse_raw_data_item (raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)) =
   (input: _)
   (poffset: _)
   (#offset: _)
@@ -1213,17 +1384,17 @@ fn validate_raw_data_item_bounded (map_depth_bound: SZ.t) (map_length_bound: SZ.
   (#v: _)
 {
   let b : Ghost.erased bytes = Seq.slice v (SZ.v offset) (Seq.length v);
-  parse_depth_recursive_eq (raw_data_item_bounded_pred (SZ.v map_length_bound)) (SZ.v map_depth_bound) b;
+  parse_depth_recursive_eq (raw_data_item_bounded_pred (SZ.v map_length_bound) map_key_bound) (SZ.v map_depth_bound) b;
   LowParse.Spec.Combinators.parse_filter_eq
     #parse_raw_data_item_kind
     (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)
-    ((raw_data_item_bounded_pred (SZ.v map_length_bound)).pred (SZ.v map_depth_bound))
+    ((raw_data_item_bounded_pred (SZ.v map_length_bound) map_key_bound).pred (SZ.v map_depth_bound))
     b;
   LowParse.Spec.Combinators.parse_filter_eq
     parse_raw_data_item
-    (raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+    (raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)
     b;
-  validate_raw_data_item_nlist_bounded map_length_bound map_depth_bound 1sz
+  validate_raw_data_item_nlist_bounded map_length_bound map_key_bound map_depth_bound 1sz
     input poffset #offset #pm #v
 }
 

@@ -1,0 +1,93 @@
+-- Value notations, BOOLEAN constraints and string DEFAULTs; WITH
+-- COMPONENTS; parameterized types; information object classes and table
+-- constraints; constraint set operations and serial constraints; value
+-- sets, contained subtypes and extensible constraints; table constraints
+-- in nested SEQUENCE types
+Features2 DEFINITIONS IMPLICIT TAGS ::= BEGIN
+IMPORTS Pair{}, EXT, Extension{} FROM Features2Base;
+
+yes BOOLEAN ::= TRUE
+greek UTF8String ::= { "ab", {0, 0, 3, 177} }
+origin Point ::= { x 0, y TRUE }
+Point ::= SEQUENCE { x INTEGER, y BOOLEAN OPTIONAL }
+
+Vals ::= SEQUENCE {
+  flag BOOLEAN (yes) DEFAULT TRUE,
+  name UTF8String (SIZE (1..8)) DEFAULT greek,
+  when UTCTime DEFAULT "240101120000Z",
+  n INTEGER (0..10 | 20..30)
+}
+
+-- WITH COMPONENTS
+Base ::= SEQUENCE {
+  a INTEGER,
+  b BOOLEAN OPTIONAL,
+  c [0] OCTET STRING OPTIONAL,
+  d [1] INTEGER OPTIONAL
+}
+Derived ::= Base (WITH COMPONENTS { ..., b PRESENT, c ABSENT, d (0..7) })
+
+-- Parameterized types
+Bounded { INTEGER : ub } ::= OCTET STRING (SIZE (1..ub))
+PRec ::= Pair { Bounded { 2 }, INTEGER }
+
+-- TYPE-IDENTIFIER, a non-extensible object set
+ALG ::= TYPE-IDENTIFIER
+id-a OBJECT IDENTIFIER ::= { 1 2 3 }
+id-b OBJECT IDENTIFIER ::= { 1 2 4 }
+id-c OBJECT IDENTIFIER ::= { 1 2 5 }
+alg-a ALG ::= { NULL IDENTIFIED BY id-a }
+alg-b ALG ::= { INTEGER IDENTIFIED BY id-b }
+Algs ALG ::= { alg-a | alg-b }
+AlgId ::= SEQUENCE {
+  algorithm ALG.&id ({Algs}),
+  parameters ALG.&Type ({Algs}{@algorithm}) OPTIONAL
+}
+
+-- An imported class and parameterized type, an extensible object set
+BC ::= SEQUENCE { ca BOOLEAN DEFAULT FALSE, len INTEGER (0..255) OPTIONAL }
+ext-bc EXT ::= { SYNTAX BC IDENTIFIED BY id-a CRITICALITY TRUE }
+ext-ku EXT ::= { SYNTAX BIT STRING IDENTIFIED BY id-b }
+KnownExts EXT ::= { ext-bc | ext-ku, ... }
+Exts ::= SEQUENCE SIZE (1..MAX) OF Extension {{KnownExts}}
+
+-- The default syntax, inline objects, a set in a set, a SET OF dependent
+ATTR ::= CLASS { &Type, &id OBJECT IDENTIFIER UNIQUE }
+Attrs1 ATTR ::= { { &Type UTF8String, &id id-a } }
+Attrs ATTR ::= { Attrs1 | { &Type INTEGER, &id id-c } }
+Attr ::= SEQUENCE {
+  type ATTR.&id ({Attrs}),
+  values SET SIZE (1..MAX) OF ATTR.&Type ({Attrs}{@type})
+}
+
+-- Set operations and serial constraints
+Ints ::= SEQUENCE OF INTEGER
+Alg ::= SEQUENCE {
+  i INTEGER ((0..100) ^ (50..200) EXCEPT 75),
+  s IA5String (SIZE (1..10)) (SIZE (3..MAX)),
+  l Ints (SIZE (1..MAX)),
+  b BOOLEAN (ALL EXCEPT FALSE)
+}
+
+-- Value sets, contained subtypes, extensible constraints
+Small INTEGER ::= { 1 | 3..5 }
+Odd INTEGER ::= { 1 | 3 | 5 | 7, ... }
+Short ::= IA5String (SIZE (1..4))
+More ::= SEQUENCE {
+  a Small,
+  b INTEGER (INCLUDES Small EXCEPT 4),
+  c INTEGER (Small | 10),
+  d Odd,
+  e INTEGER (0..10, ...),
+  f IA5String (INCLUDES Short) (SIZE (2..MAX)),
+  g OCTET STRING (SIZE (1..2, ...))
+}
+
+-- Table constraints in nested SEQUENCE types (absolute and relative keys)
+Outer ::= SEQUENCE {
+  hdr INTEGER,
+  inner SEQUENCE { type ATTR.&id ({Attrs}), value ATTR.&Type ({Attrs}{@inner.type}) },
+  list SEQUENCE OF SEQUENCE { type ATTR.&id ({Attrs}), value ATTR.&Type ({Attrs}{@.type}) }
+}
+
+END

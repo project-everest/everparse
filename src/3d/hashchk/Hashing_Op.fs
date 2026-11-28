@@ -71,7 +71,7 @@ let hash_int (h: hash_state) (i: int32) : unit =
     h.AppendData arr
 
 let hash_file (h: hash_state) (f: string) : unit =
-    use file = System.IO.File.Open(f, System.IO.FileMode.Open, System.IO.FileAccess.Read)
+    use file = System.IO.File.OpenRead(f)
     let len = int32 file.Length
     hash_int h len
     use arr = h.new_array(len)

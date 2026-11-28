@@ -981,7 +981,7 @@ inline_for_extraction
 fn l2r_safe_writer_bounded_seq_vlgenbytes
   (vmin: nat) (vmin_u32: U32.t { (U32.v vmin_u32 <: nat) == vmin })
   (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 }) (vmax_u32: U32.t { (U32.v vmax_u32 <: nat) == vmax })
-  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (#sk: Ghost.erased parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
   (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
   (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
   (hw: LPS.l2r_leaf_writer ssk)
@@ -1075,7 +1075,7 @@ inline_for_extraction
 fn l2r_safe_size_bounded_seq_vlgenbytes
   (vmin: nat) (vmin_u32: U32.t { (U32.v vmin_u32 <: nat) == vmin })
   (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 }) (vmax_u32: U32.t { (U32.v vmax_u32 <: nat) == vmax })
-  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (#sk: Ghost.erased parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
   (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
   (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
 : PPB.l2r_safe_size #(lvec byte) #(Seq.seq byte) #(parse_bounded_seq_vlbytes_t vmin vmax) vmatch_copy_seqbytes #_ #(parse_bounded_seq_vlgenbytes vmin vmax pk) (serialize_bounded_seq_vlgenbytes vmin vmax ssk) (seq_vlbytes_conv vmin vmax)

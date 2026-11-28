@@ -1,0 +1,58 @@
+-- A miniature X.509 certificate exercising the front-end features needed
+-- by RFC 5280: IMPORTS, OBJECT IDENTIFIER and INTEGER value assignments,
+-- DEFAULT on an EXPLICIT-tagged component, ANY DEFINED BY tables and
+-- extension values (CONTAINING), and KEEP-BYTES.
+X509Lite DEFINITIONS EXPLICIT TAGS ::= BEGIN
+
+IMPORTS id-ce, ub-name FROM X509LiteBase;
+
+--#KEEP-BYTES TBS
+
+--#DEFINED-BY AlgId.parameters {
+--#  sha256WithRSAEncryption : NULL,
+--#  ecdsa-with-SHA256 : ABSENT
+--#}
+
+--#DEFINED-BY Extension.extnValue BY extnID {
+--#  id-ce-basicConstraints : CONTAINING BasicConstraints,
+--#  id-ce-keyUsage : CONTAINING BIT STRING
+--#}
+
+sha256WithRSAEncryption OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1) 1 11 }
+ecdsa-with-SHA256 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) ansi-X9-62(10045) signatures(4) 3 2 }
+id-ce-keyUsage OBJECT IDENTIFIER ::= { id-ce 15 }
+id-ce-basicConstraints OBJECT IDENTIFIER ::= { id-ce 19 }
+
+Version ::= INTEGER { v1(0), v2(1), v3(2) }
+
+AlgId ::= SEQUENCE {
+  algorithm  OBJECT IDENTIFIER,
+  parameters ANY DEFINED BY algorithm OPTIONAL
+}
+
+BasicConstraints ::= SEQUENCE {
+  cA                BOOLEAN DEFAULT FALSE,
+  pathLenConstraint INTEGER (0..MAX) OPTIONAL
+}
+
+Extension ::= SEQUENCE {
+  extnID    OBJECT IDENTIFIER,
+  critical  BOOLEAN DEFAULT FALSE,
+  extnValue OCTET STRING
+}
+
+TBS ::= SEQUENCE {
+  version    [0] Version DEFAULT v1,
+  serial     INTEGER,
+  signature  AlgId,
+  subject    SEQUENCE SIZE (1..ub-name) OF UTF8String (SIZE (1..ub-name)),
+  extensions [3] SEQUENCE SIZE (1..MAX) OF Extension OPTIONAL
+}
+
+Cert ::= SEQUENCE {
+  tbs    TBS,
+  sigAlg AlgId,
+  sig    BIT STRING
+}
+
+END

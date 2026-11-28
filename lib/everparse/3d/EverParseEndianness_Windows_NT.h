@@ -16,8 +16,7 @@ Authors:
 nswamy, protz, taramana 5-Feb-2020
 
 --*/
-/* This is a hand-written header that selectively includes relevant bits from
- * krmllib.h -- it has to be updated manually to track upstream changes. */
+/* Hand-written endianness and shared C type support for 3D validators. */
 
 #pragma once
 
@@ -35,42 +34,11 @@ nswamy, protz, taramana 5-Feb-2020
 
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;
-/* Under --api pulse the copy buffer is a concrete struct emitted by KaRaMeL
-   into EverParse.h; EverParsePulseEndianness.h defines the guard below to
-   suppress this legacy definition. */
+/* Clients may supply a copy-buffer handle type before including this header. */
 #ifndef EVERPARSE_COPY_BUFFER_T_DEFINED
 #define EVERPARSE_COPY_BUFFER_T_DEFINED
 typedef void* EVERPARSE_COPY_BUFFER_T;
 #endif
-
-#ifndef KRML_MAYBE_UNUSED_VAR
-#  define KRML_MAYBE_UNUSED_VAR(x) (void)(x)
-#endif
-
-#ifndef KRML_HOST_IGNORE
-#  define KRML_HOST_IGNORE(x) (void)(x)
-#endif
-
-#ifndef KRML_HOST_PRINTF
-#  include <stdio.h>
-#  define KRML_HOST_PRINTF printf
-#endif
-
-#ifndef KRML_HOST_EXIT
-#  include <stdlib.h>
-#  define KRML_HOST_EXIT exit
-#endif
-
-#define KRML_CHECK_SIZE(size_elt, sz)                                          \
-  do {                                                                         \
-    if (((size_t)(sz)) > ((size_t)(SIZE_MAX / (size_elt)))) {                  \
-      KRML_HOST_PRINTF(                                                        \
-          "Maximum allocatable size exceeded, aborting before overflow at "    \
-          "%s:%d\n",                                                           \
-          __FILE__, __LINE__);                                                 \
-      KRML_HOST_EXIT(253);                                                     \
-    }                                                                          \
-  } while (0)
 
 #  define htobe16(x) _byteswap_ushort(x)
 #  define htole16(x) (x)

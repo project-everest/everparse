@@ -1,0 +1,18 @@
+{
+  "vectors": [
+    {"id": "sized/accept/2", "type": "DiffConstraints.Sized", "hex": "0402abcd", "expect": "accept", "clause": "X.680 51.5", "features": ["OCTET STRING", "SIZE"]},
+    {"id": "sized/accept/3", "type": "DiffConstraints.Sized", "hex": "0403abcdef", "expect": "accept", "clause": "X.680 51.5", "features": ["OCTET STRING", "SIZE"]},
+    {"id": "sized/reject/1", "type": "DiffConstraints.Sized", "hex": "0401ab", "expect": "reject", "clause": "X.680 51.5", "features": ["OCTET STRING", "SIZE"], "mutation": "constraint"},
+    {"id": "sized/reject/4", "type": "DiffConstraints.Sized", "hex": "0404abcdef01", "expect": "reject", "clause": "X.680 51.5", "features": ["OCTET STRING", "SIZE"], "mutation": "constraint"},
+    {"id": "byte/accept/0", "type": "DiffConstraints.Byte", "hex": "020100", "expect": "accept", "clause": "X.680 51.4", "features": ["INTEGER", "value-constraint"]},
+    {"id": "byte/accept/255", "type": "DiffConstraints.Byte", "hex": "020200ff", "expect": "accept", "clause": "X.680 51.4", "features": ["INTEGER", "value-constraint"]},
+    {"id": "byte/reject/256", "type": "DiffConstraints.Byte", "hex": "02020100", "expect": "reject", "clause": "X.680 51.4", "features": ["INTEGER", "value-constraint"], "mutation": "constraint"},
+    {"id": "byte/reject/minus-1", "type": "DiffConstraints.Byte", "hex": "0201ff", "expect": "reject", "clause": "X.680 51.4", "features": ["INTEGER", "value-constraint"], "mutation": "constraint"},
+    {"id": "nonemptyseqof/accept/one", "type": "DiffConstraints.NonEmptySeqOf", "hex": "3003020101", "expect": "accept", "clause": "X.680 51.5", "features": ["SEQUENCE OF", "INTEGER", "SIZE"]},
+    {"id": "nonemptyseqof/reject/empty", "type": "DiffConstraints.NonEmptySeqOf", "hex": "3000", "expect": "reject", "clause": "X.680 51.5", "features": ["SEQUENCE OF", "INTEGER", "SIZE"], "mutation": "constraint"},
+    {"id": "nonemptysetof/accept/one", "type": "DiffConstraints.NonEmptySetOf", "hex": "3103020101", "expect": "accept", "clause": "X.680 51.5", "features": ["SET OF", "INTEGER", "SIZE"]},
+    {"id": "nonemptysetof/accept/sorted", "type": "DiffConstraints.NonEmptySetOf", "hex": "3106020101020102", "expect": "accept", "clause": "X.690 11.6", "features": ["SET OF", "INTEGER", "SIZE"]},
+    {"id": "nonemptysetof/reject/empty", "type": "DiffConstraints.NonEmptySetOf", "hex": "3100", "expect": "reject", "clause": "X.680 51.5", "features": ["SET OF", "INTEGER", "SIZE"], "mutation": "constraint"},
+    {"id": "nonemptysetof/reject/unsorted", "type": "DiffConstraints.NonEmptySetOf", "hex": "3106020102020101", "expect": "reject", "clause": "X.690 11.6", "features": ["SET OF", "INTEGER", "SIZE"], "mutation": "set-of-unsorted"}
+  ]
+}

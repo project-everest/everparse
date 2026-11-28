@@ -1,100 +1,55 @@
-
-
 #include "HelloWorld.h"
 
-static uint8_t
-ValidateCorePoint(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t p = *SlPos;
-  uint64_t fieldStartPoint = (uint64_t)p;
-  size_t pos = (size_t)0U;
-  size_t p0 = pos;
-  size_t p1 = *SlPos;
-  size_t rem = SlLen - p1;
-  BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
+static uint8_t HelloWorldValidatePointCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+
+static uint8_t HelloWorldValidatePointCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
+  size_t currentPosition = slPos[0];
+  uint64_t fieldStartPoint = (uint64_t)currentPosition;
+  size_t scanOffset = 0;
+  size_t offsetBeforeX = scanOffset;
+  size_t positionBeforeX = slPos[0];
+  size_t bytesRemainingBeforeX = (slLen - positionBeforeX);
+  bool hasBytesForX;
+  if (offsetBeforeX <= bytesRemainingBeforeX) {
+    hasBytesForX = ((size_t)4 <= (bytesRemainingBeforeX - offsetBeforeX));
+  }
+  else {
+    hasBytesForX = false;
+  }
   uint8_t res;
+  if (hasBytesForX) {
+    scanOffset = (offsetBeforeX + (size_t)4);
+    res = EVERPARSE_STATUS_SUCCESS;
+  }
+  else {
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+  }
   uint8_t resultAfterPoint;
-  size_t consumed;
-  size_t p2;
-  size_t p_;
-  if (hasBytes)
-  {
-    pos = p0 + (size_t)4U;
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+  if (res == EVERPARSE_STATUS_SUCCESS) {
+    size_t currentPosition1 = slPos[0];
+    size_t newPosition = (currentPosition1 + scanOffset);
+    slPos[0] = newPosition;
+    resultAfterPoint = EVERPARSE_STATUS_SUCCESS;
   }
-  else
-  {
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
-    consumed = pos;
-    p2 = *SlPos;
-    p_ = p2 + consumed;
-    *SlPos = p_;
-    resultAfterPoint = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
-  }
-  else
-  {
+  else {
     resultAfterPoint = res;
   }
-  if (resultAfterPoint == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
+  if (resultAfterPoint == EVERPARSE_STATUS_SUCCESS) {
     return resultAfterPoint;
   }
-  ErrorHandlerFn("_point",
-    "x",
-    EverParsePulseInternalErrorReasonOfResult(resultAfterPoint),
-    resultAfterPoint == 0U || (resultAfterPoint >= 2U && resultAfterPoint <= 8U) ? (uint64_t)(uint32_t)resultAfterPoint
-                                                                                 : 15ULL,
-    Ctxt,
-    SlBase,
-    fieldStartPoint);
-  return resultAfterPoint;
+  else {
+    (void)(errorHandlerFn("_point", "x", EverParse3dErrorReasonOfResult(resultAfterPoint), EverParse3dLegacyKind(resultAfterPoint), ctxt, slBase, fieldStartPoint));
+    return resultAfterPoint;
+  }
 }
 
-uint64_t
-HelloWorldValidatePoint(
-  uint8_t *Ctxt,
-  void
-  (*Handler)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t Length,
-  uint64_t Start
-)
-{
-  size_t len = (size_t)Length;
-  size_t initial = (size_t)Start;
+uint64_t HelloWorldValidatePoint(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8_t *input, uint64_t length, uint64_t start) {
+  size_t len = (size_t)length;
+  size_t initial = (size_t)start;
   size_t cursor = initial;
-  uint8_t status = ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
-  size_t final = cursor;
-  uint64_t position = (uint64_t)final;
-  return
-    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
-      1152921504606846976ULL
-    + position;
+  uint8_t status = HelloWorldValidatePointCore(ctxt, handler, input, len, &cursor);
+  uint64_t position = (uint64_t)cursor;
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
+
 

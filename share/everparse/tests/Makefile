@@ -1,4 +1,4 @@
-MODULES=3d cbor cddl lowparse qd
+MODULES=3d asn1 cbor cddl lowparse qd
 
 all: $(addsuffix .do,$(MODULES))
 

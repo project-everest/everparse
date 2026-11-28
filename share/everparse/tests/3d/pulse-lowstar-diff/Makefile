@@ -51,8 +51,8 @@ PULSE_TESTS := $(EVERPARSE_HOME)/share/everparse/tests/3d
 LO_DIR ?= $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar/out.batch
 PU_DIR ?= $(PULSE_TESTS)/out.pulse
 
-LO_INC = -I $(LO_DIR) -I $(EVERPARSE_HOME)/lib/everparse/3d \
-         -I $(EVERPARSE_HOME)/lib/everparse/3d/krml/lowstar/buffer \
+LO_INC = -DHX_API_LOWSTAR -I $(LO_DIR) -I $(EVERPARSE_HOME)/lib/everparse/3d \
+         -I $(EVERPARSE_HOME)/lib/everparse/3d/runtime/lowstar/buffer \
          -I $(EVERPARSE_HOME)/share/everparse/tests/3d/lowstar
 PU_INC = -I $(PU_DIR) -I $(PULSE_TESTS)
 

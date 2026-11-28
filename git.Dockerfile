@@ -18,6 +18,15 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
   opam \
   sudo
 
+# For the `build` layer (python3 generates the 3d runtime headers) and the
+# `test` layer
+RUN apt-get update && apt-get install --yes --no-install-recommends \
+    cmake \
+    clang \
+    python3 \
+    python3-pip \
+    python3-venv
+
 # Create a new user and give them sudo rights
 RUN useradd -d /home/test test
 RUN echo 'test ALL=NOPASSWD: ALL' >> /etc/sudoers
@@ -79,13 +88,6 @@ SHELL ["/usr/bin/env", "BASH_ENV=/home/test/.cargo/env", "/mnt/everparse/shell.s
 FROM deps AS build
 
 RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" all
-
-# For the `test` layer
-RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
-    cmake \
-    clang \
-    python3-pip \
-    python3-venv
 
 FROM build AS test
 

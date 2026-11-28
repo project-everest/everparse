@@ -1,0 +1,53 @@
+-- Front-end features: open ranges and unions in constraints, DEFAULT
+-- values of string and BIT STRING types, DEFINED-BY keys of string and
+-- INTEGER types, the universal types EXTERNAL and EMBEDDED PDV, and
+-- KEEP-BYTES under an IMPLICIT tag and on a component.
+Features DEFINITIONS IMPLICIT TAGS ::= BEGIN
+
+--#KEEP-BYTES Blob Rec.payload
+
+--#DEFINED-BY Item.val BY kind {
+--#  "num" : INTEGER,
+--#  "str" : UTF8String
+--#} FALLBACK NONE
+
+--#DEFINED-BY Opt.val BY code {
+--#  1 : BOOLEAN,
+--#  2 : NULL
+--#}
+
+Digit ::= INTEGER (0<..<10 | 20 | 30..32)
+
+Flags ::= BIT STRING { f0(0), f1(1), f2(2) }
+
+Blob ::= SEQUENCE {
+  a INTEGER,
+  b OCTET STRING
+}
+
+Rec ::= SEQUENCE {
+  n       Digit,
+  m       INTEGER (-3..<0 | 0<..5),
+  data    OCTET STRING (SIZE (1<..4 | 5)) DEFAULT 'CAFE'H,
+  label   UTF8String DEFAULT "hé",
+  pr      PrintableString DEFAULT "A B",
+  flags   Flags DEFAULT { f1 },
+  bits    [5] BIT STRING DEFAULT '101'B,
+  kept    [6] Blob,
+  payload SEQUENCE { x INTEGER },
+  ext     [7] EXTERNAL OPTIONAL
+}
+
+Item ::= SEQUENCE {
+  kind UTF8String,
+  val  ANY DEFINED BY kind
+}
+
+Opt ::= SEQUENCE {
+  code INTEGER,
+  val  ANY DEFINED BY code OPTIONAL
+}
+
+Pdv ::= EMBEDDED PDV
+
+END

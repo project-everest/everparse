@@ -1,0 +1,731 @@
+module ASN1.Pulse.ParseTest
+#lang-pulse
+open Pulse.Lib.Pervasives
+open ASN1.Base
+open ASN1.Spec.Interpreter
+open ASN1.Pulse.Rel
+open ASN1.Pulse.Parse
+open ASN1.Pulse.Interpreter
+open ASN1.Pulse.Parser
+module D = ASN1.DiffTest.Prim
+module LI = ASN1.Pulse.ListIter
+module LW = ASN1.Pulse.ListIterW
+module SI = ASN1.Pulse.SeqIter
+module SetI = ASN1.Pulse.SetIter
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+open ASN1.Syntax
+
+(* Extraction roots: zero-copy parsers for some difftest types *)
+
+noextract
+let int64_ = ASN1.Syntax.asn1_bounded_integer 8
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_int64 : aparser #(asn1_impl_t int64_) #(asn1_t int64_) (asn1_prel int64_) #asn1_strong_parser_kind (asn1_as_parser int64_) =
+  fun input #pm #w #v -> parse_k int64_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_int_ : aparser #(asn1_impl_t D.int_) #(asn1_t D.int_) (asn1_prel D.int_) #asn1_strong_parser_kind (asn1_as_parser D.int_) =
+  fun input #pm #w #v -> parse_k D.int_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_enum_ : aparser #(asn1_impl_t D.enum_) #(asn1_t D.enum_) (asn1_prel D.enum_) #asn1_strong_parser_kind (asn1_as_parser D.enum_) =
+  fun input #pm #w #v -> parse_k D.enum_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_bits : aparser #(asn1_impl_t D.bits) #(asn1_t D.bits) (asn1_prel D.bits) #asn1_strong_parser_kind (asn1_as_parser D.bits) =
+  fun input #pm #w #v -> parse_k D.bits (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_bool_ : aparser #(asn1_impl_t D.bool_) #(asn1_t D.bool_) (asn1_prel D.bool_) #asn1_strong_parser_kind (asn1_as_parser D.bool_) =
+  fun input #pm #w #v -> parse_k D.bool_ (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Prim"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_octets : aparser #(asn1_impl_t D.octets) #(asn1_t D.octets) (asn1_prel D.octets) #asn1_strong_parser_kind (asn1_as_parser D.octets) =
+  fun input #pm #w #v -> parse_k D.octets (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+module DC = ASN1.DiffTest.Constructed
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_choice_ : aparser #(asn1_impl_t DC.choice) #(asn1_t DC.choice) (asn1_prel DC.choice) #asn1_strong_parser_kind (asn1_as_parser DC.choice) =
+  fun input #pm #w #v -> parse_k DC.choice (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+
+(* SEQUENCE { a INTEGER } and SEQUENCE { a INTEGER, b BOOLEAN } *)
+noextract
+let seqA = ASN1.Syntax.asn1_sequence [ "a" *^ (PLAIN ^: ASN1.Syntax.asn1_integer) ] (_ by (ASN1.Syntax.seq_tac ()))
+noextract
+let seqAB = ASN1.Syntax.asn1_sequence [ "a" *^ (PLAIN ^: ASN1.Syntax.asn1_integer); "b" *^ (PLAIN ^: ASN1.Syntax.asn1_boolean) ] (_ by (ASN1.Syntax.seq_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_seqA : aparser #(asn1_impl_t seqA) #(asn1_t seqA) (asn1_prel seqA) #asn1_strong_parser_kind (asn1_as_parser seqA) =
+  fun input #pm #w #v -> parse_k seqA (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_seqAB : aparser #(asn1_impl_t seqAB) #(asn1_t seqAB) (asn1_prel seqAB) #asn1_strong_parser_kind (asn1_as_parser seqAB) =
+  fun input #pm #w #v -> parse_k seqAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let parse_seq : aparser #(asn1_impl_t DC.seq) #(asn1_t DC.seq) (asn1_prel DC.seq) #asn1_strong_parser_kind (asn1_as_parser DC.seq) =
+  fun input #pm #w #v -> parse_k DC.seq (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+(* Lazy iteration over the components of
+   SEQUENCE { a INTEGER, b BOOLEAN DEFAULT FALSE,
+     c [0] IMPLICIT OCTET STRING OPTIONAL, d [1] EXPLICIT INTEGER OPTIONAL }
+   (ASN1.Pulse.SeqIter): `next` yields the index and the TLV of each present
+   component, which is then parsed by the `get` root of that component *)
+noextract
+let seqI_a = ASN1_PLAIN_ILC ASN1.Syntax.asn1_integer
+noextract
+let seqI_b = ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_boolean false
+noextract
+let seqI_c = ASN1_OPTION_ILC (ASN1.Syntax.mk_retagged (DC.ctx_prim 0) ASN1.Syntax.asn1_octetstring)
+noextract
+let seqI_d = ASN1_OPTION_ILC (ASN1.Syntax.mk_prefixed (DC.ctx_cons 1) ASN1.Syntax.asn1_integer)
+noextract
+let seqI_gitems : asn1_gen_items_lk = ASN1.Syntax.mk_gen_items [mk_ASN1_GEN_ITEM seqI_a; mk_ASN1_GEN_ITEM seqI_b; mk_ASN1_GEN_ITEM seqI_c; mk_ASN1_GEN_ITEM seqI_d] (_ by (ASN1.Syntax.seq_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let seq_iter_start : SI.start_t ASN1.Syntax.sequence_id seqI_gitems =
+  fun input #pm #w #v -> SI.start ASN1.Syntax.sequence_id seqI_gitems input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let seq_iter_is_empty : SI.is_empty_t (dsnd seqI_gitems) =
+  fun it #pm #v #w -> SI.is_empty (dsnd seqI_gitems) it #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let seq_iter_next : SI.next_t (dsnd seqI_gitems) =
+  fun pi #it #pm #v #w -> SI.next (dsnd seqI_gitems) (SI.comp (dsnd seqI_gitems) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ()))) pi #it #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let seq_get_a : SI.get_t (dsnd seqI_gitems) 0 #_ #_ #_ #asn1_int_impl (legacy_ddesc seqI_a) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) =
+  fun x #pm #v #w -> SI.get (dsnd seqI_gitems) 0 (legacy_ddesc seqI_a) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) (fun input #pm #w #v -> parse_dd (legacy_ddesc seqI_a) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) input #pm #w #v) x #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let seq_get_b : SI.get_t (dsnd seqI_gitems) 1 #_ #_ #_ #(option bool) (legacy_ddesc seqI_b) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) =
+  fun x #pm #v #w -> SI.get (dsnd seqI_gitems) 1 (legacy_ddesc seqI_b) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) (fun input #pm #w #v -> parse_dd (legacy_ddesc seqI_b) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) input #pm #w #v) x #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let seq_get_c : SI.get_t (dsnd seqI_gitems) 2 #_ #_ #_ #(option (S.slice U8.t)) (legacy_ddesc seqI_c) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) =
+  fun x #pm #v #w -> SI.get (dsnd seqI_gitems) 2 (legacy_ddesc seqI_c) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) (fun input #pm #w #v -> parse_dd (legacy_ddesc seqI_c) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) input #pm #w #v) x #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer];
+  zeta; iota; primops]]
+let seq_get_d : SI.get_t (dsnd seqI_gitems) 3 #_ #_ #_ #(option asn1_int_impl) (legacy_ddesc seqI_d) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) =
+  fun x #pm #v #w -> SI.get (dsnd seqI_gitems) 3 (legacy_ddesc seqI_d) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) (fun input #pm #w #v -> parse_dd (legacy_ddesc seqI_d) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) input #pm #w #v) x #pm #v #w
+
+(* Lazy iteration over the components of
+   SET { c [1] IMPLICIT OCTET STRING, a [0] IMPLICIT INTEGER OPTIONAL,
+     b BOOLEAN DEFAULT FALSE }
+   (ASN1.Pulse.SetIter): `next` yields the index and the TLV of each present
+   component, in encoding (DER tag) order, i.e. b, a, c; the components are
+   read by ASN1.Pulse.SeqIter.get *)
+noextract
+let setI_c = ASN1_PLAIN_ILC (ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ASN1.Syntax.asn1_octetstring)
+noextract
+let setI_a = ASN1_OPTION_ILC (ASN1.Syntax.mk_retagged (DC.ctx_prim 0) ASN1.Syntax.asn1_integer)
+noextract
+let setI_b = ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_boolean false
+noextract
+let setI_items = ASN1_GEN_ITEMS_CONS _ _ setI_c _ (ASN1_GEN_ITEMS_CONS _ _ setI_a _ (ASN1_GEN_ITEMS_CONS _ _ setI_b _ ASN1_GEN_ITEMS_NIL))
+noextract
+let setI_content : asn1_content_k = ASN1_SET _ setI_items (_ by (ASN1.Syntax.set_tac ()))
+noextract
+let setI = ASN1_ILC ASN1.Syntax.set_id setI_content
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let set_iter_start : SetI.start_t ASN1.Syntax.set_id setI_items (ASN1_SET?.pf setI_content) =
+  fun input #pm #w #v -> SetI.start ASN1.Syntax.set_id setI_items (ASN1_SET?.pf setI_content) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let set_iter_is_empty : SetI.is_empty_t setI_items =
+  fun it #pm #v #w -> SetI.is_empty setI_items it #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let set_iter_next : SetI.next_t setI_items =
+  fun pi #it #pm #v #w -> SetI.next setI_items (SetI.comp setI_items (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ()))) pi #it #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let validate_setI : LowParse.Pulse.Base.validator #(asn1_t setI) #asn1_strong_parser_kind (asn1_as_parser setI) =
+  validate_k setI (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let set_get_c : SI.get_t setI_items 0 #_ #_ #_ #(S.slice U8.t) (legacy_ddesc setI_c) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) =
+  fun x #pm #v #w -> SI.get setI_items 0 (legacy_ddesc setI_c) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) (fun input #pm #w #v -> parse_dd (legacy_ddesc setI_c) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) input #pm #w #v) x #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let set_get_a : SI.get_t setI_items 1 #_ #_ #_ #(option asn1_int_impl) (legacy_ddesc setI_a) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) =
+  fun x #pm #v #w -> SI.get setI_items 1 (legacy_ddesc setI_a) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) (fun input #pm #w #v -> parse_dd (legacy_ddesc setI_a) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) input #pm #w #v) x #pm #v #w
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Constructed"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let set_get_b : SI.get_t setI_items 2 #_ #_ #_ #(option bool) (legacy_ddesc setI_b) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) =
+  fun x #pm #v #w -> SI.get setI_items 2 (legacy_ddesc setI_b) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) (fun input #pm #w #v -> parse_dd (legacy_ddesc setI_b) (_ by (FStar.Tactics.norm [delta; zeta; iota; primops; simplify]; FStar.Tactics.trivial ())) input #pm #w #v) x #pm #v #w
+
+(* SEQUENCE OF INTEGER and SET OF OCTET STRING *)
+noextract
+let seqOfInt = ASN1.Syntax.asn1_sequence_of ASN1.Syntax.asn1_integer
+noextract
+let setOfOctets = ASN1.Syntax.asn1_set_of ASN1.Syntax.asn1_octetstring
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_seqOfInt : aparser #(asn1_impl_t seqOfInt) #(asn1_t seqOfInt) (asn1_prel seqOfInt) #asn1_strong_parser_kind (asn1_as_parser seqOfInt) =
+  fun input #pm #w #v -> parse_k seqOfInt (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_setOfOctets : aparser #(asn1_impl_t setOfOctets) #(asn1_t setOfOctets) (asn1_prel setOfOctets) #asn1_strong_parser_kind (asn1_as_parser setOfOctets) =
+  fun input #pm #w #v -> parse_k setOfOctets (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+(* Iterators over these lists (ASN1.Pulse.ListIter), and over a SEQUENCE
+   OF SEQUENCE OF INTEGER, whose elements are iterated in turn *)
+noextract
+let seqOfSeqOfInt = ASN1.Syntax.asn1_sequence_of seqOfInt
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_seqOfSeqOfInt : aparser #(asn1_impl_t seqOfSeqOfInt) #(asn1_t seqOfSeqOfInt) (asn1_prel seqOfSeqOfInt) #asn1_strong_parser_kind (asn1_as_parser seqOfSeqOfInt) =
+  fun input #pm #w #v -> parse_k seqOfSeqOfInt (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let iter_is_empty : LI.is_empty_t ASN1.Syntax.asn1_integer =
+  fun it #pm #l -> LI.is_empty ASN1.Syntax.asn1_integer it #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let iter_length : LI.length_t ASN1.Syntax.asn1_integer =
+  fun it #pm #l -> LI.length ASN1.Syntax.asn1_integer it #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let seqOfInt_iter_start : LI.start_t (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun x #pm #l -> LI.start (legacy_adesc ASN1.Syntax.asn1_integer) x #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let seqOfInt_iter_next : LI.next_t (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun pi #it #pm #l -> LI.next (legacy_adesc ASN1.Syntax.asn1_integer) (parse_k ASN1.Syntax.asn1_integer (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))) pi #it #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let setOfOctets_iter_start : LI.start_t (legacy_adesc ASN1.Syntax.asn1_octetstring) =
+  fun x #pm #l -> LI.start (legacy_adesc ASN1.Syntax.asn1_octetstring) x #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let setOfOctets_iter_next : LI.next_t (legacy_adesc ASN1.Syntax.asn1_octetstring) =
+  fun pi #it #pm #l -> LI.next (legacy_adesc ASN1.Syntax.asn1_octetstring) (parse_k ASN1.Syntax.asn1_octetstring (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))) pi #it #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let seqOfSeqOfInt_iter_start : LI.start_t (legacy_adesc seqOfInt) =
+  fun x #pm #l -> LI.start (legacy_adesc seqOfInt) x #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let seqOfSeqOfInt_iter_next : LI.next_t (legacy_adesc seqOfInt) =
+  fun pi #it #pm #l -> LI.next (legacy_adesc seqOfInt) (parse_k seqOfInt (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))) pi #it #pm #l
+
+(* Iterators over SEQUENCE OF INTEGER in writer form (ASN1.Pulse.ListIterW),
+   and builders for these lists *)
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml; `%LW.witer];
+  zeta; iota; primops]]
+let witer_start : LW.start_t #_ #_ #asn1_int_impl (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun x #pm #l -> LW.start (legacy_adesc ASN1.Syntax.asn1_integer) x #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml; `%LW.witer];
+  zeta; iota; primops]]
+let witer_is_empty : LW.is_empty_t #_ #_ #asn1_int_impl (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun it #pm #l -> LW.is_empty (legacy_adesc ASN1.Syntax.asn1_integer) it #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml; `%LW.witer];
+  zeta; iota; primops]]
+let witer_next : LW.next_t #_ #_ #asn1_int_impl (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun pi #it #pm #l -> LW.next (legacy_adesc ASN1.Syntax.asn1_integer) (parse_k ASN1.Syntax.asn1_integer (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))) pi #it #pm #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml; `%LW.witer];
+  zeta; iota; primops]]
+let seqOfInt_empty : LW.empty_t #_ #_ #asn1_int_impl (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun _ -> LW.empty (legacy_adesc ASN1.Syntax.asn1_integer) ()
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml; `%LW.witer];
+  zeta; iota; primops]]
+let seqOfInt_of_slice : LW.of_slice_t #_ #_ #asn1_int_impl (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun a #pm #va #l -> LW.of_slice (legacy_adesc ASN1.Syntax.asn1_integer) a #pm #va #l
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml; `%LW.witer];
+  zeta; iota; primops]]
+let seqOfInt_append : LW.append_t #_ #_ #asn1_int_impl (legacy_adesc ASN1.Syntax.asn1_integer) =
+  fun rb ra #pb #lb #pa #la #pm -> LW.append (legacy_adesc ASN1.Syntax.asn1_integer) rb ra #pb #lb #pa #la #pm
+
+(* SET { b BOOLEAN, a [0] IMPLICIT INTEGER OPTIONAL, c [1] IMPLICIT OCTET STRING },
+   whose components are declared in canonical order *)
+noextract
+let setBAC = ASN1.Syntax.asn1_set [
+    "b" *^ (PLAIN ^: ASN1.Syntax.asn1_boolean);
+    "a" *^ (OPTION ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0) ASN1.Syntax.asn1_integer);
+    "c" *^ (PLAIN ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ASN1.Syntax.asn1_octetstring)]
+    (_ by (ASN1.Syntax.set_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_setBAC : aparser #(asn1_impl_t setBAC) #(asn1_t setBAC) (asn1_prel setBAC) #asn1_strong_parser_kind (asn1_as_parser setBAC) =
+  fun input #pm #w #v -> parse_k setBAC (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+(* ANY DEFINED BY (OBJECT IDENTIFIER keys) *)
+
+noextract
+let oid123 = ASN1.Syntax.mk_oid [1; 2; 3]
+noextract
+let oid124 = ASN1.Syntax.mk_oid [1; 2; 4]
+noextract
+let params_null = ASN1.Syntax.mk_gen_items ["p" *^ (PLAIN ^: ASN1.Syntax.asn1_null)] (_ by (ASN1.Syntax.seq_tac ()))
+noextract
+let params_int = ASN1.Syntax.mk_gen_items ["p" *^ (PLAIN ^: ASN1.Syntax.asn1_integer)] (_ by (ASN1.Syntax.seq_tac ()))
+noextract
+let params_any = ASN1.Syntax.mk_gen_items ["p" *^ (OPTION ^: ASN1.Syntax.asn1_any)] (_ by (ASN1.Syntax.seq_tac ()))
+
+(* SEQUENCE { v INTEGER, alg OBJECT IDENTIFIER, p ANY DEFINED BY alg }
+   with 1.2.3 -> NULL, 1.2.4 -> INTEGER, no fallback *)
+noextract
+let adbP = ASN1.Syntax.asn1_any_oid_prefix
+  ["v" *^ (PLAIN ^: ASN1.Syntax.asn1_integer)]
+  "alg"
+  [(oid123, params_null); (oid124, params_int)]
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ()))
+
+(* SEQUENCE { alg OBJECT IDENTIFIER, p ANY DEFINED BY alg OPTIONAL }
+   with 1.2.3 -> NULL, 1.2.4 -> INTEGER, and a fallback *)
+noextract
+let adbF = ASN1.Syntax.asn1_any_oid_with_fallback
+  "alg"
+  [(oid123, params_null); (oid124, params_int)]
+  params_any
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.DiffTest.Any"; "ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_algId : aparser #(asn1_impl_t ASN1.DiffTest.Any.algId) #(asn1_t ASN1.DiffTest.Any.algId) (asn1_prel ASN1.DiffTest.Any.algId) #asn1_strong_parser_kind (asn1_as_parser ASN1.DiffTest.Any.algId) =
+  fun input #pm #w #v -> parse_k ASN1.DiffTest.Any.algId (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbP : aparser #(asn1_impl_t adbP) #(asn1_t adbP) (asn1_prel adbP) #asn1_strong_parser_kind (asn1_as_parser adbP) =
+  fun input #pm #w #v -> parse_k adbP (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbF : aparser #(asn1_impl_t adbF) #(asn1_t adbF) (asn1_prel adbF) #asn1_strong_parser_kind (asn1_as_parser adbF) =
+  fun input #pm #w #v -> parse_k adbF (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+(* ANY DEFINED BY with keys other than OBJECT IDENTIFIER: the key is
+   compared byte-for-byte with its DER content encoding *)
+
+(* SEQUENCE { k OCTET STRING, p ANY DEFINED BY k OPTIONAL }
+   with 'AA'H -> NULL, 'AABB'H -> INTEGER, and a fallback *)
+noextract
+let adbO = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) ASN1.Syntax.octetstring_id ASN1_OCTETSTRING
+  [([0xAAuy], params_null); ([0xAAuy; 0xBBuy], params_int)] (Some params_any)
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+(* SEQUENCE { v INTEGER, k BOOLEAN, p ANY DEFINED BY k }
+   with TRUE -> INTEGER, FALSE -> NULL, no fallback *)
+noextract
+let adbB = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l ["v" *^ (PLAIN ^: ASN1.Syntax.asn1_integer)]) ASN1.Syntax.boolean_id ASN1_BOOLEAN
+  [(true, params_int); (false, params_null)] None
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+(* SEQUENCE { k PrintableString, p ANY DEFINED BY k }
+   with "ab" -> INTEGER, "a" -> NULL, no fallback *)
+noextract
+let adbS = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) ASN1.Syntax.printablestring_id ASN1_PRINTABLESTRING
+  [([0x61uy; 0x62uy], params_int); ([0x61uy], params_null)] None
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+(* SEQUENCE { k INTEGER, p ANY DEFINED BY k OPTIONAL }
+   with 1 -> NULL, -1 -> INTEGER, 2^64 (a 9-byte key) -> NULL, and a fallback *)
+noextract
+let adbI = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) ASN1.Syntax.integer_id (ASN1_INTEGER asn1_any_integer_bound)
+  [([0x01uy], params_null); ([0xFFuy], params_int); (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x01uy; 0uy; 0uy; 0uy; 0uy; 0uy; 0uy; 0uy; 0uy] (_ by (ASN1.Syntax.wf_tac ())), params_null)] (Some params_any)
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+(* SEQUENCE { k [0] EXPLICIT INTEGER, p ANY DEFINED BY k }
+   with 1 -> NULL, -1 -> INTEGER, no fallback: the tagged key is compared
+   structurally (inner identifier, DER length, then content bytes) *)
+noextract
+let adbT = ASN1_ILC ASN1.Syntax.sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) (ASN1_PREFIXED_TERMINAL ASN1.Syntax.integer_id (ASN1_INTEGER asn1_any_integer_bound))
+  [([0x01uy], params_null); ([0xFFuy], params_int)] None
+  (_ by (ASN1.Syntax.seq_tac ()))
+  (_ by (ASN1.Syntax.choice_tac ())))
+
+(* SEQUENCE {
+     a INTEGER DEFAULT 0,
+     b OCTET STRING DEFAULT 'ABCD'H,
+     s PrintableString DEFAULT "ab",
+     t [0] EXPLICIT INTEGER DEFAULT 5,
+     r [1] IMPLICIT INTEGER (0..10) DEFAULT 3 }
+   DEFAULT values are literals, compared like ANY DEFINED BY keys: a
+   present item encoding its default value is rejected *)
+noextract
+let defL = ASN1.Syntax.asn1_sequence [
+    "a" *^ (DEFAULT ^: ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_integer (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x00uy] (_ by (ASN1.Syntax.wf_tac ()))));
+    "b" *^ (DEFAULT ^: ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_octetstring [0xABuy; 0xCDuy]);
+    "s" *^ (DEFAULT ^: ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_printablestring [0x61uy; 0x62uy]);
+    "t" *^ (DEFAULT ^: ASN1_DEFAULT_TERMINAL (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) #(ASN1_PREFIXED_TERMINAL ASN1.Syntax.integer_id (ASN1_INTEGER asn1_any_integer_bound))
+      (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x05uy] (_ by (ASN1.Syntax.wf_tac ()))));
+    "r" *^ (DEFAULT ^: ASN1.Syntax.mk_restriction_default_field (ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ASN1.Syntax.asn1_integer) (RESTRICT_INT_RANGE (Some 0) (Some 10))
+      (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x03uy] (_ by (ASN1.Syntax.wf_tac ()))))]
+  (_ by (ASN1.Syntax.seq_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbO : aparser #(asn1_impl_t adbO) #(asn1_t adbO) (asn1_prel adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
+  fun input #pm #w #v -> parse_k adbO (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbB : aparser #(asn1_impl_t adbB) #(asn1_t adbB) (asn1_prel adbB) #asn1_strong_parser_kind (asn1_as_parser adbB) =
+  fun input #pm #w #v -> parse_k adbB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbS : aparser #(asn1_impl_t adbS) #(asn1_t adbS) (asn1_prel adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
+  fun input #pm #w #v -> parse_k adbS (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbI : aparser #(asn1_impl_t adbI) #(asn1_t adbI) (asn1_prel adbI) #asn1_strong_parser_kind (asn1_as_parser adbI) =
+  fun input #pm #w #v -> parse_k adbI (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_adbT : aparser #(asn1_impl_t adbT) #(asn1_t adbT) (asn1_prel adbT) #asn1_strong_parser_kind (asn1_as_parser adbT) =
+  fun input #pm #w #v -> parse_k adbT (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbO : LowParse.Pulse.Base.validator #(asn1_t adbO) #asn1_strong_parser_kind (asn1_as_parser adbO) =
+  validate_k adbO (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbB : LowParse.Pulse.Base.validator #(asn1_t adbB) #asn1_strong_parser_kind (asn1_as_parser adbB) =
+  validate_k adbB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbS : LowParse.Pulse.Base.validator #(asn1_t adbS) #asn1_strong_parser_kind (asn1_as_parser adbS) =
+  validate_k adbS (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbI : LowParse.Pulse.Base.validator #(asn1_t adbI) #asn1_strong_parser_kind (asn1_as_parser adbI) =
+  validate_k adbI (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_adbT : LowParse.Pulse.Base.validator #(asn1_t adbT) #asn1_strong_parser_kind (asn1_as_parser adbT) =
+  validate_k adbT (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml;
+    `%asn1_items_any_impl_t; `%asn1_adb_suffix_impl_t];
+  zeta; iota; primops]]
+let parse_defL : aparser #(asn1_impl_t defL) #(asn1_t defL) (asn1_prel defL) #asn1_strong_parser_kind (asn1_as_parser defL) =
+  fun input #pm #w #v -> parse_k defL (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_defL : LowParse.Pulse.Base.validator #(asn1_t defL) #asn1_strong_parser_kind (asn1_as_parser defL) =
+  validate_k defL (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))
+
+(* SET { c [1] IMPLICIT OCTET STRING,
+         a [0] IMPLICIT INTEGER OPTIONAL,
+         b INTEGER DEFAULT 0 }
+   whose components are declared in the reverse of the canonical order of
+   their tags: the parser dispatches each encoded element to its component
+   by its tag *)
+noextract
+let setCAB = ASN1.Syntax.asn1_set [
+    "c" *^ (PLAIN ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 1) ASN1.Syntax.asn1_octetstring);
+    "a" *^ (OPTION ^: ASN1.Syntax.mk_retagged (ASN1.Syntax.mk_custom_id CONTEXT_SPECIFIC PRIMITIVE 0) ASN1.Syntax.asn1_integer);
+    "b" *^ (DEFAULT ^: ASN1.Syntax.mk_default_field ASN1.Syntax.asn1_integer (ASN1.Syntax.mk_int_lit asn1_any_integer_bound [0x00uy] (_ by (ASN1.Syntax.wf_tac ()))))]
+    (_ by (ASN1.Syntax.set_tac ()))
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map;
+    `%asn1_impl_t; `%asn1_content_impl_t; `%asn1_terminal_impl_t; `%asn1_lc_impl_t; `%asn1_items_impl_t; `%asn1_decorated_impl_t; `%small_integer; `%ml];
+  zeta; iota; primops]]
+let parse_setCAB : aparser #(asn1_impl_t setCAB) #(asn1_t setCAB) (asn1_prel setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
+  fun input #pm #w #v -> parse_k setCAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ())) input #pm #w #v
+
+[@@normalize_for_extraction [
+  delta_attr [`%asn1_pulse_attr; `%ASN1.Pulse.Restrict.asn1_restrict_attr];
+  delta_namespace ["ASN1.Syntax"; "ASN1.Pulse.ParseTest"];
+  delta_only [`%ASN1.Pulse.Rel.legacy_adesc; `%ASN1.Pulse.Rel.legacy_cdesc; `%ASN1.Pulse.Rel.legacy_ddesc; `%ASN1.Pulse.Rel.legacy_idesc; `%ASN1.Pulse.Rel.legacy_iadesc; `%ASN1.Pulse.Rel.legacy_sxdesc; `%ASN1.Pulse.Rel.legacy_fxdesc; `%ASN1.Pulse.Rel.legacy_lcdesc; `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2; `%ASN1.Base.k_as_lk; `%ASN1.Base.list_as_l; `%ASN1.Base.mk_ASN1_GEN_ITEM; `%ASN1.Base.proj2_of_3; `%List.Tot.map; `%ASN1.Pulse.Interpreter.all_defaultable];
+  zeta; iota; primops]]
+let validate_setCAB : LowParse.Pulse.Base.validator #(asn1_t setCAB) #asn1_strong_parser_kind (asn1_as_parser setCAB) =
+  validate_k setCAB (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trivial ()))

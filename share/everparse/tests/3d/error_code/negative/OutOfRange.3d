@@ -1,0 +1,6 @@
+// Error codes below 128 are reserved for EverParse
+entrypoint
+typedef struct _T
+{
+  UINT8 x { x == 0 } {:error-code 127};
+} T;

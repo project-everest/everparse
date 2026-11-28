@@ -7,6 +7,7 @@ open EverParse3d.State
 #lang-pulse
 
 module A = EverParse3d.Actions.Base
+module S = EverParse3d.Actions.Spec
 module B = EverParse3d.InputStream.LowstarExtern
 module I = EverParse3d.InputStream.Base
 module P = EverParse3d.Prelude
@@ -35,8 +36,9 @@ fn adapt_read
   (#[@@@erasable] p: P.parser #nz #wk k t)
   (#[@@@erasable] d: state_dict)
   (#has_action #use_error_handler: bool)
+  (#[@@@erasable] s: S.vspec d)
   (worker: A.validate_with_action_read #B.base_t #B.len_t #B.pos_t
-    #B.input_stream_extern p d has_action use_error_handler)
+    #B.input_stream_extern p d has_action use_error_handler s)
   : validator p d has_action true use_error_handler
   = (ctxt: _) (handler: _) (input: _) (start: _)
     (extra: _) (contents: _) (remaining: _)
@@ -71,8 +73,9 @@ fn adapt_no_read
   (#[@@@erasable] p: P.parser #nz #wk k t)
   (#[@@@erasable] d: state_dict)
   (#has_action #use_error_handler: bool)
+  (#[@@@erasable] s: S.vspec d)
   (worker: A.validate_with_action_no_read #B.base_t #B.len_t #B.pos_t
-    #B.input_stream_extern p d has_action use_error_handler)
+    #B.input_stream_extern p d has_action use_error_handler s)
   : validator p d has_action false use_error_handler
   = (ctxt: _) (handler: _) (input: _) (start: _)
     (extra: _) (contents: _) (remaining: _)

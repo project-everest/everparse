@@ -79,6 +79,18 @@ val nondep_then_defaultable_snd
   (requires (parse_defaultable_injective_cond_prop defv' p'))
   (ensures (parse_defaultable_injective_cond_prop (mk_option_tuple defv defv') (p `nondep_then` p')))
 
+val parse_defaultable_eq
+  (#k : parser_kind)
+  (#t : Type)
+  (defv : option t)
+  (p : parser k t)
+  (input : bytes)
+: Lemma
+  (requires (parse_defaultable_injective_cond_prop defv p))
+  (ensures (parse (parse_defaultable defv p) input == (match defv with
+    | Some v -> if FStar.Seq.length input = 0 then Some (v, 0) else parse p input
+    | None -> parse p input)))
+
 val defaultable_trivial_eq
   (#k : parser_kind)
   (#t : Type)

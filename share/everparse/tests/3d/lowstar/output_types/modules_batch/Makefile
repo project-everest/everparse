@@ -4,7 +4,7 @@ export EVERPARSE_HOME
 include $(EVERPARSE_HOME)/lib/everparse/fstar.Makefile
 EVERPARSE_API ?= lowstar
 export EVERPARSE_API
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(KRML_EXE),--karamel "$(KRML_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/everparse-3d.exe --api $(EVERPARSE_API) $(if $(FSTAR_EXE),--fstar "$(FSTAR_EXE)") $(if $(Z3_EXE),--z3_executable "$(Z3_EXE)")
 SOURCE_FILES=AA.3d BB.3d CC.3d
 
 all: basic

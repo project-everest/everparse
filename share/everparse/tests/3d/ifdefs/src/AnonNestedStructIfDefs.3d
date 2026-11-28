@@ -49,3 +49,12 @@ typedef struct _StaticConditionalPointAlt {
      UINT32 d4 { d3 <= d4 };
   #endif
 } StaticConditionalPointAlt;
+
+entrypoint
+typedef struct _NegatedConditionalPoint {
+  UINT32 d1;
+  UINT32 d2;
+  #if (!(DIM3 || DIM4))
+    UINT32 d3;
+  #endif
+} NegatedConditionalPoint;

@@ -17,6 +17,7 @@ else
 CUSTARD_ENTRY_MODULES := CBOR.Spec.Constants
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.Type
 CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.C
+CUSTARD_ENTRY_MODULES += CBOR.Pulse.API.Nondet.C.Alloc
 CUSTARD_ROOTS := $(cbor_raw_dir)/CBOR.Pulse.API.Nondet.C.fst
 endif
 
@@ -41,7 +42,7 @@ else
 
 $(NONDET_C_DIRECTORY)/CBORNondet.c: $(CUSTARD_KRML)
 	mkdir -p $(dir $@)
-	$(KRML_EXE) $(KRML_OPTS) -faggressive-inlining -fnoshort-names -warn-error @1..27 -skip-linking -bundle 'CBOR.Pulse.API.Nondet.Type=CBOR.Pulse.Raw.Type,CBOR.Pulse.Raw.Slice,Pulse.Lib.Slice,CBOR.Pulse.Raw.Iterator.Base,CBOR.Pulse.Raw.Iterator,CBOR.Spec.Raw.Base,Prims,Custard.\*[rename=CBORNondetType]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Nondet.C=\*[rename=CBORNondet]' -no-prefix CBOR.Pulse.API.Nondet.C -no-prefix CBOR.Pulse.API.Nondet.Type -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Nondet.Type -no-prefix CBOR.Pulse.Raw.Type -tmpdir $(NONDET_C_DIRECTORY) -header header.txt -skip-makefiles -skip-compilation -fextern-c -fparentheses $^
+	$(KRML_EXE) $(KRML_OPTS) -faggressive-inlining -fnoshort-names -warn-error @1..27 -skip-linking -bundle 'CBOR.Pulse.API.Nondet.Type=CBOR.Pulse.Raw.Type,CBOR.Pulse.Raw.Slice,Pulse.Lib.Slice,CBOR.Pulse.Raw.Iterator.Base,CBOR.Pulse.Raw.Iterator,CBOR.Spec.Raw.Base,Prims,Custard.\*[rename=CBORNondetType]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Nondet.C=\*[rename=CBORNondet]' -no-prefix CBOR.Pulse.API.Nondet.C -no-prefix CBOR.Pulse.API.Nondet.C.Alloc -add-include 'CBORNondet.c:"CBORNondetAlloc.h"' -no-prefix CBOR.Pulse.API.Nondet.Type -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Nondet.Type -no-prefix CBOR.Pulse.Raw.Type -tmpdir $(NONDET_C_DIRECTORY) -header header.txt -skip-makefiles -skip-compilation -fextern-c -fparentheses $^
 
 extract: $(NONDET_C_DIRECTORY)/CBORNondet.c
 

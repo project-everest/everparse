@@ -1,11 +1,14 @@
 files := $(shell find . -type f)
 
-# Headers at the top level of the extraction directory are the public API of
-# the library: they are snapshotted into $(header_dir), the shared EverParse
-# include directory, rather than alongside the sources. Headers in
-# subdirectories (internal/) stay with the sources. Passes that extract no
-# public header at all (Rust) just leave $(header_dir) unused.
-public_headers := $(shell find . -maxdepth 1 -type f -name '*.h')
+# The public API headers of the library, explicitly enumerated by the caller
+# in PUBLIC_HEADERS (file names relative to the extraction directory), are
+# snapshotted into $(header_dir), the shared EverParse include directory.
+# Every other file, including any other header, stays with the sources.
+# Passes that extract no public header at all (Rust) leave PUBLIC_HEADERS
+# empty.
+PUBLIC_HEADERS ?=
+public_headers := $(addprefix ./,$(PUBLIC_HEADERS))
+$(foreach h,$(public_headers),$(if $(wildcard $(h)),,$(error public header $(h) was not extracted)))
 other_files := $(filter-out $(public_headers),$(files))
 
 header_dir ?= $(target_dir)

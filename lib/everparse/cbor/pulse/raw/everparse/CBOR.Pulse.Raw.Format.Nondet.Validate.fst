@@ -7,6 +7,7 @@ open Pulse.Lib.Trade
 open Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
+module U64 = FStar.UInt64
 module Trade = Pulse.Lib.Trade.Util
 #lang-pulse
 module EP = CBOR.Pulse.Raw.EverParse.Format
@@ -96,6 +97,7 @@ ensures
 fn cbor_validate_nondet_bounded
   (map_depth_bound: SZ.t)
   (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
   (input: slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
@@ -104,15 +106,15 @@ requires
 returns res: SZ.t
 ensures
   (pts_to input #pm v ** pure (
-    cbor_validate_nondet_bounded_post map_depth_bound map_length_bound v res
+    cbor_validate_nondet_bounded_post map_depth_bound map_length_bound map_key_bound v res
   ))
 {
   LowParse.Spec.Combinators.parse_filter_eq
     CBOR.Spec.Raw.EverParse.parse_raw_data_item
-    (CBOR.Spec.Raw.Base.raw_data_item_bounded (SZ.v map_depth_bound) (SZ.v map_length_bound))
+    (EP.raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)
     v;
   let mut poff = 0sz;
-  let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound input poff;
+  let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound map_key_bound input poff;
   if (res) {
     let off = !poff;
     let input' = LowParse.Pulse.Base.peek_trade_gen
@@ -132,5 +134,98 @@ ensures
     }
   } else {
     0sz
+  }
+}
+
+let cbor_validate_nondet_bounded_sort_scratch_ok_impl map_depth_bound map_length_bound scratch_len =
+  CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_sort_scratch_ok map_depth_bound map_length_bound scratch_len
+
+fn cbor_validate_nondet_bounded_sort
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
+  (input: slice U8.t)
+  (scratch: slice SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+requires
+  (pts_to input #pm v ** pts_to scratch s)
+returns res: SZ.t
+ensures
+  (pts_to input #pm v ** (exists* s' . pts_to scratch s' ** pure (
+    cbor_validate_nondet_bounded_sort_post map_depth_bound map_length_bound map_key_bound (len scratch) v res
+  )))
+{
+  if (not (CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_sort_scratch_ok map_depth_bound map_length_bound (len scratch))) {
+    0sz
+  } else {
+    LowParse.Spec.Combinators.parse_filter_eq
+      CBOR.Spec.Raw.EverParse.parse_raw_data_item
+      (EP.raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)
+      v;
+    Seq.slice_length v;
+    let mut poff = 0sz;
+    let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound map_key_bound input poff;
+    if (res) {
+      let off = !poff;
+      let x : Ghost.erased CBOR.Spec.Raw.Base.raw_data_item = Ghost.hide (fst (Some?.v (LowParse.Spec.Base.parse CBOR.Spec.Raw.EverParse.parse_raw_data_item v)));
+      let ok = CBOR.Pulse.Raw.EverParse.DupCheck.Top.check_dups_top input map_depth_bound map_length_bound scratch x (Ghost.hide (SZ.v off));
+      if (ok) {
+        off
+      } else {
+        0sz
+      }
+    } else {
+      0sz
+    }
+  }
+}
+
+let cbor_validate_nondet_bounded_hash_scratch_ok_impl map_depth_bound map_length_bound scratch_len hash_scratch_len =
+  CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_hash_scratch_ok map_depth_bound map_length_bound scratch_len hash_scratch_len
+
+fn cbor_validate_nondet_bounded_hash
+  (map_depth_bound: SZ.t)
+  (map_length_bound: SZ.t)
+  (map_key_bound: option SZ.t)
+  (k0 k1: U64.t)
+  (input: slice U8.t)
+  (scratch: slice SZ.t)
+  (hash_scratch: slice U64.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#s: Ghost.erased (Seq.seq SZ.t))
+  (#hs: Ghost.erased (Seq.seq U64.t))
+requires
+  (pts_to input #pm v ** pts_to scratch s ** pts_to hash_scratch hs)
+returns res: SZ.t
+ensures
+  (pts_to input #pm v ** (exists* s' hs' . pts_to scratch s' ** pts_to hash_scratch hs' ** pure (
+    cbor_validate_nondet_bounded_hash_post map_depth_bound map_length_bound map_key_bound (len scratch) (len hash_scratch) v res
+  )))
+{
+  if (not (CBOR.Pulse.Raw.EverParse.DupCheck.Top.dupcheck_hash_scratch_ok map_depth_bound map_length_bound (len scratch) (len hash_scratch))) {
+    0sz
+  } else {
+    LowParse.Spec.Combinators.parse_filter_eq
+      CBOR.Spec.Raw.EverParse.parse_raw_data_item
+      (EP.raw_data_item_bounded_key (SZ.v map_depth_bound) (SZ.v map_length_bound) map_key_bound)
+      v;
+    Seq.slice_length v;
+    let mut poff = 0sz;
+    let res = EP.validate_raw_data_item_bounded map_depth_bound map_length_bound map_key_bound input poff;
+    if (res) {
+      let off = !poff;
+      let x : Ghost.erased CBOR.Spec.Raw.Base.raw_data_item = Ghost.hide (fst (Some?.v (LowParse.Spec.Base.parse CBOR.Spec.Raw.EverParse.parse_raw_data_item v)));
+      let ok = CBOR.Pulse.Raw.EverParse.DupCheck.Top.check_dups_top_hash input map_depth_bound map_length_bound k0 k1 scratch hash_scratch x (Ghost.hide (SZ.v off));
+      if (ok) {
+        off
+      } else {
+        0sz
+      }
+    } else {
+      0sz
+    }
   }
 }

@@ -1,0 +1,7 @@
+-- Imported by X509Lite.asn: value assignments used across modules.
+X509LiteBase DEFINITIONS ::= BEGIN
+
+id-ce OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) ds(5) 29 }
+ub-name INTEGER ::= 8
+
+END

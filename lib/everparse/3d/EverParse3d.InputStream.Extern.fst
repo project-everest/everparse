@@ -23,10 +23,9 @@ open Pulse.Lib.Pervasives
                legal and must be distinguishable from it.)
 
    A [has_length: bool] / [length: pos_t] pair would express the same thing,
-   but is not an option here: [len_t] is passed
-   by value to every validator, and a struct would be monomorphized by KaRaMeL
-   into whichever *generated* module used it first -- the very thing the
-   [trunc_t] design in EverParse3d.InputStream.Base exists to avoid.
+   but would require an aggregate type in every validator's C signature.
+   The scalar encoding also matches the [trunc_t] design in
+   EverParse3d.InputStream.Base.
 
    Consequently truncation is a pure computation on [len_t] -- there is no
    `EverParseStreamTruncate` primitive for the client to implement -- and
@@ -49,6 +48,7 @@ open Pulse.Lib.Pervasives
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
+module B = EverParse3d.CAbi.Boolean
 module U64 = FStar.UInt64
 module I = EverParse3d.InputStream.Base
 module LP = LowParse.Spec.Base
@@ -96,6 +96,7 @@ ensures stream_pts_to base len pos contents v ** pure (v `seq_is_suffix_of` cont
 
    It stays truthful under truncation: truncating withholds bytes from the
    view but consumes nothing, so [|contents| - |v|] is unchanged. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamGetPosition"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_get_position :
 (base: base_t) ->
     (pos: Ghost.erased pos_t) ->
@@ -176,6 +177,7 @@ ensures stream_pts_to base len pos contents v **
   SZ.uint64_to_sizet (U64.sub (U64.sub len 1uL) abs)
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamHas"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_has :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -183,13 +185,13 @@ assume val stream_has :
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt bool
+    stt B.t
     (requires (
       stream_pts_to_raw base pos contents v
     ))
     (ensures (fun res ->
       stream_pts_to_raw base pos contents v **
-      pure (res == true <==> SZ.v n <= Seq.length v)
+      pure (B.to_bool res == true <==> SZ.v n <= Seq.length v)
     ))
 
 (* Bounded views must *not* consult the client: it reports what the underlying
@@ -199,6 +201,7 @@ inline_for_extraction
 noextract
 fn stream_has_bounded
     (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (name: string)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -211,13 +214,13 @@ ensures stream_pts_to base len pos contents v **
   pure (res == true <==> SZ.v n <= Seq.length v)
 {
   if bounded len {
-    let rem = stream_remaining base len pos contents v;
+    let [@@@rename_let ("bytesRemainingBefore" ^ Common.pascal_case name)] rem = stream_remaining base len pos contents v;
     SZ.lte n rem
   } else {
     unfold (stream_pts_to base len pos contents v);
     let res = stream_has base pos n contents v;
     fold (stream_pts_to base len pos contents v);
-    res
+    B.to_bool res
   }
 }
 
@@ -232,6 +235,7 @@ ensures stream_pts_to base len pos contents v **
      The out-of-range case is left underspecified instead -- the validators
      never reach it, so an existing client stays correct whatever it answers
      there, as long as it does not read out of bounds to decide. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamHasAt"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_has_at :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -240,15 +244,15 @@ assume val stream_has_at :
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt bool
+    stt B.t
     (requires (
       stream_pts_to_raw base pos contents v
     ))
     (ensures (fun res ->
       stream_pts_to_raw base pos contents v ** pure (
       SZ.v off <= Seq.length v ==> (
-        (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
-        (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+        (B.to_bool res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+        (B.to_bool res == true ==> SZ.fits (SZ.v off + SZ.v n))
       )
     )))
 
@@ -256,6 +260,7 @@ inline_for_extraction
 noextract
 fn stream_has_at_bounded
     (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (name: string)
   (base: base_t)
   (len: len_t)
   (pos: pos_t)
@@ -274,7 +279,7 @@ ensures stream_pts_to base len pos contents v **
   )
 {
   if bounded len {
-    let rem = stream_remaining base len pos contents v;
+    let [@@@rename_let ("bytesRemainingBefore" ^ Common.pascal_case name)] rem = stream_remaining base len pos contents v;
     if (SZ.lte off rem) {
       SZ.lte n (SZ.sub rem off)
     } else {
@@ -284,7 +289,7 @@ ensures stream_pts_to base len pos contents v **
     unfold (stream_pts_to base len pos contents v);
     let res = stream_has_at base pos off n contents v;
     fold (stream_pts_to base len pos contents v);
-    res
+    B.to_bool res
   }
 }
 
@@ -296,6 +301,7 @@ ensures stream_pts_to base len pos contents v **
    used to parse a leaf integer, so `n` is at most 8 and the copy is free; in
    exchange the C signature carries no aliasing obligation and the separation
    logic postcondition stays a plain points-to. *)
+[@@FStar.Attributes.custard_extern "EverParseStreamReadBytes"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_read_bytes :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -364,6 +370,7 @@ inline_for_extraction
 noextract
 fn stream_read
     (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (name: string)
   (t': Type0)
   (k: LP.parser_kind)
   (p: LP.parser k t')
@@ -393,13 +400,14 @@ fn stream_read
   API.parse_constant_size_eq p v;
   LP.parse_strong_prefix p v (Seq.slice v 0 (SZ.v n));
   let mut scratch = [| 0uy; n |];
-  let sp = AP.from_array scratch;
+  let [@@@rename_let ("bytesOf" ^ Common.pascal_case name)] sp = AP.from_array scratch;
   stream_read_bytes_bounded base len pos n sp contents v _;
   let res = r sp;
   AP.to_array sp scratch;
   res
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamSkip"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_skip :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -441,6 +449,7 @@ ensures exists* v' .
   fold (stream_pts_to base len pos contents v');
 }
 
+[@@FStar.Attributes.custard_extern "EverParseStreamEmpty"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val stream_empty :
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
 (base: base_t) ->
@@ -595,7 +604,8 @@ ensures exists* contents' v1 v2 .
     Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
     Seq.length v <= Seq.length contents /\
     Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
-    Ghost.reveal v == Seq.append v1 v2
+    Ghost.reveal v == Seq.append v1 v2 /\
+    I.origin #base_t #len_t #pos_t #pts_to_inst (stream_trunc_base base len pos res) == I.origin #base_t #len_t #pos_t #pts_to_inst base
   )
 {
   unfold (stream_pts_to base len pos contents v);
@@ -650,8 +660,8 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
   extra_t = extra_t;
   pts_to_is_suffix_of = (fun b l (p: pos_t) c v -> stream_pts_to_is_suffix_of b l p c v);
   get_position = stream_get_relative_position;
-  has = (fun b l (p: pos_t) n c v -> stream_has_bounded b l p n c v);
-  has_at = (fun b l (p: pos_t) off n c v -> stream_has_at_bounded b l p off n c v);
+  has = (fun name b l (p: pos_t) n c v -> stream_has_bounded name b l p n c v);
+  has_at = (fun name b l (p: pos_t) off n c v -> stream_has_at_bounded name b l p off n c v);
   read = stream_read;
   skip = (fun b l (p: pos_t) n c v -> stream_skip_bounded b l p n c v);
   empty = (fun b l (p: pos_t) c v -> stream_empty_unit b l p c v);
@@ -666,7 +676,7 @@ instance input_stream_extern : I.input_stream_inst base_t len_t pos_t = {
 (* The error handler used when 3d is invoked with `--use_error_handler_macro`.
    Each backend provides its own; the 3D frontend passes the one matching the
    selected `--input_stream` to `validate_with_error_handler`. *)
-[@@CMacro]
+[@@CMacro; FStar.Attributes.custard_extern "EVERPARSE_ERROR_HANDLER_MACRO"; FStar.Attributes.custard_c_header "EverParse.h"]
 assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 
 (* No `copy_buffer` instance: probing is unavailable for the `extern` backend,
@@ -688,8 +698,10 @@ assume val error_handler_macro : Common.error_handler #base_t #len_t #pos_t
 module AP = Pulse.Lib.ArrayPtr
 module R = Pulse.Lib.Reference
 module AB = EverParse3d.Actions.Base
+module AS = EverParse3d.Actions.Spec
 open EverParse3d.State
 
+[@@FStar.Attributes.rename_let "EVERPARSE____PUINT8"; FStar.Attributes.custard_no_unfold]
 noextract
 inline_for_extraction
 let ___PUINT8 = AP.ptr U8.t
@@ -697,18 +709,19 @@ let ___PUINT8 = AP.ptr U8.t
 (* As for the stream primitives, the origin and the truncation bound are absent
    from the assumed C prototype: EverParseStreamPeep is unchanged. The client
    context is threaded, as it is to every other assumed primitive. *)
+[@@FStar.Attributes.custard_extern "EverParseFieldPtrAfterImpl"; FStar.Attributes.custard_c_header "EverParseStreamPrimitives.h"]
 assume val field_ptr_after_impl
   (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)
   (w: R.ref ___PUINT8)
-  (sl_base: base_t)
-  (sl_pos: Ghost.erased pos_t)
+  (slBase: base_t)
+  (slPos: Ghost.erased pos_t)
   (w0: Ghost.erased ___PUINT8)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-: stt bool
-    (R.pts_to w #1.0R w0 ** stream_pts_to_raw sl_base sl_pos contents_sl v_sl)
-    (fun _ -> exists* w' . R.pts_to w #1.0R w' ** stream_pts_to_raw sl_base sl_pos contents_sl v_sl)
+: stt B.t
+    (R.pts_to w #1.0R w0 ** stream_pts_to_raw slBase slPos contents_sl v_sl)
+    (fun _ -> exists* w' . R.pts_to w #1.0R w' ** stream_pts_to_raw slBase slPos contents_sl v_sl)
 
 inline_for_extraction
 noextract
@@ -716,24 +729,29 @@ fn field_ptr_after_unchecked
   (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)
   (w: R.ref ___PUINT8)
-  (sl_base: base_t)
-  (sl_len: len_t)
-  (sl_pos: pos_t)
+  (slBase: base_t)
+  (slLen: len_t)
+  (slPos: pos_t)
   (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+requires R.pts_to w #1.0R w0 ** I.pts_to slBase slLen slPos contents_sl v_sl ** AB.peep_world pw
 returns res: bool
-ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to slBase slLen slPos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (AS.peep_head pw == (if res then Some w' else None))
 {
-  rewrite (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
-       as (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  unfold (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  let res = field_ptr_after_impl sz w sl_base sl_pos w0 contents_sl v_sl;
-  fold (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
-       as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
-  res
+  rewrite (I.pts_to slBase slLen slPos contents_sl v_sl)
+       as (stream_pts_to slBase slLen slPos contents_sl v_sl);
+  unfold (stream_pts_to slBase slLen slPos contents_sl v_sl);
+  let res = field_ptr_after_impl sz w slBase slPos w0 contents_sl v_sl;
+  fold (stream_pts_to slBase slLen slPos contents_sl v_sl);
+  rewrite (stream_pts_to slBase slLen slPos contents_sl v_sl)
+       as (I.pts_to slBase slLen slPos contents_sl v_sl);
+  let ok = B.to_bool res;
+  // The peep world records what the client primitive did.
+  AB.resolve_peep_world ok w;
+  ok
 }
 
 (* The client's Peep answers for the whole stream, so inside a truncated view
@@ -745,89 +763,124 @@ fn field_ptr_after_wrapped
     (#[Util.solve_from_ctx ()] _extra: extra_t)
   (sz: FStar.UInt64.t)
   (w: R.ref ___PUINT8)
-  (sl_base: base_t)
-  (sl_len: len_t)
-  (sl_pos: pos_t)
+  (slBase: base_t)
+  (slLen: len_t)
+  (slPos: pos_t)
   (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
-requires R.pts_to w #1.0R w0 ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+requires R.pts_to w #1.0R w0 ** I.pts_to slBase slLen slPos contents_sl v_sl ** AB.peep_world pw
 returns res: bool
-ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl
+ensures exists* w' . R.pts_to w #1.0R w' ** I.pts_to slBase slLen slPos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (AS.peep_head pw == (if res then Some w' else None))
 {
-  if bounded sl_len {
-    rewrite (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
-         as (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl);
-    let rem = stream_remaining sl_base sl_len sl_pos contents_sl v_sl;
-    rewrite (stream_pts_to sl_base sl_len sl_pos contents_sl v_sl)
-         as (I.pts_to sl_base sl_len sl_pos contents_sl v_sl);
+  if bounded slLen {
+    rewrite (I.pts_to slBase slLen slPos contents_sl v_sl)
+         as (stream_pts_to slBase slLen slPos contents_sl v_sl);
+    let rem = stream_remaining slBase slLen slPos contents_sl v_sl;
+    rewrite (stream_pts_to slBase slLen slPos contents_sl v_sl)
+         as (I.pts_to slBase slLen slPos contents_sl v_sl);
     if FStar.UInt64.lte sz (SZ.sizet_to_uint64 rem) {
-      field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+      field_ptr_after_unchecked sz w slBase slLen slPos w0 pw contents_sl v_sl
     } else {
+      AB.resolve_peep_world_none ();
       false
     }
   } else {
-    field_ptr_after_unchecked sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+    field_ptr_after_unchecked sz w slBase slLen slPos w0 pw contents_sl v_sl
+  }
+}
+
+(* The client's callback may write anything to its output pointer, even when
+   it fails. So it writes to a local, copied to the destination only on
+   success: the destination is then unchanged if `field_ptr_after` fails. *)
+inline_for_extraction
+noextract
+fn field_ptr_after_via_local
+    (#[Util.solve_from_ctx ()] _extra: extra_t)
+  (sz: FStar.UInt64.t)
+  (w: R.ref ___PUINT8)
+  (slBase: base_t)
+  (slLen: len_t)
+  (slPos: pos_t)
+  (w0: Ghost.erased ___PUINT8)
+  (pw: Ghost.erased AS.peep_tape)
+  (contents_sl: Ghost.erased (Seq.seq U8.t))
+  (v_sl: Ghost.erased (Seq.seq U8.t))
+requires R.pts_to w #1.0R w0 ** I.pts_to slBase slLen slPos contents_sl v_sl ** AB.peep_world pw
+returns res: bool
+ensures R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0) ** I.pts_to slBase slLen slPos contents_sl v_sl **
+  AB.peep_world (AS.peep_tail pw) ** pure (res == Some? (AS.peep_head pw))
+{
+  let mut tmp = NP.null_ptr;
+  let ok = field_ptr_after_wrapped sz tmp slBase slLen slPos _ pw contents_sl v_sl;
+  if ok {
+    let q = !tmp;
+    w := q;
+    rewrite (R.pts_to w #1.0R q) as (R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0));
+    true
+  } else {
+    rewrite (R.pts_to w #1.0R w0) as (R.pts_to w #1.0R (AS.peep_result (AS.peep_head pw) w0));
+    false
   }
 }
 
 noextract
 inline_for_extraction
 let field_ptr_after_fn
-: AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8
-= fun _extra sz w sl_base sl_len (sl_pos: pos_t) w0 contents_sl v_sl ->
-    field_ptr_after_wrapped #_extra sz w sl_base sl_len sl_pos w0 contents_sl v_sl
+: AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern
+= fun _extra sz w slBase slLen (slPos: pos_t) w0 pw contents_sl v_sl ->
+    field_ptr_after_via_local #_extra sz w slBase slLen slPos w0 pw contents_sl v_sl
 
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
 let field_ptr_after
-: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern ___PUINT8)
+: option (AB.field_ptr_after_t base_t len_t pos_t #input_stream_extern)
 = Some field_ptr_after_fn
-
-(* An opaque alias for the state-dictionary invariant. It is a plain (hence
-   delta-reducible) definition, so that it is convertible with the `exists*`
-   that `field_ptr_after_setter_t` expects, while being opaque enough that
-   Pulse does not lift the existential into an implicit binder of the `fn`
-   below. *)
-let all_states (d: state_dict) : slprop =
-  exists* (extra: forevery_values d) . forevery_state d extra
 
 (* `noextract` as well as `inline_for_extraction`: its only caller,
    `field_ptr_after_with_setter` below, is itself noextract and inlined into
-   the generated validators. Without `noextract` KaRaMeL must materialise a
-   real definition for it -- which, now that this module is public (an API of
-   the EverParse bundle), would resurrect EverParse.c just for this one
-   function. *)
+   the generated validators. Keep this helper out of standalone extraction;
+   it is not part of the public runtime API. *)
 noextract
 inline_for_extraction
 fn field_ptr_after_with_setter_impl
-  (#extra_state: state_dict)
+  (#vt: Type0)
+  (#name: string)
+  (#state: vt -> slprop)
+  (#sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
   (_extra: extra_t)
   (sz: FStar.UInt64.t)
-  (write_to: (___PUINT8 -> AB.external_action extra_state unit))
-  (sl_base: base_t)
-  (sl_len: len_t)
-  (sl_pos: pos_t)
+  (write_to: (p: EverParse3d.PtrModel.ptr -> AB.external_action_spec name state unit (sp p)))
+  (slBase: base_t)
+  (slLen: len_t)
+  (slPos: pos_t)
+  (pw: Ghost.erased AS.peep_tape)
+  (ws: Ghost.erased vt)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
   (v_sl: Ghost.erased (Seq.seq U8.t))
 requires
-  I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-  all_states extra_state
+  I.pts_to slBase slLen slPos contents_sl v_sl **
+  state ws **
+  AB.peep_world pw
 returns res: bool
 ensures
-  I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
-  all_states extra_state
+  I.pts_to slBase slLen slPos contents_sl v_sl **
+  state (AS.setter_peep_result sp (AS.peep_head pw) ws) **
+  AB.peep_world (AS.peep_tail pw) **
+  pure (res == Some? (AS.peep_head pw))
 {
   let mut w = NP.null_ptr;
-  let ok = field_ptr_after_wrapped sz w sl_base sl_len sl_pos _ contents_sl v_sl;
+  let ok = field_ptr_after_wrapped sz w slBase slLen slPos _ pw contents_sl v_sl;
   if ok {
     let q = !w;
-    unfold (all_states extra_state);
-    write_to q ();
-    fold (all_states extra_state);
+    write_to q () #ws;
+    rewrite (state (snd (sp q ws))) as (state (AS.setter_peep_result sp (AS.peep_head pw) ws));
     true
   } else {
+    rewrite (state ws) as (state (AS.setter_peep_result sp (AS.peep_head pw) ws));
     false
   }
 }
@@ -835,6 +888,8 @@ ensures
 [@@EverParse3d.Actions.Common.specialize_backend]
 noextract
 inline_for_extraction
-let field_ptr_after_with_setter (extra_state: state_dict)
-: option (AB.field_ptr_after_setter_t base_t len_t pos_t #input_stream_extern extra_state ___PUINT8)
-= Some (field_ptr_after_with_setter_impl #extra_state)
+let field_ptr_after_with_setter
+  (vt: Type0) (name: string) (state: vt -> slprop)
+  (sp: EverParse3d.PtrModel.ptr -> vt -> Tot (unit & vt))
+: option (AB.field_ptr_after_setter_t base_t len_t pos_t #input_stream_extern name state sp)
+= Some (field_ptr_after_with_setter_impl #vt #name #state #sp)

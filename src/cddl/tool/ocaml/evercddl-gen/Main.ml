@@ -120,7 +120,7 @@ let resolve_krml_exe () =
   | Some exe -> exe
   | None ->
     let krml = "krml" ^ (if Sys.win32 then ".exe" else "") in
-    let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "karamel") "out") "bin") krml in
+    let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "karamel") "out") "bin") krml in
     if Sys.file_exists opt_krml
     then opt_krml
     else

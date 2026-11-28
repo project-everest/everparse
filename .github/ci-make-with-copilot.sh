@@ -64,6 +64,19 @@ sync_to_container () {
         return 2
     fi
 
+    # Copilot may have tried its edits out with `docker cp`, which keeps the
+    # *host* uid/gid.  On GitHub-hosted runners that happens to match the
+    # container user (both 1001), but on a self-hosted runner it does not,
+    # and the container user can then no longer overwrite those files (tar
+    # --overwrite fails with "Cannot open: Permission denied") or anything
+    # make writes next to them.  Hand everything back to the container user.
+    local cuid cgid
+    cuid=$(docker exec "$container" id -u) && cgid=$(docker exec "$container" id -g) || return 1
+    docker exec --user root "$container" \
+           find . -path ./opt -prune -o \
+           \( \! -user "$cuid" -o \! -group "$cgid" \) \
+           -exec chown -h "$cuid:$cgid" -- {} + || return 1
+
     if test "${#changed[@]}" -gt 0 ; then
         printf 'ci-make-with-copilot: uploading %s\n' "${changed[@]}"
         ( cd "$src" && printf '%s\0' "${changed[@]}" |
@@ -99,6 +112,11 @@ Investigate and fix it, subject to these rules:
   Those edits -- and only those -- are copied into the container before the
   build is retried. Editing /mnt/everparse directly inside the container has
   no lasting effect and will be overwritten.
+- To try an edit in the container before you finish, copy it there with
+      tar -c <file>... | docker exec -i $container tar -x --overwrite
+  run from the current working directory. Do not use \`docker cp\`: it
+  gives the file the host user's uid, which the container user may not be
+  able to overwrite.
 - You may run anything you like inside the container to investigate, for
   example:
       docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env \\

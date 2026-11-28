@@ -76,23 +76,21 @@ without running the verifier.
 it also needs the native Pulse outputs. The root `make 3d-test` builds both
 trees before running this suite on Pulse-enabled Linux builds.
 
-## The `--api lowstar` worker in the public header
+## The `--api lowstar` worker and public adapter
 
 Both modes are compiled from the same Pulse combinators; `--api lowstar` only
 wraps the result. For each entrypoint `3d` emits a Pulse-native worker named
 `validate_<reserved_prefix>core_<root>` (`InterpreterTarget.pulse_worker_name`),
 with `reserved_prefix = "___"`, and wraps it in a public adapter `validate_<root>`
-returning the legacy `uint64_t` result. KaRaMeL drops the reserved prefix and
-renders the worker as `<Module>ValidateCore<Root>` (`check_api.py` matches
-`Validate_*Core`, tolerating a prefix that survives). The worker returns
-`uint8_t`, like any Pulse validator.
+returning the legacy `uint64_t` result. Native Custard keeps the worker
+private and preserves its F* name in C. The worker returns `uint8_t`, like
+any Pulse validator.
 
-The worker is tagged `KrmlPrivate`, so the old per-module extraction hid it in
-`internal/`, which `check_api.py` deliberately does not glob. Custard ignores
-`KrmlPrivate` (see the comment in `../lowstar/Makefile`), so the worker now
-sits in the public header, next to the adapter. `check_api.py` therefore
-excludes those names from the `--api lowstar` result-type check:
-only the adapter is public API. A genuinely wrong public validator -- a
+`check_api.py` recognizes the native worker in the C implementation to
+distinguish the Lowstar API from the Pulse API. It also tolerates older
+headers exposing workers named `<Module>ValidateCore<Root>` by excluding
+those names from the `--api lowstar` result-type check: only the adapter is
+public API. A genuinely wrong public validator -- a
 `uint8_t` `<Module>Validate<Root>` in an `--api lowstar` tree -- is still
 rejected, and `test_harness.py` asserts both halves of that.
 

@@ -33,6 +33,11 @@ formats for CBOR objects in CDDL, and generates C or Rust data types,
 parsers and serializers. We have used it to generate message
 processing code for COSE signing.
 
+**everparse-asn1**: An experimental frontend for EverParse that accepts
+ASN.1 modules, and generates C data types with validators, zero-copy
+parsers and writers for their DER encodings, verified against a pure F\*
+specification of ASN.1 DER.
+
 EverParse is open-source and available on `GitHub
 <https://github.com/project-everest/everparse/>`_. EverParse is part
 of `Project Everest <https://project-everest.github.io/>`_.
@@ -52,6 +57,8 @@ Manual
 ------
 
 * :ref:`3d` (includes the full documentation of the EverParse binary package)
+
+* :ref:`asn1`
 
 * EverCBOR:
 
@@ -106,6 +113,7 @@ Papers
    :caption: Contents:
 
    3d
+   asn1
 
 
 Licenses

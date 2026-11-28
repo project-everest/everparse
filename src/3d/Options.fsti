@@ -27,6 +27,8 @@ val get_goto_for_early_return : unit -> ML bool
 
 val get_complete_wrappers : unit -> ML bool
 
+val get_wrapper_error_code : unit -> ML (option string)
+
 val get_blank_lines : unit -> ML bool
 
 val get_line_comments : unit -> ML bool
@@ -39,7 +41,7 @@ val get_equate_types_list : unit -> ML (list (string & string))
 
 val get_micro_step : unit -> ML (option micro_step_t)
 
-val get_produce_c_from_existing_krml : unit -> ML bool
+val get_produce_c_from_existing_checked : unit -> ML bool
 
 val get_skip_deps : unit -> ML bool
 

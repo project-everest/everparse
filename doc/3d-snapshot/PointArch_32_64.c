@@ -1,270 +1,140 @@
-
-
 #include "PointArch_32_64.h"
 
-static inline uint8_t
-ValidateCoreInt(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t pos0;
-  size_t p3;
-  uint64_t viewStart;
-  size_t fieldOff;
-  uint64_t startPos;
-  size_t p00;
-  size_t p10;
-  size_t rem0;
-  BOOLEAN hasBytes0;
-  uint8_t res0;
-  uint8_t res10;
-  size_t consumed0;
-  size_t p20;
-  size_t p_;
-  size_t pos;
-  size_t p;
-  uint64_t viewStart0;
-  size_t fieldOff0;
-  uint64_t startPos0;
-  size_t p0;
-  size_t p1;
-  size_t rem;
-  BOOLEAN hasBytes;
-  uint8_t res;
-  uint8_t res1;
-  size_t consumed;
-  size_t p2;
-  size_t p_0;
-  #if ARCH64
+static inline uint8_t PointArch3264ValidateIntCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+static uint8_t PointArch3264ValidatePointCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+
+static inline uint8_t PointArch3264ValidateIntCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
+  #if defined(ARCH64)
   {
-    KRML_MAYBE_UNUSED_VAR(viewStart0);
-    KRML_MAYBE_UNUSED_VAR(startPos0);
-    KRML_MAYBE_UNUSED_VAR(res1);
-    KRML_MAYBE_UNUSED_VAR(res);
-    KRML_MAYBE_UNUSED_VAR(rem);
-    KRML_MAYBE_UNUSED_VAR(pos);
-    KRML_MAYBE_UNUSED_VAR(p_0);
-    KRML_MAYBE_UNUSED_VAR(p2);
-    KRML_MAYBE_UNUSED_VAR(p1);
-    KRML_MAYBE_UNUSED_VAR(p0);
-    KRML_MAYBE_UNUSED_VAR(p);
-    KRML_MAYBE_UNUSED_VAR(hasBytes);
-    KRML_MAYBE_UNUSED_VAR(fieldOff0);
-    KRML_MAYBE_UNUSED_VAR(consumed);
-    pos0 = (size_t)0U;
+    size_t scanOffset = 0;
     /* Validating field x */
-    p3 = *SlPos;
-    viewStart = (uint64_t)p3;
-    fieldOff = pos0;
-    startPos = viewStart + (uint64_t)fieldOff;
+    size_t currentPosition = slPos[0];
+    uint64_t streamPositionAtX = (uint64_t)currentPosition;
+    size_t offsetOfX = scanOffset;
+    uint64_t startPositionOfX = (streamPositionAtX + (uint64_t)offsetOfX);
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    p00 = pos0;
-    p10 = *SlPos;
-    rem0 = SlLen - p10;
-    hasBytes0 = p00 <= rem0 && (size_t)8U <= (rem0 - p00);
-    if (hasBytes0)
-    {
-      pos0 = p00 + (size_t)8U;
-      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    size_t offsetBeforeX = scanOffset;
+    size_t positionBeforeX = slPos[0];
+    size_t bytesRemainingBeforeX = (slLen - positionBeforeX);
+    bool hasBytesForX;
+    if (offsetBeforeX <= bytesRemainingBeforeX) {
+      hasBytesForX = (8 <= (bytesRemainingBeforeX - offsetBeforeX));
     }
-    else
-    {
-      res0 = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    else {
+      hasBytesForX = false;
     }
-    if (res0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
-      res10 = res0;
+    uint8_t resultOfX;
+    if (hasBytesForX) {
+      scanOffset = (offsetBeforeX + 8);
+      resultOfX = EVERPARSE_STATUS_SUCCESS;
     }
-    else
-    {
-      ErrorHandlerFn("_INT",
-        "x",
-        EverParsePulseInternalErrorReasonOfResult(res0),
-        res0 == 0U || (res0 >= 2U && res0 <= 8U) ? (uint64_t)(uint32_t)res0 : 15ULL,
-        Ctxt,
-        SlBase,
-        startPos);
-      res10 = res0;
+    else {
+      resultOfX = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res10 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
-      consumed0 = pos0;
-      p20 = *SlPos;
-      p_ = p20 + consumed0;
-      *SlPos = p_;
-      return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    uint8_t res;
+    if (resultOfX == EVERPARSE_STATUS_SUCCESS) {
+      res = resultOfX;
     }
-    return res10;
+    else {
+      (void)(errorHandlerFn("_INT", "x", EverParse3dErrorReasonOfResult(resultOfX), EverParse3dLegacyKind(resultOfX), ctxt, slBase, startPositionOfX));
+      res = resultOfX;
+    }
+    if (res == EVERPARSE_STATUS_SUCCESS) {
+      size_t currentPosition1 = slPos[0];
+      size_t newPosition = (currentPosition1 + scanOffset);
+      slPos[0] = newPosition;
+      return EVERPARSE_STATUS_SUCCESS;
+    }
+    else {
+      return res;
+    }
   }
   #else
   {
-    KRML_MAYBE_UNUSED_VAR(viewStart);
-    KRML_MAYBE_UNUSED_VAR(startPos);
-    KRML_MAYBE_UNUSED_VAR(res10);
-    KRML_MAYBE_UNUSED_VAR(res0);
-    KRML_MAYBE_UNUSED_VAR(rem0);
-    KRML_MAYBE_UNUSED_VAR(pos0);
-    KRML_MAYBE_UNUSED_VAR(p_);
-    KRML_MAYBE_UNUSED_VAR(p3);
-    KRML_MAYBE_UNUSED_VAR(p20);
-    KRML_MAYBE_UNUSED_VAR(p10);
-    KRML_MAYBE_UNUSED_VAR(p00);
-    KRML_MAYBE_UNUSED_VAR(hasBytes0);
-    KRML_MAYBE_UNUSED_VAR(fieldOff);
-    KRML_MAYBE_UNUSED_VAR(consumed0);
-    pos = (size_t)0U;
+    size_t scanOffset_1 = 0;
     /* Validating field x */
-    p = *SlPos;
-    viewStart0 = (uint64_t)p;
-    fieldOff0 = pos;
-    startPos0 = viewStart0 + (uint64_t)fieldOff0;
+    size_t currentPosition_1 = slPos[0];
+    uint64_t streamPositionAtX_1 = (uint64_t)currentPosition_1;
+    size_t offsetOfX_1 = scanOffset_1;
+    uint64_t startPositionOfX_1 = (streamPositionAtX_1 + (uint64_t)offsetOfX_1);
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    p0 = pos;
-    p1 = *SlPos;
-    rem = SlLen - p1;
-    hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
-    if (hasBytes)
-    {
-      pos = p0 + (size_t)4U;
-      res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    size_t offsetBeforeX_1 = scanOffset_1;
+    size_t positionBeforeX_1 = slPos[0];
+    size_t bytesRemainingBeforeX_1 = (slLen - positionBeforeX_1);
+    bool hasBytesForX_1;
+    if (offsetBeforeX_1 <= bytesRemainingBeforeX_1) {
+      hasBytesForX_1 = (4 <= (bytesRemainingBeforeX_1 - offsetBeforeX_1));
     }
-    else
-    {
-      res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    else {
+      hasBytesForX_1 = false;
     }
-    if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
-      res1 = res;
+    uint8_t resultOfX_1;
+    if (hasBytesForX_1) {
+      scanOffset_1 = (offsetBeforeX_1 + 4);
+      resultOfX_1 = EVERPARSE_STATUS_SUCCESS;
     }
-    else
-    {
-      ErrorHandlerFn("_INT",
-        "x",
-        EverParsePulseInternalErrorReasonOfResult(res),
-        res == 0U || (res >= 2U && res <= 8U) ? (uint64_t)(uint32_t)res : 15ULL,
-        Ctxt,
-        SlBase,
-        startPos0);
-      res1 = res;
+    else {
+      resultOfX_1 = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    if (res1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
-      consumed = pos;
-      p2 = *SlPos;
-      p_0 = p2 + consumed;
-      *SlPos = p_0;
-      return EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    uint8_t res_1;
+    if (resultOfX_1 == EVERPARSE_STATUS_SUCCESS) {
+      res_1 = resultOfX_1;
     }
-    return res1;
+    else {
+      (void)(errorHandlerFn("_INT", "x", EverParse3dErrorReasonOfResult(resultOfX_1), EverParse3dLegacyKind(resultOfX_1), ctxt, slBase, startPositionOfX_1));
+      res_1 = resultOfX_1;
+    }
+    if (res_1 == EVERPARSE_STATUS_SUCCESS) {
+      size_t currentPosition1_1 = slPos[0];
+      size_t newPosition_1 = (currentPosition1_1 + scanOffset_1);
+      slPos[0] = newPosition_1;
+      return EVERPARSE_STATUS_SUCCESS;
+    }
+    else {
+      return res_1;
+    }
   }
   #endif
 }
 
-static uint8_t
-ValidateCorePoint(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
+static uint8_t PointArch3264ValidatePointCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
   /* Validating field x */
-  size_t p = *SlPos;
-  uint64_t fieldStartPoint = (uint64_t)p;
-  uint8_t resultAfterPoint = ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
-  uint8_t resultAfterx;
-  size_t p1;
-  uint64_t fieldStartPoint1;
-  uint8_t resultAfterPoint1;
-  if (resultAfterPoint == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
-    resultAfterx = resultAfterPoint;
+  size_t currentPosition = slPos[0];
+  uint64_t fieldStartPoint = (uint64_t)currentPosition;
+  uint8_t resultAfterPoint = PointArch3264ValidateIntCore(ctxt, errorHandlerFn, slBase, slLen, slPos);
+  uint8_t resultAfterX;
+  if (resultAfterPoint == EVERPARSE_STATUS_SUCCESS) {
+    resultAfterX = resultAfterPoint;
   }
-  else
-  {
-    ErrorHandlerFn("_POINT",
-      "x",
-      EverParsePulseInternalErrorReasonOfResult(resultAfterPoint),
-      resultAfterPoint == 0U || (resultAfterPoint >= 2U && resultAfterPoint <= 8U) ? (uint64_t)(uint32_t)resultAfterPoint
-                                                                                   : 15ULL,
-      Ctxt,
-      SlBase,
-      fieldStartPoint);
-    resultAfterx = resultAfterPoint;
+  else {
+    (void)(errorHandlerFn("_POINT", "x", EverParse3dErrorReasonOfResult(resultAfterPoint), EverParse3dLegacyKind(resultAfterPoint), ctxt, slBase, fieldStartPoint));
+    resultAfterX = resultAfterPoint;
   }
-  if (resultAfterx == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
+  if (resultAfterX == EVERPARSE_STATUS_SUCCESS) {
     /* Validating field y */
-    p1 = *SlPos;
-    fieldStartPoint1 = (uint64_t)p1;
-    resultAfterPoint1 = ValidateCoreInt(Ctxt, ErrorHandlerFn, SlBase, SlLen, SlPos);
-    if (resultAfterPoint1 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
+    size_t currentPosition1 = slPos[0];
+    uint64_t fieldStartPoint1 = (uint64_t)currentPosition1;
+    uint8_t resultAfterPoint1 = PointArch3264ValidateIntCore(ctxt, errorHandlerFn, slBase, slLen, slPos);
+    if (resultAfterPoint1 == EVERPARSE_STATUS_SUCCESS) {
       return resultAfterPoint1;
     }
-    ErrorHandlerFn("_POINT",
-      "y",
-      EverParsePulseInternalErrorReasonOfResult(resultAfterPoint1),
-      resultAfterPoint1 == 0U || (resultAfterPoint1 >= 2U && resultAfterPoint1 <= 8U) ? (uint64_t)(uint32_t)resultAfterPoint1
-                                                                                      : 15ULL,
-      Ctxt,
-      SlBase,
-      fieldStartPoint1);
-    return resultAfterPoint1;
+    else {
+      (void)(errorHandlerFn("_POINT", "y", EverParse3dErrorReasonOfResult(resultAfterPoint1), EverParse3dLegacyKind(resultAfterPoint1), ctxt, slBase, fieldStartPoint1));
+      return resultAfterPoint1;
+    }
   }
-  return resultAfterx;
+  else {
+    return resultAfterX;
+  }
 }
 
-uint64_t
-PointArch3264ValidatePoint(
-  uint8_t *Ctxt,
-  void
-  (*Handler)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t Length,
-  uint64_t Start
-)
-{
-  size_t len = (size_t)Length;
-  size_t initial = (size_t)Start;
+uint64_t PointArch3264ValidatePoint(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8_t *input, uint64_t length, uint64_t start) {
+  size_t len = (size_t)length;
+  size_t initial = (size_t)start;
   size_t cursor = initial;
-  uint8_t status = ValidateCorePoint(Ctxt, Handler, Input, len, &cursor);
-  size_t final = cursor;
-  uint64_t position = (uint64_t)final;
-  return
-    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
-      1152921504606846976ULL
-    + position;
+  uint8_t status = PointArch3264ValidatePointCore(ctxt, handler, input, len, &cursor);
+  uint64_t position = (uint64_t)cursor;
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
+
 

@@ -18,10 +18,12 @@ module I = EverParse3d.InputStream.Base
 
 (* The client-supplied per-invocation context, `EVERPARSE_EXTRA_T`. The 3D
    frontend passes it into the generated wrapper, which threads it down to the
-   primitives below. It is abstract here so that KaRaMeL emits it as a real C
-   parameter. *)
+   primitives below. Its abstract foreign type keeps it as an
+   EVERPARSE_EXTRA_T parameter in the extracted C. *)
+[@@FStar.Attributes.custard_extern "EVERPARSE_EXTRA_T"; FStar.Attributes.custard_c_header "EverParseEndianness.h"]
 assume val extra_t : Type0
 
+[@@FStar.Attributes.custard_extern "EVERPARSE_INPUT_STREAM_BASE"; FStar.Attributes.custard_c_header "EverParseEndianness.h"]
 assume val input_stream_base : Type0
 
 inline_for_extraction
@@ -93,4 +95,5 @@ inline_for_extraction
 let pts_to_inst : I.input_stream_pts_to base_t len_t pos_t = {
   pts_to = stream_pts_to;
   is_prefix_of = stream_is_prefix_of;
+  origin = (fun _ -> Pulse.Lib.ArrayPtr.null #FStar.UInt8.t);
 }

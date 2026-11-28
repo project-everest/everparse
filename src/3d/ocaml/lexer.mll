@@ -145,6 +145,7 @@ rule token =
   | "?"            { locate lexbuf QUESTION }
   | "{:act"        { locate lexbuf LBRACE_ACT }
   | "{:check"      { locate lexbuf LBRACE_CHECK }
+  | "{:error-code" { locate lexbuf LBRACE_ERROR_CODE }
   | "{:on-success" { locate lexbuf LBRACE_ONSUCCESS }
 
   | "{"            { locate lexbuf LBRACE }

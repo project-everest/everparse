@@ -5,46 +5,35 @@ include CBOR.Spec.Raw.Format
 open Pulse.Lib.Pervasives
 
 module S = Pulse.Lib.Slice
-module SM = Pulse.Lib.SeqMatch.Util
-module SZ = FStar.SizeT
 module I16 = FStar.Int16
-module Trade = Pulse.Lib.Trade.Util
 module U8 = FStar.UInt8
-
-let uint8_compare (x1 x2: U8.t) : Tot int =
-  if U8.lt x1 x2
-  then (-1)
-  else if U8.gt x1 x2
-  then 1
-  else 0
+module SB = LowParse.Spec.SeqBytes
+module LP = LowParse.Pulse.Lex
 
 let rec bytes_lex_compare_lex_compare
   (s1 s2: Seq.seq U8.t)
 : Lemma
-  (ensures (same_sign (bytes_lex_compare s1 s2) (lex_compare uint8_compare (Seq.seq_to_list s1) (Seq.seq_to_list s2))))
+  (ensures (bytes_lex_compare s1 s2 == SB.bytes_lex_compare s1 s2))
   (decreases (Seq.length s1))
 = if Seq.length s1 = 0 || Seq.length s2 = 0
   then ()
   else
     let _ = Seq.cons_head_tail s1 in
     let _ = Seq.cons_head_tail s2 in    
-    let c = uint8_compare (Seq.index s1 0) (Seq.index s2 0) in
+    let c = SB.byte_compare (Seq.index s1 0) (Seq.index s2 0) in
     if c = 0
     then bytes_lex_compare_lex_compare (Seq.tail s1) (Seq.tail s2)
     else ()
 
+(* Non-inlined wrappers around the (inline) LowParse.Pulse.Lex versions,
+   so that the extracted CBOR code keeps these as separate functions *)
+
 fn impl_uint8_compare (_: unit)
-: impl_compare_scalar_t u#0 #_ uint8_compare
+: impl_compare_scalar_t u#0 #_ SB.byte_compare
 = (x1: _)
   (x2: _)
 {
-  if (U8.lt x1 x2) {
-    (-1s)
-  } else if (U8.gt x1 x2) {
-    1s
-  } else {
-    0s
-  }
+  LP.impl_byte_compare () x1 x2
 }
 
 fn lex_compare_bytes
@@ -63,6 +52,5 @@ ensures
   )
 {
   bytes_lex_compare_lex_compare v1 v2;
-  lex_compare_slices uint8_compare (impl_uint8_compare ()) s1 s2
+  lex_compare_slices SB.byte_compare (impl_uint8_compare ()) s1 s2
 }
-

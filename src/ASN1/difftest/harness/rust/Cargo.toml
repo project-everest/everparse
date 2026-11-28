@@ -1,0 +1,13 @@
+# Rust runners for the ASN.1 DER differential tests (see ../../README.md).
+# Versions are pinned by the committed Cargo.lock; build with --locked.
+[workspace]
+resolver = "2"
+members = ["common", "rasn-runner", "asn1rs-runner"]
+
+[workspace.package]
+edition = "2021"
+publish = false
+version = "0.0.0"
+
+[profile.release]
+debug = false

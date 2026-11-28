@@ -1,0 +1,48 @@
+/*++
+  Exercises the C output style options of 3D: --hoist_locals,
+  --init_locals and --line_comments.
+--*/
+
+#define MAX_ACCUM 0xffffffff
+
+// A header with a tag and a bounded payload length
+typedef struct _Header {
+  UINT16 tag;
+  UINT16 len { len <= 64 };
+} Header;
+
+// The payload depends on the tag
+casetype _Payload (UINT16 tag, UINT16 len) {
+  switch (tag) {
+    case 1:
+      UINT8 bytes[:byte-size len];
+    case 2:
+      UINT32 words[:byte-size len];
+    default:
+      UINT16 halves[:byte-size len];
+  }
+} Payload;
+
+entrypoint
+typedef struct _Msg (mutable UINT32 *accum, mutable UINT16 *outTag) {
+  // the tag, saved for the caller
+  UINT16 tag
+    {:on-success
+       *outTag = tag;
+       return true;
+    };
+  UINT16 len { len <= 64 };
+  // a count added to the accumulator, with overflow check
+  UINT32 count
+    { count > 0 }
+    {:on-success
+       var a = *accum;
+       if (a < MAX_ACCUM - count) {
+         *accum = a + count;
+         return true;
+       } else {
+         return false;
+       }
+    };
+  Payload(tag, len) payload;
+} Msg;

@@ -65,10 +65,14 @@ let pulse_cb_inst_args () : ML string =
   Printf.sprintf " #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #%s #B.copy_buffer_buffer"
     (pulse_inst ())
 
+let pulse_typ_probe_args () : ML string =
+  Printf.sprintf " #B.base_t #B.len_t #B.pos_t #%s #_ #B.copy_buffer_t #B.copy_buffer_buffer"
+    (pulse_inst ())
+
 (* The client context (`EVERPARSE_EXTRA_T`) that the extern/static backends
    thread down to the stream primitives. The generated validator binds it so
    that `EverParse3d.Util.solve_from_ctx` can resolve it inside the body, and
-   so that KaRaMeL emits it as the validator's first C parameter. The buffer
+   so that Custard emits it as the validator's first C parameter. The buffer
    backend has no context (`extra_t = unit`),
    so nothing is emitted and the binder erases. *)
 let pulse_extra_binder () : ML string =
@@ -98,6 +102,9 @@ type inv =
      output types. The `Eloc_output` location carries this on its own, but a
      Pulse state_dict fuses invariant and footprint. *)
   | Inv_output : inv
+  (* --api pulse only: the prophecy of the outcomes of the client's
+     `field_ptr_after` (Peep) callbacks, see `A.peep_world`. *)
+  | Inv_world : inv
 
 noeq
 type eloc =
@@ -146,6 +153,7 @@ let rec subst_inv' subst (i:inv)
     | Inv_copy_buf x ->
       Inv_copy_buf (T.subst_expr subst x)
     | Inv_output -> i
+    | Inv_world -> i
 let subst_inv s = subst_index (subst_inv' s)
 
 let eq_tags e e' =
@@ -223,6 +231,7 @@ let rec free_vars_of_inv' (i:inv)
     | Inv_ptr x -> free_vars_of_expr x
     | Inv_copy_buf x -> free_vars_of_expr x
     | Inv_output -> []
+    | Inv_world -> []
 let free_vars_of_inv = map_index [] free_vars_of_inv'
 
 let rec free_vars_of_eloc' (e:eloc)
@@ -305,12 +314,12 @@ let tag_of_parser p
     | Parse_t_exact _ _ -> "Parse_t_exact"
     | Parse_pair _ _ _ _ _ -> "Parse_pair"
     | Parse_dep_pair _ _ _ -> "Parse_dep_pair"
-    | Parse_dep_pair_with_refinement _ _ _ _ -> "Parse_dep_pair_with_refinement"
+    | Parse_dep_pair_with_refinement _ _ _ _ _ -> "Parse_dep_pair_with_refinement"
     | Parse_dep_pair_with_action _ _ _ -> "Parse_dep_pair_with_action"
-    | Parse_dep_pair_with_refinement_and_action _ _ _ _ _ -> "Parse_dep_pair_with_refinement_and_action"
+    | Parse_dep_pair_with_refinement_and_action _ _ _ _ _ _ -> "Parse_dep_pair_with_refinement_and_action"
     | Parse_map _ _ -> "Parse_map"
-    | Parse_refinement _ _ _ -> "Parse_refinement"
-    | Parse_refinement_with_action _ _ _ _ -> "Parse_refinement_with_action"
+    | Parse_refinement _ _ _ _ -> "Parse_refinement"
+    | Parse_refinement_with_action _ _ _ _ _ -> "Parse_refinement_with_action"
     | Parse_with_dep_action _ _ _ -> "Parse_with_dep_action"
     | Parse_with_action _ _ _ -> "Parse_with_action"
     | Parse_weaken_left _ _ -> "Parse_weaken_left"
@@ -332,6 +341,26 @@ let as_lam (x:T.lam 'a)
 
 let id_as_expr (i:A.ident) = T.mk_expr (T.Identifier i)
 
+(* Refer to the CMacro constant rather than the literal 6uy, so that the
+   generated C code reads EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED *)
+let constraint_failed_code : T.expr =
+  id_as_expr A.(with_dummy_range {
+    modul_name = Some "EverParse3d.ErrorCode";
+    name = "validator_error_constraint_failed" })
+
+(* Leaves of an error code (see Ast.join_error_codes) may be the default code 6 *)
+let rec name_default_error_code (e:T.expr) : T.expr =
+  match fst e with
+  | T.Constant (A.Int _ 6) -> constraint_failed_code
+  | T.App T.IfThenElse [c; a; b] ->
+    T.mk_expr (T.App T.IfThenElse [c; name_default_error_code a; name_default_error_code b])
+  | _ -> e
+
+let error_code_or_default (err:option T.expr) : T.expr =
+  match err with
+  | Some e -> name_default_error_code e
+  | None -> constraint_failed_code
+
 let rec typ_indexes_of_action (a:T.action)
   : ML typ_indexes
   = let open T in
@@ -343,12 +372,14 @@ let rec typ_indexes_of_action (a:T.action)
         | Action_field_pos_32
         | Action_field_pos_64 -> typ_indexes_nil
         | Action_field_ptr_after _ write_to ->
-          Some (Inv_ptr (id_as_expr write_to)),
+          Some (if pulse ()
+                then Inv_conj (Inv_ptr (id_as_expr write_to)) Inv_world
+                else Inv_ptr (id_as_expr write_to)),
           Some (Eloc_ptr (id_as_expr write_to)),
           None,
           On_success false
         | Action_field_ptr_after_with_setter _ _ _ ->
-          (if pulse () then Some Inv_output else None),
+          (if pulse () then Some (Inv_conj Inv_output Inv_world) else None),
           Some Eloc_output,
           None,
           On_success false
@@ -384,6 +415,7 @@ let rec inv_copy_buf_keys (i:inv)
     | Inv_ptr _ -> []
     | Inv_copy_buf x -> [T.print_expr "" x]
     | Inv_output -> []
+    | Inv_world -> []
 
 let rec typ_indexes_of_parser (en:env) (p:T.parser)
   : ML typ_indexes
@@ -422,12 +454,12 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
       typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_parser q)
 
     | T.Parse_dep_pair _ p (_, q)
-    | T.Parse_dep_pair_with_refinement _ p _ (_, q) ->
+    | T.Parse_dep_pair_with_refinement _ p _ _ (_, q) ->
       typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_parser q)
 
     | T.Parse_weaken_left p _
     | T.Parse_weaken_right p _
-    | T.Parse_refinement _ p _
+    | T.Parse_refinement _ p _ _
     | T.Parse_with_comment p _
     | T.Parse_nlist _ _ p
     | T.Parse_t_at_most _ p
@@ -435,7 +467,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
       typ_indexes_of_parser p
 
     | T.Parse_dep_pair_with_action p (_, a) (_, q)
-    | T.Parse_dep_pair_with_refinement_and_action _ p _ (_, a) (_, q) ->
+    | T.Parse_dep_pair_with_refinement_and_action _ p _ _ (_, a) (_, q) ->
       typ_indexes_union
         (typ_indexes_of_parser p)
         (typ_indexes_union
@@ -455,7 +487,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
     | T.Parse_string p _ ->
       typ_indexes_nil
 
-    | T.Parse_refinement_with_action n p f (_, a) ->
+    | T.Parse_refinement_with_action n p f _ (_, a) ->
       typ_indexes_union 
         (typ_indexes_of_parser p)
         (typ_indexes_of_action a)
@@ -528,13 +560,13 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
       else
         failwith "typ_of_parser: Parse_dep_pair: tag not readable"
 
-    | T.Parse_dep_pair_with_refinement _ p r k ->
+    | T.Parse_dep_pair_with_refinement _ p r err k ->
       let i, r = as_lam r in
       let j, k = as_lam k in
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_dep_pair_with_refinement fn d (i, r) (j, typ_of_parser k)
+        T_dep_pair_with_refinement fn d (i, r) (error_code_or_default err) (j, typ_of_parser k)
       else
         failwith "typ_of_parser: Parse_dep_pair_with_refinement: tag not readable"
 
@@ -547,14 +579,14 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
       else
         failwith "typ_of_parser: Parse_dep_pair_with_action: tag not readable"
 
-    | T.Parse_dep_pair_with_refinement_and_action _ p r a k ->
+    | T.Parse_dep_pair_with_refinement_and_action _ p r err a k ->
       let a = as_lam a in
       let (i, k) = as_lam k in
       let r = as_lam r in
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_dep_pair_with_refinement_and_action fn d r (i, typ_of_parser k) a
+        T_dep_pair_with_refinement_and_action fn d r (error_code_or_default err) (i, typ_of_parser k) a
       else
         failwith "typ_of_parser: Parse_dep_pair_with_refinement_and_action: tag not readable"
 
@@ -578,19 +610,19 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
       else
         failwith "typ_of_parser: Parse_string: element not readable"
 
-    | T.Parse_refinement _ p f ->
+    | T.Parse_refinement _ p f err ->
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_refine fn d (as_lam f)
+        T_refine fn d (as_lam f) (error_code_or_default err)
       else
         failwith "typ_of_parser: Parse_refinement: element not readable"
 
-    | T.Parse_refinement_with_action _ p f a ->
+    | T.Parse_refinement_with_action _ p f err a ->
       let d = dtyp_of_parser p in
       if allow_reader_of_dtyp d
       then
-        T_refine_with_action fn d (as_lam f) (as_lam a)
+        T_refine_with_action fn d (as_lam f) (error_code_or_default err) (as_lam a)
       else
         failwith "typ_of_parser: Parse_refinement_with_action: element not readable"
 
@@ -659,11 +691,11 @@ let rec has_action_of_typ (t:typ)
     has_action_of_typ t1 || has_action_of_typ t2
   | T_dep_pair _ t1 (_, t2) ->
     has_action_of_dtyp t1 || has_action_of_typ t2
-  | T_refine _ t _ -> has_action_of_dtyp t
-  | T_refine_with_action _ _ _ _ -> true
-  | T_dep_pair_with_refinement _ t _ (_, t2) -> has_action_of_dtyp t || has_action_of_typ t2
+  | T_refine _ t _ _ -> has_action_of_dtyp t
+  | T_refine_with_action _ _ _ _ _ -> true
+  | T_dep_pair_with_refinement _ t _ _ (_, t2) -> has_action_of_dtyp t || has_action_of_typ t2
   | T_dep_pair_with_action _ _ _ _ -> true
-  | T_dep_pair_with_refinement_and_action _ _ _ _ _ -> true
+  | T_dep_pair_with_refinement_and_action _ _ _ _ _ _ -> true
   | T_if_else _ t1 t2 -> has_action_of_typ t1 || has_action_of_typ t2
   | T_with_action _ _ _ -> true
   | T_with_dep_action _ _ _ -> true
@@ -797,6 +829,15 @@ let print_derived_name (mname:string) (tag:string) (i:A.ident) =
    anything mentioning a `state_dict` is printed, which is the only context in
    which the key of a leaf can refer to a parameter. *)
 let pulse_kenv : ref (list string) = alloc []
+let boolean_pointer_params : ref (list A.ident) = alloc []
+
+let is_boolean_param (t:T.typ) : bool =
+  match t with
+  | T.T_app {v={name="Bool"}} _ [] -> true
+  | _ -> false
+
+let is_boolean_pointer (i:A.ident) : ML bool =
+  lowstar_api () && List.existsb (A.eq_idents i) !boolean_pointer_params
 
 let set_pulse_kenv (l:list string) : ML unit =
   pulse_kenv := l
@@ -889,13 +930,15 @@ let rec pulse_state_dict_leaves (mname:string) (i:inv)
     | Inv_ptr x ->
       let e = T.print_expr mname x in
       [e, pulse_key_of e,
-       Printf.sprintf "(EverParse3d.State.state_dict_singleton %s (Pulse.Class.PtsTo.pts_to %s #1.0R))"
+       Printf.sprintf "(EverParse3d.State.state_dict_singleton %s (Pulse.Lib.Reference.pts_to %s #1.0R))"
          (pulse_key_of e) e]
     | Inv_copy_buf x ->
       let e = T.print_expr mname x in
       [e, pulse_key_of e, Printf.sprintf "(A.copy_buffer_state_dict%s %s %s)" (pulse_cb_inst_args ()) (pulse_key_of e) e]
     | Inv_output ->
       [pulse_output_state_key, pulse_output_state_key, pulse_output_state_name]
+    | Inv_world ->
+      ["\"#world\"", "\"#world\"", "A.peep_world_dict"]
 
 let rec pulse_dedup_leaves (l:list (string & string & string))
   : ML (list (string & string & string))
@@ -1044,7 +1087,7 @@ let rec print_action (mname:string) (a:T.action)
             if not (pulse_has_field_ptr_after ())
             then A.error "The field_ptr_after action is only supported by the extern and static backends" A.dummy_range;
             Printf.sprintf
-              "(Action_field_ptr_after B.field_ptr_after () %s %s %s ())"
+              "(Action_field_ptr_after B.field_ptr_after () %s %s %s () ())"
               (pulse_key_arg_of (T.print_ident write_to))
               (T.print_expr mname sz)
               (T.print_ident write_to)
@@ -1061,7 +1104,7 @@ let rec print_action (mname:string) (a:T.action)
             if not (pulse_has_field_ptr_after ())
             then A.error "The field_ptr_after action is only supported by the extern and static backends" A.dummy_range;
             Printf.sprintf
-              "(atomic_action_call_extern (mk_field_ptr_after_with_setter (B.field_ptr_after_with_setter _) () %s (%s %s) _ ()))"
+              "(atomic_action_call_extern (mk_field_ptr_after_with_setter (B.field_ptr_after_with_setter _ _ _ _) () %s (%s %s) () _ ()))"
               (T.print_expr mname sz)
               (T.print_ident write_to_field)
               (T.print_expr mname write_to_obj)
@@ -1075,7 +1118,10 @@ let rec print_action (mname:string) (a:T.action)
 
         | T.Action_deref i ->
           if pulse ()
-          then Printf.sprintf "(Action_deref %s %s ())"
+          then Printf.sprintf "(%s %s %s ())"
+                              (if is_boolean_pointer i
+                               then "Action_deref_map EverParse3d.CAbi.Boolean.to_bool"
+                               else "Action_deref")
                               (pulse_key_arg_of (print_ident mname i))
                               (print_ident mname i)
           else
@@ -1087,7 +1133,9 @@ let rec print_action (mname:string) (a:T.action)
           then Printf.sprintf "(Action_assignment %s %s %s ())"
                               (pulse_key_arg_of (print_ident mname lhs))
                               (print_ident mname lhs)
-                              (T.print_expr mname rhs)
+                              (if is_boolean_pointer lhs
+                               then Printf.sprintf "(EverParse3d.CAbi.Boolean.of_bool %s)" (T.print_expr mname rhs)
+                               else T.print_expr mname rhs)
           else
           Printf.sprintf "(Action_assignment %s %s)"
                          (print_ident mname lhs)
@@ -1149,24 +1197,27 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname t)
                      (print_lam mname (print_typ mname) k)
 
-    | T_refine fn d r ->
-      Printf.sprintf "(T_refine \"%s\" %s %s)"
+    | T_refine fn d r err ->
+      Printf.sprintf "(T_refine \"%s\" %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
 
-    | T_refine_with_action fn d r a ->
-      Printf.sprintf "(T_refine_with_action \"%s\" %s %s %s)"
+    | T_refine_with_action fn d r err a ->
+      Printf.sprintf "(T_refine_with_action \"%s\" %s %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
                      (print_lam mname (print_action mname) a)
 
-    | T_dep_pair_with_refinement fn d r k ->
-      Printf.sprintf "(T_dep_pair_with_refinement \"%s\" %s %s %s)"
+    | T_dep_pair_with_refinement fn d r err k ->
+      Printf.sprintf "(T_dep_pair_with_refinement \"%s\" %s %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
                      (print_lam mname (print_typ mname) k)
 
     | T_dep_pair_with_action fn d k a ->
@@ -1176,11 +1227,12 @@ let rec print_typ (mname:string) (t:typ)
                      (print_lam mname (print_typ mname) k)
                      (print_lam mname (print_action mname) a)
 
-    | T_dep_pair_with_refinement_and_action fn d r k a ->
-      Printf.sprintf "(T_dep_pair_with_refinement_and_action \"%s\" %s %s %s %s)"
+    | T_dep_pair_with_refinement_and_action fn d r err k a ->
+      Printf.sprintf "(T_dep_pair_with_refinement_and_action \"%s\" %s %s %s %s %s)"
                      fn
                      (print_dtyp mname d)
                      (print_lam mname (T.print_expr mname) r)
+                     (print_lam mname (T.print_expr mname) (fst r, err))
                      (print_lam mname (print_typ mname) k)
                      (print_lam mname (print_action mname) a)
 
@@ -1258,7 +1310,9 @@ let rec print_typ (mname:string) (t:typ)
         then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
-        Printf.sprintf "(t_probe_then_validate_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+        Printf.sprintf "(t_probe_then_validate_gen%s%s %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+                     (pulse_typ_probe_args ())
+                     (T.print_boolean_inst_args ())
                      (pulse_ehm ())
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      nullable
@@ -1291,7 +1345,9 @@ let rec print_typ (mname:string) (t:typ)
         then A.error "Probes are only supported by the buffer backend under --api pulse" A.dummy_range;
         let probed_inv, _, _, _ = probed_indexes in
         let es = print_state_dict mname probed_inv in
-        Printf.sprintf "(t_probe_then_validate_alt_gen %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+        Printf.sprintf "(t_probe_then_validate_alt_gen%s%s %s %s %b \"%s\" %s %s %s %s %s %s %s %s () _ ())"
+                     (pulse_typ_probe_args ())
+                     (T.print_boolean_inst_args ())
                      (pulse_ehm ())
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      nullable
@@ -1380,6 +1436,7 @@ let rec print_inv' mname (i:inv)
     | Inv_ptr x -> Printf.sprintf "(A.ptr_inv %s)" (T.print_expr mname x)
     | Inv_copy_buf x -> Printf.sprintf "(A.copy_buffer_inv %s)" (T.print_expr mname x)
     | Inv_output -> "A.true_inv"
+    | Inv_world -> "A.true_inv"
 let print_inv mname = print_index (print_inv' mname)
 
 let rec print_eloc' mname (e:eloc)
@@ -1401,7 +1458,7 @@ let print_disj mname (i:index disj) =
   | None -> "Trivial"
   | Some i -> print_disj' mname i
 
-let print_td_iface_pulse is_entrypoint mname root_name binders args
+let print_td_iface_pulse is_entrypoint mname root_name binders args public_binders public_args
                          sd ha ar pk_wk pk_nz =
   let ar = if is_entrypoint then false else ar in
   (* NOTE: the kind itself is *not* declared here; `print_binding` emits its
@@ -1421,18 +1478,19 @@ let print_td_iface_pulse is_entrypoint mname root_name binders args
       ar
   in
   let validator_t =
-    Printf.sprintf "%sval validate_%s %s : validator_of %s %b (def'_%s %s)"
+    Printf.sprintf "%sval validate_%s %s : validator_of %s %b \"%s\" (def'_%s %s)"
       (if lowstar_api () then "[@@ \"KrmlPrivate\"]\n" else "")
       (pulse_worker_name root_name)
       binders
       sd
       (use_error_handler ())
+      root_name
       root_name args
   in
   let public_t =
     if lowstar_api ()
     then Printf.sprintf "val validate_%s %s : %s.validator_of %s %b (def'_%s %s)"
-      root_name binders (pulse_adapter_module ()) sd (use_error_handler ()) root_name args
+      root_name public_binders (pulse_adapter_module ()) sd (use_error_handler ()) root_name public_args
     else ""
   in
   let dtyp_t =
@@ -1502,16 +1560,31 @@ let print_binders_as_args mname binders =
     List.map (fun (i, _) -> print_ident mname i) binders |>
     String.concat " "
 
-let pulse_validator_attributes (is_entrypoint exported compatible: bool) : ML string =
+let pulse_validator_attributes (cname:option string) (is_entrypoint exported compatible: bool) : ML string =
   let cinline = if is_entrypoint || exported then "" else "; CInline" in
   let private_attr = if compatible then "; \"KrmlPrivate\"" else "" in
-  Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s]" cinline private_attr
+  let name_attr = match cname with
+    | None -> ""
+    | Some name -> Printf.sprintf "; FStar.Attributes.rename_let \"%s\"" name
+  in
+  Printf.sprintf "[@@normalize_for_extraction specialization_steps%s%s%s]" cinline private_attr name_attr
 
-let print_public_adapter_binding compatible root_name binders allow_reading worker_name args : ML string =
+(* The C names that `print_decls` assigns with `rename_let` to the public
+   validators and probe functions of the current module. Any PascalCase name
+   chosen for a private helper (e.g. `<Mod>Validate<T>Core` for the Low* API
+   worker) could also be the C name of another declaration (here, a type
+   named `T_core`), which Custard rejects (Error 374). In that case the
+   helper keeps Custard's default name instead. *)
+let module_cnames : ref (list string) = alloc []
+
+let cname_is_unique (name: string) : ML bool =
+  List.length (List.filter (fun n -> n = name) !module_cnames) <= 1
+
+let print_public_adapter_binding compatible cname root_name binders allow_reading worker_name args : ML string =
   if compatible
-  then Printf.sprintf "[@@normalize_for_extraction specialization_steps]\n\
+  then Printf.sprintf "[@@FStar.Attributes.rename_let \"%s\"; normalize_for_extraction specialization_steps]\n\
     let validate_%s %s = %s.adapt %b (validate_%s %s)\n"
-    root_name binders (pulse_adapter_module ()) allow_reading worker_name args
+    cname root_name binders (pulse_adapter_module ()) allow_reading worker_name args
   else ""
 
 // This large ML pretty-printer builds its result through ~20 chained
@@ -1530,12 +1603,23 @@ let print_binding mname (td:type_decl)
   let root_name = print_ident mname tdn.td_name in
   let compatible = lowstar_api () in
   let worker_name = pulse_worker_name root_name in
+  let cname = T.validator_name mname tdn.td_name.A.v.A.name in
+  (* With --api lowstar, the Pulse worker is a static function next to the
+     public adapter `cname`; name it in the same PascalCase style rather than
+     after its F* name `validate____core_X`. *)
+  let worker_cname = T.validator_name mname (tdn.td_name.A.v.A.name ^ "_core") in
   let print_binders = print_binders mname in
   let print_args = print_binders_as_args mname in
   (* Record the parameters in scope before printing anything that mentions a
      `state_dict`: a leaf that is a parameter is keyed by that parameter's
      erased key rather than by a literal. *)
   let _ = set_pulse_kenv (List.map (fun p -> print_ident mname (fst p)) tdn.td_params) in
+  let _ = boolean_pointer_params :=
+    List.collect (fun (i, t) ->
+      match t with
+      | T.T_pointer t _ -> if is_boolean_param t then [i] else []
+      | _ -> []) tdn.td_params
+  in
   let binders, args =
     if pulse ()
     then
@@ -1549,6 +1633,26 @@ let print_binding mname (td:type_decl)
         (pulse_key_binder_args mname tdn.td_params)
         (print_args tdn.td_params)
     else print_binders tdn.td_params, print_args tdn.td_params
+  in
+  let public_binders, public_args =
+    if compatible
+    then
+      let params = List.map (fun (i, t) ->
+        Printf.sprintf "(%s:%s)" (print_ident mname i)
+          (if is_boolean_param t then "EverParse3d.CAbi.Boolean.t" else T.print_typ mname t))
+        tdn.td_params |> String.concat " "
+      in
+      let args = List.map (fun (i, t) ->
+        let id = print_ident mname i in
+        if is_boolean_param t
+        then Printf.sprintf "(EverParse3d.CAbi.Boolean.to_bool %s)" id
+        else id) tdn.td_params |> String.concat " "
+      in
+      let inv, _, _, _ = td.typ_indexes in
+      Printf.sprintf "%s %s %s%s"
+        (pulse_key_binders mname tdn.td_params) params (pulse_keys_binder mname inv) (pulse_extra_binder ()),
+      Printf.sprintf "%s %s ___sq_keys" (pulse_key_binder_args mname tdn.td_params) args
+    else binders, args
   in
   let def = print_type_decl mname binders td in
   let weak_kind = A.print_weak_kind k.pk_weak_kind in
@@ -1659,7 +1763,11 @@ let print_binding mname (td:type_decl)
         args
   in
   let validate_binding =
-    let attribs = pulse_validator_attributes td.name.td_entrypoint td.attrs.is_exported compatible in
+    let worker_cname =
+      if List.mem worker_cname !module_cnames then None else Some worker_cname
+    in
+    let attribs = pulse_validator_attributes (if compatible then worker_cname else Some cname)
+      td.name.td_entrypoint td.attrs.is_exported compatible in
     if pulse ()
     then
       Printf.sprintf "%s\n\
@@ -1682,7 +1790,7 @@ let print_binding mname (td:type_decl)
                     args
   in
   let public_binding =
-    print_public_adapter_binding compatible root_name binders td.allow_reading worker_name args
+    print_public_adapter_binding compatible cname root_name public_binders td.allow_reading worker_name public_args
   in
   let dtyp : string =
     let reader =
@@ -1719,8 +1827,10 @@ let print_binding mname (td:type_decl)
                                     %s\n\
                                     %b\n\
                                     %b\n\
-                                    (A.validate_weaken_gen \"%s\" %b (coerce (_ by %s) (validate_%s %s)) ___d ___sq)\n\
-                                    (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
+                                    (A.validate_weaken_gen \"%s\" %b (with_vspec (as_vspec \"%s\" (def'_%s %s)) (coerce (_ by %s) (validate_%s %s))) ___d ___sq)\n\
+                                    (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n\
+                                    (as_value_spec_weaken \"%s\" (def'_%s %s) ___d ___sq)\n\
+                                    (as_vspec_wf_weaken \"%s\" (def'_%s %s) ___d ___sq)\n"
                       root_name binders sd
                       (pulse_inst_args ())
                       (use_error_handler ())
@@ -1736,7 +1846,10 @@ let print_binding mname (td:type_decl)
                       td.allow_reading
                       root_name
                       td.allow_reading
+                      root_name root_name args
                       coerce_validator worker_name args
+                      root_name root_name args
+                      root_name root_name args
     else
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\
@@ -1806,7 +1919,7 @@ let print_binding mname (td:type_decl)
       if td.name.td_entrypoint || td.attrs.is_exported
       then
         print_td_iface_pulse td.name.td_entrypoint
-                    mname root_name binders args
+                    mname root_name binders args public_binders public_args
                     sd td.has_action td.allow_reading
                     weak_kind k.pk_nz
       else ""
@@ -1841,12 +1954,20 @@ let print_decl mname (d:decl)
       //the error-handler callback (dynamic) or drops it in favor of the
       //EVERPARSE_ERROR_HANDLER_MACRO C macro, consistently with the
       //validators that consume it.
+      let cname = T.probe_function_name mname id.A.v.A.name in
+      let name_attr =
+        if cname_is_unique cname
+        then Printf.sprintf "; FStar.Attributes.rename_let \"%s\"" cname
+        else ""
+      in
       let impl =
         if pulse ()
         then
-          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer #%b %s <| %s\n\n"
+          Printf.sprintf "[@@ normalize_for_extraction specialization_steps%s]\nlet %s %s = probe_action_as_probe_m #B.copy_buffer_t #B.base_t #B.len_t #B.pos_t #B.input_stream_buffer #B.copy_buffer_buffer%s #%b %s <| %s\n\n"
+            name_attr
             (T.print_ident id)
             (T.print_params mname params)
+            (T.print_boolean_inst_args ())
             (use_error_handler ())
             (pulse_ehm ())
             (T.print_probe_action mname body)
@@ -1871,6 +1992,14 @@ let rec unzip (x: list ('a & 'b))
       x::xs, y::ys
 
 let print_decls en mname tds =
+  module_cnames :=
+    List.collect
+      (fun (d: decl) ->
+        match d with
+        | Inl (T.Probe_function id _ _, _) -> [T.probe_function_name mname id.A.v.A.name]
+        | Inr td -> [T.validator_name mname td.name.td_name.A.v.A.name]
+        | _ -> [])
+      tds;
   let impl, iface =
     let impls, ifaces =
       List.map (print_decl mname) tds |>

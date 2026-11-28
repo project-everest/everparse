@@ -2,10 +2,7 @@ module Batch
 open HashingOptions
 open FStar.All
 
-val krmllib: string -> ML string
-val krmlinclude: string -> ML string
-
-(* EverParse's own Makefile.basic, used instead of KaRaMeL's under --api pulse *)
+(* EverParse's standalone Makefile.basic for generated C. *)
 val pulse_makefile_basic: string
 
 val cl_wrapper: unit -> ML string
@@ -24,13 +21,6 @@ val pretty_print_source_modules
 : ML unit
 
 val verify_fst_file
-  (fstar_exe : string)
-  (_: input_stream_binding_t)
-  (out_dir: string)
-  (file: string)
-: ML unit
-
-val extract_fst_file
   (fstar_exe : string)
   (_: input_stream_binding_t)
   (out_dir: string)

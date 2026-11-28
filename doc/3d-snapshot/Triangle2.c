@@ -1,101 +1,56 @@
-
-
 #include "Triangle2.h"
 
-static uint8_t
-ValidateCoreTriangle(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
+static uint8_t Triangle2ValidateTriangleCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+
+static uint8_t Triangle2ValidateTriangleCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
   /* Validating field corners */
-  size_t p = *SlPos;
-  uint64_t fieldStartTriangle = (uint64_t)p;
-  size_t pos = (size_t)0U;
-  size_t p0 = pos;
-  size_t p1 = *SlPos;
-  size_t rem = SlLen - p1;
-  BOOLEAN hasBytes = p0 <= rem && (size_t)12U <= (rem - p0);
+  size_t currentPosition = slPos[0];
+  uint64_t fieldStartTriangle = (uint64_t)currentPosition;
+  size_t scanOffset = 0;
+  size_t offsetBefore = scanOffset;
+  size_t positionBefore = slPos[0];
+  size_t bytesRemainingBefore = (slLen - positionBefore);
+  bool hasBytesFor;
+  if (offsetBefore <= bytesRemainingBefore) {
+    hasBytesFor = ((size_t)12 <= (bytesRemainingBefore - offsetBefore));
+  }
+  else {
+    hasBytesFor = false;
+  }
   uint8_t res;
+  if (hasBytesFor) {
+    scanOffset = (offsetBefore + (size_t)12);
+    res = EVERPARSE_STATUS_SUCCESS;
+  }
+  else {
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+  }
   uint8_t resultAfterTriangle;
-  size_t consumed;
-  size_t p2;
-  size_t p_;
-  if (hasBytes)
-  {
-    pos = p0 + (size_t)12U;
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+  if (res == EVERPARSE_STATUS_SUCCESS) {
+    size_t currentPosition1 = slPos[0];
+    size_t newPosition = (currentPosition1 + scanOffset);
+    slPos[0] = newPosition;
+    resultAfterTriangle = EVERPARSE_STATUS_SUCCESS;
   }
-  else
-  {
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
-    consumed = pos;
-    p2 = *SlPos;
-    p_ = p2 + consumed;
-    *SlPos = p_;
-    resultAfterTriangle = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
-  }
-  else
-  {
+  else {
     resultAfterTriangle = res;
   }
-  if (resultAfterTriangle == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
+  if (resultAfterTriangle == EVERPARSE_STATUS_SUCCESS) {
     return resultAfterTriangle;
   }
-  ErrorHandlerFn("_triangle",
-    "corners",
-    EverParsePulseInternalErrorReasonOfResult(resultAfterTriangle),
-    resultAfterTriangle == 0U || (resultAfterTriangle >= 2U && resultAfterTriangle <= 8U) ? (uint64_t)(uint32_t)resultAfterTriangle
-                                                                                          : 15ULL,
-    Ctxt,
-    SlBase,
-    fieldStartTriangle);
-  return resultAfterTriangle;
+  else {
+    (void)(errorHandlerFn("_triangle", "corners", EverParse3dErrorReasonOfResult(resultAfterTriangle), EverParse3dLegacyKind(resultAfterTriangle), ctxt, slBase, fieldStartTriangle));
+    return resultAfterTriangle;
+  }
 }
 
-uint64_t
-Triangle2ValidateTriangle(
-  uint8_t *Ctxt,
-  void
-  (*Handler)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t Length,
-  uint64_t Start
-)
-{
-  size_t len = (size_t)Length;
-  size_t initial = (size_t)Start;
+uint64_t Triangle2ValidateTriangle(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8_t *input, uint64_t length, uint64_t start) {
+  size_t len = (size_t)length;
+  size_t initial = (size_t)start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreTriangle(Ctxt, Handler, Input, len, &cursor);
-  size_t final = cursor;
-  uint64_t position = (uint64_t)final;
-  return
-    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
-      1152921504606846976ULL
-    + position;
+  uint8_t status = Triangle2ValidateTriangleCore(ctxt, handler, input, len, &cursor);
+  uint64_t position = (uint64_t)cursor;
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
+
 

@@ -47,6 +47,11 @@ let get_goto_for_early_return () =
 let get_complete_wrappers () =
   !complete_wrappers
 
+let get_wrapper_error_code () : ML (option string) =
+  match !wrapper_error_code with
+  | Some s -> Some (s <: string)
+  | None -> None
+
 let get_blank_lines () =
   !blank_lines
 
@@ -78,8 +83,8 @@ let get_micro_step _ =
   | Some "emit_config" -> Some MicroStepEmitConfig
   | Some "save_hashes" -> Some MicroStepSaveHashes
 
-let get_produce_c_from_existing_krml _ =
-  !_produce_c_from_existing_krml
+let get_produce_c_from_existing_checked _ =
+  !_produce_c_from_existing_checked
 
 let get_skip_deps _ =
   !_skip_deps

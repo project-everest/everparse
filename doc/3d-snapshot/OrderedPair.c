@@ -1,215 +1,110 @@
-
-
 #include "OrderedPair.h"
 
-static uint8_t
-ValidateCoreOrderedPair(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t pos = (size_t)0U;
-  size_t p = *SlPos;
-  uint64_t viewStart = (uint64_t)p;
-  size_t fieldOff = pos;
-  uint64_t startPos = viewStart + (uint64_t)fieldOff;
+static uint8_t OrderedPairValidateOrderedPairCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+
+static uint8_t OrderedPairValidateOrderedPairCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
+  size_t offsetInLesser = 0;
+  size_t currentPosition = slPos[0];
+  uint64_t streamPositionAtLesser = (uint64_t)currentPosition;
+  size_t offsetOfLesser = offsetInLesser;
+  uint64_t startPositionOfLesser = (streamPositionAtLesser + (uint64_t)offsetOfLesser);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  size_t p0 = pos;
-  size_t p1 = *SlPos;
-  size_t rem = SlLen - p1;
-  BOOLEAN hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
-  uint8_t res;
-  uint8_t resultAfterlesser;
-  size_t p01;
-  size_t m;
-  uint8_t *sub;
-  uint8_t first;
-  size_t pos_;
-  uint8_t first1;
-  size_t pos_1;
-  uint8_t first2;
-  uint8_t first3;
-  uint32_t n;
-  uint32_t bfirst;
-  uint32_t n1;
-  uint32_t bfirst1;
-  uint32_t n2;
-  uint32_t bfirst2;
-  uint32_t lesser;
-  size_t p2;
-  uint64_t fieldStartOrderedPair;
-  size_t pos1;
-  size_t p02;
-  size_t p3;
-  size_t rem1;
-  BOOLEAN hasBytes1;
-  uint8_t resultAftergreater_refinement;
-  uint8_t resultAfterOrderedPair;
-  size_t p03;
-  size_t m1;
-  uint8_t *sub1;
-  uint8_t first4;
-  size_t pos_2;
-  uint8_t first5;
-  size_t pos_3;
-  uint8_t first6;
-  uint8_t first7;
-  uint32_t n3;
-  uint32_t bfirst3;
-  uint32_t n4;
-  uint32_t bfirst4;
-  uint32_t n5;
-  uint32_t bfirst5;
-  uint32_t greater_refinement;
-  BOOLEAN greater_refinementConstraintIsOk;
-  if (hasBytes)
-  {
-    pos = p0 + (size_t)4U;
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+  size_t offsetBeforeLesser = offsetInLesser;
+  size_t positionBeforeLesser = slPos[0];
+  size_t bytesRemainingBeforeLesser = (slLen - positionBeforeLesser);
+  bool hasBytesForLesser;
+  if (offsetBeforeLesser <= bytesRemainingBeforeLesser) {
+    hasBytesForLesser = (4 <= (bytesRemainingBeforeLesser - offsetBeforeLesser));
   }
-  else
-  {
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+  else {
+    hasBytesForLesser = false;
   }
-  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
-    resultAfterlesser = res;
+  uint8_t resultOfLesser;
+  if (hasBytesForLesser) {
+    offsetInLesser = (offsetBeforeLesser + 4);
+    resultOfLesser = EVERPARSE_STATUS_SUCCESS;
   }
-  else
-  {
-    ErrorHandlerFn("_orderedPair",
-      "lesser",
-      EverParsePulseInternalErrorReasonOfResult(res),
-      res == 0U || (res >= 2U && res <= 8U) ? (uint64_t)(uint32_t)res : 15ULL,
-      Ctxt,
-      SlBase,
-      startPos);
-    resultAfterlesser = res;
+  else {
+    resultOfLesser = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
   }
-  if (resultAfterlesser == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
-    p01 = *SlPos;
-    m = p01 + (size_t)4U;
-    sub = SlBase + p01;
-    *SlPos = m;
-    first = sub[0U];
-    pos_ = (size_t)2U;
-    first1 = sub[1U];
-    pos_1 = pos_ + (size_t)1U;
-    first2 = sub[pos_];
-    first3 = sub[pos_1];
-    n = (uint32_t)first3;
-    bfirst = (uint32_t)first2;
-    n1 = bfirst + n * 256U;
-    bfirst1 = (uint32_t)first1;
-    n2 = bfirst1 + n1 * 256U;
-    bfirst2 = (uint32_t)first;
-    lesser = bfirst2 + n2 * 256U;
+  uint8_t resultAfterLesser;
+  if (resultOfLesser == EVERPARSE_STATUS_SUCCESS) {
+    resultAfterLesser = resultOfLesser;
+  }
+  else {
+    (void)(errorHandlerFn("_orderedPair", "lesser", EverParse3dErrorReasonOfResult(resultOfLesser), EverParse3dLegacyKind(resultOfLesser), ctxt, slBase, startPositionOfLesser));
+    resultAfterLesser = resultOfLesser;
+  }
+  if (resultAfterLesser == EVERPARSE_STATUS_SUCCESS) {
+    size_t positionOfLesser = slPos[0];
+    size_t positionAfterLesser = (positionOfLesser + 4);
+    uint8_t *bytesOfLesser = (slBase + positionOfLesser);
+    slPos[0] = positionAfterLesser;
+    uint32_t lesser = EverParse3dReadUint32(bytesOfLesser);
     /* Validating field greater */
-    p2 = *SlPos;
-    fieldStartOrderedPair = (uint64_t)p2;
-    pos1 = (size_t)0U;
+    size_t currentPosition1 = slPos[0];
+    uint64_t fieldStartOrderedPair = (uint64_t)currentPosition1;
+    size_t offsetInGreaterRefinement = 0;
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    p02 = pos1;
-    p3 = *SlPos;
-    rem1 = SlLen - p3;
-    hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
-    if (hasBytes1)
-    {
-      pos1 = p02 + (size_t)4U;
-      resultAftergreater_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    size_t offsetBeforeGreaterRefinement = offsetInGreaterRefinement;
+    size_t positionBeforeGreaterRefinement = slPos[0];
+    size_t bytesRemainingBeforeGreaterRefinement = (slLen - positionBeforeGreaterRefinement);
+    bool hasBytesForGreaterRefinement;
+    if (offsetBeforeGreaterRefinement <= bytesRemainingBeforeGreaterRefinement) {
+      hasBytesForGreaterRefinement = (4 <= (bytesRemainingBeforeGreaterRefinement - offsetBeforeGreaterRefinement));
     }
-    else
-    {
-      resultAftergreater_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    else {
+      hasBytesForGreaterRefinement = false;
     }
-    if (resultAftergreater_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
+    uint8_t resultAfterGreaterRefinement;
+    if (hasBytesForGreaterRefinement) {
+      offsetInGreaterRefinement = (offsetBeforeGreaterRefinement + 4);
+      resultAfterGreaterRefinement = EVERPARSE_STATUS_SUCCESS;
+    }
+    else {
+      resultAfterGreaterRefinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+    }
+    uint8_t resultAfterOrderedPair;
+    if (resultAfterGreaterRefinement == EVERPARSE_STATUS_SUCCESS) {
       /* reading field_value */
-      p03 = *SlPos;
-      m1 = p03 + (size_t)4U;
-      sub1 = SlBase + p03;
-      *SlPos = m1;
-      first4 = sub1[0U];
-      pos_2 = (size_t)2U;
-      first5 = sub1[1U];
-      pos_3 = pos_2 + (size_t)1U;
-      first6 = sub1[pos_2];
-      first7 = sub1[pos_3];
-      n3 = (uint32_t)first7;
-      bfirst3 = (uint32_t)first6;
-      n4 = bfirst3 + n3 * 256U;
-      bfirst4 = (uint32_t)first5;
-      n5 = bfirst4 + n4 * 256U;
-      bfirst5 = (uint32_t)first4;
-      greater_refinement = bfirst5 + n5 * 256U;
+      size_t positionOfGreaterRefinement = slPos[0];
+      size_t positionAfterGreaterRefinement = (positionOfGreaterRefinement + 4);
+      uint8_t *bytesOfGreaterRefinement = (slBase + positionOfGreaterRefinement);
+      slPos[0] = positionAfterGreaterRefinement;
+      uint32_t greaterRefinement = EverParse3dReadUint32(bytesOfGreaterRefinement);
       /* start: checking constraint */
-      greater_refinementConstraintIsOk = lesser <= greater_refinement;
+      bool greaterRefinementConstraintIsOk = (lesser <= greaterRefinement);
       /* end: checking constraint */
-      resultAfterOrderedPair =
-        greater_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
-                                         : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+      if (greaterRefinementConstraintIsOk) {
+        resultAfterOrderedPair = EVERPARSE_STATUS_SUCCESS;
+      }
+      else {
+        resultAfterOrderedPair = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
+      }
     }
-    else
-    {
-      resultAfterOrderedPair = resultAftergreater_refinement;
+    else {
+      resultAfterOrderedPair = resultAfterGreaterRefinement;
     }
-    if (resultAfterOrderedPair == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
+    if (resultAfterOrderedPair == EVERPARSE_STATUS_SUCCESS) {
       return resultAfterOrderedPair;
     }
-    ErrorHandlerFn("_orderedPair",
-      "greater.refinement",
-      EverParsePulseInternalErrorReasonOfResult(resultAfterOrderedPair),
-      resultAfterOrderedPair == 0U || (resultAfterOrderedPair >= 2U && resultAfterOrderedPair <= 8U) ? (uint64_t)(uint32_t)resultAfterOrderedPair
-                                                                                                     : 15ULL,
-      Ctxt,
-      SlBase,
-      fieldStartOrderedPair);
-    return resultAfterOrderedPair;
+    else {
+      (void)(errorHandlerFn("_orderedPair", "greater.refinement", EverParse3dErrorReasonOfResult(resultAfterOrderedPair), EverParse3dLegacyKind(resultAfterOrderedPair), ctxt, slBase, fieldStartOrderedPair));
+      return resultAfterOrderedPair;
+    }
   }
-  return resultAfterlesser;
+  else {
+    return resultAfterLesser;
+  }
 }
 
-uint64_t
-OrderedPairValidateOrderedPair(
-  uint8_t *Ctxt,
-  void
-  (*Handler)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t Length,
-  uint64_t Start
-)
-{
-  size_t len = (size_t)Length;
-  size_t initial = (size_t)Start;
+uint64_t OrderedPairValidateOrderedPair(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8_t *input, uint64_t length, uint64_t start) {
+  size_t len = (size_t)length;
+  size_t initial = (size_t)start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreOrderedPair(Ctxt, Handler, Input, len, &cursor);
-  size_t final = cursor;
-  uint64_t position = (uint64_t)final;
-  return
-    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
-      1152921504606846976ULL
-    + position;
+  uint8_t status = OrderedPairValidateOrderedPairCore(ctxt, handler, input, len, &cursor);
+  uint64_t position = (uint64_t)cursor;
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
+
 

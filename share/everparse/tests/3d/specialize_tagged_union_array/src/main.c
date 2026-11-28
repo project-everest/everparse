@@ -67,7 +67,7 @@ BOOLEAN ProbeAndCopyLenAux(
   return true;
 }
   
-BOOLEAN WriteU64(uint64_t src, uint64_t write_offset, EVERPARSE_COPY_BUFFER_T dst)
+bool WriteU64(uint64_t src, uint64_t write_offset, EVERPARSE_COPY_BUFFER_T dst)
 {
   if (write_offset + sizeof(uint64_t) > ((uint64_t) CB(dst).cb_len))
   {
@@ -225,7 +225,7 @@ BOOLEAN GetSrcPointer(uint64_t src, uint8_t **out, uint64_t *size)
 }
 
 uint32_t
-ProbeAndReadU32(BOOLEAN *failed, uint64_t read_offset, uint64_t src, EVERPARSE_COPY_BUFFER_T x2)
+ProbeAndReadU32(bool *failed, uint64_t read_offset, uint64_t src, EVERPARSE_COPY_BUFFER_T x2)
 {
   printf("ProbeAndReadU32: read_offset=%lu, src=%lu ...", read_offset, src);
   uint8_t *src_ptr;
@@ -250,7 +250,7 @@ ProbeAndReadU32(BOOLEAN *failed, uint64_t read_offset, uint64_t src, EVERPARSE_C
 }
 
 uint32_t
-ProbeAndReadU64(BOOLEAN *failed, uint64_t read_offset, uint64_t src, EVERPARSE_COPY_BUFFER_T x2)
+ProbeAndReadU64(bool *failed, uint64_t read_offset, uint64_t src, EVERPARSE_COPY_BUFFER_T x2)
 {
   printf("ProbeAndReadU32: read_offset=%lu, src=%lu ...", read_offset, src);
   uint8_t *src_ptr;
@@ -274,7 +274,7 @@ ProbeAndReadU64(BOOLEAN *failed, uint64_t read_offset, uint64_t src, EVERPARSE_C
   return result;
 }
 
-BOOLEAN ProbeAndCopy(
+bool ProbeAndCopy(
   uint64_t bytes_to_read,
   uint64_t read_offset,
   uint64_t write_offset,
@@ -293,7 +293,7 @@ BOOLEAN ProbeAndCopy(
   return ProbeAndCopyLenAux(bytes_to_read, read_offset, write_offset, src_ptr, src_len, dst);
 }
 
-BOOLEAN ProbeInit(const char* typename, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+bool ProbeInit(const char* typename, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   printf("ProbeInit %s: len=%lu\n", typename, len);
   if (len == (uint64_t) CB(dst).cb_len)
   { return true; }

@@ -189,7 +189,7 @@ type typ =
   | T_nlist    : elt: typ -> bytesize: expr -> typ
   | T_pair     : fst: typ -> snd: typ -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
-  | T_refine   : base:typ -> refinement:lam expr -> typ
+  | T_refine   : base:typ -> refinement:lam expr -> err:option expr -> typ //err: UINT8 error code if the refinement fails, in the scope of the refinement binder (--api pulse only)
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
   | T_pointer  : typ -> pointer_size:A.integer_type -> typ
   | T_with_action: typ -> action -> typ
@@ -292,12 +292,12 @@ type parser' =
   | Parse_t_exact   : n:expr -> t:parser -> parser'
   | Parse_pair      : n1: A.ident -> p_is_const: bool -> p:parser -> q_is_const: bool -> q:parser -> parser' // p_is_const, q_is_const record whether p and q are total compile-time constant size parsers
   | Parse_dep_pair  : n1: A.ident -> p:parser -> k:lam parser -> parser'
-  | Parse_dep_pair_with_refinement: n1: A.ident -> dfst:parser -> refinement:lam expr -> dsnd:lam parser -> parser'
+  | Parse_dep_pair_with_refinement: n1: A.ident -> dfst:parser -> refinement:lam expr -> err:option expr -> dsnd:lam parser -> parser'
   | Parse_dep_pair_with_action: dfst:parser -> a:lam action -> dsnd:lam parser -> parser'
-  | Parse_dep_pair_with_refinement_and_action: n1: A.ident -> dfst:parser -> refinement:lam expr -> a:lam action -> dsnd:lam parser -> parser'
+  | Parse_dep_pair_with_refinement_and_action: n1: A.ident -> dfst:parser -> refinement:lam expr -> err:option expr -> a:lam action -> dsnd:lam parser -> parser'
   | Parse_map       : p:parser -> f:lam expr -> parser'
-  | Parse_refinement: n:A.ident -> p:parser -> f:lam expr -> parser'
-  | Parse_refinement_with_action : n:A.ident -> p:parser -> f:lam expr -> a:lam action -> parser'
+  | Parse_refinement: n:A.ident -> p:parser -> f:lam expr -> err:option expr -> parser'
+  | Parse_refinement_with_action : n:A.ident -> p:parser -> f:lam expr -> err:option expr -> a:lam action -> parser'
   | Parse_with_dep_action : name:A.ident -> p:parser -> a:lam action -> parser'
   | Parse_with_action: name: A.ident -> p:parser -> a:action -> parser'
   | Parse_weaken_left: p:parser ->  k:parser_kind -> parser'
@@ -418,6 +418,8 @@ val error_handler_decl : decl
 val maybe_mname_prefix (mname:string) (i:A.ident) : string
 val print_ident (i:A.ident) : string
 val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
+val print_boolean_inst_args : unit -> ML string
+val contains_compile_time_flag : expr -> ML bool
 val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string
@@ -431,6 +433,9 @@ val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML strin
 val wrapper_name (modul: string) (fn: string) : ML string
 val wrapper_complete_name (modul: string) (fn: string) : ML string
 val validator_name (modul: string) (fn: string) : ML string
+
+(* The C name of a probe function: `<Module><Name>` in PascalCase. *)
+val probe_function_name (modul: string) (fn: string) : ML string
 type produce_everparse_error = | ProduceEverParseError
 type opt_produce_everparse_error = option produce_everparse_error
 val print_c_entry (_: opt_produce_everparse_error) (modul: string) (env: global_env) (ds:list decl)

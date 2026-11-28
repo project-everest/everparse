@@ -3,6 +3,7 @@ open Pulse.Lib.Pervasives
 open EverParse3d.State
 
 module A = EverParse3d.Actions.Base
+module S = EverParse3d.Actions.Spec
 module B = EverParse3d.InputStream.LowstarExtern
 module P = EverParse3d.Prelude
 module LP = EverParse3d.Lowstar.ExternAdapter.Spec
@@ -70,8 +71,9 @@ val adapt_read
   (#nz: bool) (#wk: _) (#k: P.parser_kind nz wk) (#t: Type)
   (#p: P.parser k t) (#d: state_dict)
   (#has_action #use_error_handler: bool)
+  (#[@@@erasable] s: S.vspec d)
   (worker: A.validate_with_action_read #B.base_t #B.len_t #B.pos_t
-    #B.input_stream_extern p d has_action use_error_handler)
+    #B.input_stream_extern p d has_action use_error_handler s)
   : validator p d has_action true use_error_handler
 
 inline_for_extraction noextract
@@ -79,8 +81,9 @@ val adapt_no_read
   (#nz: bool) (#wk: _) (#k: P.parser_kind nz wk) (#t: Type)
   (#p: P.parser k t) (#d: state_dict)
   (#has_action #use_error_handler: bool)
+  (#[@@@erasable] s: S.vspec d)
   (worker: A.validate_with_action_no_read #B.base_t #B.len_t #B.pos_t
-    #B.input_stream_extern p d has_action use_error_handler)
+    #B.input_stream_extern p d has_action use_error_handler s)
   : validator p d has_action false use_error_handler
 
 module IT = EverParse3d.Interpreter
@@ -97,10 +100,11 @@ inline_for_extraction noextract
 let adapt
   (#nz: bool) (#wk: _) (#k: P.parser_kind nz wk) (#t: Type)
   (#p: P.parser k t) (#d: state_dict) (#ha: bool) (#eh: bool)
+  (#s: S.vspec d)
   (ar: bool)
   (worker: A.validate_with_action_t #B.base_t #B.len_t #B.pos_t
-    #B.input_stream_extern p d ha ar eh)
+    #B.input_stream_extern p d ha ar eh s)
   : validator p d ha (not ar) eh
   = if ar
-    then adapt_no_read #nz #wk #k #t #p #d #ha #eh worker
-    else adapt_read #nz #wk #k #t #p #d #ha #eh worker
+    then adapt_no_read #nz #wk #k #t #p #d #ha #eh #s worker
+    else adapt_read #nz #wk #k #t #p #d #ha #eh #s worker

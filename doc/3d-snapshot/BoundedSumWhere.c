@@ -1,258 +1,127 @@
-
-
 #include "BoundedSumWhere.h"
 
-static uint8_t
-ValidateCoreBoundedSum(
-  uint32_t Bound,
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t p = *SlPos;
-  uint64_t fieldStartBoundedSum = (uint64_t)p;
+static uint8_t BoundedSumWhereValidateBoundedSumCore(uint32_t bound, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+
+static uint8_t BoundedSumWhereValidateBoundedSumCore(uint32_t bound, EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
+  size_t currentPosition = slPos[0];
+  uint64_t fieldStartBoundedSum = (uint64_t)currentPosition;
   /* Validating field __precondition */
-  BOOLEAN preconditionConstraintIsOk = Bound <= (uint32_t)1729U;
+  bool preconditionConstraintIsOk = (bound <= (uint32_t)1729);
   uint8_t resultAfterBoundedSum;
-  size_t pos;
-  size_t p1;
-  uint64_t viewStart;
-  size_t fieldOff;
-  uint64_t startPos;
-  size_t p0;
-  size_t p2;
-  size_t rem;
-  BOOLEAN hasBytes;
-  uint8_t res;
-  uint8_t resultAfterleft;
-  size_t p01;
-  size_t m;
-  uint8_t *sub;
-  uint8_t first;
-  size_t pos_;
-  uint8_t first1;
-  size_t pos_1;
-  uint8_t first2;
-  uint8_t first3;
-  uint32_t n;
-  uint32_t bfirst;
-  uint32_t n1;
-  uint32_t bfirst1;
-  uint32_t n2;
-  uint32_t bfirst2;
-  uint32_t left;
-  size_t p3;
-  uint64_t fieldStartBoundedSum1;
-  size_t pos1;
-  size_t p02;
-  size_t p4;
-  size_t rem1;
-  BOOLEAN hasBytes1;
-  uint8_t resultAfterright_refinement;
-  uint8_t resultAfterBoundedSum0;
-  size_t p03;
-  size_t m1;
-  uint8_t *sub1;
-  uint8_t first4;
-  size_t pos_2;
-  uint8_t first5;
-  size_t pos_3;
-  uint8_t first6;
-  uint8_t first7;
-  uint32_t n3;
-  uint32_t bfirst3;
-  uint32_t n4;
-  uint32_t bfirst4;
-  uint32_t n5;
-  uint32_t bfirst5;
-  uint32_t right_refinement;
-  BOOLEAN right_refinementConstraintIsOk;
-  if (preconditionConstraintIsOk)
-  {
-    pos = (size_t)0U;
-    p1 = *SlPos;
-    viewStart = (uint64_t)p1;
-    fieldOff = pos;
-    startPos = viewStart + (uint64_t)fieldOff;
+  if (preconditionConstraintIsOk) {
+    size_t offsetInLeft = 0;
+    size_t currentPosition1 = slPos[0];
+    uint64_t streamPositionAtLeft = (uint64_t)currentPosition1;
+    size_t offsetOfLeft = offsetInLeft;
+    uint64_t startPositionOfLeft = (streamPositionAtLeft + (uint64_t)offsetOfLeft);
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    p0 = pos;
-    p2 = *SlPos;
-    rem = SlLen - p2;
-    hasBytes = p0 <= rem && (size_t)4U <= (rem - p0);
-    if (hasBytes)
-    {
-      pos = p0 + (size_t)4U;
-      res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+    size_t offsetBeforeLeft = offsetInLeft;
+    size_t positionBeforeLeft = slPos[0];
+    size_t bytesRemainingBeforeLeft = (slLen - positionBeforeLeft);
+    bool hasBytesForLeft;
+    if (offsetBeforeLeft <= bytesRemainingBeforeLeft) {
+      hasBytesForLeft = (4 <= (bytesRemainingBeforeLeft - offsetBeforeLeft));
     }
-    else
-    {
-      res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+    else {
+      hasBytesForLeft = false;
     }
-    if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
-      resultAfterleft = res;
+    uint8_t resultOfLeft;
+    if (hasBytesForLeft) {
+      offsetInLeft = (offsetBeforeLeft + 4);
+      resultOfLeft = EVERPARSE_STATUS_SUCCESS;
     }
-    else
-    {
-      ErrorHandlerFn("_boundedSum",
-        "left",
-        EverParsePulseInternalErrorReasonOfResult(res),
-        res == 0U || (res >= 2U && res <= 8U) ? (uint64_t)(uint32_t)res : 15ULL,
-        Ctxt,
-        SlBase,
-        startPos);
-      resultAfterleft = res;
+    else {
+      resultOfLeft = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
     }
-    if (resultAfterleft == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-    {
-      p01 = *SlPos;
-      m = p01 + (size_t)4U;
-      sub = SlBase + p01;
-      *SlPos = m;
-      first = sub[0U];
-      pos_ = (size_t)2U;
-      first1 = sub[1U];
-      pos_1 = pos_ + (size_t)1U;
-      first2 = sub[pos_];
-      first3 = sub[pos_1];
-      n = (uint32_t)first3;
-      bfirst = (uint32_t)first2;
-      n1 = bfirst + n * 256U;
-      bfirst1 = (uint32_t)first1;
-      n2 = bfirst1 + n1 * 256U;
-      bfirst2 = (uint32_t)first;
-      left = bfirst2 + n2 * 256U;
+    uint8_t resultAfterLeft;
+    if (resultOfLeft == EVERPARSE_STATUS_SUCCESS) {
+      resultAfterLeft = resultOfLeft;
+    }
+    else {
+      (void)(errorHandlerFn("_boundedSum", "left", EverParse3dErrorReasonOfResult(resultOfLeft), EverParse3dLegacyKind(resultOfLeft), ctxt, slBase, startPositionOfLeft));
+      resultAfterLeft = resultOfLeft;
+    }
+    if (resultAfterLeft == EVERPARSE_STATUS_SUCCESS) {
+      size_t positionOfLeft = slPos[0];
+      size_t positionAfterLeft = (positionOfLeft + 4);
+      uint8_t *bytesOfLeft = (slBase + positionOfLeft);
+      slPos[0] = positionAfterLeft;
+      uint32_t left = EverParse3dReadUint32(bytesOfLeft);
       /* Validating field right */
-      p3 = *SlPos;
-      fieldStartBoundedSum1 = (uint64_t)p3;
-      pos1 = (size_t)0U;
+      size_t currentPosition2 = slPos[0];
+      uint64_t fieldStartBoundedSum1 = (uint64_t)currentPosition2;
+      size_t offsetInRightRefinement = 0;
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      p02 = pos1;
-      p4 = *SlPos;
-      rem1 = SlLen - p4;
-      hasBytes1 = p02 <= rem1 && (size_t)4U <= (rem1 - p02);
-      if (hasBytes1)
-      {
-        pos1 = p02 + (size_t)4U;
-        resultAfterright_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+      size_t offsetBeforeRightRefinement = offsetInRightRefinement;
+      size_t positionBeforeRightRefinement = slPos[0];
+      size_t bytesRemainingBeforeRightRefinement = (slLen - positionBeforeRightRefinement);
+      bool hasBytesForRightRefinement;
+      if (offsetBeforeRightRefinement <= bytesRemainingBeforeRightRefinement) {
+        hasBytesForRightRefinement = (4 <= (bytesRemainingBeforeRightRefinement - offsetBeforeRightRefinement));
       }
-      else
-      {
-        resultAfterright_refinement = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
+      else {
+        hasBytesForRightRefinement = false;
       }
-      if (resultAfterright_refinement == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-      {
+      uint8_t resultAfterRightRefinement;
+      if (hasBytesForRightRefinement) {
+        offsetInRightRefinement = (offsetBeforeRightRefinement + 4);
+        resultAfterRightRefinement = EVERPARSE_STATUS_SUCCESS;
+      }
+      else {
+        resultAfterRightRefinement = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+      }
+      uint8_t resultAfterBoundedSum_1;
+      if (resultAfterRightRefinement == EVERPARSE_STATUS_SUCCESS) {
         /* reading field_value */
-        p03 = *SlPos;
-        m1 = p03 + (size_t)4U;
-        sub1 = SlBase + p03;
-        *SlPos = m1;
-        first4 = sub1[0U];
-        pos_2 = (size_t)2U;
-        first5 = sub1[1U];
-        pos_3 = pos_2 + (size_t)1U;
-        first6 = sub1[pos_2];
-        first7 = sub1[pos_3];
-        n3 = (uint32_t)first7;
-        bfirst3 = (uint32_t)first6;
-        n4 = bfirst3 + n3 * 256U;
-        bfirst4 = (uint32_t)first5;
-        n5 = bfirst4 + n4 * 256U;
-        bfirst5 = (uint32_t)first4;
-        right_refinement = bfirst5 + n5 * 256U;
+        size_t positionOfRightRefinement = slPos[0];
+        size_t positionAfterRightRefinement = (positionOfRightRefinement + 4);
+        uint8_t *bytesOfRightRefinement = (slBase + positionOfRightRefinement);
+        slPos[0] = positionAfterRightRefinement;
+        uint32_t rightRefinement = EverParse3dReadUint32(bytesOfRightRefinement);
         /* start: checking constraint */
-        right_refinementConstraintIsOk = left <= Bound && right_refinement <= (Bound - left);
+        bool rightRefinementConstraintIsOk = ((left <= bound) && (rightRefinement <= (bound - left)));
         /* end: checking constraint */
-        resultAfterBoundedSum0 =
-          right_refinementConstraintIsOk ? EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS
-                                         : EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+        if (rightRefinementConstraintIsOk) {
+          resultAfterBoundedSum_1 = EVERPARSE_STATUS_SUCCESS;
+        }
+        else {
+          resultAfterBoundedSum_1 = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
+        }
       }
-      else
-      {
-        resultAfterBoundedSum0 = resultAfterright_refinement;
+      else {
+        resultAfterBoundedSum_1 = resultAfterRightRefinement;
       }
-      if (resultAfterBoundedSum0 == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-      {
-        resultAfterBoundedSum = resultAfterBoundedSum0;
+      if (resultAfterBoundedSum_1 == EVERPARSE_STATUS_SUCCESS) {
+        resultAfterBoundedSum = resultAfterBoundedSum_1;
       }
-      else
-      {
-        ErrorHandlerFn("_boundedSum",
-          "right.refinement",
-          EverParsePulseInternalErrorReasonOfResult(resultAfterBoundedSum0),
-          resultAfterBoundedSum0 == 0U ||
-            (resultAfterBoundedSum0 >= 2U && resultAfterBoundedSum0 <= 8U) ? (uint64_t)(uint32_t)resultAfterBoundedSum0
-                                                                           : 15ULL,
-          Ctxt,
-          SlBase,
-          fieldStartBoundedSum1);
-        resultAfterBoundedSum = resultAfterBoundedSum0;
+      else {
+        (void)(errorHandlerFn("_boundedSum", "right.refinement", EverParse3dErrorReasonOfResult(resultAfterBoundedSum_1), EverParse3dLegacyKind(resultAfterBoundedSum_1), ctxt, slBase, fieldStartBoundedSum1));
+        resultAfterBoundedSum = resultAfterBoundedSum_1;
       }
     }
-    else
-    {
-      resultAfterBoundedSum = resultAfterleft;
+    else {
+      resultAfterBoundedSum = resultAfterLeft;
     }
   }
-  else
-  {
-    resultAfterBoundedSum = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_CONSTRAINT_FAILED;
+  else {
+    resultAfterBoundedSum = EVERPARSE_STATUS_ERROR_CONSTRAINT_FAILED;
   }
-  if (resultAfterBoundedSum == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
+  if (resultAfterBoundedSum == EVERPARSE_STATUS_SUCCESS) {
     return resultAfterBoundedSum;
   }
-  ErrorHandlerFn("_boundedSum",
-    "__precondition",
-    EverParsePulseInternalErrorReasonOfResult(resultAfterBoundedSum),
-    resultAfterBoundedSum == 0U || (resultAfterBoundedSum >= 2U && resultAfterBoundedSum <= 8U) ? (uint64_t)(uint32_t)resultAfterBoundedSum
-                                                                                                : 15ULL,
-    Ctxt,
-    SlBase,
-    fieldStartBoundedSum);
-  return resultAfterBoundedSum;
+  else {
+    (void)(errorHandlerFn("_boundedSum", "__precondition", EverParse3dErrorReasonOfResult(resultAfterBoundedSum), EverParse3dLegacyKind(resultAfterBoundedSum), ctxt, slBase, fieldStartBoundedSum));
+    return resultAfterBoundedSum;
+  }
 }
 
-uint64_t
-BoundedSumWhereValidateBoundedSum(
-  uint32_t Bound,
-  uint8_t *Ctxt,
-  void
-  (*Handler)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t Length,
-  uint64_t Start
-)
-{
-  size_t len = (size_t)Length;
-  size_t initial = (size_t)Start;
+uint64_t BoundedSumWhereValidateBoundedSum(uint32_t bound, uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8_t *input, uint64_t length, uint64_t start) {
+  size_t len = (size_t)length;
+  size_t initial = (size_t)start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreBoundedSum(Bound, Ctxt, Handler, Input, len, &cursor);
-  size_t final = cursor;
-  uint64_t position = (uint64_t)final;
-  return
-    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
-      1152921504606846976ULL
-    + position;
+  uint8_t status = BoundedSumWhereValidateBoundedSumCore(bound, ctxt, handler, input, len, &cursor);
+  uint64_t position = (uint64_t)cursor;
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
+
 

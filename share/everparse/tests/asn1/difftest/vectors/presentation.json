@@ -1,0 +1,24 @@
+{
+  "vectors": [
+    {"id": "external/accept/octet-aligned", "type": "DiffExternal.Ext", "hex": "280806022a038102abcd", "expect": "accept", "clause": "X.690 8.18", "features": ["EXTERNAL"]},
+    {"id": "external/accept/single-asn1-type", "type": "DiffExternal.Ext", "hex": "280906022a03a003020105", "expect": "accept", "clause": "X.690 8.18", "features": ["EXTERNAL"]},
+    {"id": "external/accept/arbitrary", "type": "DiffExternal.Ext", "hex": "280806022a0382020780", "expect": "accept", "clause": "X.690 8.18", "features": ["EXTERNAL"]},
+    {"id": "external/accept/indirect", "type": "DiffExternal.Ext", "hex": "28070201058102abcd", "expect": "accept", "clause": "X.690 8.18", "features": ["EXTERNAL"]},
+    {"id": "external/accept/descriptor", "type": "DiffExternal.Ext", "hex": "280d06022a0307036162638102abcd", "expect": "accept", "clause": "X.690 8.18", "features": ["EXTERNAL"]},
+    {"id": "external/reject/no-encoding", "type": "DiffExternal.Ext", "hex": "280406022a03", "expect": "reject", "clause": "X.690 8.18.1", "features": ["EXTERNAL"], "mutation": "missing-field"},
+    {"id": "external/reject/sequence-tag", "type": "DiffExternal.Ext", "hex": "300806022a038102abcd", "expect": "reject", "clause": "X.690 8.18.1", "features": ["EXTERNAL"], "mutation": "wrong-tag"},
+    {"id": "external/reject/out-of-order", "type": "DiffExternal.Ext", "hex": "28088102abcd06022a03", "expect": "reject", "clause": "X.690 8.18.1", "features": ["EXTERNAL"], "mutation": "reorder"},
+    {"id": "external/reject/arbitrary-unused-bits", "type": "DiffExternal.Ext", "hex": "280806022a0382020781", "expect": "reject", "clause": "X.690 11.2.1", "features": ["EXTERNAL"], "mutation": "bitstring-unused"},
+    {"id": "pdv/accept/syntax", "type": "DiffPdv.Pdv", "hex": "2b0aa00481022a038202abcd", "expect": "accept", "clause": "X.690 8.10.1 (sic: 8.17), X.680 36.5", "features": ["EMBEDDED PDV"]},
+    {"id": "pdv/accept/fixed", "type": "DiffPdv.Pdv", "hex": "2b08a00285008202abcd", "expect": "accept", "clause": "X.680 36.5", "features": ["EMBEDDED PDV"]},
+    {"id": "pdv/accept/syntaxes", "type": "DiffPdv.Pdv", "hex": "2b10a00aa00880022a0381022a048202abcd", "expect": "accept", "clause": "X.680 36.5", "features": ["EMBEDDED PDV"]},
+    {"id": "pdv/accept/presentation-context-id", "type": "DiffPdv.Pdv", "hex": "2b09a0038201058202abcd", "expect": "accept", "clause": "X.680 36.5", "features": ["EMBEDDED PDV"]},
+    {"id": "pdv/reject/data-value-descriptor", "type": "DiffPdv.Pdv", "hex": "2b0fa00481022a0381036162638202abcd", "expect": "reject", "clause": "X.680 36.5 (data-value-descriptor ABSENT)", "features": ["EMBEDDED PDV"], "mutation": "extra-field"},
+    {"id": "pdv/reject/no-data-value", "type": "DiffPdv.Pdv", "hex": "2b06a00481022a03", "expect": "reject", "clause": "X.680 36.5", "features": ["EMBEDDED PDV"], "mutation": "missing-field"},
+    {"id": "pdv/reject/identification-implicit", "type": "DiffPdv.Pdv", "hex": "2b0881022a038202abcd", "expect": "reject", "clause": "X.680 36.5 (identification is EXPLICIT, being a CHOICE)", "features": ["EMBEDDED PDV"], "mutation": "wrong-tag"},
+    {"id": "charstr/accept/syntax", "type": "DiffCharStr.CharStr", "hex": "3d0aa00481022a038202abcd", "expect": "accept", "clause": "X.690 8.24, X.680 44.5", "features": ["CHARACTER STRING"]},
+    {"id": "charstr/accept/fixed", "type": "DiffCharStr.CharStr", "hex": "3d08a00285008202abcd", "expect": "accept", "clause": "X.680 44.5", "features": ["CHARACTER STRING"]},
+    {"id": "charstr/reject/no-string-value", "type": "DiffCharStr.CharStr", "hex": "3d06a00481022a03", "expect": "reject", "clause": "X.680 44.5", "features": ["CHARACTER STRING"], "mutation": "missing-field"},
+    {"id": "charstr/reject/descriptor", "type": "DiffCharStr.CharStr", "hex": "3d0fa00481022a0381036162638202abcd", "expect": "reject", "clause": "X.680 44.5 (data-value-descriptor ABSENT)", "features": ["CHARACTER STRING"], "mutation": "extra-field"}
+  ]
+}

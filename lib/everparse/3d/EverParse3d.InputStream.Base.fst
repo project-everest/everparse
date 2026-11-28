@@ -9,6 +9,7 @@ module API = LowParse.Pulse.ArrayPtr.Int
 module Util = EverParse3d.Util
 module AppCtxt = EverParse3d.AppCtxt
 module PR = Pulse.Lib.Reference
+module PM = EverParse3d.PtrModel
 
 (* Backed by the generated wrapper's
    `sizeof(size_t) <= sizeof(uint64_t)` static assertion. *)
@@ -42,6 +43,11 @@ class input_stream_pts_to (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type =
     (contents: Seq.seq U8.t) ->
     (suffix: Seq.seq U8.t) ->
     Tot slprop;
+
+  (* A ghost pointer to the first byte of the contents of the stream, used
+     only to specify `field_ptr`. Backends that do not support `field_ptr` may
+     return anything. *)
+  origin: base_t -> GTot PM.ptr;
 }
 
 (* The type of the error-handler callback.
@@ -50,15 +56,11 @@ class input_stream_pts_to (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type =
    because [input_stream_inst] below must mention it, and Actions.Common
    depends on this module.
 
-   NOTE: this arrow must have exactly as many binders as the C function-pointer
-   type it extracts to. Ghost binders would be extracted by F* as extra [unit]
-   parameters of the type abbreviation, whereas Pulse drops them at application
-   sites and KaRaMeL drops them when emitting C; the resulting arity mismatch
-   makes KaRaMeL's Low* checker reject every generated validator as soon as the
-   abbreviation is preserved with -no-inline-type-abbrev (which is what gives
-   it the name EVERPARSE_ERROR_HANDLER). Hence the error handler is given
-   permission on the application context only: callers keep (and frame) their
-   permission on the input stream across the call.
+   Keep this arrow's binders aligned with the C function-pointer signature
+   preserved as EVERPARSE_ERROR_HANDLER, without extra ghost-only parameters.
+   The error handler receives permission on the application context only:
+   callers keep (and frame) their permission on the input stream across the
+   call.
 *)
 let error_handler_arrow
   (base_t: Type0) (len_t: Type0) (pos_t: Type0)
@@ -68,17 +70,17 @@ let error_handler_arrow
     error_reason:string ->
     error_code:U8.t ->
     ctxt: AppCtxt.app_ctxt ->
-    sl_base: base_t ->
-    sl_len: len_t ->
-    sl_pos: pos_t ->
+    slBase: base_t ->
+    slLen: len_t ->
+    slPos: pos_t ->
     (* The offset at which the failing field *started*, sampled before the
        field's validator ran. This is what doc/3d-lang.rst calls
        `StartPosition`, and it is what the Low* backend reports; it is
        measured the same way as the [start_pos] of an [action], i.e. relative
        to the origin of the current validation.
 
-       It has to be passed separately rather than recovered from [sl_pos]:
-       [sl_pos] is the live position (a reference, on the buffer backend) and
+       It has to be passed separately rather than recovered from [slPos]:
+       [slPos] is the live position (a reference, on the buffer backend) and
        has already moved past the bytes the field consumed by the time the
        handler runs, and on the extern backend [pos_t] is the truncation
        origin rather than a position at all.
@@ -113,13 +115,11 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   (* The error-handler callback type, carried as a member rather than named
      directly as [error_handler_arrow base_t len_t pos_t].
 
-     KaRaMeL has no parameterized typedefs: it inlines such an abbreviation at
-     every use site, so a generated validator's prototype would spell the whole
-     function-pointer type out instead of naming EVERPARSE_ERROR_HANDLER, as the
-     Low* backend does. Carrying the type as a member lets each backend supply
-     its own 0-ary alias -- which KaRaMeL can preserve, and the `EverParse`
-     bundle can rename -- while [error_handler_arrow_of_t] keeps it
-     interchangeable with the arrow type for the few places that call a handler.
+     Carrying the type as a member lets each backend supply a monomorphic
+     alias that Custard preserves as EVERPARSE_ERROR_HANDLER, rather than
+     spelling the whole function-pointer type in validator prototypes.
+     [error_handler_arrow_of_t] keeps it interchangeable with the arrow type
+     for the few places that call a handler.
      See EverParse3d.Actions.ErrorHandler.Buffer. *)
   [@@@FStar.Tactics.Typeclasses.no_method]
   error_handler_t: Type0;
@@ -196,8 +196,13 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
       )
     );
 
+  (* The [name] argument of [has], [has_at] and [read] is the 3D field being
+     checked or read ("" if none). It is only used by the inlined
+     implementations to name their C locals after the field, with
+     `rename_let`; it never reaches the generated C code. *)
   has:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
+    (name: string) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -249,6 +254,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
      too. *)
   has_at:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
+    (name: string) ->
     (base: base_t) ->
     (len: len_t) ->
     (pos: pos_t) ->
@@ -270,6 +276,7 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
 
   read:
     (#[Util.solve_from_ctx ()] _extra: extra_t) ->
+    (name: string) ->
     (t': Type0) ->
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->
@@ -330,9 +337,8 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
       pts_to base len pos contents Seq.empty));
 
   (* [truncate] conceptually returns a whole (base, len, pos) triple, but
-     returning one would extract to a C struct that KaRaMeL monomorphizes into
-     whichever *generated* module happens to use it first, and then has to
-     share through an `internal/` header. Instead each instance names the one
+     returning one would introduce an aggregate return type shared by
+     generated validators. Instead each instance names the one
      component it actually modifies -- [trunc_t] -- and recovers the other two
      from the original stream through the projections below. Both backends set
      [trunc_t = len_t] -- neither re-bases anything, and truncating only
@@ -369,7 +375,8 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
 	Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
 	Seq.length v <= Seq.length contents /\
 	Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
-	Ghost.reveal v == Seq.append v1 v2
+	Ghost.reveal v == Seq.append v1 v2 /\
+	origin #base_t #len_t #pos_t (trunc_base base len pos res) == origin #base_t #len_t #pos_t base
     )));
 
   untruncate:

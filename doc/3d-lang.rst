@@ -160,13 +160,9 @@ There can be multiple definitions marked ``entrypoint`` in a given
   ``ModuleCheckTyp`` prototypes, so client code that only calls the
   entrypoints ports over unchanged.
 
-  ``ModuleWrapper.h`` includes ``EverParsePulseEndianness.h`` instead of
-  ``EverParseEndianness.h``; its named ``EVERPARSE_ERROR_*`` kinds use the
-  same numbers (see :ref:`sec-error-handling-pulse`).
-  ``everparse-3d.exe --api pulse --batch`` accordingly writes two
-  extra headers, ``EverParsePulseEndianness.h`` and ``EverParsePulse.h``,
-  into the output directory alongside the ones listed above, unless
-  ``--no_copy_everparse_h`` is specified. Finally, the
+  ``ModuleWrapper.h`` additionally includes ``EverParse.h``; its named
+  ``EVERPARSE_ERROR_*`` kinds use the same numbers (see
+  :ref:`sec-error-handling-pulse`). Finally, the
   client primitives that ``--input_stream`` and ``extern`` specifications
   require are not the same; those are documented in
   :ref:`the 3d user manual <3d>`.
@@ -652,6 +648,147 @@ Restrictions
   can be associated with the fields of that type, if any.
 
 * Actions cannot be associated with bit fields.
+
+Functional specification of actions (Pulse backend)
+...................................................
+
+With the Pulse backend, the F* validator generated for a type ``T`` is
+verified against a purely functional specification of its actions. Its
+type, ``validator_of d eh "T" (def'_T ...)``, includes the ghost spec
+``EverParse3d.Interpreter.as_vspec "T" (def'_T ...)``, of type
+``EverParse3d.Actions.Spec.vspec d``. Given the input and the values of
+the action state (the ``mutable`` parameters) before validation, the spec
+returns either:
+
+* ``VOk final``: validation succeeds, and ``final`` holds the values of
+  the action state afterwards;
+
+* ``VErr``: validation fails (the data is ill-formed, or an action
+  returned ``false``). The action state is then unspecified, since actions
+  may have run partially.
+
+The spec is exact: the validator succeeds if, and only if, the spec
+returns ``VOk``, and it then leaves the action state as the spec says. In
+particular, the spec returns ``VErr`` whenever the data is ill-formed. Specs are ghost: the generated C
+code is unchanged.
+
+The spec mirrors the validator: return, ``field_pos``, dereference,
+assignment, sequencing, ``var`` bindings and conditionals all get exact
+specs. Arrays and strings whose element types have actions are specified
+as a left fold (like ``fold_left``) of the element spec over the
+elements: the action state after the array is the result of running the
+element spec on each element in turn, stopping at the first failure.
+
+``extern`` functions and output-type setters (written in C) are
+specified by uninterpreted, lawless functions on the abstract values of
+the output state. The generated ``M.ExternalAPI`` module declares an
+abstract type ``___output_state_values`` of such values, the output state
+``___output_state_slprop : ___output_state_values -> slprop``, and, for
+each extern function ``f`` (resp. setter ``set_x``), a spec
+``___spec_f`` (resp. ``___spec_set_x``) taking the same arguments and
+mapping the output state to a pair of the result and the new output
+state (resp. to the new output state). The C function is typed as
+``EverParse3d.Actions.Base.external_action_spec``: it returns
+``fst (___spec_f args w)`` and leaves the output state at
+``snd (___spec_f args w)``. Thus, the final output state is an exact
+symbolic log of the calls (e.g. ``___spec_set_y o b (___spec_set_x o a
+w0)``.) No law (e.g. that a getter returns what a setter set) is
+assumed, so these specs do not constrain the C code: they can always be
+realized by a prophecy of the outcomes of all calls.
+
+``field_ptr`` (buffer backend) is specified as
+``EverParse3d.PtrModel.ptr_at origin start``: the pointer ``start``
+bytes after ``origin``, a ghost pointer to the first byte of the input
+buffer, where ``start`` is the position of the field. This relies on one
+trusted assumption, ``EverParse3d.PtrModel.ptr_ext``: a pointer is
+determined by its base and offset, which holds of C pointers.
+
+Probes (buffer backend) are specified with respect to a *probe world*: a
+ghost prophecy of the outcomes of all future probes into a given copy
+buffer, stored as the ghost value of that copy buffer in the action
+state. Each probe-then-validate consumes one outcome
+(``EverParse3d.Actions.Spec.probe_outcome``): the value of the probed
+pointer, whether the probe succeeded, and the bytes it copied. If the
+probe succeeds, the probed type is validated against its own spec on the
+copied bytes, so the spec reflects that the probed memory is read only
+once, even if it is concurrently modified. If the probe or that inner
+validation fails, the result is ``VErr``. Since probe-then-validate can
+itself make validation fail, its spec is that of a *validating action*
+(``EverParse3d.Actions.Spec.vaction_spec``), which returns a validation
+result (``VOk`` or ``VErr``) rather than a boolean and a state. The
+probe functions themselves (written in C) are unchanged: the outcome
+they produce is whatever the prophecy says it is, so no assumption is
+made on their behavior. This relies on a trusted assumption: a fresh
+probe world can always be introduced
+(``EverParse3d.Actions.Base.prophesy_probe_world``), and the probe world
+is consumed by each probe-then-validate exactly once, in
+``EverParse3d.Actions.Base.probe_then_validate``, which is not exported.
+
+``field_ptr_after`` (extern and static backends) is specified likewise
+with respect to a *peep world*: a ghost prophecy
+(``EverParse3d.Actions.Spec.peep_tape``) of the outcomes of all future
+calls to the client's ``EverParseStreamPeep`` callback, ``None`` if it
+fails and ``Some p`` if it returns pointer ``p``. It is stored in the
+action state under the reserved key ``"#world"``, so the generated state
+dictionaries of the types that use ``field_ptr_after`` include it. Each
+``field_ptr_after`` consumes one outcome: it returns ``false`` and leaves
+the destination unchanged if the outcome is ``None``, and otherwise
+returns ``true`` and writes ``p`` to the destination pointer (or, with an
+output-type field, calls the setter, with its spec as above). Since the
+callback may write to its output pointer even when it fails, it writes to
+a local copied to the destination only on success. Thus, the action
+state after ``field_ptr_after`` is fully specified in both cases. As
+for probes, nothing is assumed about the C callback; the trusted
+assumptions are that a fresh peep world can always be introduced
+(``EverParse3d.Actions.Base.prophesy_peep_world``) and that it is
+consumed only through the non-ghost resolvers of
+``EverParse3d.Actions.Base`` (``resolve_peep_world``,
+``resolve_peep_world_ptr``), whose arguments are the values actually
+returned by the callback, or with a constant ``None`` outcome
+(``resolve_peep_world_none``).
+
+Clients can reason about the spec in F*.
+``EverParse3d.Actions.Spec.Test`` proves that a field
+``UINT32 x {:act *out = x; }`` validates if, and only if, the input starts
+with a 32-bit integer, and that it then stores that integer into
+``*out``; and that for an array ``T(out) a[:byte-size 8]`` of two such
+fields, ``*out`` ends up holding the second integer; and that probing
+a pointer to a 32-bit integer fails exactly when the probe fails or the
+copied bytes do not start with a 32-bit integer; and that
+``field_ptr_after`` succeeds exactly when the head of the peep world is
+``Some p``, in which case it writes ``p``, and otherwise leaves the
+destination unchanged.
+
+Since ``as_vspec`` reads input bytes, the spec of the actions is also
+given in terms of the *parsed value*:
+``EverParse3d.Interpreter.as_value_spec "T" (def'_T ...)``, of type
+``EverParse3d.Actions.ValueSpec.value_spec d t`` (where ``t`` is the
+type denotation of ``T``), takes the position at which the value starts,
+the parsed value and the action state before validation, and returns the
+result of the actions and the final action state. The positions of
+fields (for ``field_pos``) are computed from the parsed values, which is
+well defined since all 3d parsers are injective. The two levels are
+related once and for all by
+``EverParse3d.Interpreter.as_vspec_value_spec``: if the parser
+succeeds on the input with value ``v``, then the result of ``as_vspec``
+is that of ``as_value_spec`` on ``v``; and if the parser fails, then it
+is ``VErr``. So clients can reason about the actions of
+``T`` purely in terms of its values, without reasoning about bytes (see
+``EverParse3d.Actions.Spec.Test``).
+
+Such client theorems can also be stated about the code generated from a
+``.3d`` file. The generated interface keeps ``def'_T`` abstract, so the
+theorems go in a hand-written module that is a ``friend`` of the
+generated one (F* requires that module to have an interface, possibly
+empty). ``share/everparse/tests/3d/spec`` contains examples covering
+``field_pos_32``, ``field_ptr``, failing ``:check`` actions, arrays,
+extern actions (the final output state is the sequence of their
+uninterpreted specs), output setters, probes and ``field_ptr_after``.
+Each comes with an ``expect_failure`` test showing that a wrong claim
+is rejected. ``EverParse3d.Actions.ValueSpec`` provides helper lemmas
+for such proofs: ``vsize_UINT8`` ... ``vsize_UINT64BE`` give the sizes
+of integer fields, and ``vs_nlist_eq`` unfolds arrays to lists
+(``nlist_as_list``).
 
 .. _sec-alignment:
 
@@ -2234,8 +2371,8 @@ Error handling under ``--api pulse``
 The Pulse backend keeps the whole of the design above: the same
 ``EVERPARSE_ERROR_HANDLER`` typedef in ``EverParse.h``, the same
 ``EVERPARSE_ERROR_FRAME`` structure and ``EverParseDefaultErrorHandler``
-(shipped as plain C in ``EverParsePulse.h`` rather than generated into
-``EverParse.h``), the same per-module ``<Mod>EverParseError`` callback, and
+(whose ``Input`` argument is a plain ``uint8_t *``, unused by the default
+handler), the same per-module ``<Mod>EverParseError`` callback, and
 the same stack trace of enclosing types. What changes is the handler's
 argument list and the width of the error code, not its kind number.
 
@@ -2287,6 +2424,10 @@ Three points deserve attention:
 constants under ``--api pulse`` with the same kind numbers as
 ``--api lowstar``.
 The validator still returns a byte, not a packed position/error value.
+The runtime ``EverParse.h`` also names these byte-sized codes
+``EVERPARSE_STATUS_SUCCESS`` and ``EVERPARSE_STATUS_ERROR_*``, under both
+APIs; under ``--api lowstar``, ``EVERPARSE_VALIDATOR_*`` remain the packed
+64-bit codes.
 The ``ErrorReason`` and ``ErrorCode`` pairs are:
 
   - "action failed", ``EVERPARSE_ERROR_ACTION_FAILED`` (5uL)
@@ -2296,7 +2437,9 @@ The ``ErrorReason`` and ``ErrorCode`` pairs are:
   - "constraint failed", ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` (6uL)
   - "unexpected padding", ``EVERPARSE_ERROR_UNEXPECTED_PADDING`` (7uL)
   - "probe failed", ``EVERPARSE_ERROR_PROBE_FAILED`` (8uL)
-  - "unspecified", with ``ErrorCode == 1uL`` or ``ErrorCode > 8uL``
+  - "user-defined constraint failed", with ``128uL <= ErrorCode <= 255uL``
+    (see :ref:`custom error codes <sec-custom-error-codes>`)
+  - "unspecified", with ``ErrorCode == 1uL`` or ``9uL <= ErrorCode <= 127uL``
 
 In particular, ``EVERPARSE_ERROR_GENERIC`` is not defined and never
 reported, and ``EVERPARSE_ERROR_PROBE_FAILED`` exists only under
@@ -2310,6 +2453,43 @@ the callback signatures and byte return type are unchanged.
 
 The ``EVERPARSE_PROBE_FAILURE_*`` codes returned by the probe wrappers are
 unaffected and keep the same values under both backends.
+
+.. _sec-custom-error-codes:
+
+**Custom error codes.** Under ``--api pulse`` only, a refined field may
+specify the error code to report when its constraint fails, with an
+``{:error-code ...}`` annotation placed after the constraint and before
+any action:
+
+.. code-block:: c
+
+  #define BAD_KIND 201
+
+  entrypoint
+  typedef struct _Header(mutable UINT32 *out)
+  {
+    UINT8 version { version == 1 } {:error-code 200};
+    UINT8 kind { kind <= 3 } {:error-code BAD_KIND};
+    UINT32 tag { tag == 42 } {:error-code 203}
+      {:on-success *out = tag; return true; };
+  } Header;
+
+The error code must be an integer literal or a ``#define``'d integer
+constant between 128 and 255; codes below 128 are reserved for
+EverParse. When the constraint of such a field fails, the validator
+returns this code instead of ``EVERPARSE_ERROR_CONSTRAINT_FAILED``, and
+the error handler receives it as its ``ErrorCode`` argument, with the
+``ErrorReason`` "user-defined constraint failed", at every enclosing type
+level. Fields without the annotation still report
+``EVERPARSE_ERROR_CONSTRAINT_FAILED``.
+
+EverParse may merge the constraints of several fields into one, as with
+bit fields or enum-typed fields; each constraint still reports its own
+code (or ``EVERPARSE_ERROR_CONSTRAINT_FAILED`` if it has none), namely
+the code of the first constraint that fails, in field order.
+
+Using ``{:error-code ...}`` on a field without a constraint, or under
+``--api lowstar``, is an error: the Low\* API packs error kinds into 4 bits.
 
 Fully worked examples: TCP Segment Headers
 -------------------------------------------

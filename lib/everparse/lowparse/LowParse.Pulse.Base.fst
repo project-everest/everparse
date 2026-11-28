@@ -1204,9 +1204,9 @@ let leaf_size
 inline_for_extraction
 let leaf_size_ext
   (#t: Type0)
-  (#k1: parser_kind) (#p1: parser k1 t) (#s1: serializer p1)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (#s1: serializer p1)
   (w1: leaf_size s1)
-  (#k2: parser_kind) (#p2: parser k2 t)
+  (#k2: Ghost.erased parser_kind) (#p2: parser k2 t)
   (s2: serializer p2)
   (sq: squash (forall x . parse p1 x == parse p2 x))
 : leaf_size #t #k2 #p2 s2
@@ -1219,7 +1219,7 @@ let leaf_size_ext
 inline_for_extraction
 let leaf_size_constant_size
   (#t: Type0)
-  (#k: parser_kind) (#p: parser k t)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
   (s: serializer p)
   (sz: SZ.t)
   (sq: squash (

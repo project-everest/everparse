@@ -1,0 +1,201 @@
+{
+ "impl": "rasn",
+ "features": {
+  "id.high-tag": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "id.class.application": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "id.class.context": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "id.class.private": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "len.long": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "BOOLEAN": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "INTEGER": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "ENUMERATED": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "BIT STRING": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "OCTET STRING": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "NULL": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "OBJECT IDENTIFIER": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "RELATIVE-OID": {
+   "status": "partial",
+   "source": "rasn-compiler 0.16 generates RELATIVE-OID as a delegate of ObjectIdentifier (see OUT_DIR/DiffRelOid.rs)"
+  },
+  "OID-IRI": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 parse error on OID-IRI (schemas/DiffIRI.asn); module skipped by build.rs"
+  },
+  "RELATIVE-OID-IRI": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 parse error on schemas/DiffIRI.asn; rasn has no RELATIVE-OID-IRI type"
+  },
+  "ObjectDescriptor": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 emits a non-existent rasn type for ObjectDescriptor; DiffDesc skipped in build.rs"
+  },
+  "UTF8String": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "NumericString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "PrintableString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "TeletexString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "VideotexString": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16: NotYetImplemented for VideotexString"
+  },
+  "IA5String": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "GraphicString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "VisibleString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "GeneralString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "UniversalString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "BMPString": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "UTCTime": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "GeneralizedTime": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "DATE": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 parse error on DATE (schemas/DiffTime2.asn)"
+  },
+  "TIME-OF-DAY": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 parse error on schemas/DiffTime2.asn"
+  },
+  "DATE-TIME": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 parse error on schemas/DiffTime2.asn"
+  },
+  "SEQUENCE": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "SEQUENCE OF": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "SET": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "SET OF": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "CHOICE": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "OPTIONAL": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "DEFAULT": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "IMPLICIT": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "EXPLICIT": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "ANY": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "ANY DEFINED BY": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "EXTERNAL": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 maps EXTERNAL to an untagged Any (unfaithful); not dispatched"
+  },
+  "EMBEDDED PDV": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 maps EMBEDDED PDV to an untagged Any (unfaithful); not dispatched"
+  },
+  "CHARACTER STRING": {
+   "status": "unsupported",
+   "source": "rasn-compiler 0.16 parse error on CHARACTER STRING (schemas/DiffCharStr.asn)"
+  },
+  "SIZE": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "value-constraint": {
+   "status": "supported",
+   "source": "rasn 0.29 + rasn-compiler 0.16 (build.rs), DecoderOptions::der(); schemas compile and accept vectors decode"
+  },
+  "policy.oid-arc-bound": {
+   "status": "supported",
+   "source": "rasn OID arcs are u32; differences are classified 'policy'"
+  }
+ }
+}

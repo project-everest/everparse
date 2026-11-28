@@ -23,7 +23,7 @@ module PPB = LowParse.PulseParse.Base
 
 inline_for_extraction
 let validate_array'
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
@@ -64,7 +64,7 @@ inline_for_extraction
 let validate_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
@@ -85,7 +85,7 @@ let validate_vlarray
 
 inline_for_extraction
 let jump_array
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
@@ -103,7 +103,7 @@ inline_for_extraction
 let jump_vlarray
   (array_byte_size_min: nat)
   (array_byte_size_max: nat)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
@@ -179,7 +179,7 @@ fn free_array
 
 inline_for_extraction
 fn extract_elem
-  (#eh: Type0) (#k: parser_kind) (#p: parser k eh)
+  (#eh: Type0) (#k: Ghost.erased parser_kind) (#p: parser k eh)
   (#el #em: Type0) (#elem_vmatch: el -> em -> slprop) (#elem_conv: em -> GTot (option eh))
   (w: PPB.copyful_parse elem_vmatch p elem_conv)
   (j: LPS.jumper p)
@@ -269,7 +269,7 @@ let array_conv
 inline_for_extraction
 fn copyful_parse_array
   (#eh: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k eh)
   (s: serializer p)
   (#el #em: Type0)
@@ -446,7 +446,7 @@ let array_postcond_lemma
 
 inline_for_extraction
 fn l2r_safe_writer_array
-  (#eh: Type0) (#k: parser_kind) (#p: parser k eh) (s: serializer p)
+  (#eh: Type0) (#k: Ghost.erased parser_kind) (#p: parser k eh) (s: serializer p)
   (#el #em: Type0) (#elem_vmatch: el -> em -> slprop) (#elem_conv: em -> GTot (option eh))
   (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
   (array_byte_size: nat) (array_byte_size_sz: SZ.t)
@@ -518,7 +518,7 @@ let array_size_postcond_lemma
 
 inline_for_extraction
 fn l2r_safe_size_array
-  (#eh: Type0) (#k: parser_kind) (#p: parser k eh) (s: serializer p)
+  (#eh: Type0) (#k: Ghost.erased parser_kind) (#p: parser k eh) (s: serializer p)
   (#el #em: Type0) (#elem_vmatch: el -> em -> slprop) (#elem_conv: em -> GTot (option eh))
   (es: PPB.l2r_safe_size elem_vmatch s elem_conv)
   (array_byte_size: nat) (array_byte_size_sz: SZ.t)

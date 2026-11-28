@@ -1,5 +1,6 @@
 #include "EverParseEndianness.h"
 #include "EverParseStream.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 BOOLEAN EverParseHas(EVERPARSE_EXTRA_T const _unused,  EVERPARSE_INPUT_STREAM_BASE const x, uint64_t n) {

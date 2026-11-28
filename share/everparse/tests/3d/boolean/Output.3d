@@ -1,0 +1,25 @@
+output
+typedef struct _BOOL_RECORD {
+  Bool flag;
+  UINT8 marker;
+} BOOL_RECORD;
+
+extern Bool ReadFlag(mutable BOOL_RECORD *record)
+
+entrypoint
+typedef struct _Output(Bool expected, mutable BOOL_RECORD *left,
+                      mutable BOOL_RECORD *right) {
+  UINT8 command;
+  unit update
+  {:check
+    var before = ReadFlag(left);
+    if (before == expected) {
+      left->flag = (command != 0);
+      var after = ReadFlag(right);
+      return after == (command != 0);
+    } else {
+      return false;
+    }
+  };
+  UINT8 tail { tail == 42 };
+} Output;

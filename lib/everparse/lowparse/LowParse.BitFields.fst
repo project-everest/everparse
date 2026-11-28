@@ -826,7 +826,7 @@ let get_bitfield_eq (#tot: pos) (x: U.uint_t tot) (lo: nat) (hi: nat {lo <= hi /
     M.small_mod x (pow2 tot);
     get_bitfield_full #tot x
   end else begin
-    assert (hi - lo < tot);
+    assert (0 < hi - lo /\ hi - lo < tot);
     U.shift_right_logand_lemma #tot x (bitfield_mask tot lo hi) lo;
     U.shift_right_value_lemma #tot (bitfield_mask tot lo hi) lo;
     M.multiple_division_lemma (pow2 (hi - lo) - 1) (pow2 lo);

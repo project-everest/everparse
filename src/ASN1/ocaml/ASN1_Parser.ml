@@ -99,12 +99,48 @@ let get_failure_reason (s:string)
     else
       2
 
+(* Differential testing (../difftest): [DIFFTEST manifest.json results.jsonl]
+   runs every vector of the manifest through ASN1.DiffTest.parse and writes
+   one JSON object per line: {id, impl, verdict, consumed}. The verdict is
+   "accept" iff the whole input is consumed. *)
+let bytes_of_hex (h:string) : string =
+  let h = String.concat "" (String.split_on_char ' ' h) in
+  String.init (String.length h / 2)
+    (fun i -> Char.chr (int_of_string ("0x" ^ String.sub h (2 * i) 2)))
+
+let difftest (manifest:string) (results:string) : unit =
+  let open Yojson.Safe.Util in
+  let vectors = Yojson.Safe.from_file manifest |> member "vectors" |> to_list in
+  let oc = open_out_bin results in
+  List.iter (fun v ->
+      let id = v |> member "id" |> to_string in
+      let ty = v |> member "type" |> to_string in
+      let data = bytes_of_hex (v |> member "hex" |> to_string) in
+      let len = String.length data in
+      let verdict, consumed =
+        match ASN1_DiffTest.parse ty (lp_bytes_of_string data) with
+        | None -> "unsupported", `Null
+        | Some None -> "reject", `Null
+        | Some (Some n) ->
+          let n = Z.to_int n in
+          (if n = len then "accept" else "reject"), `Int n
+      in
+      let line = `Assoc [ ("id", `String id); ("impl", `String "ours");
+                          ("verdict", `String verdict); ("consumed", consumed) ] in
+      output_string oc (Yojson.Safe.to_string line);
+      output_char oc '\n')
+    vectors;
+  close_out oc
+
 let main = 
+  if Array.length Sys.argv = 4 && String.equal Sys.argv.(1) "DIFFTEST" then
+    (difftest Sys.argv.(2) Sys.argv.(3); exit 0);
   let argc = Array.length Sys.argv in
   if argc <> 3 && argc <> 4
   then (
      print_string "Usage: ASN1_Parser format filename [-debug]\n";
-     print_string "Supported format: X509 CRL\n";
+     print_string "       ASN1_Parser DIFFTEST manifest.json results.jsonl\n";
+     print_string "Supported format: X509 CRL SETTEST\n";
      exit 1
   )
   else (
@@ -114,6 +150,8 @@ let main =
               (if debugflag then ASN1_X509.dparse_cert else ASN1_X509.parse_cert)
             else if String.equal formatname "CRL" then
               (if debugflag then ASN1_CRL.dparse_crl else ASN1_CRL.parse_crl)
+            else if String.equal formatname "SETTEST" then
+              (if debugflag then ASN1_SetTest.dparse_settest else ASN1_SetTest.parse_settest)
             else 
               fun _ -> None
     in
@@ -131,8 +169,22 @@ let main =
                   exit (get_failure_reason str)
                 else
                   exit 2
-      | Some (_, n) -> 
-        print_string ("parsing succeeded consuming " ^ Z.to_string n ^ " bytes\n")
+      | Some (x, n) ->
+        print_string ("parsing succeeded consuming " ^ Z.to_string n ^ " bytes\n");
+        (* Round trip through the spec serializer (ASN1.Spec.Serializer) *)
+        let enc =
+          if debugflag then None
+          else if String.equal formatname "X509" then Some (ASN1_RoundTrip.enc_cert (Obj.magic x))
+          else if String.equal formatname "CRL" then Some (ASN1_RoundTrip.enc_crl (Obj.magic x))
+          else None
+        in
+        match enc with
+        | None -> ()
+        | Some e ->
+          let consumed = lp_bytes_of_string (String.sub str 0 (Z.to_int n)) in
+          if e = consumed
+          then print_string "round trip succeeded\n"
+          else (print_string "round trip FAILED\n"; exit 8)
     with
-     _ -> print_string (filename ^ " could not be read\n"); exit 3
+     e -> print_string (filename ^ " could not be read: " ^ Printexc.to_string e ^ "\n"); exit 3
   )

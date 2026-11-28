@@ -73,6 +73,14 @@ let index_n_to_be_zero_left
   small_division_lemma_1 n (pow2 (8 * (len - 1 - i)));
   index_n_to_be len n i
 
+let pow2_8_pred
+  (len: nat)
+  (i: nat)
+: Lemma
+  (requires (i < len))
+  (ensures (pow2 (8 * (len - i)) == pow2 (8 * (len - 1 - i)) * pow2 8))
+= FStar.Math.Lemmas.pow2_plus (8 * (len - 1 - i)) 8
+
 let index_n_to_be_zero_right
   (len: nat)
   (n: nat)
@@ -88,8 +96,10 @@ let index_n_to_be_zero_right
   ))
 = index_n_to_be len n i;
   let open FStar.Math.Lemmas in
-  modulo_division_lemma n (pow2 (8 * (len - 1 - i))) (pow2 8);
-  pow2_plus (8 * (len - 1 - i)) 8
+  let a = pow2 (8 * (len - 1 - i)) in
+  pow2_8_pred len i;
+  modulo_division_lemma n a (pow2 8);
+  small_division_lemma_1 0 a
   
 open FStar.Math.Lemmas
 

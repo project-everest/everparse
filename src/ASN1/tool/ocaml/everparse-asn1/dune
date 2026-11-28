@@ -1,0 +1,6 @@
+(ocamllex Lexer)
+
+(executable
+ (name Main)
+ (public_name everparse-asn1.exe)
+ (modes native))

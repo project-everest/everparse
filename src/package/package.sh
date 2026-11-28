@@ -166,14 +166,14 @@ make_everparse() {
     fi
 
     # Copy KaRaMeL
-    KRML_EXE="$EVERPARSE_HOME/opt/karamel/out/bin/krml$exe"
+    KRML_EXE="$EVERPARSE_HOME/opt/FStar/karamel/out/bin/krml$exe"
     $cp -L "$KRML_EXE" everparse/bin/krml$exe
     mkdir -p everparse/lib everparse/include
     $cp -r "$(fixpath "$("$KRML_EXE" -locate-krmllib)")" everparse/lib/krml
     $cp -r "$(fixpath "$("$KRML_EXE" -locate-include)")" everparse/include/krml
     # TODO implement krml -locate-misc
     mkdir -p everparse/share/krml
-    $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
+    $cp -r "$EVERPARSE_HOME/opt/FStar/karamel/out/share/krml/misc" everparse/share/krml/misc
 
     # Install EverParse. Everything EverParse itself builds — the executables,
     # the F* libraries and their .checked files, the 3d runtime support and its

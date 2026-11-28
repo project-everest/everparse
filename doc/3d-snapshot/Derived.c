@@ -1,196 +1,106 @@
-
-
 #include "Derived.h"
 
-static uint8_t
-ValidateCoreTriple(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t p = *SlPos;
-  uint64_t fieldStartTriple = (uint64_t)p;
-  size_t pos = (size_t)0U;
-  size_t p0 = pos;
-  size_t p1 = *SlPos;
-  size_t rem = SlLen - p1;
-  BOOLEAN hasBytes = p0 <= rem && (size_t)12U <= (rem - p0);
+static uint8_t DerivedValidateTripleCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+static uint8_t DerivedValidateQuadCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos);
+
+static uint8_t DerivedValidateTripleCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
+  size_t currentPosition = slPos[0];
+  uint64_t fieldStartTriple = (uint64_t)currentPosition;
+  size_t scanOffset = 0;
+  size_t offsetBeforePair = scanOffset;
+  size_t positionBeforePair = slPos[0];
+  size_t bytesRemainingBeforePair = (slLen - positionBeforePair);
+  bool hasBytesForPair;
+  if (offsetBeforePair <= bytesRemainingBeforePair) {
+    hasBytesForPair = ((size_t)12 <= (bytesRemainingBeforePair - offsetBeforePair));
+  }
+  else {
+    hasBytesForPair = false;
+  }
   uint8_t res;
+  if (hasBytesForPair) {
+    scanOffset = (offsetBeforePair + (size_t)12);
+    res = EVERPARSE_STATUS_SUCCESS;
+  }
+  else {
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+  }
   uint8_t resultAfterTriple;
-  size_t consumed;
-  size_t p2;
-  size_t p_;
-  if (hasBytes)
-  {
-    pos = p0 + (size_t)12U;
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+  if (res == EVERPARSE_STATUS_SUCCESS) {
+    size_t currentPosition1 = slPos[0];
+    size_t newPosition = (currentPosition1 + scanOffset);
+    slPos[0] = newPosition;
+    resultAfterTriple = EVERPARSE_STATUS_SUCCESS;
   }
-  else
-  {
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
-    consumed = pos;
-    p2 = *SlPos;
-    p_ = p2 + consumed;
-    *SlPos = p_;
-    resultAfterTriple = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
-  }
-  else
-  {
+  else {
     resultAfterTriple = res;
   }
-  if (resultAfterTriple == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
+  if (resultAfterTriple == EVERPARSE_STATUS_SUCCESS) {
     return resultAfterTriple;
   }
-  ErrorHandlerFn("_Triple",
-    "pair",
-    EverParsePulseInternalErrorReasonOfResult(resultAfterTriple),
-    resultAfterTriple == 0U || (resultAfterTriple >= 2U && resultAfterTriple <= 8U) ? (uint64_t)(uint32_t)resultAfterTriple
-                                                                                    : 15ULL,
-    Ctxt,
-    SlBase,
-    fieldStartTriple);
-  return resultAfterTriple;
+  else {
+    (void)(errorHandlerFn("_Triple", "pair", EverParse3dErrorReasonOfResult(resultAfterTriple), EverParse3dLegacyKind(resultAfterTriple), ctxt, slBase, fieldStartTriple));
+    return resultAfterTriple;
+  }
 }
 
-uint64_t
-DerivedValidateTriple(
-  uint8_t *Ctxt,
-  void
-  (*Handler)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t Length,
-  uint64_t Start
-)
-{
-  size_t len = (size_t)Length;
-  size_t initial = (size_t)Start;
+uint64_t DerivedValidateTriple(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8_t *input, uint64_t length, uint64_t start) {
+  size_t len = (size_t)length;
+  size_t initial = (size_t)start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreTriple(Ctxt, Handler, Input, len, &cursor);
-  size_t final = cursor;
-  uint64_t position = (uint64_t)final;
-  return
-    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
-      1152921504606846976ULL
-    + position;
+  uint8_t status = DerivedValidateTripleCore(ctxt, handler, input, len, &cursor);
+  uint64_t position = (uint64_t)cursor;
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
 
-static uint8_t
-ValidateCoreQuad(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *SlBase,
-  size_t SlLen,
-  size_t *SlPos
-)
-{
-  size_t p = *SlPos;
-  uint64_t fieldStartQuad = (uint64_t)p;
-  size_t pos = (size_t)0U;
-  size_t p0 = pos;
-  size_t p1 = *SlPos;
-  size_t rem = SlLen - p1;
-  BOOLEAN hasBytes = p0 <= rem && (size_t)16U <= (rem - p0);
+static uint8_t DerivedValidateQuadCore(EVERPARSE_APP_CTXT ctxt, EVERPARSE_ERROR_HANDLER errorHandlerFn, uint8_t *slBase, size_t slLen, size_t *slPos) {
+  size_t currentPosition = slPos[0];
+  uint64_t fieldStartQuad = (uint64_t)currentPosition;
+  size_t scanOffset = 0;
+  size_t offsetBefore12 = scanOffset;
+  size_t positionBefore12 = slPos[0];
+  size_t bytesRemainingBefore12 = (slLen - positionBefore12);
+  bool hasBytesFor12;
+  if (offsetBefore12 <= bytesRemainingBefore12) {
+    hasBytesFor12 = ((size_t)16 <= (bytesRemainingBefore12 - offsetBefore12));
+  }
+  else {
+    hasBytesFor12 = false;
+  }
   uint8_t res;
+  if (hasBytesFor12) {
+    scanOffset = (offsetBefore12 + (size_t)16);
+    res = EVERPARSE_STATUS_SUCCESS;
+  }
+  else {
+    res = EVERPARSE_STATUS_ERROR_NOT_ENOUGH_DATA;
+  }
   uint8_t resultAfterQuad;
-  size_t consumed;
-  size_t p2;
-  size_t p_;
-  if (hasBytes)
-  {
-    pos = p0 + (size_t)16U;
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
+  if (res == EVERPARSE_STATUS_SUCCESS) {
+    size_t currentPosition1 = slPos[0];
+    size_t newPosition = (currentPosition1 + scanOffset);
+    slPos[0] = newPosition;
+    resultAfterQuad = EVERPARSE_STATUS_SUCCESS;
   }
-  else
-  {
-    res = EVERPARSEPULSEINTERNAL_VALIDATOR_ERROR_NOT_ENOUGH_DATA;
-  }
-  if (res == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
-    consumed = pos;
-    p2 = *SlPos;
-    p_ = p2 + consumed;
-    *SlPos = p_;
-    resultAfterQuad = EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS;
-  }
-  else
-  {
+  else {
     resultAfterQuad = res;
   }
-  if (resultAfterQuad == EVERPARSEPULSEINTERNAL_VALIDATOR_SUCCESS)
-  {
+  if (resultAfterQuad == EVERPARSE_STATUS_SUCCESS) {
     return resultAfterQuad;
   }
-  ErrorHandlerFn("_Quad",
-    "_12",
-    EverParsePulseInternalErrorReasonOfResult(resultAfterQuad),
-    resultAfterQuad == 0U || (resultAfterQuad >= 2U && resultAfterQuad <= 8U) ? (uint64_t)(uint32_t)resultAfterQuad
-                                                                              : 15ULL,
-    Ctxt,
-    SlBase,
-    fieldStartQuad);
-  return resultAfterQuad;
+  else {
+    (void)(errorHandlerFn("_Quad", "_12", EverParse3dErrorReasonOfResult(resultAfterQuad), EverParse3dLegacyKind(resultAfterQuad), ctxt, slBase, fieldStartQuad));
+    return resultAfterQuad;
+  }
 }
 
-uint64_t
-DerivedValidateQuad(
-  uint8_t *Ctxt,
-  void
-  (*Handler)(
-    PRIMS_STRING x0,
-    PRIMS_STRING x1,
-    PRIMS_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t Length,
-  uint64_t Start
-)
-{
-  size_t len = (size_t)Length;
-  size_t initial = (size_t)Start;
+uint64_t DerivedValidateQuad(uint8_t *ctxt, EVERPARSE_ERROR_HANDLER handler, uint8_t *input, uint64_t length, uint64_t start) {
+  size_t len = (size_t)length;
+  size_t initial = (size_t)start;
   size_t cursor = initial;
-  uint8_t status = ValidateCoreQuad(Ctxt, Handler, Input, len, &cursor);
-  size_t final = cursor;
-  uint64_t position = (uint64_t)final;
-  return
-    (status == 0U || (status >= 2U && status <= 8U) ? (uint64_t)(uint32_t)status : 15ULL) *
-      1152921504606846976ULL
-    + position;
+  uint8_t status = DerivedValidateQuadCore(ctxt, handler, input, len, &cursor);
+  uint64_t position = (uint64_t)cursor;
+  return ((EverParse3dLegacyKind(status) * EVERPARSE_VALIDATOR_ERROR_GENERIC) + position);
 }
+
 

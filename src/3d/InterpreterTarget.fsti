@@ -105,12 +105,14 @@ type typ : Type =
       fn:non_empty_string ->
       base:readable_dtyp ->
       refinement:lam expr ->
+      err:expr -> //UINT8 error code if the refinement fails, in the scope of the refinement binder
       typ
 
   | T_refine_with_action:
       fn:non_empty_string ->
       base:readable_dtyp ->
       refinement:lam expr ->
+      err:expr -> //UINT8 error code if the refinement fails, in the scope of the refinement binder
       a:lam action ->
       typ
 
@@ -118,6 +120,7 @@ type typ : Type =
       fn:non_empty_string ->
       base:readable_dtyp ->
       refinement:lam expr ->
+      err:expr -> //UINT8 error code if the refinement fails, in the scope of the refinement binder
       k:lam typ ->
       typ
 
@@ -132,6 +135,7 @@ type typ : Type =
       fn:non_empty_string ->
       base:readable_dtyp ->
       refinement:lam expr ->
+      err:expr -> //UINT8 error code if the refinement fails, in the scope of the refinement binder
       k:lam typ ->
       a:lam action ->
       typ
